@@ -155,8 +155,11 @@ export class FleetStore {
     const file = join(dir, `${entry.machine.id}.json`);
     const tmp = `${file}.${process.pid}.tmp`;
     try {
-      await mkdir(dir, { recursive: true });
-      await writeFile(tmp, JSON.stringify({ lastSeen: entry.lastSeen, snapshot: entry.snapshot }));
+      await mkdir(dir, { recursive: true, mode: 0o700 });
+      // 0600: snapshots carry (redacted) terminal text; only this user reads them.
+      await writeFile(tmp, JSON.stringify({ lastSeen: entry.lastSeen, snapshot: entry.snapshot }), {
+        mode: 0o600,
+      });
       await rename(tmp, file); // atomic: a crash mid-write never leaves a half file
     } catch (err) {
       this.onDiskError(`cannot write ${file}`, err);

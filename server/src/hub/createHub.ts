@@ -8,9 +8,15 @@ import {
   AUTH_ERRORS,
   FLEET_EVENTS,
   SOCKET_NAMESPACES,
+  UI_PRINCIPAL,
+  type CallAnswer,
+  type CoreCallRequest,
   type FleetMachine,
   type FleetUpdate,
 } from '@appydave/shared';
+import { createCore, type Core } from '../core/core.js';
+import { apiRouter, rpcParseError } from '../core/doors.js';
+import { readIdentity, type AppIdentity } from '../core/identity.js';
 import { requestLogger } from '../middleware/requestLogger.js';
 import { errorHandler } from '../middleware/errorHandler.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
@@ -39,6 +45,10 @@ export interface HubOptions {
   /** How often the liveness sweep runs once start() is called. */
   livenessIntervalMs?: number;
   onDiskError?: (message: string, err: unknown) => void;
+  /** Addresses the hub is reachable on; the API pages count them as live copies (B10). */
+  liveHosts?: string[];
+  identity?: AppIdentity;
+  onFault?: (verb: string, err: unknown) => void;
 }
 
 export interface Hub {
@@ -46,6 +56,7 @@ export interface Hub {
   httpServer: HttpServer;
   io: Server;
   store: FleetStore;
+  core: Core;
   /** Load last-known state from disk. Call before listen() so the first browser sees it. */
   load: () => Promise<FleetMachine[]>;
   /** Run one liveness sweep now; emits and returns the machines that fell asleep. */
@@ -63,6 +74,15 @@ export function createHub(opts: HubOptions): Hub {
     now,
     asleepAfterMs: opts.asleepAfterMs,
     onDiskError: opts.onDiskError,
+  });
+
+  const identity = opts.identity ?? readIdentity();
+  const core = createCore({
+    store,
+    identity,
+    now,
+    asleepAfterMs: opts.asleepAfterMs,
+    onFault: opts.onFault,
   });
 
   const app = express();
@@ -86,6 +106,7 @@ export function createHub(opts: HubOptions): Hub {
   );
   app.use(healthRouter);
   app.use(infoRouter);
+  app.use(apiRouter(core, identity, opts.liveHosts ?? []));
 
   if (opts.clientDist) {
     const dist = opts.clientDist;
@@ -96,6 +117,7 @@ export function createHub(opts: HubOptions): Hub {
   app.use((_req, res) => {
     res.status(404).json({ status: 'error', error: 'Not found', timestamp: now().toISOString() });
   });
+  app.use(rpcParseError);
   app.use(errorHandler);
 
   // Browsers: session cookie at connect, then the whole fleet, then changed machines (D3).
@@ -111,6 +133,13 @@ export function createHub(opts: HubOptions): Hub {
       machines: store.list(),
     };
     socket.emit(FLEET_EVENTS.UPDATE, update);
+    // The UI's door onto the core (B1, B13): same seam, fixed principal.
+    socket.on(FLEET_EVENTS.CALL, (request: CoreCallRequest, ack: (a: CallAnswer) => void) => {
+      if (typeof ack !== 'function') return;
+      const r: Partial<CoreCallRequest> =
+        typeof request === 'object' && request !== null ? request : {};
+      ack(core.call(UI_PRINCIPAL, String(r.verb ?? ''), r.input, { dryRun: r.dryRun }));
+    });
   });
 
   const emitChanged = (machines: FleetMachine[]) => {
@@ -139,6 +168,7 @@ export function createHub(opts: HubOptions): Hub {
     httpServer,
     io,
     store,
+    core,
     load: () => store.load(),
     sweep,
     start: () => {
