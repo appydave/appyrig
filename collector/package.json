@@ -6,8 +6,8 @@
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:contract": "vitest run src/adapters/contract.test.ts"
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "socket.io": "^4.8.1"
   }
 }
