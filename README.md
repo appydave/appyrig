@@ -8,15 +8,15 @@ Built on the [AppyStack](https://github.com/appydave/appystack) RVETS template â
 
 ## Stack
 
-| Layer      | Technology                   | Role                                                     |
-| ---------- | ---------------------------- | -------------------------------------------------------- |
-| Client     | React 19 + Vite 7            | UI on port 7190, proxies `/api`, `/health`, `/socket.io` |
-| Server     | Express 5 + Socket.io        | REST API + real-time events on port 7191                 |
-| Shared     | TypeScript only              | Interfaces shared between client and server â€” no runtime |
-| Styling    | TailwindCSS v4               | Utility classes, CSS variables in `client/src/styles/`   |
-| Validation | Zod                          | Server env vars + request body schemas                   |
-| Logging    | Pino + pino-http             | Structured JSON logs, request tracing with UUID          |
-| Quality    | Vitest + ESLint 9 + Prettier | Tests, linting, formatting across all workspaces         |
+| Layer      | Technology                   | Role                                                                              |
+| ---------- | ---------------------------- | --------------------------------------------------------------------------------- |
+| Client     | React 19 + Vite 7            | UI on port 7190, proxies `/api`, `/health`, `/socket.io`                          |
+| Server     | Express 5 + Socket.io        | REST API + real-time events on port 7191                                          |
+| Shared     | TypeScript + Zod             | The snapshot/events contract (Zod schemas) shared by client, server and collector |
+| Styling    | TailwindCSS v4               | Utility classes, CSS variables in `client/src/styles/`                            |
+| Validation | Zod                          | Server env vars + request body schemas                                            |
+| Logging    | Pino + pino-http             | Structured JSON logs, request tracing with UUID                                   |
+| Quality    | Vitest + ESLint 9 + Prettier | Tests, linting, formatting across all workspaces                                  |
 
 ---
 

@@ -16,7 +16,8 @@ import {
 } from '@appydave/shared';
 import { attachCollectorIngest } from './collectorIngest.js';
 
-const SNAPSHOTS = resolve(process.cwd(), '..', 'test/fixtures/snapshots');
+// Relative to this file, so the test runs from server/ or the repo root.
+const SNAPSHOTS = resolve(import.meta.dirname, '../../../test/fixtures/snapshots');
 const TOKEN = 'test-hub-token-0123456789';
 const load = (name: string): MachineSnapshot =>
   JSON.parse(readFileSync(resolve(SNAPSHOTS, `${name}.json`), 'utf8'));

@@ -85,7 +85,7 @@ export const SeatSchema = z.strictObject({
   blockedReason: z.string().nullable(),
   lifecycleState: z.string().nullable(), // running | detached | recoverable | attention_required
   sessionStatus: z.string().nullable(),
-  /** Optional on purpose: stopped seats have no activityState at all. */
+  /** Optional on purpose: stopped seats have no activityState at all. Diagnostic only: never derive the pip from it; the pip is `status`. */
   activity: SeatActivitySchema.optional(),
   viewerStatus: ViewerStatusSchema.nullable(),
   lastActivityAt: isoDate.nullable(),

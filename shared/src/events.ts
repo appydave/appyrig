@@ -50,7 +50,7 @@ export type CollectorAck =
   | { ok: true; receivedAt: string }
   | { ok: false; failureMode: 'invalid_snapshot' | 'machine_mismatch'; message: string };
 
-/** Events on the `/` namespace, hub → browser. */
+/** Events on the `/` namespace, hub → browser. The one definition; the scaffold's ServerToClientEvents extends it. */
 export interface BrowserServerToClientEvents {
   'fleet:update': (update: FleetUpdate) => void;
 }

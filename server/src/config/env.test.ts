@@ -25,6 +25,16 @@ describe('env config', () => {
     expect(env.NODE_ENV).toBe('test');
   });
 
+  it('treats a blank HUB_TOKEN line as unset, not invalid (.env.example ships one)', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.HUB_TOKEN = '';
+
+    const { env } = await import('./env.js?blank-token=' + Date.now());
+
+    expect(env.HUB_TOKEN).toBeUndefined();
+    delete process.env.HUB_TOKEN;
+  });
+
   it('reads PORT as a number when set', async () => {
     process.env.NODE_ENV = 'test';
     process.env.PORT = '9999';

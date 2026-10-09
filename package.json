@@ -20,7 +20,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm run typecheck -w shared -w server -w client -w collector",
+    "typecheck": "npm run typecheck -w shared -w server -w client -w collector && tsc -p tsconfig.e2e.json",
     "clean": "rm -rf node_modules shared/dist server/dist client/dist",
     "prepare": "husky",
     "customize": "tsx scripts/customize.ts",

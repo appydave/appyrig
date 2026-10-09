@@ -1,4 +1,5 @@
 // TODO: Extend these interfaces for your project
+import type { BrowserServerToClientEvents } from './events.js';
 
 /** Response wrapper for all API endpoints. */
 export interface ApiResponse<T = unknown> {
@@ -23,8 +24,7 @@ export interface ServerInfo {
 }
 
 /** Socket.io events emitted from server to client. */
-export interface ServerToClientEvents {
-  'fleet:update': (update: import('./snapshot.js').FleetUpdate) => void;
+export interface ServerToClientEvents extends BrowserServerToClientEvents {
   'server:pong': (data: { message: string; timestamp: string }) => void;
   'entity:list:result': (data: { entity: string; records: unknown[] }) => void;
   'entity:get:result': (data: { entity: string; record: unknown }) => void;

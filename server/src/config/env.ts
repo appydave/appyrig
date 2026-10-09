@@ -16,7 +16,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(7191),
   CLIENT_URL: z.string().default('http://localhost:7190'),
   // Shared secret for collectors (and the one-time browser login). Unset = every collector refused.
-  HUB_TOKEN: z.string().min(16).optional(),
+  // A blank `HUB_TOKEN=` line (as shipped in .env.example) means unset, not invalid.
+  HUB_TOKEN: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(16).optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);
