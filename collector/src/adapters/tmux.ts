@@ -75,9 +75,9 @@ export function parsePanes(stdout: string): TmuxPane[] {
 }
 
 // OSC sequences (ESC ] ... BEL or ESC \\), e.g. OSC 8 hyperlinks: dropped, the link text between
-// the opening and closing sequence stays. An unterminated one runs to the end of the line.
+// the opening and closing sequence stays. An unterminated one runs to the end of its line, never into the next.
 // eslint-disable-next-line no-control-regex
-const OSC = /\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\|$)/g;
+const OSC = /\u001b\][^\u0007\u001b\n]*(?:\u0007|\u001b\\|(?=\n)|$)/g;
 // CSI sequences (colours, cursor moves).
 // eslint-disable-next-line no-control-regex
 const CSI = /\u001b\[[0-9;?]*[A-Za-z]/g;
