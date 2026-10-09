@@ -2,14 +2,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { z } from 'zod';
 
-// Precedence must flip between test and runtime:
-//  - Under test, the values a test sets on process.env must win (override OFF), or env.test.ts
-//    can never inject its inputs.
-//  - At runtime (dev / prod / Overmind), .env must win over any stale or injected PORT (override
-//    ON), or the server can silently bind the wrong port.
-//    See docs/kdd/learnings/dotenv-override-clobbers-env-tests.md for the full rationale.
+// Under test, .env is not loaded at all: tests set process.env themselves, and a tree's .env
+// (each lane and QA copy has different ports, a QA git archive has none) must not change results.
+// At runtime (dev / prod / Overmind), .env wins over any stale or injected PORT (override ON), or
+// the server can silently bind the wrong port.
+// See docs/kdd/learnings/dotenv-override-clobbers-env-tests.md for the earlier rationale.
 const underTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
-dotenv.config({ path: path.resolve(process.cwd(), '..', '.env'), override: !underTest });
+if (!underTest) dotenv.config({ path: path.resolve(process.cwd(), '..', '.env'), override: true });
 
 const envSchema = z.object({
   // TODO: Update defaults for your project
