@@ -18,6 +18,8 @@ const hub = createHub({
   dataDir: env.isTest ? undefined : dataDir,
   clientDist: env.isProduction ? join(__dirname, '../../client/dist') : undefined,
   onDiskError: (message, err) => logger.error({ err }, message),
+  onFault: (verb, err) => logger.error({ err, verb }, 'verb fault'),
+  liveHosts: parseHosts(env.HUB_BIND_HOSTS),
 });
 
 const { app, httpServer, io } = hub;

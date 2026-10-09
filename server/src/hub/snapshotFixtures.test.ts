@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { MachineSnapshotSchema, TAIL_MAX_LINES, type MachineSnapshot } from '@appydave/shared';
 
-const SNAPSHOTS = resolve(process.cwd(), '..', 'test/fixtures/snapshots');
+const SNAPSHOTS = resolve(import.meta.dirname, '../../../test/fixtures/snapshots');
 const load = (name: string): MachineSnapshot =>
   JSON.parse(readFileSync(resolve(SNAPSHOTS, `${name}.json`), 'utf8'));
 

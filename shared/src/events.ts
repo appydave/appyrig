@@ -1,4 +1,5 @@
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
+import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
 /**
  * AppyRig wire contract (P0b): Socket.IO events and the auth handshake.
@@ -26,6 +27,8 @@ export const FLEET_EVENTS = {
   UPDATE: 'fleet:update',
   /** collector → hub. Payload: MachineSnapshot. The hub acks with CollectorAck. */
   SNAPSHOT: 'collector:snapshot',
+  /** browser → hub. Payload: CoreCallRequest; the ack is the CallAnswer. Calls as `human:ui`. */
+  CALL: 'core:call',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -55,8 +58,16 @@ export interface BrowserServerToClientEvents {
   'fleet:update': (update: FleetUpdate) => void;
 }
 
-/** Events on the `/` namespace, browser → hub. None in v1: the UI reads through the API core verbs. */
-export type BrowserClientToServerEvents = Record<string, never>;
+/**
+ * Events on the `/` namespace, browser → hub. The UI's one door into the API core: every verb
+ * the UI uses is a read-only core verb, called as principal `human:ui` (B1, B13).
+ */
+export interface BrowserClientToServerEvents {
+  'core:call': (request: CoreCallRequest, ack: (answer: CallAnswer) => void) => void;
+}
+
+/** Principal the browser socket door calls as. */
+export const UI_PRINCIPAL = 'human:ui';
 
 /** Events on the `/collector` namespace, collector → hub. */
 export interface CollectorClientToServerEvents {

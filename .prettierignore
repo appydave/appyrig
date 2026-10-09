@@ -11,3 +11,5 @@ playwright-report
 .codex
 test/fixtures
 CLAUDE.local.md
+# Vendored: keep upstream bytes so a re-copy diffs cleanly
+server/src/core/vendor
