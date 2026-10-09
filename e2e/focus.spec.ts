@@ -80,4 +80,37 @@ test.describe('Focus', () => {
       await expectXtermCount(page, 0);
     }
   });
+  test('a click inside the terminal does not trap Focus: Esc still closes, header stays usable', async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    const seats = await openWall(page);
+    const seat =
+      seats.find((s) => s.status === 'blocked' && s.hasTail) ?? seats.find((s) => s.hasTail)!;
+
+    await openFocus(page, seat);
+    await expectXtermCount(page, 1);
+    const terminal = page.getByTestId('focus-terminal');
+    const box = (await terminal.boundingBox())!;
+    // Where a person clicks to select text. xterm takes keyboard focus here.
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+
+    // The header must not be covered: these are real clicks, so Playwright fails if anything
+    // sits over them (trial: hit-test only, no action).
+    await page.getByTestId('focus-mode-toggle').click({ trial: true, timeout: 3_000 });
+    await page.getByTestId('focus-close').click({ trial: true, timeout: 3_000 });
+    await expect(page.getByTestId('focus-close')).toBeInViewport();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('focus-view')).toHaveCount(0);
+    await expectXtermCount(page, 0);
+
+    // Same for Cmd+Enter, the other documented way out.
+    await openFocus(page, seat);
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.keyboard.press('Meta+Enter');
+    await expect(page.getByTestId('focus-view')).toHaveCount(0);
+
+    expect(errors, 'no console errors').toEqual([]);
+  });
 });

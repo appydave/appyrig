@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { QueueItem } from '@appydave/shared';
+import { UI_PRINCIPAL, type QueueItem, type Refusal, type SeatGetOutput } from '@appydave/shared';
+import { callVerb } from '../fleet/coreCall.js';
+import type { FleetSocket } from '../fleet/useFleet.js';
 import {
   PIP,
   ago,
@@ -68,16 +70,61 @@ function queueFor(t: TileRef): QueueItem[] {
     .slice(0, QUEUE_ROWS);
 }
 
+type SeatCall =
+  | { state: 'pending' }
+  | { state: 'ok'; value: SeatGetOutput }
+  | { state: 'refused'; error: Refusal };
+
+/**
+ * D54: opening Focus is the verb `seat.get` (B13), called once over the socket's `core:call`.
+ * Live updates keep arriving through `fleet:update`; Focus shows whichever of the two is newer
+ * (by the machine's lastSeen). A refusal is shown as data, never swallowed.
+ */
+export function newerTile(tile: TileRef, call: SeatCall): TileRef {
+  if (call.state !== 'ok') return tile;
+  const v = call.value;
+  if (Date.parse(v.lastSeen) <= Date.parse(tile.machine.lastSeen)) return tile;
+  return {
+    ...tile,
+    seat: v.seat,
+    machine: { ...tile.machine, liveness: v.liveness, lastSeen: v.lastSeen },
+  };
+}
+
 interface Props {
   tile: TileRef;
+  socket: FleetSocket;
   now: number;
   hubConnected: boolean;
   onClose: () => void;
 }
 
-export default function Focus({ tile, now, hubConnected, onClose }: Props) {
+export default function Focus({ tile: storeTile, socket, now, hubConnected, onClose }: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
+  const [call, setCall] = useState<SeatCall>({ state: 'pending' });
   const closeRef = useRef<HTMLButtonElement>(null);
+  const machineId = storeTile.machine.machine.id;
+  const seatId = storeTile.seat.id;
+
+  useEffect(() => {
+    let current = true;
+    setCall({ state: 'pending' });
+    void callVerb<SeatGetOutput>(socket, 'seat.get', { machine: machineId, seat: seatId }).then(
+      (answer) => {
+        if (!current) return;
+        setCall(
+          answer.ok
+            ? { state: 'ok', value: answer.value }
+            : { state: 'refused', error: answer.error }
+        );
+      }
+    );
+    return () => {
+      current = false;
+    };
+  }, [socket, machineId, seatId]);
+
+  const tile = newerTile(storeTile, call);
   const { seat, machine } = tile;
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
@@ -97,8 +144,11 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
         onClose();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Capture phase: Focus sees Esc before anything inside it (the terminal's textarea) can
+    // swallow it (QA M1). The keypress that opened Focus is already past window's capture phase
+    // when this attaches, so it cannot close Focus straight away.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
   const w = seat.work;
@@ -123,7 +173,7 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
 
   return (
     <div
-      className="focus"
+      className="focus-view"
       role="dialog"
       aria-modal="true"
       aria-label={`Focus: ${seatName(seat)}`}
@@ -189,6 +239,20 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
         </div>
 
         <aside className="side" data-testid="focus-side" aria-label="Seat details">
+          {call.state === 'refused' && (
+            <section
+              className="because"
+              data-kind="error"
+              data-testid="focus-call"
+              data-state="refused"
+            >
+              <span className="label">seat.get refused · {call.error.failureMode}</span>
+              <span>{call.error.message}</span>
+              <span style={{ fontSize: 12, color: 'var(--ar-ink-muted)' }}>
+                Showing the last state from the live feed instead.
+              </span>
+            </section>
+          )}
           {pip === 'blocked' && (
             <section className="because" data-testid="blocked-because">
               <span className="label">Blocked because</span>
@@ -226,6 +290,11 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
               </div>
             ))}
           </section>
+          {call.state !== 'refused' && (
+            <p className="fresh" data-testid="focus-call" data-state={call.state}>
+              {call.state === 'pending' ? 'seat.get …' : `seat.get · ok · as ${UI_PRINCIPAL}`}
+            </p>
+          )}
           <section>
             <div className="label" style={{ marginBottom: 4 }}>
               Queue · latest {queue.length}

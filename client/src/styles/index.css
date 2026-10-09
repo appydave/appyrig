@@ -72,6 +72,20 @@ a:hover {
   text-transform: uppercase;
   color: var(--ar-ink-muted);
 }
+.api-link {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--ar-line);
+  min-height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+}
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -392,8 +406,12 @@ a:hover {
   border-radius: 8px;
 }
 
-/* ---------- focus ---------- */
-.focus {
+/* ---------- focus ----------
+ * Class names here are prefixed (.focus-view, not .focus): xterm.js adds a bare `focus` class to
+ * its own .xterm element when it has keyboard focus, so a .focus rule would restyle the terminal
+ * (QA M1: it went position:fixed over the whole window).
+ */
+.focus-view {
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -410,7 +428,7 @@ a:hover {
   animation: ar-arrive var(--ar-arrive) var(--ar-ease);
 }
 @media (max-width: 640px) {
-  .focus {
+  .focus-view {
     padding: 14px 16px 20px;
     height: auto;
     overflow: auto;
@@ -485,7 +503,7 @@ a:hover {
 }
 @media (max-width: 900px) {
   /* Narrow: stack the side strip under the terminal and let the page scroll. */
-  .focus {
+  .focus-view {
     height: auto;
     overflow: auto;
   }
@@ -558,6 +576,13 @@ a:hover {
 .because .label {
   color: var(--ar-blocked-ink);
 }
+.because[data-kind='error'] {
+  background: var(--ar-error-bg);
+  border-color: var(--ar-error);
+}
+.because[data-kind='error'] .label {
+  color: var(--ar-error-ink);
+}
 .because[data-kind='asleep'] {
   background: var(--ar-surface-raised);
   border-color: var(--ar-line);
@@ -598,7 +623,7 @@ a:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .dot[data-pulse='true'],
-  .focus {
+  .focus-view {
     animation: none;
   }
   .tile {

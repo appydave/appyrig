@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { TAIL_MAX_LINES } from '@appydave/shared';
+import { stripLinks } from '../fleet/model.js';
 import { trackTerminal } from '../fleet/xtermRegistry.js';
 
 interface Props {
@@ -17,7 +18,8 @@ function cssVar(name: string, fallback: string): string {
 function render(term: Terminal, lines: string[]) {
   term.reset();
   // Hide the cursor: this is a picture of someone else's terminal, not a prompt.
-  term.write('\u001b[?25l' + lines.join('\r\n'));
+  // No live links in the terminal either (r1 L1, QA): OSC 8 is stripped before xterm parses it.
+  term.write('\u001b[?25l' + stripLinks(lines.join('\r\n')));
 }
 
 /**
@@ -59,6 +61,12 @@ export default function FocusTerminal({ lines, hidden }: Props) {
         },
       });
       release = trackTerminal();
+      // Esc and Cmd/Ctrl+Enter belong to Focus (close), not to the terminal. Returning false tells
+      // xterm not to handle or cancel them, so they still reach Focus after a click in the
+      // terminal gave it keyboard focus (QA M1).
+      term.attachCustomKeyEventHandler(
+        (e) => !(e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey)))
+      );
       const fit = new FitAddon();
       term.loadAddon(fit);
       term.open(host);
