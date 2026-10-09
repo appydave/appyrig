@@ -92,7 +92,9 @@ describe('App: Wall and Fleet Strip', () => {
         'data-status',
         t.getAttribute('data-status')
       );
-      expect(within(t).getByTestId('seat-freshness').textContent).toMatch(/^live · \d+s$/);
+      expect(within(t).getByTestId('seat-freshness').textContent).toMatch(
+        t.dataset.status === 'stopped' ? /^stopped · M2 live · \d+s$/ : /^live · \d+s$/
+      );
     }
     expect(screen.queryByTestId('hub-status')).toBeNull();
   });
@@ -227,6 +229,25 @@ describe('App: Focus', () => {
     fireEvent.keyDown(window, { key: 'Enter', metaKey: true });
     expect(screen.queryByTestId('focus-view')).toBeNull();
     expect(xtermCount()).toBe(0);
+  });
+
+  it('QA P5 defect 1: the Cmd+Enter that opens Focus never reaches window', () => {
+    // In a browser, React mounts Focus (and its window Cmd+Enter-closes listener) before the
+    // opening keypress has bubbled to window, so that keypress would close Focus at once. jsdom
+    // defers effects, so assert the mechanism: the opening event must stop before window.
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy'))]));
+    const reachedWindow = vi.fn();
+    window.addEventListener('keydown', reachedWindow);
+    try {
+      fireEvent.keyDown(screen.getAllByTestId('seat-tile')[0], { key: 'Enter', metaKey: true });
+      fireEvent.keyDown(screen.getAllByTestId('seat-tile')[1], { key: 'Enter', ctrlKey: true });
+    } finally {
+      window.removeEventListener('keydown', reachedWindow);
+    }
+    expect(reachedWindow).not.toHaveBeenCalled();
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
   });
 
   it('closing before xterm has loaded leaves no terminal behind', async () => {

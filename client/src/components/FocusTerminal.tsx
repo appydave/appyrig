@@ -92,7 +92,7 @@ export default function FocusTerminal({ lines, hidden }: Props) {
 
   return (
     <div className="focus-terminal" data-testid="focus-terminal" hidden={hidden}>
-      <div ref={hostRef} style={{ height: '100%', minHeight: 520 }} />
+      <div ref={hostRef} className="focus-terminal-host" />
     </div>
   );
 }

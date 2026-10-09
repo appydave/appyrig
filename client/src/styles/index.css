@@ -397,7 +397,10 @@ a:hover {
   position: fixed;
   inset: 0;
   z-index: 10;
-  overflow: auto;
+  /* Desktop: exactly one viewport. The terminal takes the space under the header, so the newest
+     lines (where a blocked prompt sits) are visible without scrolling the page (QA P5 defect 2). */
+  height: 100dvh;
+  overflow: hidden;
   background: var(--ar-canvas);
   box-sizing: border-box;
   padding: 18px 28px 28px;
@@ -409,6 +412,8 @@ a:hover {
 @media (max-width: 640px) {
   .focus {
     padding: 14px 16px 20px;
+    height: auto;
+    overflow: auto;
   }
 }
 @keyframes ar-arrive {
@@ -452,24 +457,50 @@ a:hover {
 }
 .focus-body {
   display: flex;
-  flex-wrap: wrap;
   gap: 16px;
   flex: 1 1 auto;
+  min-height: 0;
   align-items: stretch;
 }
 .focus-main {
-  flex: 999 1 640px;
+  flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 .focus-terminal {
   flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
   background: var(--ar-term-bg-deep);
   border-radius: 8px;
   padding: 14px 16px;
-  min-height: 560px;
   box-sizing: border-box;
+}
+.focus-terminal-host {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  /* Narrow: stack the side strip under the terminal and let the page scroll. */
+  .focus {
+    height: auto;
+    overflow: auto;
+  }
+  .focus-body {
+    flex-direction: column;
+  }
+  .focus-terminal {
+    height: 70dvh;
+    flex: none;
+  }
+  .side {
+    flex: none;
+    max-width: none;
+    overflow: visible;
+  }
 }
 .focus-terminal[hidden],
 .focus-rich[hidden] {
@@ -477,11 +508,12 @@ a:hover {
 }
 .focus-rich {
   flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   background: var(--ar-surface-raised);
   border: 1px solid var(--ar-line);
   border-radius: 8px;
   padding: 8px 32px 24px;
-  min-height: 560px;
   box-sizing: border-box;
 }
 .focus-rich p {
@@ -497,9 +529,10 @@ a:hover {
   color: var(--ar-ink-muted);
 }
 .side {
-  flex: 1 1 300px;
+  flex: 0 1 360px;
   min-width: 0;
   max-width: 420px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;

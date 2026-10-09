@@ -46,6 +46,9 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
       onKeyDown={(e) => {
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault();
+          // Focus closes on Cmd+Enter at window level and is mounted before this native event
+          // finishes bubbling, so the opening keypress must not reach window (QA P5 defect 1).
+          e.stopPropagation();
           onOpen(tileKey);
         }
       }}
@@ -72,7 +75,12 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
         </span>
       )}
       <span className="tile-foot">
-        <span data-testid="seat-freshness">{freshLabel}</span>
+        <span data-testid="seat-freshness" data-stopped={seat.status === 'stopped'}>
+          {/* The label is the machine feed's freshness; on a stopped seat say so (QA m1). */}
+          {seat.status === 'stopped'
+            ? `stopped · ${machine.machine.label} ${freshLabel}`
+            : freshLabel}
+        </span>
         <span title="queue: pending / in progress / blocked">
           q {w.pending}/{w.inProgress}/{w.blocked}
         </span>
