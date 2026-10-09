@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AUTH_ERRORS, FLEET_EVENTS } from '@appydave/shared';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import App from './App.js';
 import { ansiToHtml } from './components/AnsiText.js';
 import { lastTurn, toParagraphs } from './components/Focus.js';
@@ -9,13 +11,24 @@ import { installTestHooks, xtermCount } from './fleet/xtermRegistry.js';
 import { fleetMachine, snapshot, update } from './test/fleetFixtures.js';
 
 // xterm.js needs a real canvas; in jsdom a stand-in records lifecycle and what was written.
-const terminals: { written: string[]; disposed: boolean }[] = [];
+const terminals: {
+  written: string[];
+  disposed: boolean;
+  keyHandler: ((e: KeyboardEvent) => boolean) | null;
+}[] = [];
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
-    rec = { written: [] as string[], disposed: false };
+    rec = {
+      written: [] as string[],
+      disposed: false,
+      keyHandler: null as ((e: KeyboardEvent) => boolean) | null,
+    };
     constructor(opts: { disableStdin?: boolean }) {
       if (!opts.disableStdin) throw new Error('Focus terminal must be read-only');
       terminals.push(this.rec);
+    }
+    attachCustomKeyEventHandler(h: (e: KeyboardEvent) => boolean) {
+      this.rec.keyHandler = h;
     }
     loadAddon() {}
     open() {}
@@ -343,6 +356,53 @@ describe('App: Focus', () => {
     expect(screen.getByTestId('focus-view')).toBeInTheDocument();
   });
 
+  it('QA M1: Esc closes Focus even if something inside it stops the keypress', async () => {
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy'))]));
+    fireEvent.click(screen.getAllByTestId('seat-tile')[0]);
+    const term = screen.getByTestId('focus-terminal');
+    // Stand-in for xterm's textarea swallowing the key once it has keyboard focus.
+    term.addEventListener('keydown', (e) => e.stopPropagation());
+    fireEvent.keyDown(term, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+  });
+
+  it('QA M1: the terminal hands Esc and Cmd/Ctrl+Enter back to Focus, and keeps other keys', async () => {
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy'))]));
+    fireEvent.click(screen.getAllByTestId('seat-tile')[0]);
+    await waitFor(() => expect(terminals[0]?.keyHandler).toBeTypeOf('function'));
+    const handle = terminals[0].keyHandler!;
+    const key = (init: KeyboardEventInit) => new KeyboardEvent('keydown', init);
+    expect(handle(key({ key: 'Escape' }))).toBe(false);
+    expect(handle(key({ key: 'Enter', metaKey: true }))).toBe(false);
+    expect(handle(key({ key: 'Enter', ctrlKey: true }))).toBe(false);
+    expect(handle(key({ key: 'a' }))).toBe(true);
+    expect(handle(key({ key: 'Enter' }))).toBe(true);
+  });
+
+  it('QA L1: OSC 8 links never reach the Focus terminal; their text does', async () => {
+    const fm = fleetMachine(snapshot('roamy'));
+    const seat = fm.snapshot.seats.find((s) => s.status === 'working')!;
+    seat.tail = {
+      ...seat.tail!,
+      lines: ['open \u001b]8;;https://evil.example\u0007the report\u001b]8;;\u0007 now'],
+    };
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([fm]));
+    fireEvent.click(
+      screen.getAllByTestId('seat-tile').find((t) => t.dataset.status === 'working')!
+    );
+    await waitFor(() => expect(terminals[0]?.written.length).toBeGreaterThan(0));
+    const written = terminals[0].written.join('');
+    expect(written).toContain('open the report now');
+    expect(written).not.toContain('\u001b]8');
+    expect(written).not.toContain('evil.example');
+  });
+
   it('closing before xterm has loaded leaves no terminal behind', async () => {
     const { fire } = renderApp();
     fire('connect');
@@ -401,5 +461,12 @@ describe('AnsiText (r1 L1)', () => {
 
   it('escapes HTML in pane text', () => {
     expect(ansiToHtml(['<img src=x onerror=alert(1)>'])).not.toMatch(/<img/);
+  });
+});
+
+describe('class names (QA M1)', () => {
+  it('no stylesheet rule targets a bare .focus class, which xterm.js puts on its own element', () => {
+    const css = readFileSync(path.resolve(__dirname, 'styles/index.css'), 'utf8');
+    expect(css).not.toMatch(/(^|[\s,}])\.focus\s*[{,:]/m);
   });
 });

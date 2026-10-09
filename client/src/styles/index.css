@@ -406,8 +406,12 @@ a:hover {
   border-radius: 8px;
 }
 
-/* ---------- focus ---------- */
-.focus {
+/* ---------- focus ----------
+ * Class names here are prefixed (.focus-view, not .focus): xterm.js adds a bare `focus` class to
+ * its own .xterm element when it has keyboard focus, so a .focus rule would restyle the terminal
+ * (QA M1: it went position:fixed over the whole window).
+ */
+.focus-view {
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -424,7 +428,7 @@ a:hover {
   animation: ar-arrive var(--ar-arrive) var(--ar-ease);
 }
 @media (max-width: 640px) {
-  .focus {
+  .focus-view {
     padding: 14px 16px 20px;
     height: auto;
     overflow: auto;
@@ -499,7 +503,7 @@ a:hover {
 }
 @media (max-width: 900px) {
   /* Narrow: stack the side strip under the terminal and let the page scroll. */
-  .focus {
+  .focus-view {
     height: auto;
     overflow: auto;
   }
@@ -619,7 +623,7 @@ a:hover {
 
 @media (prefers-reduced-motion: reduce) {
   .dot[data-pulse='true'],
-  .focus {
+  .focus-view {
     animation: none;
   }
   .tile {

@@ -120,7 +120,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       )}
       {focused && !focusTile && (
         <div
-          className="focus"
+          className="focus-view"
           role="dialog"
           aria-modal="true"
           data-testid="focus-view"

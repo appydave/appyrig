@@ -144,8 +144,11 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
         onClose();
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Capture phase: Focus sees Esc before anything inside it (the terminal's textarea) can
+    // swallow it (QA M1). The keypress that opened Focus is already past window's capture phase
+    // when this attaches, so it cannot close Focus straight away.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
   const w = seat.work;
@@ -170,7 +173,7 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
 
   return (
     <div
-      className="focus"
+      className="focus-view"
       role="dialog"
       aria-modal="true"
       aria-label={`Focus: ${seatName(seat)}`}

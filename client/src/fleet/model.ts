@@ -214,6 +214,18 @@ export function blockedBecause(seat: Seat): string {
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
 
+/**
+ * OSC 8 hyperlink open/close: ESC ] 8 ; params ; uri (BEL | ESC \\). Stripping them keeps the
+ * link text and drops the link, so no pane can put a live link on screen (r1 L1): used before
+ * ANSI → HTML on tiles and before writing to the Focus terminal.
+ */
+// eslint-disable-next-line no-control-regex
+const OSC8 = /\u001b\]8;[^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+
+export function stripLinks(text: string): string {
+  return text.replace(OSC8, '');
+}
+
 export function stripAnsi(line: string): string {
   return line.replace(ANSI, '');
 }

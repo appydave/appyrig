@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import { AnsiUp } from 'ansi_up';
-
-// OSC 8 hyperlink open/close: ESC ] 8 ; params ; uri (BEL | ESC \\). The link text between them stays.
-// eslint-disable-next-line no-control-regex
-const OSC8 = /\u001b\]8;[^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+import { stripLinks } from '../fleet/model.js';
 
 /**
  * ANSI → HTML for Wall tiles (no xterm on the Wall). ansi_up escapes HTML in the terminal text
@@ -18,7 +15,7 @@ export function ansiToHtml(lines: string[]): string {
   // r1 L1: no live links. OSC 8 wrappers are stripped first (keeping the link text); the empty
   // allowlist is the backstop, so nothing inside a tile (itself a button) navigates anywhere.
   au.url_allowlist = {};
-  return au.ansi_to_html(lines.join('\n').replace(OSC8, ''));
+  return au.ansi_to_html(stripLinks(lines.join('\n')));
 }
 
 interface Props {
