@@ -146,6 +146,36 @@ describe('App: Wall and Fleet Strip', () => {
     expect(screen.getByTestId('blocked-because')).toHaveTextContent('permission prompt');
   });
 
+  it('S4: the strip alert and Focus say what the terminal is asking', () => {
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    const alert = screen.getByTestId('blocked-alert');
+    expect(alert).toHaveTextContent(
+      '▲ blocked · dev-build · Roamy · permission prompt — Allow this read outside the working directories?'
+    );
+    expect(alert).toHaveAttribute(
+      'title',
+      'dev-build on Roamy: permission prompt — Allow this read outside the working directories?'
+    );
+    fireEvent.click(alert);
+    expect(screen.getByTestId('blocked-reason')).toHaveTextContent(
+      'permission prompt — Allow this read outside the working directories?'
+    );
+  });
+
+  it('S4: without a detail, both show the reason alone (older snapshots stay valid)', () => {
+    const fm = fleetMachine(snapshot('roamy--blocked'));
+    for (const seat of fm.snapshot.seats) delete seat.blockedDetail;
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([fm]));
+    const alert = screen.getByTestId('blocked-alert');
+    expect(alert.textContent).toMatch(/permission prompt$/);
+    fireEvent.click(alert);
+    expect(screen.getByTestId('blocked-reason').textContent).toBe('permission prompt');
+  });
+
   it('S2: an asleep machine greys its tiles and nothing reads idle', () => {
     const { fire } = renderApp();
     fire('connect');

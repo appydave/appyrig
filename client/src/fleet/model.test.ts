@@ -4,6 +4,8 @@ import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
 import {
   ago,
   blockedBecause,
+  blockedDetail,
+  blockedLine,
   blockedSeats,
   countSeats,
   findSeat,
@@ -155,6 +157,22 @@ describe('counts and blocked', () => {
     const fm = fleetMachine(snapshot('roamy'));
     expect(findSeat({ roamy: fm }, 'roamy/dev-build@starter')?.seat.id).toBe('dev-build@starter');
     expect(findSeat({ roamy: fm }, 'm2/dev-build@starter')).toBeNull();
+  });
+});
+
+describe('blocked detail (S4)', () => {
+  const seat = (blockedDetail: string | null | undefined) =>
+    ({ blockedReason: 'permission prompt', blockedDetail }) as Seat;
+  it('joins reason and the terminal question', () => {
+    const s = seat('Allow this read outside the working directories?');
+    expect(blockedDetail(s)).toBe('Allow this read outside the working directories?');
+    expect(blockedLine(s)).toBe(
+      'permission prompt — Allow this read outside the working directories?'
+    );
+  });
+  it.each([null, undefined, '   '])('reads %j as no detail: reason alone', (d) => {
+    expect(blockedDetail(seat(d))).toBeNull();
+    expect(blockedLine(seat(d))).toBe('permission prompt');
   });
 });
 

@@ -6,6 +6,7 @@ import {
   PIP,
   ago,
   blockedBecause,
+  blockedDetail,
   freshness,
   modelChip,
   pipFor,
@@ -256,7 +257,10 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
           {pip === 'blocked' && (
             <section className="because" data-testid="blocked-because">
               <span className="label">Blocked because</span>
-              <span>{blockedBecause(seat)}</span>
+              <span data-testid="blocked-reason">
+                <b>{blockedBecause(seat)}</b>
+                {blockedDetail(seat) && <> — {blockedDetail(seat)}</>}
+              </span>
               {seat.recoveryGuidance && <span>{seat.recoveryGuidance}</span>}
               <span style={{ fontSize: 12, color: 'var(--ar-ink-muted)' }}>
                 Answer it in the seat&rsquo;s own terminal. AppyRig only shows it.

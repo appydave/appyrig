@@ -211,6 +211,20 @@ export function blockedBecause(seat: Seat): string {
   return seat.blockedReason ?? seat.activity?.needsInputReason ?? 'needs input (no reason given)';
 }
 
+/**
+ * S4: the question the terminal is showing, when the collector found it ("Allow this read outside
+ * the working directories?"). Optional in the contract; blank or missing reads as none.
+ */
+export function blockedDetail(seat: Seat): string | null {
+  return seat.blockedDetail?.trim() || null;
+}
+
+/** "permission prompt — Allow this read outside the working directories?" (reason alone if no detail). */
+export function blockedLine(seat: Seat): string {
+  const detail = blockedDetail(seat);
+  return detail ? `${blockedBecause(seat)} — ${detail}` : blockedBecause(seat);
+}
+
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
 

@@ -1,6 +1,8 @@
 import type { FleetMachine } from '@appydave/shared';
 import {
   blockedBecause,
+  blockedDetail,
+  blockedLine,
   blockedSeats,
   countSeats,
   freshness,
@@ -113,9 +115,17 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
             type="button"
             className="alert"
             data-testid="blocked-alert"
+            title={`${seatName(t.seat)} on ${t.machine.machine.label}: ${blockedLine(t.seat)}`}
             onClick={() => onOpen(t.key)}
           >
             ▲ blocked · {seatName(t.seat)} · {t.machine.machine.label} · {blockedBecause(t.seat)}
+            {blockedDetail(t.seat) && (
+              // Long questions are cut with an ellipsis by CSS; the title has the full text.
+              <>
+                {' '}
+                <span className="alert-detail">— {blockedDetail(t.seat)}</span>
+              </>
+            )}
           </button>
         ))}
         {blocked.length > MAX_BLOCKED_ALERTS && (

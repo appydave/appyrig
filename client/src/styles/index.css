@@ -177,6 +177,27 @@ a:hover {
   white-space: nowrap;
   cursor: pointer;
 }
+.alert-detail {
+  display: inline-block;
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+@media (max-width: 640px) {
+  /* .alert is inline-flex, which would make the detail its own column; let the text flow. */
+  .alert {
+    display: block;
+    white-space: normal;
+    text-align: left;
+  }
+  .alert-detail {
+    display: inline;
+    max-width: none;
+    white-space: normal;
+  }
+}
 .alert[data-kind='error'] {
   background: var(--ar-error-bg);
   border-color: var(--ar-error);
