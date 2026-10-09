@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "npm run build -w shared && concurrently --kill-others -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w shared && npm run build -w server && NODE_ENV=production npm run build -w client && npm run build -w collector",
-    "test": "npm run test -w server -w client -w collector",
+    "test": "npm run test -w server -w client -w collector && npm run test:root",
     "test:coverage": "npm run test:coverage -w server -w client",
     "test:e2e": "playwright test",
     "lint": "eslint .",
@@ -28,7 +28,8 @@
     "api:check": "tsx scripts/gen-api.ts --check",
     "arch:check": "depcruise shared/src server/src server/scripts client/src collector/src --config .dependency-cruiser.cjs && node scripts/arch-strings.mjs",
     "fake-collector": "node server/scripts/fake-collector.mjs",
-    "api:gen": "tsx scripts/gen-api.ts"
+    "api:gen": "tsx scripts/gen-api.ts",
+    "test:root": "vitest run --config test/root/vitest.config.ts"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",
