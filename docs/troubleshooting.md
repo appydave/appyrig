@@ -7,6 +7,7 @@ Common problems and how to fix them.
 ## EADDRINUSE: address already in use
 
 **Symptom**: Server crashes on startup with:
+
 ```
 Error: listen EADDRINUSE: address already in use :::5501
 ```
@@ -46,11 +47,12 @@ Fix: make sure no server writes happen inside `server/src/`. All runtime data (J
 ```
 
 **Path construction in `server/src/data/fileStore.ts`**:
+
 ```ts
-import path from 'path'
+import path from 'path';
 
 // process.cwd() = server/ when nodemon runs, so '../data' = monorepo root /data
-const DATA_ROOT = process.env.DATA_DIR ?? path.resolve(process.cwd(), '..', 'data')
+const DATA_ROOT = process.env.DATA_DIR ?? path.resolve(process.cwd(), '..', 'data');
 ```
 
 Override with `DATA_DIR` env var if your deployment has a different layout.
@@ -74,11 +76,13 @@ Override with `DATA_DIR` env var if your deployment has a different layout.
 **Symptom**: `tsc` errors saying the new type can't be found, even though you added it to `shared/src/types.ts`.
 
 **Fix**: Rebuild shared before server/client:
+
 ```bash
 npm run build -w shared
 ```
 
 Or run the full build in dependency order:
+
 ```bash
 npm run build
 ```
@@ -92,6 +96,7 @@ The full build always rebuilds shared first. In dev (`npm run dev`), shared is c
 **Symptom**: Production build fails at runtime with "Cannot find module '@shared/...'" or similar path alias errors.
 
 **Fix**: The server build must run `tsc-alias` after `tsc`:
+
 ```bash
 tsc && tsc-alias
 ```

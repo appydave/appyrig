@@ -7,11 +7,11 @@ export function validate(schema: { body?: z.ZodType; query?: z.ZodType; params?:
       if (schema.body) req.body = schema.body.parse(req.body);
       // Express 5: req.query is a getter — use Object.assign to mutate in place
       if (schema.query) Object.assign(req.query, schema.query.parse(req.query));
-      if (schema.params) req.params = schema.params.parse(req.params);
+      if (schema.params) req.params = schema.params.parse(req.params) as Request['params'];
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        const message = err.errors.map((e) => e.message).join('; ');
+        const message = err.issues.map((e) => e.message).join('; ');
         res
           .status(400)
           .json({ status: 'error', error: message, timestamp: new Date().toISOString() });

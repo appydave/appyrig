@@ -27,11 +27,13 @@ appystack-migrations/
 ## The Git Anchor
 
 The initial scaffold commit IS the baseline. Every consumer app starts with:
+
 ```
 548f6fa chore: initial scaffold from create-appystack
 ```
 
 To check if a file has been customised since scaffold:
+
 ```bash
 git diff 548f6fa -- server/src/middleware/errorHandler.ts
 ```
@@ -42,6 +44,7 @@ git diff 548f6fa -- server/src/middleware/errorHandler.ts
 ## File Classification
 
 ### Auto-updatable (safe to overwrite if unchanged)
+
 - `server/src/middleware/` — errorHandler, rateLimiter, requestLogger, validate
 - `.github/workflows/ci.yml` — generic CI
 - `eslint.config.js`, `tsconfig.json` files — extend from config package
@@ -50,11 +53,13 @@ git diff 548f6fa -- server/src/middleware/errorHandler.ts
 - `client/src/lib/entitySocket.ts` — singleton
 
 ### Config-package-inherited (already auto-upgrade via npm)
+
 - `eslint.config.js` (imports from `@appydave/appystack-config`)
 - `tsconfig.json` files (extends from config package)
 - `.prettierrc` (points to config package)
 
 ### Never auto-update (project owns these)
+
 - `package.json` files (scopes, names, dependencies)
 - `shared/src/types.ts` (domain model)
 - `server/src/routes/` (except health/info)
@@ -97,6 +102,7 @@ been customised since scaffold. It happened to be safe this time — but it coul
 deleted project-specific content.
 
 **What `npx appystack-upgrade` would have done instead:**
+
 1. `git diff <scaffold-commit> -- .claude/skills/recipe/SKILL.md`
 2. If modified → show diff, ask "merge manually or skip?"
 3. New recipe reference files → add automatically (they're net-new, no conflict possible)
@@ -114,6 +120,7 @@ upgrade tool needs to do safely. Each time it happens manually, capture the case
 ### How it works
 
 Run from inside any AppyStack consumer app:
+
 ```bash
 npx appystack-upgrade
 # or with flags:
@@ -122,6 +129,7 @@ npx appystack-upgrade --template-path /path/to/tpl   # use local template (dev/m
 ```
 
 ### What it does
+
 1. Detects `appystack.json` (written at scaffold time) — or scans git log for scaffold commit — or prompts
 2. Walks the bundled AppyStack template (108 files)
 3. Classifies each file: `auto` | `never` | `recipe`
@@ -131,11 +139,11 @@ npx appystack-upgrade --template-path /path/to/tpl   # use local template (dev/m
 
 ### File classification (implemented)
 
-| Tier | Files | Behaviour |
-|------|-------|-----------|
-| `auto` | Middleware, CI workflow, useSocket hook | Auto-update if unchanged since scaffold, prompt if modified |
-| `never` | package.json, types.ts, pages, components, env.ts, routes | Always skip — project owns these |
-| `recipe` | `.claude/skills/recipe/**` | New files auto-add; SKILL.md always prompts; existing refs use diff engine |
+| Tier     | Files                                                     | Behaviour                                                                  |
+| -------- | --------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `auto`   | Middleware, CI workflow, useSocket hook                   | Auto-update if unchanged since scaffold, prompt if modified                |
+| `never`  | package.json, types.ts, pages, components, env.ts, routes | Always skip — project owns these                                           |
+| `recipe` | `.claude/skills/recipe/**`                                | New files auto-add; SKILL.md always prompts; existing refs use diff engine |
 
 ### Known limitation — retrofit scaffold apps
 
@@ -144,6 +152,7 @@ Apps created via merge-mode (`create-appystack` into an existing directory) have
 **Future improvement**: version-tagged template diffs (compare template@v0.3.0 vs template@latest) would allow detecting structural changes independently of project customisation. Implement when a meaningful template version bump occurs.
 
 ### Tested against
+
 - ThumbRack — true scaffold consumer ✔
 - DeckHand — retrofit scaffold ✔
 - Signal Studio — hand-migrated (no scaffold commit) — prompt fallback ✔

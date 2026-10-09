@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: 'list',
   use: {
     headless: true,
-    baseURL: 'http://localhost:5500',
+    // Each lane / QA copy points at its own client port (MISSION.md); default = main's client.
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:7190',
   },
 });

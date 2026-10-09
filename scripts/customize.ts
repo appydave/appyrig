@@ -168,8 +168,16 @@ async function main(): Promise<void> {
   let startSh = readFile('scripts/start.sh');
   startSh = replaceAll(startSh, `:${oldServerPort}`, `:${serverPort}`);
   startSh = replaceAll(startSh, `localhost:${oldClientPort}`, `localhost:${clientPort}`);
-  startSh = replaceAll(startSh, `client: ${oldClientPort}, server: ${oldServerPort}`, `client: ${clientPort}, server: ${serverPort}`);
-  startSh = replaceAll(startSh, `ports ${oldClientPort}/${oldServerPort}`, `ports ${clientPort}/${serverPort}`);
+  startSh = replaceAll(
+    startSh,
+    `client: ${oldClientPort}, server: ${oldServerPort}`,
+    `client: ${clientPort}, server: ${serverPort}`
+  );
+  startSh = replaceAll(
+    startSh,
+    `ports ${oldClientPort}/${oldServerPort}`,
+    `ports ${clientPort}/${serverPort}`
+  );
   startSh = replaceAll(startSh, oldTitle, name);
   writeFile('scripts/start.sh', startSh);
 

@@ -5,3 +5,9 @@ coverage
 package-lock.json
 test-results
 playwright-report
+.openrig
+.claude
+.agents
+.codex
+test/fixtures
+CLAUDE.local.md

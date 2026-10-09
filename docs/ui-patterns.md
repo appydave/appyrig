@@ -11,6 +11,7 @@ Recurring UI patterns validated in production AppyStack apps. These are not fram
 A standard form field has two states: empty or filled. This is insufficient for domain-rich applications where "not yet answered" and "this doesn't apply to this person" are meaningfully different.
 
 If a participant's emergency contact field is blank, does that mean:
+
 - (a) Nobody has filled it in yet, or
 - (b) This participant has no emergency contact?
 
@@ -20,33 +21,33 @@ These are operationally different. A blank field that means "unknown" creates an
 
 Every profile field group can be in one of three states:
 
-| State | Visual | Meaning |
-|-------|--------|---------|
-| **Unanswered** | Grey / no content | Nobody has filled this in yet |
+| State              | Visual                  | Meaning                                              |
+| ------------------ | ----------------------- | ---------------------------------------------------- |
+| **Unanswered**     | Grey / no content       | Nobody has filled this in yet                        |
 | **Not applicable** | Marked, distinct colour | Explicitly confirmed as not relevant for this person |
-| **Populated** | Content visible | Data entered and saved |
+| **Populated**      | Content visible         | Data entered and saved                               |
 
 ### Implementation
 
 ```typescript
 // shared/src/types.ts
-type FieldGroupState = 'unanswered' | 'not-applicable' | 'populated'
+type FieldGroupState = 'unanswered' | 'not-applicable' | 'populated';
 
 interface ProfileFieldGroup {
-  state: FieldGroupState
-  content?: string    // only present when state === 'populated'
-  markedAt?: string   // ISO timestamp when marked not-applicable
+  state: FieldGroupState;
+  content?: string; // only present when state === 'populated'
+  markedAt?: string; // ISO timestamp when marked not-applicable
 }
 ```
 
 ```tsx
 // client/src/components/ProfileFieldGroup.tsx
 interface Props {
-  label: string
-  group: ProfileFieldGroup
-  onEdit: () => void
-  onMarkNotApplicable: () => void
-  onUnmark: () => void
+  label: string;
+  group: ProfileFieldGroup;
+  onEdit: () => void;
+  onMarkNotApplicable: () => void;
+  onUnmark: () => void;
 }
 
 export function ProfileFieldGroup({ label, group, onEdit, onMarkNotApplicable, onUnmark }: Props) {
@@ -55,9 +56,11 @@ export function ProfileFieldGroup({ label, group, onEdit, onMarkNotApplicable, o
       <div className="field-group field-group--not-applicable">
         <span className="field-group__label">{label}</span>
         <span className="field-group__badge">Not applicable</span>
-        <button onClick={onUnmark} className="field-group__action">Undo</button>
+        <button onClick={onUnmark} className="field-group__action">
+          Undo
+        </button>
       </div>
-    )
+    );
   }
 
   if (group.state === 'populated') {
@@ -65,21 +68,28 @@ export function ProfileFieldGroup({ label, group, onEdit, onMarkNotApplicable, o
       <div className="field-group field-group--populated">
         <span className="field-group__label">{label}</span>
         <p className="field-group__content">{group.content}</p>
-        <button onClick={onEdit} className="field-group__action">Edit</button>
+        <button onClick={onEdit} className="field-group__action">
+          Edit
+        </button>
       </div>
-    )
+    );
   }
 
   // unanswered
   return (
     <div className="field-group field-group--unanswered">
       <span className="field-group__label">{label}</span>
-      <button onClick={onEdit} className="field-group__action">Add</button>
-      <button onClick={onMarkNotApplicable} className="field-group__action field-group__action--secondary">
+      <button onClick={onEdit} className="field-group__action">
+        Add
+      </button>
+      <button
+        onClick={onMarkNotApplicable}
+        className="field-group__action field-group__action--secondary"
+      >
         Not applicable
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -87,14 +97,23 @@ export function ProfileFieldGroup({ label, group, onEdit, onMarkNotApplicable, o
 
 ```css
 /* client/src/styles/index.css — field group states */
-.field-group--unanswered { border-left: 3px solid var(--color-grey-300); opacity: 0.7; }
-.field-group--not-applicable { border-left: 3px solid var(--color-amber-400); background: var(--color-amber-50); }
-.field-group--populated { border-left: 3px solid var(--color-green-500); }
+.field-group--unanswered {
+  border-left: 3px solid var(--color-grey-300);
+  opacity: 0.7;
+}
+.field-group--not-applicable {
+  border-left: 3px solid var(--color-amber-400);
+  background: var(--color-amber-50);
+}
+.field-group--populated {
+  border-left: 3px solid var(--color-green-500);
+}
 ```
 
 ### UAT Test Cases
 
 Three-state fields require explicit test coverage for each state transition. See `docs/uat/` — any profile-related test file should include:
+
 - Marking a field as not-applicable
 - Undoing a not-applicable marking
 - Adding content to a previously unanswered field
@@ -129,7 +148,7 @@ The goal is to make it faster to capture a full narrative than to leave the fiel
 // Narrative-first: textarea top, structured fields below
 
 export function ProfileSection({ label, content, onSave }: Props) {
-  const [text, setText] = useState(content ?? '')
+  const [text, setText] = useState(content ?? '');
 
   return (
     <section className="profile-section">
@@ -138,7 +157,7 @@ export function ProfileSection({ label, content, onSave }: Props) {
       {/* Primary: large textarea */}
       <textarea
         value={text}
-        onChange={e => setText(e.target.value)}
+        onChange={(e) => setText(e.target.value)}
         onBlur={() => onSave(text)}
         rows={6}
         placeholder="Write anything that matters. Two minutes is enough to capture the essentials."
@@ -150,7 +169,7 @@ export function ProfileSection({ label, content, onSave }: Props) {
         {/* e.g. severity picker, date, boolean flags */}
       </div>
     </section>
-  )
+  );
 }
 ```
 
@@ -190,6 +209,7 @@ A dedicated read-only view (not an edit form) that surfaces:
 6. **Who to call** — emergency contact + on-call support
 
 Layout principles:
+
 - Max 1 page when printed (A4 landscape or portrait)
 - Colour coding for severity (red = critical, amber = caution, green = routine)
 - No horizontal scrolling
@@ -206,7 +226,9 @@ export function ParticipantSummary({ participant, profile }: Props) {
     <div className="handover-sheet" data-print-ready>
       {/* Zone 1: Identity */}
       <header className="handover-sheet__identity">
-        <h1>{participant.firstName} {participant.lastName}</h1>
+        <h1>
+          {participant.firstName} {participant.lastName}
+        </h1>
         <p className="handover-sheet__pronouns">{participant.pronouns}</p>
       </header>
 
@@ -226,7 +248,7 @@ export function ParticipantSummary({ participant, profile }: Props) {
         <HandoverSection title="Who to call" content={profile.emergencyContact} />
       </div>
     </div>
-  )
+  );
 }
 ```
 
@@ -240,11 +262,15 @@ export function ParticipantSummary({ participant, profile }: Props) {
     page-break-after: always;
   }
   .handover-sheet__alerts--critical {
-    background: #fff3cd;  /* amber, print-safe */
+    background: #fff3cd; /* amber, print-safe */
     border: 2px solid #856404;
   }
   /* Hide nav and controls when printing */
-  nav, button, .sidebar { display: none !important; }
+  nav,
+  button,
+  .sidebar {
+    display: none !important;
+  }
 }
 ```
 

@@ -6,10 +6,10 @@ AI agent context for an AppyStack project.
 
 This CLAUDE.md means you are **inside an existing AppyStack app**. Two skills exist for AppyStack — do not confuse them:
 
-| Skill | Purpose | Use when |
-|-------|---------|----------|
-| `recipe` | Scaffold features *within* this app | You're here, building something |
-| `create-appystack` | Create a *new* AppyStack project | Navigate to a parent dir first |
+| Skill              | Purpose                             | Use when                        |
+| ------------------ | ----------------------------------- | ------------------------------- |
+| `recipe`           | Scaffold features _within_ this app | You're here, building something |
+| `create-appystack` | Create a _new_ AppyStack project    | Navigate to a parent dir first  |
 
 **If asked to "create a new AppyStack app" while inside this project**: stop, remind the user to navigate up first, then use `create-appystack`.
 
@@ -43,9 +43,10 @@ Runtime-written files live at the **monorepo root** in `data/`, never inside any
 **Why**: nodemon watches `server/src/**/*.ts` for code changes. Any file written inside `src/` triggers a server restart. If the restart races before the old process releases the port, you get `EADDRINUSE` crashes.
 
 **Path construction in server code** (data is one level up from `server/`):
+
 ```ts
-import path from 'path'
-const DATA_ROOT = process.env.DATA_DIR ?? path.resolve(process.cwd(), '..', 'data')
+import path from 'path';
+const DATA_ROOT = process.env.DATA_DIR ?? path.resolve(process.cwd(), '..', 'data');
 ```
 
 `process.cwd()` is `server/` when nodemon runs, so `..` goes to the monorepo root. Override via `DATA_DIR` env var if needed.
@@ -55,10 +56,12 @@ const DATA_ROOT = process.env.DATA_DIR ?? path.resolve(process.cwd(), '..', 'dat
 ## Dev Server Management
 
 Before starting any dev server, check if it's already running:
+
 ```bash
 lsof -i :CLIENT_PORT | grep LISTEN
 lsof -i :SERVER_PORT | grep LISTEN
 ```
+
 If a process is listed, the service is UP — **do not restart it, do not change ports**.
 Never kill a running dev server unless explicitly asked.
 Never change port numbers from what is defined in `.env`.

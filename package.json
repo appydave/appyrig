@@ -7,22 +7,27 @@
   "workspaces": [
     "shared",
     "server",
-    "client"
+    "client",
+    "collector"
   ],
   "scripts": {
     "dev": "npm run build -w shared && concurrently --kill-others -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
-    "test": "npm run test -w server -w client",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w client && npm run build -w collector",
+    "test": "npm run test -w server -w client -w collector",
     "test:coverage": "npm run test:coverage -w server -w client",
     "test:e2e": "playwright test",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "npm run typecheck -w shared -w server -w client",
+    "typecheck": "npm run typecheck -w shared -w server -w client -w collector",
     "clean": "rm -rf node_modules shared/dist server/dist client/dist",
     "prepare": "husky",
-    "customize": "tsx scripts/customize.ts"
+    "customize": "tsx scripts/customize.ts",
+    "test:contract": "node scripts/stub.mjs test:contract collector 'P1: strict Zod schemas of OpenRig shapes + rename-proof test (AC 3)'",
+    "api:check": "node scripts/stub.mjs api:check collector 'P4: OpenRPC drift gate (AC 8, B12)'",
+    "arch:check": "depcruise shared/src server/src server/scripts client/src collector/src --config .dependency-cruiser.cjs && node scripts/arch-strings.mjs",
+    "fake-collector": "node server/scripts/fake-collector.mjs"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",
@@ -32,6 +37,7 @@
     "@typescript-eslint/eslint-plugin": "^8.63.0",
     "@typescript-eslint/parser": "^8.63.0",
     "concurrently": "^10.0.3",
+    "dependency-cruiser": "^18.5.0",
     "eslint": "^9.39.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",

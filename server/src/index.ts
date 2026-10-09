@@ -1,6 +1,5 @@
 import express from 'express';
 import { createServer } from 'node:http';
-import { execSync } from 'node:child_process';
 import { join, dirname } from 'node:path'; // used for production static file serving below
 import { fileURLToPath } from 'node:url';
 import { Server } from 'socket.io';
@@ -14,6 +13,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 import healthRouter from './routes/health.js';
 import infoRouter from './routes/info.js';
+import { attachCollectorIngest } from './hub/collectorIngest.js';
 import type { ServerToClientEvents, ClientToServerEvents } from '@appydave/shared';
 import { SOCKET_EVENTS } from '@appydave/shared';
 
@@ -67,6 +67,10 @@ app.use((_req, res) => {
 // Global error handler — must be last middleware (4 params)
 app.use(errorHandler);
 
+// Collector seam (P0b skeleton; the hub lane owns it from P3)
+if (!env.HUB_TOKEN) logger.warn('HUB_TOKEN is not set: every collector will be refused');
+attachCollectorIngest(io as unknown as Server, { hubToken: env.HUB_TOKEN });
+
 // Socket.io
 io.on('connection', (socket) => {
   // Auth pattern — uncomment and adapt for your app:
@@ -97,24 +101,17 @@ io.on('connection', (socket) => {
   });
 });
 
-function cleanupPort(port: number | string): void {
-  try {
-    const result = execSync(`lsof -ti:${port} 2>/dev/null || true`, { encoding: 'utf-8' });
-    const pids = result.trim().split('\n').filter(Boolean);
-    if (pids.length > 0) {
-      logger.info(`Cleaning up port ${port}: killing PIDs ${pids.join(', ')}`);
-      for (const pid of pids) {
-        try { execSync(`kill -9 ${pid} 2>/dev/null || true`); } catch { /* already gone */ }
-      }
-      execSync('sleep 0.5');
-    }
-  } catch { /* lsof unavailable, continue */ }
-}
-
 // Start server — skip in test environment to prevent EADDRINUSE when multiple
 // test files import this module. Tests use supertest with app directly.
 if (!env.isTest) {
-  cleanupPort(env.PORT);
+  // Never kill whatever holds the port: lanes and QA copies share this machine (MISSION ports).
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    logger.fatal(
+      { err },
+      `Cannot listen on ${env.PORT}${err.code === 'EADDRINUSE' ? ' (port in use — check .env PORT)' : ''}`
+    );
+    process.exit(1);
+  });
   httpServer.listen(env.PORT, () => {
     logger.info(`Server running on http://localhost:${env.PORT}`);
     logger.info(`Client URL: ${env.CLIENT_URL}`);

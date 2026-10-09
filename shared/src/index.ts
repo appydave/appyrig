@@ -6,3 +6,5 @@ export type {
   ClientToServerEvents,
 } from './types.js';
 export { ROUTES, SOCKET_EVENTS } from './constants.js';
+export * from './snapshot.js';
+export * from './events.js';

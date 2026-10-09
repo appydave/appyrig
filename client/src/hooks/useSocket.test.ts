@@ -40,7 +40,7 @@ describe('useSocket', () => {
 
   it('updates connected state on connect event', () => {
     const { result } = renderHook(() => useSocket());
-    const connectHandler = mockSocket.on.mock.calls.find(c => c[0] === 'connect')?.[1];
+    const connectHandler = mockSocket.on.mock.calls.find((c) => c[0] === 'connect')?.[1];
     act(() => connectHandler?.());
     expect(result.current.connected).toBe(true);
   });

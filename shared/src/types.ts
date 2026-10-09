@@ -24,6 +24,7 @@ export interface ServerInfo {
 
 /** Socket.io events emitted from server to client. */
 export interface ServerToClientEvents {
+  'fleet:update': (update: import('./snapshot.js').FleetUpdate) => void;
   'server:pong': (data: { message: string; timestamp: string }) => void;
   'entity:list:result': (data: { entity: string; records: unknown[] }) => void;
   'entity:get:result': (data: { entity: string; record: unknown }) => void;

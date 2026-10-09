@@ -1,0 +1,2111 @@
+{
+ "schemaVersion": 1,
+ "machine": {
+  "id": "m2",
+  "label": "M2",
+  "hostname": null
+ },
+ "collectedAt": "2026-10-09T13:24:44.000Z",
+ "collector": {
+  "version": "fixture",
+  "pid": null
+ },
+ "sources": {
+  "daemon": {
+   "ok": true,
+   "error": null,
+   "version": "0.6.6"
+  },
+  "tmux": {
+   "ok": false,
+   "error": "no tmux server running",
+   "version": null
+  },
+  "viewer": {
+   "ok": false,
+   "error": "viewer not running",
+   "version": null
+  }
+ },
+ "rigs": [
+  {
+   "id": "01M4G7K05M67G7TS46MKZM6HEG",
+   "name": "control",
+   "status": "stopped",
+   "lifecycleState": "recoverable",
+   "nodeCount": 1,
+   "runningCount": 0,
+   "attentionCount": 0
+  },
+  {
+   "id": "01M4E0QN76QG74M6AEG5XH2GRK",
+   "name": "factory-claude",
+   "status": "stopped",
+   "lifecycleState": "recoverable",
+   "nodeCount": 4,
+   "runningCount": 0,
+   "attentionCount": 0
+  },
+  {
+   "id": "01M4G3N3DZG0PKJ1PPF401NH0A",
+   "name": "fliedit-team",
+   "status": "stopped",
+   "lifecycleState": "recoverable",
+   "nodeCount": 5,
+   "runningCount": 0,
+   "attentionCount": 0
+  },
+  {
+   "id": "01M4DZNH353R95ADJ00CFZQZXC",
+   "name": "kernel",
+   "status": "stopped",
+   "lifecycleState": "recoverable",
+   "nodeCount": 4,
+   "runningCount": 0,
+   "attentionCount": 0
+  },
+  {
+   "id": "01M4G3X8YBND7KDX60V8Q80AE8",
+   "name": "skool-research",
+   "status": "stopped",
+   "lifecycleState": "recoverable",
+   "nodeCount": 2,
+   "runningCount": 0,
+   "attentionCount": 0
+  },
+  {
+   "id": "01M4DZPNH31QX680ZGRJ9S1ER3",
+   "name": "starter",
+   "status": "stopped",
+   "lifecycleState": "recoverable",
+   "nodeCount": 2,
+   "runningCount": 0,
+   "attentionCount": 0
+  }
+ ],
+ "seats": [
+  {
+   "id": "orch-boss@control",
+   "source": "openrig",
+   "rig": "control",
+   "pod": "orch",
+   "logicalId": "orch.boss",
+   "runtime": "claude-code",
+   "model": "claude-sonnet-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 8,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/brains/openrig/rigs/control",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "orch-lead@factory-claude",
+   "source": "openrig",
+   "rig": "factory-claude",
+   "pod": "orch",
+   "logicalId": "orch.lead",
+   "runtime": "claude-code",
+   "model": "claude-opus-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 11,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-build@factory-claude",
+   "source": "openrig",
+   "rig": "factory-claude",
+   "pod": "dev",
+   "logicalId": "dev.build",
+   "runtime": "claude-code",
+   "model": "claude-sonnet-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 10,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-qa@factory-claude",
+   "source": "openrig",
+   "rig": "factory-claude",
+   "pod": "dev",
+   "logicalId": "dev.qa",
+   "runtime": "claude-code",
+   "model": "claude-opus-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 12,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "review-r1@factory-claude",
+   "source": "openrig",
+   "rig": "factory-claude",
+   "pod": "review",
+   "logicalId": "review.r1",
+   "runtime": "claude-code",
+   "model": "claude-fable-5-1",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 13,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "orch-lead@fliedit-team",
+   "source": "openrig",
+   "rig": "fliedit-team",
+   "pod": "orch",
+   "logicalId": "orch.lead",
+   "runtime": "claude-code",
+   "model": "claude-opus-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 22,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-overlay@fliedit-team",
+   "source": "openrig",
+   "rig": "fliedit-team",
+   "pod": "dev",
+   "logicalId": "dev.overlay",
+   "runtime": "claude-code",
+   "model": "claude-sonnet-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 28,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit-worktrees/overlay",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-viewer@fliedit-team",
+   "source": "openrig",
+   "rig": "fliedit-team",
+   "pod": "dev",
+   "logicalId": "dev.viewer",
+   "runtime": "claude-code",
+   "model": "claude-opus-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 44,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit-worktrees/viewer",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-qa@fliedit-team",
+   "source": "openrig",
+   "rig": "fliedit-team",
+   "pod": "dev",
+   "logicalId": "dev.qa",
+   "runtime": "claude-code",
+   "model": "claude-opus-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 38,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "review-r1@fliedit-team",
+   "source": "openrig",
+   "rig": "fliedit-team",
+   "pod": "review",
+   "logicalId": "review.r1",
+   "runtime": "claude-code",
+   "model": "claude-fable-5-1",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 49,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "advisor-lead@kernel",
+   "source": "openrig",
+   "rig": "kernel",
+   "pod": "advisor",
+   "logicalId": "advisor.lead",
+   "runtime": "claude-code",
+   "model": null,
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 7,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/.openrig/workspace",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "operator-agent@kernel",
+   "source": "openrig",
+   "rig": "kernel",
+   "pod": "operator",
+   "logicalId": "operator.agent",
+   "runtime": "codex",
+   "model": null,
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 10,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/.openrig/workspace",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "operator-human@kernel",
+   "source": "openrig",
+   "rig": "kernel",
+   "pod": "operator",
+   "logicalId": "operator.human",
+   "runtime": "terminal",
+   "model": null,
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "detached",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": null,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/.openrig/workspace",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "queue-worker@kernel",
+   "source": "openrig",
+   "rig": "kernel",
+   "pod": "queue",
+   "logicalId": "queue.worker",
+   "runtime": "codex",
+   "model": null,
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 12,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/.openrig/workspace",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "research-scout@skool-research",
+   "source": "openrig",
+   "rig": "skool-research",
+   "pod": "research",
+   "logicalId": "research.scout",
+   "runtime": "claude-code",
+   "model": "claude-opus-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 19,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/brains/skool",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "research-checker@skool-research",
+   "source": "openrig",
+   "rig": "skool-research",
+   "pod": "research",
+   "logicalId": "research.checker",
+   "runtime": "claude-code",
+   "model": "claude-sonnet-5-5",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 14,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/brains/skool",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-build@starter",
+   "source": "openrig",
+   "rig": "starter",
+   "pod": "dev",
+   "logicalId": "dev.build",
+   "runtime": "claude-code",
+   "model": null,
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 9,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
+   "recoveryGuidance": null,
+   "tail": null
+  },
+  {
+   "id": "dev-review@starter",
+   "source": "openrig",
+   "rig": "starter",
+   "pod": "dev",
+   "logicalId": "dev.review",
+   "runtime": "codex",
+   "model": "gpt-5.6-terra",
+   "status": "stopped",
+   "blockedReason": null,
+   "lifecycleState": "recoverable",
+   "sessionStatus": "exited",
+   "viewerStatus": null,
+   "lastActivityAt": null,
+   "contextUsedPct": 22,
+   "work": {
+    "pending": 0,
+    "inProgress": 0,
+    "blocked": 0
+   },
+   "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
+   "recoveryGuidance": null,
+   "tail": null
+  }
+ ],
+ "queue": [
+  {
+   "id": "qitem-20261009114638-aa49d01e4a9d2e0b",
+   "source": "test-team@m2",
+   "destination": "orch-boss@control",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "report"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:46:38.256Z",
+   "updatedAt": "2026-10-09T11:46:45.490Z"
+  },
+  {
+   "id": "qitem-20261009114444-8c773acab1c65703",
+   "source": "openrig-orch@roamy",
+   "destination": "orch-boss@control",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "hub-test"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:44:44.463Z",
+   "updatedAt": "2026-10-09T11:44:52.977Z"
+  },
+  {
+   "id": "qitem-20261009114334-6f09822627fc26d0",
+   "source": "openrig-orch@roamy",
+   "destination": "orch-boss@control",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "hub-test"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:43:34.583Z",
+   "updatedAt": "2026-10-09T11:43:43.904Z"
+  },
+  {
+   "id": "qitem-20261009113022-d500971f",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "r1 WAVE ACCEPTED: viewer f3d987d mergeable into main 3c302d8; trial merge clean, all gates green on the merged tree.",
+   "createdAt": "2026-10-09T11:30:22.609Z",
+   "updatedAt": "2026-10-09T11:30:35.594Z"
+  },
+  {
+   "id": "qitem-20261009113022-38c5ffa9",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.12"
+   ],
+   "summary": "r1 ACCEPTED T-FE7 f3d987d. No findings.",
+   "createdAt": "2026-10-09T11:30:22.328Z",
+   "updatedAt": "2026-10-09T11:30:35.063Z"
+  },
+  {
+   "id": "qitem-20261009112644-6205a071b26375f2",
+   "source": "orch-lead@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "Wave review: viewer lane tip f3d987d before merge",
+   "createdAt": "2026-10-09T11:26:44.391Z",
+   "updatedAt": "2026-10-09T11:30:22.609Z"
+  },
+  {
+   "id": "qitem-20261009112632-91bfdd78",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.12"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:26:32.709Z",
+   "updatedAt": "2026-10-09T11:30:22.328Z"
+  },
+  {
+   "id": "qitem-recovery-530c8900afc652d2",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-viewer@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009104129-c94e141e0642401a",
+    "recovery-for:qitem-20261009104129-c94e141e0642401a"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009104129-c94e141e0642401a (2 min)",
+   "createdAt": "2026-10-09T11:26:21.906Z",
+   "updatedAt": "2026-10-09T11:28:44.949Z"
+  },
+  {
+   "id": "qitem-20261009112334-3216830c53ed4226",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.12"
+   ],
+   "summary": "QA T-FE7 view family: pinned + console (f3d987d)",
+   "createdAt": "2026-10-09T11:23:34.595Z",
+   "updatedAt": "2026-10-09T11:26:32.709Z"
+  },
+  {
+   "id": "qitem-20261009112456-af7ff2b6",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.11"
+   ],
+   "summary": "r1 ACCEPTED T-FE6 view.inspector e25f204. No findings.",
+   "createdAt": "2026-10-09T11:24:56.783Z",
+   "updatedAt": "2026-10-09T11:25:05.634Z"
+  },
+  {
+   "id": "qitem-20261009112327-db161dcb",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.11"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:23:27.645Z",
+   "updatedAt": "2026-10-09T11:24:56.783Z"
+  },
+  {
+   "id": "qitem-20261009104129-c94e141e0642401a",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-viewer@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "Build the viewer lane (fliedit-overlays-viewer)",
+   "createdAt": "2026-10-09T10:41:29.346Z",
+   "updatedAt": "2026-10-09T11:24:47.919Z"
+  },
+  {
+   "id": "qitem-20261009112356-768a62ac",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "r1 ACCEPTED test-only flake fix 3c302d8; diagnosis confirmed at core.ts:332.",
+   "createdAt": "2026-10-09T11:23:56.678Z",
+   "updatedAt": "2026-10-09T11:24:07.361Z"
+  },
+  {
+   "id": "qitem-20261009112224-b4e6d609",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:22:24.971Z",
+   "updatedAt": "2026-10-09T11:23:56.678Z"
+  },
+  {
+   "id": "qitem-20261009112335-2c73845bd6383281",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.12"
+   ],
+   "summary": "dev-viewer: last viewer slice sent (FE7 f3d987d)",
+   "createdAt": "2026-10-09T11:23:35.123Z",
+   "updatedAt": "2026-10-09T11:23:44.149Z"
+  },
+  {
+   "id": "qitem-20261009112009-d4b65b37ae6b73a7",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.11"
+   ],
+   "summary": "QA T-FE6 view.inspector (e25f204)",
+   "createdAt": "2026-10-09T11:20:09.977Z",
+   "updatedAt": "2026-10-09T11:23:27.645Z"
+  },
+  {
+   "id": "qitem-20261009112241-fb2a3d12",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.9"
+   ],
+   "summary": "r1 ACCEPTED FE4 follow-up 7e761c8 (coalescing + restamp).",
+   "createdAt": "2026-10-09T11:22:41.681Z",
+   "updatedAt": "2026-10-09T11:22:55.066Z"
+  },
+  {
+   "id": "qitem-20261009112241-c638ab3f",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.10"
+   ],
+   "summary": "r1 ACCEPTED T-FE5 b3d4f49. One LOW process note (docs:check claim untrue of that commit; fixed next commit).",
+   "createdAt": "2026-10-09T11:22:41.414Z",
+   "updatedAt": "2026-10-09T11:22:54.219Z"
+  },
+  {
+   "id": "qitem-20261009112033-5d2969f0",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.9"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:20:33.035Z",
+   "updatedAt": "2026-10-09T11:22:41.681Z"
+  },
+  {
+   "id": "qitem-20261009112032-f82c1c34",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.10"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:20:32.776Z",
+   "updatedAt": "2026-10-09T11:22:41.414Z"
+  },
+  {
+   "id": "qitem-20261009111806-adb1d10c663426e1",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "QA: fliedit flaky door history test fix",
+   "createdAt": "2026-10-09T11:18:06.171Z",
+   "updatedAt": "2026-10-09T11:22:24.971Z"
+  },
+  {
+   "id": "qitem-recovery-0cc8f5feddd08a56",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009111615-1d06ff865b4e100d",
+    "recovery-for:qitem-20261009111615-1d06ff865b4e100d"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009111615-1d06ff865b4e100d (3 min)",
+   "createdAt": "2026-10-09T11:21:21.897Z",
+   "updatedAt": "2026-10-09T11:21:31.598Z"
+  },
+  {
+   "id": "qitem-20261009111827-758bea4d91c6281e",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.9"
+   ],
+   "summary": "QA FE4 follow-up: wheel/scrub/marquee coalescing (7e761c8)",
+   "createdAt": "2026-10-09T11:18:27.486Z",
+   "updatedAt": "2026-10-09T11:20:33.035Z"
+  },
+  {
+   "id": "qitem-20261009111641-c00056853ea92f26",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.10"
+   ],
+   "summary": "QA T-FE5 view.select + view.snapping (b3d4f49)",
+   "createdAt": "2026-10-09T11:16:41.747Z",
+   "updatedAt": "2026-10-09T11:20:32.776Z"
+  },
+  {
+   "id": "qitem-20261009111957-bf2a08d2",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": "r1 ACCEPTED FliCast follow-up 881ea56. Branch mergeable; two INFO notes (api:all freshness guard, bar wording).",
+   "createdAt": "2026-10-09T11:19:57.237Z",
+   "updatedAt": "2026-10-09T11:20:06.499Z"
+  },
+  {
+   "id": "qitem-20261009111641-67019c01",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:16:41.656Z",
+   "updatedAt": "2026-10-09T11:19:57.237Z"
+  },
+  {
+   "id": "qitem-20261009111840-1f354b84",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.8"
+   ],
+   "summary": "r1 ACCEPTED T-FE3 + fix 1c0d99c. Heads-up: docs:check stamp gate fails at the worktree head b3d4f49 (FE5); restamp AGENT-NOTES/SYSTEM before FE5 lands.",
+   "createdAt": "2026-10-09T11:18:40.346Z",
+   "updatedAt": "2026-10-09T11:18:50.566Z"
+  },
+  {
+   "id": "qitem-20261009111549-5f4606bb",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.8"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:15:49.336Z",
+   "updatedAt": "2026-10-09T11:18:40.346Z"
+  },
+  {
+   "id": "qitem-recovery-b971082cbe62501a",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009111332-7a6c0c26",
+    "recovery-for:qitem-20261009111332-7a6c0c26"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009111332-7a6c0c26 (2 min)",
+   "createdAt": "2026-10-09T11:16:21.899Z",
+   "updatedAt": "2026-10-09T11:18:15.475Z"
+  },
+  {
+   "id": "qitem-recovery-1c470dcbe3f017f8",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009111028-957e14c9c7cd690a",
+    "recovery-for:qitem-20261009111028-957e14c9c7cd690a"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009111028-957e14c9c7cd690a (4 min)",
+   "createdAt": "2026-10-09T11:16:21.895Z",
+   "updatedAt": "2026-10-09T11:18:15.190Z"
+  },
+  {
+   "id": "qitem-20261009111615-1d06ff865b4e100d",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "Fix door.test.ts:146 journal-race flake (test-side poll)",
+   "createdAt": "2026-10-09T11:16:15.785Z",
+   "updatedAt": "2026-10-09T11:18:06.429Z"
+  },
+  {
+   "id": "qitem-20261009111413-e9ee18bd38613d63",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": "QA OPR.99.0.3.14 r2: api/ regenerated",
+   "createdAt": "2026-10-09T11:14:13.937Z",
+   "updatedAt": "2026-10-09T11:16:41.656Z"
+  },
+  {
+   "id": "qitem-20261009111244-78dc0972",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.8"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:12:44.219Z",
+   "updatedAt": "2026-10-09T11:15:49.336Z"
+  },
+  {
+   "id": "qitem-20261009111332-7a6c0c26",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:13:32.139Z",
+   "updatedAt": "2026-10-09T11:14:14.212Z"
+  },
+  {
+   "id": "qitem-20261009111155-6b7b58690c863e7a",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": "QA OPR.99.0.3.14 follow-up (one FliCast commit, orch-lead ruling)",
+   "createdAt": "2026-10-09T11:11:55.856Z",
+   "updatedAt": "2026-10-09T11:13:32.139Z"
+  },
+  {
+   "id": "qitem-20261009111241-112935a2",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": "r1 ACCEPTED FE1/FE2 follow-up e1eb757. All four items closed; tip gates green.",
+   "createdAt": "2026-10-09T11:12:41.837Z",
+   "updatedAt": "2026-10-09T11:12:50.540Z"
+  },
+  {
+   "id": "qitem-20261009110913-d2bcb5b8",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-viewer@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.8"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:09:13.053Z",
+   "updatedAt": "2026-10-09T11:12:44.219Z"
+  },
+  {
+   "id": "qitem-20261009111107-f3cedc90",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:11:07.340Z",
+   "updatedAt": "2026-10-09T11:12:41.837Z"
+  },
+  {
+   "id": "qitem-20261009111028-957e14c9c7cd690a",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": "FliCast follow-up: details.principal on both doors, header refusal principal, undoBy n alias",
+   "createdAt": "2026-10-09T11:10:28.829Z",
+   "updatedAt": "2026-10-09T11:11:56.128Z"
+  },
+  {
+   "id": "qitem-20261009111125-106f81a9",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.9"
+   ],
+   "summary": "r1 ACCEPTED T-FE4 view.zoom at 0808d46. One LOW on wheel event volume.",
+   "createdAt": "2026-10-09T11:11:25.792Z",
+   "updatedAt": "2026-10-09T11:11:36.501Z"
+  },
+  {
+   "id": "qitem-20261009110913-5f4e3e3c",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.9"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:09:13.315Z",
+   "updatedAt": "2026-10-09T11:11:25.792Z"
+  },
+  {
+   "id": "qitem-recovery-937c84036b4264fd",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-viewer@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:stalled-after-claim:qitem-20261009105758-4714b4a2b1b3eaf7",
+    "recovery-for:qitem-20261009105758-4714b4a2b1b3eaf7"
+   ],
+   "summary": "Stuck sweep: stalled-after-claim on qitem-20261009105758-4714b4a2b1b3eaf7 (4 min)",
+   "createdAt": "2026-10-09T11:06:21.904Z",
+   "updatedAt": "2026-10-09T11:11:21.895Z"
+  },
+  {
+   "id": "qitem-recovery-6d6400f299146d6e",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-viewer@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:stalled-after-claim:qitem-20261009105641-452e09d3e832c9f6",
+    "recovery-for:qitem-20261009105641-452e09d3e832c9f6"
+   ],
+   "summary": "Stuck sweep: stalled-after-claim on qitem-20261009105641-452e09d3e832c9f6 (4 min)",
+   "createdAt": "2026-10-09T11:06:21.895Z",
+   "updatedAt": "2026-10-09T11:11:21.892Z"
+  },
+  {
+   "id": "qitem-20261009110639-407a4d8a",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:06:39.377Z",
+   "updatedAt": "2026-10-09T11:11:07.340Z"
+  },
+  {
+   "id": "qitem-20261009111005-6431567b",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": "r1 ACCEPTED T-FC2. MEDIUM consistency call for orch: principal in details vs top-level across the suite.",
+   "createdAt": "2026-10-09T11:10:05.063Z",
+   "updatedAt": "2026-10-09T11:10:28.283Z"
+  },
+  {
+   "id": "qitem-20261009111004-0564a111",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.13"
+   ],
+   "summary": "r1 ACCEPTED T-FC1. One LOW: undoBy param n vs steps across the suite.",
+   "createdAt": "2026-10-09T11:10:04.775Z",
+   "updatedAt": "2026-10-09T11:10:27.453Z"
+  },
+  {
+   "id": "qitem-20261009110630-d913937a",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:06:30.272Z",
+   "updatedAt": "2026-10-09T11:10:05.063Z"
+  },
+  {
+   "id": "qitem-20261009110630-5cfaf644",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.13"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:06:30.012Z",
+   "updatedAt": "2026-10-09T11:10:04.775Z"
+  },
+  {
+   "id": "qitem-20261009110405-1145664aa7463928",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.9"
+   ],
+   "summary": "QA T-FE4 view.zoom (7e7cba6)",
+   "createdAt": "2026-10-09T11:04:05.394Z",
+   "updatedAt": "2026-10-09T11:09:13.315Z"
+  },
+  {
+   "id": "qitem-20261009110038-69c13084712dbc32",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.8"
+   ],
+   "summary": "QA T-FE3 view.seek (f1b350d)",
+   "createdAt": "2026-10-09T11:00:38.668Z",
+   "updatedAt": "2026-10-09T11:09:13.053Z"
+  },
+  {
+   "id": "qitem-20261009110258-535f83cc037634a4",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-viewer@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": "FE1/FE2 r1 follow-up: noViewer spec leak, play-at-end answer, zRate wording",
+   "createdAt": "2026-10-09T11:02:58.571Z",
+   "updatedAt": "2026-10-09T11:06:39.377Z"
+  },
+  {
+   "id": "qitem-20261009105758-4714b4a2b1b3eaf7",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.14"
+   ],
+   "summary": "QA OPR.99.0.3.14 (FliCast T-FC2): forbidden refusals name the principal",
+   "createdAt": "2026-10-09T10:57:58.484Z",
+   "updatedAt": "2026-10-09T11:06:30.272Z"
+  },
+  {
+   "id": "qitem-20261009105641-452e09d3e832c9f6",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.13"
+   ],
+   "summary": "QA OPR.99.0.3.13 (FliCast T-FC1): fli-core v0.23.0, control plane dry-runs first + Undo",
+   "createdAt": "2026-10-09T10:56:41.360Z",
+   "updatedAt": "2026-10-09T11:06:30.012Z"
+  },
+  {
+   "id": "qitem-20261009110549-e4831ed9",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": "r1 ACCEPTED ov5 follow-up 55b4a9d. All overlay slices .1-.5 now accepted; branch mergeable.",
+   "createdAt": "2026-10-09T11:05:49.993Z",
+   "updatedAt": "2026-10-09T11:06:08.635Z"
+  },
+  {
+   "id": "qitem-20261009110549-4292dad2",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": "r1 ACCEPTED ov2/ov3 follow-up ec266e3. One LOW nit to fold later.",
+   "createdAt": "2026-10-09T11:05:49.714Z",
+   "updatedAt": "2026-10-09T11:06:07.811Z"
+  },
+  {
+   "id": "qitem-20261009110549-cb313849",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.4 (ov4 skill). One LOW style note on the CLI exit; install is for openrig-orch.",
+   "createdAt": "2026-10-09T11:05:49.429Z",
+   "updatedAt": "2026-10-09T11:06:06.960Z"
+  },
+  {
+   "id": "qitem-20261009110220-46a0f55c",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:02:20.529Z",
+   "updatedAt": "2026-10-09T11:05:49.993Z"
+  },
+  {
+   "id": "qitem-20261009110220-77187cc4",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:02:20.255Z",
+   "updatedAt": "2026-10-09T11:05:49.714Z"
+  },
+  {
+   "id": "qitem-20261009110219-9fe7d983",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T11:02:19.991Z",
+   "updatedAt": "2026-10-09T11:05:49.429Z"
+  },
+  {
+   "id": "qitem-20261009110239-c30e0969",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.7 (FE2 view.transport). One LOW: play-at-end answers a pre-jump playhead.",
+   "createdAt": "2026-10-09T11:02:39.407Z",
+   "updatedAt": "2026-10-09T11:02:58.012Z"
+  },
+  {
+   "id": "qitem-20261009110239-308f1a02",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.6"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.6 (FE1 view.get). One MEDIUM: noViewer leaks into every verb's failureModes in the spec.",
+   "createdAt": "2026-10-09T11:02:39.124Z",
+   "updatedAt": "2026-10-09T11:02:57.197Z"
+  },
+  {
+   "id": "qitem-20261009105841-5c62df75",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:58:41.927Z",
+   "updatedAt": "2026-10-09T11:02:39.407Z"
+  },
+  {
+   "id": "qitem-20261009105841-2f7b863e",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.6"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:58:41.647Z",
+   "updatedAt": "2026-10-09T11:02:39.124Z"
+  },
+  {
+   "id": "qitem-20261009105837-3a0e5e34e1f4715c",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": "QA OPR.99.0.3.5 follow-up (r1 findings 5-8)",
+   "createdAt": "2026-10-09T10:58:37.763Z",
+   "updatedAt": "2026-10-09T11:02:20.529Z"
+  },
+  {
+   "id": "qitem-20261009105622-afde0d5bf2a30834",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": "QA OPR.99.0.3.3 follow-up (orch row, r1 findings on .2/.3)",
+   "createdAt": "2026-10-09T10:56:22.602Z",
+   "updatedAt": "2026-10-09T11:02:20.255Z"
+  },
+  {
+   "id": "qitem-20261009105622-45a88a65c6861ee0",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": "QA OPR.99.0.3.4 r3: $A removed, FLI_PRINCIPAL once",
+   "createdAt": "2026-10-09T10:56:22.323Z",
+   "updatedAt": "2026-10-09T11:02:19.991Z"
+  },
+  {
+   "id": "qitem-recovery-d066692a5a21c5eb",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009105721-6ccba1003cc1d3ff",
+    "recovery-for:qitem-20261009105721-6ccba1003cc1d3ff"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009105721-6ccba1003cc1d3ff (3 min)",
+   "createdAt": "2026-10-09T11:01:21.897Z",
+   "updatedAt": "2026-10-09T11:01:45.294Z"
+  },
+  {
+   "id": "qitem-recovery-59c6d87ae98991c5",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009105505-493bf3a45af26654",
+    "recovery-for:qitem-20261009105505-493bf3a45af26654"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009105505-493bf3a45af26654 (5 min)",
+   "createdAt": "2026-10-09T11:01:21.894Z",
+   "updatedAt": "2026-10-09T11:01:45.016Z"
+  },
+  {
+   "id": "qitem-recovery-c9dc84a7032edde6",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009105455-3df8a46d",
+    "recovery-for:qitem-20261009105455-3df8a46d"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009105455-3df8a46d (5 min)",
+   "createdAt": "2026-10-09T11:01:21.890Z",
+   "updatedAt": "2026-10-09T11:01:44.747Z"
+  },
+  {
+   "id": "qitem-recovery-40fb699d445b14c1",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009104058-4d156deaf579d9cb",
+    "recovery-for:qitem-20261009104058-4d156deaf579d9cb"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009104058-4d156deaf579d9cb (1 min)",
+   "createdAt": "2026-10-09T11:01:21.887Z",
+   "updatedAt": "2026-10-09T11:01:44.495Z"
+  },
+  {
+   "id": "qitem-20261009104058-4d156deaf579d9cb",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "Build the overlay lane (fliedit-overlays-viewer)",
+   "createdAt": "2026-10-09T10:40:58.843Z",
+   "updatedAt": "2026-10-09T11:00:46.174Z"
+  },
+  {
+   "id": "qitem-20261009105847-0b66f4333b02c795",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3"
+   ],
+   "summary": "dev-overlay: all 7 slices sent to dev-qa",
+   "createdAt": "2026-10-09T10:58:47.443Z",
+   "updatedAt": "2026-10-09T10:58:59.250Z"
+  },
+  {
+   "id": "qitem-20261009105421-7300bf7eead811da",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.7"
+   ],
+   "summary": "QA T-FE2 view.transport (c7608d2)",
+   "createdAt": "2026-10-09T10:54:21.185Z",
+   "updatedAt": "2026-10-09T10:58:41.927Z"
+  },
+  {
+   "id": "qitem-20261009104959-c6762279b12d0179",
+   "source": "dev-viewer@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.6"
+   ],
+   "summary": "QA T-FE1 view.get (c047db2)",
+   "createdAt": "2026-10-09T10:49:59.023Z",
+   "updatedAt": "2026-10-09T10:58:41.647Z"
+  },
+  {
+   "id": "qitem-20261009105721-6ccba1003cc1d3ff",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": "ov5 r1 findings: fold into the ov2/ov3 follow-up commit",
+   "createdAt": "2026-10-09T10:57:21.026Z",
+   "updatedAt": "2026-10-09T10:58:38.034Z"
+  },
+  {
+   "id": "qitem-20261009105706-c9e57d71",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.5 (ov5). One MEDIUM refusal-data gap + 3 LOW, non-blocking; batch with ov3 fixes.",
+   "createdAt": "2026-10-09T10:57:06.962Z",
+   "updatedAt": "2026-10-09T10:57:20.454Z"
+  },
+  {
+   "id": "qitem-20261009105413-4116cbbe",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:54:13.813Z",
+   "updatedAt": "2026-10-09T10:57:06.962Z"
+  },
+  {
+   "id": "qitem-recovery-cc857fbecd2bbac6",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009105215-cb4dff37",
+    "recovery-for:qitem-20261009105215-cb4dff37"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009105215-cb4dff37 (3 min)",
+   "createdAt": "2026-10-09T10:56:21.884Z",
+   "updatedAt": "2026-10-09T10:56:32.880Z"
+  },
+  {
+   "id": "qitem-20261009105505-493bf3a45af26654",
+   "source": "orch-lead@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": "ov2/ov3 small follow-ups from r1 (warning text, audioOnly, gif/bmp/tiff)",
+   "createdAt": "2026-10-09T10:55:05.799Z",
+   "updatedAt": "2026-10-09T10:56:23.165Z"
+  },
+  {
+   "id": "qitem-20261009105455-3df8a46d",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:54:55.345Z",
+   "updatedAt": "2026-10-09T10:56:22.880Z"
+  },
+  {
+   "id": "qitem-recovery-9bec382cfdf5719f",
+   "source": "dev-qa@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:undelivered-wake:qitem-20261009104931-21aef70a",
+    "recovery-for:qitem-20261009104931-21aef70a"
+   ],
+   "summary": "Stuck sweep: undelivered-wake on qitem-20261009104931-21aef70a (2 min)",
+   "createdAt": "2026-10-09T10:51:21.891Z",
+   "updatedAt": "2026-10-09T10:56:21.892Z"
+  },
+  {
+   "id": "qitem-recovery-38c749cb91f1a829",
+   "source": "dev-qa@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:undelivered-wake:qitem-20261009104931-958172f7",
+    "recovery-for:qitem-20261009104931-958172f7"
+   ],
+   "summary": "Stuck sweep: undelivered-wake on qitem-20261009104931-958172f7 (2 min)",
+   "createdAt": "2026-10-09T10:51:21.888Z",
+   "updatedAt": "2026-10-09T10:56:21.890Z"
+  },
+  {
+   "id": "qitem-recovery-ef552405bb9170fd",
+   "source": "dev-qa@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:stalled-after-claim:qitem-20261009104700-d5c217e4",
+    "recovery-for:qitem-20261009104700-d5c217e4"
+   ],
+   "summary": "Stuck sweep: stalled-after-claim on qitem-20261009104700-d5c217e4 (4 min)",
+   "createdAt": "2026-10-09T10:51:21.884Z",
+   "updatedAt": "2026-10-09T10:56:21.888Z"
+  },
+  {
+   "id": "qitem-20261009105444-4b7a254d",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.3 (ov3). Three LOW warning-text findings for the builder, non-blocking.",
+   "createdAt": "2026-10-09T10:54:44.771Z",
+   "updatedAt": "2026-10-09T10:55:05.279Z"
+  },
+  {
+   "id": "qitem-20261009105444-418ea021",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.2"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.2 (ov2). One INFO note, nothing blocking.",
+   "createdAt": "2026-10-09T10:54:44.491Z",
+   "updatedAt": "2026-10-09T10:55:04.431Z"
+  },
+  {
+   "id": "qitem-20261009105332-bd94a7a28f6daf1a",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": "QA OPR.99.0.3.4 re-test: fixes for your 3 findings",
+   "createdAt": "2026-10-09T10:53:32.918Z",
+   "updatedAt": "2026-10-09T10:54:55.345Z"
+  },
+  {
+   "id": "qitem-20261009104931-21aef70a",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:49:31.710Z",
+   "updatedAt": "2026-10-09T10:54:44.771Z"
+  },
+  {
+   "id": "qitem-20261009104931-958172f7",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.2"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:49:31.438Z",
+   "updatedAt": "2026-10-09T10:54:44.491Z"
+  },
+  {
+   "id": "qitem-20261009105050-101bca7b210076e9",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.5"
+   ],
+   "summary": "QA OPR.99.0.3.5: cutaway.apply (new pinned verb)",
+   "createdAt": "2026-10-09T10:50:50.097Z",
+   "updatedAt": "2026-10-09T10:54:13.813Z"
+  },
+  {
+   "id": "qitem-20261009105215-cb4dff37",
+   "source": "dev-qa@fliedit-team",
+   "destination": "dev-overlay@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:52:15.450Z",
+   "updatedAt": "2026-10-09T10:53:37.638Z"
+  },
+  {
+   "id": "qitem-20261009104807-98727acc08998c51",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.4"
+   ],
+   "summary": "QA OPR.99.0.3.4: flivideo:fliedit skill (docs only)",
+   "createdAt": "2026-10-09T10:48:07.265Z",
+   "updatedAt": "2026-10-09T10:52:15.450Z"
+  },
+  {
+   "id": "qitem-20261009105130-ae171677",
+   "source": "review-r1@fliedit-team",
+   "destination": "orch-lead@fliedit-team",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.1"
+   ],
+   "summary": "r1 ACCEPTED OPR.99.0.3.1 (ov1). Two LOW test-robustness notes, nothing blocking.",
+   "createdAt": "2026-10-09T10:51:30.690Z",
+   "updatedAt": "2026-10-09T10:51:46.784Z"
+  },
+  {
+   "id": "qitem-recovery-26790b71f791c68e",
+   "source": "research-scout@skool-research",
+   "destination": "research-checker@skool-research",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261009104459-047a289b4c6ca054",
+    "recovery-for:qitem-20261009104459-047a289b4c6ca054"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261009104459-047a289b4c6ca054 (2 min)",
+   "createdAt": "2026-10-09T10:51:21.895Z",
+   "updatedAt": "2026-10-09T10:51:35.495Z"
+  },
+  {
+   "id": "qitem-20261009104700-d5c217e4",
+   "source": "dev-qa@fliedit-team",
+   "destination": "review-r1@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.1"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:47:00.997Z",
+   "updatedAt": "2026-10-09T10:51:30.690Z"
+  },
+  {
+   "id": "qitem-20261009104459-047a289b4c6ca054",
+   "source": "research-scout@skool-research",
+   "destination": "research-checker@skool-research",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "skool-research",
+    "check"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-09T10:44:59.944Z",
+   "updatedAt": "2026-10-09T10:49:48.229Z"
+  },
+  {
+   "id": "qitem-20261009104708-96b787ddb8e68f6c",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.3"
+   ],
+   "summary": "QA OPR.99.0.3.3: video aimed at A1 lands on V1 (D20)",
+   "createdAt": "2026-10-09T10:47:08.448Z",
+   "updatedAt": "2026-10-09T10:49:31.710Z"
+  },
+  {
+   "id": "qitem-20261009104551-44be5f1aea7f4381",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.2"
+   ],
+   "summary": "QA OPR.99.0.3.2: assets.list scans resources/",
+   "createdAt": "2026-10-09T10:45:51.758Z",
+   "updatedAt": "2026-10-09T10:49:31.438Z"
+  },
+  {
+   "id": "qitem-20261009104448-36a30459236cb7d5",
+   "source": "dev-overlay@fliedit-team",
+   "destination": "dev-qa@fliedit-team",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:OPR.99.0.3",
+    "slice:OPR.99.0.3.1"
+   ],
+   "summary": "QA OPR.99.0.3.1: image overlay with fades exports and matches preview",
+   "createdAt": "2026-10-09T10:44:48.847Z",
+   "updatedAt": "2026-10-09T10:47:00.997Z"
+  },
+  {
+   "id": "qitem-20261008151956-f7f6f31a",
+   "source": "review-r1@factory-claude",
+   "destination": "orch-lead@factory-claude",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0091-pnpm-lock",
+    "review:accept"
+   ],
+   "summary": "CT-0091 review: ACCEPT commit bfa1a07; .gitignore scope addition ruled KEEP. Mission end-state e6e23e2..bfa1a07 = 8 files, 3 slices only. Flake pinned to trashVisibility.test.ts under full-suite load (2/15 runs) - data for a separate ticket.",
+   "createdAt": "2026-10-08T15:19:56.484Z",
+   "updatedAt": "2026-10-08T15:20:35.219Z"
+  },
+  {
+   "id": "qitem-20261008151815-7f714330",
+   "source": "dev-qa@factory-claude",
+   "destination": "review-r1@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0091-pnpm-lock"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T15:18:15.255Z",
+   "updatedAt": "2026-10-08T15:19:56.484Z"
+  },
+  {
+   "id": "qitem-20261008151742-05195128",
+   "source": "dev-build@factory-claude",
+   "destination": "dev-qa@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0091-drop-pnpm-lock"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T15:17:42.066Z",
+   "updatedAt": "2026-10-08T15:18:15.255Z"
+  },
+  {
+   "id": "qitem-20261008151708-1d8e4e9985f90ed4",
+   "source": "orch-lead@factory-claude",
+   "destination": "dev-build@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0091-drop-pnpm-lock"
+   ],
+   "summary": "CT-0091 build: untrack stale pnpm-lock.yaml",
+   "createdAt": "2026-10-08T15:17:08.651Z",
+   "updatedAt": "2026-10-08T15:17:42.066Z"
+  },
+  {
+   "id": "qitem-20261008151639-73688080",
+   "source": "review-r1@factory-claude",
+   "destination": "orch-lead@factory-claude",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0080-coverage-nesting",
+    "review:accept"
+   ],
+   "summary": "CT-0080 review: ACCEPT commit d8a50d5. Thresholds proven dead before / live now in all 3 workspaces; 0 blocking findings, 3 pre-existing observations (coverage scripts are watch-mode, root skips shared).",
+   "createdAt": "2026-10-08T15:16:39.884Z",
+   "updatedAt": "2026-10-08T15:16:50.903Z"
+  },
+  {
+   "id": "qitem-20261008151502-19332688",
+   "source": "dev-qa@factory-claude",
+   "destination": "review-r1@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0080-coverage-nesting"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T15:15:02.088Z",
+   "updatedAt": "2026-10-08T15:16:39.884Z"
+  },
+  {
+   "id": "qitem-20261008151350-2acc6ecd",
+   "source": "dev-build@factory-claude",
+   "destination": "dev-qa@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0080-coverage-nesting"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T15:13:50.589Z",
+   "updatedAt": "2026-10-08T15:15:02.088Z"
+  },
+  {
+   "id": "qitem-20261008151207-b70befe7219d6753",
+   "source": "orch-lead@factory-claude",
+   "destination": "dev-build@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0080-coverage-nesting"
+   ],
+   "summary": "CT-0080 build: nest coverage under test in 3 vitest configs",
+   "createdAt": "2026-10-08T15:12:07.430Z",
+   "updatedAt": "2026-10-08T15:13:50.589Z"
+  },
+  {
+   "id": "qitem-20261008151139-a2215b89",
+   "source": "review-r1@factory-claude",
+   "destination": "orch-lead@factory-claude",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0081-vitest-include",
+    "review:accept"
+   ],
+   "summary": "CT-0081 review: ACCEPT commit 1542a31. 0 blocking findings; 1 pre-existing server-suite flake (~1/10 runs) noted for a separate ticket.",
+   "createdAt": "2026-10-08T15:11:39.101Z",
+   "updatedAt": "2026-10-08T15:12:06.971Z"
+  },
+  {
+   "id": "qitem-20261008150924-e31fa585",
+   "source": "dev-qa@factory-claude",
+   "destination": "review-r1@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0081-vitest-include"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T15:09:24.595Z",
+   "updatedAt": "2026-10-08T15:11:39.101Z"
+  },
+  {
+   "id": "qitem-20261008150820-84014b74",
+   "source": "dev-build@factory-claude",
+   "destination": "dev-qa@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0081-vitest-include"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T15:08:20.759Z",
+   "updatedAt": "2026-10-08T15:09:24.595Z"
+  },
+  {
+   "id": "qitem-20261008150644-1535245391740073",
+   "source": "orch-lead@factory-claude",
+   "destination": "dev-build@factory-claude",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:flihub-test-build-hygiene",
+    "slice:ct-0081-vitest-include"
+   ],
+   "summary": "CT-0081 build: server vitest include src/**",
+   "createdAt": "2026-10-08T15:06:44.782Z",
+   "updatedAt": "2026-10-08T15:08:20.759Z"
+  },
+  {
+   "id": "qitem-20261008145128-76a1503d",
+   "source": "dev-review@starter",
+   "destination": "dev-build@starter",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:ct-0079-oneshot-tests",
+    "slice:01-vitest-run",
+    "gate:qa"
+   ],
+   "summary": "QA accepted CT-0079: the workspace test commands now exit after a single run, with watch aliases retained.",
+   "createdAt": "2026-10-08T14:51:28.445Z",
+   "updatedAt": "2026-10-08T14:51:40.621Z"
+  },
+  {
+   "id": "qitem-20261008145021-63ed1854",
+   "source": "dev-build@starter",
+   "destination": "dev-review@starter",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:ct-0079-oneshot-tests",
+    "slice:01-vitest-run"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T14:50:21.044Z",
+   "updatedAt": "2026-10-08T14:51:28.445Z"
+  },
+  {
+   "id": "qitem-20261008145007-107b9f56e1f3d1c6",
+   "source": "dev-build@starter",
+   "destination": "dev-build@starter",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:ct-0079-oneshot-tests",
+    "slice:01-vitest-run"
+   ],
+   "summary": null,
+   "createdAt": "2026-10-08T14:50:07.635Z",
+   "updatedAt": "2026-10-08T14:50:21.044Z"
+  }
+ ]
+}

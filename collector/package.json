@@ -1,0 +1,23 @@
+{
+  "name": "@appydave/collector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AppyRig collector: reads one machine (OpenRig daemon on localhost, tmux, the terminal viewer) and pushes snapshots to the hub",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@appydave/shared": "*",
+    "socket.io-client": "^4.8.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "vitest": "^4.1.10"
+  }
+}

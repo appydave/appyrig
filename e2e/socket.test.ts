@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const templateRoot = path.resolve(__dirname, '..');
 
-const SERVER_PORT = 5501;
-const CLIENT_PORT = 5500;
+const SERVER_PORT = Number(process.env.E2E_SERVER_PORT ?? 7191);
+const CLIENT_PORT = Number(process.env.E2E_CLIENT_PORT ?? 7190);
 const STARTUP_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 500;
 
