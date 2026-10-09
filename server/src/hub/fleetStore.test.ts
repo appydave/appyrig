@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { FleetStore } from './fleetStore.js';
+import { FleetStore, type LivenessChange } from './fleetStore.js';
 import { loadSnapshot, manualClock } from '../test/hubHarness.js';
 
 const dirs: string[] = [];
@@ -45,5 +45,50 @@ describe('FleetStore writes', () => {
     await store.flush();
     expect(await store.load()).toEqual([]);
     expect(store.list().map((m) => m.machine.id)).toEqual(['m2']);
+  });
+});
+
+describe('FleetStore liveness changes (logged by the hub, so AC 6 is visible in its log)', () => {
+  it('reports first push, live -> asleep with lastSeen, and asleep -> live, once each', () => {
+    const clock = manualClock();
+    const changes: LivenessChange[] = [];
+    const store = new FleetStore({ now: clock.now, onLiveness: (c) => changes.push(c) });
+    store.put(loadSnapshot('m2'));
+    const firstSeen = clock.now().toISOString();
+    clock.advance(3_000);
+    store.put(loadSnapshot('m2')); // still live: no change
+    const lastSeen = clock.now().toISOString();
+    clock.advance(14_999);
+    store.sweep();
+    clock.advance(1);
+    store.sweep();
+    store.sweep(); // already asleep: no change
+    clock.advance(60_000);
+    store.put(loadSnapshot('m2'));
+    expect(changes).toEqual([
+      { machine: 'm2', from: null, to: 'live', lastSeen: firstSeen },
+      { machine: 'm2', from: 'live', to: 'asleep', lastSeen },
+      { machine: 'm2', from: 'asleep', to: 'live', lastSeen: clock.now().toISOString() },
+    ]);
+  });
+
+  it('a machine loaded asleep from disk reports asleep -> live on its next push', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'appyrig-store-'));
+    dirs.push(dataDir);
+    const clock = manualClock();
+    const first = new FleetStore({ dataDir, now: clock.now });
+    first.put(loadSnapshot('roamy'));
+    await first.flush();
+    clock.advance(3_600_000);
+    const changes: LivenessChange[] = [];
+    const restarted = new FleetStore({
+      dataDir,
+      now: clock.now,
+      onLiveness: (c) => changes.push(c),
+    });
+    await restarted.load();
+    expect(changes).toEqual([]); // loading is not a change; the hub logs what it loaded separately
+    restarted.put(loadSnapshot('roamy'));
+    expect(changes.map((c) => `${c.from} -> ${c.to}`)).toEqual(['asleep -> live']);
   });
 });

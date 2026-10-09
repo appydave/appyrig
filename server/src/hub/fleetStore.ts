@@ -31,6 +31,16 @@ export interface FleetStoreOptions {
   asleepAfterMs?: number;
   /** Told about files that could not be read or written. Never thrown: the hub keeps serving. */
   onDiskError?: (message: string, err: unknown) => void;
+  /** Told when a machine's liveness changes: first push (from null), live → asleep, asleep → live. */
+  onLiveness?: (change: LivenessChange) => void;
+}
+
+export interface LivenessChange {
+  machine: string;
+  /** null = the hub had never heard from this machine (not even on disk). */
+  from: Liveness | null;
+  to: Liveness;
+  lastSeen: string;
 }
 
 export class FleetStore {
@@ -39,6 +49,7 @@ export class FleetStore {
   private readonly asleepAfterMs: number;
   private readonly dir: string | undefined;
   private readonly onDiskError: (message: string, err: unknown) => void;
+  private readonly onLiveness: (change: LivenessChange) => void;
   /** Per machine: the write in flight, and the latest entry waiting behind it (coalesced). */
   private readonly writes = new Map<string, Promise<void>>();
   private readonly pending = new Map<string, FleetMachine>();
@@ -48,6 +59,7 @@ export class FleetStore {
     this.asleepAfterMs = opts.asleepAfterMs ?? ASLEEP_AFTER_MS;
     this.dir = opts.dataDir ? join(opts.dataDir, 'snapshots') : undefined;
     this.onDiskError = opts.onDiskError ?? (() => {});
+    this.onLiveness = opts.onLiveness ?? (() => {});
   }
 
   livenessAt(lastSeen: string): Liveness {
@@ -70,8 +82,17 @@ export class FleetStore {
       lastSeen: this.now().toISOString(),
       snapshot,
     };
+    const before = this.machines.get(entry.machine.id)?.liveness ?? null;
     this.machines.set(entry.machine.id, entry);
     this.persist(entry);
+    if (before !== 'live') {
+      this.onLiveness({
+        machine: entry.machine.id,
+        from: before,
+        to: 'live',
+        lastSeen: entry.lastSeen,
+      });
+    }
     return entry;
   }
 
@@ -86,6 +107,12 @@ export class FleetStore {
         const asleep: FleetMachine = { ...entry, liveness: 'asleep' };
         this.machines.set(entry.machine.id, asleep);
         changed.push(asleep);
+        this.onLiveness({
+          machine: entry.machine.id,
+          from: 'live',
+          to: 'asleep',
+          lastSeen: entry.lastSeen,
+        });
       }
     }
     return changed;

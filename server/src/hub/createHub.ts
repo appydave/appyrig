@@ -24,7 +24,7 @@ import healthRouter from '../routes/health.js';
 import infoRouter from '../routes/info.js';
 import { browserAuth, isAuthorised } from './browserAuth.js';
 import { attachCollectorIngest } from './collectorIngest.js';
-import { FleetStore } from './fleetStore.js';
+import { FleetStore, type LivenessChange } from './fleetStore.js';
 import { listenOnHosts, type Listening } from './listen.js';
 
 /**
@@ -49,6 +49,8 @@ export interface HubOptions {
   liveHosts?: string[];
   identity?: AppIdentity;
   onFault?: (verb: string, err: unknown) => void;
+  /** Every liveness change (first push, live → asleep, asleep → live), e.g. for the hub log. */
+  onLiveness?: (change: LivenessChange) => void;
 }
 
 export interface Hub {
@@ -74,6 +76,7 @@ export function createHub(opts: HubOptions): Hub {
     now,
     asleepAfterMs: opts.asleepAfterMs,
     onDiskError: opts.onDiskError,
+    onLiveness: opts.onLiveness,
   });
 
   const identity = opts.identity ?? readIdentity();

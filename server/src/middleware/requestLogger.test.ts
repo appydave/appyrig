@@ -145,3 +145,34 @@ describe('requestLogger never writes a credential (r1 H1)', () => {
     expect(maskUrl('/x?a=1&TOKEN=abc#h')).toBe('/x?a=1&TOKEN=[redacted]#h');
   });
 });
+
+describe('requestLogger keeps polling out of the info log (P6)', () => {
+  it('logs routine successes on the polled paths at debug, everything else and all failures as before', async () => {
+    const { default: pino } = await import('pino');
+    const { Writable } = await import('node:stream');
+    const { createRequestLogger } = await import('./requestLogger.js');
+    const lines: { level: number; msg: string }[] = [];
+    const sink = new Writable({
+      write(chunk, _enc, done) {
+        lines.push(JSON.parse(String(chunk)));
+        done();
+      },
+    });
+    const app = express();
+    app.use(express.json());
+    app.use(createRequestLogger(pino({ level: 'info' }, sink)));
+    app.get('/health', (_req, res) => res.json({ ok: true }));
+    app.get('/v1/health', (_req, res) => res.json({ ok: true }));
+    app.post('/v1/rpc', (req, res) => res.status(req.body.fail ? 401 : 200).json({}));
+    app.get('/api/info', (_req, res) => res.json({ ok: true }));
+
+    await request(app).get('/health');
+    await request(app).get('/v1/health?x=1');
+    await request(app).post('/v1/rpc').send({});
+    await request(app).post('/v1/rpc').send({ fail: true });
+    await request(app).get('/api/info');
+
+    expect(lines.map((l) => l.msg)).toEqual(['POST /v1/rpc 401', 'GET /api/info 200']);
+    expect(lines[0]!.level).toBe(40); // warn
+  });
+});
