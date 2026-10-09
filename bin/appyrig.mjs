@@ -9,6 +9,7 @@
  *   appyrig docs             print the URL of the hub's read-only reference page
  *   appyrig console          print the URL of the hub's console page
  *
+ * Note: the stored token (~/.config/appyrig/token) is sent to whichever hub you point --hub at.
  * Settings: --hub <url> | APPYRIG_HUB_URL (default http://127.0.0.1:7191)
  *           --token-file <path> | APPYRIG_TOKEN_FILE | APPYRIG_TOKEN | ~/.config/appyrig/token
  * stderr always starts with `appyrig: as <principal>` for a call. Exit 0 ok, 1 the hub refused the

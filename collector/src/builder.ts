@@ -6,9 +6,9 @@ import {
   type Seat,
   type SourceHealth,
 } from '@appydave/shared';
-import { runtimeOfCommand, tailLines } from './adapters/index.js';
+import { runtimeOfCommand, stripAnsi, tailLines } from './adapters/index.js';
 import type { DaemonRead, Sources, TmuxPane, ViewerAgent } from './adapters/index.js';
-import { redactDeep } from './redact.js';
+import { redactDeep, redactString } from './redact.js';
 
 export interface BuilderConfig {
   machine: MachineIdentity;
@@ -46,17 +46,17 @@ async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
   return out;
 }
 
-// eslint-disable-next-line no-control-regex
-const ANSI = /\u001b\[[0-9;?]*[A-Za-z]/g;
 const QUESTION = /^(?:Allow|Do you want to|Would you like to|Proceed)\b.*\?$/i;
 
 /** The last prompt-style question in the visible tail (what a blocked seat is asking), if any. */
 export function blockedDetailOf(lines: string[]): string | null {
   for (let i = lines.length - 1; i >= Math.max(0, lines.length - 40); i--) {
-    const text = lines[i]!.replace(ANSI, '')
+    const text = stripAnsi(lines[i]!)
       .replace(/^[\s│┃|>❯⏺*·-]+/, '')
+      .replace(/[\s│┃|]+$/, '')
       .trim();
-    if (QUESTION.test(text)) return text.slice(0, 200);
+    // Redact before cutting, so a secret straddling the cut cannot leave a recognisable fragment.
+    if (QUESTION.test(text)) return redactString(text).slice(0, 200);
   }
   return null;
 }
