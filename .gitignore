@@ -21,3 +21,6 @@ test-results
 # OS
 .DS_Store
 Thumbs.db
+
+# Hub runtime state (snapshots/); never under src/
+/data/

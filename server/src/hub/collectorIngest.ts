@@ -1,4 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
 import type { Namespace, Server } from 'socket.io';
 import {
   AUTH_ERRORS,
@@ -11,47 +10,32 @@ import {
   type CollectorServerToClientEvents,
   type FleetMachine,
 } from '@appydave/shared';
+import { sameSecret } from './browserAuth.js';
+import type { FleetStore } from './fleetStore.js';
 
 /**
- * P0b skeleton of the hub's collector seam: token check, Zod validation, last snapshot per
- * machine in memory, and a `fleet:update` broadcast to browsers. The hub lane (P3) owns the real
- * version: disk store, liveness timer, browser auth. Keep this signature or replace it whole.
+ * The hub's collector seam: the `/collector` namespace. Token check at connect, Zod validation
+ * of every snapshot, a machine-id check against the handshake, then the store. Refusals are acks
+ * with a failureMode, never throws. The hub has no adapters: it only ingests validated snapshots.
  */
-
-function tokensMatch(given: unknown, expected: string): boolean {
-  if (typeof given !== 'string' || given.length === 0) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 export interface CollectorIngestOptions {
   /** Hub token. When undefined, every collector is refused (no open default). */
   hubToken: string | undefined;
-  now?: () => Date;
-  onSnapshot?: (machine: FleetMachine) => void;
+  store: FleetStore;
+  /** Called with the stored entry after every accepted snapshot. */
+  onSnapshot: (machine: FleetMachine) => void;
 }
 
-export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions) {
-  const now = opts.now ?? (() => new Date());
-  const machines = new Map<string, FleetMachine>();
+export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions): void {
   const nsp = io.of(SOCKET_NAMESPACES.COLLECTOR) as unknown as Namespace<
     CollectorClientToServerEvents,
     CollectorServerToClientEvents
   >;
 
-  // Every browser gets the whole fleet on connect; after that, only changed machines.
-  io.of(SOCKET_NAMESPACES.BROWSER).on('connection', (socket) => {
-    socket.emit(FLEET_EVENTS.UPDATE, {
-      generatedAt: now().toISOString(),
-      full: true,
-      machines: [...machines.values()],
-    });
-  });
-
   nsp.use((socket, next) => {
     const auth = socket.handshake.auth as Partial<CollectorAuth>;
-    if (!opts.hubToken || !tokensMatch(auth.token, opts.hubToken)) {
+    if (!opts.hubToken || !sameSecret(auth.token, opts.hubToken)) {
       next(new Error(AUTH_ERRORS.collectorToken));
       return;
     }
@@ -83,25 +67,9 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions) 
         });
         return;
       }
-      const receivedAt = now().toISOString();
-      const entry: FleetMachine = {
-        machine: parsed.data.machine,
-        liveness: 'live',
-        lastSeen: receivedAt,
-        snapshot: parsed.data,
-      };
-      machines.set(entry.machine.id, entry);
-      io.of(SOCKET_NAMESPACES.BROWSER).emit(FLEET_EVENTS.UPDATE, {
-        generatedAt: receivedAt,
-        full: false,
-        machines: [entry],
-      });
-      opts.onSnapshot?.(entry);
-      reply({ ok: true, receivedAt });
+      const entry = opts.store.put(parsed.data);
+      opts.onSnapshot(entry);
+      reply({ ok: true, receivedAt: entry.lastSeen });
     });
   });
-
-  return {
-    machines: () => [...machines.values()],
-  };
 }

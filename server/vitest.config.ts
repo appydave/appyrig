@@ -5,6 +5,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 10000,
+    // A fixed hub token for every server test: without one the hub refuses all browsers and
+    // collectors. Tests that need "no token" build their own hub with hubToken: undefined.
+    env: { HUB_TOKEN: 'test-hub-token-0123456789' },
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',

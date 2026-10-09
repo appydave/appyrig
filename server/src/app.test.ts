@@ -4,6 +4,11 @@ import type { AddressInfo } from 'node:net';
 import { io as ioc } from 'socket.io-client';
 import { SOCKET_EVENTS } from '@appydave/shared';
 import { app, httpServer } from './index.js';
+import { sessionCookieHeader } from './hub/browserAuth.js';
+
+const TOKEN = process.env.HUB_TOKEN!;
+const BEARER = { Authorization: `Bearer ${TOKEN}` };
+const COOKIE = sessionCookieHeader(TOKEN).split(';')[0];
 
 describe('Express app (via index.ts export)', () => {
   it('GET /health returns 200', async () => {
@@ -12,13 +17,18 @@ describe('Express app (via index.ts export)', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('GET /api/info returns 200', async () => {
-    const res = await request(app).get('/api/info');
+  it('GET /api/info returns 200 with a session', async () => {
+    const res = await request(app).get('/api/info').set(BEARER);
     expect(res.status).toBe(200);
   });
 
+  it('GET /api/info is refused without a session', async () => {
+    const res = await request(app).get('/api/info');
+    expect(res.status).toBe(401);
+  });
+
   it('GET /unknown-route returns 404', async () => {
-    const res = await request(app).get('/unknown-route-that-does-not-exist');
+    const res = await request(app).get('/unknown-route-that-does-not-exist').set(BEARER);
     expect(res.status).toBe(404);
     expect(res.body.status).toBe('error');
     expect(res.body.error).toBe('Not found');
@@ -49,7 +59,11 @@ describe('Socket.io via httpServer export', () => {
     return new Promise<void>((resolve, reject) => {
       const url = `http://localhost:${port}`;
 
-      const client = ioc(url, { forceNew: true, transports: ['websocket'] });
+      const client = ioc(url, {
+        forceNew: true,
+        transports: ['websocket'],
+        extraHeaders: { cookie: COOKIE },
+      });
 
       client.on('connect_error', (err) => {
         client.disconnect();
@@ -77,7 +91,11 @@ describe('Socket.io via httpServer export', () => {
     return new Promise<void>((resolve, reject) => {
       const url = `http://localhost:${port}`;
 
-      const client = ioc(url, { forceNew: true, transports: ['websocket'] });
+      const client = ioc(url, {
+        forceNew: true,
+        transports: ['websocket'],
+        extraHeaders: { cookie: COOKIE },
+      });
 
       client.on('connect_error', (err) => {
         client.disconnect();

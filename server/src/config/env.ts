@@ -18,6 +18,11 @@ const envSchema = z.object({
   // Shared secret for collectors (and the one-time browser login). Unset = every collector refused.
   // A blank `HUB_TOKEN=` line (as shipped in .env.example) means unset, not invalid.
   HUB_TOKEN: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(16).optional()),
+  // Addresses the hub binds to, comma-separated, all on PORT. The M2 hub adds its Tailscale IP
+  // (100.126.70.25); nothing else is ever bound (plan §0.1). Default: localhost only, IPv4 + IPv6.
+  HUB_BIND_HOSTS: z.string().default('127.0.0.1,::1'),
+  // Folder that holds snapshots/. Default: <monorepo root>/data (never under src/: nodemon).
+  DATA_DIR: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

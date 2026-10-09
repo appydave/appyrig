@@ -1,101 +1,40 @@
-import express from 'express';
-import { createServer } from 'node:http';
-import { join, dirname } from 'node:path'; // used for production static file serving below
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Server } from 'socket.io';
-import helmet from 'helmet';
-import compression from 'compression';
-import cors from 'cors';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
-import { requestLogger } from './middleware/requestLogger.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
-import healthRouter from './routes/health.js';
-import infoRouter from './routes/info.js';
-import { attachCollectorIngest } from './hub/collectorIngest.js';
-import type { ServerToClientEvents, ClientToServerEvents } from '@appydave/shared';
+import { createHub } from './hub/createHub.js';
+import { parseHosts } from './hub/listen.js';
 import { SOCKET_EVENTS } from '@appydave/shared';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const app = express();
-const httpServer = createServer(app);
+// process.cwd() is server/ under nodemon and `npm run start`, so `..` is the monorepo root.
+const dataDir = env.DATA_DIR ?? resolve(process.cwd(), '..', 'data');
 
-const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
-  cors: {
-    origin: env.CLIENT_URL,
-    methods: ['GET', 'POST'],
-  },
+const hub = createHub({
+  hubToken: env.HUB_TOKEN,
+  clientUrl: env.CLIENT_URL,
+  // Tests never touch the disk through index.ts; they build their own hubs.
+  dataDir: env.isTest ? undefined : dataDir,
+  clientDist: env.isProduction ? join(__dirname, '../../client/dist') : undefined,
+  onDiskError: (message, err) => logger.error({ err }, message),
 });
 
-// Middleware
-app.use(helmet());
-app.use(compression());
-app.use(cors({ origin: env.CLIENT_URL }));
-app.use(express.json());
-app.use(requestLogger);
+const { app, httpServer, io } = hub;
 
-// Rate limiting — apply before all routes
-app.use(apiLimiter);
-
-// Routes
-app.use(healthRouter);
-app.use(infoRouter);
-
-// Production static file serving — serve the built client app
-if (env.isProduction) {
-  const clientDist = join(__dirname, '../../client/dist');
-  app.use(express.static(clientDist));
-
-  // SPA fallback — serve index.html for all non-API routes
-  app.get('*splat', (_req, res) => {
-    res.sendFile(join(clientDist, 'index.html'));
-  });
+if (!env.HUB_TOKEN) {
+  logger.warn('HUB_TOKEN is not set: every collector and every browser will be refused');
 }
 
-// 404 catch-all — must be after all routes (only reached in non-production for unknown API routes)
-app.use((_req, res) => {
-  res.status(404).json({
-    status: 'error',
-    error: 'Not found',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Global error handler — must be last middleware (4 params)
-app.use(errorHandler);
-
-// Collector seam (P0b skeleton; the hub lane owns it from P3)
-if (!env.HUB_TOKEN) logger.warn('HUB_TOKEN is not set: every collector will be refused');
-attachCollectorIngest(io as unknown as Server, { hubToken: env.HUB_TOKEN });
-
-// Socket.io
+// Scaffold ping/pong on the browser namespace (behind the session check, like everything there).
 io.on('connection', (socket) => {
-  // Auth pattern — uncomment and adapt for your app:
-  // const token = socket.handshake.auth.token as string | undefined;
-  // if (!token) { socket.disconnect(); return; }
-  // try {
-  //   const payload = verifyToken(token); // replace with your JWT verify function
-  //   socket.data.userId = payload.sub;
-  // } catch {
-  //   socket.disconnect();
-  //   return;
-  // }
   logger.info({ socketId: socket.id }, 'Client connected');
-
-  socket.on(SOCKET_EVENTS.CLIENT_PING, async () => {
-    try {
-      socket.emit(SOCKET_EVENTS.SERVER_PONG, {
-        message: 'pong',
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err) {
-      logger.error({ err }, 'Error handling client:ping');
-    }
+  socket.on(SOCKET_EVENTS.CLIENT_PING, () => {
+    socket.emit(SOCKET_EVENTS.SERVER_PONG, {
+      message: 'pong',
+      timestamp: new Date().toISOString(),
+    });
   });
-
   socket.on('disconnect', () => {
     logger.info({ socketId: socket.id }, 'Client disconnected');
   });
@@ -105,30 +44,47 @@ io.on('connection', (socket) => {
 // test files import this module. Tests use supertest with app directly.
 if (!env.isTest) {
   // Never kill whatever holds the port: lanes and QA copies share this machine (MISSION ports).
-  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  const start = async () => {
+    const loaded = await hub.load();
+    logger.info(
+      { dataDir, machines: loaded.map((m) => `${m.machine.id}:${m.liveness}`) },
+      'Loaded last-known fleet'
+    );
+    const hosts = parseHosts(env.HUB_BIND_HOSTS);
+    const bound = await hub.listen(env.PORT, hosts);
+    hub.start();
+    logger.info(`Hub listening on ${bound.hosts.map((h) => `${h}:${bound.port}`).join(', ')}`);
+    logger.info(`Client URL: ${env.CLIENT_URL}`);
+  };
+  start().catch((err: NodeJS.ErrnoException) => {
     logger.fatal(
       { err },
-      `Cannot listen on ${env.PORT}${err.code === 'EADDRINUSE' ? ' (port in use — check .env PORT)' : ''}`
+      `Cannot start the hub on ${env.HUB_BIND_HOSTS} port ${env.PORT}` +
+        (err.code === 'EADDRINUSE' ? ' (port in use — check .env PORT)' : '') +
+        (err.code === 'EADDRNOTAVAIL'
+          ? ' (address not on this machine — check HUB_BIND_HOSTS)'
+          : '')
     );
     process.exit(1);
-  });
-  httpServer.listen(env.PORT, () => {
-    logger.info(`Server running on http://localhost:${env.PORT}`);
-    logger.info(`Client URL: ${env.CLIENT_URL}`);
   });
 }
 
 // Graceful shutdown
 const shutdown = () => {
   logger.info('Shutting down gracefully...');
-  io.close();
-  httpServer.close(() => {
-    logger.info('Server closed');
-    process.exit(0);
-  });
+  hub.close().then(
+    () => {
+      logger.info('Server closed');
+      process.exit(0);
+    },
+    (err) => {
+      logger.error({ err }, 'Error while closing');
+      process.exit(1);
+    }
+  );
 };
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-export { app, httpServer };
+export { app, httpServer, hub };

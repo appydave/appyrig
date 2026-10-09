@@ -10,16 +10,18 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import { app } from './index.js';
 
+const BEARER = { Authorization: `Bearer ${process.env.HUB_TOKEN}` };
+
 describe('404 catch-all', () => {
   it('returns 404 JSON for an unknown route', async () => {
-    const res = await request(app).get('/does-not-exist');
+    const res = await request(app).get('/does-not-exist').set(BEARER);
     expect(res.status).toBe(404);
     expect(res.body).toMatchObject({ status: 'error', error: 'Not found' });
     expect(typeof res.body.timestamp).toBe('string');
   });
 
   it('returns JSON not HTML for unknown /api routes', async () => {
-    const res = await request(app).get('/api/unknown');
+    const res = await request(app).get('/api/unknown').set(BEARER);
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toMatch(/json/);
   });
@@ -27,7 +29,7 @@ describe('404 catch-all', () => {
   it('confirms SPA handler is not active in test mode (no 500 from missing dist/)', async () => {
     // If the SPA wildcard were registered it would call sendFile against a
     // missing dist/ directory and return 500. A clean 404 confirms it's not.
-    const res = await request(app).get('/dashboard/settings');
+    const res = await request(app).get('/dashboard/settings').set(BEARER);
     expect(res.status).toBe(404);
     expect(res.body.status).toBe('error');
   });
