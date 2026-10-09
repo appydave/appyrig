@@ -1,0 +1,31 @@
+
+
+[38;5;231m⏺[39m Starting the research in parallel. One agent captures test fixtures, read-only. Another works out the repo home, git org and
+  ports. I'll load the plan-shape skill meanwhile.
+
+[38;5;114m⏺[39m [1m2[0m background agents launched [38;5;246m(↓ to manage)[39m
+   [38;5;246m├[39m [1mCapture AppyRig test fixtures read-only[0m
+   [38;5;246m└[39m [1mResearch AppyStack repo home and ports[0m
+
+[38;5;114m⏺[39m [1mSkill[0m(appydave:goal-plan)
+[38;5;246m  ⎿  [39mSuccessfully loaded skill
+
+  [38;5;246mRan [1m1[0m[38;5;246m shell command [39m
+
+[38;5;231m⏺[39m I have the plan shape. Waiting on the two research agents, since the repo home, ports and fixtures go into the plan.
+
+  [38;5;246mRan [1m1[0m[38;5;246m shell command [39m
+
+[38;5;231m⏺[39m Fixture capture is under way. I'll wait for both agents to report before writing the plan.
+
+[38;5;246m✻[39m [38;5;246mWaiting for [1m2[0m[38;5;246m background agents to finish[39m
+                                                                                       [38;5;114m✔ Update installed · Restart to update[39m
+[38;5;244m──────────────────────────────────────────────────────────────────────────────────────────────────────────────── openrig-orch ─
+[39m❯ 
+[38;5;244m───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+[39m  [36m~/dev/ad/brains[38;5;246m ([35mmain[38;5;246m) ✗ | 🟡66% | [90m660k[38;5;246m | [90mO 5.5[38;5;246m | [90m$44.59[38;5;246m | [90m717m[38;5;246m | 95Gi | [90mTS[32m✓[38;5;246m | [90mtmux:10[38;5;246m | [31m5h:79% 7d:21%@d3[39m
+  [38;5;220m⏵⏵ auto mode on[38;5;246m · [38;5;44m1 shell[38;5;246m · [38;5;174m⧉[39m [38;5;246m2 · ← for agents[39m
+
+[1m  ⏺ main[0m
+[38;5;246m  ◯ general-purpose[39m  [38;5;246mCapturing OpenRig fixture files[39m                                                     [38;5;246m38s · ↓ 89.4k tokens[39m
+[38;5;246m  ◯ general-purpose[39m  [38;5;246mReading AppyStack template package.json[39m                                            [38;5;246m38s · ↓ 112.7k tokens[39m

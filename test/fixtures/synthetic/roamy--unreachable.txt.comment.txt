@@ -1,0 +1,1 @@
+Hand-written: what `curl -m 10 http://100.89.32.35:7433/api/ps` prints when Roamy is asleep or off the tailnet. Format follows curl 8.x; exit 28 = timeout, exit 7 = refused (daemon down, host awake).

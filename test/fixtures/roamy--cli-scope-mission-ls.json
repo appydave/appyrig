@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "count": 1,
+  "missions": [
+    {
+      "name": "linkcheck-cli",
+      "id": "OPR.99.0.1",
+      "path": "/Users/davidcruwys/.openrig/workspace/missions/linkcheck-cli",
+      "activeSliceCount": 4,
+      "closedSliceCount": 0
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+Edited from roamy--api-rig-starter-01M4B7FVVPVFNP3KACK0PT7QRW-nodes.json: dev-review@starter lifecycleState attention_required, sessionStatus detached, recoveryGuidance filled with INVENTED shape (real captures have recoveryGuidance null). Note real attention_required seats exist live in roamy--api-rig-kernel-*-nodes.json with null guidance.

@@ -1,0 +1,1 @@
+Edited from roamy--api-rig-starter-01M4B7FVVPVFNP3KACK0PT7QRW-nodes.json: dev-build@starter activityState set to display needs-input, needsInput {count 1, reason "permission prompt"}, decidedBy "prompt-chrome" (decidedBy value is a guess; real rungs seen: self-report).

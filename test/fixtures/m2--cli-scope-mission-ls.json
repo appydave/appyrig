@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "count": 3,
+  "missions": [
+    {
+      "name": "ct-0079-oneshot-tests",
+      "id": "OPR.99.0.1",
+      "path": "/Users/davidcruwys/.openrig/workspace/missions/ct-0079-oneshot-tests",
+      "activeSliceCount": 1,
+      "closedSliceCount": 0
+    },
+    {
+      "name": "fliedit-overlays-viewer",
+      "id": "OPR.99.0.3",
+      "path": "/Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer",
+      "activeSliceCount": 14,
+      "closedSliceCount": 0
+    },
+    {
+      "name": "flihub-test-build-hygiene",
+      "id": "OPR.99.0.2",
+      "path": "/Users/davidcruwys/.openrig/workspace/missions/flihub-test-build-hygiene",
+      "activeSliceCount": 3,
+      "closedSliceCount": 0
+    }
+  ]
+}

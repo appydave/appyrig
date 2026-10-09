@@ -1,0 +1,67 @@
+[2m  │ [0m[38;2;147;153;178m--[38;2;235;160;172mjson[39m
+[2m  └ {"resolvedBy":"node_id","identity":[0m
+    [2m{"rigName":"starter","nodeId":"01M4B7FZZ754RD46ZZQS8G60D8","logicalId":"dev.review","podId":"01M4B7FVVQBQ2TV
+    … +86 lines (ctrl + t to view transcript)[0m
+    [2m  "warnings": [][0m
+    [2m}[0m
+
+
+[1;2m› [0mFrom: dev-build@starter
+  To: dev-review@starter
+  Sent: 10-08 09:43Z
+  ---
+  Fixed at 69d2fc9 — /../outside.md now clamps to the scanned root (your repro reports BROKEN, exit 1). Recheck
+  row in your queue.
+  ---
+  ↩ Reply: rig send dev-build@starter "..."
+
+
+[2m• [0mThe re-QA candidate normalizes absolute URL paths before joining the scan root. I’ll claim it and re-run the
+  escape cases, including encoded traversal, alongside the existing suite.
+
+[1m[38;5;2m•[0m [1mRan[0m [38;2;137;180;250mrig[38;2;205;214;244m queue claim qitem-20261008094321-21dd1fc8[38;2;147;153;178m --[38;2;235;160;172mjson[38;2;205;214;244m [38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250mgit[38;2;205;214;244m status[38;2;147;153;178m --[38;2;235;160;172mshort[38;2;205;214;244m [38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250mgit[38;2;205;214;244m show[38;2;147;153;178m --[38;2;235;160;172mformat[38;2;148;226;213m=[38;2;205;214;244mfuller[39m
+[2m  │ [0m[38;2;147;153;178m--[38;2;235;160;172mfind-renames[38;2;205;214;244m 69d2fc9[38;2;148;226;213m --[38;2;205;214;244m src/links.js test/links.test.js [38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250mnpm[38;2;205;214;244m test[39m
+[2m  └ {"pickup":{"state":"working"},"waiting":[0m
+    [2m{"obligation":"qitem-20261008094321-21dd1fc8","owner":"dev-review@starter","state":"in-progress","actionable
+    … +95 lines (ctrl + t to view transcript)[0m
+    [2mℹ todo 0[0m
+    [2mℹ duration_ms 137.470542
+
+[0;1m[38;5;2m•[0m [1mRan[0m [38;2;205;214;244mtemp_parent[38;2;148;226;213m=[38;2;205;214;244m$[38;2;147;153;178m([38;2;137;180;250mmktemp[38;2;147;153;178m -[38;2;235;160;172md[38;2;166;227;161m /private/tmp/rig-linkcheck-root-reaudit.XXXXXX[38;2;147;153;178m)[38;2;205;214;244m [38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250mmkdir[38;2;147;153;178m -[38;2;235;160;172mp[38;2;205;214;244m [38;2;166;227;161m"[38;2;243;139;168m$[38;2;205;214;244mtemp_parent[38;2;166;227;161m/scanned/
+[2m[39m  │ [0m[38;2;166;227;161msub"[38;2;205;214;244m [38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250mtouch[38;2;205;214;244m [38;2;166;227;161m"[38;2;243;139;168m$[38;2;205;214;244mtemp_parent[38;2;166;227;161m/outside.md"[38;2;205;214;244m [38;2;166;227;161m"[38;2;243;139;168m$[38;2;205;214;244mtemp_parent[38;2;166;227;161m/scanned/outside.md"[38;2;205;214;244m [38;2;166;227;161m"[38;2;243;139;168m$[38;2;205;214;244mtemp_parent[38;2;166;227;161m/scanned/x.md"[38;2;205;214;244m [38;2;148;226;213m&&[39m
+[2m  │ [0m[38;2;137;180;250mprintf[38;2;205;214;244m [38;2;166;227;161m'%s\n'[38;2;205;214;244m [38;2;166;227;161m'[clamped](/../outside.md)'[38;2;205;214;244m [38;2;166;227;161m'[encoded](/%2E%2E/x.md)'[38;2;205;214;244m [38;2;166;227;161m'[normal](/x.md)'[38;2;205;214;244m [38;2;148;226;213m>[38;2;205;214;244m [38;2;166;227;161m"[38;2;243;139;168m$[38;2;205;214;244mtemp_parent[38;2;166;227;161m/[39m
+[2m  │ … +4 lines[0m
+[2m  └ /private/tmp/rig-linkcheck-root-reaudit.wlwplO/scanned/sub/page.md:1 → /../outside.md OK[0m
+    [2m/private/tmp/rig-linkcheck-root-reaudit.wlwplO/scanned/sub/page.md:2 → /%2E%2E/x.md OK[0m
+[2m    … +4 lines (ctrl + t to view transcript)[0m
+    [2mrig-linkcheck-root-reaudit.wlwplO/scanned/x.md","exists":true},{"target":"/x.md","resolved":"/private/tmp/[0m
+    [2mrig-linkcheck-root-reaudit.wlwplO/scanned/x.md","exists":true}][0m
+
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• [0mThe prior escape route is now contained: both literal and percent-encoded traversal resolve inside the scanned
+  folder, not its parent. I’ll return the accepted re-QA verdict.
+
+[1m[38;5;2m•[0m [1mRan[0m [38;2;137;180;250mrig[38;2;205;214;244m queue handoff qitem-20261008094321-21dd1fc8[38;2;147;153;178m --[38;2;235;160;172mto[38;2;205;214;244m dev-build@starter[38;2;147;153;178m --[38;2;235;160;172msummary[38;2;205;214;244m [38;2;166;227;161m'QA accepted: 69d2fc9[39m
+[2m  │ [0m[38;2;166;227;161mcontains root-absolute traversal within the scanned folder.'[38;2;147;153;178m --[38;2;235;160;172mtags[39m
+[2m  │ [0m[38;2;205;214;244mlearning,slice-4,markdown-links,qa-accepted[38;2;147;153;178m --[38;2;235;160;172mtarget-repo[38;2;205;214;244m rig-linkcheck[38;2;147;153;178m --[38;2;235;160;172mnote[38;2;205;214;244m [38;2;166;227;161m'Re-QA complete; prior[39m
+[2m  │ … +11 lines[0m
+[2m  └ {"closed":{"pickup":{"state":"terminal","evidence":"closed (handed-off)"},"waiting":[0m
+    [2m{"obligation":"qitem-20261008094321-21dd1fc8","owner":"dev-review@starter","state":"handed-off","actionableS
+    … +54 lines (ctrl + t to view transcript)[0m
+    [2mAdvisory: runtime: Claude runtime identity could not be established; delivery proceeds without verified[0m
+    [2mnative identity. target pane appears mid-task; sent anyway (busy is advisory, not a block).[0m
+
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• [0mRe-QA accepted commit [38;5;6m69d2fc9[39m.
+
+  The root-absolute traversal case is contained within the scanned folder, including percent-encoded traversal.
+  [38;5;6mnpm test[39m passes 10/10. Durable acceptance was returned to [38;5;6mdev-build@starter[39m.
+
+[2m────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[0;1m›[0m [2mImprove documentation in @filename[0m
+
+  [38;2;246;226;183mgpt-5.6-terra medium[2m[39m · [0m[38;2;171;223;167m~/dev/sandbox/rig-linkcheck[39m

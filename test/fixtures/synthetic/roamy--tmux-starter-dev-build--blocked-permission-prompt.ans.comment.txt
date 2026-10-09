@@ -1,0 +1,1 @@
+Edited from roamy--tmux-starter-dev-build-idle-claude-footer.ans: input box and footer replaced by the real run-1 M2 permission prompt text (options 1-4, from the FliEdit QA seat, quoted in north-star/appyrig-mock/project/Focus.dc.html); ANSI colour codes around it are approximated.

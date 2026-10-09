@@ -1,0 +1,1 @@
+Edited from roamy--tmux-starter-dev-build-idle-claude-footer.ans: a spinner line "Running Bash(...) (12s · esc to interrupt)" inserted above the footer; spinner wording approximated from Claude Code TUI, not captured live.

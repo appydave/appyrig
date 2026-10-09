@@ -1,0 +1,67 @@
+     [38;5;77m[48;5;22m    +[38;5;231m`) before                                                                                       [39m[49m
+     [38;5;77m[48;5;22m 87 +[38;5;231m  handing off. `rig scope slice close` only takes abandonment reasons (wontfix/deferred/supersed[39m[49m
+     [38;5;77m[48;5;22m    +[38;5;231med/stale),                                                                                      [39m[49m
+     [38;5;77m[48;5;22m 88 +[38;5;231m  so leave shipped slices as they are. The queue row is the done record. Remaining gaps: referen[39m[49m
+     [38;5;77m[48;5;22m    +[38;5;231mce links,                                                                                       [39m[49m
+     [38;5;77m[48;5;22m 89 +[38;5;231m  `<…>` autolinks, fenced code, spaces/parens. Relative `../` and symlinks can still leave the f[39m[49m
+     [38;5;77m[48;5;22m    +[38;5;231molder.                                                                                          [39m[49m
+     [2m[38;5;231m 90[0m [38;5;231m -[39m [38;5;231m2026-10-07[39m [38;5;231m—[39m [38;5;231mFinished[39m [38;5;231mlinkcheck-cli[39m [38;5;231m(`/Users/davidcruwys/dev/sandbox/rig-linkcheck`),[39m [38;5;231mall[39m [38;5;231mthre[39m
+     [2m[38;5;231m [0m   [38;5;231m e[39m [38;5;231mREADME[39m
+     [2m[38;5;231m 91[0m [38;5;231m [39m  [38;5;231mslices,[39m [38;5;231meach[39m [38;5;231mQA-accepted.[39m [38;5;231mCommits[39m [38;5;231mon[39m [38;5;231mmain:[39m [38;5;231m9af0d90[39m [38;5;231m(find[39m [38;5;231mlinks),[39m [38;5;231mc81cda4[39m [38;5;231m(fix:[39m [38;5;231mexclude[39m [38;5;231m`//host[39m
+     [2m[38;5;231m [0m   [38;5;231m `[39m
+     [2m[38;5;231m 92[0m [38;5;231m [39m  [38;5;231mlinks),[39m [38;5;231m53b8b24[39m [38;5;231m(target[39m [38;5;231mexists?),[39m [38;5;231m61085bd[39m [38;5;231m(OK/BROKEN[39m [38;5;231mreport,[39m [38;5;231mexit[39m [38;5;231m0/1/2).[39m [38;5;231mnpm[39m [38;5;231mtest[39m [38;5;231mpasses[39m [38;5;231m7/7.[39m
+     [2m[38;5;231m [0m   [38;5;231m [39m [38;5;231mKnown[39m [38;5;231mopen[39m [38;5;231mgaps:[39m
+[38;5;246m [39m [38;5;246m⎿[39m [38;5;246m Allowed[39m [38;5;246mby[39m [38;5;246mauto[39m [38;5;246mmode[39m [38;5;246mclassifier[39m
+
+[38;5;114m⏺[39m [1mUpdate[0m(]8;id=ic2rmf;file:///Users/davidcruwys/.openrig/topology/rigs/starter/seats/dev-build/LEARNED.md\~/.openrig/topology/rigs/starter/seats/dev-build/LEARNED.md]8;;\)
+[38;5;246m  ⎿  [39mAdded [1m1[0m line, removed [1m1[0m line
+     [2m[38;5;231m 2 [0m[38;5;231m seat: dev-build@starter[39m
+     [2m[38;5;231m 3 [0m[38;5;231m template: openrig-core/skills/openrig-operating-model/templates/LEARNED.md @ @openrig/cli v0.6.6[39m
+     [2m[38;5;231m 4 [0m[38;5;231m owners: self (sole direct writer) · operator-agent@kernel (by proposal) · hierarchy (boundaries o[39m
+     [2m[38;5;231m   [0m[38;5;231m nly, marked)[39m
+     [38;5;167m[48;5;52m 5 -[38;5;231mupdated: 2026-10-07                                                                              [39m[49m
+     [38;5;77m[48;5;22m 5 +[38;5;231mupdated: 2026-10-[48;5;28m08[48;5;22m                                                                              [39m[49m
+     [2m[38;5;231m 6 [0m[38;5;231m status: seeded-by-self 2026-10-07[39m
+     [2m[38;5;231m 7[0m [38;5;231m ---[39m
+     [2m[38;5;231m 8[0m [38;5;231m #[39m [38;5;231mLEARNED[39m [38;5;231m—[39m [38;5;231mstarter[39m [38;5;231m/[39m [38;5;231mdev[39m [38;5;231m/[39m [38;5;231mbuild[39m [38;5;231m(dev-build@starter)[39m
+[38;5;246m [39m [38;5;246m⎿[39m [38;5;246m Allowed[39m [38;5;246mby[39m [38;5;246mauto[39m [38;5;246mmode[39m [38;5;246mclassifier[39m
+
+[38;5;231m⏺[39m Slice 4 is done: dev-review accepted it at [38;5;153m69d2fc9[39m, and I've closed the row.
+
+  [1mWhat you can use now:[0m in [38;5;153mlinkcheck <folder>[39m, a link like [38;5;153m[t](/docs/x.md)[39m is checked against the folder you
+  scanned. Before, it was checked against the root of the disk. A link that tries to climb out with [38;5;153m/../[39m is
+  stopped at the folder's top level.
+
+  [1mHow it went:[0m
+  - The first version, [38;5;153ma34686e[39m, worked for [38;5;153m/x.md[39m.
+  - dev-review found that [38;5;153m/../outside.md[39m could still reach a file outside the folder and get reported OK.
+  - I fixed that in [38;5;153m69d2fc9[39m and added a regression test. dev-review re-ran their own probes and accepted it.
+  - [38;5;153mnpm[39m [38;5;153mtest[39m passes 10 of 10.
+
+  [1mRecords:[0m
+  - Row [38;5;153mqitem-20261008094356-aa3ddaa3[39m is closed as done. I now own no open rows.
+  - LEARNED.md has a new 2026-10-08 lesson: when a link target is mapped onto a folder, try [38;5;153m/../[39m and [38;5;153m%2E%2E[39m
+    before handing it off.
+  - The slice record stays open as a [38;5;153mplaceholder[39m, like slices 1–3. The tool's only close reasons are for
+    abandoned work (wontfix, deferred, superseded, stale), and none of those fit a slice that shipped.
+  - I didn't message the operator. This request came from you at the terminal, not from the operator, so there
+    was no operator goal to report back on.
+  - Nothing is pushed; the repo has no remote.
+
+  [1mNot[0m [1mchecked:[0m
+  - Ordinary relative links like [38;5;153m../x.md[39m can still point outside the folder, as before.
+  - Symlinks aren't followed to see where they really lead.
+  - The other known gaps are still open: reference-style links, [38;5;153m<…>[39m links, links inside code blocks, and
+    filenames with spaces or brackets.
+
+  [1mNext:[0m I'd fix links inside code blocks being checked next. Code examples often contain made-up link text, so
+  that probably causes the most false BROKEN reports of what's left. Want me to go ahead?
+
+[38;5;246m✻[39m [38;5;246mBaked for 33s · done 4:44 PM[39m
+
+[38;5;244m─────────────────────────────────────────────────────────────────────────────────────────────[39m [38;5;244mdev-build@starter[39m [38;5;244m─
+[39m❯ [2mgo ahead with the fenced code slice[0m
+[38;5;244m─────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+[39m  [38;5;220m⏵⏵[39m [38;5;220mauto[39m [38;5;220mmode[39m [38;5;220mon[38;5;246m (shift+tab[39m [38;5;246mto[39m [38;5;246mcycle)[39m [38;5;246m·[39m [38;5;246m←[39m [38;5;246mfor[39m [38;5;246magents[39m                    [38;5;114m✔[39m [38;5;114mUpdate[39m [38;5;114minstalled[39m [38;5;114m·[39m [38;5;114mRestart[39m [38;5;114mto[39m [38;5;114mupdate[39m
+                                                                                                            [38;5;114m]8;id=fapgmr;https://claude.ai/code/session_01XuYGYZbwxhLS6LdzhFdHWd?from=cli\/rc[39m]8;;\
+

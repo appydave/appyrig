@@ -1,0 +1,1 @@
+Edited from roamy--api-rig-starter-01M4B7FVVPVFNP3KACK0PT7QRW-nodes.json: dev-build@starter set to working with legacy agentActivity PreToolUse/Bash (hook values are a guess). Live working seat: operator-human@kernel in the kernel nodes capture.

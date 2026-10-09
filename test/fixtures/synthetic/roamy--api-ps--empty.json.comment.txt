@@ -1,0 +1,1 @@
+Edited from roamy--api-ps.json: empty array = daemon up with no rigs at all (never seen live: M2 with kernel down still lists 6 stopped rigs).

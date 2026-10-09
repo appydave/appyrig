@@ -1,0 +1,67 @@
+  [38;2;137;180;250mnpm[38;2;205;214;244m test[39m
+  [38;2;137;180;250m./bin/linkcheck.js[38;2;205;214;244m fixtures/docs[39m
+
+  The last two run from the project folder.
+
+[1m[38;5;2m•[0m [1mRan[0m [38;2;137;180;250mgit[38;2;147;153;178m -[38;2;235;160;172mC[38;2;205;214;244m /Users/davidcruwys/dev/sandbox/rig-linkcheck log[38;2;147;153;178m -[38;2;235;160;172m1[38;2;147;153;178m --[38;2;235;160;172moneline
+[2m[39m  │ [0m[38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250mgit[38;2;147;153;178m -[38;2;235;160;172mC[38;2;205;214;244m /Users/davidcruwys/dev/sandbox/rig-linkcheck status[39m
+[2m  │ [0m[38;2;147;153;178m--[38;2;235;160;172mshort[39m
+[2m  └ c81cda4 linkcheck: exclude protocol-relative //host links[0m
+    [2m?? .agents/[0m
+[2m    … +4 lines (ctrl + t to view transcript)[0m
+    [2m?? AGENTS.md[0m
+    [2m?? CLAUDE.md[0m
+
+[1m[38;5;2m•[0m [1mRan[0m [38;2;137;180;250mnpm[38;2;205;214;244m test [38;2;148;226;213m&&[38;2;205;214;244m [38;2;137;180;250m./bin/linkcheck.js[38;2;205;214;244m fixtures/docs[39m
+[2m  └[0m
+    [2m> rig-linkcheck@0.1.0 test[0m
+[2m    … +15 lines (ctrl + t to view transcript)[0m
+    [2mfixtures/docs/index.md:3 → guide.md[0m
+    [2mfixtures/docs/index.md:3 → nope.md[0m
+
+[2m──────────────────────────────────────────────────────────────────────────
+
+• [0mSlice 1 is complete and verified.
+
+  - Final commit: [38;5;6mc81cda4[39m — excludes protocol-relative [38;5;6m//host[39m links.
+  - [38;5;6mnpm test[39m: 2 passed, 0 failed.
+  - [38;5;6m./bin/linkcheck.js fixtures/docs[39m outputs the four expected relative
+    links.
+
+  - Later slices remain intentionally out of scope: existence checks, [38;5;6mOK/[39m
+    [38;5;6mBROKEN[39m, and non-zero exits.
+
+  One note: the repo has OpenRig-generated untracked setup files
+  ([38;5;6m.agents/[39m, [38;5;6m.claude/[39m, [38;5;6m.codex/[39m, [38;5;6m.mcp.json[39m, [38;5;6m.openrig/[39m, [38;5;6mAGENTS.md[39m,
+  [38;5;6mCLAUDE.md[39m). I left them untouched and did not push anything.
+
+[2m──────────────────────────────────────────────────────────────────────────
+
+
+[1m› [0mFrom: dev-build@starter
+  To: operator-agent@kernel
+  Sent: 10-07 13:47Z
+  ---
+  FYI dev-build@starter: linkcheck slices 2 and 3 done at user's request
+  (terminal). Final commit 61085bd on main in /Users/davidcruwys/dev/
+  sandbox/rig-linkcheck, all QA-accepted by dev-review. README fully
+  implemented; npm test 7/7. No open rows.
+  ---
+  ↩ Reply: rig send dev-build@starter "..."
+
+
+[2m• [0mHeads-up: the builder reports slices 2–3 were completed separately after
+  a request made in its terminal, producing commit [38;5;6m61085bd[39m and expanding
+  beyond the original slice-1-only scope.
+
+  I have not independently verified that new work or changed anything. If
+  that terminal request was yours, I can verify and summarize the full
+  implementation; if not, tell me and I’ll help assess the safest next
+  step.
+
+
+[1m›[0m [2mWrite tests for @filename[0m
+
+  [38;2;246;226;183mgpt-5.6-terra medium[2m[39m · [0m[38;2;171;223;167m~/.openrig/workspace[39m
+
+
