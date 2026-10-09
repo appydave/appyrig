@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build output
+dist
+**/dist
+
+# Test coverage
+coverage
+**/coverage
+
+# Git
+.git
+.gitignore
+
+# Editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment files (inject at runtime)
+.env
+.env.local
+.env.*.local
+
+# Playwright / E2E
+e2e
+test-results
+playwright-report
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

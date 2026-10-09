@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - '5501:5501'
+    environment:
+      - NODE_ENV=production
+      - PORT=5501
+      # CLIENT_URL is not needed in production — server serves the client directly
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:5501/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

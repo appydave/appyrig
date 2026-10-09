@@ -1,0 +1,50 @@
+{
+  "name": "@appydave/appyrig",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live view of agent teams across machines",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run build -w shared && concurrently --kill-others -n server,client -c blue,green \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
+    "test": "npm run test -w server -w client",
+    "test:coverage": "npm run test:coverage -w server -w client",
+    "test:e2e": "playwright test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "npm run typecheck -w shared -w server -w client",
+    "clean": "rm -rf node_modules shared/dist server/dist client/dist",
+    "prepare": "husky",
+    "customize": "tsx scripts/customize.ts"
+  },
+  "devDependencies": {
+    "@appydave/appystack-config": "^1.0.3",
+    "@clack/prompts": "^1.7.0",
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.61.1",
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/parser": "^8.63.0",
+    "concurrently": "^10.0.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.5",
+    "typescript": "^5.7.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,json,css,md}": "prettier --write",
+    "*.{ts,tsx,js}": "eslint --fix"
+  },
+  "author": "David Cruwys",
+  "license": "MIT"
+}

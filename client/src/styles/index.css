@@ -1,0 +1,50 @@
+@import 'tailwindcss';
+
+@source "../";
+
+@theme {
+  /* Base */
+  --color-background: oklch(0.152 0.034 260);
+  --color-foreground: oklch(0.966 0.009 246);
+
+  /* Card */
+  --color-card: oklch(0.217 0.041 260);
+  --color-card-foreground: oklch(0.966 0.009 246);
+
+  /* Border */
+  --color-border: oklch(0.33 0.046 259);
+
+  /* Primary — terminal green */
+  --color-primary: oklch(0.723 0.213 142);
+  --color-primary-foreground: oklch(0.152 0.034 260);
+
+  /* Muted */
+  --color-muted: oklch(0.217 0.041 260);
+  --color-muted-foreground: oklch(0.672 0.025 249);
+
+  /* Destructive */
+  --color-destructive: oklch(0.628 0.219 27);
+  --color-destructive-foreground: oklch(0.966 0.009 246);
+}
+
+:root {
+  /* Semantic aliases matching ShadCN convention */
+  --background: oklch(0.152 0.034 260);
+  --foreground: oklch(0.966 0.009 246);
+  --card: oklch(0.217 0.041 260);
+  --border: oklch(0.33 0.046 259);
+  --primary: oklch(0.723 0.213 142);
+  --primary-foreground: oklch(0.152 0.034 260);
+  --muted-foreground: oklch(0.672 0.025 249);
+  --destructive: oklch(0.628 0.219 27);
+}
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}

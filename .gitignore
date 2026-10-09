@@ -1,0 +1,23 @@
+node_modules
+package-lock.json
+dist
+build
+coverage
+test-results
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+!.vscode/launch.json
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
