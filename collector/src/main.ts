@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { pid } from 'node:process';
 import { createSources } from './adapters/index.js';
 import { buildSnapshot } from './builder.js';
@@ -5,7 +6,11 @@ import { loadSettings } from './config.js';
 import { startPusher } from './pusher.js';
 
 /** Entry point for launchd: `node dist/main.js`. Settings come from APPYRIG_* environment variables. */
-const VERSION = '0.1.0';
+const VERSION = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  }
+).version;
 
 function main() {
   const settings = loadSettings();

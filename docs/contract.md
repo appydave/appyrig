@@ -42,3 +42,9 @@ Hub-only variables (blank or absent = default):
 ## Running the hub as a service (P6)
 
 `server/scripts/hub-service.sh install | uninstall | status | plist` writes and loads `~/Library/LaunchAgents/com.appydave.appyrig.hub.plist`: absolute `node` path, `NODE_ENV=production`, port 7191, `HUB_BIND_HOSTS=127.0.0.1,::1,100.126.70.25`, `HUB_TOKEN_FILE=~/.config/appyrig/token`, `DATA_DIR=<repo>/data`, `RunAtLoad`, `KeepAlive`, log `~/Library/Logs/appyrig-hub.log`. Needs `npm run build` first and a 0600 token file. Tests pass `--label <other> --port <lane port>` so they never touch the real job; `plist` prints without side effects.
+
+## Collector notes (dev-collector, D30+)
+
+- `QueueItem.summary` is the queue row's own summary when it has one, otherwise the first non-empty line of its body (redacted, at most 160 chars). The body itself never leaves the collector.
+- `Seat.blockedDetail` (optional) is the question a blocked terminal is showing, e.g. "Allow this read outside the working directories?"; `blockedReason` keeps the daemon's short reason ("permission prompt"). A hub built from a `shared` without the field refuses such snapshots (strict schema), so hub and collector must come from the same main.
+- `sources.daemon.ok=false` with an `error` can accompany seats: a rig or the queue that could not be read is reported, and everything that was read is kept.

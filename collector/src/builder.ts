@@ -46,6 +46,21 @@ async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
   return out;
 }
 
+// eslint-disable-next-line no-control-regex
+const ANSI = /\u001b\[[0-9;?]*[A-Za-z]/g;
+const QUESTION = /^(?:Allow|Do you want to|Would you like to|Proceed)\b.*\?$/i;
+
+/** The last prompt-style question in the visible tail (what a blocked seat is asking), if any. */
+export function blockedDetailOf(lines: string[]): string | null {
+  for (let i = lines.length - 1; i >= Math.max(0, lines.length - 40); i--) {
+    const text = lines[i]!.replace(ANSI, '')
+      .replace(/^[\s│┃|>❯⏺*·-]+/, '')
+      .trim();
+    if (QUESTION.test(text)) return text.slice(0, 200);
+  }
+  return null;
+}
+
 const VIEWER_AGENT_OF_RUNTIME: Record<string, string> = { 'claude-code': 'claude', codex: 'codex' };
 
 /**
@@ -142,6 +157,12 @@ export async function buildSnapshot(
 
   if ('value' in viewerR) mergeViewer(seats, viewerAgents);
 
+  for (const seat of seats) {
+    if (seat.status !== 'blocked' || !seat.tail) continue;
+    const detail = blockedDetailOf(seat.tail.lines);
+    if (detail) seat.blockedDetail = detail;
+  }
+
   const tmuxHealth: SourceHealth =
     'error' in tmuxR
       ? failed(tmuxR.error)
@@ -160,7 +181,12 @@ export async function buildSnapshot(
     collectedAt: capturedAt,
     collector: { version: config.version, pid: config.pid },
     sources: {
-      daemon: 'error' in daemonR ? failed(daemonR.error) : ok(daemon!.version),
+      daemon:
+        'error' in daemonR
+          ? failed(daemonR.error)
+          : daemon!.warnings?.length
+            ? { ok: false, error: daemon!.warnings.join(' | '), version: daemon!.version }
+            : ok(daemon!.version),
       tmux: tmuxHealth,
       viewer: 'error' in viewerR ? failed(viewerR.error) : ok(),
     },

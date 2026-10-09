@@ -35,7 +35,6 @@ describe('adapter: tmux', () => {
   });
 
   it('the field separator is printable, so a missing UTF-8 locale cannot mangle it', () => {
-     
     expect(FIELD_SEP).toMatch(/^[\x21-\x7e]+$/);
     expect(LIST_PANES_ARGS.join(' ')).not.toMatch(/\t/);
   });

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { MachineSnapshotSchema, TAIL_MAX_LINES, type MachineSnapshot } from '@appydave/shared';
-import { buildSnapshot, mergeViewer, type BuilderConfig } from './builder.js';
+import { blockedDetailOf, buildSnapshot, mergeViewer, type BuilderConfig } from './builder.js';
 import {
   FIXTURES,
   fixtureSources,
@@ -120,6 +120,28 @@ describe('snapshot builder', () => {
     expect(snap.sources.tmux.error).toMatch(/capture failed for operator-human@kernel/);
   });
 
+  it('a partly unreadable daemon keeps what it read and says what it could not', async () => {
+    const snap = await buildSnapshot(
+      fixtureSources({
+        machine: 'roamy',
+        daemon: async () => ({
+          ...recordedDaemon('roamy'),
+          queue: [],
+          warnings: ['nodes unreadable for starter: boom', 'queue unreadable: rig exited 1'],
+        }),
+      }),
+      ROAMY,
+      NOW
+    );
+    expect(snap.sources.daemon).toEqual({
+      ok: false,
+      error: 'nodes unreadable for starter: boom | queue unreadable: rig exited 1',
+      version: '0.6.6',
+    });
+    expect(snap.seats).toHaveLength(7);
+    expect(snap.queue).toEqual([]);
+  });
+
   it('viewer down does not take the snapshot down', async () => {
     const snap = await buildSnapshot(
       fixtureSources({
@@ -188,6 +210,23 @@ describe('snapshot builder', () => {
       expect(seat(snap, 'openrig-orch').tail!.lines).toHaveLength(5);
       expect(json).toContain('<REDACTED>');
     });
+  });
+});
+
+describe('blockedDetailOf', () => {
+  it('finds the last question through ANSI and box characters', () => {
+    const lines = [
+      'x',
+      '\u001b[1m  Allow this read outside the working directories?\u001b[0m',
+      '   1. Yes',
+      '   2. No',
+    ];
+    expect(blockedDetailOf(lines)).toBe('Allow this read outside the working directories?');
+    expect(blockedDetailOf(['│ Do you want to proceed?'])).toBe('Do you want to proceed?');
+  });
+  it('is null when nothing asks', () => {
+    expect(blockedDetailOf(['all done', 'Allowed by auto mode classifier'])).toBeNull();
+    expect(blockedDetailOf([])).toBeNull();
   });
 });
 

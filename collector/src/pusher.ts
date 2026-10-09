@@ -55,16 +55,13 @@ export function startPusher(opts: PusherOptions): Pusher {
   socket.on('disconnect', (reason) => note(`disconnected: ${reason}`));
   socket.on('connect_error', (err) => note(`hub refused or unreachable: ${err.message}`));
 
+  // A missing ack is a timeout, not a refusal: kept apart from the hub's own failure modes.
   const push = (snapshot: MachineSnapshot) =>
-    new Promise<CollectorAck>((resolve) => {
+    new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
       socket
         .timeout(ackTimeout)
         .emit(FLEET_EVENTS.SNAPSHOT, snapshot, (err: unknown, ack?: CollectorAck) => {
-          resolve(
-            err || !ack
-              ? { ok: false, failureMode: 'invalid_snapshot', message: 'no ack from hub' }
-              : ack
-          );
+          resolve(err || !ack ? { ok: false, timeout: true } : ack);
         });
     });
 
@@ -74,9 +71,11 @@ export function startPusher(opts: PusherOptions): Pusher {
       if (socket.connected) {
         const ack = await push(await opts.build());
         note(
-          ack.ok
-            ? `pushing every ${intervalMs}ms: acked by hub`
-            : `snapshot refused: ${ack.failureMode}: ${ack.message}`
+          'timeout' in ack
+            ? `no ack from hub within ${ackTimeout}ms`
+            : ack.ok
+              ? `pushing every ${intervalMs}ms: acked by hub`
+              : `snapshot refused: ${ack.failureMode}: ${ack.message}`
         );
       }
     } catch (e) {
