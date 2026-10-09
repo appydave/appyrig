@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import path from 'path';
 import { z } from 'zod';
 
@@ -16,13 +16,21 @@ if (!underTest && process.env.HUB_IGNORE_DOTENV !== '1') {
 }
 
 // HUB_TOKEN_FILE: read the hub token from a file (0600), so it never sits in a plist or a ps line.
-// Setting both, or a file that cannot be read, stops start-up rather than starting with no token.
+// Setting both, a file others can read, or a file that cannot be read stops start-up rather than
+// starting with no token or a leaked one.
 if (process.env.HUB_TOKEN_FILE) {
   if (process.env.HUB_TOKEN) {
     console.error('Set HUB_TOKEN or HUB_TOKEN_FILE, not both.');
     process.exit(1);
   }
   try {
+    const mode = statSync(process.env.HUB_TOKEN_FILE).mode & 0o777;
+    if (mode & 0o077) {
+      console.error(
+        `HUB_TOKEN_FILE ${process.env.HUB_TOKEN_FILE} is mode ${mode.toString(8)}; chmod 600 it.`
+      );
+      process.exit(1);
+    }
     process.env.HUB_TOKEN = readFileSync(process.env.HUB_TOKEN_FILE, 'utf8').trim();
   } catch (err) {
     console.error(
