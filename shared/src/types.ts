@@ -1,5 +1,5 @@
 // TODO: Extend these interfaces for your project
-import type { BrowserServerToClientEvents } from './events.js';
+import type { BrowserClientToServerEvents, BrowserServerToClientEvents } from './events.js';
 
 /** Response wrapper for all API endpoints. */
 export interface ApiResponse<T = unknown> {
@@ -35,8 +35,8 @@ export interface ServerToClientEvents extends BrowserServerToClientEvents {
   'entity:error': (data: { entity: string; operation: string; message: string }) => void;
 }
 
-/** Socket.io events emitted from client to server. */
-export interface ClientToServerEvents {
+/** Socket.io events emitted from client to server. Includes the browser door `core:call` (r1 P4 M1). */
+export interface ClientToServerEvents extends BrowserClientToServerEvents {
   'client:ping': () => void;
   'entity:list': (payload: { entity: string }) => void;
   'entity:get': (payload: { entity: string; id: string }) => void;
