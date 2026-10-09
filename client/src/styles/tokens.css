@@ -1,0 +1,73 @@
+/*
+ * AppyDave skin — the only theme in v1. Light only: one palette, no dark variant (AC 13).
+ * Components read these custom properties and nothing else, so a second skin (e.g. Kybernesis)
+ * is one more file that redefines them; no component is forked.
+ * Source: brief-2026-10-09-appyrig.md "Visual design direction".
+ */
+:root {
+  color-scheme: light;
+
+  /* Page */
+  --ar-canvas: #faf5ec;
+  --ar-ink: #342d2d;
+  --ar-ink-muted: #7a6e5e;
+  --ar-surface: #f0ebe4;
+  --ar-surface-raised: #ffffff;
+  --ar-line: #d4cdc4;
+  --ar-line-soft: #e8e0d4;
+
+  /* One meaning each */
+  --ar-cta: #ffde59; /* the one action / focus ring */
+  --ar-sequence: #c8841a; /* numbered sequences, handoff order */
+  --ar-link: #2e91fc;
+  --ar-link-hover: #1f6fc4;
+  --ar-wordmark-a: #ccba9d;
+
+  /* Terminal tiles: dark accent panels inside the light page */
+  --ar-term-bg: #25201e;
+  --ar-term-bg-deep: #1a1515;
+  --ar-term-fg: #e8e0d4;
+  --ar-term-line: #3a3330;
+  --ar-term-dim: #9a8f80;
+  --ar-term-meta: #ccba9d;
+
+  /* Status: bar/dot colour, then text on the dark tile */
+  --ar-working: #16a34a;
+  --ar-working-text: #4ade80;
+  --ar-working-ink: #15803d;
+  --ar-idle: #9ca3af;
+  --ar-idle-text: #c2c7cf;
+  --ar-blocked: #f59e0b;
+  --ar-blocked-text: #fbbf24;
+  --ar-blocked-bg: #fef3c7;
+  --ar-blocked-ink: #92400e;
+  --ar-stopped: #6b5f55;
+  --ar-stopped-text: #a89c90;
+  --ar-unknown: #8b8fa3;
+  --ar-unknown-text: #b8bccb;
+  --ar-asleep: #9ca3af;
+  --ar-asleep-ink: #4b5563;
+  --ar-error: #dc2626;
+  --ar-error-bg: #fee2e2;
+  --ar-error-ink: #991b1b;
+
+  /* Model chips (colour by model; runtime when the model is unknown) */
+  --ar-model-opus: #7a4f9e;
+  --ar-model-sonnet: #2f7d6b;
+  --ar-model-fable: #b5562f;
+  --ar-model-haiku: #8a6d1f;
+  --ar-model-codex: #3b5b8c;
+  --ar-model-other: #5b524a;
+
+  /* Type */
+  --ar-font-display: 'Bebas Neue', Oswald, sans-serif;
+  --ar-font-label: Oswald, 'Arial Narrow', sans-serif;
+  --ar-font-body: Roboto, system-ui, sans-serif;
+  /* Terminal font behind one token (D51): Roboto Mono, brand-pure. JetBrains Mono is the alternative. */
+  --ar-font-term: 'Roboto Mono', ui-monospace, monospace;
+
+  /* Motion: fast swaps, ease-out arrivals, no bounce */
+  --ar-fast: 120ms;
+  --ar-arrive: 150ms;
+  --ar-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
