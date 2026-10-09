@@ -165,4 +165,26 @@ describe('env config', () => {
     exitSpy.mockRestore();
     errSpy.mockRestore();
   });
+
+  it('exits 1 when HUB_TOKEN_FILE is readable by group or others', async () => {
+    const { mkdtempSync, writeFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const file = join(mkdtempSync(join(tmpdir(), 'appyrig-env-')), 'token');
+    writeFileSync(file, 'open-hub-token-0123456789abcdef', { mode: 0o644 });
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as () => never);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    process.env.NODE_ENV = 'test';
+    delete process.env.HUB_TOKEN;
+    process.env.HUB_TOKEN_FILE = file;
+    try {
+      await import('./env.js?token-file-open=' + Date.now());
+    } catch {
+      // parsed data may be unusable after the mocked exit
+    }
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(String(errSpy.mock.calls[0]?.[0])).toMatch(/mode 644; chmod 600/);
+    exitSpy.mockRestore();
+    errSpy.mockRestore();
+  });
 });
