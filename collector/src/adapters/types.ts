@@ -7,6 +7,8 @@ export interface DaemonRead {
   /** Seats with `tail: null` and `viewerStatus: null`; the builder fills those in. */
   seats: Seat[];
   queue: QueueItem[];
+  /** Parts of the daemon read that failed while the rest succeeded; empty/absent = all read. */
+  warnings?: string[];
 }
 
 export interface TmuxPane {

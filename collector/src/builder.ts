@@ -181,7 +181,12 @@ export async function buildSnapshot(
     collectedAt: capturedAt,
     collector: { version: config.version, pid: config.pid },
     sources: {
-      daemon: 'error' in daemonR ? failed(daemonR.error) : ok(daemon!.version),
+      daemon:
+        'error' in daemonR
+          ? failed(daemonR.error)
+          : daemon!.warnings?.length
+            ? { ok: false, error: daemon!.warnings.join(' | '), version: daemon!.version }
+            : ok(daemon!.version),
       tmux: tmuxHealth,
       viewer: 'error' in viewerR ? failed(viewerR.error) : ok(),
     },

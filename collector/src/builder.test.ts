@@ -120,6 +120,28 @@ describe('snapshot builder', () => {
     expect(snap.sources.tmux.error).toMatch(/capture failed for operator-human@kernel/);
   });
 
+  it('a partly unreadable daemon keeps what it read and says what it could not', async () => {
+    const snap = await buildSnapshot(
+      fixtureSources({
+        machine: 'roamy',
+        daemon: async () => ({
+          ...recordedDaemon('roamy'),
+          queue: [],
+          warnings: ['nodes unreadable for starter: boom', 'queue unreadable: rig exited 1'],
+        }),
+      }),
+      ROAMY,
+      NOW
+    );
+    expect(snap.sources.daemon).toEqual({
+      ok: false,
+      error: 'nodes unreadable for starter: boom | queue unreadable: rig exited 1',
+      version: '0.6.6',
+    });
+    expect(snap.seats).toHaveLength(7);
+    expect(snap.queue).toEqual([]);
+  });
+
   it('viewer down does not take the snapshot down', async () => {
     const snap = await buildSnapshot(
       fixtureSources({

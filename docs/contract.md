@@ -38,3 +38,9 @@ Hub-only variables (blank or absent = default):
 - **D4** The pip state is `Seat.status` (`working | idle | blocked | stopped | unknown`), derived by the collector; `blocked` = `needsInput.count > 0` or a viewer-detected approval UI. `attention_required` stays in `lifecycleState`, not a pip.
 - **D5** Snapshot fixtures in AppyRig's own shape, not a second parser outside the adapters (plan review M6).
 - **D6** ESLint and Prettier ignore OpenRig's runtime files (`.openrig`, `.claude`, `.agents`, `.codex`, `CLAUDE.local.md`) and `test/fixtures`.
+
+## Collector notes (dev-collector, D30+)
+
+- `QueueItem.summary` is the queue row's own summary when it has one, otherwise the first non-empty line of its body (redacted, at most 160 chars). The body itself never leaves the collector.
+- `Seat.blockedDetail` (optional) is the question a blocked terminal is showing, e.g. "Allow this read outside the working directories?"; `blockedReason` keeps the daemon's short reason ("permission prompt"). A hub built from a `shared` without the field refuses such snapshots (strict schema), so hub and collector must come from the same main.
+- `sources.daemon.ok=false` with an `error` can accompany seats: a rig or the queue that could not be read is reported, and everything that was read is kept.

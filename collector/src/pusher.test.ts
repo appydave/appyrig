@@ -103,6 +103,34 @@ describe('pusher', () => {
     expect(hub.received).toHaveLength(0);
   });
 
+  it('a hub that never acks is logged as a timeout, not a refusal', async () => {
+    const http = createServer();
+    const io = new Server(http);
+    io.of('/collector').on('connection', (socket) => socket.on('collector:snapshot', () => {}));
+    await new Promise<void>((r) => http.listen(0, '127.0.0.1', r));
+    const url = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
+    const log: string[] = [];
+    pusher = startPusher({
+      hubUrl: url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 50,
+      ackTimeoutMs: 100,
+      log: (l) => log.push(l),
+    });
+    try {
+      await until(() => log.some((l) => /no ack from hub within 100ms/.test(l)));
+      expect(log.join('\n')).not.toMatch(/refused: invalid_snapshot/);
+    } finally {
+      await pusher.stop();
+      pusher = undefined;
+      await new Promise<void>((r) => {
+        void io.close(() => r());
+      });
+    }
+  });
+
   it('reconnects after the hub restarts and keeps pushing', async () => {
     hub = await startHub();
     const port = Number(new URL(hub.url).port);

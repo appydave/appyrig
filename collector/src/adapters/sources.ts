@@ -117,11 +117,16 @@ export function createSources(opts: SourceOptions = {}): Sources {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
       }
-      if (failures.length) throw new Error(`nodes unreadable for ${failures.join(' | ')}`);
-      // A queue failure must not hide the seats; it surfaces as an empty queue plus the daemon error
-      // only if seats also failed. Keep it simple: queue errors fail the daemon read loudly.
-      const queue = await readQueue();
-      return { version: await readVersion(), rigs, seats, queue };
+      // Partial success: a rig or the queue that cannot be read is reported in `warnings` (the
+      // builder turns them into sources.daemon.ok=false) while everything readable still shows.
+      const warnings = failures.map((f) => `nodes unreadable for ${f}`);
+      let queue: DaemonRead['queue'] = [];
+      try {
+        queue = await readQueue();
+      } catch (e) {
+        warnings.push(`queue unreadable: ${(e as Error).message}`);
+      }
+      return { version: await readVersion(), rigs, seats, queue, warnings };
     },
 
     async tmuxPanes(): Promise<TmuxPane[]> {
