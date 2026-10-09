@@ -14,6 +14,9 @@ import { logger } from '../config/logger.js';
  * - the response is logged as its status only, so a login's Set-Cookie never appears.
  */
 
+/** Paths agents and health checks poll; a success on them is logged at debug, not info. */
+export const QUIET_PATHS = new Set(['/v1/rpc', '/v1/call', '/v1/health', '/health']);
+
 const TOKEN_IN_URL = new RegExp(`([?&]${TOKEN_QUERY_PARAM}=)[^&#]*`, 'gi');
 
 export function maskUrl(url: string | undefined): string {
@@ -24,10 +27,13 @@ export function createRequestLogger(log: Logger) {
   return pinoHttp({
     logger: log,
     genReqId: () => crypto.randomUUID(),
-    customLogLevel: (_req, res) => {
+    customLogLevel: (req, res) => {
       const status = res.statusCode;
       if (status >= 500) return 'error';
       if (status >= 400) return 'warn';
+      // A poller hitting these every second filled the production log (P6): routine successes
+      // drop to debug, which production does not print. Failures above still show.
+      if (QUIET_PATHS.has((req.url ?? '').split('?')[0]!)) return 'debug';
       return 'info';
     },
     customSuccessMessage: (req, res) => `${req.method} ${maskUrl(req.url)} ${res.statusCode}`,

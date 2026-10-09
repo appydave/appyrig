@@ -20,6 +20,12 @@ const hub = createHub({
   onDiskError: (message, err) => logger.error({ err }, message),
   onFault: (verb, err) => logger.error({ err, verb }, 'verb fault'),
   liveHosts: parseHosts(env.HUB_BIND_HOSTS),
+  // One line per liveness change, so AC 6 can be read from the hub log on a real install.
+  onLiveness: ({ machine, from, to, lastSeen }) =>
+    logger.info(
+      { machine, from, to, lastSeen },
+      `${machine} ${from ?? 'new'} -> ${to}${to === 'asleep' ? ` (lastSeen ${lastSeen})` : ''}`
+    ),
 });
 
 const { app, httpServer, io } = hub;
