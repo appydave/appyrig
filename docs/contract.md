@@ -38,3 +38,7 @@ Hub-only variables (blank or absent = default):
 - **D4** The pip state is `Seat.status` (`working | idle | blocked | stopped | unknown`), derived by the collector; `blocked` = `needsInput.count > 0` or a viewer-detected approval UI. `attention_required` stays in `lifecycleState`, not a pip.
 - **D5** Snapshot fixtures in AppyRig's own shape, not a second parser outside the adapters (plan review M6).
 - **D6** ESLint and Prettier ignore OpenRig's runtime files (`.openrig`, `.claude`, `.agents`, `.codex`, `CLAUDE.local.md`) and `test/fixtures`.
+
+## Running the hub as a service (P6)
+
+`server/scripts/hub-service.sh install | uninstall | status | plist` writes and loads `~/Library/LaunchAgents/com.appydave.appyrig.hub.plist`: absolute `node` path, `NODE_ENV=production`, port 7191, `HUB_BIND_HOSTS=127.0.0.1,::1,100.126.70.25`, `HUB_TOKEN_FILE=~/.config/appyrig/token`, `DATA_DIR=<repo>/data`, `RunAtLoad`, `KeepAlive`, log `~/Library/Logs/appyrig-hub.log`. Needs `npm run build` first and a 0600 token file. Tests pass `--label <other> --port <lane port>` so they never touch the real job; `plist` prints without side effects.

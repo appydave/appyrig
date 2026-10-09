@@ -7,6 +7,7 @@ import {
   MachineFilterSchema,
   MachineSummarySchema,
   NoInputSchema,
+  QUEUE_MAX_ITEMS,
   QueueListInputSchema,
   QueueRowSchema,
   RigTopologySchema,
@@ -243,7 +244,7 @@ const VERB_SET = {
         .filter((r) => input.state === undefined || r.item.state === input.state)
         .filter((r) => input.destination === undefined || r.item.destination === input.destination)
         .sort((a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt))
-        .slice(0, input.limit ?? 500)
+        .slice(0, input.limit ?? QUEUE_MAX_ITEMS)
   ),
 
   'handoff.list': query(
