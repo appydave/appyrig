@@ -109,3 +109,39 @@ describe('requestLogger customLogLevel', () => {
     expect(childMock.warn).not.toHaveBeenCalled();
   });
 });
+
+describe('requestLogger never writes a credential (r1 H1)', () => {
+  it('masks the /?token= value and drops Authorization, Cookie and Set-Cookie', async () => {
+    const { default: pino } = await import('pino');
+    const { Writable } = await import('node:stream');
+    const { createRequestLogger, maskUrl } = await import('./requestLogger.js');
+    const { browserAuth, sessionValue } = await import('../hub/browserAuth.js');
+    const TOKEN = 'secret-hub-token-0123456789abcdef';
+    const lines: string[] = [];
+    const sink = new Writable({
+      write(chunk, _enc, done) {
+        lines.push(String(chunk));
+        done();
+      },
+    });
+    const app = express();
+    app.use(createRequestLogger(pino(sink)));
+    app.use(browserAuth({ hubToken: TOKEN, afterLogin: '/' }));
+    app.get('/api/info', (_req, res) => res.json({ ok: true }));
+
+    const login = await request(app).get(`/?token=${TOKEN}`);
+    expect(login.status).toBe(303);
+    const cookie = String(login.headers['set-cookie']).split(';')[0]!;
+    await request(app).get('/api/info').set('Cookie', cookie);
+    await request(app).get('/api/info').set('Authorization', `Bearer ${TOKEN}`);
+    await request(app).get(`/?token=wrong&token=${TOKEN}`);
+
+    const log = lines.join('');
+    expect(lines.length).toBeGreaterThanOrEqual(4);
+    expect(log).not.toContain(TOKEN);
+    expect(log).not.toContain(sessionValue(TOKEN));
+    expect(log).toContain('token=[redacted]');
+    expect(log).toContain('GET /?token=[redacted] 303');
+    expect(maskUrl('/x?a=1&TOKEN=abc#h')).toBe('/x?a=1&TOKEN=[redacted]#h');
+  });
+});

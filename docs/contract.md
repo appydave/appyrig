@@ -21,7 +21,14 @@
 
 ## Ports and `.env`
 
-Each tree's root `.env` sets `PORT` (hub) and `CLIENT_URL` (client dev server); Vite reads both, Playwright reads `PLAYWRIGHT_BASE_URL`, scaffold e2e reads `E2E_SERVER_PORT` / `E2E_CLIENT_PORT`. main 7190/7191 · collector 7290 · hub 7300/7301 · ui 7310/7311 · qa-backend 7320/7321 · qa-ui 7330/7331. `HUB_TOKEN` (16+ chars) in `.env`; unset = every collector refused.
+Each tree's root `.env` sets `PORT` (hub) and `CLIENT_URL` (client dev server); Vite reads both, Playwright reads `PLAYWRIGHT_BASE_URL`, scaffold e2e reads `E2E_SERVER_PORT` / `E2E_CLIENT_PORT`. main 7190/7191 · collector 7290 · hub 7300/7301 · ui 7310/7311 · qa-backend 7320/7321 · qa-ui 7330/7331. `HUB_TOKEN` (16+ chars) in `.env`; unset = every collector and browser refused.
+
+Hub-only variables (blank or absent = default):
+
+| Variable         | Default            | What it does                                                                                                                                                                                                                             |
+| ---------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HUB_BIND_HOSTS` | `127.0.0.1,::1`    | Comma list of addresses the hub binds on `PORT`; nothing else is bound, and an address that will not bind stops start-up. **The M2 hub needs `HUB_BIND_HOSTS=127.0.0.1,::1,100.126.70.25`** or Roamy and the M4 cannot reach it (AC 15). |
+| `DATA_DIR`       | `<repo root>/data` | Holds `snapshots/<machine>.json`, the last-known state a restarted hub serves at once (files 0600). Never under `src/`.                                                                                                                  |
 
 ## Lead decisions
 

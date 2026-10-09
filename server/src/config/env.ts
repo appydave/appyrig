@@ -10,6 +10,9 @@ import { z } from 'zod';
 const underTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
 if (!underTest) dotenv.config({ path: path.resolve(process.cwd(), '..', '.env'), override: true });
 
+// A blank `NAME=` line (as .env.example ships them) means unset, not an empty value.
+const blankIsUnset = (v: unknown) => (v === '' ? undefined : v);
+
 const envSchema = z.object({
   // TODO: Update defaults for your project
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -17,12 +20,12 @@ const envSchema = z.object({
   CLIENT_URL: z.string().default('http://localhost:7190'),
   // Shared secret for collectors (and the one-time browser login). Unset = every collector refused.
   // A blank `HUB_TOKEN=` line (as shipped in .env.example) means unset, not invalid.
-  HUB_TOKEN: z.preprocess((v) => (v === '' ? undefined : v), z.string().min(16).optional()),
+  HUB_TOKEN: z.preprocess(blankIsUnset, z.string().min(16).optional()),
   // Addresses the hub binds to, comma-separated, all on PORT. The M2 hub adds its Tailscale IP
   // (100.126.70.25); nothing else is ever bound (plan §0.1). Default: localhost only, IPv4 + IPv6.
-  HUB_BIND_HOSTS: z.string().default('127.0.0.1,::1'),
+  HUB_BIND_HOSTS: z.preprocess(blankIsUnset, z.string().default('127.0.0.1,::1')),
   // Folder that holds snapshots/. Default: <monorepo root>/data (never under src/: nodemon).
-  DATA_DIR: z.string().optional(),
+  DATA_DIR: z.preprocess(blankIsUnset, z.string().optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);
