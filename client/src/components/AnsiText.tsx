@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { AnsiUp } from 'ansi_up';
-import { stripLinks } from '../fleet/model.js';
+import { stripOsc } from '../fleet/model.js';
 
 /**
  * ANSI → HTML for Wall tiles (no xterm on the Wall). ansi_up escapes HTML in the terminal text
@@ -15,7 +15,7 @@ export function ansiToHtml(lines: string[]): string {
   // r1 L1: no live links. OSC 8 wrappers are stripped first (keeping the link text); the empty
   // allowlist is the backstop, so nothing inside a tile (itself a button) navigates anywhere.
   au.url_allowlist = {};
-  return au.ansi_to_html(stripLinks(lines.join('\n')));
+  return au.ansi_to_html(stripOsc(lines.join('\n')));
 }
 
 interface Props {

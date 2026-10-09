@@ -216,7 +216,11 @@ export function blockedBecause(seat: Seat): string {
  * the working directories?"). Optional in the contract; blank or missing reads as none.
  */
 export function blockedDetail(seat: Seat): string | null {
-  return seat.blockedDetail?.trim() || null;
+  // r1 L2: plain text only, whatever the collector sends: escape sequences out, then any stray
+  // control byte (a lone ESC, BEL, CR…) becomes a space.
+  // eslint-disable-next-line no-control-regex
+  const text = stripAnsi(seat.blockedDetail ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ');
+  return text.replace(/\s+/g, ' ').trim() || null;
 }
 
 /** "permission prompt — Allow this read outside the working directories?" (reason alone if no detail). */
@@ -229,15 +233,16 @@ export function blockedLine(seat: Seat): string {
 const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
 
 /**
- * OSC 8 hyperlink open/close: ESC ] 8 ; params ; uri (BEL | ESC \\). Stripping them keeps the
- * link text and drops the link, so no pane can put a live link on screen (r1 L1): used before
- * ANSI → HTML on tiles and before writing to the Focus terminal.
+ * Every OSC sequence: ESC ] … (BEL | ESC \\). That covers OSC 8 hyperlinks (r1 L1: the link text
+ * stays, the link goes) and OSC 52 clipboard writes (qa-backend: a pane must never reach the
+ * viewer's clipboard), plus titles and the rest. Applied before ANSI → HTML on tiles and before
+ * writing to the Focus terminal, so neither renderer ever sees one.
  */
 // eslint-disable-next-line no-control-regex
-const OSC8 = /\u001b\]8;[^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+const OSC = /\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
 
-export function stripLinks(text: string): string {
-  return text.replace(OSC8, '');
+export function stripOsc(text: string): string {
+  return text.replace(OSC, '');
 }
 
 export function stripAnsi(line: string): string {
