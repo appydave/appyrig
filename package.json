@@ -25,9 +25,10 @@
     "prepare": "husky",
     "customize": "tsx scripts/customize.ts",
     "test:contract": "npm run test:contract -w collector",
-    "api:check": "node scripts/stub.mjs api:check collector 'P4: OpenRPC drift gate (AC 8, B12)'",
+    "api:check": "tsx scripts/gen-api.ts --check",
     "arch:check": "depcruise shared/src server/src server/scripts client/src collector/src --config .dependency-cruiser.cjs && node scripts/arch-strings.mjs",
-    "fake-collector": "node server/scripts/fake-collector.mjs"
+    "fake-collector": "node server/scripts/fake-collector.mjs",
+    "api:gen": "tsx scripts/gen-api.ts"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",
@@ -52,5 +53,8 @@
     "*.{ts,tsx,js}": "eslint --fix"
   },
   "author": "David Cruwys",
-  "license": "MIT"
+  "license": "MIT",
+  "bin": {
+    "appyrig": "bin/appyrig.mjs"
+  }
 }

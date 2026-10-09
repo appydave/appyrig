@@ -14,3 +14,4 @@ CLAUDE.local.md
 .mcp.json
 # Vendored: keep upstream bytes so a re-copy diffs cleanly
 server/src/core/vendor
+api
