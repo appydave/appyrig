@@ -611,9 +611,14 @@
                                 ]
                               },
                               "blockedDetail": {
-                                "type": [
-                                  "string",
-                                  "null"
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 200
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
                                 ]
                               },
                               "lifecycleState": {
@@ -2884,9 +2889,14 @@
                     ]
                   },
                   "blockedDetail": {
-                    "type": [
-                      "string",
-                      "null"
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
                     ]
                   },
                   "lifecycleState": {
@@ -3483,9 +3493,14 @@
                       ]
                     },
                     "blockedDetail": {
-                      "type": [
-                        "string",
-                        "null"
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
                       ]
                     },
                     "lifecycleState": {

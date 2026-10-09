@@ -88,7 +88,7 @@ export const SeatSchema = z.strictObject({
    * Optional detail for a blocked seat: the question the terminal is showing, e.g. "Allow this read
    * outside the working directories?". Additive and optional so older snapshots stay valid.
    */
-  blockedDetail: z.string().nullable().optional(),
+  blockedDetail: z.string().max(200).nullable().optional(),
   lifecycleState: z.string().nullable(), // running | detached | recoverable | attention_required
   sessionStatus: z.string().nullable(),
   /** Optional on purpose: stopped seats have no activityState at all. Diagnostic only: never derive the pip from it; the pip is `status`. */

@@ -74,12 +74,17 @@ export function parsePanes(stdout: string): TmuxPane[] {
   return [...bySession.values()].map((v) => v.pane);
 }
 
+// OSC sequences (ESC ] ... BEL or ESC \\), e.g. OSC 8 hyperlinks: dropped, the link text between
+// the opening and closing sequence stays. An unterminated one runs to the end of the line.
 // eslint-disable-next-line no-control-regex
-const ANSI_ESCAPE = /\u001b\[[0-9;?]*[A-Za-z]/g;
+const OSC = /\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\|$)/g;
+// CSI sequences (colours, cursor moves).
+// eslint-disable-next-line no-control-regex
+const CSI = /\u001b\[[0-9;?]*[A-Za-z]/g;
 
-/** Text without ANSI escape sequences. */
+/** Text without ANSI escape sequences (CSI and OSC). */
 export function stripAnsi(text: string): string {
-  return text.replace(ANSI_ESCAPE, '');
+  return text.replace(OSC, '').replace(CSI, '');
 }
 
 /** Last TAIL_MAX_LINES lines, trailing blank lines dropped. */
