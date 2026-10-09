@@ -7,9 +7,17 @@ import {
   LIST_PANES_ARGS,
   parsePanes,
   runtimeOfCommand,
+  stripAnsi,
   tailLines,
 } from './tmux.js';
 import { readFixtureText, ROAMY_PANES } from './fixtureSources.js';
+
+describe('adapter: tmux stripAnsi', () => {
+  it('an unterminated OSC stops at the end of its line (multi-line input keeps the rest)', () => {
+    expect(stripAnsi('\u001b]8;;http://x\nkept\nalso kept')).toBe('\nkept\nalso kept');
+    expect(stripAnsi('a\u001b]8;;u\u0007b\u001b]8;;\u0007\nc')).toBe('ab\nc');
+  });
+});
 
 describe('adapter: tmux', () => {
   it('capture is read-only and asks for ANSI text of one pane', () => {
