@@ -223,6 +223,13 @@ describe('blockedDetailOf', () => {
     ];
     expect(blockedDetailOf(lines)).toBe('Allow this read outside the working directories?');
     expect(blockedDetailOf(['│ Do you want to proceed?'])).toBe('Do you want to proceed?');
+    // a boxed prompt with a right-hand border too
+    expect(blockedDetailOf(['│ Do you want to proceed? │'])).toBe('Do you want to proceed?');
+  });
+  it('redacts before the 200-char cut', () => {
+    const q = `Allow ${'x'.repeat(185)} sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWX?`;
+    expect(blockedDetailOf([q])!.length).toBeLessThanOrEqual(200);
+    expect(blockedDetailOf([q])).not.toMatch(/sk-/);
   });
   it('is null when nothing asks', () => {
     expect(blockedDetailOf(['all done', 'Allowed by auto mode classifier'])).toBeNull();

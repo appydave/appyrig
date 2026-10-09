@@ -74,11 +74,18 @@ export function parsePanes(stdout: string): TmuxPane[] {
   return [...bySession.values()].map((v) => v.pane);
 }
 
+// eslint-disable-next-line no-control-regex
+const ANSI_ESCAPE = /\u001b\[[0-9;?]*[A-Za-z]/g;
+
+/** Text without ANSI escape sequences. */
+export function stripAnsi(text: string): string {
+  return text.replace(ANSI_ESCAPE, '');
+}
+
 /** Last TAIL_MAX_LINES lines, trailing blank lines dropped. */
 export function tailLines(raw: string): string[] {
   const lines = raw.replace(/\r\n/g, '\n').split('\n');
-  // eslint-disable-next-line no-control-regex
-  const blank = (l: string) => l.replace(/\u001b\[[0-9;]*m/g, '').trim() === '';
+  const blank = (l: string) => stripAnsi(l).trim() === '';
   while (lines.length && blank(lines[lines.length - 1]!)) lines.pop();
   return lines.slice(-TAIL_MAX_LINES);
 }
