@@ -75,6 +75,7 @@ export const SeatSchema = z.strictObject({
   /** Stable id within the machine: the canonical session name (`dev-build@starter`) or the tmux session name. */
   id: z.string().min(1),
   source: SeatSourceSchema,
+  /** Rig NAME (= RigSummary.name, e.g. `starter`), never the rig ULID: the hub joins on it. */
   rig: z.string().nullable(),
   pod: z.string().nullable(),
   logicalId: z.string().nullable(),
