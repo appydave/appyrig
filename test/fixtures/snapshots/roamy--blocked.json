@@ -407,6 +407,7 @@
       "model": null,
       "status": "blocked",
       "blockedReason": "permission prompt",
+      "blockedDetail": "Allow this read outside the working directories?",
       "lifecycleState": "attention_required",
       "sessionStatus": "running",
       "activity": {

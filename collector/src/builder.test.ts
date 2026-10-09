@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { MachineSnapshotSchema, TAIL_MAX_LINES, type MachineSnapshot } from '@appydave/shared';
-import { buildSnapshot, mergeViewer, type BuilderConfig } from './builder.js';
+import { blockedDetailOf, buildSnapshot, mergeViewer, type BuilderConfig } from './builder.js';
 import {
   FIXTURES,
   fixtureSources,
@@ -188,6 +188,23 @@ describe('snapshot builder', () => {
       expect(seat(snap, 'openrig-orch').tail!.lines).toHaveLength(5);
       expect(json).toContain('<REDACTED>');
     });
+  });
+});
+
+describe('blockedDetailOf', () => {
+  it('finds the last question through ANSI and box characters', () => {
+    const lines = [
+      'x',
+      '\u001b[1m  Allow this read outside the working directories?\u001b[0m',
+      '   1. Yes',
+      '   2. No',
+    ];
+    expect(blockedDetailOf(lines)).toBe('Allow this read outside the working directories?');
+    expect(blockedDetailOf(['│ Do you want to proceed?'])).toBe('Do you want to proceed?');
+  });
+  it('is null when nothing asks', () => {
+    expect(blockedDetailOf(['all done', 'Allowed by auto mode classifier'])).toBeNull();
+    expect(blockedDetailOf([])).toBeNull();
   });
 });
 
