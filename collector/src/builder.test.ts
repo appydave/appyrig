@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { MachineSnapshotSchema, TAIL_MAX_LINES, type MachineSnapshot } from '@appydave/shared';
+import {
+  MachineSnapshotSchema,
+  SeatSchema,
+  TAIL_MAX_LINES,
+  type MachineSnapshot,
+} from '@appydave/shared';
 import { blockedDetailOf, buildSnapshot, mergeViewer, type BuilderConfig } from './builder.js';
 import {
   FIXTURES,
@@ -231,6 +236,44 @@ describe('blockedDetailOf', () => {
     expect(blockedDetailOf([q])!.length).toBeLessThanOrEqual(200);
     expect(blockedDetailOf([q])).not.toMatch(/sk-/);
   });
+  it('strips OSC 8 hyperlinks (ST and BEL terminated) and keeps the link text', () => {
+    const osc = (url: string, text: string, end: string) =>
+      `\u001b]8;;${url}${end}${text}\u001b]8;;${end}`;
+    const st = `\u001b[1m  Allow ${osc('https://example.com/a?b=c', 'this read', '\u001b\\')} outside the working directories?\u001b[0m`;
+    const bel = `│ Do you want to open ${osc('file:///tmp/x', 'the file', '\u0007')}? │`;
+    expect(blockedDetailOf([st])).toBe('Allow this read outside the working directories?');
+    expect(blockedDetailOf([bel])).toBe('Do you want to open the file?');
+    // eslint-disable-next-line no-control-regex
+    expect(blockedDetailOf([st, bel])).not.toMatch(/[\u001b\u0007]|https?:/);
+    // an unterminated OSC at the end of the line cannot leak either
+    expect(blockedDetailOf(['Allow this? \u001b]8;;https://x'])).toBe('Allow this?');
+  });
+
+  it('SeatSchema bounds blockedDetail to the collector cap', () => {
+    const base = {
+      id: 'a',
+      source: 'tmux' as const,
+      rig: null,
+      pod: null,
+      logicalId: null,
+      runtime: null,
+      model: null,
+      status: 'blocked' as const,
+      blockedReason: null,
+      lifecycleState: null,
+      sessionStatus: null,
+      viewerStatus: null,
+      lastActivityAt: null,
+      contextUsedPct: null,
+      work: { pending: 0, inProgress: 0, blocked: 0 },
+      cwd: null,
+      recoveryGuidance: null,
+      tail: null,
+    };
+    expect(SeatSchema.safeParse({ ...base, blockedDetail: 'x'.repeat(200) }).success).toBe(true);
+    expect(SeatSchema.safeParse({ ...base, blockedDetail: 'x'.repeat(201) }).success).toBe(false);
+  });
+
   it('is null when nothing asks', () => {
     expect(blockedDetailOf(['all done', 'Allowed by auto mode classifier'])).toBeNull();
     expect(blockedDetailOf([])).toBeNull();
