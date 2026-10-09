@@ -489,7 +489,9 @@ a:hover {
     height: auto;
     overflow: auto;
   }
-  .focus-body {
+  .focus-body,
+  .focus-main {
+    flex: none;
     flex-direction: column;
   }
   .focus-terminal {
