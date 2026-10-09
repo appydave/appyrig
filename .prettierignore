@@ -11,3 +11,4 @@ playwright-report
 .codex
 test/fixtures
 CLAUDE.local.md
+.mcp.json
