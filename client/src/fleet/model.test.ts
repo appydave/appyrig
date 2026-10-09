@@ -15,6 +15,7 @@ import {
   pipFor,
   seatName,
   stripAnsi,
+  stripOsc,
   visibleTail,
 } from './model.js';
 
@@ -170,16 +171,30 @@ describe('blocked detail (S4)', () => {
       'permission prompt — Allow this read outside the working directories?'
     );
   });
-  it.each([null, undefined, '   '])('reads %j as no detail: reason alone', (d) => {
-    expect(blockedDetail(seat(d))).toBeNull();
-    expect(blockedLine(seat(d))).toBe('permission prompt');
+  it('r1 L2: strips escape sequences and stray control bytes', () => {
+    const s = seat('\u001b[33mAllow this read\u001b[0m\u0007 outside\r\n the \u001bworking dirs?');
+    expect(blockedDetail(s)).toBe('Allow this read outside the working dirs?');
+    const controls = [...blockedDetail(s)!].filter((c) => c.charCodeAt(0) < 32 || c === '\u007f');
+    expect(controls).toEqual([]);
   });
+  it.each([null, undefined, '   ', '\u001b[0m\u0007'])(
+    'reads %j as no detail: reason alone',
+    (d) => {
+      expect(blockedDetail(seat(d))).toBeNull();
+      expect(blockedLine(seat(d))).toBe('permission prompt');
+    }
+  );
 });
 
 describe('text helpers', () => {
   it('seatName drops the rig', () => {
     expect(seatName({ id: 'dev-build@starter' } as Seat)).toBe('dev-build');
     expect(seatName({ id: 'openrig-orch' } as Seat)).toBe('openrig-orch');
+  });
+  it('stripOsc drops OSC 8 links (keeping text) and OSC 52 clipboard writes', () => {
+    expect(stripOsc('a \u001b]8;;https://x\u0007link\u001b]8;;\u001b\\ b')).toBe('a link b');
+    expect(stripOsc('x\u001b]52;c;ZXZpbA==\u0007y')).toBe('xy');
+    expect(stripOsc('\u001b]0;title\u0007\u001b[1mbold\u001b[0m')).toBe('\u001b[1mbold\u001b[0m');
   });
   it('stripAnsi removes SGR and OSC sequences', () => {
     expect(stripAnsi('\u001b[1;38;2;255;222;89m❯ 1. Yes\u001b[0m')).toBe('❯ 1. Yes');

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { TAIL_MAX_LINES } from '@appydave/shared';
-import { stripLinks } from '../fleet/model.js';
+import { stripOsc } from '../fleet/model.js';
 import { trackTerminal } from '../fleet/xtermRegistry.js';
 
 interface Props {
@@ -18,8 +18,8 @@ function cssVar(name: string, fallback: string): string {
 function render(term: Terminal, lines: string[]) {
   term.reset();
   // Hide the cursor: this is a picture of someone else's terminal, not a prompt.
-  // No live links in the terminal either (r1 L1, QA): OSC 8 is stripped before xterm parses it.
-  term.write('\u001b[?25l' + stripLinks(lines.join('\r\n')));
+  // No OSC reaches xterm: no live links (r1 L1) and no OSC 52 clipboard writes (qa-backend).
+  term.write('\u001b[?25l' + stripOsc(lines.join('\r\n')));
 }
 
 /**
