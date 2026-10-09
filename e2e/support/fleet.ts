@@ -1,0 +1,95 @@
+import { expect, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/**
+ * Shared ground truth for the UI smoke tests (AC 10, 11).
+ *
+ * The fake collector replays these AppyRig-shaped snapshots into the hub, and the specs read the
+ * same files, so every assertion is "the screen shows what the fixtures say", not a hard-coded
+ * count. roamy--blocked and roamy share machine id `roamy`, so only one runs at a time;
+ * roamy--blocked covers more pip states (working, idle, blocked, unknown) and m2 adds stopped.
+ */
+export const E2E_SCENARIOS = ['roamy--blocked', 'm2'];
+
+const snapshotsDir = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../test/fixtures/snapshots'
+);
+
+export interface ExpectedSeat {
+  machineId: string;
+  seatId: string;
+  status: string;
+  hasTail: boolean;
+}
+
+export function expectedSeats(): ExpectedSeat[] {
+  return E2E_SCENARIOS.flatMap((scenario) => {
+    const snapshot = JSON.parse(readFileSync(path.join(snapshotsDir, `${scenario}.json`), 'utf8'));
+    return snapshot.seats.map(
+      (seat: { id: string; status: string; tail: unknown }): ExpectedSeat => ({
+        machineId: snapshot.machine.id,
+        seatId: seat.id,
+        status: seat.status,
+        hasTail: seat.tail !== null,
+      })
+    );
+  });
+}
+
+/** `[data-testid="seat-tile"]` for one seat. Seat ids are unique per machine only. */
+export function tileFor(page: Page, seat: Pick<ExpectedSeat, 'machineId' | 'seatId'>) {
+  return page.locator(
+    `[data-testid="seat-tile"][data-machine-id="${seat.machineId}"][data-seat-id="${seat.seatId}"]`
+  );
+}
+
+/** Collects console errors and uncaught page errors from the moment it is called. */
+export function watchErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(`console: ${msg.text()}`);
+  });
+  page.on('pageerror', (err) => errors.push(`pageerror: ${err.message}`));
+  return errors;
+}
+
+/**
+ * Browser login (AC 18): one visit to the hub's `/?token=` sets the session cookie. Cookies are
+ * scoped by host, not port, so the cookie set by the hub also rides the client's proxied socket.
+ * Before the hub lane lands browser auth the visit is a no-op; the Wall assertions still decide.
+ */
+export async function signIn(page: Page): Promise<void> {
+  const hub = process.env.E2E_HUB_URL;
+  const token = process.env.E2E_HUB_TOKEN;
+  if (!hub || !token)
+    throw new Error('E2E_HUB_URL / E2E_HUB_TOKEN unset: run through playwright.config.ts');
+  await page
+    .context()
+    .request.get(`${hub}/?token=${encodeURIComponent(token)}`, { maxRedirects: 0 });
+}
+
+/** Signs in, opens the Wall and waits until every fixture seat has a tile. */
+export async function openWall(page: Page): Promise<ExpectedSeat[]> {
+  const seats = expectedSeats();
+  await signIn(page);
+  await page.goto('/');
+  await expect(page.getByTestId('wall')).toBeVisible();
+  await expect(page.getByTestId('seat-tile')).toHaveCount(seats.length, { timeout: 15_000 });
+  return seats;
+}
+
+/** window.__appyrig.xtermCount(), or -1 when the hook is missing (so a missing hook fails loudly). */
+export function xtermCount(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const hooks = (window as unknown as { __appyrig?: { xtermCount?: () => number } }).__appyrig;
+    return typeof hooks?.xtermCount === 'function' ? hooks.xtermCount() : -1;
+  });
+}
+
+/** Polls until xtermCount() equals n (xterm is created lazily and disposed on close). */
+export async function expectXtermCount(page: Page, n: number): Promise<void> {
+  await expect.poll(() => xtermCount(page), { message: `xtermCount() should be ${n}` }).toBe(n);
+}
