@@ -124,4 +124,45 @@ describe('env config', () => {
 
     expect(env.HUB_BIND_HOSTS).toBe('127.0.0.1,::1,100.126.70.25');
   });
+
+  it('reads the hub token from HUB_TOKEN_FILE, trimmed', async () => {
+    const { mkdtempSync, writeFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const file = join(mkdtempSync(join(tmpdir(), 'appyrig-env-')), 'token');
+    writeFileSync(file, 'file-hub-token-0123456789abcdef\n', { mode: 0o600 });
+    process.env.NODE_ENV = 'test';
+    delete process.env.HUB_TOKEN;
+    process.env.HUB_TOKEN_FILE = file;
+
+    const { env } = await import('./env.js?token-file=' + Date.now());
+
+    expect(env.HUB_TOKEN).toBe('file-hub-token-0123456789abcdef');
+  });
+
+  it('exits 1 when HUB_TOKEN_FILE cannot be read, or when both token settings are given', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as () => never);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    process.env.NODE_ENV = 'test';
+    delete process.env.HUB_TOKEN;
+    process.env.HUB_TOKEN_FILE = '/nonexistent/appyrig/token';
+    try {
+      await import('./env.js?token-file-missing=' + Date.now());
+    } catch {
+      // parsed data may be unusable after the mocked exit
+    }
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(String(errSpy.mock.calls[0]?.[0])).toMatch(/Cannot read HUB_TOKEN_FILE/);
+
+    exitSpy.mockClear();
+    process.env.HUB_TOKEN = 'inline-hub-token-0123456789';
+    try {
+      await import('./env.js?token-both=' + Date.now());
+    } catch {
+      // as above
+    }
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    exitSpy.mockRestore();
+    errSpy.mockRestore();
+  });
 });

@@ -1,4 +1,5 @@
 import dotenv from 'dotenv';
+import { readFileSync } from 'node:fs';
 import path from 'path';
 import { z } from 'zod';
 
@@ -7,8 +8,29 @@ import { z } from 'zod';
 // At runtime (dev / prod / Overmind), .env wins over any stale or injected PORT (override ON), or
 // the server can silently bind the wrong port.
 // See docs/kdd/learnings/dotenv-override-clobbers-env-tests.md for the earlier rationale.
+// The launchd job (server/scripts/hub-service.sh) sets HUB_IGNORE_DOTENV=1: its plist is the whole
+// configuration, and a repo .env (dev ports, dev NODE_ENV) must not override it.
 const underTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
-if (!underTest) dotenv.config({ path: path.resolve(process.cwd(), '..', '.env'), override: true });
+if (!underTest && process.env.HUB_IGNORE_DOTENV !== '1') {
+  dotenv.config({ path: path.resolve(process.cwd(), '..', '.env'), override: true });
+}
+
+// HUB_TOKEN_FILE: read the hub token from a file (0600), so it never sits in a plist or a ps line.
+// Setting both, or a file that cannot be read, stops start-up rather than starting with no token.
+if (process.env.HUB_TOKEN_FILE) {
+  if (process.env.HUB_TOKEN) {
+    console.error('Set HUB_TOKEN or HUB_TOKEN_FILE, not both.');
+    process.exit(1);
+  }
+  try {
+    process.env.HUB_TOKEN = readFileSync(process.env.HUB_TOKEN_FILE, 'utf8').trim();
+  } catch (err) {
+    console.error(
+      `Cannot read HUB_TOKEN_FILE ${process.env.HUB_TOKEN_FILE}: ${(err as Error).message}`
+    );
+    process.exit(1);
+  }
+}
 
 // A blank `NAME=` line (as .env.example ships them) means unset, not an empty value.
 const blankIsUnset = (v: unknown) => (v === '' ? undefined : v);
