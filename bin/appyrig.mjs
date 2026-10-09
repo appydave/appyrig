@@ -23,7 +23,12 @@ import { parseArgs } from 'node:util';
 const DEFAULT_HUB = 'http://127.0.0.1:7191';
 const PRINCIPAL_HEADER = 'x-fli-principal';
 
-class Usage extends Error {}
+class Usage extends Error {
+  constructor(message, showHelp = true) {
+    super(message);
+    this.showHelp = showHelp;
+  }
+}
 
 function parseValue(raw) {
   try {
@@ -131,7 +136,10 @@ export async function run(argv, env = process.env, io = {}) {
         body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: verb, params }),
       });
     } catch (e) {
-      throw new Usage(`cannot reach the hub at ${hub}: ${e instanceof Error ? e.message : e}`);
+      throw new Usage(
+        `cannot reach the hub at ${hub}: ${e instanceof Error ? e.message : e}`,
+        false
+      );
     }
     let body;
     try {
@@ -139,15 +147,23 @@ export async function run(argv, env = process.env, io = {}) {
     } catch {
       throw new Usage(`hub answered HTTP ${res.status} with a body that is not JSON`);
     }
-    if (body && typeof body === 'object' && 'error' in body && body.error) {
+    // A rejected token is a setup failure, not a refused verb: check the HTTP status first, because
+    // the hub's 401 body also has an `error` key (a string) that is not a JSON-RPC error.
+    if (res.status === 401 || res.status === 403) {
+      throw new Usage(
+        `hub refused the token (HTTP ${res.status}): check --token-file / APPYRIG_TOKEN_FILE`,
+        false
+      );
+    }
+    if (body && typeof body === 'object' && body.jsonrpc === '2.0' && body.error) {
       const e = body.error;
       const mode = e.data?.failureMode ?? String(e.code);
       err(`appyrig: refused: ${mode}: ${e.message}\n`);
+      for (const issue of e.data?.details?.issues ?? []) {
+        err(`appyrig:   ${issue.path}: ${issue.message}\n`);
+      }
       if (values.json) out(`${JSON.stringify(body.error)}\n`);
       return 1;
-    }
-    if (res.status === 401 || res.status === 403) {
-      throw new Usage(`hub refused the token (HTTP ${res.status})`);
     }
     if (!body || typeof body !== 'object' || !('result' in body)) {
       throw new Usage(`unexpected hub answer (HTTP ${res.status})`);
@@ -158,7 +174,7 @@ export async function run(argv, env = process.env, io = {}) {
     return 0;
   } catch (e) {
     if (e instanceof Usage || e?.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') {
-      err(`appyrig: ${e.message}\n${HELP}\n`);
+      err(`appyrig: ${e.message}\n${e.showHelp === false ? '' : `${HELP}\n`}`);
       return 2;
     }
     err(`appyrig: ${e instanceof Error ? e.message : e}\n`);

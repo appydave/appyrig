@@ -124,6 +124,39 @@ describe('appyrig cli', () => {
     expect(r.stdout).toBe('');
   });
 
+  it("a rejected token (the hub's real 401 body) is a setup failure: exit 2, not a refused verb", async () => {
+    const hub = await stubHub(() => ({
+      status: 401,
+      json: { status: 'error', error: 'browser session missing or invalid', timestamp: 'x' },
+    }));
+    const r = await cli(['machine.list', '--hub', hub.url, '--token-file', tokenFile()]);
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain('hub refused the token (HTTP 401)');
+    expect(r.stderr).not.toContain('undefined');
+    expect(r.stdout).toBe('');
+  });
+
+  it('a refusal prints the field-level issues the hub returned', async () => {
+    const hub = await stubHub(() => ({
+      json: {
+        jsonrpc: '2.0',
+        id: 1,
+        error: {
+          code: -32602,
+          message: 'input does not match',
+          data: {
+            failureMode: 'invalid-input',
+            details: { issues: [{ path: 'seat', message: 'Required' }] },
+          },
+        },
+      },
+    }));
+    const r = await cli(['seat.get', 'machine=m2', '--hub', hub.url, '--token-file', tokenFile()]);
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain('refused: invalid-input: input does not match');
+    expect(r.stderr).toContain('seat: Required');
+  });
+
   it('exit 2 for usage problems and an unreachable hub, never a silent 0', async () => {
     expect((await cli([])).code).toBe(2);
     const noToken = await cli(['fleet.get', '--hub', 'http://127.0.0.1:1'], { HOME: tmpdir() });
