@@ -35,7 +35,7 @@ export interface ServerToClientEvents extends BrowserServerToClientEvents {
   'entity:error': (data: { entity: string; operation: string; message: string }) => void;
 }
 
-/** Socket.io events emitted from client to server. */
+/** Socket.io events emitted from client to server. Includes the browser door `core:call` (r1 P4 M1). */
 export interface ClientToServerEvents extends BrowserClientToServerEvents {
   'client:ping': () => void;
   'entity:list': (payload: { entity: string }) => void;

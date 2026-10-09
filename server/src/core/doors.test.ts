@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import request from 'supertest';
-import { FLEET_EVENTS, type CallAnswer } from '@appydave/shared';
+import { FLEET_EVENTS, type CallAnswer, type ClientToServerEvents } from '@appydave/shared';
 import { readIdentity } from './identity.js';
 import { LOOPBACK_EXPR, apiDocument, pageCsp, renderPages, withLiveHosts } from './doors.js';
 import { renderApiPage } from './vendor/api-page.js';
@@ -218,5 +218,16 @@ describe('B9 / B10 — docs and console pages', () => {
     expect(JSON.stringify(a)).toBe(JSON.stringify(apiDocument(readIdentity())));
     expect(a.methods).toHaveLength(11);
     expect(a.methods.every((m) => m['x-side-effects'] === 'read-only')).toBe(true);
+  });
+});
+
+describe('shared socket types (r1 P4 M1)', () => {
+  it("the app's ClientToServerEvents carries core:call, so the UI can emit it without a cast", () => {
+    // Compile-time: typecheck fails if ClientToServerEvents stops extending the browser door.
+    const emit: ClientToServerEvents['core:call'] = (_request, ack) =>
+      ack({ ok: true, value: null });
+    let got: CallAnswer | undefined;
+    emit({ verb: 'fleet.get' }, (a) => (got = a));
+    expect(got).toEqual({ ok: true, value: null });
   });
 });
