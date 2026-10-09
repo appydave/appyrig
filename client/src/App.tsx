@@ -3,7 +3,7 @@ import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
 import Wall from './components/Wall.js';
 import { findSeat, orderedMachines, type GroupBy } from './fleet/model.js';
-import { useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
+import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
 
@@ -20,7 +20,7 @@ interface Props {
   getSocket?: () => FleetSocket;
 }
 
-export default function App({ getSocket }: Props) {
+export default function App({ getSocket = getFleetSocket }: Props) {
   const { state, link } = useFleet(getSocket);
   const now = useNow();
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
@@ -68,6 +68,16 @@ export default function App({ getSocket }: Props) {
           {machines.length === 1 ? '' : 's'}
         </span>
         <div className="controls" role="group" aria-label="Group tiles by">
+          {/* B11: the API is findable from the UI. /v1/docs is open and carries no fleet data. */}
+          <a
+            className="api-link"
+            href="/v1/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="api-docs-link"
+          >
+            API
+          </a>
           <span className="label">Group</span>
           {(['rig', 'machine'] as const).map((g) => (
             <button
@@ -100,7 +110,13 @@ export default function App({ getSocket }: Props) {
         onOpen={open}
       />
       {focusTile && (
-        <Focus tile={focusTile} now={now} hubConnected={hubConnected} onClose={close} />
+        <Focus
+          tile={focusTile}
+          socket={getSocket()}
+          now={now}
+          hubConnected={hubConnected}
+          onClose={close}
+        />
       )}
       {focused && !focusTile && (
         <div

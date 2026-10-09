@@ -12,7 +12,10 @@ export type FleetSocket = Socket<BrowserServerToClientEvents, BrowserClientToSer
 
 let socket: FleetSocket | null = null;
 
-/** The one browser socket to the hub's `/` namespace. Read-only: the UI never emits. */
+/**
+ * The one browser socket to the hub's `/` namespace. It receives `fleet:update`, and its only
+ * emit is `core:call` for read-only API verbs (see coreCall.ts).
+ */
 export function getFleetSocket(): FleetSocket {
   if (!socket) {
     // D52: always same origin. The hub serves the built client itself, and in dev Vite proxies

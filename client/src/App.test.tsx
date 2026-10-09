@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AUTH_ERRORS, FLEET_EVENTS } from '@appydave/shared';
 import App from './App.js';
+import { ansiToHtml } from './components/AnsiText.js';
 import { lastTurn, toParagraphs } from './components/Focus.js';
 import type { FleetSocket } from './fleet/useFleet.js';
 import { installTestHooks, xtermCount } from './fleet/xtermRegistry.js';
@@ -36,8 +37,18 @@ vi.mock('@xterm/addon-fit', () => ({
 type Handler = (...args: unknown[]) => void;
 
 /** A socket stand-in: the UI only ever listens, so `on`/`off` plus a trigger are enough. */
-function fakeSocket() {
+type Answer =
+  { ok: true; value: unknown } | { ok: false; error: { failureMode: string; message: string } };
+type CallHandler = (request: { verb: string; input?: unknown }) => Answer | undefined;
+
+/**
+ * A socket stand-in. The UI listens with `on`/`off` and its only emit is `core:call` through
+ * `timeout(ms).emit(...)`; `onCall` decides the answer (undefined = never answer). Every call is
+ * recorded, and a plain `emit` is a spy so any other emit shows up in a test.
+ */
+function fakeSocket(onCall: CallHandler = () => undefined) {
   const handlers = new Map<string, Set<Handler>>();
+  const calls: { event: string; request: { verb: string; input?: unknown } }[] = [];
   const s = {
     connected: false,
     on(ev: string, h: Handler) {
@@ -50,14 +61,25 @@ function fakeSocket() {
       return s;
     },
     emit: vi.fn(),
+    timeout: () => ({
+      emit: (
+        event: string,
+        request: { verb: string; input?: unknown },
+        ack: (err: Error | null, answer?: Answer) => void
+      ) => {
+        calls.push({ event, request });
+        const answer = onCall(request);
+        if (answer) queueMicrotask(() => ack(null, answer));
+      },
+    }),
   };
   const fire = (ev: string, ...args: unknown[]) =>
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
-  return { socket: s as unknown as FleetSocket, fire, emitSpy: s.emit };
+  return { socket: s as unknown as FleetSocket, fire, emitSpy: s.emit, calls };
 }
 
-function renderApp() {
-  const fake = fakeSocket();
+function renderApp(onCall?: CallHandler) {
+  const fake = fakeSocket(onCall);
   const getSocket = () => fake.socket;
   render(<App getSocket={getSocket} />);
   return fake;
@@ -181,13 +203,84 @@ describe('App: Wall and Fleet Strip', () => {
     ).toEqual(['roamy', 'm2']);
   });
 
-  it('never emits anything to the hub (read-only UI)', () => {
-    const { fire, emitSpy } = renderApp();
+  it('only ever emits core:call with a read verb (no other emit)', () => {
+    const { fire, emitSpy, calls } = renderApp();
     fire('connect');
     fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
     fireEvent.click(screen.getAllByTestId('seat-tile')[0]);
+    fireEvent.click(screen.getByTestId('focus-mode-toggle'));
     fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.click(screen.getByTestId('group-by-machine'));
     expect(emitSpy).not.toHaveBeenCalled();
+    expect(calls.map((c) => [c.event, c.request.verb])).toEqual([['core:call', 'seat.get']]);
+  });
+
+  it('B11: the header links to the open API docs page', () => {
+    renderApp();
+    const link = screen.getByTestId('api-docs-link');
+    expect(link).toHaveAttribute('href', '/v1/docs');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  });
+});
+
+describe('App: Focus calls seat.get (B13)', () => {
+  const seatRef = { machine: 'roamy', seat: 'dev-build@starter' };
+
+  function openBlocked(onCall: CallHandler) {
+    const fake = renderApp(onCall);
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    fireEvent.click(screen.getByTestId('blocked-alert'));
+    return fake;
+  }
+
+  it('calls seat.get once with the seat it opened, and says so', async () => {
+    const fm = fleetMachine(snapshot('roamy--blocked'));
+    const seat = fm.snapshot.seats.find((s) => s.id === seatRef.seat)!;
+    const { calls } = openBlocked(() => ({
+      ok: true,
+      value: { machine: 'roamy', liveness: 'live', lastSeen: fm.lastSeen, seat },
+    }));
+    expect(screen.getByTestId('focus-call')).toHaveAttribute('data-state', 'pending');
+    await waitFor(() =>
+      expect(screen.getByTestId('focus-call')).toHaveTextContent('seat.get · ok · as human:ui')
+    );
+    expect(calls).toEqual([{ event: 'core:call', request: { verb: 'seat.get', input: seatRef } }]);
+  });
+
+  it('shows a refusal as data, and keeps the live-feed view', async () => {
+    openBlocked(() => ({
+      ok: false,
+      error: { failureMode: 'not_found', message: 'no such seat' },
+    }));
+    const box = await screen.findByText(/seat.get refused · not_found/);
+    expect(box.closest('[data-testid="focus-call"]')).toHaveAttribute('data-state', 'refused');
+    expect(screen.getByTestId('focus-call')).toHaveTextContent('no such seat');
+    expect(screen.getByTestId('blocked-because')).toHaveTextContent('permission prompt');
+  });
+
+  it('uses the seat.get answer when it is newer than the live feed', async () => {
+    const fm = fleetMachine(snapshot('roamy--blocked'), {
+      lastSeen: new Date(Date.now() - 60_000).toISOString(),
+    });
+    const fake = renderApp(() => ({
+      ok: true,
+      value: {
+        machine: 'roamy',
+        liveness: 'live',
+        lastSeen: new Date().toISOString(),
+        seat: {
+          ...fm.snapshot.seats.find((s) => s.id === seatRef.seat)!,
+          status: 'idle',
+          blockedReason: null,
+        },
+      },
+    }));
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fm]));
+    fireEvent.click(screen.getByTestId('blocked-alert'));
+    expect(screen.getByTestId('blocked-because')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('blocked-because')).toBeNull());
   });
 });
 
@@ -294,5 +387,19 @@ describe('rich text', () => {
       '⏺ Second',
       '❯ 1. Yes\n2. No',
     ]);
+  });
+});
+
+describe('AnsiText (r1 L1)', () => {
+  it('renders an OSC 8 hyperlink as its text, never as a live link', () => {
+    const html = ansiToHtml([
+      'see \u001b]8;;https://example.com\u0007the docs\u001b]8;;\u0007 now',
+    ]);
+    expect(html).not.toMatch(/<a\b/);
+    expect(html).toContain('the docs');
+  });
+
+  it('escapes HTML in pane text', () => {
+    expect(ansiToHtml(['<img src=x onerror=alert(1)>'])).not.toMatch(/<img/);
   });
 });

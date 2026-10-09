@@ -72,6 +72,20 @@ a:hover {
   text-transform: uppercase;
   color: var(--ar-ink-muted);
 }
+.api-link {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--ar-line);
+  min-height: 32px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+}
 .controls {
   display: flex;
   flex-wrap: wrap;
@@ -557,6 +571,13 @@ a:hover {
 }
 .because .label {
   color: var(--ar-blocked-ink);
+}
+.because[data-kind='error'] {
+  background: var(--ar-error-bg);
+  border-color: var(--ar-error);
+}
+.because[data-kind='error'] .label {
+  color: var(--ar-error-ink);
 }
 .because[data-kind='asleep'] {
   background: var(--ar-surface-raised);
