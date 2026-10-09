@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
@@ -45,6 +46,19 @@ if (!hubToken || hubToken.length < 16) {
   throw new Error('HUB_TOKEN (16+ chars) must be set in .env or the environment for the e2e hub.');
 }
 
+// The e2e hub must never read or write the tree's real data/ (it persists snapshots there, and a
+// real hub would later load the fixtures as live state). It gets a fresh temp DATA_DIR, created
+// once in the runner (workers inherit the env var). The hub loads .env with override on, so a
+// DATA_DIR line in .env, even a blank one, would replace the injected path: refuse it.
+if ('DATA_DIR' in dotenv) {
+  throw new Error(
+    '.env sets DATA_DIR; the e2e hub loads .env with override on, so that line would replace the ' +
+      "e2e temp data dir and the run could touch real state. Remove DATA_DIR from this tree's .env."
+  );
+}
+process.env.E2E_DATA_DIR ??= mkdtempSync(path.join(tmpdir(), 'appyrig-e2e-data-'));
+const e2eDataDir = process.env.E2E_DATA_DIR;
+
 // Read by specs (e2e/support/fleet.ts) so they know where the hub is and how to log in.
 process.env.E2E_HUB_URL = hubUrl;
 process.env.E2E_HUB_TOKEN = hubToken;
@@ -56,6 +70,8 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: 'list',
+  // Proves the hub used the temp DATA_DIR, then removes it.
+  globalTeardown: './e2e/support/global-teardown.ts',
   use: {
     headless: true,
     baseURL,
@@ -65,6 +81,7 @@ export default defineConfig({
     {
       name: 'hub',
       command: 'npm run build -w shared && npm run dev -w server',
+      env: { DATA_DIR: e2eDataDir },
       url: `${hubUrl}/health`,
       reuseExistingServer: false,
       timeout: 120_000,
