@@ -105,6 +105,23 @@ describe('groupSeats', () => {
     ]);
   });
 
+  it('D53: blocked groups first, then running, then all-stopped, then asleep', () => {
+    const fleet = [
+      fleetMachine(snapshot('m2')),
+      fleetMachine(snapshot('roamy--blocked')),
+      {
+        ...fleetMachine(snapshot('roamy')),
+        machine: { id: 'zz', label: 'ZZ', hostname: null },
+        liveness: 'asleep' as const,
+      },
+    ];
+    const ranks = groupSeats(fleet, 'rig').map((g) => `${g.where}:${g.name}`);
+    expect(ranks[0]).toBe('Roamy:starter');
+    expect(ranks.indexOf('Roamy:kernel')).toBeLessThan(ranks.indexOf('M2:control'));
+    expect(ranks.slice(-3).every((r) => r.startsWith('ZZ:'))).toBe(true);
+    expect(groupSeats(fleet, 'machine').map((g) => g.key)).toEqual(['roamy', 'm2', 'zz']);
+  });
+
   it('keeps every seat exactly once, whichever grouping', () => {
     const total = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
     for (const by of ['rig', 'machine'] as const) {

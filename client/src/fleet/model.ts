@@ -109,10 +109,25 @@ export function orderedMachines(machines: Record<string, FleetMachine>): FleetMa
 }
 
 /**
- * Groups for the Wall. By rig, a rig name is scoped to its machine: `kernel` on Roamy and `kernel`
- * on the M2 are different rigs. Seats outside OpenRig group as "tmux sessions".
+ * D53: what needs eyes comes first. Groups with a blocked seat, then groups with any running seat,
+ * then groups whose seats are all stopped, then asleep machines. Order inside a rank is stable.
+ */
+export function groupRank(g: WallGroup): number {
+  if (g.asleep) return 3;
+  if (g.tiles.some((t) => t.seat.status === 'blocked')) return 0;
+  if (g.tiles.some((t) => t.seat.status !== 'stopped')) return 1;
+  return 2;
+}
+
+/**
+ * Groups for the Wall, ranked by groupRank. By rig, a rig name is scoped to its machine: `kernel`
+ * on Roamy and `kernel` on the M2 are different rigs. Seats outside OpenRig group as "tmux sessions".
  */
 export function groupSeats(machines: FleetMachine[], by: GroupBy): WallGroup[] {
+  return collectGroups(machines, by).sort((a, b) => groupRank(a) - groupRank(b));
+}
+
+function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
   const groups: WallGroup[] = [];
   for (const fm of machines) {
     const asleep = fm.liveness === 'asleep';

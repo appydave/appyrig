@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AUTH_ERRORS, FLEET_EVENTS } from '@appydave/shared';
 import App from './App.js';
-import { toParagraphs } from './components/Focus.js';
+import { lastTurn, toParagraphs } from './components/Focus.js';
 import type { FleetSocket } from './fleet/useFleet.js';
 import { installTestHooks, xtermCount } from './fleet/xtermRegistry.js';
 import { fleetMachine, snapshot, update } from './test/fleetFixtures.js';
@@ -176,7 +176,7 @@ describe('App: Wall and Fleet Strip', () => {
     fireEvent.click(screen.getByTestId('group-by-machine'));
     expect(
       screen.getAllByTestId('wall-group').map((g) => g.getAttribute('data-group-key'))
-    ).toEqual(['m2', 'roamy']);
+    ).toEqual(['roamy', 'm2']);
   });
 
   it('never emits anything to the hub (read-only UI)', () => {
@@ -249,10 +249,29 @@ describe('App: Focus', () => {
   });
 });
 
-describe('toParagraphs', () => {
-  it('strips colour, drops rules and splits on agent turn markers', () => {
+describe('rich text', () => {
+  it('takes the latest turn, from the last marker (⏺ or ●) to the end', () => {
+    expect(lastTurn(['⏺ old', 'x', '● new', 'y'])).toEqual(['● new', 'y']);
+    const many = Array.from({ length: 60 }, (_, i) => `l${i}`);
+    expect(lastTurn(many)).toHaveLength(40);
+  });
+
+  it('strips colour, drops rules, re-joins hard wraps and keeps list lines', () => {
     expect(
-      toParagraphs(['\u001b[1m⏺ First\u001b[0m', '  more', '────────', '⏺ Second', '', 'third'])
-    ).toEqual(['⏺ First\nmore', '⏺ Second', 'third']);
+      toParagraphs([
+        '\u001b[1m⏺ First part of a\u001b[0m',
+        '  sentence that wrapped.',
+        '  - a list item',
+        '────────',
+        '⏺ Second',
+        '',
+        '❯ 1. Yes',
+        '  2. No',
+      ])
+    ).toEqual([
+      '⏺ First part of a sentence that wrapped.\n- a list item',
+      '⏺ Second',
+      '❯ 1. Yes\n2. No',
+    ]);
   });
 });

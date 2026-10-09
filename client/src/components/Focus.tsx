@@ -18,26 +18,44 @@ type Mode = 'terminal' | 'rich';
 
 const QUEUE_ROWS = 6;
 
+/** Agent turn markers: Claude Code prints "⏺" (some fonts and captures give "●"). */
+const TURN = /^\s*[⏺●]/;
+/** Lines that start a new visual line in prose: list items, tool results, numbered options. */
+const LINE_START = /^\s*(?:[-*•⎿└❯›>]|\d+[.)]\s|[✓✕✗✔✘✻✽✳◐○▲])/;
+/** Rules, frames and box-drawing only. */
+const RULE = /^[\s─━═│┃╭╮╰╯┌┐└┘├┤┬┴┼-]*$/;
+
+/** The agent's latest turn: from the last turn marker to the end. Falls back to the last 40 lines. */
+export function lastTurn(lines: string[]): string[] {
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    if (TURN.test(stripAnsi(lines[i]))) return lines.slice(i);
+  }
+  return lines.slice(-40);
+}
+
 /**
- * Rich text: the terminal text as readable prose. Strip ANSI, drop rule/box lines, and treat
- * each "⏺" (an agent turn marker) or blank line as a paragraph break. The terminal stays the
- * source of truth; this only makes it easier to read.
+ * Rich text: the agent's latest turn as readable prose. Strip ANSI, drop rule/box lines, break
+ * paragraphs on blank lines and turn markers, and re-join the terminal's hard wraps, keeping
+ * list items and options on their own lines. The terminal stays the source of truth.
  */
 export function toParagraphs(lines: string[]): string[] {
   const out: string[] = [];
-  let cur: string[] = [];
+  let cur = '';
   const flush = () => {
-    if (cur.length) out.push(cur.join('\n'));
-    cur = [];
+    if (cur) out.push(cur);
+    cur = '';
   };
   for (const raw of lines) {
     const line = stripAnsi(raw).replace(/\s+$/, '');
-    if (/^[\s─━═│┃╭╮╰╯┌┐└┘├┤┬┴┼-]*$/.test(line)) {
+    if (RULE.test(line)) {
       flush();
       continue;
     }
-    if (line.trimStart().startsWith('⏺')) flush();
-    cur.push(line.trim());
+    if (TURN.test(line)) flush();
+    const text = line.trim();
+    if (!cur) cur = text;
+    else if (LINE_START.test(line)) cur += `\n${text}`;
+    else cur += ` ${text}`;
   }
   flush();
   return out;
@@ -68,7 +86,7 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
     () => (seat.tail ? visibleTail(seat.tail.lines, Infinity) : []),
     [seat.tail]
   );
-  const paragraphs = useMemo(() => toParagraphs(lines), [lines]);
+  const paragraphs = useMemo(() => toParagraphs(lastTurn(lines)), [lines]);
   const queue = queueFor(tile);
 
   useEffect(() => {
@@ -164,8 +182,8 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
               paragraphs.map((p, i) => <p key={i}>{p}</p>)
             )}
             <p className="note">
-              Rich text is the terminal text without colours and frames. The terminal stays the
-              source of truth.
+              Rich text is the seat&rsquo;s latest turn, without colours, frames or hard wraps.
+              Earlier output and the exact screen are in Terminal, which stays the source of truth.
             </p>
           </article>
         </div>
@@ -215,7 +233,7 @@ export default function Focus({ tile, now, hubConnected, onClose }: Props) {
             {queue.length === 0 && <p className="fresh">No queue rows to or from this seat.</p>}
             {queue.map((q) => (
               <div className="qrow" key={q.id}>
-                <span>{q.summary ?? q.tags.join(', ') ?? q.id}</span>
+                <span>{q.summary || q.tags.join(', ') || q.id}</span>
                 <span className="fresh">{q.state}</span>
                 <span className="mono">
                   {q.source === seat.id ? `→ ${q.destination ?? '?'}` : `← ${q.source ?? '?'}`}
