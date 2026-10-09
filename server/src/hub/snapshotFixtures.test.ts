@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { MachineSnapshotSchema, TAIL_MAX_LINES, type MachineSnapshot } from '@appydave/shared';
-
-const SNAPSHOTS = resolve(import.meta.dirname, '../../../test/fixtures/snapshots');
-const load = (name: string): MachineSnapshot =>
-  JSON.parse(readFileSync(resolve(SNAPSHOTS, `${name}.json`), 'utf8'));
+import { MachineSnapshotSchema, TAIL_MAX_LINES } from '@appydave/shared';
+import { SNAPSHOTS, loadSnapshot as load } from '../test/hubHarness.js';
 
 describe('snapshot fixtures satisfy the shared contract', () => {
   for (const file of readdirSync(SNAPSHOTS).filter((f) => f.endsWith('.json'))) {

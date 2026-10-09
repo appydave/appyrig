@@ -104,4 +104,24 @@ describe('env config', () => {
     expect(exitSpy).toHaveBeenCalledWith(1);
     exitSpy.mockRestore();
   });
+
+  it('treats blank HUB_BIND_HOSTS and DATA_DIR lines as unset (.env.example ships them)', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.HUB_BIND_HOSTS = '';
+    process.env.DATA_DIR = '';
+
+    const { env } = await import('./env.js?blank-hub=' + Date.now());
+
+    expect(env.HUB_BIND_HOSTS).toBe('127.0.0.1,::1');
+    expect(env.DATA_DIR).toBeUndefined();
+  });
+
+  it('reads the M2 bind list as given', async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.HUB_BIND_HOSTS = '127.0.0.1,::1,100.126.70.25';
+
+    const { env } = await import('./env.js?m2-hosts=' + Date.now());
+
+    expect(env.HUB_BIND_HOSTS).toBe('127.0.0.1,::1,100.126.70.25');
+  });
 });

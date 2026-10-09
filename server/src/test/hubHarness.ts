@@ -10,7 +10,7 @@ import { sessionCookieHeader } from '../hub/browserAuth.js';
 export const TOKEN = 'test-hub-token-0123456789';
 export const COOKIE = sessionCookieHeader(TOKEN).split(';')[0]!;
 
-const SNAPSHOTS = resolve(import.meta.dirname, '../../../test/fixtures/snapshots');
+export const SNAPSHOTS = resolve(import.meta.dirname, '../../../test/fixtures/snapshots');
 export const loadSnapshot = (name: string): MachineSnapshot =>
   JSON.parse(readFileSync(resolve(SNAPSHOTS, `${name}.json`), 'utf8'));
 
