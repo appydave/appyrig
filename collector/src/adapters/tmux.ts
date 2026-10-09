@@ -6,11 +6,24 @@ import type { TmuxPane } from './types.js';
  * comes from here and nowhere else (plan §0.1: never the transcript routes).
  */
 
+/**
+ * Field separator for `list-panes -F`. A printable one on purpose: tmux replaces control characters
+ * (a TAB) with `_` when no UTF-8 locale is set, which is exactly what launchd gives a job.
+ */
+export const FIELD_SEP = '<|>';
+
 export const LIST_PANES_ARGS = [
   'list-panes',
   '-a',
   '-F',
-  '#{session_name}\t#{pane_id}\t#{window_active}\t#{pane_active}\t#{pane_current_command}\t#{pane_current_path}',
+  [
+    '#{session_name}',
+    '#{pane_id}',
+    '#{window_active}',
+    '#{pane_active}',
+    '#{pane_current_command}',
+    '#{pane_current_path}',
+  ].join(FIELD_SEP),
 ];
 
 export function capturePaneArgs(paneId: string): string[] {
@@ -22,13 +35,28 @@ export function isNoServer(stderr: string): boolean {
   return /no server running|error connecting to/i.test(stderr);
 }
 
-/** One pane per session: the active pane of the active window (first listed as the fallback). */
+/**
+ * One pane per session: the active pane of the active window (first listed as the fallback).
+ * Throws when there is output but not one line parses: that is tmux speaking in a format we do not
+ * understand, and an empty list there would look exactly like "no sessions".
+ */
 export function parsePanes(stdout: string): TmuxPane[] {
   const bySession = new Map<string, { pane: TmuxPane; active: boolean }>();
+  let lines = 0;
   for (const line of stdout.split('\n')) {
     if (!line.trim()) continue;
-    const [session, paneId, windowActive, paneActive, command, cwd] = line.split('\t');
-    if (!session || !paneId) continue;
+    lines++;
+    const fields = line.split(FIELD_SEP);
+    if (fields.length !== 6) continue;
+    const [session, paneId, windowActive, paneActive, command, cwd] = fields as [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+    ];
+    if (!session || !/^%\d+$/.test(paneId)) continue;
     const active = windowActive === '1' && paneActive === '1';
     const prev = bySession.get(session);
     if (!prev || (active && !prev.active)) {
@@ -37,6 +65,11 @@ export function parsePanes(stdout: string): TmuxPane[] {
         active,
       });
     }
+  }
+  if (lines > 0 && bySession.size === 0) {
+    throw new Error(
+      `unparseable list-panes output (${lines} line(s), none with 6 fields): ${stdout.trim().slice(0, 120)}`
+    );
   }
   return [...bySession.values()].map((v) => v.pane);
 }

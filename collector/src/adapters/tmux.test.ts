@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { TAIL_MAX_LINES } from '@appydave/shared';
-import { capturePaneArgs, isNoServer, parsePanes, runtimeOfCommand, tailLines } from './tmux.js';
+import {
+  capturePaneArgs,
+  FIELD_SEP,
+  isNoServer,
+  LIST_PANES_ARGS,
+  parsePanes,
+  runtimeOfCommand,
+  tailLines,
+} from './tmux.js';
 import { readFixtureText, ROAMY_PANES } from './fixtureSources.js';
 
 describe('adapter: tmux', () => {
@@ -12,17 +20,35 @@ describe('adapter: tmux', () => {
   });
 
   it('picks the active pane of the active window per session', () => {
+    const row = (...f: string[]) => f.join(FIELD_SEP);
     const out = [
-      'a\t%1\t0\t1\tzsh\t/x',
-      'a\t%2\t1\t0\tzsh\t/x',
-      'a\t%3\t1\t1\tclaude\t/work',
-      'b\t%4\t1\t1\tnode\t/y',
+      row('a', '%1', '0', '1', 'zsh', '/x'),
+      row('a', '%2', '1', '0', 'zsh', '/x'),
+      row('a', '%3', '1', '1', 'claude', '/work'),
+      row('b', '%4', '1', '1', 'node', '/y'),
       '',
     ].join('\n');
     expect(parsePanes(out)).toEqual([
       { session: 'a', paneId: '%3', command: 'claude', cwd: '/work' },
       { session: 'b', paneId: '%4', command: 'node', cwd: '/y' },
     ]);
+  });
+
+  it('the field separator is printable, so a missing UTF-8 locale cannot mangle it', () => {
+     
+    expect(FIELD_SEP).toMatch(/^[\x21-\x7e]+$/);
+    expect(LIST_PANES_ARGS.join(' ')).not.toMatch(/\t/);
+  });
+
+  it('output that tmux mangled (TAB -> _, as under launchd) is an error, never zero sessions', () => {
+    const mangled =
+      'dev-collector@appyrig-build_%2_1_1_bash_/Users/me/dev\nopenrig-orch_%5_1_1_2.1.200_/Users/me';
+    expect(() => parsePanes(mangled)).toThrow(/unparseable list-panes output/);
+  });
+
+  it('empty output is zero sessions, not an error', () => {
+    expect(parsePanes('')).toEqual([]);
+    expect(parsePanes('\n')).toEqual([]);
   });
 
   it('no server running is zero sessions, other errors are not', () => {

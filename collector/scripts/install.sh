@@ -87,6 +87,8 @@ esc() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>$(esc "$PATH_VALUE")</string>
+    <key>LANG</key><string>en_US.UTF-8</string>
+    <key>LC_ALL</key><string>en_US.UTF-8</string>
     <key>APPYRIG_HUB_URL</key><string>$(esc "$HUB")</string>
     <key>APPYRIG_TOKEN_FILE</key><string>$(esc "$TOKEN_FILE")</string>
     <key>APPYRIG_MACHINE_ID</key><string>$(esc "$MACHINE_ID")</string>

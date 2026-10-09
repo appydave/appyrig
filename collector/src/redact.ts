@@ -21,6 +21,12 @@ const PATTERNS: RegExp[] = [
   /\bBearer\s+[A-Za-z0-9._~+/=-]{8,}/gi,
   // auth_token / hook_token style assignments
   /\b(?:auth|hook|access|api)[_-]?token["']?\s*[:=]\s*["']?[A-Za-z0-9._~+/=-]{8,}/gi,
+  // env-style secret assignments: ANTHROPIC_API_KEY=..., DB_PASSWORD: ..., client_secret = ...
+  /\b[A-Za-z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Za-z0-9_]*["']?\s*[:=]\s*["']?[^\s"'<>,;]{6,}/gi,
+  // password: value
+  /\bpass(?:word|wd)\s*[:=]\s*["']?[^\s"']{4,}/gi,
+  // JWTs
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g,
   // any hex run of 40+ characters (hashes, long keys)
   /\b[0-9a-fA-F]{40,}\b/g,
 ];

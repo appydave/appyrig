@@ -14,6 +14,10 @@ const SECRETS = {
   resumeFlag: "claude --resume '3f2a9c1e-5b7d-4e21-9a0c-8d6f1b2c3e4f'",
   resumeCodex: 'codex resume 01a1166b-c782-75a1-bf28-4e9cb54ea8ed',
   aws: 'AKIAIOSFODNN7EXAMPLE',
+  envKey: 'ANTHROPIC_API_KEY=sk_live_notapattern99',
+  envSecret: 'export CLIENT_SECRET: "s3cr3tValue-xyz"',
+  password: 'password: hunter2hunter2',
+  jwt: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N',
 };
 const PAYLOAD: Record<string, string> = {
   gho: SECRETS.gho,
@@ -28,6 +32,10 @@ const PAYLOAD: Record<string, string> = {
   resumeFlag: '3f2a9c1e-5b7d-4e21-9a0c-8d6f1b2c3e4f',
   resumeCodex: '01a1166b-c782-75a1-bf28-4e9cb54ea8ed',
   aws: SECRETS.aws,
+  envKey: 'sk_live_notapattern99',
+  envSecret: 's3cr3tValue-xyz',
+  password: 'hunter2hunter2',
+  jwt: 'eyJhbGciOiJIUzI1NiJ9',
 };
 
 describe('redaction filter (AC 19)', () => {

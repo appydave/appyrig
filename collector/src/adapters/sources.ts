@@ -47,7 +47,9 @@ export function createSources(opts: SourceOptions = {}): Sources {
   const viewerBin = opts.viewerBin ?? 'herdr';
   const timeout = opts.timeoutMs ?? 8000;
   const queueTtl = opts.queueTtlMs ?? 15_000;
-  const env = opts.env ?? process.env;
+  // A UTF-8 locale for every child: launchd sets none, and tmux mangles control characters without one.
+  const env = { LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', ...(opts.env ?? process.env) };
+  if (!/utf-?8/i.test(env.LC_ALL ?? '')) env.LC_ALL = 'en_US.UTF-8';
 
   const run = (bin: string, args: string[]): Promise<ExecResult> =>
     new Promise((resolve, reject) => {

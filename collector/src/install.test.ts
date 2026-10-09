@@ -38,6 +38,8 @@ describe('launchd install script', () => {
     execFileSync('plutil', ['-lint', plist]);
     const xml = readFileSync(plist, 'utf8');
     expect(xml).toContain('<key>RunAtLoad</key><true/>');
+    // launchd sets no locale; tmux mangles control characters without a UTF-8 one
+    expect(xml).toContain('<key>LC_ALL</key><string>en_US.UTF-8</string>');
     expect(xml).toContain('<key>KeepAlive</key><true/>');
     expect(xml).toContain('http://100.126.70.25:7191');
     expect(xml).toContain(token);
