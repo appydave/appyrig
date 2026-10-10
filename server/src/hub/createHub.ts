@@ -94,7 +94,15 @@ export function createHub(opts: HubOptions): Hub {
     cors: { origin: opts.clientUrl, methods: ['GET', 'POST'], credentials: true },
   });
 
-  app.use(helmet());
+  // The hub is served over plain http on the tailnet (http://<tailscale-ip>:7191).
+  // helmet's defaults (CSP upgrade-insecure-requests + HSTS) make browsers fetch
+  // /assets/* over https, which fails and leaves a blank page.
+  app.use(
+    helmet({
+      contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } },
+      strictTransportSecurity: false,
+    })
+  );
   app.use(compression());
   app.use(cors({ origin: opts.clientUrl, credentials: true }));
   app.use(express.json());
