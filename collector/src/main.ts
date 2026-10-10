@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { pid } from 'node:process';
+import { HistoryReader } from './adapters/history.js';
 import { createSources } from './adapters/index.js';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
@@ -16,11 +17,19 @@ function main() {
   const settings = loadSettings();
   const sources = createSources(settings.sources);
   const config = { machine: settings.machine, version: VERSION, pid };
+  // Seat histories are read only for seats the daemon reported in the latest snapshot.
+  let knownSeats = new Set<string>();
+  const history = new HistoryReader(settings.machine.id);
   const pusher = startPusher({
     hubUrl: settings.hubUrl,
     token: settings.token,
     machineId: settings.machine.id,
-    build: () => buildSnapshot(sources, config),
+    build: async () => {
+      const snap = await buildSnapshot(sources, config);
+      knownSeats = new Set(snap.seats.filter((s) => s.rig !== null).map((s) => s.id));
+      return snap;
+    },
+    histories: () => history.changed(knownSeats),
   });
   console.log(
     `${new Date().toISOString()} appyrig collector ${VERSION} for ${settings.machine.id} -> ${settings.hubUrl}`

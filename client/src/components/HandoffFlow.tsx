@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import { ago } from '../fleet/model.js';
-import { buildFlow, flowChapters, flowRange, rigQueue, type FlowEdge } from '../fleet/views.js';
+import type { FleetSocket } from '../fleet/useFleet.js';
+import {
+  buildFlow,
+  flowChapters,
+  flowRange,
+  replaySteps,
+  rigQueue,
+  type FlowEdge,
+} from '../fleet/views.js';
+import ReplayConsoles from './ReplayConsoles.js';
 
 interface Props {
   machine: FleetMachine | null;
   rig: string | null;
   now: number;
+  /** For the consoles' seat.history calls; without it the consoles show handoffs only. */
+  socket?: FleetSocket;
 }
 
 const W = 1000;
@@ -89,7 +100,7 @@ const clock = (t: number) =>
  * Amber arcs below the row are rework (a FAIL sent back). The scrubber replays a finished run.
  * A team with no QA or review seat is drawn one box per seat instead of being squashed into roles.
  */
-export default function HandoffFlow({ machine, rig, now }: Props) {
+export default function HandoffFlow({ machine, rig, now, socket }: Props) {
   const range = useMemo(
     () => (machine && rig ? flowRange(rigQueue(machine, rig)) : null),
     [machine, rig]
@@ -104,9 +115,13 @@ export default function HandoffFlow({ machine, rig, now }: Props) {
     () => (machine && rig ? flowChapters(machine, rig, tenMin) : []),
     [machine, rig, tenMin]
   );
-  const jump = (t: number | null) => {
+  const steps = useMemo(() => (machine && rig ? replaySteps(machine, rig) : []), [machine, rig]);
+  // Set while stepping one handoff at a time; any other move clears it.
+  const [stepId, setStepId] = useState<string | null>(null);
+  const jump = (t: number | null, step: string | null = null) => {
     atRef.current = t;
     setAt(t);
+    setStepId(step);
   };
 
   // A new rig starts at its end (the current state).
@@ -155,6 +170,31 @@ export default function HandoffFlow({ machine, rig, now }: Props) {
   const staleStages = flow.stages.filter((s) => s.stale > 0);
   // During a replay, narrate the latest chapter reached.
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
+  const stepIdx = stepId ? steps.findIndex((q) => q.id === stepId) : -1;
+  const stepTo = (i: number) => {
+    const q = steps[i];
+    if (!q) return;
+    setPlaying(false);
+    jump(Date.parse(q.createdAt), q.id);
+  };
+  const nextStep = () =>
+    stepTo(
+      stepIdx >= 0
+        ? stepIdx + 1
+        : at === null
+          ? 0
+          : steps.findIndex((q) => Date.parse(q.createdAt) > t)
+    );
+  const prevStep = () => {
+    if (stepIdx >= 0) return stepTo(stepIdx - 1);
+    if (at === null) return stepTo(steps.length - 1);
+    let i = -1;
+    steps.forEach((q, k) => {
+      if (Date.parse(q.createdAt) < t) i = k;
+    });
+    stepTo(i);
+  };
+  const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
   const staleCount = staleStages.reduce((n, s) => n + s.stale, 0);
   const oldestStale = Math.max(0, ...staleStages.map((s) => s.oldestStaleMs ?? 0));
 
@@ -201,10 +241,20 @@ export default function HandoffFlow({ machine, rig, now }: Props) {
           : 'No QA or review seat in this rig, so each seat is its own box, in the order it first handed work on.'}
       </p>
 
-      {chapter && (
-        <p className="flow-narration" data-testid="flow-narration" data-kind={chapter.kind}>
-          <b>{chapter.title}</b> {chapter.text}
+      {stepItem ? (
+        <p className="flow-narration" data-testid="flow-narration" data-kind="step">
+          <b>
+            Handoff {stepIdx + 1} of {steps.length}
+          </b>{' '}
+          {clock(Date.parse(stepItem.createdAt))} · {(stepItem.source ?? '?').split('@')[0]} →{' '}
+          {(stepItem.destination ?? '?').split('@')[0]}: {stepItem.summary ?? '(no message)'}
         </p>
+      ) : (
+        chapter && (
+          <p className="flow-narration" data-testid="flow-narration" data-kind={chapter.kind}>
+            <b>{chapter.title}</b> {chapter.text}
+          </p>
+        )
       )}
 
       <svg
@@ -365,6 +415,28 @@ export default function HandoffFlow({ machine, rig, now }: Props) {
         >
           {playing ? 'Pause' : 'Replay run'}
         </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="flow-prev"
+          aria-label="Previous handoff"
+          data-explain="step"
+          disabled={stepIdx === 0}
+          onClick={prevStep}
+        >
+          ◀
+        </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="flow-next"
+          aria-label="Next handoff"
+          data-explain="step"
+          disabled={stepIdx === steps.length - 1}
+          onClick={nextStep}
+        >
+          ▶
+        </button>
         <input
           type="range"
           aria-label="Replay time"
@@ -403,6 +475,7 @@ export default function HandoffFlow({ machine, rig, now }: Props) {
           ))}
         </ol>
       )}
+      <ReplayConsoles machine={machine} rig={rig} at={t} socket={socket} />
     </section>
   );
 }

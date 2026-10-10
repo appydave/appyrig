@@ -180,7 +180,11 @@ export function createHub(opts: HubOptions): Hub {
     io,
     store,
     core,
-    load: () => store.load(),
+    load: async () => {
+      const loaded = await store.load();
+      await store.loadHistories();
+      return loaded;
+    },
     sweep,
     start: () => {
       if (timer) return;

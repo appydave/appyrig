@@ -4,7 +4,9 @@ import { z } from 'zod';
 import {
   ASLEEP_AFTER_MS,
   MachineSnapshotSchema,
+  SeatHistorySchema,
   type FleetMachine,
+  type SeatHistory,
   type Liveness,
   type MachineSnapshot,
 } from '@appydave/shared';
@@ -53,11 +55,15 @@ export class FleetStore {
   /** Per machine: the write in flight, and the latest entry waiting behind it (coalesced). */
   private readonly writes = new Map<string, Promise<void>>();
   private readonly pending = new Map<string, FleetMachine>();
+  /** v1.2: seat histories for the replay consoles, by `<machine>/<seat>`. */
+  private readonly histories = new Map<string, SeatHistory>();
+  private readonly historyDir: string | undefined;
 
   constructor(opts: FleetStoreOptions = {}) {
     this.now = opts.now ?? (() => new Date());
     this.asleepAfterMs = opts.asleepAfterMs ?? ASLEEP_AFTER_MS;
     this.dir = opts.dataDir ? join(opts.dataDir, 'snapshots') : undefined;
+    this.historyDir = opts.dataDir ? join(opts.dataDir, 'history') : undefined;
     this.onDiskError = opts.onDiskError ?? (() => {});
     this.onLiveness = opts.onLiveness ?? (() => {});
   }
@@ -155,6 +161,67 @@ export class FleetStore {
       }
     }
     return this.list();
+  }
+
+  /** v1.2: keep the latest history a collector sent for one seat (memory + disk). */
+  putHistory(h: SeatHistory): void {
+    this.histories.set(`${h.machineId}/${h.seat}`, h);
+    if (!this.historyDir) return;
+    const key = `history:${h.machineId}/${h.seat}`;
+    const file = join(
+      this.historyDir,
+      `${encodeURIComponent(h.machineId)}__${encodeURIComponent(h.seat)}.json`
+    );
+    const prev = this.writes.get(key) ?? Promise.resolve();
+    const run = prev.then(async () => {
+      const tmp = `${file}.${process.pid}.tmp`;
+      try {
+        await mkdir(this.historyDir!, { recursive: true, mode: 0o700 });
+        await writeFile(tmp, JSON.stringify(this.histories.get(`${h.machineId}/${h.seat}`)), {
+          mode: 0o600,
+        });
+        await rename(tmp, file);
+      } catch (err) {
+        this.onDiskError(`cannot write ${file}`, err);
+      }
+    });
+    this.writes.set(key, run);
+    void run.then(() => {
+      if (this.writes.get(key) === run) this.writes.delete(key);
+    });
+  }
+
+  getHistory(machineId: string, seat: string): SeatHistory | undefined {
+    return this.histories.get(`${machineId}/${seat}`);
+  }
+
+  /** Load stored histories; invalid files are reported and skipped. */
+  async loadHistories(): Promise<number> {
+    if (!this.historyDir) return 0;
+    let names: string[];
+    try {
+      names = (await readdir(this.historyDir)).filter((n) => n.endsWith('.json'));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        this.onDiskError(`cannot read ${this.historyDir}`, err);
+      }
+      return 0;
+    }
+    for (const name of names) {
+      const file = join(this.historyDir, name);
+      try {
+        const parsed = SeatHistorySchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+        if (!parsed.success) {
+          this.onDiskError(`${file} is not a seat history; skipped`, parsed.error);
+          continue;
+        }
+        const key = `${parsed.data.machineId}/${parsed.data.seat}`;
+        if (!this.histories.has(key)) this.histories.set(key, parsed.data);
+      } catch (err) {
+        this.onDiskError(`cannot load ${file}; skipped`, err);
+      }
+    }
+    return this.histories.size;
   }
 
   /** Resolves when every write queued so far has finished. */

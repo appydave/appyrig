@@ -1355,3 +1355,83 @@ a:hover {
     position: static;
   }
 }
+
+/* ---------- v1.2: replay consoles ---------- */
+.consoles {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--ar-border, var(--ar-ink-muted));
+  padding-top: 12px;
+}
+.consoles-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.console-chip[aria-pressed='true'] {
+  background: var(--ar-cta);
+  border-color: var(--ar-ink);
+}
+.console-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 12px;
+}
+.console {
+  border: 1px solid var(--ar-ink);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--ar-term-bg, #2b2626);
+  color: var(--ar-term-ink, #f3ecdf);
+}
+.console header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--ar-ink);
+  color: var(--ar-canvas);
+  font-size: 13px;
+}
+.console-src {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.console-body {
+  height: 260px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  font-family: var(--ar-font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.console-body .quiet {
+  color: inherit;
+  opacity: 0.6;
+}
+.console-line {
+  margin: 0 0 3px;
+  display: grid;
+  grid-template-columns: 64px 16px 1fr;
+  gap: 4px;
+}
+.console-line time {
+  opacity: 0.55;
+}
+.console-line[data-kind='received'],
+.console-line[data-kind='sent'] {
+  color: var(--ar-cta);
+}
+.console-line[data-kind='prompt'] {
+  color: #9fd3c7;
+}
+.console-line[data-kind='tool'] {
+  opacity: 0.75;
+}
+.flow-replay .pill-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

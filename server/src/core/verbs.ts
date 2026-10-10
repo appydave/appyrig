@@ -11,6 +11,8 @@ import {
   QueueListInputSchema,
   QueueRowSchema,
   RigTopologySchema,
+  SeatHistoryInputSchema,
+  SeatHistoryOutputSchema,
   SeatGetOutputSchema,
   SeatListInputSchema,
   SeatRefSchema,
@@ -229,6 +231,25 @@ const VERB_SET = {
         lines: seat.tail ? seat.tail.lines.slice(-n) : [],
         ansi: seat.tail?.ansi ?? false,
         capturedAt: seat.tail?.capturedAt ?? null,
+      };
+    }
+  ),
+
+  'seat.history': query(
+    'What an OpenRig seat said and did over time (prompts, replies, tool calls), from its Claude transcript; for replay. Tool results and thinking are never included.',
+    SeatHistoryInputSchema,
+    SeatHistoryOutputSchema,
+    NOT_FOUND,
+    (input, ctx) => {
+      machinesOf(ctx, input.machine);
+      const h = ctx.store.getHistory(input.machine, input.seat);
+      return {
+        machine: input.machine,
+        seat: input.seat,
+        available: !!h,
+        collectedAt: h?.collectedAt ?? null,
+        truncated: h?.truncated ?? false,
+        events: h?.events ?? [],
       };
     }
   ),

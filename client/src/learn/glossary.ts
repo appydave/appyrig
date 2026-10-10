@@ -255,7 +255,18 @@ export const GLOSSARY: Record<string, Term> = {
   replay: {
     term: 'Replay run',
     what: "Plays the rig's whole queue history back in 40 seconds. The slider jumps to any moment.",
-    why: 'The chapters list jumps straight to the moments that mattered: first rework, the biggest queue, the end.',
+    why: 'The chapter buttons jump to the moments that mattered (first rework, the biggest queue, the end) and the caption line says what happened.',
+  },
+
+  step: {
+    term: 'Step one handoff',
+    what: 'Moves the replay to the previous or next handoff, one at a time, and shows who handed what to whom with the message it carried.',
+    why: 'Replay steps handoff by handoff, not by agent turn: each step is one work item passed between seats.',
+  },
+  console: {
+    term: 'Consoles',
+    what: 'Pick seats and each shows what it said and did up to the replay time: handoffs it sent (→) and received (←), and, from its Claude transcript, prompts typed in (▸), its replies (◂) and tool calls (⚙).',
+    why: "You see the conversation behind each line on the diagram. Tool results and the agent's thinking are never shown, and secrets are redacted.",
   },
 
   // ---------------------------------------------------------------- accounts

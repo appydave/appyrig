@@ -1,3 +1,4 @@
+import type { SeatHistory } from './history.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -29,6 +30,8 @@ export const FLEET_EVENTS = {
   SNAPSHOT: 'collector:snapshot',
   /** browser → hub. Payload: CoreCallRequest; the ack is the CallAnswer. Calls as `human:ui`. */
   CALL: 'core:call',
+  /** collector → hub. Payload: SeatHistory (one seat). The hub acks with CollectorAck. v1.2. */
+  HISTORY: 'collector:history',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -72,6 +75,7 @@ export const UI_PRINCIPAL = 'human:ui';
 /** Events on the `/collector` namespace, collector → hub. */
 export interface CollectorClientToServerEvents {
   'collector:snapshot': (snapshot: MachineSnapshot, ack: (result: CollectorAck) => void) => void;
+  'collector:history': (history: SeatHistory, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */

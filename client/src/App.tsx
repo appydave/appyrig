@@ -212,6 +212,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               machine={machines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
               rig={activeRig?.name ?? null}
               now={now}
+              socket={getSocket()}
             />
           )}
         </main>

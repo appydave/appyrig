@@ -115,4 +115,29 @@ test.describe('v1.1 screens', () => {
     await expect(page.getByTestId('rig-map')).toBeVisible();
     expect(errors, 'no console errors on Learn').toEqual([]);
   });
+
+  test('Step buttons move one handoff at a time; consoles show each seat up to that moment', async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await openWall(page);
+    await page.getByTestId('view-flow').click();
+    await page.locator('[data-testid="rig-chip"][data-rig-key="m2:fliedit-team"]').click();
+    const flow = page.getByTestId('handoff-flow');
+    await flow.getByTestId('flow-next').click();
+    await expect(flow.getByTestId('flow-narration')).toContainText('Handoff 1 of');
+    await flow.getByTestId('flow-next').click();
+    await expect(flow.getByTestId('flow-narration')).toContainText('Handoff 2 of');
+    await flow.getByTestId('flow-prev').click();
+    await expect(flow.getByTestId('flow-narration')).toContainText('Handoff 1 of');
+
+    await flow.getByTestId('consoles-toggle').click();
+    const consoles = flow.getByTestId('replay-console');
+    await expect(consoles).toHaveCount(2);
+    // The fixture hub has no transcript history, so consoles say so and show handoffs only.
+    await expect(consoles.first()).toContainText('handoffs only');
+    await flow.getByTestId('console-chip').nth(2).click();
+    await expect(consoles).toHaveCount(3);
+    expect(errors, 'no console errors on steps and consoles').toEqual([]);
+  });
 });

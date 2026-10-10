@@ -6,7 +6,9 @@ import {
   type CollectorAck,
   type CollectorAuth,
   type MachineSnapshot,
+  type SeatHistory,
 } from '@appydave/shared';
+import type { PendingHistory } from './adapters/history.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -21,7 +23,13 @@ export interface PusherOptions {
   intervalMs?: number;
   ackTimeoutMs?: number;
   log?: (line: string) => void;
+  /** v1.2: seat histories whose transcripts changed, pushed on a slower loop than snapshots. */
+  histories?: () => Promise<PendingHistory[]>;
+  historyIntervalMs?: number;
 }
+
+/** Seat history changes slowly and is large next to a snapshot, so it is checked once a minute. */
+export const HISTORY_INTERVAL_MS = 60_000;
 
 export interface Pusher {
   stop(): Promise<void>;
@@ -85,11 +93,42 @@ export function startPusher(opts: PusherOptions): Pusher {
   };
   void tick();
 
+  // Seat histories: one emit per changed seat, marked sent only when the hub accepts it.
+  let historyTimer: NodeJS.Timeout | undefined;
+  const historyInterval = opts.historyIntervalMs ?? HISTORY_INTERVAL_MS;
+  const pushHistory = (h: SeatHistory) =>
+    new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
+      socket
+        .timeout(ackTimeout * 2)
+        .emit(FLEET_EVENTS.HISTORY, h, (err: unknown, ack?: CollectorAck) => {
+          resolve(err || !ack ? { ok: false, timeout: true } : ack);
+        });
+    });
+  const historyTick = async () => {
+    if (stopped || !opts.histories) return;
+    try {
+      if (socket.connected) {
+        for (const p of await opts.histories()) {
+          const ack = await pushHistory(p.history);
+          if ('timeout' in ack) note(`no ack for history of ${p.history.seat}`);
+          else if (ack.ok) p.markSent();
+          else note(`history refused for ${p.history.seat}: ${ack.failureMode}: ${ack.message}`);
+        }
+      }
+    } catch (e) {
+      note(`history tick failed: ${(e as Error).message}`);
+    }
+    if (!stopped) historyTimer = setTimeout(historyTick, historyInterval);
+  };
+  // First history round shortly after the first snapshot, so known seats exist.
+  if (opts.histories) historyTimer = setTimeout(historyTick, Math.min(historyInterval, 5_000));
+
   return {
     socket,
     async stop() {
       stopped = true;
       if (timer) clearTimeout(timer);
+      if (historyTimer) clearTimeout(historyTimer);
       socket.close();
     },
   };

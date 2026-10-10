@@ -5,6 +5,7 @@ import {
   buildAccounts,
   buildFlow,
   buildRigMap,
+  consoleLines,
   flowChapters,
   flowModeOf,
   flowRange,
@@ -14,6 +15,7 @@ import {
   mostHeadroom,
   resetsIn,
   resolveEndpoint,
+  replaySteps,
   rigQueue,
   stageOf,
   STALE_MS,
@@ -312,5 +314,54 @@ describe('Accounts', () => {
     expect(resetsIn('2026-10-12T20:00:00.000Z', NOW)).toBe('in 2d 12h');
     expect(resetsIn('2026-10-10T07:00:00.000Z', NOW)).toBe('now');
     expect(resetsIn(null, NOW)).toBeNull();
+  });
+});
+
+describe('Replay consoles', () => {
+  const items = [
+    q({
+      id: '1',
+      source: 'orch-lead@x',
+      destination: 'dev-hub@x',
+      summary: 'build the hub',
+      createdAt: '2026-10-09T10:00:00.000Z',
+    }),
+    q({
+      id: '2',
+      source: 'dev-hub@x',
+      destination: 'dev-qa@x',
+      summary: 'ready for QA',
+      createdAt: '2026-10-09T10:30:00.000Z',
+    }),
+    q({
+      id: '3',
+      source: 'dev-qa@x',
+      destination: 'review-r1@x',
+      summary: 'pass',
+      createdAt: '2026-10-09T10:40:00.000Z',
+    }),
+  ];
+
+  it('a seat sees what it received and sent up to the replay time, merged with its transcript', () => {
+    const history = [
+      { at: '2026-10-09T10:05:00.000Z', kind: 'reply' as const, text: 'Starting on the hub.' },
+      { at: '2026-10-09T10:45:00.000Z', kind: 'tool' as const, text: 'Bash: npm test' },
+    ];
+    const at = Date.parse('2026-10-09T10:35:00.000Z');
+    const lines = consoleLines('dev-hub', 'x', items, history, at);
+    expect(lines.map((l) => l.kind)).toEqual(['received', 'reply', 'sent']);
+    expect(lines[0]!.text).toBe('← orch-lead: build the hub');
+    expect(lines[2]!.text).toBe('→ dev-qa: ready for QA');
+  });
+
+  it('without history a console still shows the handoff messages', () => {
+    const lines = consoleLines('dev-qa', 'x', items, null, Date.parse('2026-10-09T11:00:00.000Z'));
+    expect(lines.map((l) => l.text)).toEqual(['← dev-hub: ready for QA', '→ review-r1: pass']);
+  });
+
+  it('replay steps are the handoffs in time order', () => {
+    const fm = withAccount(m2(), undefined);
+    fm.snapshot.queue = [items[2]!, items[0]!, items[1]!];
+    expect(replaySteps(fm, 'x').map((i) => i.id)).toEqual(['1', '2', '3']);
   });
 });

@@ -1,4 +1,10 @@
-import type { AccountUsage, FleetMachine, QueueItem, Seat } from '@appydave/shared';
+import type {
+  AccountUsage,
+  FleetMachine,
+  QueueItem,
+  Seat,
+  SeatHistoryEvent,
+} from '@appydave/shared';
 import { modelChip, pipFor, seatKey, seatName, type ModelFamily, type PipKey } from './model.js';
 
 /**
@@ -606,6 +612,52 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
     text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back for rework` : ''}.`,
   });
   return out.sort((a, b) => a.at - b.at);
+}
+
+// ---------------------------------------------------------------- replay consoles
+
+export type ConsoleKind = 'sent' | 'received' | SeatHistoryEvent['kind'];
+
+export interface ConsoleLine {
+  at: string;
+  kind: ConsoleKind;
+  text: string;
+}
+
+/**
+ * One seat's console at replay time `at`: the handoffs it sent and received (always there: the queue
+ * carries every handoff's message) merged with its transcript events (prompts, replies, tool calls)
+ * when the collector sent its history. Oldest first, nothing after `at`.
+ */
+export function consoleLines(
+  seatName: string,
+  rig: string,
+  items: QueueItem[],
+  history: SeatHistoryEvent[] | null,
+  at: number
+): ConsoleLine[] {
+  const me = (raw: string | null) => raw === `${seatName}@${rig}` || bare(raw) === seatName;
+  const lines: ConsoleLine[] = [];
+  for (const q of items) {
+    if (ms(q.createdAt) > at) continue;
+    const msg = q.summary ?? '(no message)';
+    if (me(q.source) && !me(q.destination)) {
+      lines.push({ at: q.createdAt, kind: 'sent', text: `→ ${bare(q.destination)}: ${msg}` });
+    } else if (me(q.destination) && !me(q.source)) {
+      lines.push({ at: q.createdAt, kind: 'received', text: `← ${bare(q.source)}: ${msg}` });
+    } else if (me(q.source) && me(q.destination)) {
+      lines.push({ at: q.createdAt, kind: 'sent', text: `↺ note to self: ${msg}` });
+    }
+  }
+  for (const e of history ?? []) if (ms(e.at) <= at) lines.push(e);
+  return lines.sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/** A rig's handoffs in time order: the replay's single steps. */
+export function replaySteps(fm: FleetMachine, rig: string): QueueItem[] {
+  return [...rigQueue(fm, rig)].sort(
+    (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+  );
 }
 
 export function median(xs: number[]): number | null {

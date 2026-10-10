@@ -33,6 +33,7 @@ describe('AC 9 — no write verbs', () => {
       'queue.list',
       'rig.topology',
       'seat.get',
+      'seat.history',
       'seat.list',
       'seat.tail',
       'system.status',
@@ -207,6 +208,7 @@ describe('core.call — the one seam', () => {
     const inputs: Record<string, unknown> = {
       'seat.get': { machine: 'roamy', seat },
       'seat.tail': { machine: 'roamy', seat },
+      'seat.history': { machine: 'roamy', seat },
     };
     for (const name of Object.keys(VERB_REGISTRY)) {
       const a = core.call(AGENT, name, inputs[name] ?? {});
@@ -222,7 +224,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 11 },
+      value: { app: 'AppyRig', version: real.version, verbs: 12 },
     });
   });
 
@@ -242,5 +244,28 @@ describe('B14 + refusal table', () => {
       'seat-not-found': -32003,
       'principal-header': -32004,
     });
+  });
+});
+
+describe('v1.2 seat.history', () => {
+  it('answers available: false until a collector sends history, then the stored events', () => {
+    const { core, store } = fleet();
+    const seat = store.get('m2')!.snapshot.seats[0]!.id;
+    const none = core.call(AGENT, 'seat.history', { machine: 'm2', seat });
+    expect(none).toMatchObject({ ok: true, value: { available: false, events: [] } });
+    store.putHistory({
+      machineId: 'm2',
+      seat,
+      collectedAt: '2026-10-10T00:00:00.000Z',
+      truncated: false,
+      events: [{ at: '2026-10-09T13:50:00.000Z', kind: 'reply', text: 'Starting.' }],
+    });
+    const got = core.call(AGENT, 'seat.history', { machine: 'm2', seat });
+    expect(got).toMatchObject({
+      ok: true,
+      value: { available: true, events: [{ kind: 'reply', text: 'Starting.' }] },
+    });
+    const bad = core.call(AGENT, 'seat.history', { machine: 'nowhere', seat });
+    expect(bad.ok).toBe(false);
   });
 });
