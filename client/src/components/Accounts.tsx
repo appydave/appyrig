@@ -20,7 +20,12 @@ function Meter({
 }) {
   const level = pct === null ? 'none' : pct >= 90 ? 'high' : pct >= 60 ? 'mid' : 'low';
   return (
-    <div className="meter" data-testid={testId} data-level={level}>
+    <div
+      className="meter"
+      data-testid={testId}
+      data-level={level}
+      data-explain={testId === 'meter-5h' ? 'meter-5h' : 'meter-7d'}
+    >
       <div className="meter-head">
         <span className="label">{label}</span>
         <b>{pct === null ? 'no reading' : `${Math.round(pct)}% used`}</b>
@@ -49,7 +54,7 @@ export default function Accounts({ machines, now }: Props) {
         from the Claude Code status line on machines that run the usage sampler.
       </p>
       {best && (
-        <div className="headroom" data-testid="headroom">
+        <div className="headroom" data-testid="headroom" data-explain="headroom">
           <span className="label">Next team → most headroom</span>
           <b>{best.email}</b> · {Math.round(best.reading!.fiveHourPct!)}% of its 5-hour window used.
           <i> Suggestion only; AppyRig never moves work.</i>
@@ -65,7 +70,7 @@ export default function Accounts({ machines, now }: Props) {
               data-testid="account-card"
               data-email={a.email}
             >
-              <header>
+              <header data-explain="account" data-explain-ctx={`${a.email} · ${a.planLabel}`}>
                 <b>{a.email}</b>
                 <span className="label">{a.planLabel}</span>
               </header>
@@ -81,12 +86,12 @@ export default function Accounts({ machines, now }: Props) {
                 resets={resetsIn(r?.sevenDayResetsAt ?? null, now)}
                 testId="meter-7d"
               />
-              <p className="account-src" data-testid="account-source">
+              <p className="account-src" data-testid="account-source" data-explain="sampler">
                 {r?.sampledAt
                   ? `read on ${r.from} · ${ago(now - Date.parse(r.sampledAt))} ago`
                   : `no reading: ${a.machines.join(', ')} ${a.machines.length > 1 ? "don't" : "doesn't"} run the usage sampler`}
               </p>
-              <div className="drawers">
+              <div className="drawers" data-explain="drawers">
                 <span className="label">Who draws on it</span>
                 <p>
                   Machines: <b>{a.machines.join(' · ')}</b>

@@ -128,7 +128,11 @@ export interface MapSeat {
   name: string;
   model: { text: string; family: ModelFamily };
   pip: PipKey;
+  /** Open items addressed to this seat, handed over less than STALE_MS ago. */
   open: number;
+  /** Open items older than STALE_MS: left behind, not waiting in a live queue. */
+  stale: number;
+  oldestStaleMs: number | null;
 }
 
 export interface MapPod {
@@ -148,7 +152,10 @@ export interface MapEdge {
   from: string;
   to: string;
   count: number;
+  /** Open and fresh: amber. */
   open: number;
+  /** Open but older than STALE_MS: drawn dashed, not amber. */
+  stale: number;
   /** A self-handoff (a seat queueing work to itself): drawn as a badge, not a line. */
   self: boolean;
 }
@@ -166,13 +173,20 @@ const podRank = (p: string) => {
   return i === -1 ? POD_ORDER.length : i;
 };
 
-function mapSeat(fm: FleetMachine, seat: Seat, open: number): MapSeat {
+interface OpenCount {
+  open: number;
+  stale: number;
+  oldestStaleMs: number | null;
+}
+const NONE: OpenCount = { open: 0, stale: 0, oldestStaleMs: null };
+
+function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
   return {
     key: seatKey(fm.machine.id, seat.id),
     name: seatName(seat),
     model: modelChip(seat),
     pip: pipFor(seat, fm),
-    open,
+    ...c,
   };
 }
 
@@ -180,13 +194,17 @@ function mapSeat(fm: FleetMachine, seat: Seat, open: number): MapSeat {
  * One rig as lanes: its own machine first (pods as bands), then any other machine whose seats
  * exchanged queue items with it (e.g. Roamy's openrig-orch briefing the M2's lead).
  */
-export function buildRigMap(machines: FleetMachine[], rigKey: string): RigMap | null {
+export function buildRigMap(
+  machines: FleetMachine[],
+  rigKey: string,
+  now: number = Date.now()
+): RigMap | null {
   const rig = listRigs(machines).find((r) => r.key === rigKey);
   const home = machines.find((m) => m.machine.id === rig?.machineId);
   if (!rig || !home) return null;
 
   const items = rigQueue(home, rig.name);
-  const openAt = new Map<string, number>();
+  const openAt = new Map<string, OpenCount>();
   const edgeMap = new Map<string, MapEdge>();
   const outside = new Map<string, { fm: FleetMachine | null; ep: Endpoint }>();
 
@@ -209,12 +227,22 @@ export function buildRigMap(machines: FleetMachine[], rigKey: string): RigMap | 
       to: to.key,
       count: 0,
       open: 0,
+      stale: 0,
       self: from.key === to.key,
     };
     e.count += 1;
     if (isOpen(q)) {
-      e.open += 1;
-      openAt.set(to.key, (openAt.get(to.key) ?? 0) + 1);
+      const age = now - ms(q.createdAt);
+      const c = { ...(openAt.get(to.key) ?? NONE) };
+      if (age > STALE_MS) {
+        e.stale += 1;
+        c.stale += 1;
+        c.oldestStaleMs = Math.max(c.oldestStaleMs ?? 0, age);
+      } else {
+        e.open += 1;
+        c.open += 1;
+      }
+      openAt.set(to.key, c);
     }
     edgeMap.set(k, e);
   }
@@ -223,7 +251,7 @@ export function buildRigMap(machines: FleetMachine[], rigKey: string): RigMap | 
   for (const seat of home.snapshot.seats.filter((s) => s.rig === rig.name)) {
     const pod = seat.pod ?? 'seats';
     const p = pods.get(pod) ?? { name: pod, seats: [] };
-    p.seats.push(mapSeat(home, seat, openAt.get(seatKey(home.machine.id, seat.id)) ?? 0));
+    p.seats.push(mapSeat(home, seat, openAt.get(seatKey(home.machine.id, seat.id)) ?? NONE));
     pods.set(pod, p);
   }
   const lanes: MapLane[] = [
@@ -261,13 +289,13 @@ export function buildRigMap(machines: FleetMachine[], rigKey: string): RigMap | 
     }
     lane.pods[0]!.seats.push(
       fm && ep.seat
-        ? mapSeat(fm, ep.seat, openAt.get(ep.key) ?? 0)
+        ? mapSeat(fm, ep.seat, openAt.get(ep.key) ?? NONE)
         : {
             key: ep.key,
             name: ep.raw,
             model: { text: 'unplaced', family: 'other' },
             pip: 'unknown',
-            open: openAt.get(ep.key) ?? 0,
+            ...(openAt.get(ep.key) ?? NONE),
           }
     );
   }
@@ -277,6 +305,9 @@ export function buildRigMap(machines: FleetMachine[], rigKey: string): RigMap | 
 }
 
 // ---------------------------------------------------------------- Handoff Flow
+
+/** An open item older than this is stale: left behind, not a queue building up. */
+export const STALE_MS = 2 * 60 * 60 * 1000;
 
 export type Stage = 'lead' | 'build' | 'qa' | 'review';
 export const STAGES: Stage[] = ['lead', 'build', 'qa', 'review'];
@@ -296,25 +327,48 @@ export function stageOf(name: string): Stage {
   return 'build';
 }
 
+/**
+ * `roles`: a build team (it has a QA or review seat) flows through the four role stages.
+ * `seats`: any other team (research-scout → research-checker, the kernel's advisor and operators)
+ * gets one box per seat, so nothing is squashed into "Builders".
+ */
+export type FlowMode = 'roles' | 'seats';
+
+export function flowModeOf(names: string[]): FlowMode {
+  return names.some((n) => ['qa', 'review'].includes(stageOf(n))) ? 'roles' : 'seats';
+}
+
+/** Seat mode shows at most this many boxes; the quietest endpoints share one "others" box. */
+const MAX_SEAT_BOXES = 6;
+
 export interface FlowEdge {
-  from: Stage;
-  to: Stage;
+  /** Node ids: a Stage in roles mode, a seat name in seats mode. */
+  from: string;
+  to: string;
   count: number;
   /** Items on this edge in flight at the replay time. */
   inFlight: QueueItem[];
-  /** Going back to an earlier stage: a FAIL or a fix request. */
+  /** Going back to an earlier stage: a FAIL or a fix request (roles mode only). */
   rework: boolean;
 }
 
 export interface FlowStageView {
-  stage: Stage;
+  /** Node id: a Stage in roles mode, a seat name in seats mode. */
+  stage: string;
+  label: string;
   seats: { name: string; family: ModelFamily; model: string }[];
-  /** Items waiting at this stage at the replay time. */
+  /** True for a seats-mode box that is not in this rig (another rig or machine). */
+  outside: boolean;
+  /** Items waiting here at the replay time, handed over less than STALE_MS before it. */
   waiting: number;
   oldestWaitMs: number | null;
+  /** Items still open but older than STALE_MS: forgotten, not queued. */
+  stale: number;
+  oldestStaleMs: number | null;
 }
 
 export interface FlowView {
+  mode: FlowMode;
   start: number;
   end: number;
   at: number;
@@ -324,8 +378,8 @@ export interface FlowView {
   rework: number;
   /** Median minutes from handoff to close, over closed items up to `at`. */
   medianTurnaroundMin: number | null;
-  /** The stage holding the most waiting items at `at` (the queue), if any wait. */
-  bottleneck: Stage | null;
+  /** The node holding the most fresh waiting items at `at` (the queue), if any. Stale items never count. */
+  bottleneck: string | null;
 }
 
 const ms = (iso: string) => Date.parse(iso);
@@ -342,6 +396,8 @@ export function flowRange(items: QueueItem[]): { start: number; end: number } | 
   return { start, end };
 }
 
+const bare = (raw: string | null) => (raw ?? '').split('@')[0] ?? '';
+
 /**
  * The flow at time `at`: everything handed off up to then, and what was still open then. An item
  * is in flight from createdAt until updatedAt if it is done (updatedAt is when it closed), or
@@ -351,10 +407,48 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   const items = rigQueue(fm, rig);
   const range = flowRange(items);
   if (!range) return null;
-  const nameStage = (raw: string | null) => stageOf((raw ?? '').split('@')[0] ?? '');
+  const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
+  const inRig = (raw: string | null) => suffix(raw) === rig;
+  const mode = flowModeOf([
+    ...rigSeats.map(seatName),
+    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(bare)),
+  ]);
+
+  // Seats mode: one node per endpoint, in the order each first handed work on; the overflow
+  // shares an "others" node.
+  const seatOrder: string[] = [];
+  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? bare(raw) : (raw ?? '?'));
+  if (mode === 'seats') {
+    const counts = new Map<string, number>();
+    for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+      for (const raw of [q.source, q.destination]) {
+        const id = nodeOfRaw(raw);
+        if (!counts.has(id)) seatOrder.push(id);
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    for (const s of rigSeats) if (!counts.has(seatName(s))) seatOrder.push(seatName(s));
+    if (seatOrder.length > MAX_SEAT_BOXES) {
+      const keep = new Set(
+        [...seatOrder]
+          .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0))
+          .slice(0, MAX_SEAT_BOXES - 1)
+      );
+      const kept = seatOrder.filter((id) => keep.has(id));
+      seatOrder.length = 0;
+      seatOrder.push(...kept, 'others');
+    }
+  }
+  const nodeOf = (raw: string | null): string => {
+    if (mode === 'roles') return stageOf(bare(raw));
+    const id = nodeOfRaw(raw);
+    return seatOrder.includes(id) ? id : 'others';
+  };
+  const order: string[] = mode === 'roles' ? STAGES : seatOrder;
 
   const edgeMap = new Map<string, FlowEdge>();
-  const waiting = new Map<Stage, QueueItem[]>();
+  const waiting = new Map<string, QueueItem[]>();
+  const stale = new Map<string, QueueItem[]>();
   const closedTurn: number[] = [];
   let total = 0;
   let rework = 0;
@@ -363,44 +457,59 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     const created = ms(q.createdAt);
     if (created > at) continue;
     total += 1;
-    const from = nameStage(q.source);
-    const to = nameStage(q.destination);
-    const back = STAGES.indexOf(to) < STAGES.indexOf(from) && to !== 'lead';
+    const from = nodeOf(q.source);
+    const to = nodeOf(q.destination);
+    const back = mode === 'roles' && order.indexOf(to) < order.indexOf(from) && to !== 'lead';
     if (back) rework += 1;
     const k = `${from}→${to}`;
     const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], rework: back };
     e.count += 1;
     const closedAt = isOpen(q) ? now : ms(q.updatedAt);
-    if (closedAt > at) {
+    // Still open = still in flight, even when the replay time is "now".
+    if (isOpen(q) || closedAt > at) {
       e.inFlight.push(q);
-      waiting.set(to, [...(waiting.get(to) ?? []), q]);
+      const bucket = at - created > STALE_MS ? stale : waiting;
+      bucket.set(to, [...(bucket.get(to) ?? []), q]);
     } else if (!isOpen(q)) {
       closedTurn.push((closedAt - created) / 60_000);
     }
     edgeMap.set(k, e);
   }
 
-  const seatsBy = new Map<Stage, FlowStageView['seats']>();
-  for (const s of fm.snapshot.seats.filter((x) => x.rig === rig)) {
-    const st = stageOf(seatName(s));
+  const seatsBy = new Map<string, FlowStageView['seats']>();
+  for (const s of rigSeats) {
+    const id = mode === 'roles' ? stageOf(seatName(s)) : nodeOf(`${seatName(s)}@${rig}`);
     const chip = modelChip(s);
-    seatsBy.set(st, [
-      ...(seatsBy.get(st) ?? []),
+    seatsBy.set(id, [
+      ...(seatsBy.get(id) ?? []),
       { name: seatName(s), family: chip.family, model: chip.text },
     ]);
   }
 
-  const stages = STAGES.map((stage) => {
-    const w = waiting.get(stage) ?? [];
-    const oldest = w.reduce<number | null>((acc, q) => {
+  const oldest = (list: QueueItem[]) =>
+    list.reduce<number | null>((acc, q) => {
       const age = at - ms(q.createdAt);
       return acc === null || age > acc ? age : acc;
     }, null);
-    return { stage, seats: seatsBy.get(stage) ?? [], waiting: w.length, oldestWaitMs: oldest };
+
+  const stages: FlowStageView[] = order.map((id) => {
+    const w = waiting.get(id) ?? [];
+    const st = stale.get(id) ?? [];
+    return {
+      stage: id,
+      label: mode === 'roles' ? STAGE_LABEL[id as Stage] : id,
+      seats: seatsBy.get(id) ?? [],
+      outside: mode === 'seats' && id !== 'others' && !rigSeats.some((s) => seatName(s) === id),
+      waiting: w.length,
+      oldestWaitMs: oldest(w),
+      stale: st.length,
+      oldestStaleMs: oldest(st),
+    };
   });
   const top = [...stages].sort((a, b) => b.waiting - a.waiting)[0];
 
   return {
+    mode,
     start: range.start,
     end: range.end,
     at,
@@ -411,6 +520,92 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     medianTurnaroundMin: median(closedTurn),
     bottleneck: top && top.waiting > 0 ? top.stage : null,
   };
+}
+
+// ---------------------------------------------------------------- replay chapters
+
+export interface Chapter {
+  at: number;
+  kind: 'start' | 'first-rework' | 'peak' | 'longest-wait' | 'end';
+  title: string;
+  text: string;
+}
+
+const hhmm = (t: number) =>
+  new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+/**
+ * The moments worth pausing on in a run, found from the queue alone so any rig gets them:
+ * the first handoff, the first rework, the biggest fresh queue, the longest real wait, the end.
+ */
+export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapter[] {
+  const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const range = flowRange(items);
+  if (!range) return [];
+  const label = (flow: FlowView, id: string) =>
+    flow.stages.find((s) => s.stage === id)?.label ?? id;
+  const out: Chapter[] = [];
+
+  const first = items[0]!;
+  out.push({
+    at: ms(first.createdAt),
+    kind: 'start',
+    title: 'The run starts',
+    text: `${hhmm(ms(first.createdAt))} · ${bare(first.source)} hands the first item to ${bare(first.destination)}.`,
+  });
+
+  let reworkSeen = false;
+  let peak: { at: number; n: number; where: string; flow: FlowView } | null = null;
+  for (const q of items) {
+    const t = ms(q.createdAt);
+    const flow = buildFlow(fm, rig, t, now)!;
+    if (!reworkSeen && flow.rework > 0) {
+      reworkSeen = true;
+      out.push({
+        at: t,
+        kind: 'first-rework',
+        title: 'First rework',
+        text: `${hhmm(t)} · ${bare(q.source)} sends work back to ${bare(q.destination)}. A check found a real problem.`,
+      });
+    }
+    const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
+    if (top && top.waiting > (peak?.n ?? 1))
+      peak = { at: t, n: top.waiting, where: top.stage, flow };
+  }
+  if (peak) {
+    out.push({
+      at: peak.at,
+      kind: 'peak',
+      title: 'Biggest queue',
+      text: `${hhmm(peak.at)} · ${peak.n} items waiting at ${label(peak.flow, peak.where)} at once. This is where the run slowed down.`,
+    });
+  }
+
+  // The longest wait that was real work (closed, and under the stale cut-off).
+  const waits = items
+    .filter((q) => !isOpen(q))
+    .map((q) => ({ q, w: ms(q.updatedAt) - ms(q.createdAt) }))
+    .filter((x) => x.w <= STALE_MS)
+    .sort((a, b) => b.w - a.w);
+  const longest = waits[0];
+  if (longest && longest.w >= 5 * 60_000) {
+    const mins = Math.round(longest.w / 60_000);
+    out.push({
+      at: ms(longest.q.createdAt),
+      kind: 'longest-wait',
+      title: 'Longest wait',
+      text: `${hhmm(ms(longest.q.createdAt))} · an item for ${bare(longest.q.destination)} waits ${mins} min before it is closed.`,
+    });
+  }
+
+  const endFlow = buildFlow(fm, rig, range.end, now)!;
+  out.push({
+    at: range.end,
+    kind: 'end',
+    title: 'Where it ended',
+    text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back for rework` : ''}.`,
+  });
+  return out.sort((a, b) => a.at - b.at);
 }
 
 export function median(xs: number[]): number | null {

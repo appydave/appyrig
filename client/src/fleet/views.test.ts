@@ -5,6 +5,8 @@ import {
   buildAccounts,
   buildFlow,
   buildRigMap,
+  flowChapters,
+  flowModeOf,
   flowRange,
   isOpen,
   listRigs,
@@ -14,6 +16,7 @@ import {
   resolveEndpoint,
   rigQueue,
   stageOf,
+  STALE_MS,
 } from './views.js';
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
@@ -115,6 +118,34 @@ describe('Rig Map', () => {
     expect(resolveEndpoint('ghost@nowhere', home, [home, other]).key).toBe('?/ghost@nowhere');
   });
 
+  it('splits open items into fresh (amber) and stale (dashed)', () => {
+    const fm = m2();
+    const rig = 'fliedit-team';
+    const seat = fm.snapshot.seats.find((s) => s.rig === rig)!;
+    const created = '2026-10-10T07:50:00.000Z';
+    fm.snapshot.queue = [
+      ...fm.snapshot.queue,
+      q({
+        id: 'fresh',
+        source: 'x@' + rig,
+        destination: seat.id,
+        state: 'pending',
+        createdAt: created,
+      }),
+      q({
+        id: 'stale',
+        source: 'x@' + rig,
+        destination: seat.id,
+        state: 'pending',
+        createdAt: '2026-10-09T07:50:00.000Z',
+      }),
+    ];
+    const map = buildRigMap([fm], `m2:${rig}`, NOW)!;
+    const edge = map.edges.find((e) => e.from.endsWith('x@' + rig) && e.to.endsWith(seat.id))!;
+    expect(edge.open).toBe(1);
+    expect(edge.stale).toBe(1);
+  });
+
   it('returns null for a rig nobody reports', () => {
     expect(buildRigMap([m2()], 'm2:no-such-rig')).toBeNull();
   });
@@ -160,10 +191,74 @@ describe('Handoff Flow', () => {
     expect(after.medianTurnaroundMin).toBe(20);
   });
 
+  it('an item left open past STALE_MS is "left open", never the bottleneck', () => {
+    const fm = withAccount(m2(), undefined);
+    fm.snapshot.queue = [
+      q({
+        id: 'old',
+        source: 'boss@x',
+        destination: 'orch-lead@x',
+        state: 'pending',
+        createdAt: '2026-10-09T10:00:00.000Z',
+        updatedAt: '2026-10-09T10:00:00.000Z',
+      }),
+      q({ id: 'qa', source: 'dev-build@x', destination: 'dev-qa@x' }),
+    ];
+    const later = Date.parse('2026-10-09T10:00:00.000Z') + STALE_MS + 60_000;
+    const flow = buildFlow(fm, 'x', later, later)!;
+    const lead = flow.stages.find((s) => s.stage === 'lead')!;
+    expect(lead.waiting).toBe(0);
+    expect(lead.stale).toBe(1);
+    expect(flow.bottleneck).toBeNull();
+  });
+
+  it('a team with no QA or review seat gets one box per seat, in first-handoff order', () => {
+    expect(flowModeOf(['orch-lead', 'dev-build', 'dev-qa'])).toBe('roles');
+    expect(flowModeOf(['research-scout', 'research-checker'])).toBe('seats');
+    const fm = withAccount(m2(), undefined);
+    fm.snapshot.queue = [
+      q({
+        id: 'a',
+        source: 'research-scout@sr',
+        destination: 'research-checker@sr',
+        createdAt: '2026-10-09T10:00:00.000Z',
+      }),
+      q({
+        id: 'b',
+        source: 'research-checker@sr',
+        destination: 'research-scout@sr',
+        createdAt: '2026-10-09T10:10:00.000Z',
+      }),
+    ];
+    const flow = buildFlow(fm, 'sr', NOW, NOW)!;
+    expect(flow.mode).toBe('seats');
+    expect(flow.stages.map((s) => s.stage)).toEqual(['research-scout', 'research-checker']);
+    expect(flow.rework).toBe(0);
+    expect(flow.edges.every((e) => !e.rework)).toBe(true);
+  });
+
   it('no queue rows → no flow', () => {
     const fm = m2();
     fm.snapshot.queue = [];
     expect(buildFlow(fm, 'fliedit-team', NOW, NOW)).toBeNull();
+  });
+});
+
+describe('Replay chapters', () => {
+  it('finds start, first rework and end in a real run, in time order', () => {
+    const ch = flowChapters(m2(), 'fliedit-team', NOW);
+    const kinds = ch.map((c) => c.kind);
+    expect(kinds[0]).toBe('start');
+    expect(kinds.at(-1)).toBe('end');
+    expect(kinds).toContain('first-rework');
+    expect(ch.map((c) => c.at)).toEqual([...ch.map((c) => c.at)].sort((a, b) => a - b));
+    expect(ch.find((c) => c.kind === 'end')!.text).toMatch(/handoffs/);
+  });
+
+  it('a rig with no queue has no chapters', () => {
+    const fm = m2();
+    fm.snapshot.queue = [];
+    expect(flowChapters(fm, 'fliedit-team', NOW)).toEqual([]);
   });
 });
 

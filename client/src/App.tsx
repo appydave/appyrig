@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Accounts from './components/Accounts.js';
+import ExplainLayer from './components/ExplainLayer.js';
 import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
 import HandoffFlow from './components/HandoffFlow.js';
+import Learn from './components/Learn.js';
 import RigMap from './components/RigMap.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
@@ -12,13 +14,15 @@ import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useF
 
 const GROUP_KEY = 'appyrig.groupBy';
 const VIEW_KEY = 'appyrig.view';
+const EXPLAIN_KEY = 'appyrig.explain';
 
-export type View = 'wall' | 'map' | 'flow' | 'accounts';
+export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'learn';
 const VIEWS: { key: View; label: string }[] = [
   { key: 'wall', label: 'The Wall' },
   { key: 'map', label: 'Rig Map' },
   { key: 'flow', label: 'Handoff Flow' },
   { key: 'accounts', label: 'Accounts' },
+  { key: 'learn', label: 'Learn' },
 ];
 
 function readView(): View {
@@ -27,6 +31,15 @@ function readView(): View {
     return VIEWS.some((x) => x.key === v) ? (v as View) : 'wall';
   } catch {
     return 'wall';
+  }
+}
+
+/** Explain mode starts on: AppyRig is a training tool as much as a monitor. */
+function readExplain(): boolean {
+  try {
+    return localStorage.getItem(EXPLAIN_KEY) !== 'off';
+  } catch {
+    return true;
   }
 }
 
@@ -48,6 +61,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const now = useNow();
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
   const [view, setView] = useState<View>(readView);
+  const [explain, setExplain] = useState<boolean>(readExplain);
   const [rigKey, setRigKey] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
@@ -57,16 +71,28 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const focusTile = focused ? findSeat(state.machines, focused) : null;
   const hubConnected = link === 'connected';
   const rigs = useMemo(() => listRigs(machines), [machines]);
+  // Stale/fresh splits only need minute precision; a per-second value would re-lay the map every tick.
+  const minute = Math.floor(now / 60_000) * 60_000;
   const activeRig = rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null;
   const rigMap = useMemo(
-    () => (view === 'map' && activeRig ? buildRigMap(machines, activeRig.key) : null),
-    [view, activeRig, machines]
+    () => (view === 'map' && activeRig ? buildRigMap(machines, activeRig.key, minute) : null),
+    [view, activeRig, machines, minute]
   );
 
   const chooseView = (v: View) => {
     setView(v);
     try {
       localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // per-viewer convenience only
+    }
+  };
+
+  const toggleExplain = () => {
+    const next = !explain;
+    setExplain(next);
+    try {
+      localStorage.setItem(EXPLAIN_KEY, next ? 'on' : 'off');
     } catch {
       // per-viewer convenience only
     }
@@ -97,7 +123,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   }, [focused]);
 
   return (
-    <div className="app">
+    <div className="app" data-explain-on={explain || undefined}>
       <header className="app-header" hidden={!!focusTile}>
         <span className="wordmark" aria-label="AppyRig">
           <span className="wordmark-a">Appy</span>
@@ -111,12 +137,23 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               className="view-tab"
               data-testid={`view-${v.key}`}
               aria-current={view === v.key ? 'page' : undefined}
+              data-explain={`view-${v.key}`}
               onClick={() => chooseView(v.key)}
             >
               {v.label}
             </button>
           ))}
         </nav>
+        <button
+          type="button"
+          className="pill-btn explain-toggle"
+          data-testid="explain-toggle"
+          aria-pressed={explain}
+          title="Explain mode: hover anything to see what it means"
+          onClick={toggleExplain}
+        >
+          ? Explain {explain ? 'on' : 'off'}
+        </button>
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}
@@ -182,6 +219,12 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       {view === 'accounts' && (
         <main className="view" data-testid="view-body-accounts">
           <Accounts machines={machines} now={now} />
+        </main>
+      )}
+      <ExplainLayer enabled={explain && !focusTile} />
+      {view === 'learn' && (
+        <main className="view" data-testid="view-body-learn">
+          <Learn machines={machines} now={now} onGoTo={chooseView} />
         </main>
       )}
       {focusTile && (

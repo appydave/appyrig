@@ -12,6 +12,8 @@ import {
 import type { HubLink } from '../fleet/useFleet.js';
 
 const MAX_BLOCKED_ALERTS = 3;
+/** The collector's wording when nothing listens on the OpenRig port (collector/src/adapters/sources.ts). */
+const NO_DAEMON = /no OpenRig daemon running/;
 
 interface Props {
   machines: FleetMachine[];
@@ -37,10 +39,18 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
   const sourceProblems = machines.flatMap((fm) =>
     (['daemon', 'tmux'] as const)
       .filter((src) => !fm.snapshot.sources[src].ok)
-      .map((src) => ({
-        key: `${fm.machine.id}:${src}`,
-        text: `${fm.machine.label} · ${src} unreadable${fm.snapshot.sources[src].error ? `: ${fm.snapshot.sources[src].error}` : ''}`,
-      }))
+      .map((src) => {
+        const err = fm.snapshot.sources[src].error;
+        // A machine that simply doesn't run OpenRig is a fact, not a fault.
+        const absent = src === 'daemon' && !!err && NO_DAEMON.test(err);
+        return {
+          key: `${fm.machine.id}:${src}`,
+          absent,
+          text: absent
+            ? `${fm.machine.label} · no OpenRig on this machine (tmux seats only)`
+            : `${fm.machine.label} · ${src} unreadable${err ? `: ${err}` : ''}`,
+        };
+      })
   );
 
   return (
@@ -71,6 +81,8 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
             data-liveness={fm.liveness}
             data-level={f.level}
             data-pip={f.level === 'live' ? 'working' : 'asleep'}
+            data-explain={fm.liveness === 'asleep' ? 'asleep' : 'machine'}
+            data-explain-ctx={`${fm.machine.label} · ${f.label} · ${n} seat${n === 1 ? '' : 's'}`}
           >
             <span
               className="dot"
@@ -90,7 +102,7 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
       )}
       {machines.length > 0 && <span className="sep" />}
       {machines.length > 0 && (
-        <span className="counts" data-testid="fleet-counts">
+        <span className="counts" data-testid="fleet-counts" data-explain="seat-status">
           <b>{counts.byStatus.working}</b> working · <b>{counts.byStatus.idle}</b> idle ·{' '}
           <b data-status="blocked">{counts.byStatus.blocked}</b> blocked ·{' '}
           <b>{counts.byStatus.stopped}</b> stopped
@@ -133,11 +145,23 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
             +{blocked.length - MAX_BLOCKED_ALERTS} more blocked
           </span>
         )}
-        {sourceProblems.map((p) => (
-          <span key={p.key} className="alert" data-kind="error">
-            ✕ {p.text}
-          </span>
-        ))}
+        {sourceProblems.map((p) =>
+          p.absent ? (
+            <span
+              key={p.key}
+              className="alert"
+              data-kind="muted"
+              data-testid="no-openrig"
+              data-explain="no-openrig"
+            >
+              {p.text}
+            </span>
+          ) : (
+            <span key={p.key} className="alert" data-kind="error" data-explain="daemon">
+              ✕ {p.text}
+            </span>
+          )
+        )}
         {asleep.length > 0 && blocked.length === 0 && (
           <span className="fresh">
             Handoffs into {asleep.map((m) => m.machine.label).join(', ')} will bounce until it wakes

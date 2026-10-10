@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { PIP } from '../fleet/model.js';
+import { ago, PIP } from '../fleet/model.js';
 import type { MapEdge, RigMap as RigMapView } from '../fleet/views.js';
 
 interface Props {
@@ -9,6 +9,12 @@ interface Props {
 
 /** Highest an arc may rise above (or dip below) its row; .pod-seats pads for it. */
 const ARC_MAX = 64;
+/** Each further outside lane steps right, so a line to the rig never runs through another card. */
+const LANE_STEP = 240;
+
+/** A point along the cubic bezier P0..P3 at t. */
+const bez = (t: number, p0: number, p1: number, p2: number, p3: number) =>
+  (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3;
 
 interface Placed {
   edge: MapEdge;
@@ -69,11 +75,13 @@ export default function RigMap({ map, onOpen }: Props) {
           const sy = down ? a.y + a.h : a.y;
           const ey = down ? b.y : b.y + b.h;
           const mid = (sy + ey) / 2;
+          // The label sits near the start, clear of the lane headings halfway down.
+          const t = 0.22;
           out.push({
             edge,
             d: `M${sx},${sy} C${sx},${mid} ${ex},${mid} ${ex},${ey}`,
-            lx: (sx + ex) / 2 + 8,
-            ly: mid,
+            lx: bez(t, sx, sx, ex, ex) + 10,
+            ly: bez(t, sy, mid, mid, ey),
           });
         });
       setPlaced(out);
@@ -88,12 +96,17 @@ export default function RigMap({ map, onOpen }: Props) {
   if (!map) return <p className="empty">Pick a rig.</p>;
   const max = Math.max(1, ...map.edges.map((e) => e.count));
   const selfOf = new Map(map.edges.filter((e) => e.self).map((e) => [e.from, e.count]));
+  const names = new Map(
+    map.lanes.flatMap((l) => l.pods.flatMap((p) => p.seats.map((s) => [s.key, s.name] as const)))
+  );
+  const nameOf = (key: string) => names.get(key) ?? key;
 
   return (
     <section className="rigmap" data-testid="rig-map" aria-label={`Rig map of ${map.rig.name}`}>
-      <p className="view-caption">
+      <p className="view-caption" data-explain="handoff">
         <b>{map.rig.name}</b> on {map.rig.machineLabel} · {map.handoffs} handoffs through the queue
-        · line width = how often one seat handed work to another · amber = still waiting
+        · line width = how often one seat handed work to another · amber = still waiting · dashed =
+        left open over 2 h
       </p>
       <div className="rigmap-canvas" ref={box}>
         <svg
@@ -122,34 +135,43 @@ export default function RigMap({ map, onOpen }: Props) {
               key={`${p.edge.from}→${p.edge.to}`}
               data-testid="rig-map-edge"
               data-open={p.edge.open > 0}
+              data-stale={p.edge.stale > 0}
+              data-explain={p.edge.open ? 'waiting' : p.edge.stale ? 'stale' : 'handoff'}
+              data-explain-ctx={`${nameOf(p.edge.from)} → ${nameOf(p.edge.to)} · ${p.edge.count} handoff${p.edge.count === 1 ? '' : 's'}${p.edge.open ? ` · ${p.edge.open} waiting` : ''}${p.edge.stale ? ` · ${p.edge.stale} left open` : ''}`}
             >
               <path
                 d={p.d}
-                className={p.edge.open ? 'rigmap-edge open' : 'rigmap-edge'}
+                className={`rigmap-edge ${p.edge.open ? 'open' : p.edge.stale ? 'stale' : ''}`}
                 strokeWidth={1.2 + (p.edge.count / max) * 5}
                 markerEnd="url(#rm-arrow)"
               />
+              <path d={p.d} className="hit" />
               <text x={p.lx} y={p.ly} className="rigmap-count">
                 {p.edge.count}
               </text>
             </g>
           ))}
         </svg>
-        {map.lanes.map((lane) => (
+        {map.lanes.map((lane, i) => (
           <div
             className="lane"
             key={lane.machineId}
             data-testid="rig-map-lane"
             data-liveness={lane.liveness}
           >
-            <div className="lane-head">
+            <div className="lane-head" data-explain={i === 0 ? 'rig' : 'outside-lane'}>
               <b>{lane.label}</b>
               <i>{lane.subtitle}</i>
             </div>
-            <div className="lane-pods">
+            <div
+              className="lane-pods"
+              style={i > 1 ? { paddingLeft: (i - 1) * LANE_STEP } : undefined}
+            >
               {lane.pods.map((pod) => (
                 <div className="pod" key={pod.name}>
-                  <div className="pod-name">pod · {pod.name}</div>
+                  <div className="pod-name" data-explain="pod">
+                    pod · {pod.name}
+                  </div>
                   <div className="pod-seats">
                     {pod.seats.map((s) => (
                       <button
@@ -160,22 +182,35 @@ export default function RigMap({ map, onOpen }: Props) {
                         data-testid="rig-map-node"
                         data-pip={s.pip}
                         onClick={() => !s.key.startsWith('?/') && onOpen(s.key)}
-                        title={
+                        aria-label={
                           s.key.startsWith('?/')
-                            ? 'Not a seat any machine reports'
-                            : 'Open in focus'
+                            ? `${s.name}: not a seat any machine reports`
+                            : `${s.name}: open in focus`
                         }
+                        data-explain="seat"
+                        data-explain-ctx={`${s.name} · ${s.model.text} · ${PIP[s.pip].label}`}
                       >
-                        <span className="chip" data-family={s.model.family}>
+                        <span className="chip" data-family={s.model.family} data-explain="model">
                           {s.model.text}
                         </span>
                         <b>{s.name}</b>
-                        <span className="pip" data-pip={s.pip}>
+                        <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
                           <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
                         </span>
-                        {s.open > 0 && <span className="node-wait">{s.open} waiting</span>}
+                        {s.open > 0 && (
+                          <span className="node-wait" data-explain="waiting">
+                            {s.open} waiting
+                          </span>
+                        )}
+                        {s.stale > 0 && (
+                          <span className="node-stale" data-explain="stale">
+                            {s.stale} left open · {ago(s.oldestStaleMs ?? 0)}
+                          </span>
+                        )}
                         {selfOf.get(s.key) ? (
-                          <span className="node-self">↺ {selfOf.get(s.key)} to itself</span>
+                          <span className="node-self" data-explain="self-handoff">
+                            ↺ {selfOf.get(s.key)} to itself
+                          </span>
                         ) : null}
                       </button>
                     ))}

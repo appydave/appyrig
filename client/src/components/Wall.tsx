@@ -41,6 +41,8 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
       data-liveness={machine.liveness}
       data-model={chip.text}
       data-pip={pip}
+      data-explain="seat"
+      data-explain-ctx={`${name} · ${chip.text} · ${seat.rig ?? 'plain tmux session'} on ${machine.machine.label}`}
       aria-label={`${name}, ${PIP[pip].label}, ${seat.rig ?? 'tmux'} on ${machine.machine.label}: open in focus`}
       onClick={() => onOpen(tileKey)}
       onKeyDown={(e) => {
@@ -56,12 +58,17 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
       <span className="tile-bar" />
       <span className="tile-head">
         <span className="tile-name">{name}</span>
-        <span className="chip" data-family={chip.family}>
+        <span className="chip" data-family={chip.family} data-explain="model">
           {chip.text}
         </span>
       </span>
       <span className="tile-meta">
-        <span className="pip" data-testid="seat-pip" data-status={seat.status}>
+        <span
+          className="pip"
+          data-testid="seat-pip"
+          data-status={seat.status}
+          data-explain={`status-${pip}`}
+        >
           <span className="pip-glyph">{PIP[pip].glyph}</span>
           {PIP[pip].label}
         </span>

@@ -1,0 +1,296 @@
+/**
+ * The words on AppyRig's screens, in plain English, for Explain mode's hover cards and the Learn tab.
+ *
+ * Provenance: OpenRig facts come from the brain's code study (OpenRig commit 5aef0270), which is the
+ * canonical source; this file only quotes it. Update the brain first, then this file.
+ *   ~/dev/ad/brains/openrig/study-guide.md            (answers from the code, with file:line)
+ *   ~/dev/ad/brains/openrig/chatgpt-pack/topics.md    (pods, edges, the queue)
+ * Tags: DEMONSTRATED = seen in code or on a live install; CLAIMED = OpenRig's docs only.
+ */
+
+export type Tag = 'DEMONSTRATED' | 'CLAIMED';
+
+export interface OpenRigFact {
+  text: string;
+  /** path:line in the OpenRig repo, as the study cites it. */
+  cite?: string;
+  tag: Tag;
+}
+
+export interface Term {
+  term: string;
+  /** What it is, in one or two sentences. */
+  what: string;
+  /** Why you should care when you see it. */
+  why: string;
+  openrig?: OpenRigFact;
+}
+
+/** The published study guide (B608–B612 answered from OpenRig's code). */
+export const STUDY_GUIDE_URL = 'https://claude.ai/artifact/QiEZJ82dHpZzq7wnpAZAbm';
+
+export const GLOSSARY: Record<string, Term> = {
+  // ---------------------------------------------------------------- screens
+  'view-wall': {
+    term: 'The Wall',
+    what: 'Every agent session on every machine as a live tile, with the last lines of its terminal.',
+    why: 'One glance answers "who is working, who is stuck, who has stopped". Click a tile to open it.',
+  },
+  'view-map': {
+    term: 'Rig Map',
+    what: 'One team (a rig) drawn as seats in pods, with a line for every pair of seats that handed work to each other.',
+    why: 'It shows who actually talks to whom, counted from the queue, not who is allowed to.',
+  },
+  'view-flow': {
+    term: 'Handoff Flow',
+    what: 'The same handoffs grouped by role: Lead → Builders → QA → Reviewer. Teams without QA or review get one box per seat.',
+    why: 'It shows where work piles up and how often it gets sent back. Replay run plays the whole run back.',
+  },
+  'view-accounts': {
+    term: 'Accounts',
+    what: 'Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines draw on it.',
+    why: 'Every machine signed into one account spends one allowance. Seven seats on one account can empty it fast.',
+  },
+  learn: {
+    term: 'Learn',
+    what: "Short lessons on OpenRig's ideas, each shown on a real seat or rig from your own fleet.",
+    why: 'You learn the words on the other screens by seeing them on your own teams.',
+  },
+
+  // ---------------------------------------------------------------- machines and sources
+  machine: {
+    term: 'Machine',
+    what: 'A Mac that runs the AppyRig collector. It reports its seats, rigs and queue to the hub every 3 seconds.',
+    why: '"live · 1s" means the report is fresh. Seat counts include plain tmux sessions, not only OpenRig seats.',
+  },
+  asleep: {
+    term: 'Asleep',
+    what: 'The machine has not reported for 15 seconds or more: a closed lid, a reboot, or a stopped collector.',
+    why: 'Everything shown for it is its last-known state. Work handed to its seats waits until it wakes.',
+  },
+  'no-openrig': {
+    term: 'No OpenRig on this machine',
+    what: "Nothing is listening on OpenRig's port (7433), so the machine has no rigs, pods or queue. Its tmux sessions still show on the Wall.",
+    why: 'This is a fact, not a fault. It only matters if you expected rigs to run there.',
+  },
+  daemon: {
+    term: 'OpenRig daemon',
+    what: 'The background server OpenRig runs on each machine (port 7433). It owns the rigs, seats and queue.',
+    why: "If it can't be read, the machine still shows its tmux sessions but no rigs or handoffs.",
+    openrig: {
+      text: 'With no bind setting, the daemon listens on loopback and the Tailscale IP, and treats the tailnet as the security boundary.',
+      cite: 'packages/daemon/src/index.ts:261-302',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  'seat-status': {
+    term: 'Seat status',
+    what: 'Counts of every session across the fleet by what it is doing right now.',
+    why: '"unknown" is usually a plain tmux session OpenRig doesn\'t manage, so nobody reports its state.',
+  },
+
+  // ---------------------------------------------------------------- the team
+  rig: {
+    term: 'Rig',
+    what: 'A whole team of agents, defined in one rig.yaml and run together by OpenRig. A rig is a list of pods plus the edges between them.',
+    why: 'It is the unit you start, stop and watch. appyrig-build was a 7-seat rig.',
+    openrig: {
+      text: 'A rig spec is pods[] plus cross-pod edges[].',
+      cite: 'packages/daemon/src/domain/types.ts:1183',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  'outside-lane': {
+    term: 'Talks to this rig',
+    what: 'Seats outside the rig that sent it work or got work from it: another rig on the same machine, or a session on another machine.',
+    why: 'Teams are rarely sealed. This is how a boss seat or a remote orchestrator shows up.',
+  },
+  pod: {
+    term: 'Pod',
+    what: "A named group of seats inside a rig, such as orch, dev or review. The pod name becomes part of every seat's name.",
+    why: 'Pods group seats by job. A seat called dev-hub is the "hub" member of the "dev" pod.',
+    openrig: {
+      text: 'A pod has an id, label, startup files, members and its own edges. Session names are {pod}-{member}@{rig}.',
+      cite: 'packages/daemon/src/domain/session-name.ts:13',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  seat: {
+    term: 'Seat',
+    what: "One agent's desk: a fixed name, a role, a model and a working folder. The agent in it can be replaced and the seat stays.",
+    why: 'Lessons (LEARNED.md) belong to the seat, so a fresh agent in the same seat starts with what the last one learned.',
+    openrig: {
+      text: 'A seat is a rig member pointing at an AgentSpec. Its role text is typed into the terminal after launch, not written to CLAUDE.md, so after /compact it survives only in the summary.',
+      cite: 'packages/daemon/src/adapters/claude-code-adapter.ts:624-635',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  model: {
+    term: 'Model',
+    what: 'Which AI runs in the seat: Opus (strongest, dearest), Sonnet (fast, cheaper), Fable, or a Codex model.',
+    why: 'In the AppyRig build, Sonnet did as well as Opus for building to fixtures and for backend QA.',
+    openrig: {
+      text: 'Model is set per member, then profile, then spec default; rig seat set-model changes it live.',
+      cite: 'packages/daemon/src/domain/profile-resolver.ts:139-150',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  'status-working': {
+    term: 'Working',
+    what: 'The agent is in the middle of a turn: thinking, running a tool, or writing.',
+    why: 'It is spending tokens right now.',
+  },
+  'status-idle': {
+    term: 'Idle',
+    what: 'The agent finished its turn and is waiting at the prompt.',
+    why: 'Idle with work waiting in its queue means nobody woke it up.',
+  },
+  'status-blocked': {
+    term: 'Blocked',
+    what: 'The agent is waiting on a person: a permission prompt or a question in its terminal.',
+    why: 'Nothing moves until someone answers. The strip at the top lists blocked seats first.',
+  },
+  'status-stopped': {
+    term: 'Stopped',
+    what: 'The seat exists but no agent process is running in it.',
+    why: 'A stopped seat keeps its name, notes and lessons. Nothing restarts it by itself when work arrives.',
+    openrig: {
+      text: 'A seat persists with no process after rig seat stop, rig down or a reboot; rig up --existing resumes it. Nothing auto-launches a stopped seat.',
+      cite: 'packages/cli/src/commands/seat.ts:645-663',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  'status-unknown': {
+    term: 'Unknown',
+    what: "Nobody reports this session's state. Usually a plain tmux session that OpenRig doesn't manage.",
+    why: "You can still read its terminal on the Wall; AppyRig just won't guess what it is doing.",
+  },
+  'status-asleep': {
+    term: 'Asleep',
+    what: "The seat's machine has stopped reporting, so its real state is unknown.",
+    why: 'AppyRig never shows "idle" for a sleeping machine. That would be a guess.',
+  },
+
+  // ---------------------------------------------------------------- work moving
+  handoff: {
+    term: 'Handoff',
+    what: "One seat put a work item on OpenRig's queue addressed to another seat. Each line is a pair of seats; the number is how many items went that way.",
+    why: "Handoffs are how a rig's seats coordinate. Every one costs model calls on both sides.",
+    openrig: {
+      text: 'The queue has an inbox and an outbox per seat. Closed states are done and handed-off; closing as done needs one of seven reasons.',
+      cite: 'packages/daemon/src/domain/hot-potato-enforcer.ts:18',
+      tag: 'DEMONSTRATED',
+    },
+  },
+  waiting: {
+    term: 'Waiting',
+    what: "A work item handed over less than 2 hours ago that the receiving seat hasn't closed yet.",
+    why: 'Waiting work is a queue building up. Lots of it at one seat or stage is a bottleneck.',
+  },
+  stale: {
+    term: 'Left open',
+    what: 'A work item still open more than 2 hours after it was handed over. Usually nobody will close it: the run ended or it was forgotten.',
+    why: "It is drawn dashed and never counted as a bottleneck, so one forgotten item can't mislabel a team as stuck.",
+  },
+  'self-handoff': {
+    term: 'To itself',
+    what: 'The seat put work on its own queue, usually a note-to-self for the next step.',
+    why: 'Harmless, but each one is another queue round-trip.',
+  },
+  'flow-forward': {
+    term: 'Work moving on',
+    what: 'Items handed to the next stage: a brief to builders, a build to QA, a pass to the reviewer.',
+    why: 'Thicker lines carry more handoffs. Dots moving along a line are items in flight at the replay time.',
+  },
+  'flow-report': {
+    term: 'Report back',
+    what: 'Items going back up the line that are not rework: a verdict to the lead, a status report, a question.',
+    why: 'Dashed arcs above the row. The reviewer → lead arc carries the verdicts.',
+  },
+  rework: {
+    term: 'Rework',
+    what: 'Work sent back to an earlier stage: QA failing a build and returning it to a builder.',
+    why: 'Each one is a fix round. In the AppyRig build, 12 of 107 handoffs were rework: the checkers were finding real problems.',
+  },
+  stage: {
+    term: 'Stage',
+    what: 'A role in the build line: Lead, Builders, QA or Reviewer. AppyRig reads it from seat names.',
+    why: 'qa → QA, review or r1 → Reviewer, lead or orch → Lead, the rest → Builders.',
+  },
+  'stage-lead': {
+    term: 'Lead',
+    what: 'The seat that plans, hands out slices of work, merges what passes, and reports up.',
+    why: 'Everything starts and ends here, so a slow lead slows the whole rig.',
+  },
+  'stage-build': {
+    term: 'Builders',
+    what: 'The seats that write the code, each in its own lane (worktree).',
+    why: 'Adding builders only helps if QA and review can keep up.',
+  },
+  'stage-qa': {
+    term: 'QA',
+    what: 'Seats that test each build by actually running it, not just reading the code.',
+    why: 'In the AppyRig build, QA caught bugs no unit test could: tmux under launchd, a trapped terminal.',
+  },
+  'stage-review': {
+    term: 'Reviewer',
+    what: 'A cold, independent check of each candidate before it merges.',
+    why: 'With one reviewer and three lanes, the reviewer became the queue around 15:45Z.',
+  },
+  'seat-mode': {
+    term: 'One box per seat',
+    what: "This rig has no QA or review seat, so it isn't drawn as a build line. Each seat gets its own box, in the order it first handed work on.",
+    why: 'A research team (scout → checker) isn\'t a build team. Squashing it into "Builders" would hide who did what.',
+  },
+  'median-turnaround': {
+    term: 'Median handoff → close',
+    what: 'Half of all handoffs were closed faster than this, half slower.',
+    why: 'A short median means seats pick up work quickly. Long waits show up as waiting or left open.',
+  },
+  bottleneck: {
+    term: 'Where the queue builds',
+    what: 'The stage or seat with the most fresh waiting items at the replay time.',
+    why: 'Move the replay slider: the bottleneck moves during a run. Items left open over 2 hours never count.',
+  },
+  replay: {
+    term: 'Replay run',
+    what: "Plays the rig's whole queue history back in 40 seconds. The slider jumps to any moment.",
+    why: 'The chapters list jumps straight to the moments that mattered: first rework, the biggest queue, the end.',
+  },
+
+  // ---------------------------------------------------------------- accounts
+  account: {
+    term: 'Claude account',
+    what: "The login a machine's Claude Code uses. Every machine signed into the same account shares its limits.",
+    why: 'M2 and M4 share ideasmen, so a team on the M2 spends the same allowance as your sessions on the M4.',
+  },
+  'meter-5h': {
+    term: '5-hour window',
+    what: "How much of the account's rolling 5-hour allowance is used. At 100% every session on the account stops until it resets.",
+    why: 'Seven seats at once emptied it in about 17 minutes during the AppyRig build.',
+  },
+  'meter-7d': {
+    term: 'Weekly',
+    what: "How much of the account's 7-day allowance is used.",
+    why: 'The 5-hour window resets often; the weekly one is the real budget.',
+  },
+  sampler: {
+    term: 'Usage sampler',
+    what: "A small script called by Claude Code's status line that saves the 5-hour and weekly % to ~/.claude/usage-log.csv. It costs no tokens.",
+    why: 'A machine without it shows "no reading", never 0%. The reading refreshes when a Claude session on that machine gets a reply.',
+  },
+  headroom: {
+    term: 'Most headroom',
+    what: 'The account with the lowest 5-hour use among those with a reading.',
+    why: 'Where the next team should run. A suggestion only; AppyRig never moves work.',
+  },
+  drawers: {
+    term: 'Who draws on it',
+    what: 'The machines on this account and their running Claude seats.',
+    why: 'Each running seat spends from the same window.',
+  },
+};
+
+export function termFor(id: string | null | undefined): Term | null {
+  return id ? (GLOSSARY[id] ?? null) : null;
+}

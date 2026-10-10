@@ -63,4 +63,56 @@ test.describe('v1.1 screens', () => {
     await expect(page.getByTestId('accounts')).not.toContainText('0% used');
     expect(errors, 'no console errors on Accounts').toEqual([]);
   });
+
+  test('Explain mode: hovering a seat shows what it is; Escape hides it; the toggle turns it off', async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await openWall(page);
+    await page.getByTestId('view-map').click();
+    await page.locator('[data-testid="rig-chip"][data-rig-key="m2:fliedit-team"]').click();
+    await expect(page.getByTestId('explain-toggle')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('rig-map').getByTestId('rig-map-node').first().hover();
+    const card = page.getByTestId('explain-card');
+    await expect(card).toBeVisible();
+    await expect(card).toContainText('Seat');
+    await page.keyboard.press('Escape');
+    await expect(card).toHaveCount(0);
+    await page.getByTestId('explain-toggle').click();
+    await page.getByTestId('rig-map').getByTestId('rig-map-node').nth(1).hover();
+    await page.waitForTimeout(300);
+    await expect(card).toHaveCount(0);
+    expect(errors, 'no console errors in Explain mode').toEqual([]);
+  });
+
+  test('Handoff Flow chapters jump the replay and narrate the moment', async ({ page }) => {
+    const errors = watchErrors(page);
+    await openWall(page);
+    await page.getByTestId('view-flow').click();
+    await page.locator('[data-testid="rig-chip"][data-rig-key="m2:fliedit-team"]').click();
+    const flow = page.getByTestId('handoff-flow');
+    const chapters = page.getByTestId('flow-chapter');
+    await expect(chapters.first()).toContainText('The run starts');
+    await chapters.first().click();
+    await expect(flow.getByTestId('flow-narration')).toContainText('first item');
+    await expect(flow.getByTestId('flow-time')).not.toHaveText(/^now/);
+    expect(errors, 'no console errors on chapters').toEqual([]);
+  });
+
+  test('Learn: lessons show on the fleet, and "See it" goes to the screen', async ({ page }) => {
+    const errors = watchErrors(page);
+    await openWall(page);
+    await page.getByTestId('view-learn').click();
+    await expect(page.getByTestId('lesson-link')).toHaveCount(9);
+    await expect(page.getByTestId('lesson')).toContainText('Seats');
+    await expect(page.getByTestId('lesson').locator('table')).toBeVisible();
+    await page.getByTestId('lesson-link').filter({ hasText: 'Refocus' }).click();
+    await expect(page.getByTestId('lesson')).toContainText('--plugin-dir');
+    await page.getByTestId('lesson-link').filter({ hasText: 'Every term' }).click();
+    await expect(page.getByTestId('lesson')).toContainText('Rework');
+    await page.getByTestId('lesson-link').first().click();
+    await page.getByTestId('lesson-try').click();
+    await expect(page.getByTestId('rig-map')).toBeVisible();
+    expect(errors, 'no console errors on Learn').toEqual([]);
+  });
 });
