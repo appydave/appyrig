@@ -4,6 +4,7 @@ import { ago, blockedSeats, PIP, pipFor, seatName } from '../fleet/model.js';
 import { buildAccounts, buildRigMap, listRigs } from '../fleet/views.js';
 import { GLOSSARY, STUDY_GUIDE_URL } from '../learn/glossary.js';
 import { LESSONS, type Lesson } from '../learn/lessons.js';
+import { ATLAS, ATLAS_URL, STATUS_LABEL, atlasGroups } from '../learn/atlas.js';
 import type { View } from '../App.js';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 
 const LESSON_KEY = 'appyrig.lesson';
 const GLOSSARY_ID = 'glossary';
+const ATLAS_ID = 'atlas';
 
 function readLesson(): string {
   try {
@@ -24,6 +26,48 @@ function readLesson(): string {
 }
 
 const VIEW_LABEL = { wall: 'The Wall', map: 'Rig Map', flow: 'Handoff Flow', accounts: 'Accounts' };
+
+/** The Concept Atlas: every OpenRig term, checked against the code, and the AppyDave ideas beside it. */
+function AtlasPage() {
+  const snap = ATLAS.snapshot;
+  return (
+    <article className="learn-body" data-testid="lesson" data-lesson={ATLAS_ID}>
+      <span className="label">Concept Atlas</span>
+      <h2>OpenRig concepts</h2>
+      <p className="quiet">
+        Checked against OpenRig&apos;s code at {snap.commit} (changelog {snap.changelog}) on{' '}
+        {snap.checked}. Ours = AppyDave ideas, kept apart from OpenRig&apos;s own words.{' '}
+        <a href={ATLAS_URL} target="_blank" rel="noopener noreferrer">
+          Open the map ↗
+        </a>
+      </p>
+      {atlasGroups().map((g) => (
+        <section key={`${g.world}/${g.group}`} className="atlas-group">
+          <h3>
+            {g.world === 'openrig' ? 'OpenRig' : 'AppyDave'} · {g.group}
+          </h3>
+          <dl className="learn-glossary">
+            {g.terms.map((t) => (
+              <div key={t.id} data-testid="atlas-term" data-status={t.status}>
+                <dt>
+                  {t.term}{' '}
+                  <span className="atlas-status" data-status={t.status}>
+                    {STATUS_LABEL[t.status]}
+                  </span>
+                </dt>
+                <dd>
+                  {t.definition}
+                  {t.note && <span className="quiet"> {t.note}</span>}
+                  {t.evidence[0] && <code>{t.evidence[0].ref}</code>}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))}
+    </article>
+  );
+}
 
 /** The lesson shown on your own fleet: real seats, rigs, queues and readings. */
 function LiveExample({
@@ -234,6 +278,19 @@ export default function Learn({ machines, now, onGoTo }: Props) {
             <i>{terms.length} words on these screens</i>
           </span>
         </button>
+        <button
+          type="button"
+          className="learn-nav-item"
+          data-testid="lesson-link"
+          aria-current={id === ATLAS_ID ? 'page' : undefined}
+          onClick={() => choose(ATLAS_ID)}
+        >
+          <span className="learn-num">◎</span>
+          <span>
+            <b>OpenRig concepts</b>
+            <i>{ATLAS.terms.length} terms, real or not</i>
+          </span>
+        </button>
       </nav>
 
       {lesson ? (
@@ -286,6 +343,8 @@ export default function Learn({ machines, now, onGoTo }: Props) {
             </a>
           </p>
         </article>
+      ) : id === ATLAS_ID ? (
+        <AtlasPage />
       ) : (
         <article className="learn-body" data-testid="lesson" data-lesson={GLOSSARY_ID}>
           <span className="label">Glossary</span>

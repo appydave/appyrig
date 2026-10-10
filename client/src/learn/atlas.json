@@ -1,0 +1,3091 @@
+{
+  "snapshot": {
+    "repo": "mvschwarz/openrig",
+    "commit": "4b48ca21",
+    "changelog": "0.6.9",
+    "npm": "0.6.8",
+    "study_base": "5aef0270",
+    "checked": "2026-10-10"
+  },
+  "statuses": [
+    "implemented",
+    "documented",
+    "claimed",
+    "interpretation",
+    "not-found",
+    "ours-built",
+    "ours-proposed"
+  ],
+  "seed": [
+    {
+      "heard": "seats (7 dimensions)",
+      "id": "seat-dimensions"
+    },
+    {
+      "heard": "pods",
+      "id": "pod"
+    },
+    {
+      "heard": "agents",
+      "id": "agentspec"
+    },
+    {
+      "heard": "workflows (custom plus 6 built-in)",
+      "id": "builtin-workflows"
+    },
+    {
+      "heard": "learnings",
+      "id": "learnings"
+    },
+    {
+      "heard": "project",
+      "id": "project"
+    },
+    {
+      "heard": "mission",
+      "id": "mission"
+    },
+    {
+      "heard": "slice",
+      "id": "slice"
+    },
+    {
+      "heard": "health monitoring",
+      "id": "health-monitoring"
+    },
+    {
+      "heard": "refocus",
+      "id": "refocus"
+    },
+    {
+      "heard": "members",
+      "id": "member"
+    },
+    {
+      "heard": "runtime",
+      "id": "runtime"
+    },
+    {
+      "heard": "model",
+      "id": "model"
+    },
+    {
+      "heard": "effort",
+      "id": "effort"
+    },
+    {
+      "heard": "skills",
+      "id": "skills"
+    },
+    {
+      "heard": "learned.md",
+      "id": "learned-md"
+    },
+    {
+      "heard": "recap.md",
+      "id": "recap-md"
+    },
+    {
+      "heard": "agentspec",
+      "id": "agentspec"
+    },
+    {
+      "heard": "handover",
+      "id": "handover"
+    },
+    {
+      "heard": "project.yaml",
+      "id": "project-yaml"
+    },
+    {
+      "heard": "mission.yaml",
+      "id": "mission-yaml"
+    },
+    {
+      "heard": "slice.yaml",
+      "id": "slice-yaml"
+    },
+    {
+      "heard": "special.md",
+      "id": "spec-md"
+    },
+    {
+      "heard": "notes.md",
+      "id": "notes-md"
+    },
+    {
+      "heard": "progress.md",
+      "id": "progress-md"
+    },
+    {
+      "heard": "proof.md",
+      "id": "proof-md"
+    },
+    {
+      "heard": "edges",
+      "id": "edge"
+    },
+    {
+      "heard": "queue",
+      "id": "queue"
+    },
+    {
+      "heard": "seat",
+      "id": "seat"
+    },
+    {
+      "heard": "harness",
+      "id": "harness"
+    },
+    {
+      "heard": "culture.md",
+      "id": "culture-md"
+    },
+    {
+      "heard": "workspace",
+      "id": "workspace"
+    },
+    {
+      "heard": "templates",
+      "id": "templates"
+    },
+    {
+      "heard": "specialist agents",
+      "id": "specialist-agents"
+    },
+    {
+      "heard": "subagents",
+      "id": "subagents"
+    },
+    {
+      "heard": "APM",
+      "id": "apm"
+    },
+    {
+      "heard": "pathologies",
+      "id": "pathologies"
+    },
+    {
+      "heard": "recurring jobs",
+      "id": "recurring-jobs"
+    },
+    {
+      "heard": "topology",
+      "id": "topology"
+    },
+    {
+      "heard": "identity",
+      "id": "identity"
+    },
+    {
+      "heard": "context",
+      "id": "context"
+    },
+    {
+      "heard": "knowledge",
+      "id": "knowledge"
+    },
+    {
+      "heard": "sequence",
+      "id": "sequence"
+    },
+    {
+      "heard": "orchestrator",
+      "id": "orchestrator"
+    },
+    {
+      "heard": "zod or other typescript schema",
+      "id": "zod-schema"
+    },
+    {
+      "heard": "names paced",
+      "id": "namespace"
+    },
+    {
+      "heard": "chain files",
+      "id": "chain-files"
+    },
+    {
+      "heard": "bundle.yaml",
+      "id": "bundle-yaml"
+    },
+    {
+      "heard": "hosts.yaml",
+      "id": "hosts-yaml"
+    },
+    {
+      "heard": "continuity policy",
+      "id": "continuity-policy"
+    }
+  ],
+  "terms": [
+    {
+      "id": "concept-atlas",
+      "term": "Concept Atlas",
+      "aliases": [],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-built",
+      "definition": "This atlas: every term with a definition, a status, the code snapshot it was checked against, and how it connects. One data set, many views.",
+      "evidence": [
+        {
+          "ref": "brains/openrig/atlas/concept-atlas.json",
+          "what": "the data behind these views"
+        }
+      ],
+      "example": "Pick 'seat' → see its evidence and its links to pod, occupant and LEARNED.md.",
+      "note": "David's education-business idea: OpenRig training built on this plus AppyRig.",
+      "related": [
+        {
+          "id": "brain",
+          "rel": "lives in"
+        },
+        {
+          "id": "appyrig",
+          "rel": "feeds the Learn tab of"
+        }
+      ]
+    },
+    {
+      "id": "graduation",
+      "term": "Graduation",
+      "aliases": ["human-controlled → human-authorised → autonomous"],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-proposed",
+      "definition": "A prompt, workflow, pod or rig earns more autonomy in steps: human-controlled, then human-authorised, then autonomous. Evidence is collected; promotion stays manual for now.",
+      "evidence": [],
+      "example": "A workflow that ran cleanly many times is proposed for 'human-authorised'.",
+      "note": "'Five successes in a row' was floated, not decided. Compare OpenRig's knowledge-maturity ladder.",
+      "related": [
+        {
+          "id": "knowledge-maturity",
+          "rel": "parallels"
+        },
+        {
+          "id": "kdd",
+          "rel": "compatible with"
+        },
+        {
+          "id": "swagger",
+          "rel": "approved by"
+        }
+      ]
+    },
+    {
+      "id": "kdd",
+      "term": "KDD (Knowledge-Driven Development)",
+      "aliases": [],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-built",
+      "definition": "David's method where recurring lessons get captured, counted and promoted until they become enforced rules (hooks, checks). Lisa is its librarian.",
+      "evidence": [
+        {
+          "ref": "appydave-plugins/appydave/skills/lisa",
+          "what": "Lisa, the KDD librarian"
+        }
+      ],
+      "example": "A mistake seen three times becomes a hook that blocks it.",
+      "note": "OpenRig's knowledge machinery overlaps but has no recurrence counter or enforcement (study guide).",
+      "related": [
+        {
+          "id": "knowledge-maturity",
+          "rel": "differs from"
+        },
+        {
+          "id": "learned-md",
+          "rel": "could feed"
+        },
+        {
+          "id": "brain",
+          "rel": "stored in"
+        }
+      ]
+    },
+    {
+      "id": "north-star",
+      "term": "North Star",
+      "aliases": [],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-built",
+      "definition": "David's statement of where the whole system is heading, used to judge whether work is on course.",
+      "evidence": [
+        {
+          "ref": "brains/north-star",
+          "what": "north-star brain"
+        }
+      ],
+      "example": "Plans and briefs for AppyRig live in the north-star brain.",
+      "note": "David: context only for the OpenRig thread, not part of OpenRig.",
+      "related": [
+        {
+          "id": "quest",
+          "rel": "frames"
+        },
+        {
+          "id": "mission",
+          "rel": "sits above"
+        }
+      ]
+    },
+    {
+      "id": "quest",
+      "term": "Quest",
+      "aliases": [],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-proposed",
+      "definition": "A deliberate exploration with a time limit and an investment cap set up front. Several can run at once. Not the same as drift.",
+      "evidence": [],
+      "example": "'Spend two hours testing Docker sandboxes, then stop and report.'",
+      "note": "Refocus cannot tell a quest from drift; OpenRig has no such concept.",
+      "related": [
+        {
+          "id": "refocus",
+          "rel": "is misread as drift by"
+        },
+        {
+          "id": "north-star",
+          "rel": "serves"
+        },
+        {
+          "id": "slice",
+          "rel": "differs from"
+        }
+      ]
+    },
+    {
+      "id": "rig-architect",
+      "term": "Rig architect (the rig that builds rigs)",
+      "aliases": ["rig that builds rigs"],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-proposed",
+      "definition": "A rig whose job is designing other rigs from simple instructions, choosing agents, models, effort, prompts and skills, and learning from every rig's usage data.",
+      "evidence": [],
+      "example": "'Build me a podcast-launch team' → a rig.yaml with seats, models and workflow.",
+      "note": "Traces to POEM and AWB v1–v3 architect agents. David calls it the most important rig.",
+      "related": [
+        {
+          "id": "awb",
+          "rel": "lives in"
+        },
+        {
+          "id": "rig",
+          "rel": "designs"
+        },
+        {
+          "id": "graduation",
+          "rel": "uses evidence from"
+        }
+      ]
+    },
+    {
+      "id": "swagger",
+      "term": "Swagger",
+      "aliases": ["primary overseer"],
+      "world": "appydave",
+      "group": "ideas",
+      "status": "ours-built",
+      "definition": "David's control pattern: one primary orchestrator he talks to, which brings him the problem, why it matters and a recommendation, with drill-down. The human stays on the loop, not in it.",
+      "evidence": [
+        {
+          "ref": "brains/CLAUDE-PREFERENCES.md",
+          "what": "Swagger pattern is the house default"
+        }
+      ],
+      "example": "'Three problems, my take on each, go?'",
+      "note": "Practised in Claude sessions today; as a standing seat over a population of rigs it is proposed.",
+      "related": [
+        {
+          "id": "orchestrator",
+          "rel": "is a kind of"
+        },
+        {
+          "id": "graduation",
+          "rel": "authorises"
+        },
+        {
+          "id": "quest",
+          "rel": "tracks"
+        }
+      ]
+    },
+    {
+      "id": "awb",
+      "term": "Agent Workflow Builder",
+      "aliases": ["AWB"],
+      "world": "appydave",
+      "group": "siblings",
+      "status": "ours-built",
+      "definition": "David's workflow designer (Gen 1–3), originally linear prompt chains. Proposed new role: the design environment for rigs and workflows that OpenRig then runs.",
+      "evidence": [
+        {
+          "ref": "apps/awb",
+          "what": "Gen 3 TypeScript monorepo"
+        }
+      ],
+      "example": "Design a rig in AWB → export rig.yaml → OpenRig runs it.",
+      "note": "The 'designs rigs' role is proposed (B625), not built.",
+      "related": [
+        {
+          "id": "rig-architect",
+          "rel": "would host"
+        },
+        {
+          "id": "workflow",
+          "rel": "designs"
+        },
+        {
+          "id": "rig",
+          "rel": "would design"
+        }
+      ]
+    },
+    {
+      "id": "angeleye",
+      "term": "AngelEye",
+      "aliases": [],
+      "world": "appydave",
+      "group": "siblings",
+      "status": "ours-built",
+      "definition": "David's harness telemetry app: every hook event and tool call from Claude Code sessions, logged as JSONL, so pulse agents can mine sessions for skills and frustrations.",
+      "evidence": [
+        {
+          "ref": "apps/angeleye",
+          "what": "existing app; cross-machine capture is the stated goal"
+        }
+      ],
+      "example": "A pulse agent reads a week of tool calls to spot a recurring frustration.",
+      "note": "B625: 'OpenRig sees the organisation. AngelEye sees inside the work.' Codex/other harnesses are a wish, not built.",
+      "related": [
+        {
+          "id": "appyrig",
+          "rel": "feeds"
+        },
+        {
+          "id": "pulse-agent",
+          "rel": "feeds"
+        },
+        {
+          "id": "harness",
+          "rel": "observes"
+        }
+      ]
+    },
+    {
+      "id": "appyrig",
+      "term": "AppyRig",
+      "aliases": [],
+      "world": "appydave",
+      "group": "siblings",
+      "status": "ours-built",
+      "definition": "David's read-only dashboard over OpenRig across the M2, M4 and Roamy: the Wall, Rig Map, Handoff Flow with replay and consoles, Accounts, and a Learn tab.",
+      "evidence": [
+        {
+          "ref": "apps/appyrig@9774100",
+          "what": "v1.2.1 live on the M2 hub :7191"
+        }
+      ],
+      "example": "Handoff Flow → Replay run → ▸ Consoles shows each seat's prompts and handoffs.",
+      "note": "Never sends keys or text to seats; never calls OpenRig's transcript route.",
+      "related": [
+        {
+          "id": "queue",
+          "rel": "replays"
+        },
+        {
+          "id": "seat",
+          "rel": "shows the state of"
+        },
+        {
+          "id": "angeleye",
+          "rel": "sibling of"
+        },
+        {
+          "id": "daemon",
+          "rel": "reads from"
+        }
+      ]
+    },
+    {
+      "id": "brain",
+      "term": "Brain",
+      "aliases": ["second brain"],
+      "world": "appydave",
+      "group": "siblings",
+      "status": "ours-built",
+      "definition": "A curated knowledge folder under ~/dev/ad/brains/, read by David's agents. The openrig brain holds this study.",
+      "evidence": [
+        {
+          "ref": "brains/openrig/INDEX.md",
+          "what": "openrig brain"
+        }
+      ],
+      "example": "Agents read openrig/INDEX.md before answering OpenRig questions.",
+      "note": "OpenRig knows nothing about brains; LEARNED.md is separate.",
+      "related": [
+        {
+          "id": "pulse-agent",
+          "rel": "kept fresh by"
+        },
+        {
+          "id": "kdd",
+          "rel": "holds"
+        },
+        {
+          "id": "learned-md",
+          "rel": "separate from"
+        }
+      ]
+    },
+    {
+      "id": "buzz",
+      "term": "Buzz crew",
+      "aliases": ["Orc / Coder / Tester"],
+      "world": "appydave",
+      "group": "siblings",
+      "status": "ours-built",
+      "definition": "David's existing agent crew outside OpenRig (Orc, Coder, Tester, Tuber). Kept separate from OpenRig by rule.",
+      "evidence": [
+        {
+          "ref": "brains/openrig/implementation-map.md",
+          "what": "where OpenRig ideas map onto Buzz"
+        }
+      ],
+      "example": "The implementation map ranks OpenRig ideas to rebuild on Buzz.",
+      "note": "Dossier rule 1: keep OpenRig distinct from Buzz.",
+      "related": [
+        {
+          "id": "orchestrator",
+          "rel": "has its own"
+        },
+        {
+          "id": "rig",
+          "rel": "is not a"
+        }
+      ]
+    },
+    {
+      "id": "pulse-agent",
+      "term": "Pulse agent",
+      "aliases": ["Rigby"],
+      "world": "appydave",
+      "group": "siblings",
+      "status": "ours-built",
+      "definition": "An agent that wakes on a schedule to do one job and report. The first is Rigby, the OpenRig librarian, refreshing the openrig brain daily at 06:30 on the M2.",
+      "evidence": [
+        {
+          "ref": "brains/openrig/rigs/openrig-watch/MISSION.md",
+          "what": "Rigby's role"
+        }
+      ],
+      "example": "Rigby writes openrig/daily/<date>.md each morning.",
+      "note": "Runs as an OpenRig seat started by launchd, not by OpenRig's watchdog (which is interval-based).",
+      "related": [
+        {
+          "id": "seat",
+          "rel": "runs in a"
+        },
+        {
+          "id": "learned-md",
+          "rel": "keeps craft in"
+        },
+        {
+          "id": "brain",
+          "rel": "refreshes"
+        },
+        {
+          "id": "recurring-jobs",
+          "rel": "is our answer to"
+        }
+      ]
+    },
+    {
+      "id": "orchestrator",
+      "term": "Orchestrator (orchestration pod)",
+      "aliases": ["orch", "orchestration-team", "lead"],
+      "world": "openrig",
+      "group": "agents",
+      "status": "implemented",
+      "definition": "A seat role, not a daemon component: a built-in agent spec and pod skill whose job is coordinating, dispatching and monitoring the other seats, not implementing.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/specs/agents/orchestration/orchestrator/agent.yaml:3",
+          "what": "Orchestrator lead — coordinates agents, monitors progress"
+        },
+        {
+          "ref": "skills/_canonical/pods/orchestration-team/SKILL.md:8",
+          "what": "keep the team productive, not do the work"
+        }
+      ],
+      "example": "The factory rig has member id orch using the orchestrator agent spec.",
+      "note": "Architect skill: any rig with 3+ agents needs an orchestrator. Coordination itself runs in the daemon (queue/watchdog).",
+      "related": [
+        {
+          "id": "pod",
+          "rel": "lives in a"
+        },
+        {
+          "id": "agentspec",
+          "rel": "defined by"
+        },
+        {
+          "id": "queue",
+          "rel": "dispatches through"
+        },
+        {
+          "id": "swagger",
+          "rel": "compare with"
+        }
+      ]
+    },
+    {
+      "id": "zod-schema",
+      "term": "Spec validation (hand-written validators)",
+      "aliases": ["zod", "zod schema", "TypeScript schema"],
+      "world": "openrig",
+      "group": "agents",
+      "status": "interpretation",
+      "definition": "Rig specs and workflow specs are validated by hand-written TypeScript validators, not Zod. Zod appears only for MCP tool inputs; AJV for restore-packet JSON Schema.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/rigspec-schema.ts:99",
+          "what": "RigSpecSchema class: hand-rolled validation"
+        },
+        {
+          "ref": "packages/cli/src/mcp-server.ts:2",
+          "what": "zod imported only in MCP server"
+        },
+        {
+          "ref": "packages/cli/src/restore-packet/schema-validator.ts:24",
+          "what": "AJV validates restore packet"
+        }
+      ],
+      "example": "rig.yaml with an unknown pod key fails RigSpecSchema with a path-prefixed error.",
+      "note": "Daemon has no zod dependency; zod ^4.3.6 is only in the CLI package. Parsing uses the `yaml` package.",
+      "related": [
+        {
+          "id": "bundle-yaml",
+          "rel": "validates"
+        },
+        {
+          "id": "agentspec",
+          "rel": "validates"
+        },
+        {
+          "id": "workflow",
+          "rel": "validates specs of"
+        }
+      ]
+    },
+    {
+      "id": "specialist-agents",
+      "term": "Specialist (pod/role)",
+      "aliases": ["specialist agents", "vault-specialist"],
+      "world": "openrig",
+      "group": "agents",
+      "status": "documented",
+      "definition": "Architect-skill guidance for a domain-expert seat (Vault, DB, infra); one shipped example agent spec, vault-specialist. Not a distinct runtime type.",
+      "evidence": [
+        {
+          "ref": "skills/_canonical/core/openrig-architect/SKILL.md:93",
+          "what": "Specialist pod: domain-specific operations"
+        },
+        {
+          "ref": "skills/_canonical/core/openrig-architect/SKILL.md:352",
+          "what": "agent_ref local:agents/apps/vault-specialist"
+        }
+      ],
+      "example": "A secrets-manager rig pairs Docker-Compose Vault with a vault-specialist seat.",
+      "note": "Built-in agent specs: orchestrator, implementer, qa, reviewer, product-designer, vault-specialist, conveyor roles, etc.",
+      "related": [
+        {
+          "id": "agentspec",
+          "rel": "is an"
+        },
+        {
+          "id": "pod",
+          "rel": "may form a"
+        },
+        {
+          "id": "orchestrator",
+          "rel": "coordinated by"
+        }
+      ]
+    },
+    {
+      "id": "subagents",
+      "term": "subagents (projected resource)",
+      "aliases": ["subagent resource", ".claude/agents"],
+      "world": "openrig",
+      "group": "agents",
+      "status": "implemented",
+      "definition": "A resource category in an AgentSpec: subagent files that OpenRig copies into the seat's runtime (Claude: .claude/agents), so the harness itself spawns them.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/projection-planner.ts:23",
+          "what": "categories: skill, guidance, subagent, plugin, runtime_resource"
+        },
+        {
+          "ref": "packages/daemon/src/adapters/claude-code-adapter.ts:584",
+          "what": "subagent projects to .claude/agents"
+        }
+      ],
+      "example": "An implementer spec lists a test-writer subagent; Claude Code in that seat can call it.",
+      "note": "OpenRig does not manage subagents as seats; they are invisible to the queue/topology.",
+      "related": [
+        {
+          "id": "agentspec",
+          "rel": "declared in"
+        },
+        {
+          "id": "skills",
+          "rel": "projected like"
+        },
+        {
+          "id": "harness",
+          "rel": "executed by"
+        },
+        {
+          "id": "seat",
+          "rel": "not a"
+        }
+      ]
+    },
+    {
+      "id": "agentspec",
+      "term": "AgentSpec",
+      "aliases": ["agent.yaml", "agent_ref", "agent blueprint"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "A reusable agent blueprint (agent.yaml) with defaults, imports, resources (skills, guidance, hooks), named profiles and startup files. Members point at one via agent_ref.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/types.ts:941",
+          "what": "AgentSpec interface: defaults, imports, startup, resources, profiles"
+        },
+        {
+          "ref": "docs/reference/agent-spec.md:7",
+          "what": "canonical reference for agent.yaml"
+        },
+        {
+          "ref": "README.md:336",
+          "what": "AgentSpec: reusable agent blueprint"
+        }
+      ],
+      "example": "agent_ref: local:../../agents/development/implementer",
+      "note": "The AgentSpec folder is the closest thing to a reusable seat template.",
+      "related": [
+        {
+          "id": "member",
+          "rel": "is referenced by"
+        },
+        {
+          "id": "skills",
+          "rel": "lists"
+        },
+        {
+          "id": "templates",
+          "rel": "acts as seat"
+        },
+        {
+          "id": "namespace",
+          "rel": "is imported under"
+        }
+      ]
+    },
+    {
+      "id": "bundle-yaml",
+      "term": "bundle.yaml",
+      "aliases": [".rigbundle", "RigBundle", "bundle manifest"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "The manifest of a portable .rigbundle archive (rig spec + vendored AgentSpecs + SHA-256 integrity). An author can also place bundle.yaml beside rig.yaml to declare minimum versions and setup preconditions.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/bundle-archive.ts:139",
+          "what": "bundle.yaml is the archive's manifest"
+        },
+        {
+          "ref": "packages/cli/src/lib/bundle-source.ts:217",
+          "what": "reads author's bundle.yaml compatibility minima"
+        },
+        {
+          "ref": "docs/reference/bundle-formats.md:138",
+          "what": "author's bundle.yaml may declare preconditions"
+        }
+      ],
+      "example": "rig bundle create <github-folder-url> -o team.rigbundle",
+      "note": "",
+      "related": [
+        {
+          "id": "rig",
+          "rel": "packages"
+        },
+        {
+          "id": "agentspec",
+          "rel": "vendors"
+        },
+        {
+          "id": "culture-md",
+          "rel": "includes"
+        },
+        {
+          "id": "cross-host",
+          "rel": "shares teams"
+        }
+      ]
+    },
+    {
+      "id": "culture-md",
+      "term": "CULTURE.md",
+      "aliases": ["culture_file", "CULTURE-default.md", "culture"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "A rig's coordination-norms file, named by culture_file in rig.yaml. Every seat first gets OpenRig's CULTURE-default.md, then the rig's own CULTURE.md, at fresh start and restore.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/rigspec-instantiator.ts:2541",
+          "what": "culture floor then rig culture_file added to startup files"
+        },
+        {
+          "ref": "README.md:342",
+          "what": "Culture: rig CULTURE.md on top of default culture"
+        },
+        {
+          "ref": "packages/daemon/src/domain/builtin-startup-files.ts:19",
+          "what": "built-in CULTURE-default.md"
+        }
+      ],
+      "example": "culture_file: culture/CULTURE.md",
+      "note": "",
+      "related": [
+        {
+          "id": "rig",
+          "rel": "is declared by"
+        },
+        {
+          "id": "seat",
+          "rel": "is delivered to every"
+        },
+        {
+          "id": "bundle-yaml",
+          "rel": "is packed with"
+        }
+      ]
+    },
+    {
+      "id": "effort",
+      "term": "effort",
+      "aliases": ["effort:", "--effort"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "The reasoning-effort level for a seat, resolved like model (member, profile, spec default) and passed to Claude Code as --effort at launch.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/profile-resolver.ts:148",
+          "what": "effort precedence: member, profile, spec default"
+        },
+        {
+          "ref": "packages/daemon/src/adapters/claude-code-adapter.ts:277",
+          "what": "adds --effort to the Claude launch command"
+        }
+      ],
+      "example": "effort: high",
+      "note": "",
+      "related": [
+        {
+          "id": "model",
+          "rel": "pairs with"
+        },
+        {
+          "id": "member",
+          "rel": "is set on"
+        },
+        {
+          "id": "agentspec",
+          "rel": "can default from"
+        }
+      ]
+    },
+    {
+      "id": "member",
+      "term": "member",
+      "aliases": ["members:", "RigSpecPodMember"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "The YAML entry inside a pod that declares one seat: its id, AgentSpec reference, profile, runtime, model, effort, role, working folder and continuity overrides.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/types.ts:1072",
+          "what": "RigSpecPodMember interface"
+        },
+        {
+          "ref": "packages/daemon/src/domain/rigspec-schema.ts:52",
+          "what": "MEMBER_KEYS: the 17 allowed member fields"
+        },
+        {
+          "ref": "docs/reference/topology-naming.md:15",
+          "what": "'Seat (member)': a role within that pod"
+        }
+      ],
+      "example": "- id: build  agent_ref: local:agents/impl  runtime: codex  model: gpt-5  cwd: .",
+      "note": "'Member' is the authoring word (rig.yaml); 'seat' is the same thing once running and addressable.",
+      "related": [
+        {
+          "id": "seat",
+          "rel": "is authored form of"
+        },
+        {
+          "id": "agentspec",
+          "rel": "references"
+        },
+        {
+          "id": "runtime",
+          "rel": "sets"
+        },
+        {
+          "id": "model",
+          "rel": "sets"
+        },
+        {
+          "id": "effort",
+          "rel": "sets"
+        }
+      ]
+    },
+    {
+      "id": "model",
+      "term": "model",
+      "aliases": ["model:", "set-model"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "The LLM a seat's harness uses, set per member (or profile or spec default) and passed to the harness as --model. Changeable live with `rig seat set-model`.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/profile-resolver.ts:144",
+          "what": "model precedence: member, profile, spec default"
+        },
+        {
+          "ref": "packages/cli/src/commands/seat.ts:577",
+          "what": "rig seat set-model command"
+        }
+      ],
+      "example": "rig seat set-model dev-impl@my-rig --model claude-fable-5",
+      "note": "",
+      "related": [
+        {
+          "id": "member",
+          "rel": "is set on"
+        },
+        {
+          "id": "harness",
+          "rel": "is wrapped by"
+        },
+        {
+          "id": "effort",
+          "rel": "pairs with"
+        },
+        {
+          "id": "runtime",
+          "rel": "must suit"
+        }
+      ]
+    },
+    {
+      "id": "namespace",
+      "term": "namespace",
+      "aliases": ["names paced", "pod namespace", "namespace:id"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "Two small uses: a pod's unique key inside a rig (equal to the pod id), and the prefix in a qualified AgentSpec import reference such as shared:openrig-core.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/db/migrations/017_pod_namespace.ts:6",
+          "what": "pods table gets a namespace column"
+        },
+        {
+          "ref": "docs/reference/agent-spec.md:212",
+          "what": "qualified reference namespace:id names an imported spec"
+        }
+      ],
+      "example": "uses: [skill:shared:openrig-core]",
+      "note": "'Names paced' = namespace. A minor internal term, not a headline concept.",
+      "related": [
+        {
+          "id": "pod",
+          "rel": "keys"
+        },
+        {
+          "id": "agentspec",
+          "rel": "qualifies imports of"
+        }
+      ]
+    },
+    {
+      "id": "runtime",
+      "term": "runtime",
+      "aliases": ["claude-code", "codex", "pi", "omp", "terminal"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "The member field naming which harness a seat runs: claude-code, codex, pi, omp, terminal (or stub for tests). Resolved member, then profile, then spec default, then claude-code.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/profile-resolver.ts:139",
+          "what": "runtime precedence: member, profile, spec default, claude-code"
+        },
+        {
+          "ref": "packages/daemon/src/domain/rigspec-preflight.ts:149",
+          "what": "SUPPORTED_RUNTIMES list"
+        }
+      ],
+      "example": "runtime: codex",
+      "note": "",
+      "related": [
+        {
+          "id": "harness",
+          "rel": "selects"
+        },
+        {
+          "id": "member",
+          "rel": "is set on"
+        },
+        {
+          "id": "agentspec",
+          "rel": "can default from"
+        },
+        {
+          "id": "model",
+          "rel": "pairs with"
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "term": "skills",
+      "aliases": ["resources.skills", "skill loadout"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "Procedure folders (SKILL.md) an AgentSpec lists as resources. At launch OpenRig copies the selected skills into the seat's .claude/skills or .agents/skills so the harness loads them on demand.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/types.ts:910",
+          "what": "AgentResources.skills: SkillResource[]"
+        },
+        {
+          "ref": "packages/daemon/src/domain/skill-discovery.ts:26",
+          "what": "skills live under <cwd>/.claude/skills or .agents/skills"
+        },
+        {
+          "ref": "README.md:336",
+          "what": "AgentSpec: blueprint with skills, guidance, hooks, profiles"
+        }
+      ],
+      "example": "rig skill list   (or a profile's uses: [skill:openrig-core])",
+      "note": "These are ordinary Claude/Codex skills; OpenRig only selects and projects them.",
+      "related": [
+        {
+          "id": "agentspec",
+          "rel": "is listed in"
+        },
+        {
+          "id": "seat",
+          "rel": "is projected into"
+        },
+        {
+          "id": "harness",
+          "rel": "is loaded by"
+        }
+      ]
+    },
+    {
+      "id": "templates",
+      "term": "templates",
+      "aliases": ["--template", "slice template", "mission template", "team template"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "Mainly the scaffold kinds `rig scope` uses to create slices (placeholder, bug-fix, research, ...) and missions (placeholder, release). Docs also loosely call shipped rigs 'team templates'.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/lib/scope/types.ts:69",
+          "what": "SliceTemplateKind: placeholder, bug-fix, research, ..."
+        },
+        {
+          "ref": "packages/cli/src/commands/scope.ts:310",
+          "what": "--template option on slice scaffold"
+        },
+        {
+          "ref": "docs/reference/topology-naming.md:67",
+          "what": "Starter called a 'team template'"
+        }
+      ],
+      "example": "rig scope slice new ... --template bug-fix",
+      "note": "No single 'template' object. Several senses: scope scaffolds, shipped rig specs as team templates, AgentSpec as seat template. No 'save seat as template' verb.",
+      "related": [
+        {
+          "id": "slice",
+          "rel": "scaffolds"
+        },
+        {
+          "id": "mission",
+          "rel": "scaffolds"
+        },
+        {
+          "id": "agentspec",
+          "rel": "loosely includes"
+        },
+        {
+          "id": "rig",
+          "rel": "loosely includes shipped"
+        }
+      ]
+    },
+    {
+      "id": "workspace",
+      "term": "workspace",
+      "aliases": ["workspace:", "PL-007 Workspace Primitive", "workspace root"],
+      "world": "openrig",
+      "group": "configuration",
+      "status": "implemented",
+      "definition": "A typed folder root a rig works over: workspaceRoot plus repos, each of kind user, project, knowledge, lab or delivery. Also the file-backed project tree the Project TUI reads.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/types.ts:1163",
+          "what": "WorkspaceSpec: workspaceRoot, repos, defaultRepo, knowledgeRoot"
+        },
+        {
+          "ref": "packages/daemon/src/domain/types.ts:1149",
+          "what": "WORKSPACE_KINDS: user, project, knowledge, lab, delivery"
+        },
+        {
+          "ref": "docs/reference/project-workspace.md:3",
+          "what": "Project TUI is a view over a workspace root"
+        }
+      ],
+      "example": "rig workspace doctor",
+      "note": "Optional in rig.yaml; rigs without it stay valid.",
+      "related": [
+        {
+          "id": "rig",
+          "rel": "is declared by"
+        },
+        {
+          "id": "project",
+          "rel": "contains"
+        },
+        {
+          "id": "knowledge",
+          "rel": "has a kind for"
+        }
+      ]
+    },
+    {
+      "id": "continuity-policy",
+      "term": "continuity_policy",
+      "aliases": ["compaction strategy", "continuity stack"],
+      "world": "openrig",
+      "group": "continuity",
+      "status": "implemented",
+      "definition": "A pod-level rig-spec block (enabled, sync_triggers, artifacts) plus per-agent compaction strategy deciding how a seat survives a full context window.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/rigspec-schema.ts:1038",
+          "what": "validateContinuityPolicy: enabled, sync_triggers, artifacts"
+        },
+        {
+          "ref": "packages/daemon/src/domain/continuity-policy-materializer.ts:14",
+          "what": "strategies: default, managed, handover, apprentice-handover"
+        }
+      ],
+      "example": "A pod sets continuity_policy enabled: true so seats hand over before the context wall.",
+      "note": "Materializer converts policy into watchdog jobs using transcript bytes as a token proxy (~153K tokens/MB; prepare 600K, cutover 900K tokens).",
+      "related": [
+        {
+          "id": "pod",
+          "rel": "declared on"
+        },
+        {
+          "id": "handover",
+          "rel": "can trigger"
+        },
+        {
+          "id": "watchdog",
+          "rel": "materializes into"
+        },
+        {
+          "id": "context",
+          "rel": "protects"
+        }
+      ]
+    },
+    {
+      "id": "rebuild-priming",
+      "term": "Rebuild priming chain",
+      "aliases": ["--source rebuild", "priming packet"],
+      "world": "openrig",
+      "group": "continuity",
+      "status": "implemented",
+      "definition": "The ordered list of durable files fed to a fresh successor on a rebuild handover: RECAP, LEARNED, latest restore packet, then older recaps.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/rebuild-priming-chain.ts:22",
+          "what": "buildRebuildPrimingChain"
+        },
+        {
+          "ref": "packages/daemon/src/domain/rebuild-priming-chain.ts:11",
+          "what": "trust order RECAP > LEARNED > restore packet > superseded"
+        }
+      ],
+      "example": "A rebuilt reviewer seat reads its RECAP.md first, then LEARNED.md.",
+      "note": "Missing files are recorded as named gaps, never silently dropped. Nothing writes RECAP by default (only `rig context recap-write`).",
+      "related": [
+        {
+          "id": "handover",
+          "rel": "used by"
+        },
+        {
+          "id": "recap-md",
+          "rel": "reads first"
+        },
+        {
+          "id": "learned-md",
+          "rel": "reads second"
+        },
+        {
+          "id": "occupant",
+          "rel": "primes new"
+        }
+      ]
+    },
+    {
+      "id": "refocus",
+      "term": "Refocus",
+      "aliases": ["refocusing skill", "refocus hook", "refocus work packet"],
+      "world": "openrig",
+      "group": "continuity",
+      "status": "implemented",
+      "definition": "A hook that re-orients a long-running agent (post-compaction or at a context threshold) with a trace from its current work up to the project root.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/assets/plugins/openrig-core/hooks/claude.json:47",
+          "what": "refocus.cjs hook uses ${CLAUDE_PLUGIN_ROOT}"
+        },
+        {
+          "ref": "packages/daemon/assets/plugins/openrig-core/hooks/scripts/refocus.cjs:109",
+          "what": "work packet off by default (OPENRIG_REFOCUS_WORK_PACKET)"
+        },
+        {
+          "ref": "CHANGELOG.md:70",
+          "what": "0.6.9: refocus work packet, off by default"
+        }
+      ],
+      "example": "After compaction, the seat receives its work trace and LEARNED excerpt and continues.",
+      "note": "Bug confirmed by code reading: no --plugin-dir/enabledPlugins wiring for Claude seats; only activity-relay is copied into settings.local.json, so Claude refocus hooks look inert. Codex path differs. Not runtime-tested.",
+      "related": [
+        {
+          "id": "context",
+          "rel": "restores"
+        },
+        {
+          "id": "learned-md",
+          "rel": "excerpts"
+        },
+        {
+          "id": "rebuild-priming",
+          "rel": "complements"
+        },
+        {
+          "id": "harness",
+          "rel": "depends on"
+        }
+      ]
+    },
+    {
+      "id": "handover",
+      "term": "Seat handover",
+      "aliases": ["rig seat handover", "shift change", "handover compaction strategy"],
+      "world": "openrig",
+      "group": "continuity",
+      "status": "implemented",
+      "definition": "Replacing a seat's occupant with a successor while keeping the seat; the --source chooses how context reaches the successor.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/seat.ts:364",
+          "what": "`rig seat handover` with --source options"
+        },
+        {
+          "ref": "packages/daemon/src/domain/seat-handover-planner.ts:133",
+          "what": "4 sources: fresh, discovered, fork, rebuild"
+        }
+      ],
+      "example": "rig seat handover dev-impl@myrig --source rebuild --reason 'context full'",
+      "note": "Also a compaction strategy value ('handover', 'apprentice-handover'). Distinct from a queue hand-off (closure_reason handed_off_to).",
+      "related": [
+        {
+          "id": "occupant",
+          "rel": "replaces"
+        },
+        {
+          "id": "rebuild-priming",
+          "rel": "source rebuild uses"
+        },
+        {
+          "id": "continuity-policy",
+          "rel": "can be triggered by"
+        },
+        {
+          "id": "seat",
+          "rel": "preserves"
+        }
+      ]
+    },
+    {
+      "id": "builtin-workflows",
+      "term": "Built-in workflow specs",
+      "aliases": ["starter workflows", "6 built-in workflows"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "implemented",
+      "definition": "Workflow specs bundled with the daemon as starters; custom specs are added alongside them from the spec library.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/workflow/starter-spec-loader.ts:161",
+          "what": "resolves builtins/workflow-specs directory"
+        },
+        {
+          "ref": "packages/daemon/src/builtins/workflow-specs/linear-build.yaml:5",
+          "what": "id: linear-build"
+        },
+        {
+          "ref": "packages/daemon/src/builtins/workflow-specs/factory-rsi.yaml:20",
+          "what": "id: factory-rsi"
+        }
+      ],
+      "example": "basic-loop walks one work packet slowly through the conveyor rig for a new user.",
+      "note": "Count confirmed: 6 — basic-loop, branched-remediation, conveyor, factory-rsi, gated-release, linear-build.",
+      "related": [
+        {
+          "id": "workflow",
+          "rel": "are instances of"
+        },
+        {
+          "id": "templates",
+          "rel": "sit beside"
+        },
+        {
+          "id": "rig",
+          "rel": "pair with starter"
+        }
+      ]
+    },
+    {
+      "id": "closure-reason",
+      "term": "closure_reason",
+      "aliases": ["hot-potato closure", "closure target"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "implemented",
+      "definition": "A required label saying why a queue item was closed, so no work silently disappears; enforced at the queue layer for every surface.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/hot-potato-enforcer.ts:18",
+          "what": "CLOSURE_REASONS enum"
+        },
+        {
+          "ref": "packages/daemon/src/domain/hot-potato-enforcer.ts:5",
+          "what": "closing to done MUST pass a valid closure_reason"
+        }
+      ],
+      "example": "Close with handed_off_to and closure_target = the next owner's seat.",
+      "note": "Header comment and older docs say 6 values; code now has 7 — handed_off_to, blocked_on, denied, canceled, no-follow-on, escalation, superseded (added 0.5.1).",
+      "related": [
+        {
+          "id": "queue",
+          "rel": "closes items of"
+        },
+        {
+          "id": "handover",
+          "rel": "distinct from seat"
+        },
+        {
+          "id": "seat",
+          "rel": "targets"
+        }
+      ]
+    },
+    {
+      "id": "watchdog",
+      "term": "Coordination Watchdog",
+      "aliases": ["rig watchdog", "watchdog policies"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "implemented",
+      "definition": "A daemon-native scheduler that runs policy jobs against seats: reminders, artifact gates, workflow keepalive, idle gates, context usage, parked owners.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/watchdog.ts:64",
+          "what": "description: daemon-native scheduler for reminders, gates, health"
+        },
+        {
+          "ref": "packages/daemon/src/domain/watchdog-policy-engine.ts:126",
+          "what": "4 built-in policies listed"
+        },
+        {
+          "ref": "packages/daemon/src/startup.ts:2029",
+          "what": "additional policies registered at startup"
+        }
+      ],
+      "example": "context-usage-threshold job warns a seat when its context crosses the configured percent.",
+      "note": "7 policies: periodic-reminder, artifact-pool-ready, edge-artifact-required, context-usage-threshold + workflow-keepalive, idle-gate-qitem, parked-owner-consumer.",
+      "related": [
+        {
+          "id": "recurring-jobs",
+          "rel": "runs"
+        },
+        {
+          "id": "workflow",
+          "rel": "keeps alive"
+        },
+        {
+          "id": "queue",
+          "rel": "wakes owners of"
+        },
+        {
+          "id": "continuity-policy",
+          "rel": "registered by"
+        }
+      ]
+    },
+    {
+      "id": "queue",
+      "term": "Queue (queue items / qitems)",
+      "aliases": ["owned-work queue", "inbox/outbox", "qitem", "hot potato"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "implemented",
+      "definition": "The daemon's owned-work list: each qitem has one owning seat and a state; it is the bus agents use to hand work to each other.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/queue.ts:439",
+          "what": "`rig queue`: Coordination L3 owned-work queue + inbox/outbox"
+        },
+        {
+          "ref": "packages/daemon/src/domain/queue-repository.ts:33",
+          "what": "8 queue states pending…handed-off"
+        }
+      ],
+      "example": "An implementer finishes and hands its qitem to the reviewer seat.",
+      "note": "8 states: pending, in-progress, done, blocked, failed, denied, canceled, handed-off. Terminal: done, handed-off.",
+      "related": [
+        {
+          "id": "closure-reason",
+          "rel": "closes with"
+        },
+        {
+          "id": "seat",
+          "rel": "owned by"
+        },
+        {
+          "id": "workflow",
+          "rel": "carries steps of"
+        },
+        {
+          "id": "watchdog",
+          "rel": "nudged by"
+        },
+        {
+          "id": "cross-host",
+          "rel": "crosses hosts as"
+        }
+      ]
+    },
+    {
+      "id": "sequence",
+      "term": "sequence",
+      "aliases": ["startup sequence"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "not-found",
+      "definition": "Not an OpenRig concept or primitive. The word appears only in ordinary use, e.g. a node's 10-step startup sequence and pod skills' 'Startup sequence' headings.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/startup-orchestrator.ts:123",
+          "what": "comment: node startup Sequence (NS-T05)"
+        },
+        {
+          "ref": "skills/_canonical/pods/orchestration-team/SKILL.md:10",
+          "what": "'Startup sequence' heading in pod skill"
+        }
+      ],
+      "example": "Startup: project resources, deliver files, launch harness, wait ready, inject identity anchor.",
+      "note": "If ordered multi-step work was meant, that is a workflow (e.g. linear-build); ordered missions are slices/waves.",
+      "related": [
+        {
+          "id": "workflow",
+          "rel": "likely meant"
+        },
+        {
+          "id": "wave",
+          "rel": "or possibly"
+        },
+        {
+          "id": "seat",
+          "rel": "startup applies to"
+        }
+      ]
+    },
+    {
+      "id": "recurring-jobs",
+      "term": "watchdog jobs (interval-scheduled)",
+      "aliases": ["recurring jobs", "periodic-reminder", "scheduled reminders"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "interpretation",
+      "definition": "No generic scheduler/cron. Recurring work is a watchdog job: a policy evaluated every intervalSeconds against a target seat; periodic-reminder just resends a message.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/policies/periodic-reminder.ts:15",
+          "what": "periodic-reminder policy definition"
+        },
+        {
+          "ref": "packages/daemon/src/domain/watchdog-jobs-repository.ts:58",
+          "what": "job intervalSeconds field"
+        }
+      ],
+      "example": "Register a periodic-reminder job: every 1800s, remind orch@myrig to check the review queue.",
+      "note": "Separately the daemon snapshots rigs on its own ~5-minute periodic scheduler; that is internal, not a user job.",
+      "related": [
+        {
+          "id": "watchdog",
+          "rel": "is a job of"
+        },
+        {
+          "id": "snapshot",
+          "rel": "distinct from periodic"
+        },
+        {
+          "id": "seat",
+          "rel": "targets"
+        }
+      ]
+    },
+    {
+      "id": "workflow",
+      "term": "Workflow (Workflow Runtime)",
+      "aliases": ["workflow spec", "rig workflow", "workflow instance"],
+      "world": "openrig",
+      "group": "coordination",
+      "status": "implemented",
+      "definition": "A declarative YAML spec of steps and roles that the daemon runs as instances, projecting each step onto a seat's queue and keeping an append-only step trail.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/workflow.ts:132",
+          "what": "`rig workflow` command: daemon-native Workflow Runtime"
+        },
+        {
+          "ref": "packages/daemon/src/domain/workflow-types.ts:16",
+          "what": "step exit kinds: handoff, waiting, done, failed"
+        }
+      ],
+      "example": "Start a linear-build workflow; each step lands as a queue item on the role's seat.",
+      "note": "Step exits are a closed enum of 4 (handoff/waiting/done/failed); pinnable harnesses are claude-code and codex only.",
+      "related": [
+        {
+          "id": "builtin-workflows",
+          "rel": "ships as"
+        },
+        {
+          "id": "queue",
+          "rel": "projects steps onto"
+        },
+        {
+          "id": "watchdog",
+          "rel": "kept alive by"
+        },
+        {
+          "id": "seat",
+          "rel": "assigns steps to"
+        }
+      ]
+    },
+    {
+      "id": "chain-files",
+      "term": "chain files",
+      "aliases": ["chain-file convention", "CE-v2"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The rule: one filename, identical at every altitude of a tree, read root-to-leaf. Topology tree (instance→rig→pod→seat: LEARNED, CRAFT, CULTURE) and project tree (project→mission→slice: SPEC, PROOF, PROGRESS, NOTES).",
+      "evidence": [
+        {
+          "ref": "docs/reference/chain-file-convention.md:10",
+          "what": "One filename, identical at every altitude of a tree"
+        },
+        {
+          "ref": "packages/cli/src/commands/context.ts:430",
+          "what": "rig context trace walks the chain"
+        }
+      ],
+      "example": "rig context trace --rig factory --seat orch-lead --name LEARNED.md",
+      "note": "Trace needs no daemon. Only topology-tree defaults ship (factory rig only); project-tree files never ship. Legacy ~/.openrig/shared-docs/rigs/ still readable with advisory.",
+      "related": [
+        {
+          "id": "learned-md",
+          "rel": "includes"
+        },
+        {
+          "id": "spec-md",
+          "rel": "includes"
+        },
+        {
+          "id": "culture-md",
+          "rel": "includes"
+        },
+        {
+          "id": "seat",
+          "rel": "anchored at"
+        },
+        {
+          "id": "project",
+          "rel": "anchored at"
+        }
+      ]
+    },
+    {
+      "id": "learned-md",
+      "term": "LEARNED.md",
+      "aliases": ["seat lessons", "seat lineage lessons"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "What a POSITION (seat, rig, pod, instance) has learned, in the topology tree. Identified by its path, so the same seat name in two rigs is two files. Never shipped or shared as-is.",
+      "evidence": [
+        {
+          "ref": "docs/reference/chain-file-convention.md:50",
+          "what": "LEARNED.md — what a POSITION has learned"
+        },
+        {
+          "ref": "packages/daemon/src/domain/rebuild-priming-chain.ts:33",
+          "what": "rebuild priming chain reads seat LEARNED.md second"
+        },
+        {
+          "ref": "packages/cli/src/commands/restore-packet.ts:198",
+          "what": "restore packet points at seat LEARNED.md"
+        }
+      ],
+      "example": "<topology.root>/rigs/factory/seats/orch-lead/LEARNED.md",
+      "note": "Written by agents by convention (no write command); READ by daemon code: rebuild priming (after RECAP), restore packets, rig context trace. Lives under topology.root, not the project tree.",
+      "related": [
+        {
+          "id": "seat",
+          "rel": "belongs to"
+        },
+        {
+          "id": "rebuild-priming",
+          "rel": "read by"
+        },
+        {
+          "id": "recap-md",
+          "rel": "lower trust than"
+        },
+        {
+          "id": "knowledge-maturity",
+          "rel": "insights/field-notes rungs of"
+        },
+        {
+          "id": "chain-files",
+          "rel": "is one of"
+        }
+      ]
+    },
+    {
+      "id": "mission-yaml",
+      "term": "mission.yaml",
+      "aliases": ["mission manifest"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The mission manifest: slice membership/order, arrangement (waves, integration ref), chosen SDLC components and proof policy for that mission.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:890",
+          "what": "mission create writes mission.yaml"
+        },
+        {
+          "ref": "packages/cli/src/lib/scope/mission-composition.ts:105",
+          "what": "mission composition reads mission.yaml manifest"
+        },
+        {
+          "ref": "packages/daemon/src/domain/execution-view.ts:511",
+          "what": "arrangement.waves parsed by execution view"
+        }
+      ],
+      "example": "slice create appends slices/<name>/slice.yaml to the mission's membership list.",
+      "note": "Written by rig scope (create/membership add); read by CLI scope tools and daemon execution view.",
+      "related": [
+        {
+          "id": "mission",
+          "rel": "configures"
+        },
+        {
+          "id": "wave",
+          "rel": "declares"
+        },
+        {
+          "id": "slice-yaml",
+          "rel": "lists"
+        },
+        {
+          "id": "project-yaml",
+          "rel": "child of"
+        }
+      ]
+    },
+    {
+      "id": "notes-md",
+      "term": "NOTES.md",
+      "aliases": ["MISSION_NOTES.md (legacy)"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The work's append-only, dated working record: what actually happened doing a mission/slice. Field-notes rung of the maturity ladder. Not for seat learnings (those go to LEARNED.md).",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:901",
+          "what": "mission create scaffolds NOTES.md"
+        },
+        {
+          "ref": "packages/cli/src/lib/scope/scope-audit.ts:362",
+          "what": "audit flags mission without NOTES.md"
+        },
+        {
+          "ref": "docs/reference/knowledge-maturity.md:30",
+          "what": "NOTES.md = field notes / observations rung"
+        }
+      ],
+      "example": "2026-10-09 — integrator found merge conflict in invoice.ts; resolved by re-slicing territory.",
+      "note": "Scaffolded by CLI (skip with --no-notes); agents append by convention. Addressable in context profiles as mission:NOTES.md#section.",
+      "related": [
+        {
+          "id": "mission",
+          "rel": "records work of"
+        },
+        {
+          "id": "learned-md",
+          "rel": "distinct from"
+        },
+        {
+          "id": "knowledge-maturity",
+          "rel": "field-notes rung of"
+        },
+        {
+          "id": "chain-files",
+          "rel": "read by walkers as"
+        }
+      ]
+    },
+    {
+      "id": "progress-md",
+      "term": "PROGRESS.md",
+      "aliases": ["progress rail"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The durable acceptance-state checklist (progress rail) for a mission or slice: what is done, what remains.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:404",
+          "what": "slice create scaffolds PROGRESS.md"
+        },
+        {
+          "ref": "packages/cli/src/lib/scope/scope-audit.ts:277",
+          "what": "audit flags missing PROGRESS.md / readme-only marker"
+        }
+      ],
+      "example": "- [x] CSV export endpoint  - [ ] proof attached",
+      "note": "Scaffolded by CLI (or replaced by progress_rail: readme-only); updated by agents by convention; read by rig scope audit and the Project TUI.",
+      "related": [
+        {
+          "id": "slice",
+          "rel": "tracks"
+        },
+        {
+          "id": "mission",
+          "rel": "tracks"
+        },
+        {
+          "id": "proof-md",
+          "rel": "paired with"
+        },
+        {
+          "id": "chain-files",
+          "rel": "is one of"
+        }
+      ]
+    },
+    {
+      "id": "project-yaml",
+      "term": "project.yaml",
+      "aliases": ["project manifest"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The project manifest at the project root: id, optional missions.root, and an install block (intent, context files, worlds, skills) that rig context work-install and skill install read.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/lib/work-install.ts:280",
+          "what": "reads project.yaml from project root"
+        },
+        {
+          "ref": "packages/cli/src/lib/work-install.ts:343",
+          "what": "validates install.worlds list"
+        },
+        {
+          "ref": "packages/cli/src/commands/workflow.ts:160",
+          "what": "compiles project.yaml → mission.yaml → slice.yaml graph"
+        }
+      ],
+      "example": "project.yaml with install.skills: [...] and install.context: [docs/ARCH.md]",
+      "note": "Scaffolded by rig config init-workspace; authored by humans/agents; read by CLI (work-install, skill, proof, workflow compile). proofPolicy.judges resolves nearest of slice/mission/project yaml.",
+      "related": [
+        {
+          "id": "project",
+          "rel": "declares"
+        },
+        {
+          "id": "mission-yaml",
+          "rel": "parent of"
+        },
+        {
+          "id": "workspace",
+          "rel": "lives in root of"
+        },
+        {
+          "id": "skills",
+          "rel": "selects"
+        }
+      ]
+    },
+    {
+      "id": "proof-md",
+      "term": "PROOF.md",
+      "aliases": ["proof/", "proof contract"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The slice's evidence file plus proof/ folder: shows promised outcomes were actually delivered. A done/proven slice without them fails audit.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:408",
+          "what": "slice create writes PROOF.md"
+        },
+        {
+          "ref": "packages/cli/src/lib/scope/scope-audit.ts:381",
+          "what": "done slice lacking PROOF.md + proof/ artifacts flagged"
+        }
+      ],
+      "example": "proof/ holds a test-run transcript added via rig proof add; PROOF.md indexes it.",
+      "note": "Evidence lands via rig proof add, never hand-placed (SOP). Workflow specs also use proof/PROOF.md as evidence_ref.",
+      "related": [
+        {
+          "id": "slice",
+          "rel": "proves"
+        },
+        {
+          "id": "progress-md",
+          "rel": "paired with"
+        },
+        {
+          "id": "slice-yaml",
+          "rel": "referenced by"
+        },
+        {
+          "id": "workflow",
+          "rel": "evidence_ref for"
+        }
+      ]
+    },
+    {
+      "id": "recap-md",
+      "term": "RECAP.md",
+      "aliases": ["seat recap", "authored recap"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "A seat's authored handover recap — decisions with rationale — written at the handover boundary. Highest-trust item when rebuilding/priming a successor; old recaps are superseded but preserved.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/context.ts:785",
+          "what": "rig context recap-write command"
+        },
+        {
+          "ref": "packages/daemon/src/domain/context-packs/seat-recap-store.ts:30",
+          "what": "RECAP_FILENAME store with supersession chain"
+        },
+        {
+          "ref": "packages/daemon/src/domain/rebuild-priming-chain.ts:11",
+          "what": "current RECAP.md is priority 1 (highest trust)"
+        }
+      ],
+      "example": "rig context recap-write --rig factory --seat dev-impl --file recap.md",
+      "note": "Written by the outgoing agent through a CLI command (not hand-edited); predecessors kept in recap-superseded/. Advisory if no decisions section. Lives beside LEARNED.md under topology.root.",
+      "related": [
+        {
+          "id": "handover",
+          "rel": "written at"
+        },
+        {
+          "id": "rebuild-priming",
+          "rel": "first link of"
+        },
+        {
+          "id": "learned-md",
+          "rel": "sits beside"
+        },
+        {
+          "id": "seat",
+          "rel": "belongs to"
+        }
+      ]
+    },
+    {
+      "id": "slice-yaml",
+      "term": "slice.yaml",
+      "aliases": ["slice manifest"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The slice manifest: links to its mission, spec/progress/proof files, and execution data such as depends_on and wave.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:407",
+          "what": "slice create writes slice.yaml"
+        },
+        {
+          "ref": "packages/cli/src/commands/scope.ts:111",
+          "what": "manifest template: mission: ../../mission.yaml"
+        },
+        {
+          "ref": "docs/reference/sdlc-conventions.md:40",
+          "what": "execution.depends_on and execution.wave precedence"
+        }
+      ],
+      "example": "slice.yaml: mission: ../../mission.yaml, spec: SPEC.md, progress: PROGRESS.md, proof: PROOF.md",
+      "note": "Created by CLI; consumed by workflow compile, proof judge resolution and execution view.",
+      "related": [
+        {
+          "id": "slice",
+          "rel": "configures"
+        },
+        {
+          "id": "mission-yaml",
+          "rel": "listed in"
+        },
+        {
+          "id": "proof-md",
+          "rel": "points to"
+        },
+        {
+          "id": "wave",
+          "rel": "may name"
+        }
+      ]
+    },
+    {
+      "id": "spec-md",
+      "term": "SPEC.md",
+      "aliases": ["special.md", "spec", "README.md (legacy)"],
+      "world": "openrig",
+      "group": "files",
+      "status": "implemented",
+      "definition": "The intent/specification chain file at every project-tree node (project, mission, slice). Intent in frontmatter composes up the chain; the leaf carries the actual specification.",
+      "evidence": [
+        {
+          "ref": "docs/reference/chain-file-convention.md:62",
+          "what": "SPEC.md: intent composes up; specification is a leaf property"
+        },
+        {
+          "ref": "packages/cli/src/commands/scope.ts:387",
+          "what": "slice create writes SPEC.md"
+        },
+        {
+          "ref": "packages/cli/src/commands/scope.ts:1039",
+          "what": "audit flags PROGRESS.md without SPEC.md"
+        }
+      ],
+      "example": "rig scope slice create --intent 'Export invoices as CSV' writes intent into SPEC.md frontmatter.",
+      "note": "'special.md' is a mishearing of SPEC.md. Scaffolded by CLI, then authored by the PM/planner agent; README.md is a legacy fallback. Has a minted dot-ID in frontmatter.",
+      "related": [
+        {
+          "id": "chain-files",
+          "rel": "is one of"
+        },
+        {
+          "id": "slice",
+          "rel": "specifies"
+        },
+        {
+          "id": "mission",
+          "rel": "specifies"
+        },
+        {
+          "id": "project",
+          "rel": "specifies"
+        }
+      ]
+    },
+    {
+      "id": "apm",
+      "term": "APM (Agent Productivity Monitoring)",
+      "aliases": ["agent productivity monitoring"],
+      "world": "openrig",
+      "group": "health",
+      "status": "claimed",
+      "definition": "A name used in OpenRig videos for watching queue activity against real progress. The repo never uses the term.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/health-policy.ts:5",
+          "what": "the shipped equivalent: health detectors"
+        }
+      ],
+      "example": "Video framing: 'lots of queue motion, ticket not moving' — in code, the ceremony detector.",
+      "note": "Zero repo hits for 'APM' or 'Agent Productivity Monitoring' at 4b48ca21; the real feature is `rig health`.",
+      "related": [
+        {
+          "id": "health-monitoring",
+          "rel": "implemented as"
+        },
+        {
+          "id": "ceremony-detector",
+          "rel": "core signal is"
+        },
+        {
+          "id": "pathologies",
+          "rel": "framed alongside"
+        }
+      ]
+    },
+    {
+      "id": "pathologies",
+      "term": "Coordination pathologies",
+      "aliases": ["mind viruses", "pathology catalogue", "established pathology"],
+      "world": "openrig",
+      "group": "health",
+      "status": "claimed",
+      "definition": "An 8-item catalogue from the videos of ways agent teams go wrong. The code has no catalogue, only detectors and a diagnosis verdict 'established pathology'.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/health-diagnosis.ts:6",
+          "what": "verdicts incl. 'established pathology'"
+        },
+        {
+          "ref": "packages/daemon/src/domain/health-policy.ts:5",
+          "what": "detector ids that cover some pathologies"
+        }
+      ],
+      "example": "Scope inflation roughly maps to governance.scope-admission-drift.",
+      "note": "Live detectors: ceremony amplification; recursive proof ~ review-carousel; hyper-monitoring ~ redundant-wake-storm; scope inflation ~ scope-admission-drift; inherited rules ~ stale-directive (loose). Narrative only: context narrowing, just following orders, mind viruses.",
+      "related": [
+        {
+          "id": "health-monitoring",
+          "rel": "partly detected by"
+        },
+        {
+          "id": "ceremony-detector",
+          "rel": "one has"
+        },
+        {
+          "id": "apm",
+          "rel": "framed alongside"
+        },
+        {
+          "id": "learned-md",
+          "rel": "can spread via"
+        }
+      ]
+    },
+    {
+      "id": "health-monitoring",
+      "term": "Health (rig health)",
+      "aliases": ["health records", "health policy", "health diagnosis"],
+      "world": "openrig",
+      "group": "health",
+      "status": "implemented",
+      "definition": "Read-only, explainable detectors that watch coordination for unhealthy patterns and record findings; optional diagnosis by an owner seat, optional human escalation.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/health.ts:322",
+          "what": "read-only, explainable system health records"
+        },
+        {
+          "ref": "packages/daemon/src/domain/health-policy.ts:5",
+          "what": "HEALTH_DETECTORS: 6 detector ids"
+        }
+      ],
+      "example": "rig health explain <finding> shows the counts and threshold that raised it.",
+      "note": "Detectors: process.ceremony-amplification, process.review-carousel, process.redundant-wake-storm, governance.stale-directive, governance.scope-admission-drift, context.pressure. Diagnosis disabled by default.",
+      "related": [
+        {
+          "id": "ceremony-detector",
+          "rel": "includes"
+        },
+        {
+          "id": "pathologies",
+          "rel": "partly detects"
+        },
+        {
+          "id": "apm",
+          "rel": "is the real form of"
+        },
+        {
+          "id": "queue",
+          "rel": "observes"
+        }
+      ]
+    },
+    {
+      "id": "ceremony-detector",
+      "term": "process.ceremony-amplification",
+      "aliases": ["ceremony detector", "confirmed ceremony"],
+      "world": "openrig",
+      "group": "health",
+      "status": "implemented",
+      "definition": "Flags when coordination transitions (handoffs, rounds) vastly outnumber real product changes; counts raise a candidate, attributed outcomes confirm it.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/health-policy.ts:22",
+          "what": "defaults: transitions 20, ratio 12, reviewReturns 4, wakes 4"
+        },
+        {
+          "ref": "packages/daemon/src/domain/health-detectors.ts:397",
+          "what": "threshold formula incl. boundedAuthority = false"
+        }
+      ],
+      "example": "20+ queue transitions against 1 product change in 24h raises a ceremony candidate.",
+      "note": "Fires when transitions >= 20 AND transitions/max(product changes,1) >= 12 AND no bounded authority; window 86400s. 'Counts alone never confirm.'",
+      "related": [
+        {
+          "id": "health-monitoring",
+          "rel": "is a detector of"
+        },
+        {
+          "id": "pathologies",
+          "rel": "detects one of"
+        },
+        {
+          "id": "queue",
+          "rel": "counts transitions in"
+        }
+      ]
+    },
+    {
+      "id": "cross-host",
+      "term": "cross-host",
+      "aliases": ["--host", "multi-host", "cross-instance"],
+      "world": "openrig",
+      "group": "infrastructure",
+      "status": "implemented",
+      "definition": "Running rig commands (send, capture, broadcast, down, ps, whoami) against another machine's daemon named in hosts.yaml, over ssh or http. No shared state is replicated between hosts.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/cross-host-executor.ts:12",
+          "what": "CrossHostResult separates ssh vs remote-command failures"
+        },
+        {
+          "ref": "packages/cli/src/commands/capture.ts:34",
+          "what": "--host captures on a remote host"
+        }
+      ],
+      "example": "rig send dev-build@starter 'hi' --host m2",
+      "note": "Command-forwarding only; each host keeps its own daemon and state.",
+      "related": [
+        {
+          "id": "hosts-yaml",
+          "rel": "is configured by"
+        },
+        {
+          "id": "daemon",
+          "rel": "talks to remote"
+        },
+        {
+          "id": "queue",
+          "rel": "can carry items across"
+        }
+      ]
+    },
+    {
+      "id": "daemon",
+      "term": "daemon",
+      "aliases": ["rig daemon", "OpenRig daemon", "packages/daemon"],
+      "world": "openrig",
+      "group": "infrastructure",
+      "status": "implemented",
+      "definition": "The always-running local server that owns the SQLite state, launches and watches seats in tmux, runs the queue and serves the API that the CLI, TUI and UI call.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/daemon.ts:140",
+          "what": "`rig daemon` manages the OpenRig daemon"
+        },
+        {
+          "ref": "docs/reference/topology-naming.md:12",
+          "what": "Instance = one daemon and its rigs"
+        }
+      ],
+      "example": "rig daemon start",
+      "note": "",
+      "related": [
+        {
+          "id": "kernel",
+          "rel": "auto-boots"
+        },
+        {
+          "id": "rig",
+          "rel": "runs"
+        },
+        {
+          "id": "hosts-yaml",
+          "rel": "is reached via"
+        },
+        {
+          "id": "queue",
+          "rel": "runs"
+        }
+      ]
+    },
+    {
+      "id": "harness",
+      "term": "harness",
+      "aliases": ["coding agent CLI", "launchHarness"],
+      "world": "openrig",
+      "group": "infrastructure",
+      "status": "implemented",
+      "definition": "The coding-agent program that wraps a model, e.g. Claude Code or Codex. OpenRig launches one harness per seat inside tmux; OpenRig calls itself a multi-agent harness.",
+      "evidence": [
+        {
+          "ref": "README.md:5",
+          "what": "'A harness wraps a model. A rig wraps your harnesses.'"
+        },
+        {
+          "ref": "packages/daemon/src/adapters/claude-code-adapter.ts:235",
+          "what": "launchHarness starts Claude Code in the seat's tmux"
+        },
+        {
+          "ref": "README.md:261",
+          "what": "OpenRig is a multi-agent harness"
+        }
+      ],
+      "example": "runtime: claude-code   (selects which harness the seat launches)",
+      "note": "In rig.yaml the field is `runtime`, not `harness`; the two words name the same choice.",
+      "related": [
+        {
+          "id": "runtime",
+          "rel": "is selected by"
+        },
+        {
+          "id": "model",
+          "rel": "wraps"
+        },
+        {
+          "id": "occupant",
+          "rel": "hosts"
+        },
+        {
+          "id": "seat",
+          "rel": "runs in"
+        }
+      ]
+    },
+    {
+      "id": "hosts-yaml",
+      "term": "hosts.yaml",
+      "aliases": ["host registry", "rig host"],
+      "world": "openrig",
+      "group": "infrastructure",
+      "status": "implemented",
+      "definition": "The per-machine registry at ~/.openrig/hosts.yaml listing other OpenRig hosts and how to reach them (ssh or http transport), used by every --host command.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/host-registry.ts:123",
+          "what": "default registry path is hosts.yaml"
+        },
+        {
+          "ref": "packages/cli/src/host-registry.ts:120",
+          "what": "KNOWN_TRANSPORTS: ssh, http"
+        },
+        {
+          "ref": "packages/cli/src/commands/host.ts:485",
+          "what": "`rig host` manages ~/.openrig/hosts.yaml"
+        }
+      ],
+      "example": "rig host list",
+      "note": "",
+      "related": [
+        {
+          "id": "cross-host",
+          "rel": "enables"
+        },
+        {
+          "id": "daemon",
+          "rel": "points at remote"
+        }
+      ]
+    },
+    {
+      "id": "kernel",
+      "term": "kernel",
+      "aliases": ["kernel rig", "kernel operator", "saved:kernel"],
+      "world": "openrig",
+      "group": "infrastructure",
+      "status": "implemented",
+      "definition": "A built-in, always-on rig named `kernel` that auto-boots on first daemon start. Its seats (advisor, operator, queue worker) run OpenRig itself and help the user pick a first team.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/specs/rigs/launch/kernel/rig.yaml:2",
+          "what": "name: kernel; auto-boots on first daemon start"
+        },
+        {
+          "ref": "packages/daemon/src/domain/kernel-boot-tracker.ts:1",
+          "what": "kernel-rig-as-default boot tracker"
+        },
+        {
+          "ref": "README.md:17",
+          "what": "talk to the kernel operator first"
+        }
+      ],
+      "example": "rig terminal open saved:kernel --window",
+      "note": "Not an OS kernel; it is an ordinary rig with a special auto-boot path. Variant chosen by which runtimes are authenticated.",
+      "related": [
+        {
+          "id": "rig",
+          "rel": "is a"
+        },
+        {
+          "id": "daemon",
+          "rel": "is booted by"
+        },
+        {
+          "id": "orchestrator",
+          "rel": "provides operator"
+        }
+      ]
+    },
+    {
+      "id": "snapshot",
+      "term": "snapshot",
+      "aliases": ["rig snapshot", "auto-pre-down", "restore"],
+      "world": "openrig",
+      "group": "infrastructure",
+      "status": "implemented",
+      "definition": "A saved record of a rig's seats, sessions and resume tokens. `rig down` always takes one automatically; `rig up <name>` restores from the latest, resuming conversations where possible.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/snapshot-capture.ts:27",
+          "what": "SnapshotCapture class"
+        },
+        {
+          "ref": "packages/daemon/src/domain/rig-teardown.ts:133",
+          "what": "auto-pre-down snapshot before teardown"
+        },
+        {
+          "ref": "README.md:340",
+          "what": "Snapshot/Restore: per-node outcomes on restore"
+        }
+      ],
+      "example": "rig snapshot <rigId>",
+      "note": "",
+      "related": [
+        {
+          "id": "rig",
+          "rel": "captures"
+        },
+        {
+          "id": "edge",
+          "rel": "restore order uses"
+        },
+        {
+          "id": "occupant",
+          "rel": "records resume token of"
+        }
+      ]
+    },
+    {
+      "id": "context",
+      "term": "context (rig context / context packs)",
+      "aliases": ["context pack", "context profile", "context library"],
+      "world": "openrig",
+      "group": "knowledge",
+      "status": "implemented",
+      "definition": "A real OpenRig noun, not just a generic word: the rig context command family (trace, compose, profile, recap-write, work-install) and context packs whose atoms are classified world | lore | skills | mission.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/context.ts:430",
+          "what": "rig context trace subcommand"
+        },
+        {
+          "ref": "packages/daemon/src/domain/context-packs/context-pack-types.ts:27",
+          "what": "atom taxonomies: world, lore, skills, mission"
+        }
+      ],
+      "example": "rig context work-install installs project.yaml's install.context files into a seat.",
+      "note": "In everyday prose it is also generic; the concept-level words are 'context pack', 'profile', and the taxonomy (world/lore/skills/mission).",
+      "related": [
+        {
+          "id": "chain-files",
+          "rel": "traced via"
+        },
+        {
+          "id": "recap-md",
+          "rel": "writes"
+        },
+        {
+          "id": "project-yaml",
+          "rel": "installs from"
+        },
+        {
+          "id": "knowledge",
+          "rel": "packages"
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "term": "knowledge",
+      "aliases": ["lore", "position knowledge"],
+      "world": "openrig",
+      "group": "knowledge",
+      "status": "interpretation",
+      "definition": "Generic word, not an OpenRig primitive. OpenRig's own terms: 'lore' (what has been learned here — a context-pack taxonomy), the maturity ladder, and 'position knowledge' (LEARNED/RECAP, unshareable).",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/context-packs/context-pack-types.ts:35",
+          "what": "lore = what has been learned here (position knowledge)"
+        },
+        {
+          "ref": "packages/daemon/src/domain/context-packs/seat-recap-store.ts:7",
+          "what": "the recap is POSITION knowledge, unshareable"
+        }
+      ],
+      "example": "Say 'lore' or 'LEARNED.md content', not 'the knowledge'.",
+      "note": "Only code use as a value: workspace kind 'knowledge' (user|project|knowledge|lab|delivery) — a workspace type, not a knowledge concept.",
+      "related": [
+        {
+          "id": "knowledge-maturity",
+          "rel": "graded by"
+        },
+        {
+          "id": "learned-md",
+          "rel": "stored as"
+        },
+        {
+          "id": "context",
+          "rel": "packaged as"
+        },
+        {
+          "id": "workspace",
+          "rel": "names a kind of"
+        }
+      ]
+    },
+    {
+      "id": "knowledge-maturity",
+      "term": "knowledge maturity (the epistemic ladder)",
+      "aliases": ["maturity ladder", "stage", "DATA → FIELD NOTES → INSIGHTS → CANON"],
+      "world": "openrig",
+      "group": "knowledge",
+      "status": "implemented",
+      "definition": "Trust model: knowledge climbs DATA → field notes → insights → canon, each rung slower-changing. Files carry maturity by address (NOTES vs LEARNED vs CULTURE); scope/lore/pack items carry a stage field.",
+      "evidence": [
+        {
+          "ref": "docs/reference/knowledge-maturity.md:21",
+          "what": "DATA → FIELD NOTES / OBSERVATIONS → INSIGHTS → CANON"
+        },
+        {
+          "ref": "packages/cli/src/lib/scope/types.ts:103",
+          "what": "Stage enum wip/provisional/established/canonical/superseded/retired"
+        }
+      ],
+      "example": "A slice set to stage 'shaped' is rejected; 'superseded' must name its successor.",
+      "note": "Mostly doctrine. Code enforces only the stage enum on scope missions/slices; context-pack manifests and lore frontmatter are not checked.",
+      "related": [
+        {
+          "id": "notes-md",
+          "rel": "field-notes rung"
+        },
+        {
+          "id": "learned-md",
+          "rel": "insights rung"
+        },
+        {
+          "id": "culture-md",
+          "rel": "canon rung"
+        },
+        {
+          "id": "slice",
+          "rel": "stage field on"
+        }
+      ]
+    },
+    {
+      "id": "learnings",
+      "term": "learnings",
+      "aliases": ["lessons"],
+      "world": "openrig",
+      "group": "knowledge",
+      "status": "interpretation",
+      "definition": "Not an OpenRig term — the word appears once, in a template comment. OpenRig's concrete equivalent is LEARNED.md (seat/position lessons), promoted via the maturity ladder toward CRAFT/CULTURE canon.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/assets/plugins/openrig-core/skills/openrig-operating-model/templates/NOTES.md:8",
+          "what": "seat-specific learnings go to that seat's LEARNED.md"
+        }
+      ],
+      "example": "A seat's lesson 'always rebase before integrator merge' belongs in its LEARNED.md.",
+      "note": "Possibly conflated with AppyDave's KDD 'learnings' vocabulary; in OpenRig, use LEARNED.md.",
+      "related": [
+        {
+          "id": "learned-md",
+          "rel": "realised as"
+        },
+        {
+          "id": "knowledge-maturity",
+          "rel": "climbs"
+        },
+        {
+          "id": "kdd",
+          "rel": "AppyDave analogue"
+        },
+        {
+          "id": "notes-md",
+          "rel": "not stored in"
+        }
+      ]
+    },
+    {
+      "id": "edge",
+      "term": "edge",
+      "aliases": [
+        "edges:",
+        "delegates_to",
+        "spawned_by",
+        "can_observe",
+        "collaborates_with",
+        "escalates_to"
+      ],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "A typed arrow between two members (pod-local or cross-pod). Five kinds exist; only delegates_to and spawned_by change behaviour (launch order; delegates_to also picks the queue orchestrator). The rest are display and whoami information.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/rigspec-schema.ts:30",
+          "what": "VALID_EDGE_KINDS: the five accepted kinds"
+        },
+        {
+          "ref": "packages/daemon/src/domain/restore-orchestrator.ts:71",
+          "what": "launch order uses only delegates_to and spawned_by"
+        },
+        {
+          "ref": "packages/daemon/src/domain/queue-owner.ts:25",
+          "what": "queue orchestrator = source of incoming delegates_to edge"
+        }
+      ],
+      "example": "edges: - kind: delegates_to  from: orch.lead  to: dev.build",
+      "note": "ChatGPT claim is right, and OpenRig's own docs/reference/edge-types.md:34 says so. Nuance: delegates_to also drives queue escalation; spawned_by does not. Edges do not route or restrict messages.",
+      "related": [
+        {
+          "id": "topology",
+          "rel": "forms"
+        },
+        {
+          "id": "member",
+          "rel": "connects"
+        },
+        {
+          "id": "queue",
+          "rel": "routes escalation in"
+        },
+        {
+          "id": "orchestrator",
+          "rel": "names (delegates_to)"
+        },
+        {
+          "id": "identity",
+          "rel": "appears in"
+        }
+      ]
+    },
+    {
+      "id": "identity",
+      "term": "identity",
+      "aliases": ["rig whoami", "managed identity", "session identity"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "A seat's answer to 'who am I': its rig, pod, member, session address, peers and incoming/outgoing edges, served by `rig whoami` and injected as session identity text after launch.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/whoami.ts:216",
+          "what": "whoami: current managed identity in a topology"
+        },
+        {
+          "ref": "packages/daemon/src/domain/whoami-service.ts:272",
+          "what": "reads edges to build outgoing/incoming relations"
+        }
+      ],
+      "example": "rig whoami --json",
+      "note": "",
+      "related": [
+        {
+          "id": "seat",
+          "rel": "belongs to"
+        },
+        {
+          "id": "edge",
+          "rel": "lists"
+        },
+        {
+          "id": "topology",
+          "rel": "is located in"
+        }
+      ]
+    },
+    {
+      "id": "occupant",
+      "term": "occupant",
+      "aliases": ["currentOccupant", "occupantLifecycle"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "The live conversation (one native Claude or Codex session with its resume token) currently filling a seat. A handover replaces the occupant; the seat stays.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/seat-handover-service.ts:59",
+          "what": "handover result records previousOccupant / currentOccupant"
+        },
+        {
+          "ref": "docs/reference/agent-state-taxonomy.md:25",
+          "what": "occupantLifecycle: active, retiring, retired"
+        },
+        {
+          "ref": "docs/reference/agent-startup-guide.md:237",
+          "what": "--stop replaces a live occupant deliberately"
+        }
+      ],
+      "example": "rig seat launch dev-build@starter --fresh --stop --reason 'new occupant'",
+      "note": "",
+      "related": [
+        {
+          "id": "seat",
+          "rel": "occupies"
+        },
+        {
+          "id": "handover",
+          "rel": "is replaced by"
+        },
+        {
+          "id": "harness",
+          "rel": "runs inside"
+        },
+        {
+          "id": "rebuild-priming",
+          "rel": "is primed by"
+        }
+      ]
+    },
+    {
+      "id": "pod",
+      "term": "pod",
+      "aliases": ["pods:"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "A group of related seats inside a rig that share guidance, startup files and a continuity policy. Each agent still has its own context window.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/types.ts:1128",
+          "what": "RigSpecPod: id, label, continuityPolicy, startup, members, edges"
+        },
+        {
+          "ref": "README.md:338",
+          "what": "Pod: group of related seats with shared guidance"
+        },
+        {
+          "ref": "packages/daemon/src/domain/pod-repository.ts:38",
+          "what": "createPod stores the pod with its namespace"
+        }
+      ],
+      "example": "pods: - id: dev  members: [build, qa]",
+      "note": "",
+      "related": [
+        {
+          "id": "rig",
+          "rel": "belongs to"
+        },
+        {
+          "id": "member",
+          "rel": "contains"
+        },
+        {
+          "id": "namespace",
+          "rel": "is keyed by"
+        },
+        {
+          "id": "continuity-policy",
+          "rel": "carries"
+        },
+        {
+          "id": "edge",
+          "rel": "holds pod-local"
+        }
+      ]
+    },
+    {
+      "id": "rig",
+      "term": "rig",
+      "aliases": ["RigSpec", "rig.yaml", "team"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "A whole agent team defined in one rig.yaml: its pods, members, edges, culture file and workspace. The `rig` CLI boots, stops, snapshots and restores it as one unit.",
+      "evidence": [
+        {
+          "ref": "packages/daemon/src/domain/types.ts:1172",
+          "what": "RigSpec interface: name, cultureFile, workspace, pods, edges"
+        },
+        {
+          "ref": "README.md:5",
+          "what": "'A harness wraps a model. A rig wraps your harnesses.'"
+        },
+        {
+          "ref": "docs/reference/topology-naming.md:13",
+          "what": "Rig = a team or project purpose"
+        }
+      ],
+      "example": "name: kernel  (rig.yaml top level); boot with `rig up starter`",
+      "note": "The CLI is also called `rig`, so 'rig' means both the tool and the team.",
+      "related": [
+        {
+          "id": "pod",
+          "rel": "contains"
+        },
+        {
+          "id": "edge",
+          "rel": "declares"
+        },
+        {
+          "id": "culture-md",
+          "rel": "is shaped by"
+        },
+        {
+          "id": "snapshot",
+          "rel": "is captured by"
+        },
+        {
+          "id": "daemon",
+          "rel": "is run by"
+        }
+      ]
+    },
+    {
+      "id": "seat",
+      "term": "seat",
+      "aliases": ["node", "session address", "pod-member@rig", "logical seat id"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "A stable role and address in a running rig, like dev-build@starter. The conversation sitting in it (the occupant) can be swapped while the address and authored context stay.",
+      "evidence": [
+        {
+          "ref": "README.md:337",
+          "what": "Seat: stable role and address, e.g. dev-build@starter"
+        },
+        {
+          "ref": "packages/daemon/src/domain/session-name.ts:18",
+          "what": "address = pod-member@rig, also the tmux session name"
+        },
+        {
+          "ref": "packages/cli/src/commands/seat.ts:577",
+          "what": "`rig seat set-model` acts on a seat"
+        }
+      ],
+      "example": "rig seat handover dev-build@starter --source rebuild",
+      "note": "Logical id is pod.member (dev.build); session address is pod-member@rig (dev-build@starter). In the database a seat is a 'node'.",
+      "related": [
+        {
+          "id": "member",
+          "rel": "is declared by"
+        },
+        {
+          "id": "occupant",
+          "rel": "is occupied by"
+        },
+        {
+          "id": "identity",
+          "rel": "has"
+        },
+        {
+          "id": "handover",
+          "rel": "changes occupant via"
+        },
+        {
+          "id": "pod",
+          "rel": "belongs to"
+        }
+      ]
+    },
+    {
+      "id": "seat-dimensions",
+      "term": "seat dimensions (7)",
+      "aliases": ["seven dimensions of a seat", "seats (7 dimensions)"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "not-found",
+      "definition": "No OpenRig code or doc says a seat has seven dimensions. A seat member has 17 allowed YAML fields; the brain's study guide frames a seat as address + AgentSpec + seat folder + occupant.",
+      "evidence": [],
+      "example": "(none — no such schema; compare MEMBER_KEYS in rigspec-schema.ts)",
+      "note": "Likely a mishearing of 'seven seats': factory-rsi is 'one rig, seven seats' (CHANGELOG.md:2024) and David's AppyRig run used seven seats. ChatGPT itself called it 'a framework we invented'.",
+      "related": [
+        {
+          "id": "seat",
+          "rel": "misdescribes"
+        },
+        {
+          "id": "member",
+          "rel": "actually has fields of"
+        },
+        {
+          "id": "rig",
+          "rel": "confused with seven-seat"
+        }
+      ]
+    },
+    {
+      "id": "topology",
+      "term": "topology",
+      "aliases": ["topology/ folder", "rig graph"],
+      "world": "openrig",
+      "group": "structure",
+      "status": "implemented",
+      "definition": "The shape of a team: which rigs, pods and seats exist and how edges link them. Also the ~/.openrig/topology/ folder tree holding per-rig, per-pod and per-seat continuity files.",
+      "evidence": [
+        {
+          "ref": "docs/reference/instance-layout.md:23",
+          "what": "topology/: instance, rig, pod and seat continuity tree"
+        },
+        {
+          "ref": "packages/daemon/src/domain/graph-projection.ts:235",
+          "what": "edges projected into the UI topology graph"
+        },
+        {
+          "ref": "packages/cli/src/commands/whoami.ts:216",
+          "what": "whoami: identity in an OpenRig topology"
+        }
+      ],
+      "example": "~/.openrig/topology/rigs/starter/seats/dev-build/LEARNED.md",
+      "note": "Two senses: the team graph, and the on-disk folder where LEARNED.md/RECAP.md chain files live.",
+      "related": [
+        {
+          "id": "edge",
+          "rel": "is made of"
+        },
+        {
+          "id": "rig",
+          "rel": "describes"
+        },
+        {
+          "id": "chain-files",
+          "rel": "stores"
+        },
+        {
+          "id": "learnings",
+          "rel": "holds files for"
+        }
+      ]
+    },
+    {
+      "id": "mission",
+      "term": "mission",
+      "aliases": ["missions/<name>"],
+      "world": "openrig",
+      "group": "work",
+      "status": "implemented",
+      "definition": "A unit of work inside a project: a folder under missions/ with SPEC.md, mission.yaml, PROGRESS.md and NOTES.md, holding slices. The mission owner chooses the SDLC components (simple flow, wave model, rigorous overlay).",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:764",
+          "what": "rig scope mission create scaffolds SPEC.md and mission.yaml"
+        },
+        {
+          "ref": "docs/reference/sdlc-conventions.md:30",
+          "what": "SDLC assembled from components chosen per mission"
+        }
+      ],
+      "example": "rig scope mission create billing-v2 → missions/billing-v2/{SPEC.md,mission.yaml,PROGRESS.md,NOTES.md}",
+      "note": "Created by the CLI (rig scope), not the daemon. A legacy README.md is accepted where no SPEC.md exists.",
+      "related": [
+        {
+          "id": "project",
+          "rel": "child of"
+        },
+        {
+          "id": "slice",
+          "rel": "contains"
+        },
+        {
+          "id": "mission-yaml",
+          "rel": "configured by"
+        },
+        {
+          "id": "wave",
+          "rel": "may group slices into"
+        },
+        {
+          "id": "notes-md",
+          "rel": "keeps work record in"
+        }
+      ]
+    },
+    {
+      "id": "project",
+      "term": "project",
+      "aliases": ["workspace project", "project tree root"],
+      "world": "openrig",
+      "group": "work",
+      "status": "implemented",
+      "definition": "The root of the work tree: a folder holding project.yaml and SPEC.md describing what you are building. Missions live under it; rigs can be associated with it via the workspace catalog.",
+      "evidence": [
+        {
+          "ref": "docs/reference/chain-file-convention.md:24",
+          "what": "Project tree: project → mission → slice, what is being built"
+        },
+        {
+          "ref": "packages/cli/src/lib/work-install.ts:280",
+          "what": "work-install reads the project's project.yaml manifest"
+        },
+        {
+          "ref": "docs/reference/project-workspace.md:12",
+          "what": "rig config init-workspace creates default workspace with project.yaml"
+        }
+      ],
+      "example": "~/.openrig/workspace/ with SPEC.md, project.yaml, missions/ — created by rig config init-workspace.",
+      "note": "Project-tree context never ships with OpenRig; you author it. The default project IS the workspace root (~/.openrig/workspace).",
+      "related": [
+        {
+          "id": "project-yaml",
+          "rel": "declared by"
+        },
+        {
+          "id": "mission",
+          "rel": "contains"
+        },
+        {
+          "id": "workspace",
+          "rel": "lives in"
+        },
+        {
+          "id": "spec-md",
+          "rel": "carries intent in"
+        }
+      ]
+    },
+    {
+      "id": "slice",
+      "term": "slice",
+      "aliases": ["slices/<name>"],
+      "world": "openrig",
+      "group": "work",
+      "status": "implemented",
+      "definition": "The leaf unit of buildable work under a mission: SPEC.md (spec), slice.yaml, PROGRESS.md (state), PROOF.md plus proof/ (evidence). Not done until promised outcomes have evidence.",
+      "evidence": [
+        {
+          "ref": "packages/cli/src/commands/scope.ts:307",
+          "what": "slice create scaffolds SPEC, slice.yaml, PROGRESS, PROOF, proof/"
+        },
+        {
+          "ref": "packages/cli/src/lib/scope/scope-audit.ts:381",
+          "what": "audit flags done slice lacking PROOF.md and proof artifacts"
+        }
+      ],
+      "example": "missions/billing-v2/slices/invoice-export/ built by one seat, proven via rig proof add.",
+      "note": "rig scope audit enforces completeness; slice stage vocabulary (wip…retired) is validated by rig scope slice stage.",
+      "related": [
+        {
+          "id": "mission",
+          "rel": "child of"
+        },
+        {
+          "id": "slice-yaml",
+          "rel": "configured by"
+        },
+        {
+          "id": "proof-md",
+          "rel": "proven by"
+        },
+        {
+          "id": "progress-md",
+          "rel": "tracked in"
+        },
+        {
+          "id": "wave",
+          "rel": "assigned to"
+        }
+      ]
+    },
+    {
+      "id": "wave",
+      "term": "wave",
+      "aliases": ["wave model", "wave SDLC", "wave-map"],
+      "world": "openrig",
+      "group": "work",
+      "status": "implemented",
+      "definition": "An optional build model: a group of slices built in parallel in disjoint file territories, merged serially by an integrator, reviewed once per wave. Wave composition is the 'care dial'.",
+      "evidence": [
+        {
+          "ref": "docs/reference/wave-sdlc.md:1",
+          "what": "The wave SDLC — parallel build, wave-level review"
+        },
+        {
+          "ref": "packages/daemon/src/domain/execution-view.ts:511",
+          "what": "execution view reads mission.yaml arrangement.waves"
+        },
+        {
+          "ref": "docs/reference/sdlc-conventions.md:40",
+          "what": "EC-2 wave-as-data in mission.yaml arrangement.waves"
+        }
+      ],
+      "example": "mission.yaml arrangement.waves: [{id: W1, slices: [a, b, c], review_model: dual}]",
+      "note": "Mostly a documented process (selectable, not mandatory); code only reads wave composition for rig view show execution. Legacy fallback: queue row tagged format:wave-map-v1.",
+      "related": [
+        {
+          "id": "mission-yaml",
+          "rel": "declared in"
+        },
+        {
+          "id": "slice",
+          "rel": "groups"
+        },
+        {
+          "id": "mission",
+          "rel": "chosen per"
+        },
+        {
+          "id": "queue",
+          "rel": "legacy wave-map in"
+        }
+      ]
+    }
+  ]
+}

@@ -29,7 +29,8 @@
     "arch:check": "depcruise shared/src server/src server/scripts client/src collector/src --config .dependency-cruiser.cjs && node scripts/arch-strings.mjs",
     "fake-collector": "node server/scripts/fake-collector.mjs",
     "api:gen": "tsx scripts/gen-api.ts",
-    "test:root": "vitest run --config test/root/vitest.config.ts"
+    "test:root": "vitest run --config test/root/vitest.config.ts",
+    "atlas:sync": "node scripts/sync-atlas.mjs"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",

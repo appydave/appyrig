@@ -103,13 +103,18 @@ test.describe('v1.1 screens', () => {
     const errors = watchErrors(page);
     await openWall(page);
     await page.getByTestId('view-learn').click();
-    await expect(page.getByTestId('lesson-link')).toHaveCount(9);
+    await expect(page.getByTestId('lesson-link')).toHaveCount(10);
     await expect(page.getByTestId('lesson')).toContainText('Seats');
     await expect(page.getByTestId('lesson').locator('table')).toBeVisible();
     await page.getByTestId('lesson-link').filter({ hasText: 'Refocus' }).click();
     await expect(page.getByTestId('lesson')).toContainText('--plugin-dir');
     await page.getByTestId('lesson-link').filter({ hasText: 'Every term' }).click();
     await expect(page.getByTestId('lesson')).toContainText('Rework');
+    await page.getByTestId('lesson-link').filter({ hasText: 'OpenRig concepts' }).click();
+    await expect(page.getByTestId('atlas-term').first()).toBeVisible();
+    await expect(
+      page.locator('[data-testid="atlas-term"][data-status="not-found"]')
+    ).not.toHaveCount(0);
     await page.getByTestId('lesson-link').first().click();
     await page.getByTestId('lesson-try').click();
     await expect(page.getByTestId('rig-map')).toBeVisible();
