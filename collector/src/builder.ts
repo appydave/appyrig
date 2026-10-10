@@ -104,10 +104,11 @@ export async function buildSnapshot(
   config: BuilderConfig,
   now: Date = new Date()
 ): Promise<MachineSnapshot> {
-  const [daemonR, tmuxR, viewerR] = await Promise.all([
+  const [daemonR, tmuxR, viewerR, accountR] = await Promise.all([
     settle(sources.daemon()),
     settle(sources.tmuxPanes()),
     settle(sources.viewerAgents()),
+    settle(sources.account ? sources.account() : Promise.resolve(null)),
   ]);
 
   const daemon: DaemonRead | null = 'value' in daemonR ? daemonR.value : null;
@@ -193,6 +194,8 @@ export async function buildSnapshot(
     rigs: daemon?.rigs ?? [],
     seats,
     queue: daemon?.queue ?? [],
+    // Only collectors with an account source report one; recorded fixtures stay byte-identical.
+    ...(sources.account ? { account: 'value' in accountR ? accountR.value : null } : {}),
   };
   return MachineSnapshotSchema.parse(redactDeep(snapshot));
 }

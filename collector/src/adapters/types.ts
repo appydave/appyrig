@@ -1,4 +1,4 @@
-import type { QueueItem, RigSummary, Seat, ViewerStatus } from '@appydave/shared';
+import type { AccountUsage, QueueItem, RigSummary, Seat, ViewerStatus } from '@appydave/shared';
 
 /** What the daemon adapter returns: AppyRig-shaped pieces, no OpenRig shapes leak out. */
 export interface DaemonRead {
@@ -38,4 +38,6 @@ export interface Sources {
   /** Raw pane text with ANSI escapes, unbounded and unredacted (the builder bounds and redacts). */
   capture(paneId: string): Promise<string>;
   viewerAgents(): Promise<ViewerAgent[]>;
+  /** The machine's Claude account + latest usage reading (v1.1). Optional: fixtures may omit it. */
+  account?(): Promise<AccountUsage | null>;
 }

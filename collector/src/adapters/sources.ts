@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { readAccount } from './account.js';
 import { parseNodes, parsePs, parseQueue } from './daemon.js';
 import { capturePaneArgs, isNoServer, LIST_PANES_ARGS, parsePanes } from './tmux.js';
 import { AGENT_LIST_ARGS, parseAgentList } from './viewer.js';
@@ -69,7 +70,16 @@ export function createSources(opts: SourceOptions = {}): Sources {
     });
 
   const getJson = async (path: string): Promise<unknown> => {
-    const res = await fetch(new URL(path, daemonUrl), { signal: AbortSignal.timeout(timeout) });
+    let res: Response;
+    try {
+      res = await fetch(new URL(path, daemonUrl), { signal: AbortSignal.timeout(timeout) });
+    } catch (e) {
+      // Plain words for the common case: a machine without OpenRig (the M4) refuses the port.
+      if ((e as { cause?: { code?: string } }).cause?.code === 'ECONNREFUSED') {
+        throw new Error('no OpenRig daemon running on this machine');
+      }
+      throw e;
+    }
     if (!res.ok) throw new Error(`GET ${path} -> HTTP ${res.status}`);
     return res.json();
   };
@@ -144,6 +154,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
       return r.stdout;
     },
 
+    account: () => readAccount(),
     async viewerAgents(): Promise<ViewerAgent[]> {
       const r = await run(viewerBin, AGENT_LIST_ARGS);
       if (r.code !== 0) {

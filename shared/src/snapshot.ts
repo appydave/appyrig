@@ -147,6 +147,26 @@ export const MachineIdentitySchema = z.strictObject({
 });
 export type MachineIdentity = z.infer<typeof MachineIdentitySchema>;
 
+/**
+ * The Claude account this machine is signed into, and its latest rate-limit reading (v1.1, the
+ * accounts panel). Read from files only: the account's email and plan type, never a credential;
+ * usage from the status-line sampler's log when the machine has one. A null reading means "no
+ * sampler on this machine", which the UI must never show as 0%.
+ */
+export const AccountUsageSchema = z.strictObject({
+  email: z.string().nullable(),
+  /** Plan type as the login record names it (`claude_max`, `claude_pro`, …). Max tier is not in it. */
+  plan: z.string().nullable(),
+  /** Can exceed 100: the status line reports 102% once a window is spent. */
+  fiveHourPct: z.number().min(0).nullable(),
+  fiveHourResetsAt: isoDate.nullable(),
+  sevenDayPct: z.number().min(0).nullable(),
+  sevenDayResetsAt: isoDate.nullable(),
+  /** When the sampler last wrote a reading (it writes on change, or every 5 min while active). */
+  sampledAt: isoDate.nullable(),
+});
+export type AccountUsage = z.infer<typeof AccountUsageSchema>;
+
 export const MachineSnapshotSchema = z.strictObject({
   schemaVersion: z.literal(SNAPSHOT_SCHEMA_VERSION),
   machine: MachineIdentitySchema,
@@ -160,6 +180,8 @@ export const MachineSnapshotSchema = z.strictObject({
   rigs: z.array(RigSummarySchema),
   seats: z.array(SeatSchema),
   queue: z.array(QueueItemSchema).max(QUEUE_MAX_ITEMS),
+  /** Optional and additive (v1.1): older collectors omit it. Deploy the hub before the collectors. */
+  account: AccountUsageSchema.nullable().optional(),
 });
 export type MachineSnapshot = z.infer<typeof MachineSnapshotSchema>;
 

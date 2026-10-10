@@ -4,6 +4,15 @@ import { mkdtempSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
+const hasRig = (() => {
+  try {
+    execFileSync('/bin/sh', ['-c', 'command -v rig'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 /** Install script, written to a temp plist dir and never loaded (--no-load). */
 const SCRIPTS = resolve(import.meta.dirname, '../scripts');
 
@@ -44,9 +53,11 @@ describe('launchd install script', () => {
     expect(xml).toContain('http://100.126.70.25:7191');
     expect(xml).toContain(token);
     expect(xml).toMatch(/<key>PATH<\/key><string>[^<]*\/(bin|usr\/bin)/);
-    for (const key of ['APPYRIG_TMUX_BIN', 'APPYRIG_RIG_BIN']) {
-      expect(xml).toMatch(new RegExp(`<key>${key}</key><string>/`));
-    }
+    expect(xml).toMatch(/<key>APPYRIG_TMUX_BIN<\/key><string>\//);
+    // rig is optional (a machine without OpenRig, like the M4): absolute when on PATH, else bare.
+    expect(xml).toMatch(
+      hasRig ? /<key>APPYRIG_RIG_BIN<\/key><string>\// : /<key>APPYRIG_RIG_BIN<\/key><string>rig</
+    );
     expect(xml).toMatch(
       /<string>\/[^<]*\/node<\/string>\s*<string>\/[^<]*\/dist\/main\.js<\/string>/
     );

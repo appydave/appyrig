@@ -1,11 +1,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Accounts from './components/Accounts.js';
 import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
+import HandoffFlow from './components/HandoffFlow.js';
+import RigMap from './components/RigMap.js';
+import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
 import { findSeat, orderedMachines, type GroupBy } from './fleet/model.js';
+import { buildRigMap, listRigs } from './fleet/views.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
+const VIEW_KEY = 'appyrig.view';
+
+export type View = 'wall' | 'map' | 'flow' | 'accounts';
+const VIEWS: { key: View; label: string }[] = [
+  { key: 'wall', label: 'The Wall' },
+  { key: 'map', label: 'Rig Map' },
+  { key: 'flow', label: 'Handoff Flow' },
+  { key: 'accounts', label: 'Accounts' },
+];
+
+function readView(): View {
+  try {
+    const v = localStorage.getItem(VIEW_KEY);
+    return VIEWS.some((x) => x.key === v) ? (v as View) : 'wall';
+  } catch {
+    return 'wall';
+  }
+}
 
 function readGroupBy(): GroupBy {
   try {
@@ -24,6 +47,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const { state, link } = useFleet(getSocket);
   const now = useNow();
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
+  const [view, setView] = useState<View>(readView);
+  const [rigKey, setRigKey] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
 
@@ -31,6 +56,21 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const seatCount = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
   const focusTile = focused ? findSeat(state.machines, focused) : null;
   const hubConnected = link === 'connected';
+  const rigs = useMemo(() => listRigs(machines), [machines]);
+  const activeRig = rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null;
+  const rigMap = useMemo(
+    () => (view === 'map' && activeRig ? buildRigMap(machines, activeRig.key) : null),
+    [view, activeRig, machines]
+  );
+
+  const chooseView = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      // per-viewer convenience only
+    }
+  };
 
   const chooseGroup = (g: GroupBy) => {
     setGroupBy(g);
@@ -63,11 +103,25 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           <span className="wordmark-a">Appy</span>
           <span className="wordmark-b">Rig</span>
         </span>
+        <nav className="view-tabs" aria-label="Screens">
+          {VIEWS.map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              className="view-tab"
+              data-testid={`view-${v.key}`}
+              aria-current={view === v.key ? 'page' : undefined}
+              onClick={() => chooseView(v.key)}
+            >
+              {v.label}
+            </button>
+          ))}
+        </nav>
         <span className="label">
-          The Wall · {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
+          {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}
         </span>
-        <div className="controls" role="group" aria-label="Group tiles by">
+        <div className="controls" role="group" aria-label="Group tiles by" hidden={view !== 'wall'}>
           {/* B11: the API is findable from the UI. /v1/docs is open and carries no fleet data. */}
           <a
             className="api-link"
@@ -101,14 +155,35 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         error={state.error}
         onOpen={open}
       />
-      <Wall
-        machines={machines}
-        groupBy={groupBy}
-        now={now}
-        hubConnected={hubConnected}
-        received={state.received}
-        onOpen={open}
-      />
+      {view === 'wall' && (
+        <Wall
+          machines={machines}
+          groupBy={groupBy}
+          now={now}
+          hubConnected={hubConnected}
+          received={state.received}
+          onOpen={open}
+        />
+      )}
+      {(view === 'map' || view === 'flow') && (
+        <main className="view" data-testid={`view-body-${view}`}>
+          <RigPicker rigs={rigs} selected={activeRig?.key ?? null} onSelect={setRigKey} />
+          {view === 'map' ? (
+            <RigMap map={rigMap} onOpen={open} />
+          ) : (
+            <HandoffFlow
+              machine={machines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
+              rig={activeRig?.name ?? null}
+              now={now}
+            />
+          )}
+        </main>
+      )}
+      {view === 'accounts' && (
+        <main className="view" data-testid="view-body-accounts">
+          <Accounts machines={machines} now={now} />
+        </main>
+      )}
       {focusTile && (
         <Focus
           tile={focusTile}

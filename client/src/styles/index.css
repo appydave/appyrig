@@ -654,3 +654,433 @@ a:hover {
     transform: none;
   }
 }
+
+/* ---------- v1.1: screen tabs ---------- */
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  background: var(--ar-surface);
+}
+.view-tab {
+  font-family: var(--ar-font-label);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  min-height: 32px;
+}
+.view-tab[aria-current='page'] {
+  background: var(--ar-ink);
+  color: var(--ar-cta);
+}
+.view-tab:focus-visible,
+.node:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 2px;
+}
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.view-caption {
+  margin: 0;
+  color: var(--ar-ink-muted);
+  font-size: 14px;
+}
+.view-caption b {
+  color: var(--ar-ink);
+}
+.amber {
+  color: var(--ar-sequence);
+}
+.quiet {
+  color: var(--ar-ink-muted);
+  font-size: 13px;
+}
+.pill-btn.cta {
+  background: var(--ar-cta);
+  border-color: var(--ar-ink);
+  font-weight: 600;
+}
+
+/* ---------- rig picker ---------- */
+.rig-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rig-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border-radius: 10px;
+  padding: 6px 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.rig-chip b {
+  font-family: var(--ar-font-label);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.rig-chip span {
+  font-family: var(--ar-font-body);
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* ---------- Rig Map ---------- */
+.rigmap-canvas {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-x: auto;
+}
+.rigmap-edges {
+  position: absolute;
+  inset: 0 auto auto 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+.rigmap-edge {
+  fill: none;
+  stroke: var(--ar-ink);
+  stroke-opacity: 0.45;
+}
+.rigmap-edge.open {
+  stroke: var(--ar-blocked);
+  stroke-opacity: 0.9;
+}
+.rigmap-arrowhead {
+  fill: var(--ar-ink);
+  fill-opacity: 0.5;
+}
+.rigmap-count {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  fill: var(--ar-ink);
+  paint-order: stroke;
+  stroke: var(--ar-canvas);
+  stroke-width: 4px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.lane {
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+  background: var(--ar-surface-raised);
+  padding: 12px 14px 16px;
+}
+.lane[data-liveness='asleep'] {
+  opacity: 0.6;
+}
+.lane-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.lane-head b {
+  font-family: var(--ar-font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+.lane-head i {
+  font-style: normal;
+  color: var(--ar-ink-muted);
+  font-size: 13px;
+}
+.lane-pods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.pod {
+  background: var(--ar-surface);
+  border: 1px dashed var(--ar-line);
+  border-radius: 10px;
+  padding: 8px 10px 10px;
+}
+.pod-name {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+  margin-bottom: 8px;
+}
+.pod-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 70px 40px;
+  /* room for the traffic arcs above and below each row (RigMap ARC_MAX) */
+  padding: 58px 4px 58px;
+}
+.node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 150px;
+  padding: 10px 12px;
+  border: 1px solid var(--ar-line);
+  border-left: 4px solid var(--pip);
+  border-radius: 8px;
+  background: var(--ar-surface-raised);
+  color: var(--ar-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  --pip-text: var(--ar-ink-muted);
+}
+.node b {
+  font-family: var(--ar-font-label);
+  font-size: 15px;
+  letter-spacing: 0.03em;
+}
+.node[data-pip='working'] {
+  --pip-text: var(--ar-working-ink);
+}
+.node[data-pip='blocked'] {
+  --pip-text: var(--ar-blocked-ink);
+}
+.node-wait {
+  font-size: 11px;
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.node-self {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+}
+
+/* ---------- Handoff Flow ---------- */
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.flow-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  font-size: 14px;
+  color: var(--ar-ink-muted);
+}
+.flow-stats b {
+  font-family: var(--ar-font-display);
+  font-size: 26px;
+  letter-spacing: 0.03em;
+  color: var(--ar-ink);
+  margin-right: 2px;
+}
+.flow-stats b.amber {
+  color: var(--ar-sequence);
+}
+.flow-svg {
+  width: 100%;
+  max-width: 1100px;
+  height: auto;
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+}
+.flow-box {
+  fill: var(--ar-canvas);
+  stroke: var(--ar-ink);
+  stroke-width: 1.5;
+}
+.flow-box.waiting {
+  fill: var(--ar-blocked-bg);
+  stroke: var(--ar-sequence);
+  stroke-width: 2.5;
+}
+.flow-stage-name {
+  font-family: var(--ar-font-display);
+  font-size: 24px;
+  letter-spacing: 0.04em;
+  fill: var(--ar-ink);
+  text-anchor: middle;
+}
+.flow-seats,
+.flow-wait {
+  font-family: var(--ar-font-body);
+  font-size: 11px;
+  fill: var(--ar-ink-muted);
+  text-anchor: middle;
+}
+.flow-wait.amber {
+  fill: var(--ar-blocked-ink);
+  font-weight: 700;
+}
+.flow-edge {
+  fill: none;
+  stroke: var(--ar-ink);
+  stroke-opacity: 0.45;
+}
+.flow-edge.report {
+  stroke-dasharray: 5 5;
+}
+.flow-edge.rework {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 0.85;
+}
+.flow-arrowhead {
+  fill: var(--ar-ink);
+  fill-opacity: 0.55;
+}
+.flow-arrowhead.amber {
+  fill: var(--ar-sequence);
+  fill-opacity: 1;
+}
+.flow-count {
+  font-family: var(--ar-font-label);
+  font-size: 13px;
+  fill: var(--ar-ink);
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--ar-surface-raised);
+  stroke-width: 4px;
+}
+.flow-count.rework {
+  fill: var(--ar-sequence);
+}
+.pulse {
+  fill: var(--ar-cta);
+  stroke: var(--ar-ink);
+  stroke-width: 1.5;
+}
+.pulse.rework {
+  fill: var(--ar-sequence);
+}
+.flow-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  font-size: 13px;
+}
+.flow-legend li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.flow-replay {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.flow-replay input[type='range'] {
+  flex: 1 1 280px;
+  accent-color: var(--ar-sequence);
+}
+
+/* ---------- Accounts ---------- */
+.headroom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: baseline;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--ar-ink);
+  color: var(--ar-canvas);
+}
+.headroom .label {
+  color: var(--ar-cta);
+}
+.headroom i {
+  opacity: 0.7;
+  font-size: 13px;
+}
+.account-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+  background: var(--ar-surface-raised);
+}
+.account header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.account header b {
+  font-family: var(--ar-font-label);
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+.meter-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.meter-head b {
+  font-family: var(--ar-font-display);
+  font-size: 22px;
+  letter-spacing: 0.03em;
+}
+.meter-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ar-surface);
+  border: 1px solid var(--ar-line-soft);
+  overflow: hidden;
+  margin: 4px 0 2px;
+}
+.meter-fill {
+  height: 100%;
+  background: var(--ar-working);
+}
+.meter[data-level='mid'] .meter-fill {
+  background: var(--ar-blocked);
+}
+.meter[data-level='high'] .meter-fill {
+  background: var(--ar-error);
+}
+.meter[data-level='none'] .meter-head b {
+  color: var(--ar-ink-muted);
+  font-size: 16px;
+}
+.meter-foot,
+.account-src {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+  margin: 0;
+}
+.drawers p,
+.drawers ul {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.drawers ul {
+  padding-left: 18px;
+}

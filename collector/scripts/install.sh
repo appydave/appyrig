@@ -57,7 +57,8 @@ abs() { command -v "$1" 2>/dev/null || true; }
 NODE_BIN="$(abs node)"; [ -n "$NODE_BIN" ] || { echo "node not found on PATH" >&2; exit 2; }
 TMUX_BIN="$(abs tmux)"; [ -n "$TMUX_BIN" ] || { echo "tmux not found on PATH" >&2; exit 2; }
 HERDR_BIN="$(abs herdr)"   # optional: absent means the viewer source reports not ok
-RIG_BIN="$(abs rig)"; [ -n "$RIG_BIN" ] || { echo "rig not found on PATH" >&2; exit 2; }
+# optional: a machine without OpenRig (the M4) still has tmux seats; the daemon source then reports not ok
+RIG_BIN="$(abs rig)"
 
 PATH_VALUE=""
 for b in "$NODE_BIN" "$TMUX_BIN" "$RIG_BIN" "$HERDR_BIN"; do
@@ -93,7 +94,7 @@ esc() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/
     <key>APPYRIG_TOKEN_FILE</key><string>$(esc "$TOKEN_FILE")</string>
     <key>APPYRIG_MACHINE_ID</key><string>$(esc "$MACHINE_ID")</string>
     <key>APPYRIG_MACHINE_LABEL</key><string>$(esc "$MACHINE_LABEL")</string>
-    <key>APPYRIG_RIG_BIN</key><string>$(esc "$RIG_BIN")</string>
+    <key>APPYRIG_RIG_BIN</key><string>$(esc "${RIG_BIN:-rig}")</string>
     <key>APPYRIG_TMUX_BIN</key><string>$(esc "$TMUX_BIN")</string>
 EOF
   [ -n "$HERDR_BIN" ] && echo "    <key>APPYRIG_VIEWER_BIN</key><string>$(esc "$HERDR_BIN")</string>"
