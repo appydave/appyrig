@@ -5,6 +5,7 @@ import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
 import HandoffFlow from './components/HandoffFlow.js';
 import Learn from './components/Learn.js';
+import Legend from './components/Legend.js';
 import RigMap from './components/RigMap.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
@@ -15,6 +16,8 @@ import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useF
 const GROUP_KEY = 'appyrig.groupBy';
 const VIEW_KEY = 'appyrig.view';
 const EXPLAIN_KEY = 'appyrig.explain';
+const LEGEND_KEY = 'appyrig.legend';
+const HINT_KEY = 'appyrig.hint';
 
 export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'learn';
 const VIEWS: { key: View; label: string }[] = [
@@ -43,6 +46,48 @@ function readExplain(): boolean {
   }
 }
 
+type LegendChoice = 'on' | 'off' | null;
+
+/**
+ * S1: until the viewer chooses, the legend is open on the two diagram screens (Rig Map, Handoff
+ * Flow) and closed elsewhere, so it never pushes the Wall's tiles down. A choice then sticks.
+ */
+function readLegend(): LegendChoice {
+  try {
+    const v = localStorage.getItem(LEGEND_KEY);
+    return v === 'on' || v === 'off' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** S1: the first-visit hint shows until it is dismissed (or Explain is toggled). */
+function readHint(): boolean {
+  try {
+    return localStorage.getItem(HINT_KEY) !== 'seen';
+  } catch {
+    return true;
+  }
+}
+
+/** Keys typed into a field, or with a modifier, are never shortcuts. */
+function isTyping(e: KeyboardEvent): boolean {
+  if (e.metaKey || e.ctrlKey || e.altKey) return true;
+  const t = e.target;
+  return (
+    t instanceof HTMLElement &&
+    (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))
+  );
+}
+
+function remember(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // per-viewer convenience only
+  }
+}
+
 function readGroupBy(): GroupBy {
   try {
     return localStorage.getItem(GROUP_KEY) === 'machine' ? 'machine' : 'rig';
@@ -62,6 +107,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
   const [view, setView] = useState<View>(readView);
   const [explain, setExplain] = useState<boolean>(readExplain);
+  const [legendChoice, setLegendChoice] = useState<LegendChoice>(readLegend);
+  const [hint, setHint] = useState<boolean>(readHint);
   const [rigKey, setRigKey] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
@@ -88,15 +135,24 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     }
   };
 
+  const dismissHint = () => {
+    setHint(false);
+    remember(HINT_KEY, 'seen');
+  };
+
   const toggleExplain = () => {
     const next = !explain;
     setExplain(next);
-    try {
-      localStorage.setItem(EXPLAIN_KEY, next ? 'on' : 'off');
-    } catch {
-      // per-viewer convenience only
-    }
+    remember(EXPLAIN_KEY, next ? 'on' : 'off');
+    dismissHint();
   };
+
+  const legend = legendChoice ? legendChoice === 'on' : view === 'map' || view === 'flow';
+  const toggleLegend = useCallback(() => {
+    const next = legend ? 'off' : 'on';
+    setLegendChoice(next);
+    remember(LEGEND_KEY, next);
+  }, [legend]);
 
   const chooseGroup = (g: GroupBy) => {
     setGroupBy(g);
@@ -112,6 +168,16 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     setFocused(key);
   }, []);
   const close = useCallback(() => setFocused(null), []);
+
+  // L shows or hides the legend, on every screen except Focus.
+  useEffect(() => {
+    if (focused) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'l' || e.key === 'L') && !isTyping(e)) toggleLegend();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [focused, toggleLegend]);
 
   // Return keyboard focus to the tile Focus was opened from.
   useEffect(() => {
@@ -154,6 +220,40 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         >
           ? Explain {explain ? 'on' : 'off'}
         </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="legend-toggle"
+          aria-pressed={legend}
+          aria-keyshortcuts="L"
+          title="Legend: what every line, colour and box on this screen means (L)"
+          onClick={toggleLegend}
+        >
+          Legend · L
+        </button>
+        {hint && (
+          <span className="first-hint" role="note" data-testid="explain-hint">
+            <span aria-hidden="true">←</span> New here?{' '}
+            {explain ? (
+              <>
+                <b>Explain</b> is on: hover anything to see what it means.
+              </>
+            ) : (
+              <>
+                Turn on <b>Explain</b>, then hover anything to see what it means.
+              </>
+            )}{' '}
+            <b>Legend</b> names every mark on the screen.
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="explain-hint-dismiss"
+              onClick={dismissHint}
+            >
+              Got it
+            </button>
+          </span>
+        )}
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}
@@ -192,6 +292,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         error={state.error}
         onOpen={open}
       />
+      {legend && !focusTile && <Legend view={view} onClose={toggleLegend} />}
       {view === 'wall' && (
         <Wall
           machines={machines}

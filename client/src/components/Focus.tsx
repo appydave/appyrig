@@ -225,6 +225,10 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
 
       <div className="focus-body">
         <div className="focus-main">
+          <p className="channel-caption" data-testid="channel-terminal">
+            <b>{mode === 'terminal' ? 'Terminal' : 'Rich text'}</b> · the seat&rsquo;s own screen:
+            what it is saying and doing. One channel; the queue on the right is the other.
+          </p>
           <FocusTerminal lines={lines} hidden={mode !== 'terminal'} />
           <article className="focus-rich" data-testid="focus-rich" hidden={mode !== 'rich'}>
             {paragraphs.length === 0 ? (
@@ -303,6 +307,10 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
             <div className="label" style={{ marginBottom: 4 }}>
               Queue · latest {queue.length}
             </div>
+            <p className="channel-caption" data-testid="channel-queue">
+              Formal handoffs through the OpenRig queue, not the terminal. → sent by this seat · ←
+              received.
+            </p>
             {queue.length === 0 && <p className="fresh">No queue rows to or from this seat.</p>}
             {queue.map((q) => (
               <div className="qrow" key={q.id}>

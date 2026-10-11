@@ -500,3 +500,93 @@ describe('class names (QA M1)', () => {
     expect(css).not.toMatch(/(^|[\s,}])\.focus\s*[{,:]/m);
   });
 });
+
+describe('App: S1 legend and Explain discoverability', () => {
+  function connected() {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    return fake;
+  }
+
+  it('a first visit shows a hint pointing at Explain; Got it hides it for good', () => {
+    connected();
+    const hint = screen.getByTestId('explain-hint');
+    expect(hint).toHaveTextContent(/Explain/);
+    fireEvent.click(screen.getByTestId('explain-hint-dismiss'));
+    expect(screen.queryByTestId('explain-hint')).toBeNull();
+    expect(localStorage.getItem('appyrig.hint')).toBe('seen');
+  });
+
+  it('with Explain off, the hint says to turn it on; toggling Explain dismisses the hint', () => {
+    localStorage.setItem('appyrig.explain', 'off');
+    connected();
+    expect(screen.getByTestId('explain-hint')).toHaveTextContent('Turn on Explain');
+    fireEvent.click(screen.getByTestId('explain-toggle'));
+    expect(screen.queryByTestId('explain-hint')).toBeNull();
+  });
+
+  it('the hint stays gone on a later visit', () => {
+    localStorage.setItem('appyrig.hint', 'seen');
+    connected();
+    expect(screen.queryByTestId('explain-hint')).toBeNull();
+  });
+
+  it('unchosen, the legend is closed on the Wall and open on the two diagram screens', () => {
+    // jsdom has no ResizeObserver; the Rig Map only needs one to re-measure its lines.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+    connected();
+    expect(screen.queryByTestId('legend')).toBeNull();
+    fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
+    expect(screen.getByTestId('legend')).toHaveTextContent('Grey band · POD');
+    fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'flow');
+    expect(screen.getByTestId('legend')).toHaveTextContent('Amber arc below · N back');
+    vi.unstubAllGlobals();
+  });
+
+  it('the header button and the L key toggle it, and the choice is remembered', () => {
+    connected();
+    fireEvent.click(screen.getByTestId('legend-toggle'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'wall');
+    expect(localStorage.getItem('appyrig.legend')).toBe('on');
+    fireEvent.keyDown(window, { key: 'l' });
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(localStorage.getItem('appyrig.legend')).toBe('off');
+    fireEvent.keyDown(window, { key: 'L' });
+    fireEvent.click(screen.getByTestId('legend-close'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+  });
+
+  it('L typed into a field, or with a modifier, is not a shortcut', () => {
+    localStorage.setItem('appyrig.legend', 'on');
+    connected();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: 'l' });
+    fireEvent.keyDown(window, { key: 'l', metaKey: true });
+    expect(screen.getByTestId('legend')).toBeInTheDocument();
+    input.remove();
+  });
+
+  it('Focus hides the legend and labels its two channels: terminal vs queue', () => {
+    localStorage.setItem('appyrig.legend', 'on');
+    connected();
+    fireEvent.click(screen.getByTestId('blocked-alert'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.getByTestId('channel-terminal')).toHaveTextContent('the seat’s own screen');
+    expect(screen.getByTestId('channel-queue')).toHaveTextContent(
+      'OpenRig queue, not the terminal'
+    );
+    // L inside Focus does nothing.
+    fireEvent.keyDown(window, { key: 'l' });
+    expect(localStorage.getItem('appyrig.legend')).toBe('on');
+  });
+});
