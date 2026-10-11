@@ -6,6 +6,7 @@ import compression from 'compression';
 import cors from 'cors';
 import {
   AUTH_ERRORS,
+  FEEDBACK_ROUTE,
   FLEET_EVENTS,
   SOCKET_NAMESPACES,
   UI_PRINCIPAL,
@@ -125,7 +126,9 @@ export function createHub(opts: HubOptions): Hub {
   );
   app.use(compression());
   app.use(cors({ origin: opts.clientUrl, credentials: true }));
-  app.use(express.json());
+  // The feedback route parses its own (5 MB) body; everything else keeps the default 100 KB limit.
+  const defaultJson = express.json();
+  app.use((req, res, next) => (req.path === FEEDBACK_ROUTE ? next() : defaultJson(req, res, next)));
   app.use(requestLogger);
   app.use(apiLimiter);
   // Auth before every route: only the open API doors pass without a session (AC 18).
@@ -137,7 +140,7 @@ export function createHub(opts: HubOptions): Hub {
   );
   app.use(healthRouter);
   app.use(infoRouter);
-  app.use(apiRouter(core, identity, opts.liveHosts ?? []));
+  app.use(apiRouter(core, identity, opts.liveHosts ?? [], (id) => store.feedback.screenshot(id)));
 
   if (opts.clientDist) {
     const dist = opts.clientDist;
@@ -204,6 +207,7 @@ export function createHub(opts: HubOptions): Hub {
       const loaded = await store.load();
       await store.loadHistories();
       await store.loadHandoffs();
+      await store.schemas.load();
       return loaded;
     },
     sweep,

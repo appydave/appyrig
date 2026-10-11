@@ -14,13 +14,16 @@ const cfg = { machine: { id: 'roamy', label: 'Roamy', hostname: null }, version:
 interface Hub {
   url: string;
   received: MachineSnapshot[];
+  /** Payloads of the v1.4 channels, when the fake hub listens for them (`modern`). */
+  extra: { event: string; payload: unknown }[];
   close(): Promise<void>;
 }
 
-async function startHub(port = 0): Promise<Hub> {
+async function startHub(port = 0, modern = false): Promise<Hub> {
   const http: HttpServer = createServer();
   const io = new Server(http);
   const received: MachineSnapshot[] = [];
+  const extra: { event: string; payload: unknown }[] = [];
   io.of('/collector')
     .use((s, next) =>
       s.handshake.auth.token === TOKEN
@@ -28,6 +31,12 @@ async function startHub(port = 0): Promise<Hub> {
         : next(new Error('collector token missing or invalid'))
     )
     .on('connection', (socket) => {
+      if (modern)
+        for (const event of ['collector:rigfiles', 'collector:schema'])
+          socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
+            extra.push({ event, payload });
+            ack({ ok: true, receivedAt: new Date().toISOString() });
+          });
       socket.on('collector:snapshot', (raw, ack: (a: CollectorAck) => void) => {
         const r = MachineSnapshotSchema.safeParse(raw);
         if (r.success) received.push(r.data);
@@ -43,6 +52,7 @@ async function startHub(port = 0): Promise<Hub> {
   return {
     url: `http://127.0.0.1:${actual}`,
     received,
+    extra,
     close: () =>
       new Promise<void>((r) => {
         void io.close(() => r());
@@ -192,6 +202,91 @@ describe('pusher', () => {
     });
     await until(() => batches >= 4, 10_000);
     expect(lines.filter((l) => l.includes('no ack for queue bodies'))).toHaveLength(1);
+  }, 15_000);
+
+  it('sends rig files and the database shape on their own channels, once each, after the hub accepts them', async () => {
+    hub = await startHub(0, true);
+    let fileTakes = 0;
+    let marked = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 50,
+      log: () => {},
+      rigFilesIntervalMs: 40,
+      schemaIntervalMs: 40,
+      rigFiles: async () => {
+        fileTakes++;
+        return marked === 0
+          ? {
+              pushes: [
+                {
+                  machineId: 'roamy',
+                  collectedAt: new Date().toISOString(),
+                  rig: 'r',
+                  replace: true,
+                  files: [],
+                },
+                {
+                  machineId: 'roamy',
+                  collectedAt: new Date().toISOString(),
+                  rig: 'r',
+                  replace: false,
+                  files: [],
+                },
+              ],
+              markSent: () => {
+                marked++;
+              },
+            }
+          : null;
+      },
+      schema: async () => null,
+    });
+    await until(() => marked === 1);
+    expect(hub.extra.filter((e) => e.event === 'collector:rigfiles')).toHaveLength(2); // both chunks, in order
+    await new Promise((r) => setTimeout(r, 200));
+    expect(marked).toBe(1);
+    expect(fileTakes).toBeGreaterThan(1); // it kept asking, and got nothing new
+  }, 15_000);
+
+  it('against a hub with no listener for them, nothing is marked sent and the warning is logged once', async () => {
+    hub = await startHub(); // like a pre-1.4 hub
+    const lines: string[] = [];
+    let marked = 0;
+    let takes = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      ackTimeoutMs: 20,
+      log: (l) => lines.push(l),
+      rigFilesIntervalMs: 30,
+      rigFiles: async () => {
+        takes++;
+        return {
+          pushes: [
+            {
+              machineId: 'roamy',
+              collectedAt: new Date().toISOString(),
+              rig: 'r',
+              replace: true,
+              files: [],
+            },
+          ],
+          markSent: () => {
+            marked++;
+          },
+        };
+      },
+    });
+    await until(() => takes >= 3, 10_000);
+    expect(marked).toBe(0);
+    expect(lines.filter((l) => l.includes('no ack for rig files'))).toHaveLength(1);
   }, 15_000);
 
   it('does not overlap ticks when a build is slow', async () => {

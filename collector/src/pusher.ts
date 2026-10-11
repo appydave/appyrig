@@ -10,6 +10,8 @@ import {
 } from '@appydave/shared';
 import type { PendingHistory } from './adapters/history.js';
 import type { PendingHandoffs } from './adapters/handoffs.js';
+import type { PendingRigFiles } from './adapters/rigfiles.js';
+import type { PendingSchema } from './adapters/dbschema.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -30,6 +32,12 @@ export interface PusherOptions {
   /** v1.4: queue message bodies not yet accepted by the hub, one batch per call; null = nothing to send. */
   handoffs?: () => Promise<PendingHandoffs | null>;
   handoffIntervalMs?: number;
+  /** v1.4 · S7: rig files whose content changed since the hub accepted them; null = nothing to send. */
+  rigFiles?: () => Promise<PendingRigFiles | null>;
+  rigFilesIntervalMs?: number;
+  /** v1.4 · S7: the OpenRig database shape, when it changed; null = nothing to send. */
+  schema?: () => Promise<PendingSchema | null>;
+  schemaIntervalMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
   onConnect?: () => void;
 }
@@ -177,9 +185,76 @@ export function startPusher(opts: PusherOptions): Pusher {
   };
   if (opts.handoffs) handoffTimer = setTimeout(handoffTick, Math.min(handoffInterval, 3_000));
 
+  // v1.4 · S7: rig files (chunked, so no message nears socket.io's 1 MB limit) and the database
+  // shape. Same rules as queue bodies: marked sent only when the hub accepts, retried otherwise,
+  // and an older hub (no listener, no ack) is warned about at most every 10 minutes.
+  const sendAcked = (event: string, payload: unknown) =>
+    new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
+      socket.timeout(ackTimeout * 2).emit(event, payload, (err: unknown, a?: CollectorAck) => {
+        resolve(err || !a ? { ok: false, timeout: true } : a);
+      });
+    });
+  const timers: NodeJS.Timeout[] = [];
+  const channel = (
+    key: string,
+    event: string,
+    everyMs: number,
+    take: () => Promise<{ payloads: unknown[]; markSent(): void } | null>
+  ) => {
+    let t: NodeJS.Timeout | undefined;
+    const tick = async () => {
+      if (stopped) return;
+      try {
+        if (socket.connected) {
+          const pending = await take();
+          if (pending) {
+            let all = true;
+            for (const p of pending.payloads) {
+              const ack = await sendAcked(event, p);
+              if ('timeout' in ack) {
+                warnSometimes(key, `no ack for ${key} (is the hub older than v1.4?)`);
+                all = false;
+                break;
+              }
+              if (!ack.ok) {
+                note(`${key} refused: ${ack.failureMode}: ${ack.message}`);
+                all = false;
+                break;
+              }
+            }
+            if (all) pending.markSent();
+          }
+        }
+      } catch (e) {
+        note(`${key} tick failed: ${(e as Error).message}`);
+      }
+      if (!stopped) {
+        t = setTimeout(tick, everyMs);
+        timers.push(t);
+      }
+    };
+    t = setTimeout(tick, Math.min(everyMs, 4_000));
+    timers.push(t);
+  };
+  if (opts.rigFiles) {
+    const take = opts.rigFiles;
+    channel('rig files', FLEET_EVENTS.RIGFILES, opts.rigFilesIntervalMs ?? 15_000, async () => {
+      const p = await take();
+      return p && { payloads: p.pushes, markSent: p.markSent };
+    });
+  }
+  if (opts.schema) {
+    const take = opts.schema;
+    channel('database schema', FLEET_EVENTS.SCHEMA, opts.schemaIntervalMs ?? 30_000, async () => {
+      const p = await take();
+      return p && { payloads: [p.push], markSent: p.markSent };
+    });
+  }
+
   return {
     socket,
     async stop() {
+      for (const t of timers) clearTimeout(t);
       if (handoffTimer) clearTimeout(handoffTimer);
       stopped = true;
       if (timer) clearTimeout(timer);

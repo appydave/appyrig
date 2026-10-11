@@ -48,4 +48,6 @@ export interface Sources {
   queueBodies?(): Promise<Map<string, string>>;
   /** Machine health (v1.4 · S6), without tmux sessions: the builder adds those. Optional: fixtures omit it. */
   health?(): Promise<HealthSample>;
+  /** Runs one read-only command with the collector's timeout and environment (v1.4 · S7: `rig --version`). */
+  exec?(bin: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }>;
 }

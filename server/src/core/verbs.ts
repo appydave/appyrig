@@ -1,6 +1,20 @@
 import { z } from 'zod';
 import {
   type AccountListOutput,
+  FeedbackAddInputSchema,
+  FeedbackAddOutputSchema,
+  FeedbackGetInputSchema,
+  FeedbackGetOutputSchema,
+  FeedbackListInputSchema,
+  FeedbackListOutputSchema,
+  type FeedbackListOutput,
+  DbSchemaInputSchema,
+  DbSchemaOutputSchema,
+  RigFileInputSchema,
+  RigFileOutputSchema,
+  RigFilesInputSchema,
+  RigFilesOutputSchema,
+  type RigFilesOutput,
   HandoffGetInputSchema,
   HealthGetInputSchema,
   HealthGetOutputSchema,
@@ -51,6 +65,7 @@ import {
 } from './vendor/failure-codes.js';
 import type { FleetStore } from '../hub/fleetStore.js';
 import { rigEntryOf } from './rigEntry.js';
+import { FeedbackRefusal } from '../hub/feedbackStore.js';
 import type { AppIdentity } from './identity.js';
 
 /**
@@ -72,6 +87,10 @@ export const FAILURE_CODES = defineFailureCodes({
   'principal-header': -32004,
   'handoff-not-found': -32005,
   'rig-not-found': -32006,
+  'file-not-found': -32007,
+  'feedback-not-found': -32008,
+  'feedback-unavailable': -32009,
+  'feedback-full': -32010,
 });
 
 export const MachineNotFoundDetails = z.object({
@@ -105,12 +124,36 @@ export interface VerbContext {
   asleepAfterMs: number;
   principal: string;
   verbCount: number;
+  /** True when the caller asked for a dry run: a write verb validates and writes nothing. */
+  dryRun: boolean;
 }
 
 type Verb<I extends z.ZodType, O extends z.ZodType> = {
   contract: CapabilityContract<I, O>;
   handle: (input: z.infer<I>, ctx: VerbContext) => z.infer<O>;
 };
+
+/** The one write verb's shape: a human-only command that edits only AppyRig's own store. */
+const writeCommand = <I extends z.ZodType, O extends z.ZodType>(
+  description: string,
+  input: I,
+  output: O,
+  failureModes: string[],
+  handle: (input: z.infer<I>, ctx: VerbContext) => z.infer<O>
+): Verb<I, O> => ({
+  contract: defineCapability({
+    kind: 'command',
+    description,
+    input,
+    output,
+    sideEffects: 'reversible-write',
+    idempotent: false,
+    confirmationRequired: false,
+    humanOnly: true,
+    failureModes,
+  }),
+  handle,
+});
 
 const query = <I extends z.ZodType, O extends z.ZodType>(
   description: string,
@@ -169,6 +212,9 @@ const NOT_FOUND = ['machine-not-found'];
 const SEAT_NOT_FOUND = ['machine-not-found', 'seat-not-found'];
 const HANDOFF_NOT_FOUND = ['machine-not-found', 'handoff-not-found'];
 const RIG_NOT_FOUND = ['machine-not-found', 'rig-not-found'];
+const FEEDBACK_NOT_FOUND = ['feedback-not-found'];
+const FEEDBACK_ADD = ['feedback-unavailable', 'feedback-full'];
+const FILE_NOT_FOUND = ['machine-not-found', 'rig-not-found', 'file-not-found'];
 
 // ── the verbs ──────────────────────────────────────────────────────────────────────────────────
 
@@ -363,6 +409,168 @@ const VERB_SET = {
     }
   ),
 
+  'rig.files': query(
+    "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
+    RigFilesInputSchema,
+    RigFilesOutputSchema,
+    RIG_NOT_FOUND,
+    (input, ctx): RigFilesOutput => {
+      const [m] = machinesOf(ctx, input.machine);
+      const rig = m!.snapshot.rigs.find((r) => r.name === input.rig);
+      if (!rig) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: m!.snapshot.rigs.map((r) => r.name),
+          }
+        );
+      }
+      const out = (status: RigFilesOutput['status'], reason: string | null) => ({
+        machine: input.machine,
+        rig: input.rig,
+        status,
+        reason,
+        files: ctx.store.rigFiles.list(input.machine, input.rig),
+      });
+      if (rig.specStatus === undefined)
+        return out(
+          'no-data',
+          "this machine's collector does not report rig specs yet (it predates v1.4)"
+        );
+      if (rig.specStatus === 'not-found')
+        return out('no-spec', 'no rig.yaml for this rig was found in the configured spec folders');
+      return ctx.store.rigFiles.has(input.machine, input.rig)
+        ? out('ok', null)
+        : out(
+            'pending',
+            'a rig.yaml was found but its files have not arrived yet (the collector may predate the file viewer)'
+          );
+    }
+  ),
+
+  'rig.file': query(
+    'One file of a rig, by the id rig.files gave (e.g. spec:rig.yaml), never by path. The text is redacted and capped at 256 KB (truncated says so).',
+    RigFileInputSchema,
+    RigFileOutputSchema,
+    FILE_NOT_FOUND,
+    (input, ctx) => {
+      const [m] = machinesOf(ctx, input.machine);
+      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: m!.snapshot.rigs.map((r) => r.name),
+          }
+        );
+      }
+      const file = ctx.store.rigFiles.get(input.machine, input.rig, input.fileId);
+      if (!file) {
+        throw new CapabilityRefusal(
+          'file-not-found',
+          `Rig "${input.rig}" has no file "${input.fileId}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: ctx.store.rigFiles.list(input.machine, input.rig).map((f) => f.id),
+          }
+        );
+      }
+      return { machine: input.machine, rig: input.rig, file };
+    }
+  ),
+
+  'db.schema': query(
+    "The live shape of the OpenRig database on a machine: tables, columns (type, nullability, primary key), foreign keys, the OpenRig version it was read under, and what changed since the previous OpenRig version seen (baseline on the first). Read-only: names and types only, never a row. status: 'no-openrig' (no database on that machine), 'unreadable' (reason says why), 'no-data' (older collector).",
+    DbSchemaInputSchema,
+    DbSchemaOutputSchema,
+    NOT_FOUND,
+    (input, ctx) => {
+      machinesOf(ctx, input.machine);
+      return ctx.store.schemas.get(input.machine, ctx.now());
+    }
+  ),
+
+  'feedback.add': writeCommand(
+    "File an in-app feedback note (a verdict, a region, a note, the view state and optionally a PNG screenshot) into AppyRig's own data/feedback/ store. The only write AppyRig makes: it never touches OpenRig, a seat or the queue. Human-only (an agent reads notes, it does not file them). The screenshot is base64 PNG, at most 3 MB decoded (downscale to 1600 px wide first); send it over POST /v1/feedback, whose body limit is 5 MB. dryRun validates and writes nothing.",
+    FeedbackAddInputSchema,
+    FeedbackAddOutputSchema,
+    FEEDBACK_ADD,
+    (input, ctx) => {
+      try {
+        const { note, count } = ctx.store.feedback.add(
+          input,
+          { viewer: ctx.principal, appVersion: ctx.identity.version, now: ctx.now() },
+          ctx.dryRun
+        );
+        return {
+          id: note.id,
+          createdAt: note.createdAt,
+          hasScreenshot: note.screenshot !== null,
+          screenshot: note.screenshot,
+          count,
+          dryRun: ctx.dryRun,
+        };
+      } catch (e) {
+        if (e instanceof FeedbackRefusal) {
+          if (e.failureMode === 'invalid-input')
+            throw new CapabilityRefusal('invalid-input', e.message, {
+              issues: [{ path: 'screenshotPng', message: e.message }],
+            });
+          throw new CapabilityRefusal(e.failureMode, e.message);
+        }
+        throw e;
+      }
+    }
+  ),
+
+  'feedback.list': query(
+    "The feedback notes filed in the app, newest first (verdict, region, the note's first 200 characters, route, whether it has a screenshot). indexFile is the same list as a file on the hub's disk (data/feedback/index.jsonl), readable without this API; read one in full with feedback.get.",
+    FeedbackListInputSchema,
+    FeedbackListOutputSchema,
+    [],
+    (input, ctx): FeedbackListOutput => {
+      const since = input.since ? Date.parse(input.since) : null;
+      const all = ctx.store.feedback.list();
+      return {
+        total: all.length,
+        notes: all
+          .filter((n) => !input.verdict || n.verdict === input.verdict)
+          .filter((n) => !input.region || n.region === input.region)
+          .filter((n) => since === null || Date.parse(n.createdAt) >= since)
+          .slice(0, input.limit ?? 50),
+        indexFile: ctx.store.feedback.indexFile,
+      };
+    }
+  ),
+
+  'feedback.get': query(
+    "One feedback note in full (everything the viewer sent plus what the server added), with the route to its screenshot (GET /v1/feedback/<id>/screenshot.png) and its folder on the hub's disk.",
+    FeedbackGetInputSchema,
+    FeedbackGetOutputSchema,
+    FEEDBACK_NOT_FOUND,
+    (input, ctx) => {
+      const found = ctx.store.feedback.get(input.id);
+      if (!found) {
+        throw new CapabilityRefusal('feedback-not-found', `No feedback note "${input.id}".`, {
+          id: input.id,
+        });
+      }
+      return {
+        note: found.note,
+        screenshotUrl: found.note.screenshot
+          ? `/v1/feedback/${found.note.id}/screenshot.png`
+          : null,
+        folder: found.folder,
+      };
+    }
+  ),
+
   'rig.entry': query(
     "Where a rig's work came in: the earliest instruction across its seats' histories, and whether it came through the queue. 'unknown' says why it cannot tell; seatsWithoutHistory lists seats whose prompts are not visible.",
     RigEntryInputSchema,
@@ -476,12 +684,32 @@ const VERB_SET = {
   ),
 };
 
-/** Refuse, at import time, a registry holding anything but read-only queries (AC 9). */
-function defineVerbs<S extends Record<string, Verb<z.ZodType, z.ZodType>>>(set: S): S {
+/**
+ * The single write AppyRig has: filing an in-app feedback note into its own data/feedback/ store.
+ * Everything else is a read-only query. A write is only allowed here if it is on this list AND is a
+ * human-only command that is not idempotent; core.test.ts pins the list to exactly this one name.
+ */
+export const WRITE_VERBS = ['feedback.add'] as const;
+
+/** Refuse, at import time, a registry holding anything but read-only queries (AC 9) and the one named write. */
+export function defineVerbs<S extends Record<string, Verb<z.ZodType, z.ZodType>>>(set: S): S {
+  const isAllowedWrite = (name: string, c: CapabilityContract): boolean =>
+    (WRITE_VERBS as readonly string[]).includes(name) &&
+    c.kind === 'command' &&
+    c.sideEffects === 'reversible-write' &&
+    c.humanOnly === true &&
+    !c.idempotent;
   const writes = Object.entries(set)
-    .filter(([, v]) => v.contract.sideEffects !== 'read-only' || v.contract.kind !== 'query')
+    .filter(
+      ([name, v]) =>
+        !(v.contract.sideEffects === 'read-only' && v.contract.kind === 'query') &&
+        !isAllowedWrite(name, v.contract)
+    )
     .map(([name]) => name);
-  if (writes.length > 0) throw new Error(`v1 verbs are read-only; not: ${writes.join(', ')}`);
+  if (writes.length > 0)
+    throw new Error(
+      `verbs are read-only except ${WRITE_VERBS.join(', ')}; not: ${writes.join(', ')}`
+    );
   defineCapabilities(Object.fromEntries(Object.entries(set).map(([k, v]) => [k, v.contract])));
   return set;
 }

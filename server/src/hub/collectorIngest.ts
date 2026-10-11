@@ -5,6 +5,8 @@ import {
   MachineSnapshotSchema,
   SeatHistorySchema,
   HandoffBodiesSchema,
+  RigFilesPushSchema,
+  SchemaPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -127,5 +129,52 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
       opts.store.putHandoffs(parsed.data);
       reply({ ok: true, receivedAt: new Date().toISOString() });
     });
+
+    // v1.4 · S7: a chunk of one rig's files, and the OpenRig database shape. Same checks as the others.
+    const guarded =
+      (
+        schema: {
+          safeParse: (
+            raw: unknown
+          ) =>
+            | { success: true; data: { machineId: string } }
+            | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
+        },
+        what: string,
+        store: (data: never) => void
+      ) =>
+      (raw: unknown, ack: unknown) => {
+        const reply = typeof ack === 'function' ? (ack as (a: unknown) => void) : () => {};
+        const parsed = schema.safeParse(raw);
+        if (!parsed.success) {
+          reply({
+            ok: false,
+            failureMode: 'invalid_snapshot',
+            message: parsed.error.issues
+              .slice(0, 5)
+              .map((i) => `${i.path.join('.')}: ${i.message}`)
+              .join('; '),
+          });
+          return;
+        }
+        if (parsed.data.machineId !== machineId) {
+          reply({
+            ok: false,
+            failureMode: 'machine_mismatch',
+            message: `socket authenticated as ${machineId}, ${what} is for ${parsed.data.machineId}`,
+          });
+          return;
+        }
+        store(parsed.data as never);
+        reply({ ok: true, receivedAt: new Date().toISOString() });
+      };
+    socket.on(
+      FLEET_EVENTS.RIGFILES,
+      guarded(RigFilesPushSchema, 'rig files', (d) => opts.store.rigFiles.put(d))
+    );
+    socket.on(
+      FLEET_EVENTS.SCHEMA,
+      guarded(SchemaPushSchema, 'database schema', (d) => opts.store.schemas.put(d))
+    );
   });
 }

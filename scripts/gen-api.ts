@@ -15,7 +15,7 @@ import { apiDocument, CONSOLE_PATH } from '../server/src/core/doors.js';
 import { readIdentity } from '../server/src/core/identity.js';
 import { renderApiPage } from '../server/src/core/vendor/api-page.js';
 import { openRpcText } from '../server/src/core/vendor/openrpc.js';
-import { VERBS } from '../server/src/core/verbs.js';
+import { VERBS, WRITE_VERBS } from '../server/src/core/verbs.js';
 
 const root = resolve(import.meta.dirname, '..');
 const check = process.argv.includes('--check');
@@ -31,7 +31,15 @@ const doc = apiDocument(identity);
 const verbNames = Object.keys(VERBS);
 if (verbNames.length === 0) problems.push('the verb registry is empty');
 for (const [name, v] of Object.entries(VERBS)) {
-  if (v.sideEffects !== 'read-only' || v.kind !== 'query') {
+  const readOnlyQuery = v.sideEffects === 'read-only' && v.kind === 'query';
+  // The one named write (feedback.add) must stay human-only and non-idempotent; anything else is a problem.
+  const namedWrite =
+    (WRITE_VERBS as readonly string[]).includes(name) &&
+    v.kind === 'command' &&
+    v.sideEffects === 'reversible-write' &&
+    v.humanOnly === true &&
+    !v.idempotent;
+  if (!readOnlyQuery && !namedWrite) {
     problems.push(`verb ${name} is not a read-only query (AC 9)`);
   }
 }
@@ -90,6 +98,6 @@ if (problems.length > 0) {
 }
 console.log(
   check
-    ? `api:check ok (${verbNames.length} verbs, all read-only; api/ is current)`
+    ? `api:check ok (${verbNames.length} verbs, all read-only except feedback.add, the one named write; api/ is current)`
     : `api:gen done (${verbNames.length} verbs)`
 );

@@ -213,11 +213,12 @@ describe('B9 / B10 — docs and console pages', () => {
     expect(pages.console).toContain('"100.126.70.25"');
   });
 
-  it('the OpenRPC document is deterministic and lists all 12 read verbs', () => {
+  it('the OpenRPC document is deterministic and lists every verb, all read-only except the one named write', () => {
     const a = apiDocument(readIdentity());
     expect(JSON.stringify(a)).toBe(JSON.stringify(apiDocument(readIdentity())));
-    expect(a.methods).toHaveLength(15);
-    expect(a.methods.every((m) => m['x-side-effects'] === 'read-only')).toBe(true);
+    expect(a.methods).toHaveLength(21);
+    const writes = a.methods.filter((m) => m['x-side-effects'] !== 'read-only').map((m) => m.name);
+    expect(writes).toEqual(['feedback.add']);
   });
 });
 

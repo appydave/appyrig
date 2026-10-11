@@ -44,7 +44,12 @@ const PRIVATE_KEY_BLOCK =
 const URL_CREDENTIALS = /(?<=:\/\/[^\s/:@]{1,64}:)[^\s/@]+(?=@)/g;
 
 // HTTP Basic credentials
-const BASIC_AUTH = /\bBasic\s+[A-Za-z0-9+/]{12,}={0,2}/g;
+// Only with an Authorization header, or when the value is credential-shaped (has a digit): the
+// word "Basic" next to a long ordinary word ("Basic authentication") is prose, not a secret.
+const BASIC_AUTH =
+  /\b(?:Authorization:\s*Basic\s+[A-Za-z0-9+/]{8,}={0,2}|Basic\s+(?=[A-Za-z0-9+/]*\d)[A-Za-z0-9+/]{16,}={0,2})/gi;
+// Tailscale auth keys: tskey-auth-…, tskey-api-…, tskey-client-…
+const TAILSCALE_KEY = /\btskey-[A-Za-z0-9-]{12,}/g;
 
 // A label that names a secret, then (after "is", "=", ":", quotes or spaces) a value that looks like
 // one: "secret key is wJal…", "aws secret access key: wJal…", "token \"abc123…\"".
@@ -74,7 +79,10 @@ export function redactString(input: string): string {
   let out = input.replace(PRIVATE_KEY_BLOCK, REDACTED);
   for (const re of PATTERNS) out = out.replace(re, REDACTED);
   out = out.replace(URL_CREDENTIALS, REDACTED);
-  out = out.replace(BASIC_AUTH, `Basic ${REDACTED}`);
+  out = out.replace(BASIC_AUTH, (m) =>
+    /^authorization/i.test(m) ? `Authorization: Basic ${REDACTED}` : `Basic ${REDACTED}`
+  );
+  out = out.replace(TAILSCALE_KEY, REDACTED);
   out = out.replace(LABELLED_VALUE, (_m, label: string, value: string) =>
     value === REDACTED || label.endsWith(REDACTED) ? _m : `${label}${REDACTED}`
   );

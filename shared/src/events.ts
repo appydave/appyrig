@@ -1,5 +1,7 @@
 import type { SeatHistory } from './history.js';
 import type { HandoffBodies } from './handoffs.js';
+import type { RigFilesPush } from './rigfiles.js';
+import type { SchemaPush } from './dbschema.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -35,6 +37,10 @@ export const FLEET_EVENTS = {
   HISTORY: 'collector:history',
   /** collector → hub. Payload: HandoffBodies (queue message bodies not yet sent). Acked with CollectorAck. v1.4. */
   HANDOFFS: 'collector:handoffs',
+  /** collector → hub. Payload: RigFilesPush (a chunk of one rig's spec/mission files). Acked with CollectorAck. v1.4 · S7. */
+  RIGFILES: 'collector:rigfiles',
+  /** collector → hub. Payload: SchemaPush (the OpenRig database shape on that machine). Acked with CollectorAck. v1.4 · S7. */
+  SCHEMA: 'collector:schema',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -80,6 +86,8 @@ export interface CollectorClientToServerEvents {
   'collector:snapshot': (snapshot: MachineSnapshot, ack: (result: CollectorAck) => void) => void;
   'collector:history': (history: SeatHistory, ack: (result: CollectorAck) => void) => void;
   'collector:handoffs': (bodies: HandoffBodies, ack: (result: CollectorAck) => void) => void;
+  'collector:rigfiles': (push: RigFilesPush, ack: (result: CollectorAck) => void) => void;
+  'collector:schema': (push: SchemaPush, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */

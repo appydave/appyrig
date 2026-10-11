@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
-import { Router, type NextFunction, type Request, type Response } from 'express';
+import { Router, json, type NextFunction, type Request, type Response } from 'express';
 import type { IncomingHttpHeaders } from 'node:http';
-import type { CallAnswer } from '@appydave/shared';
+import {
+  FEEDBACK_BODY_LIMIT,
+  FEEDBACK_ROUTE,
+  FeedbackIdSchema,
+  type CallAnswer,
+} from '@appydave/shared';
 import { PRINCIPAL_HEADER } from './vendor/capability.js';
 import { JSONRPC_CODES } from './vendor/failure-codes.js';
 import { answerJsonRpc, toOpenRpc, type OpenRpcDocument } from './vendor/openrpc.js';
@@ -19,6 +24,9 @@ import type { AppIdentity } from './identity.js';
  *   GET  /v1/console       session  callable console, fires as agent:console, dry run ticked (B9)
  *   POST /v1/rpc           session  JSON-RPC 2.0 (B3, B4, B5, B7)
  *   POST /v1/call          session  { verb, input, dryRun } → { ok, value | error }
+ *   POST /v1/feedback      session  the body IS feedback.add's input (it may carry a PNG, so it has its own 5 MB body limit);
+ *                                   answers like /v1/call, 201 when a note was filed
+ *   GET  /v1/feedback/:id/screenshot.png   session  the PNG of a note
  *
  * "open" = listed in OPEN_PATHS (hub/browserAuth.ts); everything else is behind the session.
  */
@@ -163,10 +171,20 @@ const STATUS: Record<string, number> = {
   'seat-not-found': 404,
   'handoff-not-found': 404,
   'rig-not-found': 404,
+  'file-not-found': 404,
+  'feedback-not-found': 404,
+  'feedback-unavailable': 503,
+  'feedback-full': 409,
   internal: 500,
 };
 
-export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]): Router {
+export function apiRouter(
+  core: Core,
+  identity: AppIdentity,
+  liveHosts: string[],
+  /** The PNG of a feedback note by id, or undefined. The id is checked against the id pattern before it gets here and again in the store. */
+  screenshotOf: (id: string) => Buffer | undefined = () => undefined
+): Router {
   const doc = apiDocument(identity);
   const pages = renderPages(doc, liveHosts);
   const csp = { docs: pageCsp(pages.docs), console: pageCsp(pages.console) };
@@ -255,6 +273,45 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
     );
     if (answer === null) res.status(204).end();
     else res.json(answer);
+  });
+
+  // feedback.add over HTTP: the only door that takes a big body, so it carries its own limit.
+  // (The hub's global JSON parser skips this path; see createHub.)
+  router.post(FEEDBACK_ROUTE, json({ limit: FEEDBACK_BODY_LIMIT }), (req, res) => {
+    const headers = readCallHeaders(req.headers);
+    const send = (answer: CallAnswer) =>
+      res.status(answer.ok ? 201 : (STATUS[answer.error.failureMode] ?? 400)).json(answer);
+    if (!headers.ok) {
+      send({
+        ok: false,
+        error: {
+          failureMode: headers.failureMode,
+          message: headers.message,
+          details: headers.details,
+        },
+      });
+      return;
+    }
+    send(core.call(headers.principal, 'feedback.add', req.body, { dryRun: headers.dryRun }));
+  });
+
+  router.get(`${FEEDBACK_ROUTE}/:id/screenshot.png`, (req, res) => {
+    const id = FeedbackIdSchema.safeParse(req.params.id);
+    const png = id.success ? screenshotOf(id.data) : undefined;
+    if (!png) {
+      res
+        .status(404)
+        .json({
+          ok: false,
+          error: { failureMode: 'feedback-not-found', message: 'No such screenshot.' },
+        });
+      return;
+    }
+    res
+      .type('image/png')
+      .set('Cache-Control', 'private, max-age=31536000, immutable')
+      .set('X-Content-Type-Options', 'nosniff')
+      .send(png);
   });
 
   router.post('/v1/call', (req, res) => {

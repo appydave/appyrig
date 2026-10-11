@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { pid } from 'node:process';
 import { HistoryReader } from './adapters/history.js';
-import { createSources, HandoffReader } from './adapters/index.js';
+import { createSources, HandoffReader, RigFilesReader, SchemaReader } from './adapters/index.js';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
 import { startPusher } from './pusher.js';
@@ -22,6 +22,10 @@ function main() {
   let queueOrder: string[] = [];
   const history = new HistoryReader(settings.machine.id);
   const handoffs = new HandoffReader(settings.machine.id);
+  const rigFiles = new RigFilesReader(settings.machine.id);
+  const schema = new SchemaReader(settings.machine.id, sources.exec!, {
+    rigBin: settings.sources.rigBin,
+  });
   const pusher = startPusher({
     hubUrl: settings.hubUrl,
     token: settings.token,
@@ -32,7 +36,13 @@ function main() {
       queueOrder = snap.queue.map((q) => q.id);
       return snap;
     },
-    onConnect: () => handoffs.reset(),
+    onConnect: () => {
+      handoffs.reset();
+      rigFiles.reset();
+      schema.reset();
+    },
+    rigFiles: async () => (sources.specs ? rigFiles.next(await sources.specs()) : null),
+    schema: () => schema.next(),
     histories: () => history.changed(knownSeats),
     handoffs: async () =>
       sources.queueBodies ? handoffs.next(queueOrder, await sources.queueBodies()) : null,

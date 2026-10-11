@@ -157,10 +157,11 @@ export interface AccountView {
 
 /**
  * The hub sees a login switch a push or two after it happens, so a sample stamped just before the
- * hub noticed can still belong to the new account. Readings this close to the switch are kept
- * (the other way round, an old-account sample this close to the switch slips in: a small, brief error).
+ * hub noticed can still belong to the new account. Readings this close to the switch are kept: 15 s
+ * covers a push or two (every 3 s) without re-admitting a meaningful stretch of the old account's readings
+ * (an old-account sample inside the window slips in: a small, brief error).
  */
-export const SWITCH_TOLERANCE_MS = 60_000;
+export const SWITCH_TOLERANCE_MS = 15_000;
 
 const hasReading = (a: AccountUsage): boolean =>
   (a.fiveHourPct !== null || a.sevenDayPct !== null) && a.sampledAt !== null;
