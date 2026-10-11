@@ -82,7 +82,11 @@ export type Swatch =
   | 'reading'
   | 'old'
   | 'drawers'
-  | 'unreported';
+  | 'unreported'
+  | 'health-mark'
+  | 'counts'
+  | 'apps'
+  | 'missing';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -196,13 +200,21 @@ const WALL: LegendSection[] = [
     entries: [
       {
         swatch: 'machine-dot',
-        mark: '● M2 live · 0s · 34 seats',
-        means: 'A machine, how fresh its feed is, and how many seats it reports.',
+        mark: '● M2 live · 0s',
+        means:
+          'A machine and how fresh its feed is. Hover it for its seat count; the Machines view has the rest.',
       },
       {
         swatch: 'no-openrig',
         mark: 'M4 · no OpenRig',
         means: 'That machine runs no OpenRig, so only its tmux sessions are listed.',
+      },
+      {
+        swatch: 'health-mark',
+        term: 'memory-pressure',
+        mark: '● normal · ▲ warning · ■ critical · – no data',
+        means:
+          'Each machine’s memory pressure, beside it. Click for the Machines view. "no data" = its collector sends no health yet; hover for why.',
       },
     ],
   },
@@ -581,6 +593,63 @@ const ACCOUNTS: LegendSection[] = [
   },
 ];
 
+const MACHINES: LegendSection[] = [
+  {
+    title: 'Machines · each card',
+    entries: [
+      {
+        swatch: 'health-mark',
+        term: 'memory-pressure',
+        mark: '● normal · 31% free',
+        means:
+          'macOS memory pressure in words (● normal, ▲ warning, ■ critical) and the share of memory free.',
+      },
+      {
+        swatch: 'window-bar',
+        term: 'memory-used',
+        mark: 'Memory used · 11.8 GB of 16 GB',
+        means:
+          'What apps and the system hold now, as Activity Monitor counts it; the bar is used against total.',
+      },
+      {
+        swatch: 'reading',
+        term: 'swap',
+        mark: 'Swap',
+        means:
+          'Memory pushed out to disk. Growing swap with ▲ or ■ pressure = the machine is short of memory.',
+      },
+      {
+        swatch: 'counts',
+        term: 'process-counts',
+        mark: 'Claude · tmux sessions · Shells',
+        means:
+          'Running Claude Code processes, tmux sessions, and interactive shells (about one per terminal tab).',
+      },
+      {
+        swatch: 'apps',
+        term: 'terminal-apps',
+        mark: 'Terminal apps · memory',
+        means:
+          'Each running terminal app (iTerm2, tmux, herdr…), its processes and the memory they hold, biggest first.',
+      },
+      {
+        swatch: 'missing',
+        term: 'health-no-data',
+        mark: '– · no health data yet',
+        means:
+          '"–" = that reading could not be taken (hover for why), never 0. "No health data yet" = the machine’s collector predates v1.4.',
+      },
+      {
+        swatch: 'old',
+        term: 'old-reading',
+        mark: 'sampled 12s ago · old reading',
+        means:
+          'When the collector took these readings; "old reading" after 90 s (three missed samples).',
+      },
+    ],
+  },
+];
+
 /**
  * Which glossary term each mark is. The legend line is the one-glance name; with Explain on,
  * hovering the line shows the glossary card, so the long meaning is written once (r1 S1 note).
@@ -649,6 +718,8 @@ function sectionsFor(screen: LegendScreen): LegendSection[] {
       return [...FOCUS, STATUS];
     case 'accounts':
       return [...ACCOUNTS, STATUS];
+    case 'machines':
+      return [...MACHINES, STATUS];
     case 'learn':
       return [STATUS];
   }
@@ -660,5 +731,6 @@ export const VIEW_TITLE: Record<LegendScreen, string> = {
   flow: 'Handoff Flow',
   focus: 'Seat panel',
   accounts: 'Accounts',
+  machines: 'Machines',
   learn: 'Learn',
 };

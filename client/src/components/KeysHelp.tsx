@@ -24,6 +24,7 @@ const SCREEN: Record<View, Row[]> = {
     ['Tab', 'Reach the replay, chapters and consoles'],
   ],
   accounts: [],
+  machines: [],
   learn: [],
 };
 
@@ -39,6 +40,7 @@ const TITLE: Record<View, string> = {
   map: 'Rig Map',
   flow: 'Handoff Flow',
   accounts: 'Accounts',
+  machines: 'Machines',
   learn: 'Learn',
 };
 

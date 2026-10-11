@@ -40,3 +40,21 @@
   - monthly is a line of text, "not reported (no source has it)", never a bar
   - tier shows its source: "Max $200 · from config" / "· reported by the login" / "tier not reported"
 - **Schema gaps**: none
+
+## machine-health
+
+- **Date**: 2026-10-11
+- **Area**: Fleet Strip + a new Machines view (v1.4 S6)
+- **Goal**: Each machine's memory pressure and process counts, live, with iTerm memory visible (David's known pain), never showing a missing reading as 0
+- **Mode**: schema-grounded (`shared/src/health.ts` MachineHealth: memory used/total, pressure level, free %, swap, claude/tmux/shell counts, terminal apps with RSS; every reading `ok` or `unavailable`+reason; no health object = older collector)
+- **Design tokens source**: CSS vars (`client/src/styles/tokens.css`)
+- **Variations** (`.mochaccino/designs/machine-health/index.html`):
+  - A · health inside the Fleet Strip only: always visible, but no room for terminal-app memory (a hover at best) and the strip gets long
+  - B · a pressure mark per machine in the strip + a Machines tab with a card per machine (memory bar, swap, counts, terminal apps by memory, sample age)
+- **Picked: B.** The strip carries the one thing worth always seeing (pressure, glyph + word); the card carries the detail David asked for (iTerm memory). The strip mark opens the Machines view.
+- **Key design decisions**:
+  - pressure: ● normal · ▲ warning · ■ critical; a missing reading is "–" plus words, with the reason on hover, never 0
+  - an older collector's machine reads "no health data yet" (card and strip), with why
+  - a reading older than 90 s (three missed 30 s samples) is marked "old reading"
+  - the Machines view follows the S3 machine filter; the strip keeps every machine, as before
+- **Schema gaps**: none

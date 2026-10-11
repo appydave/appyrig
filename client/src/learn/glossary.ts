@@ -315,6 +315,36 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'Claude Code’s login and status line report a 5-hour and a weekly window only. No source reports a monthly one.',
     why: '"Not reported" means the source has nothing, not zero. AppyRig never invents it.',
   },
+  'memory-pressure': {
+    term: 'Memory pressure',
+    what: 'macOS’s own judgement of how hard it is working to find memory: ● normal, ▲ warning, ■ critical. "% free" is its system-wide free share.',
+    why: 'Warning or critical means apps (iTerm, Claude seats) start swapping and slowing. That machine is a poor place for the next team.',
+  },
+  'memory-used': {
+    term: 'Memory used',
+    what: 'App memory plus wired and compressed memory, the same sum Activity Monitor calls "Memory Used". Not total minus free.',
+    why: 'Close to total with pressure rising = time to close something (often a big iTerm).',
+  },
+  swap: {
+    term: 'Swap',
+    what: 'Memory written out to disk because RAM ran short.',
+    why: 'A little is normal. Growing swap with warning pressure means the machine is short of memory.',
+  },
+  'process-counts': {
+    term: 'Claude · tmux · shells',
+    what: 'How many Claude Code processes are running, how many tmux sessions exist, and how many interactive shells are attached to a terminal (about one per tab).',
+    why: 'A quick sense of how busy the machine is, and a hint when old sessions are still lying around.',
+  },
+  'terminal-apps': {
+    term: 'Terminal apps · memory',
+    what: 'Each running terminal app (iTerm2 including iTermServer, tmux, herdr, Ghostty…) with its processes and the memory they hold, biggest first. Resident memory, summed.',
+    why: 'iTerm’s memory is a known pain on the main machines; this shows when it is the one to restart.',
+  },
+  'health-no-data': {
+    term: 'No health data / –',
+    what: '"No health data yet": the machine’s collector predates v1.4 and sends none. "–": that one reading could not be taken; hover for why.',
+    why: 'Neither is ever shown as 0 or as "fine". Nothing is assumed.',
+  },
   sampler: {
     term: 'Usage sampler',
     what: "A small script called by Claude Code's status line that saves the 5-hour and weekly % to ~/.claude/usage-log.csv. It costs no tokens.",

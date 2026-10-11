@@ -2369,3 +2369,158 @@ g[data-testid='flow-edge'] {
   border-left: 0;
   opacity: 0.5;
 }
+
+/* ---------- v1.4 S6: machine health (mochaccino machine-health, B) ---------- */
+.health-mark {
+  all: unset;
+  cursor: pointer;
+  margin-left: 6px;
+  font-family: var(--ar-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.health-mark:focus-visible {
+  outline: 2px solid var(--ar-cta);
+}
+.health-mark[data-kind='normal'],
+.pressure[data-kind='normal'] {
+  background: #dcfce7;
+  color: var(--ar-working-ink);
+}
+.health-mark[data-kind='warn'],
+.pressure[data-kind='warn'] {
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+}
+.health-mark[data-kind='critical'],
+.pressure[data-kind='critical'] {
+  background: var(--ar-error-bg);
+  color: var(--ar-error-ink);
+}
+.health-mark[data-kind='no-data'],
+.health-mark[data-kind='unavailable'],
+.pressure[data-kind='no-data'],
+.pressure[data-kind='unavailable'] {
+  font-weight: 400;
+  border: 1px dashed var(--ar-line);
+}
+.machines {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.machine-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 14px;
+}
+.machine-card {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.machine-card header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+.machine-card header b {
+  font-family: var(--ar-font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+.pressure {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.machine-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.machine-row > span:first-child {
+  color: var(--ar-ink-muted);
+}
+.machine-bar {
+  position: relative;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 6px;
+  background: var(--ar-line-soft);
+}
+.machine-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: var(--ar-ink);
+}
+.machine-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+.machine-counts > div {
+  background: var(--ar-surface);
+  border-radius: 8px;
+  padding: 6px 4px;
+}
+.machine-counts b {
+  display: block;
+  font-family: var(--ar-font-display);
+  font-size: 24px;
+  line-height: 1.1;
+}
+.health-missing {
+  color: var(--ar-ink-muted);
+}
+.machine-apps {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 2px 12px;
+  font-size: 13px;
+}
+.machine-apps li {
+  display: contents;
+}
+.machine-apps span {
+  color: var(--ar-ink-muted);
+}
+.machine-age {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+
+/* S6: six screens no longer fit one pill row at phone width; wrap them instead of scrolling the page. */
+@media (max-width: 640px) {
+  .view-tabs {
+    flex-wrap: wrap;
+    border-radius: 16px;
+    max-width: 100%;
+  }
+}
+.machine-seats {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
