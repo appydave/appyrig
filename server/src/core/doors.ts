@@ -161,6 +161,8 @@ const STATUS: Record<string, number> = {
   'unknown-capability': 404,
   'machine-not-found': 404,
   'seat-not-found': 404,
+  'handoff-not-found': 404,
+  'rig-not-found': 404,
   internal: 500,
 };
 

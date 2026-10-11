@@ -4,6 +4,7 @@ import {
   FLEET_EVENTS,
   MachineSnapshotSchema,
   SeatHistorySchema,
+  HandoffBodiesSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -97,6 +98,33 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
         return;
       }
       opts.store.putHistory(parsed.data);
+      reply({ ok: true, receivedAt: new Date().toISOString() });
+    });
+
+    // v1.4 · S4: queue message bodies, sent once each. Same checks as a history.
+    socket.on(FLEET_EVENTS.HANDOFFS, (raw, ack) => {
+      const reply = typeof ack === 'function' ? ack : () => {};
+      const parsed = HandoffBodiesSchema.safeParse(raw);
+      if (!parsed.success) {
+        reply({
+          ok: false,
+          failureMode: 'invalid_snapshot',
+          message: parsed.error.issues
+            .slice(0, 5)
+            .map((i) => `${i.path.join('.')}: ${i.message}`)
+            .join('; '),
+        });
+        return;
+      }
+      if (parsed.data.machineId !== machineId) {
+        reply({
+          ok: false,
+          failureMode: 'machine_mismatch',
+          message: `socket authenticated as ${machineId}, queue bodies are for ${parsed.data.machineId}`,
+        });
+        return;
+      }
+      opts.store.putHandoffs(parsed.data);
       reply({ ok: true, receivedAt: new Date().toISOString() });
     });
   });

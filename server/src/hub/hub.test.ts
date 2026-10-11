@@ -3,7 +3,12 @@ import request from 'supertest';
 import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ASLEEP_AFTER_MS, AUTH_ERRORS, SESSION_COOKIE } from '@appydave/shared';
+import {
+  ASLEEP_AFTER_MS,
+  AUTH_ERRORS,
+  SESSION_COOKIE,
+  SeatHistoryEventSchema,
+} from '@appydave/shared';
 import {
   COOKIE,
   TOKEN,
@@ -305,5 +310,140 @@ describe('seat.get timeout (BUG-seatget) — fleet pushes are compressed', () =>
     });
     const ws = (browser.io.engine.transport as unknown as { ws: { extensions: string } }).ws;
     expect(ws.extensions).toContain('permessage-deflate');
+  });
+});
+
+describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
+  const bodies = (machineId: string, ids: string[]) => ({
+    machineId,
+    collectedAt: '2026-10-11T12:00:00.000Z',
+    items: ids.map((id) => ({ id, body: `defect text for ${id}`, truncated: false })),
+  });
+  const sendBodies = (s: Parameters<typeof push>[0], payload: unknown) =>
+    new Promise<{ ok: boolean; failureMode?: string }>((resolve) =>
+      s
+        .timeout(2_000)
+        .emit('collector:handoffs', payload, (err: unknown, ack: never) =>
+          resolve(err ? { ok: false, failureMode: 'timeout' } : ack)
+        )
+    );
+
+  it('handoff.get is pending until the body arrives, then present, and refuses an unknown id', async () => {
+    const h = await start();
+    const snapshot = loadSnapshot('roamy');
+    const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(collector, snapshot);
+    const id = snapshot.queue[0]!.id;
+
+    const before = h.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id });
+    expect(before).toMatchObject({ ok: true, value: { id, body: null, bodyStatus: 'pending' } });
+
+    expect((await sendBodies(collector, bodies('roamy', [id]))).ok).toBe(true);
+    const after = h.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id });
+    expect(after).toMatchObject({
+      ok: true,
+      value: {
+        body: `defect text for ${id}`,
+        bodyStatus: 'present',
+        from: snapshot.queue[0]!.source,
+      },
+    });
+
+    expect(h.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'handoff-not-found' },
+    });
+  });
+
+  it('refuses bodies for another machine and malformed bodies, storing neither', async () => {
+    const h = await start();
+    const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(collector, loadSnapshot('roamy'));
+    expect(await sendBodies(collector, bodies('m2', ['q']))).toMatchObject({
+      ok: false,
+      failureMode: 'machine_mismatch',
+    });
+    expect(await sendBodies(collector, { machineId: 'roamy', items: 'no' })).toMatchObject({
+      ok: false,
+      failureMode: 'invalid_snapshot',
+    });
+  });
+
+  it('bodies survive a hub restart (stored on disk)', async () => {
+    const dir = tempDir();
+    const snapshot = loadSnapshot('roamy');
+    const id = snapshot.queue[0]!.id;
+    const h1 = await start({ dataDir: dir });
+    const c = h1.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(c, snapshot);
+    await sendBodies(c, bodies('roamy', [id]));
+    await h1.hub.store.flush();
+    await h1.stop();
+    running.splice(running.indexOf(h1), 1);
+
+    const h2 = await start({ dataDir: dir });
+    await h2.hub.load();
+    expect(h2.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id })).toMatchObject({
+      ok: true,
+      value: { bodyStatus: 'present' },
+    });
+  });
+
+  it('old collector → new hub: a snapshot and a history without origin are accepted; new → old is refused', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(c, loadSnapshot('roamy'));
+    const oldEvent = { at: '2026-10-11T09:00:00.000Z', kind: 'prompt', text: 'hi' };
+    const ack = await new Promise<{ ok: boolean }>((resolve) =>
+      c.emit(
+        'collector:history',
+        {
+          machineId: 'roamy',
+          seat: 'a@r',
+          collectedAt: '2026-10-11T09:00:00.000Z',
+          events: [oldEvent],
+          truncated: false,
+        },
+        resolve
+      )
+    );
+    expect(ack.ok).toBe(true);
+    // The pre-v1.4 strict event shape refuses `origin`: an old hub would reject a new collector's history.
+    const oldShape = SeatHistoryEventSchema.omit({ origin: true });
+    expect(oldShape.safeParse({ ...oldEvent, origin: 'typed' }).success).toBe(false);
+    expect(oldShape.safeParse(oldEvent).success).toBe(true);
+  });
+
+  it('rig.entry reads the histories the collector pushed', async () => {
+    const h = await start();
+    const snapshot = loadSnapshot('roamy');
+    const seat = snapshot.seats.find((s) => s.rig !== null)!;
+    const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(c, snapshot);
+    await new Promise((resolve) =>
+      c.emit(
+        'collector:history',
+        {
+          machineId: 'roamy',
+          seat: seat.id,
+          collectedAt: '2026-10-11T09:00:00.000Z',
+          truncated: false,
+          events: [
+            { at: '2026-10-11T09:00:00.000Z', kind: 'prompt', text: 'Fix it.', origin: 'typed' },
+            { at: '2026-10-11T09:00:02.000Z', kind: 'tool', text: 'Bash: ls' },
+          ],
+        },
+        resolve
+      )
+    );
+    const out = h.hub.core.call('cli', 'rig.entry', { machine: 'roamy', rig: seat.rig });
+    expect(out).toMatchObject({
+      ok: true,
+      value: { entry: { status: 'outside-queue', entry: { seat: seat.id, excerpt: 'Fix it.' } } },
+    });
+    expect(h.hub.core.call('cli', 'rig.entry', { machine: 'roamy', rig: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'rig-not-found' },
+    });
   });
 });

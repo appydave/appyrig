@@ -27,10 +27,12 @@ describe('AC 9 — no write verbs', () => {
     expect(Object.keys(VERBS).sort()).toEqual([
       'account.list',
       'fleet.get',
+      'handoff.get',
       'handoff.list',
       'history.list',
       'machine.list',
       'queue.list',
+      'rig.entry',
       'rig.topology',
       'seat.get',
       'seat.history',
@@ -209,6 +211,8 @@ describe('core.call — the one seam', () => {
       'seat.get': { machine: 'roamy', seat },
       'seat.tail': { machine: 'roamy', seat },
       'seat.history': { machine: 'roamy', seat },
+      'handoff.get': { machine: 'roamy', id: store.get('roamy')!.snapshot.queue[0]!.id },
+      'rig.entry': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
     };
     for (const name of Object.keys(VERB_REGISTRY)) {
       const a = core.call(AGENT, name, inputs[name] ?? {});
@@ -224,7 +228,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 12 },
+      value: { app: 'AppyRig', version: real.version, verbs: 14 },
     });
   });
 
@@ -243,6 +247,8 @@ describe('B14 + refusal table', () => {
       'machine-not-found': -32002,
       'seat-not-found': -32003,
       'principal-header': -32004,
+      'handoff-not-found': -32005,
+      'rig-not-found': -32006,
     });
   });
 });

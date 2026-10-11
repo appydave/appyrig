@@ -133,3 +133,15 @@ export function parseQueue(raw: unknown): QueueItem[] {
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
     .slice(0, QUEUE_MAX_ITEMS);
 }
+
+/**
+ * v1.4 · S4: queue id → message body, from the same `rig queue list --full` read as parseQueue.
+ * Bodies are not part of the snapshot (too large); a separate channel sends each one once.
+ * Rows with no body are left out, so "no body" never turns into an empty message.
+ */
+export function parseQueueBodies(raw: unknown): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const q of parseList(LenientQueueItem, raw, 'queue list'))
+    if (typeof q.body === 'string' && q.body.length > 0) out.set(q.qitemId, q.body);
+  return out;
+}
