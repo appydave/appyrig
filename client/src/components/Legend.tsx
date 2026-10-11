@@ -171,6 +171,8 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   order: () => <span className="legend-mono">→ →</span>,
   'machine-filter': () => <span className="legend-pill">● M2</span>,
   'idle-card': () => <span className="legend-idle-card">○ ○</span>,
+  'entry-mark': () => <span className="legend-mono legend-entry">↘</span>,
+  'handoff-panel': () => <span className="legend-lines legend-panel-sw" />,
   'map-arcs': () => (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
       <path d="M8,9 C8,1 48,1 48,9" className="rigmap-edge" strokeWidth={2} />

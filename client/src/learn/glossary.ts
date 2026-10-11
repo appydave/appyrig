@@ -192,6 +192,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'A work item still open more than 2 hours after it was handed over. Usually nobody will close it: the run ended or it was forgotten.',
     why: "It is drawn dashed and never counted as a bottleneck, so one forgotten item can't mislabel a team as stuck.",
   },
+  'entry-outside': {
+    term: 'Where work came in',
+    what: "The first seat of the rig to do anything, and what woke it. Usually its launch prompt: OpenRig starts every seat with one, so 'started at launch' is normal. It can also be a prompt typed into the seat or a direct message from another seat.",
+    why: 'Only queue handoffs are drawn as lines, so work that came in any other way would be invisible. This marker shows where the run actually began.',
+  },
   'self-handoff': {
     term: 'To itself',
     what: 'The seat put work on its own queue, usually a note-to-self for the next step.',
