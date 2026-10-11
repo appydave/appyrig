@@ -79,7 +79,24 @@ export type Swatch =
   | 'order'
   | 'machine-filter'
   | 'map-arcs'
-  | 'idle-card';
+  | 'idle-card'
+  | 'entry-mark'
+  | 'handoff-panel'
+  | 'window-bar'
+  | 'now-tick'
+  | 'proj-ghost'
+  | 'verdict'
+  | 'pace'
+  | 'monthly'
+  | 'tier'
+  | 'reading'
+  | 'old'
+  | 'drawers'
+  | 'unreported'
+  | 'health-mark'
+  | 'counts'
+  | 'apps'
+  | 'missing';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -193,13 +210,21 @@ const WALL: LegendSection[] = [
     entries: [
       {
         swatch: 'machine-dot',
-        mark: '● M2 live · 0s · 34 seats',
-        means: 'A machine, how fresh its feed is, and how many seats it reports.',
+        mark: '● M2 live · 0s',
+        means:
+          'A machine and how fresh its feed is. Hover it for its seat count; the Machines view has the rest.',
       },
       {
         swatch: 'no-openrig',
         mark: 'M4 · no OpenRig',
         means: 'That machine runs no OpenRig, so only its tmux sessions are listed.',
+      },
+      {
+        swatch: 'health-mark',
+        term: 'memory-pressure',
+        mark: '● normal · ▲ warning · ■ critical · – no data',
+        means:
+          'Each machine’s memory pressure, beside it. Click for the Machines view. "no data" = its collector sends no health yet; hover for why.',
       },
     ],
   },
@@ -324,6 +349,13 @@ const FLOW: LegendSection[] = [
         means: 'Something has been open there for more than 2 hours.',
       },
       {
+        swatch: 'entry-mark',
+        term: 'entry-outside',
+        mark: '↘ work entered here · at launch',
+        means:
+          'The first seat to act, when what woke it was not the queue: its launch prompt (normal), a prompt typed in, or a direct message. The line above the diagram says which.',
+      },
+      {
         swatch: 'stage-chips',
         mark: 'Builders  dev-build',
         means: 'The seats in each stage, coloured by model.',
@@ -363,6 +395,13 @@ const FLOW: LegendSection[] = [
         means: 'One item in flight at the time shown (open, not yet closed).',
       },
       { swatch: 'dot-rework', mark: 'Amber dot', means: 'An item going back, in flight.' },
+      {
+        swatch: 'handoff-panel',
+        term: 'handoff',
+        mark: 'Handoff details (right)',
+        means:
+          'Hover or Tab to a line or dot: who handed what to whom, when, its state, and the full message. Click or Enter pins it; Esc closes. "On hover / Pinned" sets the default.',
+      },
     ],
   },
   {
@@ -475,18 +514,147 @@ const FOCUS: LegendSection[] = [
 
 const ACCOUNTS: LegendSection[] = [
   {
-    title: 'Accounts',
+    title: 'Accounts · each window',
     entries: [
       {
-        swatch: 'bar',
-        mark: 'Green bar · 45% used',
-        means: 'Share of that usage window spent so far.',
+        swatch: 'window-bar',
+        term: 'window-now',
+        mark: 'Bar · 18% left',
+        means:
+          'The whole window, from its start to its reset. Dark fill = used; "18% left" = what remains before the reset.',
+      },
+      {
+        swatch: 'now-tick',
+        term: 'window-now',
+        mark: 'Amber tick',
+        means:
+          'Where the clock is in the window now. Fill past the tick = spending faster than time passes.',
+      },
+      {
+        swatch: 'proj-ghost',
+        term: 'window-now',
+        mark: 'Dashed ghost',
+        means: 'Where use lands at the reset if the pace at the reading holds.',
+      },
+      {
+        swatch: 'verdict',
+        term: 'window-verdict',
+        mark: '● plenty of room · ▲ be careful · ■ will run out ~12:48',
+        means:
+          'The projection at reset in words: under 80%, 80–99%, 100%+ (with when). "○ too early to tell" before 5% of the window; "■ spent" at 100%.',
+      },
+      {
+        swatch: 'pace',
+        term: 'window-now',
+        mark: '▲ 24 points ahead of the clock',
+        means: 'Used % minus time gone %, at the reading. ▼ behind = room to spare.',
       },
       { swatch: 'resets', mark: 'resets in 39m', means: 'When that window refills.' },
       {
+        swatch: 'monthly',
+        term: 'monthly',
+        mark: 'Monthly: not reported',
+        means: 'No source reports a monthly window, so none is drawn. Not the same as zero.',
+      },
+    ],
+  },
+  {
+    title: 'Accounts · the card',
+    entries: [
+      {
+        swatch: 'tier',
+        term: 'account-tier',
+        mark: 'MAX $200 · FROM CONFIG',
+        means:
+          'The plan tier and where it came from: reported by the login, from AppyRig’s config, or "tier not reported" when neither says.',
+      },
+      {
+        swatch: 'reading',
+        term: 'sampler',
+        mark: 'read on Roamy · 2m ago',
+        means: 'Which machine’s status line the figures came from, and when.',
+      },
+      {
+        swatch: 'old',
+        term: 'old-reading',
+        mark: 'old reading',
+        means: 'Read more than 15 minutes ago; the verdict is as of then.',
+      },
+      {
+        swatch: 'drawers',
+        term: 'drawers',
+        mark: 'Who draws on it · Machines signed in',
+        means:
+          'The machines signed into this account right now (it moves when a login switches), and their running Claude seats.',
+      },
+      {
         swatch: 'headroom',
+        term: 'headroom',
         mark: 'Next team → most headroom',
-        means: 'The account with the most room left. A suggestion only.',
+        means: 'The account with the most 5-hour room left. A suggestion only.',
+      },
+      {
+        swatch: 'unreported',
+        term: 'account',
+        mark: 'Not reporting an account',
+        means: 'A machine with no Claude login, or a collector too old to say.',
+      },
+    ],
+  },
+];
+
+const MACHINES: LegendSection[] = [
+  {
+    title: 'Machines · each card',
+    entries: [
+      {
+        swatch: 'health-mark',
+        term: 'memory-pressure',
+        mark: '● normal · 31% free',
+        means:
+          'macOS memory pressure in words (● normal, ▲ warning, ■ critical) and the share of memory free.',
+      },
+      {
+        swatch: 'window-bar',
+        term: 'memory-used',
+        mark: 'Memory used · 11.8 GB of 16 GB',
+        means:
+          'What apps and the system hold now, as Activity Monitor counts it; the bar is used against total.',
+      },
+      {
+        swatch: 'reading',
+        term: 'swap',
+        mark: 'Swap',
+        means:
+          'Memory pushed out to disk. Growing swap with ▲ or ■ pressure = the machine is short of memory.',
+      },
+      {
+        swatch: 'counts',
+        term: 'process-counts',
+        mark: 'Claude · tmux sessions · Shells',
+        means:
+          'Running Claude Code processes, tmux sessions, and interactive shells (about one per terminal tab).',
+      },
+      {
+        swatch: 'apps',
+        term: 'terminal-apps',
+        mark: 'Terminal apps · memory',
+        means:
+          'Each running terminal app (iTerm2, tmux, herdr…), its processes and the memory they hold, biggest first.',
+      },
+      {
+        swatch: 'missing',
+        term: 'health-no-data',
+        mark: '– · no health data yet',
+        means:
+          '"–" = that reading could not be taken (hover for why), never 0. "No health data yet" = the machine’s collector predates v1.4.',
+      },
+      {
+        swatch: 'old',
+        term: 'old-reading',
+        mark: 'sampled 12s ago · old reading',
+        means:
+          'When the collector took these readings; "old reading" after 90 s (three missed samples).',
       },
     ],
   },
@@ -631,6 +799,8 @@ function sectionsFor(screen: LegendScreen): LegendSection[] {
       return [...FOCUS, STATUS];
     case 'accounts':
       return [...ACCOUNTS, STATUS];
+    case 'machines':
+      return [...MACHINES, STATUS];
     case 'schema':
       return SCHEMA;
     case 'learn':
@@ -644,6 +814,7 @@ export const VIEW_TITLE: Record<LegendScreen, string> = {
   flow: 'Handoff Flow',
   focus: 'Seat panel',
   accounts: 'Accounts',
+  machines: 'Machines',
   schema: 'OpenRig DB',
   learn: 'Learn',
 };

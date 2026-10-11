@@ -184,7 +184,38 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   'group-collapsed': () => <span className="legend-mono">▸ ✕ 4</span>,
   order: () => <span className="legend-mono">→ →</span>,
   'machine-filter': () => <span className="legend-pill">● M2</span>,
+  'window-bar': () => (
+    <span className="legend-window">
+      <i style={{ width: '60%' }} />
+    </span>
+  ),
+  'now-tick': () => (
+    <span className="legend-window">
+      <i style={{ width: '60%' }} />
+      <b style={{ left: '45%' }} />
+    </span>
+  ),
+  'proj-ghost': () => (
+    <span className="legend-window">
+      <i style={{ width: '40%' }} />
+      <em style={{ left: '40%', width: '45%' }} />
+    </span>
+  ),
+  verdict: () => <span className="legend-mono">● ▲ ■</span>,
+  pace: () => <span className="legend-mono">▲ ▼</span>,
+  monthly: () => <span className="legend-mono">—</span>,
+  tier: () => <span className="legend-pill">Max</span>,
+  reading: () => <span className="legend-mono">2m</span>,
+  old: () => <span className="old-reading">old</span>,
+  drawers: () => <span className="legend-mono">M2</span>,
+  unreported: () => <span className="legend-mono">?</span>,
+  'health-mark': () => <span className="legend-mono">● ▲ ■</span>,
+  counts: () => <span className="legend-num legend-num-sm">9</span>,
+  apps: () => <span className="legend-lines" />,
+  missing: () => <span className="legend-mono">–</span>,
   'idle-card': () => <span className="legend-idle-card">○ ○</span>,
+  'entry-mark': () => <span className="legend-mono legend-entry">↘</span>,
+  'handoff-panel': () => <span className="legend-lines legend-panel-sw" />,
   'map-arcs': () => (
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
       <path d="M8,9 C8,1 48,1 48,9" className="rigmap-edge" strokeWidth={2} />

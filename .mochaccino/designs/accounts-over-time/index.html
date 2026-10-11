@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Accounts Over Time</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #faf5ec;
+        --ink: #342d2d;
+        --muted: #7a6e5e;
+        --surface: #f0ebe4;
+        --raised: #fff;
+        --line: #d4cdc4;
+        --soft: #e8e0d4;
+        --cta: #ffde59;
+        --seq: #c8841a;
+        --ok: #16a34a;
+        --ok-ink: #15803d;
+        --warn: #f59e0b;
+        --warn-bg: #fef3c7;
+        --warn-ink: #92400e;
+        --bad: #dc2626;
+        --bad-bg: #fee2e2;
+        --bad-ink: #991b1b;
+        --idle: #9ca3af;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          14px Roboto,
+          system-ui,
+          sans-serif;
+      }
+      .banner {
+        padding: 8px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--surface);
+      }
+      h2 {
+        font:
+          600 13px Oswald,
+          sans-serif;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 24px 28px 10px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 16px;
+        padding: 0 28px;
+      }
+      .card {
+        background: var(--raised);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .card header b {
+        font:
+          600 16px Oswald,
+          sans-serif;
+      }
+      .tier {
+        font:
+          11px Oswald,
+          sans-serif;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .tier i {
+        font-style: normal;
+        text-transform: none;
+        letter-spacing: 0;
+        font-family: Roboto;
+      }
+      .lbl {
+        font:
+          11px Oswald,
+          sans-serif;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .verdict {
+        font-weight: 600;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 13px;
+      }
+      .v-ok {
+        color: var(--ok-ink);
+        background: #dcfce7;
+      }
+      .v-warn {
+        color: var(--warn-ink);
+        background: var(--warn-bg);
+      }
+      .v-bad {
+        color: var(--bad-ink);
+        background: var(--bad-bg);
+      }
+      .v-none {
+        color: var(--muted);
+        background: var(--surface);
+      }
+      .stale {
+        font-size: 12px;
+        color: var(--warn-ink);
+        border: 1px dashed var(--warn);
+        border-radius: 4px;
+        padding: 0 5px;
+      }
+      .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      /* A · two tracks: time above, use below, now tick, projection ghost */
+      .a-win {
+        display: grid;
+        gap: 4px;
+      }
+      .a-track {
+        position: relative;
+        height: 10px;
+        border-radius: 5px;
+        background: var(--soft);
+        overflow: visible;
+      }
+      .a-time {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: repeating-linear-gradient(45deg, #cfc6ba 0 4px, transparent 4px 8px);
+        border-radius: 5px;
+      }
+      .a-used {
+        position: absolute;
+        inset: 0 auto 0 0;
+        background: var(--ink);
+        border-radius: 5px;
+      }
+      .a-proj {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        border: 2px dashed var(--ink);
+        border-left: 0;
+        border-radius: 0 5px 5px 0;
+        opacity: 0.5;
+      }
+      .a-now {
+        position: absolute;
+        top: -4px;
+        bottom: -4px;
+        width: 2px;
+        background: var(--seq);
+      }
+      .a-axis {
+        display: flex;
+        justify-content: space-between;
+        font:
+          11px 'Roboto Mono',
+          monospace;
+        color: var(--muted);
+      }
+
+      /* B · one bar, now tick, ahead/behind pace */
+      .b-track {
+        position: relative;
+        height: 16px;
+        border-radius: 8px;
+        background: var(--soft);
+      }
+      .b-used {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 8px;
+        background: var(--ink);
+      }
+      .b-now {
+        position: absolute;
+        top: -5px;
+        bottom: -5px;
+        width: 3px;
+        background: var(--seq);
+      }
+      .b-now::after {
+        content: 'now';
+        position: absolute;
+        top: -14px;
+        left: -8px;
+        font-size: 10px;
+        color: var(--seq);
+      }
+
+      /* C · timeline with clock times and a "room left" figure */
+      .c-win {
+        display: grid;
+        grid-template-columns: 92px 1fr;
+        gap: 6px 12px;
+        align-items: center;
+      }
+      .c-big {
+        font:
+          600 26px 'Bebas Neue',
+          Oswald,
+          sans-serif;
+        line-height: 1;
+      }
+      .c-big small {
+        font: 12px Roboto;
+        color: var(--muted);
+        display: block;
+      }
+      .c-line {
+        position: relative;
+        height: 34px;
+      }
+      .c-base {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 16px;
+        height: 2px;
+        background: var(--line);
+      }
+      .c-past {
+        position: absolute;
+        left: 0;
+        top: 15px;
+        height: 4px;
+        background: var(--muted);
+      }
+      .c-used {
+        position: absolute;
+        left: 0;
+        top: 10px;
+        height: 14px;
+        border-radius: 3px;
+        background: var(--ink);
+        opacity: 0.85;
+      }
+      .c-proj {
+        position: absolute;
+        top: 10px;
+        height: 14px;
+        border: 2px dashed var(--ink);
+        border-left: 0;
+        border-radius: 0 3px 3px 0;
+        opacity: 0.45;
+      }
+      .c-cap {
+        position: absolute;
+        right: 0;
+        top: 4px;
+        bottom: 4px;
+        width: 2px;
+        background: var(--bad);
+      }
+      .c-now {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        width: 2px;
+        background: var(--seq);
+      }
+      .c-times {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -12px;
+        display: flex;
+        justify-content: space-between;
+        font:
+          10px 'Roboto Mono',
+          monospace;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+      Mochaccino — accounts-over-time — 2026-10-11 · three ways to draw a window against its reset,
+      same data
+    </div>
+    <div id="root"></div>
+    <script>
+      // Same numbers in every variant. now = 12:12.
+      const ACC = [
+        {
+          email: 'david@ideasmen.com.au',
+          tier: 'Max $200',
+          src: 'config',
+          machines: ['M4'],
+          from: 'M4',
+          age: '35m',
+          stale: true,
+          w5: {
+            used: 82,
+            el: 58,
+            elNow: 62,
+            proj: 141,
+            start: '08:30',
+            reset: '13:30',
+            runout: '12:48',
+          },
+          w7: {
+            used: 42,
+            el: 56,
+            elNow: 56,
+            proj: 75,
+            start: 'Mon 21:00',
+            reset: 'Mon 21:00',
+            runout: null,
+          },
+        },
+        {
+          email: 'david@appydave.com',
+          tier: 'Max $100',
+          src: 'config',
+          machines: ['M2', 'Roamy'],
+          from: 'Roamy',
+          age: '2m',
+          stale: false,
+          w5: {
+            used: 20,
+            el: 49,
+            elNow: 50,
+            proj: 41,
+            start: '09:42',
+            reset: '14:42',
+            runout: null,
+          },
+          w7: {
+            used: 55,
+            el: 36,
+            elNow: 36,
+            proj: 153,
+            start: 'Wed 09:00',
+            reset: 'Wed 09:00',
+            runout: 'Sun 14:00',
+          },
+        },
+      ];
+      const verdict = (w) =>
+        w.proj >= 100
+          ? `<span class="verdict v-bad">■ will run out ~${w.runout}</span>`
+          : w.proj >= 80
+            ? `<span class="verdict v-warn">▲ be careful · ~${Math.round(w.proj)}% by reset</span>`
+            : `<span class="verdict v-ok">● plenty of room · ~${Math.round(w.proj)}% by reset</span>`;
+      const head = (a) =>
+        `<header><b>${a.email}</b><div class="tier">${a.tier} <i>· from config</i></div></header>`;
+      const src = (
+        a
+      ) => `<div class="small">read on ${a.from} · ${a.age} ago ${a.stale ? '<span class="stale">old reading</span>' : ''}</div>
+  <div class="small">Monthly: <b>not reported</b> (no source has it)</div><div class="small">Machines: <b>${a.machines.join(' · ')}</b></div>`;
+
+      const A = (a) =>
+        `<div class="card">${head(a)}${['w5', 'w7']
+          .map((k) => {
+            const w = a[k];
+            return `<div class="a-win">
+  <div style="display:flex;justify-content:space-between"><span class="lbl">${k === 'w5' ? '5-hour' : 'Weekly'}</span>${verdict(w)}</div>
+  <span class="small">time gone</span><div class="a-track"><div class="a-time" style="width:${w.elNow}%"></div><div class="a-now" style="left:${w.elNow}%"></div></div>
+  <span class="small">used ${w.used}%</span><div class="a-track"><div class="a-used" style="width:${Math.min(100, w.used)}%"></div><div class="a-proj" style="left:${Math.min(100, w.used)}%;width:${Math.max(0, Math.min(100, w.proj) - w.used)}%"></div><div class="a-now" style="left:${w.elNow}%"></div></div>
+  <div class="a-axis"><span>${w.start}</span><span>resets ${w.reset}</span></div></div>`;
+          })
+          .join('')}${src(a)}</div>`;
+
+      const B = (a) =>
+        `<div class="card">${head(a)}${['w5', 'w7']
+          .map((k) => {
+            const w = a[k];
+            const d = w.used - w.el;
+            return `<div class="a-win">
+  <div style="display:flex;justify-content:space-between"><span class="lbl">${k === 'w5' ? '5-hour' : 'Weekly'} · ${w.used}% used</span>${verdict(w)}</div>
+  <div class="b-track" style="margin-top:12px"><div class="b-used" style="width:${Math.min(100, w.used)}%"></div><div class="b-now" style="left:${w.elNow}%"></div></div>
+  <span class="small">${d > 0 ? `▲ ${d} points ahead of the clock` : `▼ ${-d} points behind the clock`} · resets ${w.reset}</span></div>`;
+          })
+          .join('')}${src(a)}</div>`;
+
+      const C = (a) =>
+        `<div class="card">${head(a)}${['w5', 'w7']
+          .map((k) => {
+            const w = a[k];
+            return `<div class="c-win">
+  <div class="c-big">${Math.max(0, 100 - w.used)}%<small>left · ${k === 'w5' ? '5-hour' : 'weekly'}</small></div>
+  <div><div>${verdict(w)}</div><div class="c-line"><div class="c-base"></div><div class="c-past" style="width:${w.elNow}%"></div>
+  <div class="c-used" style="width:${Math.min(100, w.used)}%"></div><div class="c-proj" style="left:${Math.min(100, w.used)}%;width:${Math.max(0, Math.min(100, w.proj) - w.used)}%"></div>
+  <div class="c-cap"></div><div class="c-now" style="left:${w.elNow}%"></div>
+  <div class="c-times"><span>${w.start}</span><span style="color:var(--seq)">now</span><span>reset ${w.reset}</span></div></div></div></div>`;
+          })
+          .join('')}<div style="height:6px"></div>${src(a)}</div>`;
+
+      document.getElementById('root').innerHTML = [
+        ['A · two tracks: time gone vs used', A],
+        ['B · one bar + now tick + pace words', B],
+        ['C · room left + timeline to the reset', C],
+      ]
+        .map(([t, f]) => `<h2>${t}</h2><div class="row">${ACC.map(f).join('')}</div>`)
+        .join('');
+    </script>
+  </body>
+</html>

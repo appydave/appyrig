@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FleetMachine } from '@appydave/shared';
+import type { FleetMachine, HandoffGetOutput, RigEntry, RigEntryOutput } from '@appydave/shared';
 import { ago } from '../fleet/model.js';
+import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import {
   buildFlow,
@@ -8,9 +9,11 @@ import {
   flowRange,
   replaySteps,
   rigQueue,
+  stageOf,
   type FlowEdge,
 } from '../fleet/views.js';
 import ReplayConsoles from './ReplayConsoles.js';
+import HandoffPanel, { type PanelMode, type PanelSelection } from './HandoffPanel.js';
 import { isShortcutBlocked, isSlider } from '../lib/keys.js';
 
 interface Props {
@@ -91,6 +94,40 @@ function edgePath(
 
 const EXPLAIN_EDGE = { forward: 'flow-forward', report: 'flow-report', rework: 'rework' } as const;
 
+const PANEL_KEY = 'appyrig.handoffPanel';
+function readPanelMode(): PanelMode {
+  try {
+    return localStorage.getItem(PANEL_KEY) === 'pinned' ? 'pinned' : 'hover';
+  } catch {
+    return 'hover';
+  }
+}
+
+/**
+ * S4: how the first seat to act was woken, in calm words. Nearly every rig starts at launch,
+ * which is normal, so that case reads as a fact, not an alarm.
+ */
+export function entryWords(e: RigEntry): string | null {
+  if (e.status === 'unknown' || !e.entry) return null;
+  if (e.status === 'via-queue') return 'came in through the queue';
+  switch (e.entry.origin) {
+    case 'startup':
+      return 'started at launch, not via the queue';
+    case 'typed':
+      return 'a prompt typed into the seat, not via the queue';
+    case 'send':
+      return 'a direct message from another seat, not via the queue';
+    case 'system':
+      return 'an OpenRig system message, not via the queue';
+    case 'compaction':
+      return 'resumed after a context compaction, not via the queue';
+    case 'skill':
+      return "a skill's instructions, not via the queue";
+    default:
+      return 'not via the queue';
+  }
+}
+
 const REPLAY_SECONDS = 40;
 /** Replay holds on each chapter for this many 100 ms ticks, so the narration can be read. */
 const CHAPTER_HOLD_TICKS = 30;
@@ -105,6 +142,14 @@ const clock = (t: number) =>
  * A team with no QA or review seat is drawn one box per seat instead of being squashed into roles.
  */
 export default function HandoffFlow({ machine, rig, now, socket, keys = true }: Props) {
+  // S4: the handoff detail panel. `sel` names a line (edge key) and/or one item on it.
+  const [sel, setSel] = useState<{ edge: string | null; itemId: string | null } | null>(null);
+  const [pinned, setPinned] = useState(false);
+  const [mode, setMode] = useState<PanelMode>(readPanelMode);
+  const bodies = useRef(new Map<string, HandoffGetOutput>());
+  const [entry, setEntry] = useState<RigEntry | null>(null);
+  const machineId = machine?.machine.id ?? null;
+
   const range = useMemo(
     () => (machine && rig ? flowRange(rigQueue(machine, rig)) : null),
     [machine, rig]
@@ -142,6 +187,35 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [keys]);
+
+  // S4: where this rig's work came in (rig.entry, read-only), once per rig.
+  useEffect(() => {
+    setEntry(null);
+    setSel(null);
+    setPinned(false);
+    if (!socket || !machineId || !rig) return;
+    let current = true;
+    void callVerb<RigEntryOutput>(socket, 'rig.entry', { machine: machineId, rig }).then((a) => {
+      if (current && a.ok) setEntry(a.value.entry);
+    });
+    return () => {
+      current = false;
+    };
+  }, [socket, machineId, rig]);
+
+  // S4: Esc closes the panel first (capture, so the screen-level Esc never also goes back).
+  useEffect(() => {
+    // r1 S4: stand down while a seat panel (or the ? overlay) is on top, so one Esc closes one thing.
+    if (!sel || !keys) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      setSel(null);
+      setPinned(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [sel, keys]);
 
   // A new rig starts at its end (the current state).
   useEffect(() => {
@@ -182,6 +256,8 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     if (!q) return;
     setPlaying(false);
     jump(Date.parse(q.createdAt), q.id);
+    // S4: the stepped handoff's full message, so the one-line narration is readable in full.
+    if (!pinned) setSel({ edge: null, itemId: q.id });
   };
   const nextStep = () =>
     stepTo(
@@ -227,6 +303,52 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   // During a replay, narrate the latest chapter reached.
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
   const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
+  const edgeKey = (e: FlowEdge) => `${e.from}→${e.to}`;
+  const selection: PanelSelection | null = (() => {
+    if (!sel) return null;
+    const edge =
+      (sel.edge && flow.edges.find((e) => edgeKey(e) === sel.edge)) ||
+      (sel.itemId && flow.edges.find((e) => e.items.some((q) => q.id === sel.itemId))) ||
+      null;
+    if (!edge || !edge.items.length) return null;
+    const itemId =
+      sel.itemId && edge.items.some((q) => q.id === sel.itemId)
+        ? sel.itemId
+        : edge.items[edge.items.length - 1]!.id;
+    return {
+      edge: edgeKey(edge),
+      title: `${labelOf(edge.from)} → ${labelOf(edge.to)} · ${edge.count} handoff${edge.count === 1 ? '' : 's'}`,
+      items: edge.items,
+      itemId,
+    };
+  })();
+  const peek = (edge: string, itemId: string | null = null) => {
+    if (!pinned) setSel({ edge, itemId });
+  };
+  const unpeek = () => {
+    if (!pinned && mode === 'hover') setSel(null);
+  };
+  const pin = (edge: string, itemId: string | null = null) => {
+    setSel({ edge, itemId });
+    setPinned(true);
+  };
+  const chooseMode = (m: PanelMode) => {
+    setMode(m);
+    if (m === 'hover') setPinned(false);
+    try {
+      localStorage.setItem(PANEL_KEY, m);
+    } catch {
+      // per-viewer convenience only
+    }
+  };
+  // S4: the first seat to act, as a box on this diagram.
+  const entryText = entry ? entryWords(entry) : null;
+  const entryNode = (() => {
+    if (!entry?.entry || entry.status !== 'outside-queue') return null;
+    const raw = entry.entry.seat;
+    const id = flow.mode === 'roles' ? stageOf(raw.split('@')[0]!) : raw.split('@')[0]!;
+    return flow.stages.some((s) => s.stage === id) ? id : null;
+  })();
   const staleCount = staleStages.reduce((n, s) => n + s.stale, 0);
   const oldestStale = Math.max(0, ...staleStages.map((s) => s.oldestStaleMs ?? 0));
 
@@ -289,134 +411,216 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
         )
       )}
 
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="flow-svg"
-        role="img"
-        aria-label="Handoff flow diagram"
-      >
-        <defs>
-          <marker
-            id="hf-arrow"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="11"
-            markerHeight="11"
-            markerUnits="userSpaceOnUse"
-            orient="auto"
-          >
-            <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead" />
-          </marker>
-          <marker
-            id="hf-arrow-amber"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="11"
-            markerHeight="11"
-            markerUnits="userSpaceOnUse"
-            orient="auto"
-          >
-            <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead amber" />
-          </marker>
-        </defs>
-        {flow.edges.map((e, i) => {
-          const p = edgePath(e, L);
-          const id = `hf-edge-${i}`;
-          return (
-            <g
-              key={`${e.from}→${e.to}`}
-              data-testid="flow-edge"
-              data-kind={p.kind}
-              data-in-flight={e.inFlight.length}
-              data-explain={EXPLAIN_EDGE[p.kind]}
-              data-explain-ctx={`${labelOf(e.from)} → ${labelOf(e.to)} · ${e.count} handoff${e.count === 1 ? '' : 's'}`}
+      {entry && (
+        <p className="flow-entry" data-testid="flow-entry" data-status={entry.status}>
+          <b>Where work came in · </b>
+          {entry.entry && entryText ? (
+            <>
+              {entry.entry.seat.split('@')[0]}: {entryText} ({clock(Date.parse(entry.entry.at))})
+              {entry.entry.excerpt && (
+                <q className="flow-entry-excerpt" data-testid="flow-entry-excerpt">
+                  {entry.entry.excerpt}
+                </q>
+              )}
+            </>
+          ) : (
+            <>not known{entry.reason ? `: ${entry.reason}` : ''}</>
+          )}
+          {entry.seatsWithoutHistory.length > 0 && (
+            <span className="quiet">
+              {' '}
+              · {entry.seatsWithoutHistory.length} seat
+              {entry.seatsWithoutHistory.length === 1 ? ' has' : 's have'} no visible history, so
+              one of them may have acted first.
+            </span>
+          )}
+        </p>
+      )}
+
+      <div className="flow-row">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="flow-svg"
+          role="group"
+          aria-label="Handoff flow diagram: Tab to a line to see its handoffs"
+        >
+          <defs>
+            <marker
+              id="hf-arrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="11"
+              markerHeight="11"
+              markerUnits="userSpaceOnUse"
+              orient="auto"
             >
-              <path
-                id={id}
-                d={p.d}
-                className={`flow-edge ${p.kind}`}
-                strokeWidth={1.5 + (e.count / max) * 6}
-                markerEnd={p.kind === 'rework' ? 'url(#hf-arrow-amber)' : 'url(#hf-arrow)'}
-              />
-              {/* A wide invisible stroke so the line is easy to hover. */}
-              <path d={p.d} className="hit" />
-              <text x={p.lx} y={p.ly} className={`flow-count ${p.kind}`}>
-                {e.count}
-                {p.kind === 'rework' ? ' back' : ''}
-              </text>
-              {e.inFlight.slice(0, 6).map((q, k) => (
-                <circle key={q.id} r={6} className={`pulse ${p.kind}`} data-testid="flow-pulse">
-                  <title>{q.summary ?? q.id}</title>
-                  <animateMotion
-                    dur="2.4s"
-                    repeatCount="indefinite"
-                    begin={`${(k * 0.4).toFixed(1)}s`}
+              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead" />
+            </marker>
+            <marker
+              id="hf-arrow-amber"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="11"
+              markerHeight="11"
+              markerUnits="userSpaceOnUse"
+              orient="auto"
+            >
+              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead amber" />
+            </marker>
+          </defs>
+          {flow.edges.map((e, i) => {
+            const p = edgePath(e, L);
+            const id = `hf-edge-${i}`;
+            return (
+              <g
+                key={`${e.from}→${e.to}`}
+                data-testid="flow-edge"
+                data-edge={edgeKey(e)}
+                data-kind={p.kind}
+                data-in-flight={e.inFlight.length}
+                data-selected={selection?.edge === edgeKey(e) || undefined}
+                tabIndex={0}
+                role="button"
+                aria-label={`${labelOf(e.from)} to ${labelOf(e.to)}: ${e.count} handoff${e.count === 1 ? '' : 's'}. Enter pins the details.`}
+                onPointerEnter={() => peek(edgeKey(e))}
+                onPointerLeave={unpeek}
+                onFocus={() => peek(edgeKey(e))}
+                onBlur={unpeek}
+                onClick={() => pin(edgeKey(e))}
+                onKeyDown={(ev) => {
+                  if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    pin(edgeKey(e));
+                  }
+                }}
+                data-explain={EXPLAIN_EDGE[p.kind]}
+                data-explain-ctx={`${labelOf(e.from)} → ${labelOf(e.to)} · ${e.count} handoff${e.count === 1 ? '' : 's'}`}
+              >
+                <path
+                  id={id}
+                  d={p.d}
+                  className={`flow-edge ${p.kind}`}
+                  strokeWidth={1.5 + (e.count / max) * 6}
+                  markerEnd={p.kind === 'rework' ? 'url(#hf-arrow-amber)' : 'url(#hf-arrow)'}
+                />
+                {/* A wide invisible stroke so the line is easy to hover. */}
+                <path d={p.d} className="hit" />
+                <text x={p.lx} y={p.ly} className={`flow-count ${p.kind}`}>
+                  {e.count}
+                  {p.kind === 'rework' ? ' back' : ''}
+                </text>
+                {e.inFlight.slice(0, 6).map((q, k) => (
+                  <circle
+                    key={q.id}
+                    r={6}
+                    className={`pulse ${p.kind}`}
+                    data-testid="flow-pulse"
+                    data-item={q.id}
+                    onPointerEnter={() => peek(edgeKey(e), q.id)}
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      pin(edgeKey(e), q.id);
+                    }}
                   >
-                    <mpath href={`#${id}`} />
-                  </animateMotion>
-                </circle>
-              ))}
-            </g>
-          );
-        })}
-        {flow.stages.map((s) => {
-          const x = L.x(s.stage);
-          const state = s.waiting ? 'waiting' : s.stale ? 'stale' : '';
-          return (
-            <g
-              key={s.stage}
-              data-testid="flow-stage"
-              data-stage={s.stage}
-              data-waiting={s.waiting}
-              data-stale={s.stale}
-              data-explain={flow.mode === 'roles' ? `stage-${s.stage}` : 'seat'}
-              data-explain-ctx={
-                s.seats.length
-                  ? `${s.label}: ${s.seats.map((x) => `${x.name} (${x.model})`).join(', ')}`
-                  : s.label
-              }
-            >
-              <rect
-                x={x - L.boxW / 2}
-                y={ROW_Y - BOX_H / 2}
-                width={L.boxW}
-                height={BOX_H}
-                rx={10}
-                className={`flow-box ${state}`}
-              />
-              <text
-                x={x}
-                y={ROW_Y - 14}
-                className={flow.mode === 'roles' ? 'flow-stage-name' : 'flow-seat-name'}
+                    <title>{q.summary ?? q.id}</title>
+                    <animateMotion
+                      dur="2.4s"
+                      repeatCount="indefinite"
+                      begin={`${(k * 0.4).toFixed(1)}s`}
+                    >
+                      <mpath href={`#${id}`} />
+                    </animateMotion>
+                  </circle>
+                ))}
+              </g>
+            );
+          })}
+          {flow.stages.map((s) => {
+            const x = L.x(s.stage);
+            const state = s.waiting ? 'waiting' : s.stale ? 'stale' : '';
+            return (
+              <g
+                key={s.stage}
+                data-testid="flow-stage"
+                data-stage={s.stage}
+                data-waiting={s.waiting}
+                data-stale={s.stale}
+                data-explain={flow.mode === 'roles' ? `stage-${s.stage}` : 'seat'}
+                data-explain-ctx={
+                  s.seats.length
+                    ? `${s.label}: ${s.seats.map((x) => `${x.name} (${x.model})`).join(', ')}`
+                    : s.label
+                }
               >
-                {s.label}
-              </text>
-              <text x={x} y={ROW_Y + 8} className="flow-seats">
-                {s.seats.length
-                  ? s.seats.map((x) => x.model).join(' · ')
-                  : s.outside
-                    ? 'outside this rig'
-                    : s.stage === 'others'
-                      ? 'quieter seats'
-                      : 'no seat'}
-              </text>
-              <text
-                x={x}
-                y={ROW_Y + 30}
-                className={`flow-wait ${state === 'waiting' ? 'amber' : ''}`}
-              >
-                {s.waiting
-                  ? `${s.waiting} waiting · oldest ${ago(s.oldestWaitMs ?? 0)}`
-                  : s.stale
-                    ? `${s.stale} left open · ${ago(s.oldestStaleMs ?? 0)}`
-                    : 'nothing waiting'}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+                <rect
+                  x={x - L.boxW / 2}
+                  y={ROW_Y - BOX_H / 2}
+                  width={L.boxW}
+                  height={BOX_H}
+                  rx={10}
+                  className={`flow-box ${state}`}
+                />
+                <text
+                  x={x}
+                  y={ROW_Y - 14}
+                  className={flow.mode === 'roles' ? 'flow-stage-name' : 'flow-seat-name'}
+                >
+                  {s.label}
+                </text>
+                <text x={x} y={ROW_Y + 8} className="flow-seats">
+                  {s.seats.length
+                    ? s.seats.map((x) => x.model).join(' · ')
+                    : s.outside
+                      ? 'outside this rig'
+                      : s.stage === 'others'
+                        ? 'quieter seats'
+                        : 'no seat'}
+                </text>
+                <text
+                  x={x}
+                  y={ROW_Y + 30}
+                  className={`flow-wait ${state === 'waiting' ? 'amber' : ''}`}
+                >
+                  {s.waiting
+                    ? `${s.waiting} waiting · oldest ${ago(s.oldestWaitMs ?? 0)}`
+                    : s.stale
+                      ? `${s.stale} left open · ${ago(s.oldestStaleMs ?? 0)}`
+                      : 'nothing waiting'}
+                </text>
+                {entryNode === s.stage && (
+                  <text
+                    x={x}
+                    y={ROW_Y + BOX_H / 2 + 18}
+                    className="flow-entry-mark"
+                    data-testid="flow-entry-mark"
+                    data-explain="entry-outside"
+                    data-explain-ctx={`${entry!.entry!.seat.split('@')[0]}: ${entryText}`}
+                  >
+                    ↘ work entered here ·{' '}
+                    {entry!.entry!.origin === 'startup' ? 'at launch' : 'outside the queue'}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+        <HandoffPanel
+          machineId={machine.machine.id}
+          selection={selection}
+          mode={mode}
+          pinned={pinned}
+          socket={socket}
+          cache={bodies.current}
+          onPick={(id) => selection && setSel({ edge: selection.edge, itemId: id })}
+          onMode={chooseMode}
+          onClose={() => {
+            setSel(null);
+            setPinned(false);
+          }}
+        />
+      </div>
 
       {flow.mode === 'roles' && (
         <ul className="flow-legend" aria-label="Seats per stage">

@@ -26,6 +26,7 @@ export const SCREEN: Record<View, Row[]> = {
     ['Tab', 'Reach the replay, chapters and consoles'],
   ],
   accounts: [],
+  machines: [],
   schema: [
     ['/', 'Search tables by name'],
     ['Esc', 'In the search box: clear it, then leave it'],
@@ -51,6 +52,7 @@ const TITLE: Record<View, string> = {
   map: 'Rig Map',
   flow: 'Handoff Flow',
   accounts: 'Accounts',
+  machines: 'Machines',
   schema: 'OpenRig DB',
   learn: 'Learn',
 };

@@ -234,6 +234,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'A work item still open more than 2 hours after it was handed over. Usually nobody will close it: the run ended or it was forgotten.',
     why: "It is drawn dashed and never counted as a bottleneck, so one forgotten item can't mislabel a team as stuck.",
   },
+  'entry-outside': {
+    term: 'Where work came in',
+    what: "The first seat of the rig to do anything, and what woke it. Usually its launch prompt: OpenRig starts every seat with one, so 'started at launch' is normal. It can also be a prompt typed into the seat or a direct message from another seat.",
+    why: 'Only queue handoffs are drawn as lines, so work that came in any other way would be invisible. This marker shows where the run actually began.',
+  },
   'self-handoff': {
     term: 'To itself',
     what: 'The seat put work on its own queue, usually a note-to-self for the next step.',
@@ -315,7 +320,7 @@ export const GLOSSARY: Record<string, Term> = {
   account: {
     term: 'Claude account',
     what: "The login a machine's Claude Code uses. Every machine signed into the same account shares its limits.",
-    why: 'M2 and M4 share ideasmen, so a team on the M2 spends the same allowance as your sessions on the M4.',
+    why: "A machine sits under the account it is signed into right now, read from its own Claude login on every push: switch a machine's login and it moves to the other card.",
   },
   'meter-5h': {
     term: '5-hour window',
@@ -326,6 +331,61 @@ export const GLOSSARY: Record<string, Term> = {
     term: 'Weekly',
     what: "How much of the account's 7-day allowance is used.",
     why: 'The 5-hour window resets often; the weekly one is the real budget.',
+  },
+  'account-tier': {
+    term: 'Plan tier',
+    what: 'Which plan the account is on, e.g. Max $200, and where AppyRig learned it: reported by the login itself, set in AppyRig’s config, or not reported at all.',
+    why: 'The tier sets how big each window is. "Tier not reported" means neither the login nor the config names it; AppyRig does not guess.',
+  },
+  'window-now': {
+    term: 'Window against its reset',
+    what: 'The bar is the whole window, from its start to its reset. The dark fill is how much is used; the amber tick is where the clock is now; the dashed ghost is where use lands at the reset if the pace holds.',
+    why: 'Fill past the tick means you are spending faster than time passes. "18% left" is what remains before the reset.',
+  },
+  'window-verdict': {
+    term: 'Plenty of room / be careful / will run out',
+    what: 'The window’s projection at the reset, in words: ● under 80% = plenty of room, ▲ 80–99% = be careful, ■ 100%+ = will run out, with the time it would.',
+    why: 'Plenty of room: you can be reckless. Will run out: every seat on the account stops at that time until the reset. "Too early to tell" until 5% of the window has gone.',
+  },
+  'old-reading': {
+    term: 'Old reading',
+    what: 'The usage figures were read more than 15 minutes ago; the verdict is as of that reading.',
+    why: 'Readings refresh when a Claude session on that machine gets a reply. An old one can make a busy account look calm.',
+  },
+  monthly: {
+    term: 'Monthly',
+    what: 'Claude Code’s login and status line report a 5-hour and a weekly window only. No source reports a monthly one.',
+    why: '"Not reported" means the source has nothing, not zero. AppyRig never invents it.',
+  },
+  'memory-pressure': {
+    term: 'Memory pressure',
+    what: 'macOS’s own judgement of how hard it is working to find memory: ● normal, ▲ warning, ■ critical. "% free" is its system-wide free share.',
+    why: 'Warning or critical means apps (iTerm, Claude seats) start swapping and slowing. That machine is a poor place for the next team.',
+  },
+  'memory-used': {
+    term: 'Memory used',
+    what: 'App memory plus wired and compressed memory, the same sum Activity Monitor calls "Memory Used". Not total minus free.',
+    why: 'Close to total with pressure rising = time to close something (often a big iTerm).',
+  },
+  swap: {
+    term: 'Swap',
+    what: 'Memory written out to disk because RAM ran short.',
+    why: 'A little is normal. Growing swap with warning pressure means the machine is short of memory.',
+  },
+  'process-counts': {
+    term: 'Claude · tmux · shells',
+    what: 'How many Claude Code processes are running, how many tmux sessions exist, and how many interactive shells are attached to a terminal (about one per tab).',
+    why: 'A quick sense of how busy the machine is, and a hint when old sessions are still lying around.',
+  },
+  'terminal-apps': {
+    term: 'Terminal apps · memory',
+    what: 'Each running terminal app (iTerm2 including iTermServer, tmux, herdr, Ghostty…) with its processes and the memory they hold, biggest first. Resident memory, summed.',
+    why: 'iTerm’s memory is a known pain on the main machines; this shows when it is the one to restart.',
+  },
+  'health-no-data': {
+    term: 'No health data / –',
+    what: '"No health data yet": the machine’s collector predates v1.4 and sends none. "–": that one reading could not be taken; hover for why.',
+    why: 'Neither is ever shown as 0 or as "fine". Nothing is assumed.',
   },
   sampler: {
     term: 'Usage sampler',

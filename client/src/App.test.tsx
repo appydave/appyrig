@@ -7,6 +7,7 @@ import App from './App.js';
 import { ansiToHtml } from './components/AnsiText.js';
 import { lastTurn, toParagraphs } from './components/Focus.js';
 import type { FleetSocket } from './fleet/useFleet.js';
+import type { FleetMachine } from '@appydave/shared';
 import { installTestHooks, xtermCount } from './fleet/xtermRegistry.js';
 import { fleetMachine, snapshot, update } from './test/fleetFixtures.js';
 
@@ -844,6 +845,8 @@ describe('App: S3 calmer Wall + machine filter', () => {
     expect(opened).toHaveAttribute('data-state', 'idle');
     expect(within(opened).getAllByTestId('seat-tile').length).toBeGreaterThan(0);
     expect(JSON.parse(localStorage.getItem('appyrig.groups')!)[key]).toBe(true);
+    // QA/r1 S3: focus lands on the opened group's head, not the page body.
+    expect(document.activeElement).toBe(within(opened).getByTestId('wall-group-head'));
   });
 
   it('the machine filter hides a machine on the Wall, says so, and is remembered', () => {
@@ -863,5 +866,303 @@ describe('App: S3 calmer Wall + machine filter', () => {
     expect(screen.getAllByTestId('machine-chip')).toHaveLength(2);
     fireEvent.click(screen.getByTestId('wall-show-machine'));
     expect(screen.queryByTestId('wall-hidden')).toBeNull();
+  });
+});
+
+describe('App: S4 handoff details + where work came in', () => {
+  type Req = { verb: string; input?: unknown };
+  function flowWith(onCall: (r: Req) => Answer | undefined) {
+    const fake = renderApp(onCall);
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    return fake;
+  }
+  const handoff = (r: Req, body: string | null): Answer => {
+    const id = (r.input as { id: string }).id;
+    return {
+      ok: true,
+      value: {
+        machine: 'm2',
+        id,
+        from: 'dev-qa@fliedit-team',
+        to: 'dev-build@fliedit-team',
+        state: 'done',
+        tags: [],
+        summary: 'QA verdict',
+        createdAt: '2026-10-11T10:00:00.000Z',
+        updatedAt: '2026-10-11T10:05:00.000Z',
+        body,
+        bodyStatus: body === null ? 'pending' : 'present',
+        bodyTruncated: false,
+      },
+    };
+  };
+  const entry = (status: 'outside-queue' | 'unknown'): Answer => ({
+    ok: true,
+    value: {
+      machine: 'm2',
+      rig: 'fliedit-team',
+      entry: {
+        status,
+        reason: status === 'unknown' ? 'older events were dropped' : null,
+        entry:
+          status === 'unknown'
+            ? null
+            : {
+                seat: 'orch-lead@fliedit-team',
+                at: '2026-10-11T09:00:00.000Z',
+                actedAt: '2026-10-11T09:00:05.000Z',
+                origin: 'startup',
+                excerpt: null,
+              },
+        seatsWithoutHistory: [],
+      },
+    },
+  });
+
+  it('focusing a line shows the full message, readable; Enter pins; Esc closes and stays on the Flow', async () => {
+    const DEFECT =
+      'VERDICT: RETURN — 1 material defect on the window’s real path (exportArms): the cancelled arm still lands after Esc, and the undo stack records it twice.';
+    const { calls } = flowWith((r) =>
+      r.verb === 'handoff.get'
+        ? handoff(r, DEFECT)
+        : r.verb === 'rig.entry'
+          ? entry('outside-queue')
+          : undefined
+    );
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-empty', 'true');
+    const edge = screen.getAllByTestId('flow-edge')[0]!;
+    fireEvent.focus(edge);
+    expect(await screen.findByTestId('handoff-text')).toHaveTextContent(DEFECT);
+    expect(calls.some((c) => c.request.verb === 'handoff.get')).toBe(true);
+    fireEvent.keyDown(edge, { key: 'Enter' });
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-pinned', 'true');
+    fireEvent.blur(edge);
+    expect(screen.getByTestId('handoff-text')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-empty', 'true');
+    // The Esc that closed the panel did not also take the screen back.
+    expect(screen.getByTestId('handoff-flow')).toBeInTheDocument();
+  });
+
+  it('a body the collector has not sent yet reads "loading message…", not an empty panel', async () => {
+    flowWith((r) => (r.verb === 'handoff.get' ? handoff(r, null) : undefined));
+    fireEvent.focus(screen.getAllByTestId('flow-edge')[0]!);
+    await waitFor(() =>
+      expect(screen.getByTestId('handoff-body')).toHaveAttribute('data-status', 'pending')
+    );
+    expect(screen.getByTestId('handoff-body')).toHaveTextContent('loading message…');
+  });
+
+  it('marks where work came in, calmly, on the first seat to act', async () => {
+    flowWith((r) => (r.verb === 'rig.entry' ? entry('outside-queue') : undefined));
+    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
+      'orch-lead: started at launch, not via the queue'
+    );
+    const mark = screen.getByTestId('flow-entry-mark');
+    expect(mark).toHaveTextContent('work entered here · at launch');
+    expect(mark.closest('[data-testid="flow-stage"]')).toHaveAttribute('data-stage', 'lead');
+  });
+
+  it('an unknown entry says so and draws no marker', async () => {
+    flowWith((r) => (r.verb === 'rig.entry' ? entry('unknown') : undefined));
+    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
+      'not known: older events were dropped'
+    );
+    expect(screen.queryByTestId('flow-entry-mark')).toBeNull();
+  });
+});
+
+describe('App: S5 accounts over time', () => {
+  const derived = (tier: { label: string | null; source: 'reported' | 'config' | 'unknown' }) => {
+    const now = Date.now();
+    const start = new Date(now - 2.5 * 3_600_000).toISOString();
+    const win = (used: number) => ({
+      status: 'reading' as const,
+      usedPct: used,
+      resetsAt: new Date(now + 2.5 * 3_600_000).toISOString(),
+      windowMs: 5 * 3_600_000,
+      startsAt: start,
+      elapsedPct: 50,
+      elapsedNowPct: 50,
+      paceDeltaPct: used - 50,
+      projectedPct: used * 2,
+    });
+    return {
+      tier,
+      asOf: new Date(now).toISOString(),
+      readingFrom: 'roamy',
+      sampleAgeMs: 60_000,
+      fiveHour: win(45),
+      sevenDay: { ...win(20), windowMs: 7 * 24 * 3_600_000 },
+      monthly: { status: 'not-reported' as const },
+    };
+  };
+  const signedIn = (
+    name: 'roamy--blocked' | 'm2',
+    email: string,
+    tier = derived({ label: 'Max $200', source: 'config' })
+  ) => {
+    const fm = fleetMachine(snapshot(name));
+    return {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        account: {
+          email,
+          plan: 'claude_max',
+          fiveHourPct: 45,
+          fiveHourResetsAt: tier.fiveHour.resetsAt,
+          sevenDayPct: 20,
+          sevenDayResetsAt: tier.sevenDay.resetsAt,
+          sampledAt: new Date(Date.now() - 60_000).toISOString(),
+          derived: tier,
+        },
+      },
+    } as unknown as FleetMachine;
+  };
+
+  it('each window against its reset, tier with its source, monthly not reported', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([signedIn('roamy--blocked', 'a@x.com')]));
+    fireEvent.click(screen.getByTestId('view-accounts'));
+    const card = screen.getByTestId('account-card');
+    expect(within(card).getByTestId('account-tier')).toHaveTextContent('Max $200 · from config');
+    expect(within(card).getByTestId('window-5h-left')).toHaveTextContent('55% left');
+    expect(within(card).getByTestId('window-5h-verdict')).toHaveTextContent(
+      'be careful · ~90% by reset'
+    );
+    expect(within(card).getByTestId('window-7d-verdict')).toHaveTextContent('plenty of room');
+    expect(within(card).getByTestId('window-5h-now')).toBeInTheDocument();
+    expect(within(card).getByTestId('account-monthly')).toHaveTextContent('Monthly: not reported');
+    expect(within(card).queryByTestId('meter-5h')).toBeNull();
+  });
+
+  it("switching a machine's login moves it to the other card on the next push", () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([signedIn('roamy--blocked', 'a@x.com'), signedIn('m2', 'b@x.com')])
+    );
+    fireEvent.click(screen.getByTestId('view-accounts'));
+    const machinesOf = (email: string) =>
+      screen
+        .queryAllByTestId('account-card')
+        .find((c) => c.dataset.email === email)
+        ?.querySelector('[data-testid="account-machines"]')?.textContent ?? null;
+    expect(machinesOf('b@x.com')).toContain('M2');
+    // The M2 signs into a@x.com: one push later it is under that card, and b@x.com is gone.
+    fake.fire(FLEET_EVENTS.UPDATE, update([signedIn('m2', 'a@x.com')], false));
+    expect(machinesOf('a@x.com')).toContain('M2');
+    expect(machinesOf('a@x.com')).toContain('Roamy');
+    expect(machinesOf('b@x.com')).toBeNull();
+  });
+
+  it('a tier nobody reports says so, never guesses', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([signedIn('roamy--blocked', 'a@x.com', derived({ label: null, source: 'unknown' }))])
+    );
+    fireEvent.click(screen.getByTestId('view-accounts'));
+    expect(screen.getByTestId('account-tier')).toHaveTextContent('Max · tier not reported');
+  });
+});
+
+describe('App: S6 machine health', () => {
+  const ok = <T,>(value: T) => ({ status: 'ok' as const, value });
+  const health = (level: 'normal' | 'warn' | 'critical') => ({
+    sampledAt: new Date(Date.now() - 12_000).toISOString(),
+    memory: {
+      totalBytes: ok(16 * 1024 ** 3),
+      usedBytes: ok(Math.round(11.8 * 1024 ** 3)),
+      pressureLevel: ok(level),
+      freePct: ok(31),
+      swapUsedBytes: ok(Math.round(1.2 * 1024 ** 3)),
+      swapTotalBytes: ok(2 * 1024 ** 3),
+    },
+    processes: {
+      claude: ok(9),
+      tmuxSessions: ok(14),
+      terminalShells: { status: 'unavailable' as const, reason: 'ps was not allowed to list ttys' },
+      terminalApps: ok([
+        { app: 'iTerm2', processes: 3, rssBytes: Math.round(4.1 * 1024 ** 3) },
+        { app: 'tmux', processes: 15, rssBytes: 600 * 1024 ** 2 },
+      ]),
+    },
+  });
+  const withHealth = (name: 'roamy--blocked' | 'm2', level: 'normal' | 'warn' | 'critical') => {
+    const fm = fleetMachine(snapshot(name));
+    return {
+      ...fm,
+      snapshot: { ...fm.snapshot, health: health(level) },
+    } as unknown as FleetMachine;
+  };
+
+  it('the strip marks each machine’s pressure in words; no health data is said, never 0', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([withHealth('m2', 'warn'), fleetMachine(snapshot('roamy--blocked'))])
+    );
+    const marks = screen.getAllByTestId('health-mark');
+    const byKind = Object.fromEntries(marks.map((m) => [m.dataset.kind, m.textContent]));
+    expect(byKind['warn']).toBe('▲ warning');
+    expect(byKind['no-data']).toBe('– no data');
+    expect(marks.find((m) => m.dataset.kind === 'no-data')!.title).toMatch(/predates v1\.4/);
+    fireEvent.click(marks[0]!);
+    expect(screen.getByTestId('view-body-machines')).toBeInTheDocument();
+  });
+
+  it('a Machines card shows memory, swap, counts and terminal apps; a missing reading is "–" with why', () => {
+    localStorage.setItem('appyrig.view', 'machines');
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([withHealth('m2', 'normal'), fleetMachine(snapshot('roamy--blocked'))])
+    );
+    const m2 = screen.getAllByTestId('machine-card').find((c) => c.dataset.machineId === 'm2')!;
+    expect(within(m2).getByTestId('machine-pressure')).toHaveTextContent('● normal · 31% free');
+    expect(within(m2).getByTestId('machine-memory')).toHaveTextContent('11.8 GB of 16 GB');
+    expect(within(m2).getByTestId('count-claude')).toHaveTextContent('9');
+    const shells = within(m2).getByTestId('count-shells');
+    expect(shells).toHaveTextContent('–');
+    expect(shells).toHaveAttribute('title', 'ps was not allowed to list ttys');
+    expect(within(m2).getByTestId('machine-apps')).toHaveTextContent('iTerm2');
+    expect(within(m2).getByTestId('machine-apps')).toHaveTextContent('4.1 GB');
+    const roamy = screen
+      .getAllByTestId('machine-card')
+      .find((c) => c.dataset.machineId === 'roamy')!;
+    expect(roamy).toHaveAttribute('data-health', 'no-data');
+    expect(within(roamy).getByTestId('machine-no-data')).toHaveTextContent('predates v1.4');
+    expect(roamy).not.toHaveTextContent(/\b0\b/);
+  });
+
+  it('the Machines view follows the machine filter', () => {
+    localStorage.setItem('appyrig.view', 'machines');
+    localStorage.setItem('appyrig.hiddenMachines', JSON.stringify(['m2']));
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([withHealth('m2', 'normal'), fleetMachine(snapshot('roamy--blocked'))])
+    );
+    expect(screen.getAllByTestId('machine-card').map((c) => c.dataset.machineId)).toEqual([
+      'roamy',
+    ]);
+    expect(screen.getByTestId('machines')).toHaveTextContent(
+      '1 machine hidden by the machine filter'
+    );
   });
 });

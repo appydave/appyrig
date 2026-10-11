@@ -2581,3 +2581,430 @@ button.group-head:focus-visible {
     max-height: 30vh;
   }
 }
+/* ---------- v1.4 S4: handoff detail panel + where work came in ---------- */
+.flow-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: stretch;
+}
+.flow-row .flow-svg {
+  flex: 1 1 620px;
+  min-width: 0;
+}
+.flow-edge-group:focus,
+g[data-testid='flow-edge']:focus {
+  outline: none;
+}
+g[data-testid='flow-edge']:focus-visible .flow-edge,
+g[data-testid='flow-edge'][data-selected] .flow-edge {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 1;
+}
+g[data-testid='flow-edge'] {
+  cursor: pointer;
+}
+.handoff-panel {
+  flex: 1 1 340px;
+  max-width: 460px;
+  min-width: 0;
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 520px;
+}
+.handoff-panel[data-pinned='true'] {
+  border-color: var(--ar-sequence);
+  box-shadow: inset 4px 0 0 var(--ar-sequence);
+}
+.handoff-panel header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.handoff-panel header .label {
+  flex: 1 1 auto;
+}
+.handoff-panel header .pill-btn {
+  min-height: 26px;
+  padding: 2px 10px;
+}
+.handoff-mode {
+  display: inline-flex;
+  gap: 4px;
+}
+.handoff-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+.handoff-head b {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.handoff-head span {
+  color: var(--ar-ink-muted);
+}
+.handoff-body {
+  flex: 1 1 auto;
+  min-height: 60px;
+  overflow-y: auto;
+  border-top: 1px solid var(--ar-line-soft);
+  padding-top: 6px;
+}
+.handoff-body pre {
+  margin: 0;
+  font-family: var(--ar-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.handoff-panel .quiet {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+}
+.handoff-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0 0;
+  border-top: 1px solid var(--ar-line-soft);
+  max-height: 140px;
+  overflow-y: auto;
+  font-size: 12px;
+}
+.handoff-list button {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.handoff-list button span {
+  color: var(--ar-ink-muted);
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+}
+.handoff-list button[aria-current='true'] {
+  background: var(--ar-blocked-bg);
+}
+.handoff-list button:focus-visible {
+  outline: 2px solid var(--ar-cta);
+}
+.flow-entry {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+}
+.flow-entry b {
+  color: var(--ar-ink);
+  font-weight: 600;
+}
+.flow-entry-excerpt {
+  display: block;
+  margin-top: 2px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+.flow-entry-mark {
+  font-family: var(--ar-font-body);
+  font-size: 11px;
+  fill: var(--ar-ink-muted);
+  text-anchor: middle;
+}
+.legend-entry {
+  color: var(--ar-ink);
+}
+.legend-panel-sw {
+  border: 1px solid var(--ar-line);
+  border-radius: 3px;
+  background-color: var(--ar-surface-raised);
+}
+
+/* ---------- v1.4 S5: windows against their reset (mochaccino accounts-over-time, B) ---------- */
+.window {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.window-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 10px;
+}
+.window-head .label b {
+  color: var(--ar-ink);
+  font-weight: 600;
+}
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.verdict[data-kind='plenty'] {
+  background: #dcfce7;
+  color: var(--ar-working-ink);
+}
+.verdict[data-kind='careful'] {
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+}
+.verdict[data-kind='runs-out'],
+.verdict[data-kind='spent'] {
+  background: var(--ar-error-bg);
+  color: var(--ar-error-ink);
+}
+.window-track {
+  position: relative;
+  height: 14px;
+  margin-top: 4px;
+  border-radius: 7px;
+  background: var(--ar-line-soft);
+}
+.window-used {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 7px;
+  background: var(--ar-ink);
+}
+.window-proj {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 2px dashed var(--ar-ink);
+  border-left: 0;
+  border-radius: 0 7px 7px 0;
+  opacity: 0.45;
+}
+.window-now {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  margin-left: -1px;
+  background: var(--ar-sequence);
+}
+.window-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.account-monthly {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+}
+.old-reading {
+  font-size: 12px;
+  color: var(--ar-blocked-ink);
+  border: 1px dashed var(--ar-blocked);
+  border-radius: 4px;
+  padding: 0 5px;
+}
+.legend-window {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--ar-line-soft);
+}
+.legend-window i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--ar-ink);
+}
+.legend-window b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--ar-sequence);
+}
+.legend-window em {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 1.5px dashed var(--ar-ink);
+  border-left: 0;
+  opacity: 0.5;
+}
+
+/* ---------- v1.4 S6: machine health (mochaccino machine-health, B) ---------- */
+.health-mark {
+  all: unset;
+  cursor: pointer;
+  margin-left: 6px;
+  font-family: var(--ar-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.health-mark:focus-visible {
+  outline: 2px solid var(--ar-cta);
+}
+.health-mark[data-kind='normal'],
+.pressure[data-kind='normal'] {
+  background: #dcfce7;
+  color: var(--ar-working-ink);
+}
+.health-mark[data-kind='warn'],
+.pressure[data-kind='warn'] {
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+}
+.health-mark[data-kind='critical'],
+.pressure[data-kind='critical'] {
+  background: var(--ar-error-bg);
+  color: var(--ar-error-ink);
+}
+.health-mark[data-kind='no-data'],
+.health-mark[data-kind='unavailable'],
+.pressure[data-kind='no-data'],
+.pressure[data-kind='unavailable'] {
+  font-weight: 400;
+  border: 1px dashed var(--ar-line);
+}
+.machines {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.machine-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 14px;
+}
+.machine-card {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.machine-card header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+.machine-card header b {
+  font-family: var(--ar-font-display);
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+.pressure {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.machine-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+}
+.machine-row > span:first-child {
+  color: var(--ar-ink-muted);
+}
+.machine-bar {
+  position: relative;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 6px;
+  background: var(--ar-line-soft);
+}
+.machine-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: var(--ar-ink);
+}
+.machine-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+.machine-counts > div {
+  background: var(--ar-surface);
+  border-radius: 8px;
+  padding: 6px 4px;
+}
+.machine-counts b {
+  display: block;
+  font-family: var(--ar-font-display);
+  font-size: 24px;
+  line-height: 1.1;
+}
+.health-missing {
+  color: var(--ar-ink-muted);
+}
+.machine-apps {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 2px 12px;
+  font-size: 13px;
+}
+.machine-apps li {
+  display: contents;
+}
+.machine-apps span {
+  color: var(--ar-ink-muted);
+}
+.machine-age {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+
+/* S6: six screens no longer fit one pill row at phone width; wrap them instead of scrolling the page. */
+@media (max-width: 640px) {
+  .view-tabs {
+    flex-wrap: wrap;
+    border-radius: 16px;
+    max-width: 100%;
+  }
+}
+.machine-seats {
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}

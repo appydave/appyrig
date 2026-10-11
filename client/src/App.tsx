@@ -5,6 +5,7 @@ import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
 import HandoffFlow from './components/HandoffFlow.js';
 import Learn from './components/Learn.js';
+import Machines from './components/Machines.js';
 import KeysHelp from './components/KeysHelp.js';
 import Legend from './components/Legend.js';
 import { isShortcutBlocked } from './lib/keys.js';
@@ -25,12 +26,13 @@ const LEGEND_KEY = 'appyrig.legend';
 const HINT_KEY = 'appyrig.hint';
 const HIDDEN_KEY = 'appyrig.hiddenMachines';
 
-export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'schema' | 'learn';
+export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'machines' | 'schema' | 'learn';
 const VIEWS: { key: View; label: string }[] = [
   { key: 'wall', label: 'The Wall' },
   { key: 'map', label: 'Rig Map' },
   { key: 'flow', label: 'Handoff Flow' },
   { key: 'accounts', label: 'Accounts' },
+  { key: 'machines', label: 'Machines' },
   { key: 'schema', label: 'OpenRig DB' },
   { key: 'learn', label: 'Learn' },
 ];
@@ -402,8 +404,10 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         received={state.received}
         error={state.error}
         onOpen={open}
+        onHealth={() => chooseView('machines')}
         filter={
-          allMachines.length > 1 && (view === 'wall' || view === 'map' || view === 'flow') ? (
+          allMachines.length > 1 &&
+          (view === 'wall' || view === 'map' || view === 'flow' || view === 'machines') ? (
             <div className="machine-filter" role="group" aria-label="Machines shown">
               <span className="label">Show</span>
               {allMachines.map((m) => (
@@ -457,6 +461,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               keys={!focusTile && !help}
             />
           )}
+        </main>
+      )}
+      {view === 'machines' && (
+        <main className="view" data-testid="view-body-machines">
+          <Machines machines={machines} hidden={hiddenShown.length} now={now} />
         </main>
       )}
       {view === 'accounts' && (

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { FleetMachine } from '@appydave/shared';
+import { pressureOf } from '../fleet/health.js';
 import {
   blockedBecause,
   blockedDetail,
@@ -25,6 +26,8 @@ interface Props {
   onOpen: (key: string) => void;
   /** S3: the machine filter, drawn at the end of the strip (keeps the header to one row). */
   filter?: ReactNode;
+  /** S6: the pressure mark opens the Machines view. */
+  onHealth?: () => void;
 }
 
 function hubMessage(link: HubLink, received: boolean): string | null {
@@ -41,6 +44,7 @@ export default function FleetStrip({
   received,
   error,
   onOpen,
+  onHealth,
   filter,
 }: Props) {
   const counts = countSeats(machines);
@@ -101,10 +105,36 @@ export default function FleetStrip({
               data-pulse={f.level === 'live'}
             />
             {fm.machine.label}
-            <span className="fresh">
-              {f.label} · {n} seat{n === 1 ? '' : 's'}
-              {fm.liveness === 'asleep' ? ' paused' : ''}
+            {/* S6: the per-machine seat count moved to the hover and the Machines card, so three
+                machines, their pressure marks and the filter stay on one row at 1440 px. */}
+            <span className="fresh" title={`${n} seat${n === 1 ? '' : 's'}`}>
+              {f.label}
+              {fm.liveness === 'asleep' ? ` · ${n} seat${n === 1 ? '' : 's'} paused` : ''}
             </span>
+            {(() => {
+              // S6: memory pressure, glyph + word; the reason or detail on hover; opens Machines.
+              const p = pressureOf(fm);
+              const short =
+                p.kind === 'no-data' ? 'no data' : p.kind === 'unavailable' ? 'n/a' : p.word;
+              const title =
+                p.kind === 'no-data' || p.kind === 'unavailable'
+                  ? `Memory pressure: ${p.word}. ${p.reason ?? ''}`
+                  : `Memory pressure: ${p.word}. Open Machines for memory, swap and processes.`;
+              return (
+                <button
+                  type="button"
+                  className="health-mark"
+                  data-testid="health-mark"
+                  data-kind={p.kind}
+                  data-explain={p.kind === 'no-data' ? 'health-no-data' : 'memory-pressure'}
+                  title={title}
+                  aria-label={`${fm.machine.label} ${title}`}
+                  onClick={onHealth}
+                >
+                  {p.glyph} {short}
+                </button>
+              );
+            })()}
           </span>
         );
       })}
