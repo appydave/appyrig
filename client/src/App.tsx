@@ -5,7 +5,9 @@ import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
 import HandoffFlow from './components/HandoffFlow.js';
 import Learn from './components/Learn.js';
+import KeysHelp from './components/KeysHelp.js';
 import Legend from './components/Legend.js';
+import { isShortcutBlocked } from './lib/keys.js';
 import RigMap from './components/RigMap.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
@@ -70,16 +72,6 @@ function readHint(): boolean {
   }
 }
 
-/** Keys typed into a field, or with a modifier, are never shortcuts. */
-function isTyping(e: KeyboardEvent): boolean {
-  if (e.metaKey || e.ctrlKey || e.altKey) return true;
-  const t = e.target;
-  return (
-    t instanceof HTMLElement &&
-    (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName))
-  );
-}
-
 function remember(key: string, value: string) {
   try {
     localStorage.setItem(key, value);
@@ -112,6 +104,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const [rigKey, setRigKey] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
+  /** S2: the element that opened Focus (tile, map node, strip alert), so Esc lands back on it. */
+  const opener = useRef<HTMLElement | null>(null);
+  /** S2: screens visited, so Esc returns to the one you came from. */
+  const history = useRef<View[]>([]);
+  const [help, setHelp] = useState(false);
 
   const machines = useMemo(() => orderedMachines(state.machines), [state.machines]);
   const seatCount = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
@@ -126,7 +123,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     [view, activeRig, machines, minute]
   );
 
-  const chooseView = (v: View) => {
+  const showView = (v: View) => {
     setView(v);
     try {
       localStorage.setItem(VIEW_KEY, v);
@@ -134,6 +131,18 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       // per-viewer convenience only
     }
   };
+
+  const chooseView = (v: View) => {
+    if (v === view) return;
+    history.current = [...history.current.slice(-19), view];
+    showView(v);
+  };
+
+  /** Esc with nothing on top: back to the previous screen. False when there is none. */
+  const goBack = useCallback(() => {
+    const prev = history.current.pop();
+    if (prev) showView(prev);
+  }, []);
 
   const dismissHint = () => {
     setHint(false);
@@ -165,27 +174,44 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   const open = useCallback((key: string) => {
     lastFocused.current = key;
+    const active = document.activeElement;
+    opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
     setFocused(key);
   }, []);
   const close = useCallback(() => setFocused(null), []);
 
-  // L shows or hides the legend, on every screen except Focus.
+  // Screen keys (S1 L, S2 ? and Esc), on every screen except Focus, which owns its own Esc.
+  // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
     if (focused) return;
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === 'l' || e.key === 'L') && !isTyping(e)) toggleLegend();
+      if (e.key === 'Escape') {
+        // Already spent: Focus closing (it re-attaches this listener mid-keypress) or a card.
+        if (e.defaultPrevented) return;
+        if (help) setHelp(false);
+        else if (!isShortcutBlocked(e)) goBack();
+        return;
+      }
+      if (isShortcutBlocked(e)) return;
+      if (e.key === '?') {
+        e.preventDefault();
+        setHelp((h) => !h);
+      } else if ((e.key === 'l' || e.key === 'L') && !help) toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, toggleLegend]);
+  }, [focused, help, toggleLegend, goBack]);
 
-  // Return keyboard focus to the tile Focus was opened from.
+  // Return keyboard focus to whatever opened Focus: a Wall tile, a Rig Map node, a strip alert.
   useEffect(() => {
     if (focused || !lastFocused.current) return;
-    const el = document.querySelector<HTMLElement>(
-      `[data-seat-key="${CSS.escape(lastFocused.current)}"]`
-    );
-    el?.focus();
+    const back =
+      opener.current?.isConnected && opener.current.matches('[data-seat-key],[data-node-key]')
+        ? opener.current
+        : document.querySelector<HTMLElement>(
+            `[data-seat-key="${CSS.escape(lastFocused.current)}"],[data-node-key="${CSS.escape(lastFocused.current)}"]`
+          );
+    (back ?? (opener.current?.isConnected ? opener.current : null))?.focus();
   }, [focused]);
 
   return (
@@ -230,6 +256,17 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onClick={toggleLegend}
         >
           Legend · L
+        </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="keys-toggle"
+          aria-pressed={help}
+          aria-keyshortcuts="?"
+          title="Keyboard shortcuts (?)"
+          onClick={() => setHelp((h) => !h)}
+        >
+          Keys · ?
         </button>
         {hint && (
           <span className="first-hint" role="note" data-testid="explain-hint">
@@ -301,6 +338,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           hubConnected={hubConnected}
           received={state.received}
           onOpen={open}
+          keys={!focusTile && !help}
         />
       )}
       {(view === 'map' || view === 'flow') && (
@@ -314,6 +352,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               rig={activeRig?.name ?? null}
               now={now}
               socket={getSocket()}
+              keys={!focusTile && !help}
             />
           )}
         </main>
@@ -323,12 +362,13 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           <Accounts machines={machines} now={now} />
         </main>
       )}
-      <ExplainLayer enabled={explain && !focusTile} />
+      <ExplainLayer enabled={explain && !focusTile && !help} />
       {view === 'learn' && (
         <main className="view" data-testid="view-body-learn">
           <Learn machines={machines} now={now} onGoTo={chooseView} />
         </main>
       )}
+      {help && !focusTile && <KeysHelp view={view} onClose={() => setHelp(false)} />}
       {focusTile && (
         <Focus
           tile={focusTile}

@@ -1690,3 +1690,66 @@ a:hover {
 .channel-caption b {
   color: var(--ar-ink);
 }
+
+/* ---------- v1.4 S2: keys overlay ---------- */
+.keys-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(52 45 45 / 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 16px 16px;
+}
+.keys-help {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-ink);
+  border-radius: 12px;
+  padding: 14px 18px 16px;
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.keys-help header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.keys-help h2,
+.keys-help h3 {
+  margin: 0;
+  font-weight: 500;
+}
+.keys-help ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.keys-help li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 14px;
+}
+.keys-help kbd {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  border: 1px solid var(--ar-line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  background: var(--ar-canvas);
+  justify-self: start;
+}
+.keys-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}

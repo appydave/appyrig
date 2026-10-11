@@ -23,6 +23,8 @@ const DELAY_MS = 120;
 export default function ExplainLayer({ enabled }: Props) {
   const [shown, setShown] = useState<Shown | null>(null);
   const timer = useRef<number | null>(null);
+  const visible = useRef(false);
+  visible.current = !!shown;
 
   useEffect(() => {
     if (!enabled) {
@@ -55,6 +57,11 @@ export default function ExplainLayer({ enabled }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         clear();
+        // S2: an Esc that hides a card is spent; it must not also take the screen back.
+        if (visible.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
         setShown(null);
       }
     };

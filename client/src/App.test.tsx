@@ -590,3 +590,114 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(localStorage.getItem('appyrig.legend')).toBe('on');
   });
 });
+
+describe('App: S2 keyboard', () => {
+  const noResize = () =>
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+
+  function connected(...names: ('roamy--blocked' | 'm2')[]) {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update(names.map((n) => fleetMachine(snapshot(n)))));
+    return fake;
+  }
+
+  it('Wall: arrows from the page move focus onto the tiles, Enter opens, Esc returns to that tile', () => {
+    connected('roamy--blocked');
+    const tiles = screen.getAllByTestId('seat-tile');
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(tiles[0]);
+    fireEvent.keyDown(tiles[0]!, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(tiles[1]);
+    fireEvent.keyDown(tiles[1]!, { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(tiles[0]);
+    // Enter on a focused button is a click.
+    fireEvent.click(tiles[0]!);
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    expect(document.activeElement).toBe(screen.getAllByTestId('seat-tile')[0]);
+  });
+
+  it('Esc goes back to the screen you came from, one step at a time', () => {
+    noResize();
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('wall')).toBeInTheDocument();
+    // Nothing further back: stays put.
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('wall')).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it('Rig Map: Esc from a seat lands back on the map node that opened it', () => {
+    noResize();
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    const node = screen.getAllByTestId('rig-map-node')[0]!;
+    node.focus();
+    fireEvent.click(node);
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    expect(document.activeElement).toBe(node);
+    vi.unstubAllGlobals();
+  });
+
+  it('Handoff Flow: → and ← step through handoffs', () => {
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(screen.getByTestId('flow-narration')).toHaveTextContent(/^Handoff 1 of \d+/);
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(screen.getByTestId('flow-narration')).toHaveTextContent(/^Handoff 3 of \d+/);
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+    expect(screen.getByTestId('flow-narration')).toHaveTextContent(/^Handoff 2 of \d+/);
+  });
+
+  it('? opens the keys for this screen; Esc closes it without leaving the screen', () => {
+    noResize();
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.keyDown(window, { key: '?' });
+    expect(screen.getByTestId('keys-help')).toHaveAttribute('data-view', 'map');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it('keys never fire while typing in a field', () => {
+    connected('roamy--blocked');
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    fireEvent.keyDown(input, { key: '?' });
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+    expect(document.activeElement).toBe(input);
+    input.remove();
+  });
+});

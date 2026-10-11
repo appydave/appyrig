@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useRef } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
@@ -11,6 +11,47 @@ import {
   type GroupBy,
 } from '../fleet/model.js';
 import AnsiText from './AnsiText.js';
+import { isShortcutBlocked } from '../lib/keys.js';
+
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] as const;
+type Arrow = (typeof ARROWS)[number];
+
+/**
+ * S2: which tile an arrow key moves to. Left/Right walk reading order (across group breaks);
+ * Up/Down go to the nearest row above or below, then the tile closest in x. Stays put at an edge.
+ */
+export function nextTile(boxes: Box[], cur: number, key: Arrow): number {
+  if (cur < 0) return boxes.length ? 0 : -1;
+  if (key === 'ArrowLeft') return Math.max(0, cur - 1);
+  if (key === 'ArrowRight') return Math.min(boxes.length - 1, cur + 1);
+  const c = boxes[cur]!;
+  const cy = c.y + c.h / 2;
+  const cx = c.x + c.w / 2;
+  const down = key === 'ArrowDown';
+  let best = cur;
+  let bestDy = Infinity;
+  let bestDx = Infinity;
+  boxes.forEach((b, i) => {
+    const dy = b.y + b.h / 2 - cy;
+    if (down ? dy <= c.h / 2 : dy >= -c.h / 2) return;
+    const ady = Math.abs(dy);
+    const adx = Math.abs(b.x + b.w / 2 - cx);
+    // Nearest row first (rows within a few px count as one), then nearest column.
+    if (ady < bestDy - 4 || (Math.abs(ady - bestDy) <= 4 && adx < bestDx)) {
+      best = i;
+      bestDy = ady;
+      bestDx = adx;
+    }
+  });
+  return best;
+}
 
 /** Lines a tile shows; the store keeps up to TAIL_MAX_LINES for Focus. */
 const TILE_LINES = 14;
@@ -103,6 +144,8 @@ interface WallProps {
   hubConnected: boolean;
   received: boolean;
   onOpen: (key: string) => void;
+  /** S2: arrow keys move between tiles. Off while Focus or an overlay owns the keyboard. */
+  keys?: boolean;
 }
 
 export default function Wall({
@@ -112,10 +155,39 @@ export default function Wall({
   hubConnected,
   received,
   onOpen,
+  keys = true,
 }: WallProps) {
   const groups = groupSeats(machines, groupBy);
+  const box = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!keys) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(ARROWS as readonly string[]).includes(e.key) || isShortcutBlocked(e)) return;
+      const wall = box.current;
+      if (!wall) return;
+      const active = document.activeElement;
+      // From anywhere on the page (a header tab, the body, a tile), but never out of a dialog.
+      if (active?.closest('[role="dialog"]')) return;
+      const tiles = [...wall.querySelectorAll<HTMLElement>('[data-testid="seat-tile"]')];
+      const boxes = tiles.map((t) => {
+        const r = t.getBoundingClientRect();
+        return { x: r.left, y: r.top, w: r.width, h: r.height };
+      });
+      const i = nextTile(boxes, tiles.indexOf(active as HTMLElement), e.key as Arrow);
+      const el = tiles[i];
+      if (!el) return;
+      e.preventDefault();
+      el.focus();
+      el.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [keys]);
+
   return (
     <main
+      ref={box}
       data-testid="wall"
       aria-label="The Wall"
       style={{ display: 'flex', flexDirection: 'column', gap: 22 }}
