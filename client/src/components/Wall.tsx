@@ -209,6 +209,19 @@ export default function Wall({
   const box = useRef<HTMLElement>(null);
   const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
   const isOpen = (g: WallGroup) => openAt[g.key] ?? !collapsedByDefault(g);
+  // S3 (QA/r1 note): an idle card unmounts when it opens, so focus would drop to the page body.
+  // Remember the group and focus its head once it is drawn.
+  const focusHead = useRef<string | null>(null);
+  useEffect(() => {
+    const key = focusHead.current;
+    if (!key) return;
+    focusHead.current = null;
+    box.current
+      ?.querySelector<HTMLElement>(
+        `[data-testid="wall-group"][data-group-key="${CSS.escape(key)}"] [data-testid="wall-group-head"]`
+      )
+      ?.focus();
+  });
   const toggle = (g: WallGroup) => {
     const next = { ...openAt, [g.key]: !isOpen(g) };
     setOpenAt(next);
@@ -313,7 +326,10 @@ export default function Wall({
                     data-group-key={q.key}
                     aria-expanded={false}
                     title={q.rig ? rigTitle(q.rig) : undefined}
-                    onClick={() => toggle(q)}
+                    onClick={() => {
+                      focusHead.current = q.key;
+                      toggle(q);
+                    }}
                   >
                     <span className="idle-team-name">
                       <b>{q.rig?.displayName ?? q.name}</b> <span>{q.where}</span>

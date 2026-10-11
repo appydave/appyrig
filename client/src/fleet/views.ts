@@ -1,4 +1,5 @@
 import type {
+  AccountDerived,
   AccountUsage,
   FleetMachine,
   QueueItem,
@@ -704,6 +705,8 @@ export interface AccountView {
   drawers: AccountDrawer[];
   /** Live, non-stopped Claude seats drawing on it right now. */
   activeSeats: number;
+  /** S5: the hub's view of the account (tier, windows against their resets); null from an older hub. */
+  derived: AccountDerived | null;
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -755,7 +758,12 @@ export function buildAccounts(machines: FleetMachine[]): {
         machines: [],
         drawers: [],
         activeSeats: 0,
+        derived: null,
       } satisfies AccountView);
+    // The hub derives one answer per account; take the one with a reading if machines differ.
+    if (acct.derived && (!v.derived || (!v.derived.readingFrom && acct.derived.readingFrom))) {
+      v.derived = acct.derived;
+    }
     v.machines.push(fm.machine.label);
     if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
       v.reading = { ...acct, from: fm.machine.label };

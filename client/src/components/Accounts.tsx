@@ -1,12 +1,14 @@
-import type { FleetMachine } from '@appydave/shared';
+import type { AccountTier, AccountWindow, FleetMachine } from '@appydave/shared';
 import { ago } from '../fleet/model.js';
-import { buildAccounts, mostHeadroom, resetsIn } from '../fleet/views.js';
+import { buildAccounts, mostHeadroom, resetsIn, type AccountView } from '../fleet/views.js';
+import { STALE_READING_MS, windowStory } from '../fleet/accountWindow.js';
 
 interface Props {
   machines: FleetMachine[];
   now: number;
 }
 
+/** A plain % meter, for a hub that predates S5 (no derived windows). */
 function Meter({
   label,
   pct,
@@ -39,9 +41,91 @@ function Meter({
 }
 
 /**
- * Concept 5's accounts half: every Claude account the fleet runs on, its 5-hour and weekly use,
- * and which machines and seats draw on it. All machines on one account share one window, so a
- * team on the M2 spends the same allowance as every session on the M4.
+ * S5 · one window against its reset (mochaccino accounts-over-time, variant B). The bar is the
+ * whole window; dark fill = used, amber tick = now, dashed ghost = use at reset at this pace.
+ */
+function Window({
+  label,
+  w,
+  now,
+  testId,
+}: {
+  label: string;
+  w: AccountWindow;
+  now: number;
+  testId: string;
+}) {
+  const st = windowStory(w, now);
+  const used = Math.min(100, st.usedPct ?? 0);
+  return (
+    <div className="window" data-testid={testId} data-kind={st.kind}>
+      <div className="window-head">
+        <span className="label" data-explain={testId === 'window-5h' ? 'meter-5h' : 'meter-7d'}>
+          {label}
+          {st.leftPct !== null && (
+            <>
+              {' · '}
+              <b data-testid={`${testId}-left`}>{st.leftPct}% left</b>
+            </>
+          )}
+        </span>
+        <span
+          className="verdict"
+          data-kind={st.kind}
+          data-testid={`${testId}-verdict`}
+          data-explain="window-verdict"
+        >
+          <span aria-hidden="true">{st.glyph}</span> {st.text}
+        </span>
+      </div>
+      {st.nowPct !== null && (
+        <div
+          className="window-track"
+          data-explain="window-now"
+          role="img"
+          aria-label={`${label}: ${Math.round(st.usedPct ?? 0)}% used, ${Math.round(st.nowPct)}% of the window gone${st.projectedPct !== null ? `, about ${Math.round(st.projectedPct)}% by reset` : ''}`}
+        >
+          <div className="window-used" style={{ width: `${used}%` }} />
+          {st.projectedPct !== null && st.projectedPct > used && (
+            <div
+              className="window-proj"
+              data-testid={`${testId}-proj`}
+              style={{ left: `${used}%`, width: `${st.projectedPct - used}%` }}
+            />
+          )}
+          <div
+            className="window-now"
+            data-testid={`${testId}-now`}
+            style={{ left: `${st.nowPct}%` }}
+          />
+        </div>
+      )}
+      <span className="window-foot">
+        {st.pace && <span data-testid={`${testId}-pace`}>{st.pace}</span>}
+        {st.resetsAt && <span>resets {resetsIn(st.resetsAt, now)}</span>}
+      </span>
+    </div>
+  );
+}
+
+const TIER_SOURCE: Record<AccountTier['source'], string> = {
+  reported: 'reported by the login',
+  config: 'from config',
+  unknown: '',
+};
+
+function tierLine(a: AccountView): string {
+  const t = a.derived?.tier;
+  if (!t) return a.planLabel;
+  if (t.source === 'unknown' || !t.label)
+    return `${a.planLabel.replace(/ · tier not reported$/, '')} · tier not reported`;
+  return `${t.label} · ${TIER_SOURCE[t.source]}`;
+}
+
+/**
+ * Accounts (v1.1, S5 over time): every Claude account the fleet runs on, each window drawn against
+ * its reset in plain words, the plan tier with where it came from, and the machines signed into it
+ * right now. All machines on one account share its windows.
  */
 export default function Accounts({ machines, now }: Props) {
   const { accounts, unknown } = buildAccounts(machines);
@@ -50,8 +134,9 @@ export default function Accounts({ machines, now }: Props) {
   return (
     <section className="accounts" data-testid="accounts" aria-label="Claude accounts">
       <p className="view-caption">
-        Every machine signed into the same account spends <b>one</b> 5-hour window. Readings come
-        from the Claude Code status line on machines that run the usage sampler.
+        Every machine signed into the same account spends <b>one</b> 5-hour window. Each bar is a
+        whole window up to its reset: dark = used, amber tick = now, dashed = where use lands at the
+        reset at this pace.
       </p>
       {best && (
         <div className="headroom" data-testid="headroom" data-explain="headroom">
@@ -63,6 +148,8 @@ export default function Accounts({ machines, now }: Props) {
       <div className="account-grid">
         {accounts.map((a) => {
           const r = a.reading;
+          const d = a.derived;
+          const ageMs = r?.sampledAt ? now - Date.parse(r.sampledAt) : null;
           return (
             <article
               className="account"
@@ -70,38 +157,77 @@ export default function Accounts({ machines, now }: Props) {
               data-testid="account-card"
               data-email={a.email}
             >
-              <header data-explain="account" data-explain-ctx={`${a.email} · ${a.planLabel}`}>
+              <header data-explain="account" data-explain-ctx={`${a.email} · ${tierLine(a)}`}>
                 <b>{a.email}</b>
-                <span className="label">{a.planLabel}</span>
+                <span
+                  className="label"
+                  data-testid="account-tier"
+                  data-source={d?.tier.source ?? 'old-hub'}
+                  data-explain="account-tier"
+                >
+                  {tierLine(a)}
+                </span>
               </header>
-              <Meter
-                label="5-hour window"
-                pct={r?.fiveHourPct ?? null}
-                resets={resetsIn(r?.fiveHourResetsAt ?? null, now)}
-                testId="meter-5h"
-              />
-              <Meter
-                label="Weekly"
-                pct={r?.sevenDayPct ?? null}
-                resets={resetsIn(r?.sevenDayResetsAt ?? null, now)}
-                testId="meter-7d"
-              />
+              {d ? (
+                <>
+                  <Window label="5-hour" w={d.fiveHour} now={now} testId="window-5h" />
+                  <Window label="Weekly" w={d.sevenDay} now={now} testId="window-7d" />
+                  <p
+                    className="account-monthly"
+                    data-testid="account-monthly"
+                    data-explain="monthly"
+                  >
+                    Monthly: <b>not reported</b> (no source has it)
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Meter
+                    label="5-hour window"
+                    pct={r?.fiveHourPct ?? null}
+                    resets={resetsIn(r?.fiveHourResetsAt ?? null, now)}
+                    testId="meter-5h"
+                  />
+                  <Meter
+                    label="Weekly"
+                    pct={r?.sevenDayPct ?? null}
+                    resets={resetsIn(r?.sevenDayResetsAt ?? null, now)}
+                    testId="meter-7d"
+                  />
+                </>
+              )}
               <p className="account-src" data-testid="account-source" data-explain="sampler">
-                {r?.sampledAt
-                  ? `read on ${r.from} · ${ago(now - Date.parse(r.sampledAt))} ago`
-                  : `no reading: ${a.machines.join(', ')} ${a.machines.length > 1 ? "don't" : "doesn't"} run the usage sampler`}
+                {r?.sampledAt ? (
+                  <>
+                    read on {r.from} · {ago(ageMs!)} ago
+                    {ageMs! > STALE_READING_MS && (
+                      <>
+                        {' '}
+                        <span
+                          className="old-reading"
+                          data-testid="old-reading"
+                          data-explain="old-reading"
+                        >
+                          old reading
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  `no reading: ${a.machines.join(', ')} ${a.machines.length > 1 ? "don't" : "doesn't"} run the usage sampler`
+                )}
               </p>
               <div className="drawers" data-explain="drawers">
                 <span className="label">Who draws on it</span>
-                <p>
-                  Machines: <b>{a.machines.join(' · ')}</b>
+                <p data-testid="account-machines">
+                  Machines signed in: <b>{a.machines.join(' · ')}</b>
                 </p>
                 {a.drawers.length ? (
                   <ul>
-                    {a.drawers.map((d) => (
-                      <li key={d.machineLabel}>
-                        <b>{d.machineLabel}</b> · {d.seats.length} active seat
-                        {d.seats.length === 1 ? '' : 's'}: {d.seats.join(', ')}
+                    {a.drawers.map((dr) => (
+                      <li key={dr.machineLabel}>
+                        <b>{dr.machineLabel}</b> · {dr.seats.length} active seat
+                        {dr.seats.length === 1 ? '' : 's'}: {dr.seats.join(', ')}
                       </li>
                     ))}
                   </ul>

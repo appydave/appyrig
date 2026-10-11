@@ -7,6 +7,7 @@ import App from './App.js';
 import { ansiToHtml } from './components/AnsiText.js';
 import { lastTurn, toParagraphs } from './components/Focus.js';
 import type { FleetSocket } from './fleet/useFleet.js';
+import type { FleetMachine } from '@appydave/shared';
 import { installTestHooks, xtermCount } from './fleet/xtermRegistry.js';
 import { fleetMachine, snapshot, update } from './test/fleetFixtures.js';
 
@@ -844,6 +845,8 @@ describe('App: S3 calmer Wall + machine filter', () => {
     expect(opened).toHaveAttribute('data-state', 'idle');
     expect(within(opened).getAllByTestId('seat-tile').length).toBeGreaterThan(0);
     expect(JSON.parse(localStorage.getItem('appyrig.groups')!)[key]).toBe(true);
+    // QA/r1 S3: focus lands on the opened group's head, not the page body.
+    expect(document.activeElement).toBe(within(opened).getByTestId('wall-group-head'));
   });
 
   it('the machine filter hides a machine on the Wall, says so, and is remembered', () => {
@@ -973,5 +976,104 @@ describe('App: S4 handoff details + where work came in', () => {
       'not known: older events were dropped'
     );
     expect(screen.queryByTestId('flow-entry-mark')).toBeNull();
+  });
+});
+
+describe('App: S5 accounts over time', () => {
+  const derived = (tier: { label: string | null; source: 'reported' | 'config' | 'unknown' }) => {
+    const now = Date.now();
+    const start = new Date(now - 2.5 * 3_600_000).toISOString();
+    const win = (used: number) => ({
+      status: 'reading' as const,
+      usedPct: used,
+      resetsAt: new Date(now + 2.5 * 3_600_000).toISOString(),
+      windowMs: 5 * 3_600_000,
+      startsAt: start,
+      elapsedPct: 50,
+      elapsedNowPct: 50,
+      paceDeltaPct: used - 50,
+      projectedPct: used * 2,
+    });
+    return {
+      tier,
+      asOf: new Date(now).toISOString(),
+      readingFrom: 'roamy',
+      sampleAgeMs: 60_000,
+      fiveHour: win(45),
+      sevenDay: { ...win(20), windowMs: 7 * 24 * 3_600_000 },
+      monthly: { status: 'not-reported' as const },
+    };
+  };
+  const signedIn = (
+    name: 'roamy--blocked' | 'm2',
+    email: string,
+    tier = derived({ label: 'Max $200', source: 'config' })
+  ) => {
+    const fm = fleetMachine(snapshot(name));
+    return {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        account: {
+          email,
+          plan: 'claude_max',
+          fiveHourPct: 45,
+          fiveHourResetsAt: tier.fiveHour.resetsAt,
+          sevenDayPct: 20,
+          sevenDayResetsAt: tier.sevenDay.resetsAt,
+          sampledAt: new Date(Date.now() - 60_000).toISOString(),
+          derived: tier,
+        },
+      },
+    } as unknown as FleetMachine;
+  };
+
+  it('each window against its reset, tier with its source, monthly not reported', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([signedIn('roamy--blocked', 'a@x.com')]));
+    fireEvent.click(screen.getByTestId('view-accounts'));
+    const card = screen.getByTestId('account-card');
+    expect(within(card).getByTestId('account-tier')).toHaveTextContent('Max $200 · from config');
+    expect(within(card).getByTestId('window-5h-left')).toHaveTextContent('55% left');
+    expect(within(card).getByTestId('window-5h-verdict')).toHaveTextContent(
+      'be careful · ~90% by reset'
+    );
+    expect(within(card).getByTestId('window-7d-verdict')).toHaveTextContent('plenty of room');
+    expect(within(card).getByTestId('window-5h-now')).toBeInTheDocument();
+    expect(within(card).getByTestId('account-monthly')).toHaveTextContent('Monthly: not reported');
+    expect(within(card).queryByTestId('meter-5h')).toBeNull();
+  });
+
+  it("switching a machine's login moves it to the other card on the next push", () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([signedIn('roamy--blocked', 'a@x.com'), signedIn('m2', 'b@x.com')])
+    );
+    fireEvent.click(screen.getByTestId('view-accounts'));
+    const machinesOf = (email: string) =>
+      screen
+        .queryAllByTestId('account-card')
+        .find((c) => c.dataset.email === email)
+        ?.querySelector('[data-testid="account-machines"]')?.textContent ?? null;
+    expect(machinesOf('b@x.com')).toContain('M2');
+    // The M2 signs into a@x.com: one push later it is under that card, and b@x.com is gone.
+    fake.fire(FLEET_EVENTS.UPDATE, update([signedIn('m2', 'a@x.com')], false));
+    expect(machinesOf('a@x.com')).toContain('M2');
+    expect(machinesOf('a@x.com')).toContain('Roamy');
+    expect(machinesOf('b@x.com')).toBeNull();
+  });
+
+  it('a tier nobody reports says so, never guesses', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([signedIn('roamy--blocked', 'a@x.com', derived({ label: null, source: 'unknown' }))])
+    );
+    fireEvent.click(screen.getByTestId('view-accounts'));
+    expect(screen.getByTestId('account-tier')).toHaveTextContent('Max · tier not reported');
   });
 });

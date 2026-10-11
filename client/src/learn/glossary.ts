@@ -278,7 +278,7 @@ export const GLOSSARY: Record<string, Term> = {
   account: {
     term: 'Claude account',
     what: "The login a machine's Claude Code uses. Every machine signed into the same account shares its limits.",
-    why: 'M2 and M4 share ideasmen, so a team on the M2 spends the same allowance as your sessions on the M4.',
+    why: "A machine sits under the account it is signed into right now, read from its own Claude login on every push: switch a machine's login and it moves to the other card.",
   },
   'meter-5h': {
     term: '5-hour window',
@@ -289,6 +289,31 @@ export const GLOSSARY: Record<string, Term> = {
     term: 'Weekly',
     what: "How much of the account's 7-day allowance is used.",
     why: 'The 5-hour window resets often; the weekly one is the real budget.',
+  },
+  'account-tier': {
+    term: 'Plan tier',
+    what: 'Which plan the account is on, e.g. Max $200, and where AppyRig learned it: reported by the login itself, set in AppyRig’s config, or not reported at all.',
+    why: 'The tier sets how big each window is. "Tier not reported" means neither the login nor the config names it; AppyRig does not guess.',
+  },
+  'window-now': {
+    term: 'Window against its reset',
+    what: 'The bar is the whole window, from its start to its reset. The dark fill is how much is used; the amber tick is where the clock is now; the dashed ghost is where use lands at the reset if the pace holds.',
+    why: 'Fill past the tick means you are spending faster than time passes. "18% left" is what remains before the reset.',
+  },
+  'window-verdict': {
+    term: 'Plenty of room / be careful / will run out',
+    what: 'The window’s projection at the reset, in words: ● under 80% = plenty of room, ▲ 80–99% = be careful, ■ 100%+ = will run out, with the time it would.',
+    why: 'Plenty of room: you can be reckless. Will run out: every seat on the account stops at that time until the reset. "Too early to tell" until 5% of the window has gone.',
+  },
+  'old-reading': {
+    term: 'Old reading',
+    what: 'The usage figures were read more than 15 minutes ago; the verdict is as of that reading.',
+    why: 'Readings refresh when a Claude session on that machine gets a reply. An old one can make a busy account look calm.',
+  },
+  monthly: {
+    term: 'Monthly',
+    what: 'Claude Code’s login and status line report a 5-hour and a weekly window only. No source reports a monthly one.',
+    why: '"Not reported" means the source has nothing, not zero. AppyRig never invents it.',
   },
   sampler: {
     term: 'Usage sampler',
