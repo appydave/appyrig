@@ -32,6 +32,7 @@ function main() {
       queueOrder = snap.queue.map((q) => q.id);
       return snap;
     },
+    onConnect: () => handoffs.reset(),
     histories: () => history.changed(knownSeats),
     handoffs: async () =>
       sources.queueBodies ? handoffs.next(queueOrder, await sources.queueBodies()) : null,

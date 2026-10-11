@@ -30,6 +30,8 @@ export interface PusherOptions {
   /** v1.4: queue message bodies not yet accepted by the hub, one batch per call; null = nothing to send. */
   handoffs?: () => Promise<PendingHandoffs | null>;
   handoffIntervalMs?: number;
+  /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
+  onConnect?: () => void;
 }
 
 /** Seat history changes slowly and is large next to a snapshot, so it is checked once a minute. */
@@ -66,7 +68,10 @@ export function startPusher(opts: PusherOptions): Pusher {
     }
   };
 
-  socket.on('connect', () => note(`connected to ${opts.hubUrl} as ${opts.machineId}`));
+  socket.on('connect', () => {
+    opts.onConnect?.();
+    note(`connected to ${opts.hubUrl} as ${opts.machineId}`);
+  });
   socket.on('disconnect', (reason) => note(`disconnected: ${reason}`));
   socket.on('connect_error', (err) => note(`hub refused or unreachable: ${err.message}`));
 

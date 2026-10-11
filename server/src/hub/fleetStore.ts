@@ -255,7 +255,23 @@ export class FleetStore {
     const m = this.handoffs.get(b.machineId) ?? new Map();
     this.handoffs.set(b.machineId, m);
     for (const i of b.items) m.set(i.id, { body: i.body, truncated: i.truncated });
-    while (m.size > HANDOFF_STORE_MAX) m.delete(m.keys().next().value as string);
+    // Over the cap, drop the OLDEST items, not the earliest arrivals: a collector sends newest first,
+    // so arrival order would throw away exactly what a person is looking at. Age comes from the
+    // machine's queue rows; a body whose item is not in them (nothing serves it) goes first.
+    if (m.size > HANDOFF_STORE_MAX) {
+      const created = new Map(
+        (this.machines.get(b.machineId)?.snapshot.queue ?? []).map((q) => [
+          q.id,
+          Date.parse(q.createdAt),
+        ])
+      );
+      const oldestFirst = [...m.keys()].sort(
+        (x, y) =>
+          (created.get(x) ?? -Infinity) - (created.get(y) ?? -Infinity) ||
+          (x < y ? -1 : x > y ? 1 : 0)
+      );
+      for (const id of oldestFirst.slice(0, m.size - HANDOFF_STORE_MAX)) m.delete(id);
+    }
     if (!this.handoffDir) return;
     const key = `handoffs:${b.machineId}`;
     const file = join(this.handoffDir, `${encodeURIComponent(b.machineId)}.json`);

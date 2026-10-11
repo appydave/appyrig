@@ -22,6 +22,14 @@ export class HandoffReader {
   ) {}
 
   /**
+   * Forget what was sent, so everything goes again. Called on every (re)connect: the hub may have
+   * lost its stored bodies (moved, new data dir, a corrupt file) and the hub's store is idempotent.
+   */
+  reset(): void {
+    this.sent.clear();
+  }
+
+  /**
    * `order` is the queue ids newest first (the snapshot's order); `bodies` is id → body. Returns
    * the next batch of ids never accepted by the hub, or null when everything has been sent.
    */

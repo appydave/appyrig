@@ -44,6 +44,9 @@ const clean = (s: string): string => {
   return flat.length > HISTORY_TEXT_MAX ? `${flat.slice(0, HISTORY_TEXT_MAX - 1)}…` : flat;
 };
 
+/** A leading heading that names a role: "# Role: Implementer", "# Advisor Lead — Role". */
+const ROLE_PACK = /^\s*#\s+[^\n]*\bRole\b/;
+
 const STARTUP_HEADER_END = /and transcript path\.\s*/;
 
 /**
@@ -65,7 +68,7 @@ export function classifyPrompt(raw: string): { origin: SeatHistoryOrigin; text: 
     const rest = end ? t.slice(end.index + end[0].length) : '';
     // OpenRig appends the seat's standard role pack ("# Role: Implementer …"). It is the same for
     // every seat of that role and says nothing about the work, so it is not kept as text.
-    return { origin: 'startup', text: /^\s*#\s*Role:/.test(rest) ? '' : rest };
+    return { origin: 'startup', text: ROLE_PACK.test(rest) ? '' : rest };
   }
   return { origin: 'typed', text: t };
 }

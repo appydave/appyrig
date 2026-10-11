@@ -43,6 +43,15 @@ describe('classifyPrompt', () => {
     expect(classifyPrompt(wrapped).text).toContain('Do R4.');
   });
 
+  it('recognises a role pack by its heading, whatever the role is called', () => {
+    const kernel = classifyPrompt(
+      `${STARTUP}\n\n# Advisor Lead — Role\n\nYou are the advisor lead.`
+    );
+    expect(kernel).toEqual({ origin: 'startup', text: '' });
+    // a heading that is not a role is real text and is kept
+    expect(classifyPrompt(`${STARTUP}\n\n# Task\n\nDo it.`).text).toContain('Do it.');
+  });
+
   it('anything else is typed', () => {
     expect(classifyPrompt('please look at the export bug')).toEqual({
       origin: 'typed',
@@ -104,6 +113,15 @@ describe('HandoffReader', () => {
     expect(second.bodies.items.map((i) => i.id)).toEqual(ids.slice(HANDOFF_BATCH_MAX));
     second.markSent();
     expect(r.next(ids, bodies(ids))).toBeNull();
+  });
+
+  it('reset() makes everything go out again (the hub may have lost its bodies)', () => {
+    const r = new HandoffReader('m2');
+    const ids = ['a', 'b'];
+    r.next(ids, bodies(ids))!.markSent();
+    expect(r.next(ids, bodies(ids))).toBeNull();
+    r.reset();
+    expect(r.next(ids, bodies(ids))!.bodies.items.map((i) => i.id)).toEqual(ids);
   });
 
   it('skips ids with no body, redacts, and cuts an over-long body with a flag', () => {
