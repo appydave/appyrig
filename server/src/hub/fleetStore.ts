@@ -5,6 +5,9 @@ import {
   ASLEEP_AFTER_MS,
   MachineSnapshotSchema,
   SeatHistorySchema,
+  HANDOFF_STORE_MAX,
+  HANDOFF_BODY_MAX,
+  type HandoffBodies,
   type FleetMachine,
   type SeatHistory,
   type Liveness,
@@ -24,6 +27,18 @@ import {
 const StoredMachineSchema = z.strictObject({
   lastSeen: z.iso.datetime({ offset: true }),
   snapshot: MachineSnapshotSchema,
+});
+
+/** What goes on disk for queue bodies (no per-batch limit: it holds up to HANDOFF_STORE_MAX). */
+const StoredHandoffsSchema = z.strictObject({
+  machineId: z.string().min(1),
+  items: z.array(
+    z.strictObject({
+      id: z.string().min(1),
+      body: z.string().max(HANDOFF_BODY_MAX),
+      truncated: z.boolean(),
+    })
+  ),
 });
 
 export interface FleetStoreOptions {
@@ -61,12 +76,16 @@ export class FleetStore {
   /** v1.2: seat histories for the replay consoles, by `<machine>/<seat>`. */
   private readonly histories = new Map<string, SeatHistory>();
   private readonly historyDir: string | undefined;
+  /** v1.4 · S4: queue message bodies by machine, then queue id; insertion order = arrival order. */
+  private readonly handoffs = new Map<string, Map<string, { body: string; truncated: boolean }>>();
+  private readonly handoffDir: string | undefined;
 
   constructor(opts: FleetStoreOptions = {}) {
     this.now = opts.now ?? (() => new Date());
     this.asleepAfterMs = opts.asleepAfterMs ?? ASLEEP_AFTER_MS;
     this.dir = opts.dataDir ? join(opts.dataDir, 'snapshots') : undefined;
     this.historyDir = opts.dataDir ? join(opts.dataDir, 'history') : undefined;
+    this.handoffDir = opts.dataDir ? join(opts.dataDir, 'handoffs') : undefined;
     this.onDiskError = opts.onDiskError ?? (() => {});
     this.onLiveness = opts.onLiveness ?? (() => {});
     this.decorate = opts.decorate ?? ((m) => m);
@@ -229,6 +248,71 @@ export class FleetStore {
       }
     }
     return this.histories.size;
+  }
+
+  /** v1.4 · S4: keep queue bodies a collector sent (memory + disk). Oldest dropped past HANDOFF_STORE_MAX. */
+  putHandoffs(b: HandoffBodies): void {
+    const m = this.handoffs.get(b.machineId) ?? new Map();
+    this.handoffs.set(b.machineId, m);
+    for (const i of b.items) m.set(i.id, { body: i.body, truncated: i.truncated });
+    while (m.size > HANDOFF_STORE_MAX) m.delete(m.keys().next().value as string);
+    if (!this.handoffDir) return;
+    const key = `handoffs:${b.machineId}`;
+    const file = join(this.handoffDir, `${encodeURIComponent(b.machineId)}.json`);
+    const prev = this.writes.get(key) ?? Promise.resolve();
+    const run = prev.then(async () => {
+      const tmp = `${file}.${process.pid}.tmp`;
+      try {
+        await mkdir(this.handoffDir!, { recursive: true, mode: 0o700 });
+        const items = [...(this.handoffs.get(b.machineId) ?? new Map()).entries()].map(
+          ([id, v]) => ({ id, ...v })
+        );
+        await writeFile(tmp, JSON.stringify({ machineId: b.machineId, items }), { mode: 0o600 });
+        await rename(tmp, file);
+      } catch (err) {
+        this.onDiskError(`cannot write ${file}`, err);
+      }
+    });
+    this.writes.set(key, run);
+    void run.then(() => {
+      if (this.writes.get(key) === run) this.writes.delete(key);
+    });
+  }
+
+  getHandoff(machineId: string, id: string): { body: string; truncated: boolean } | undefined {
+    return this.handoffs.get(machineId)?.get(id);
+  }
+
+  /** Load stored queue bodies; invalid files are reported and skipped. */
+  async loadHandoffs(): Promise<number> {
+    if (!this.handoffDir) return 0;
+    let names: string[];
+    try {
+      names = (await readdir(this.handoffDir)).filter((n) => n.endsWith('.json'));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        this.onDiskError(`cannot read ${this.handoffDir}`, err);
+      }
+      return 0;
+    }
+    for (const name of names) {
+      const file = join(this.handoffDir, name);
+      try {
+        const parsed = StoredHandoffsSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+        if (!parsed.success) {
+          this.onDiskError(`${file} is not stored queue bodies; skipped`, parsed.error);
+          continue;
+        }
+        // Bodies that arrived while loading win; never overwrite them.
+        const m = this.handoffs.get(parsed.data.machineId) ?? new Map();
+        for (const i of parsed.data.items.slice(-HANDOFF_STORE_MAX))
+          if (!m.has(i.id)) m.set(i.id, { body: i.body, truncated: i.truncated });
+        this.handoffs.set(parsed.data.machineId, m);
+      } catch (err) {
+        this.onDiskError(`cannot load ${file}; skipped`, err);
+      }
+    }
+    return [...this.handoffs.values()].reduce((n, m) => n + m.size, 0);
   }
 
   /** Resolves when every write queued so far has finished. */

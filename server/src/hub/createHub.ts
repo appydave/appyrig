@@ -192,6 +192,7 @@ export function createHub(opts: HubOptions): Hub {
     load: async () => {
       const loaded = await store.load();
       await store.loadHistories();
+      await store.loadHandoffs();
       return loaded;
     },
     sweep,

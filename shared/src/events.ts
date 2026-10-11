@@ -1,4 +1,5 @@
 import type { SeatHistory } from './history.js';
+import type { HandoffBodies } from './handoffs.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -32,6 +33,8 @@ export const FLEET_EVENTS = {
   CALL: 'core:call',
   /** collector → hub. Payload: SeatHistory (one seat). The hub acks with CollectorAck. v1.2. */
   HISTORY: 'collector:history',
+  /** collector → hub. Payload: HandoffBodies (queue message bodies not yet sent). Acked with CollectorAck. v1.4. */
+  HANDOFFS: 'collector:handoffs',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -76,6 +79,7 @@ export const UI_PRINCIPAL = 'human:ui';
 export interface CollectorClientToServerEvents {
   'collector:snapshot': (snapshot: MachineSnapshot, ack: (result: CollectorAck) => void) => void;
   'collector:history': (history: SeatHistory, ack: (result: CollectorAck) => void) => void;
+  'collector:handoffs': (bodies: HandoffBodies, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */

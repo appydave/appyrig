@@ -6,6 +6,7 @@ import {
   HISTORY_TEXT_MAX,
   type SeatHistory,
   type SeatHistoryEvent,
+  type SeatHistoryOrigin,
 } from '@appydave/shared';
 import { redactString } from '../redact.js';
 
@@ -43,6 +44,32 @@ const clean = (s: string): string => {
   return flat.length > HISTORY_TEXT_MAX ? `${flat.slice(0, HISTORY_TEXT_MAX - 1)}…` : flat;
 };
 
+const STARTUP_HEADER_END = /and transcript path\.\s*/;
+
+/**
+ * v1.4 · S4: where a prompt typed into a seat came from, from its own opening words. Only the
+ * shape is read; the rules were taken from OpenRig's own messages (see SeatHistoryOrigin).
+ * A startup prompt is the standard identity header plus whatever the launcher added after it, so
+ * its `text` becomes that remainder, minus OpenRig's standard role pack (so usually empty): neither says anything about the work.
+ */
+export function classifyPrompt(raw: string): { origin: SeatHistoryOrigin; text: string } {
+  const t = raw.replace(/<\/?pasted_content[^>]*>/g, ' ').trim();
+  if (/^From: \S+\s+To: \S+\s+Sent:/.test(t)) {
+    return { origin: /---\s*Queue handoff: qitem-/.test(t) ? 'queue' : 'send', text: t };
+  }
+  if (/^\[OpenRig watchdog/.test(t)) return { origin: 'system', text: t };
+  if (/^This session is being continued/.test(t)) return { origin: 'compaction', text: t };
+  if (/^Base directory for this skill/.test(t)) return { origin: 'skill', text: t };
+  if (/^\S+@\S+\s+OpenRig session identity:/.test(t)) {
+    const end = STARTUP_HEADER_END.exec(t);
+    const rest = end ? t.slice(end.index + end[0].length) : '';
+    // OpenRig appends the seat's standard role pack ("# Role: Implementer …"). It is the same for
+    // every seat of that role and says nothing about the work, so it is not kept as text.
+    return { origin: 'startup', text: /^\s*#\s*Role:/.test(rest) ? '' : rest };
+  }
+  return { origin: 'typed', text: t };
+}
+
 /** One line for a tool call: its name and the input that says what it did. */
 export function toolSummary(name: string, input: unknown): string {
   const i = (input ?? {}) as Record<string, unknown>;
@@ -74,6 +101,14 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
     if (!at || Number.isNaN(Date.parse(at))) continue;
     const content = d.message?.content;
     const push = (kind: SeatHistoryEvent['kind'], t: string) => {
+      if (kind === 'prompt') {
+        const { origin, text } = classifyPrompt(t);
+        const c = clean(text);
+        // A startup prompt with nothing after its header is still an event: it is how the seat began.
+        if (c || origin === 'startup')
+          out.push({ at: new Date(at).toISOString(), kind, text: c, origin });
+        return;
+      }
       const c = clean(t);
       if (c) out.push({ at: new Date(at).toISOString(), kind, text: c });
     };

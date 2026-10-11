@@ -43,4 +43,6 @@ export interface Sources {
   account?(): Promise<AccountUsage | null>;
   /** rig name → its rig.yaml, from the configured spec folders (v1.4). Optional: fixtures may omit it. */
   specs?(): Promise<Map<string, SpecInfo>>;
+  /** queue id → message body from the latest queue read (v1.4). Optional: fixtures may omit it. */
+  queueBodies?(): Promise<Map<string, string>>;
 }
