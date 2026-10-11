@@ -199,6 +199,7 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   counts: () => <span className="legend-num legend-num-sm">9</span>,
   apps: () => <span className="legend-lines" />,
   missing: () => <span className="legend-mono">–</span>,
+  'seat-chip': () => <span className="seat-chip">○ seat</span>,
   'idle-card': () => <span className="legend-idle-card">○ ○</span>,
   'entry-mark': () => <span className="legend-mono legend-entry">↘</span>,
   'handoff-panel': () => <span className="legend-lines legend-panel-sw" />,

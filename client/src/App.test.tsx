@@ -105,6 +105,8 @@ function openAllGroups() {
   for (const head of screen.queryAllByTestId('wall-group-head')) {
     if (head.getAttribute('aria-expanded') === 'false') fireEvent.click(head);
   }
+  // S3-fit: a working team's quiet seats are chips until "show N as tiles".
+  for (const b of screen.queryAllByTestId('group-show-all')) fireEvent.click(b);
 }
 
 beforeEach(() => {
@@ -789,7 +791,7 @@ describe('App: S3 calmer Wall + machine filter', () => {
   it('states the order on screen, and groups never go back up the order', () => {
     connected();
     expect(screen.getByTestId('wall-order')).toHaveTextContent(
-      /blocked → working → idle .* → state unknown → stopped/
+      /blocked → working → idle .* → unknown → stopped/
     );
     const rank = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
     const ranks = states().map((st) => rank.indexOf(st));
@@ -1297,5 +1299,47 @@ describe('App: S8 feedback capture', () => {
     expect(screen.getByTestId('feedback-error')).toHaveTextContent('the note is the point');
     expect(sent).toHaveLength(0);
     vi.unstubAllGlobals();
+  });
+});
+
+describe('App: S3-fit working teams pack side by side', () => {
+  it('a working team shows busy seats as tiles and quiet ones as chips; spans only its tiles', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    const kernel = screen
+      .getAllByTestId('wall-group')
+      .find((g) => g.dataset.groupKey === 'roamy:kernel')!;
+    expect(kernel).toHaveAttribute('data-state', 'working');
+    const tiles = within(kernel).getAllByTestId('seat-tile');
+    expect(tiles.every((t) => ['working', 'blocked'].includes(t.dataset.pip!))).toBe(true);
+    expect(kernel).toHaveAttribute('data-span', String(tiles.length));
+    const chips = within(kernel).getAllByTestId('seat-chip');
+    expect(chips.length).toBeGreaterThan(0);
+    // A chip opens the seat like a tile, and Esc lands back on it.
+    chips[0]!.focus();
+    fireEvent.click(chips[0]!);
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(document.activeElement).toBe(
+      within(
+        screen.getAllByTestId('wall-group').find((g) => g.dataset.groupKey === 'roamy:kernel')!
+      ).getAllByTestId('seat-chip')[0]
+    );
+  });
+
+  it('"show N as tiles" expands a team, and the choice is remembered', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    const kernel = () =>
+      screen.getAllByTestId('wall-group').find((g) => g.dataset.groupKey === 'roamy:kernel')!;
+    const before = within(kernel()).getAllByTestId('seat-tile').length;
+    fireEvent.click(within(kernel()).getByTestId('group-show-all'));
+    expect(within(kernel()).getAllByTestId('seat-tile').length).toBeGreaterThan(before);
+    expect(within(kernel()).queryAllByTestId('seat-chip')).toHaveLength(0);
+    expect(JSON.parse(localStorage.getItem('appyrig.groupsFull')!)['roamy:kernel']).toBe(true);
+    fireEvent.click(within(kernel()).getByTestId('group-show-busy'));
+    expect(within(kernel()).getAllByTestId('seat-tile')).toHaveLength(before);
   });
 });

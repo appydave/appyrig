@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { expectedSeats, signIn, watchErrors } from './support/fleet';
+import { expectedSeats, signIn, watchErrors, E2E_MACHINES } from './support/fleet';
 
 // v1.4 S3-ui: the calmer Wall and the machine filter, on the fixture hub (roamy--blocked + m2).
 
@@ -41,7 +41,7 @@ test.describe('v1.4 S3 calmer Wall', () => {
     await page.reload();
     await expect(page.getByTestId('wall-hidden')).toContainText('M2');
     // The strip still lists every machine.
-    await expect(page.getByTestId('machine-chip')).toHaveCount(2);
+    await expect(page.getByTestId('machine-chip')).toHaveCount(E2E_MACHINES);
     // Rig chips follow the filter too.
     await page.getByTestId('view-map').click();
     await expect(page.locator('[data-testid="rig-chip"][data-rig-key^="m2:"]')).toHaveCount(0);

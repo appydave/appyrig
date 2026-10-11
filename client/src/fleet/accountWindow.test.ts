@@ -67,6 +67,12 @@ describe('windowStory (S5)', () => {
     expect(windowStory(w({ status: 'no-reading', usedPct: null }), at(10)).text).toBe('no reading');
   });
 
+  it('one point is singular (QA + r1 S5)', () => {
+    expect(windowStory(w({ usedPct: 51, paceDeltaPct: 1, projectedPct: 102 }), at(50)).pace).toBe(
+      '▲ 1 point ahead of the clock'
+    );
+  });
+
   it('the now tick follows the clock, not the reading', () => {
     expect(windowStory(w({ elapsedNowPct: 50 }), at(75)).nowPct).toBeCloseTo(75);
   });

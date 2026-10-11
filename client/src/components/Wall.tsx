@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
@@ -27,6 +27,25 @@ export interface Box {
 }
 
 const OPEN_KEY = 'appyrig.groups';
+const FULL_KEY = 'appyrig.groupsFull';
+
+/** S3-fit: the Wall is one grid of tile-width columns; a team spans as many as it shows tiles. */
+const COL_MIN = 232;
+const COL_GAP = 12;
+const colsFor = (width: number) =>
+  width > 0 ? Math.max(1, Math.floor((width + COL_GAP) / (COL_MIN + COL_GAP))) : 5;
+
+/** Busy = worth a full tile inside a working team: working or blocked. */
+const isBusy = (pip: PipKey) => pip === 'working' || pip === 'blocked';
+
+function readFull(): Record<string, boolean> {
+  try {
+    const v = JSON.parse(localStorage.getItem(FULL_KEY) ?? '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
 
 /** Per-viewer open/closed overrides by group key; anything not listed follows its default. */
 function readOpen(): Record<string, boolean> {
@@ -208,6 +227,28 @@ export default function Wall({
   const groups = groupSeats(machines, groupBy);
   const box = useRef<HTMLElement>(null);
   const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
+  // S3-fit: working teams show their quiet seats as chips until asked for all tiles.
+  const [fullAt, setFullAt] = useState<Record<string, boolean>>(readFull);
+  const showAll = (g: WallGroup, all: boolean) => {
+    const next = { ...fullAt, [g.key]: all };
+    setFullAt(next);
+    try {
+      localStorage.setItem(FULL_KEY, JSON.stringify(next));
+    } catch {
+      // per-viewer convenience only
+    }
+  };
+  const [cols, setCols] = useState(5);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const measure = () => setCols(colsFor(el.clientWidth));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const isOpen = (g: WallGroup) => openAt[g.key] ?? !collapsedByDefault(g);
   // S3 (QA/r1 note): an idle card unmounts when it opens, so focus would drop to the page body.
   // Remember the group and focus its head once it is drawn.
@@ -267,33 +308,39 @@ export default function Wall({
       ref={box}
       data-testid="wall"
       aria-label="The Wall"
-      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      className="wall-pack"
+      style={{ ['--wall-cols' as string]: cols }}
     >
       {received && groups.length === 0 && hidden.length === 0 && (
         <p className="empty">
           No seats yet. Machines appear here as soon as their collector reports.
         </p>
       )}
-      {hidden.length > 0 && (
-        <p className="filter-note" data-testid="wall-hidden">
-          Hidden by the machine filter:{' '}
-          {hidden.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className="pill-btn"
-              data-testid="wall-show-machine"
-              onClick={() => onShow?.(m.id)}
-            >
-              ○ {m.label} · show
-            </button>
-          ))}
-        </p>
-      )}
-      {groups.length > 0 && (
-        <p className="view-caption wall-order" data-testid="wall-order">
-          {WALL_ORDER_TEXT}
-        </p>
+      {/* S3-fit: the order and what the filter hides share one line, to save a row above the fold. */}
+      {(hidden.length > 0 || groups.length > 0) && (
+        <div className="wall-top">
+          {groups.length > 0 && (
+            <p className="view-caption wall-order" data-testid="wall-order">
+              {WALL_ORDER_TEXT}
+            </p>
+          )}
+          {hidden.length > 0 && (
+            <p className="filter-note" data-testid="wall-hidden">
+              Hidden by the filter:{' '}
+              {hidden.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="pill-btn"
+                  data-testid="wall-show-machine"
+                  onClick={() => onShow?.(m.id)}
+                >
+                  ○ {m.label} · show
+                </button>
+              ))}
+            </p>
+          )}
+        </div>
       )}
       {groups.map((g, i) => {
         // S3 variant C: idle-only teams the viewer has not opened sit as cards in one strip, drawn
@@ -355,6 +402,12 @@ export default function Wall({
         const fresh = freshness(g.tiles[0]?.machine ?? machines[0], now, hubConnected).label;
         const open = isOpen(g);
         const state = groupState(g);
+        // A working (or blocked) team shows its busy seats as tiles and the rest as chips, so a
+        // team with one seat working takes one column, and small teams sit side by side.
+        const compact = open && (state === 'working' || state === 'blocked') && !fullAt[g.key];
+        const shown = compact ? g.tiles.filter((t) => isBusy(pipFor(t.seat, t.machine))) : g.tiles;
+        const quiet = compact ? g.tiles.filter((t) => !isBusy(pipFor(t.seat, t.machine))) : [];
+        const span = open ? Math.max(1, Math.min(cols, shown.length)) : cols;
         return (
           <section
             key={g.key}
@@ -363,6 +416,8 @@ export default function Wall({
             data-group-key={g.key}
             data-state={state}
             data-open={open}
+            data-span={span}
+            style={{ gridColumn: `span ${span}` }}
           >
             <button
               type="button"
@@ -394,8 +449,12 @@ export default function Wall({
               </p>
             )}
             {open && (
-              <div className="grid" id={`grid-${g.key}`}>
-                {g.tiles.map((t) => (
+              <div
+                className="grid"
+                id={`grid-${g.key}`}
+                style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))` }}
+              >
+                {shown.map((t) => (
                   <SeatTile
                     key={t.key}
                     tileKey={t.key}
@@ -406,6 +465,46 @@ export default function Wall({
                   />
                 ))}
               </div>
+            )}
+            {quiet.length > 0 && (
+              <div className="group-quiet" data-testid="group-quiet">
+                {quiet.map((t) => {
+                  const pip = pipFor(t.seat, t.machine);
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      className="seat-chip"
+                      data-testid="seat-chip"
+                      data-seat-key={t.key}
+                      data-pip={pip}
+                      data-explain="seat"
+                      title={`${seatName(t.seat)} · ${PIP[pip].label}: open`}
+                      onClick={() => onOpen(t.key)}
+                    >
+                      <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="group-all"
+                  data-testid="group-show-all"
+                  onClick={() => showAll(g, true)}
+                >
+                  show {quiet.length} as tiles
+                </button>
+              </div>
+            )}
+            {open && !compact && fullAt[g.key] && (state === 'working' || state === 'blocked') && (
+              <button
+                type="button"
+                className="group-all"
+                data-testid="group-show-busy"
+                onClick={() => showAll(g, false)}
+              >
+                only working seats as tiles
+              </button>
             )}
           </section>
         );

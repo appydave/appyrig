@@ -2678,3 +2678,75 @@ g[data-testid='flow-edge'] {
   color: var(--ar-canvas);
   font-size: 13px;
 }
+
+/* ---------- v1.4 S3-fit: working teams pack side by side ---------- */
+.wall-pack {
+  display: grid;
+  grid-template-columns: repeat(var(--wall-cols, 5), minmax(0, 1fr));
+  gap: 14px 12px;
+  align-items: start;
+}
+/* Everything but an open team spans the full width (its own span is set inline). */
+.wall-pack > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.wall-pack .group-head {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+.wall-pack .group .grid {
+  margin-top: 0;
+}
+.group-quiet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+}
+.seat-chip {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px dashed var(--ar-line);
+  background: var(--ar-surface-raised);
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+}
+.seat-chip .pip-glyph {
+  color: var(--pip);
+}
+.seat-chip:hover,
+.seat-chip:focus-visible,
+.group-all:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 1px;
+}
+.group-all {
+  all: unset;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--ar-link);
+  text-decoration: underline;
+}
+
+.wall-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+.wall-top .filter-note .pill-btn {
+  min-height: 26px;
+  padding: 2px 10px;
+}

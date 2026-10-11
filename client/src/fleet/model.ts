@@ -125,7 +125,7 @@ export const GROUP_STATES: GroupState[] = [
 
 /** Stated on screen above the Wall (S3: "the sort order is stated on screen"). */
 export const WALL_ORDER_TEXT =
-  'Order: blocked → working → idle (one card per team; open a card for its tiles) → state unknown → stopped → asleep machine · newest activity first within each · stopped and asleep start collapsed';
+  'Order: blocked → working → idle (one card per team) → unknown → stopped → asleep · newest first · stopped and asleep collapsed';
 
 export function groupState(g: WallGroup): GroupState {
   if (g.asleep) return 'asleep';

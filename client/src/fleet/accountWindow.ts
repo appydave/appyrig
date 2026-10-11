@@ -40,6 +40,12 @@ const hhmm = (ms: number, now: number) => {
   });
 };
 
+/** "1 point" / "24 points" (QA + r1 S5). */
+const points = (d: number) => {
+  const n = Math.round(d);
+  return `${n} point${n === 1 ? '' : 's'}`;
+};
+
 export function windowStory(w: AccountWindow, now: number): WindowStory {
   const base = {
     leftPct: null,
@@ -78,8 +84,8 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
         : Math.round(delta) === 0
           ? 'on pace with the clock'
           : delta > 0
-            ? `▲ ${Math.round(delta)} points ahead of the clock`
-            : `▼ ${Math.round(-delta)} points behind the clock`,
+            ? `▲ ${points(delta)} ahead of the clock`
+            : `▼ ${points(-delta)} behind the clock`,
   };
   const resetText = w.resetsAt ? hhmm(Date.parse(w.resetsAt), now) : 'the reset';
   if (used >= 100) {

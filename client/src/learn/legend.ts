@@ -86,7 +86,8 @@ export type Swatch =
   | 'health-mark'
   | 'counts'
   | 'apps'
-  | 'missing';
+  | 'missing'
+  | 'seat-chip';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -163,6 +164,13 @@ const WALL: LegendSection[] = [
         mark: '▸ GROUP · ✕ 4 stopped',
         means:
           'A collapsed group: click it (or Enter) to open. The counts say what is inside. Stopped and asleep groups start collapsed; your choice is remembered.',
+      },
+      {
+        swatch: 'seat-chip',
+        term: 'seat',
+        mark: '○ ORCH-LEAD · show 2 as tiles',
+        means:
+          'In a working team, the seats not working right now, as chips: click one to open it, or "show N as tiles" for full tiles (remembered).',
       },
       {
         swatch: 'idle-card',

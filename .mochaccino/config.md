@@ -58,3 +58,12 @@
   - a reading older than 90 s (three missed 30 s samples) is marked "old reading"
   - the Machines view follows the S3 machine filter; the strip keeps every machine, as before
 - **Schema gaps**: none
+
+### wall-fit-running-teams · amendment (S3-fit, 2026-10-11 12:40Z)
+
+QA found C held for 2 working teams, not 4: with today's 3 working teams the running content ended at 928 px at 1440×900. No new round, since the options didn't change; this applies B (packed blocks) to the working teams only, plus one refinement:
+
+- a working team shows only its working/blocked seats as tiles; the rest are one-line chips (click opens the seat; "show N as tiles" expands the team, remembered)
+- a team spans only as many columns as it shows tiles, so small working teams sit side by side (today: appyrig-v14 3 + ylo-thumbs 1 + kernel 1 on one row)
+- the order caption is shorter and shares its line with the machine-filter note
+- measured: the e2e fixture (4 working + 5 idle-only) ends at ≤ 900 px; the live fleet (3 working + 4 idle) at 803 px (1440×900) and 779 px (1600×1000)

@@ -10,8 +10,11 @@ import { fileURLToPath } from 'node:url';
  * same files, so every assertion is "the screen shows what the fixtures say", not a hard-coded
  * count. roamy--blocked and roamy share machine id `roamy`, so only one runs at a time;
  * roamy--blocked covers more pip states (working, idle, blocked, unknown) and m2 adds stopped.
+ * fit (v1.4 S3-fit) is a synthetic machine with 4 working teams and 5 idle-only teams.
  */
-export const E2E_SCENARIOS = ['roamy--blocked', 'm2'];
+export const E2E_SCENARIOS = ['roamy--blocked', 'm2', 'fit'];
+/** Machines the e2e hub reports (one per scenario). */
+export const E2E_MACHINES = E2E_SCENARIOS.length;
 
 const snapshotsDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -77,6 +80,8 @@ export async function openAllGroups(page: Page): Promise<void> {
   while ((await cards.count()) > 0) await cards.first().click();
   const closed = page.locator('[data-testid="wall-group-head"][aria-expanded="false"]');
   while ((await closed.count()) > 0) await closed.first().click();
+  const chips = page.getByTestId('group-show-all');
+  while ((await chips.count()) > 0) await chips.first().click();
 }
 
 /** Signs in, opens the Wall and waits until every fixture seat has a tile. */
