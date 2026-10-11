@@ -68,7 +68,8 @@ export type Swatch =
   | 'group-collapsed'
   | 'order'
   | 'machine-filter'
-  | 'map-arcs';
+  | 'map-arcs'
+  | 'idle-card';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -147,6 +148,12 @@ const WALL: LegendSection[] = [
           'A collapsed group: click it (or Enter) to open. The counts say what is inside. Stopped and asleep groups start collapsed; your choice is remembered.',
       },
       {
+        swatch: 'idle-card',
+        mark: 'IDLE TEAMS · ○ dev-build ○ dev-qa',
+        means:
+          'A team that is running but where nobody is working, as one card. Open it (click or Enter) for its tiles; your choice is remembered.',
+      },
+      {
         swatch: 'order',
         mark: 'Order: blocked → working → …',
         means:
@@ -156,7 +163,7 @@ const WALL: LegendSection[] = [
         swatch: 'machine-filter',
         mark: 'Show  ● M2  ○ M4',
         means:
-          'The machine filter: ○ = hidden from the Wall and the rig lists. The strip below the header still shows every machine.',
+          'The machine filter, at the end of the machine strip: ○ = hidden from the Wall and the rig lists. The strip itself still lists and counts every machine.',
       },
       { swatch: 'fresh', mark: 'live · 2s', means: 'How long since that machine last reported.' },
       {
@@ -512,6 +519,7 @@ export const TERM_FOR: Partial<Record<Swatch, string>> = {
   scrubber: 'replay',
   consoles: 'console',
   'lane-head': 'outside-lane',
+  'idle-card': 'status-idle',
 };
 
 const withTerms = (sections: LegendSection[]): LegendSection[] =>

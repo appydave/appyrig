@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import {
   blockedBecause,
@@ -22,6 +23,8 @@ interface Props {
   received: boolean;
   error: string | null;
   onOpen: (key: string) => void;
+  /** S3: the machine filter, drawn at the end of the strip (keeps the header to one row). */
+  filter?: ReactNode;
 }
 
 function hubMessage(link: HubLink, received: boolean): string | null {
@@ -31,7 +34,15 @@ function hubMessage(link: HubLink, received: boolean): string | null {
   return null;
 }
 
-export default function FleetStrip({ machines, now, link, received, error, onOpen }: Props) {
+export default function FleetStrip({
+  machines,
+  now,
+  link,
+  received,
+  error,
+  onOpen,
+  filter,
+}: Props) {
   const counts = countSeats(machines);
   const blocked = blockedSeats(machines);
   const hub = hubMessage(link, received);
@@ -120,6 +131,7 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
           )}
         </span>
       )}
+      {filter}
       <span className="strip-end">
         {blocked.slice(0, MAX_BLOCKED_ALERTS).map((t: TileRef) => (
           <button

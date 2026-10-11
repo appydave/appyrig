@@ -155,7 +155,8 @@ describe('groupSeats', () => {
     const groups = groupSeats(fleet, 'rig');
     expect(groups.map((g) => g.name)).toEqual(['busy', 'fresh', 'quiet', 'tmuxy', 'old']);
     expect(groups.map(groupState)).toEqual(['working', 'idle', 'idle', 'unknown', 'stopped']);
-    expect(groups.map(collapsedByDefault)).toEqual([false, false, false, false, true]);
+    // S3 rework (variant C): idle-only teams start as cards in the idle strip.
+    expect(groups.map(collapsedByDefault)).toEqual([false, true, true, false, true]);
   });
 
   it('S3: a rig group carries its RigSummary, so the Wall can show displayName and summary', () => {
@@ -274,6 +275,20 @@ describe('contentTail (S3)', () => {
       '✻ Percolating… (7m 36s · ↓ 34.5k tokens)',
     ]);
   });
+  it('drops Claude Code tips anywhere in the tail, and blank lines', () => {
+    const lines = [
+      'Bash(npx playwright test)',
+      '',
+      '  └ Tip: Use /btw to ask a quick side question without interrupting Claude’s',
+      '    current work',
+      '✻ Flowing… (1m 6s · ↓ 2.0k tokens)',
+    ];
+    expect(contentTail(lines, 3)).toEqual([
+      'Bash(npx playwright test)',
+      '✻ Flowing… (1m 6s · ↓ 2.0k tokens)',
+    ]);
+  });
+
   it('a screen that is all chrome falls back to the plain tail, never to nothing', () => {
     expect(contentTail(['❯ ', '  ⏵⏵ auto mode on (shift+tab to cycle)'], 3)).toHaveLength(2);
   });

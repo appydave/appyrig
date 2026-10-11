@@ -87,8 +87,17 @@ export function nextTile(boxes: Box[], cur: number, key: Arrow): number {
  * Lines a tile shows; the store keeps up to TAIL_MAX_LINES for Focus. S3: a working seat shows
  * enough to see what it is doing; every other seat a glance, so running teams fit on one screen.
  */
-const TILE_LINES_WORKING = 7;
-const TILE_LINES_OTHER = 3;
+const TILE_LINES_BUSY = 3;
+/** Plain tmux (unknown): its terminal is the only signal there is, so it keeps a few lines. */
+const TILE_LINES_UNKNOWN = 3;
+/** Idle, stopped, asleep: one line, the last thing it said. */
+const TILE_LINES_QUIET = 1;
+const linesFor = (pip: PipKey) =>
+  pip === 'working' || pip === 'blocked'
+    ? TILE_LINES_BUSY
+    : pip === 'unknown'
+      ? TILE_LINES_UNKNOWN
+      : TILE_LINES_QUIET;
 
 interface TileProps {
   tileKey: string;
@@ -102,9 +111,7 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
-  const lines = seat.tail
-    ? contentTail(seat.tail.lines, pip === 'working' ? TILE_LINES_WORKING : TILE_LINES_OTHER)
-    : [];
+  const lines = seat.tail ? contentTail(seat.tail.lines, linesFor(pip)) : [];
   const w = seat.work;
   return (
     <button
@@ -221,7 +228,12 @@ export default function Wall({
       const active = document.activeElement;
       // From anywhere on the page (a header tab, the body, a tile), but never out of a dialog.
       if (active?.closest('[role="dialog"]')) return;
-      const tiles = [...wall.querySelectorAll<HTMLElement>('[data-testid="seat-tile"]')];
+      // Tiles and idle-team cards, in reading order: a card is one stop, Enter opens it.
+      const tiles = [
+        ...wall.querySelectorAll<HTMLElement>(
+          '[data-testid="seat-tile"],[data-testid="idle-team"]'
+        ),
+      ];
       const boxes = tiles.map((t) => {
         const r = t.getBoundingClientRect();
         return { x: r.left, y: r.top, w: r.width, h: r.height };
@@ -242,7 +254,7 @@ export default function Wall({
       ref={box}
       data-testid="wall"
       aria-label="The Wall"
-      style={{ display: 'flex', flexDirection: 'column', gap: 22 }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
       {received && groups.length === 0 && hidden.length === 0 && (
         <p className="empty">
@@ -270,7 +282,59 @@ export default function Wall({
           {WALL_ORDER_TEXT}
         </p>
       )}
-      {groups.map((g) => {
+      {groups.map((g, i) => {
+        // S3 variant C: idle-only teams the viewer has not opened sit as cards in one strip, drawn
+        // where the first of them would be.
+        if (groupState(g) === 'idle' && !isOpen(g)) {
+          if (groups.findIndex((x) => groupState(x) === 'idle' && !isOpen(x)) !== i) return null;
+          const quiet = groups.filter((x) => groupState(x) === 'idle' && !isOpen(x));
+          return (
+            <section
+              key="idle-strip"
+              className="idle-strip"
+              data-testid="idle-strip"
+              aria-label="Idle teams"
+            >
+              <div className="group-head idle-strip-head">
+                <b>Idle teams</b>
+                <span className="group-counts">
+                  {quiet.length} team{quiet.length === 1 ? '' : 's'} running, nobody working · open
+                  a card for its tiles
+                </span>
+                <i />
+              </div>
+              <div className="idle-cards">
+                {quiet.map((q) => (
+                  <button
+                    key={q.key}
+                    type="button"
+                    className="idle-team"
+                    data-testid="idle-team"
+                    data-group-key={q.key}
+                    aria-expanded={false}
+                    title={q.rig ? rigTitle(q.rig) : undefined}
+                    onClick={() => toggle(q)}
+                  >
+                    <span className="idle-team-name">
+                      <b>{q.rig?.displayName ?? q.name}</b> <span>{q.where}</span>
+                    </span>
+                    {q.rig?.summary && <span className="idle-team-summary">{q.rig.summary}</span>}
+                    <span className="idle-team-seats">
+                      {q.tiles.map((t) => {
+                        const pip = pipFor(t.seat, t.machine);
+                        return (
+                          <span key={t.key} data-pip={pip}>
+                            <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        }
         // One freshness label per machine per tick, shared by its tiles.
         const fresh = freshness(g.tiles[0]?.machine ?? machines[0], now, hubConnected).label;
         const open = isOpen(g);

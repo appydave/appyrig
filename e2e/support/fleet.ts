@@ -73,6 +73,8 @@ export async function signIn(page: Page): Promise<void> {
 
 /** Opens every collapsed Wall group (S3), keyboard-free and idempotent. */
 export async function openAllGroups(page: Page): Promise<void> {
+  const cards = page.getByTestId('idle-team');
+  while ((await cards.count()) > 0) await cards.first().click();
   const closed = page.locator('[data-testid="wall-group-head"][aria-expanded="false"]');
   while ((await closed.count()) > 0) await closed.first().click();
 }

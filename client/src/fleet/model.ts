@@ -125,7 +125,7 @@ export const GROUP_STATES: GroupState[] = [
 
 /** Stated on screen above the Wall (S3: "the sort order is stated on screen"). */
 export const WALL_ORDER_TEXT =
-  'Order: blocked → working → idle → state unknown → stopped → asleep machine · newest activity first within each · stopped and asleep start collapsed';
+  'Order: blocked → working → idle (one card per team; open a card for its tiles) → state unknown → stopped → asleep machine · newest activity first within each · stopped and asleep start collapsed';
 
 export function groupState(g: WallGroup): GroupState {
   if (g.asleep) return 'asleep';
@@ -137,10 +137,14 @@ export function groupState(g: WallGroup): GroupState {
   return 'stopped';
 }
 
-/** Collapsed until the viewer opens it: nothing is happening in a stopped or asleep group. */
+/**
+ * Collapsed until the viewer opens it. Stopped and asleep groups become one head line; idle-only
+ * teams become one card in the idle strip (S3 rework, mochaccino wall-fit-running-teams, variant C),
+ * so the teams that are working fit above the fold however many teams sit idle.
+ */
 export function collapsedByDefault(g: WallGroup): boolean {
   const st = groupState(g);
-  return st === 'stopped' || st === 'asleep';
+  return st === 'idle' || st === 'stopped' || st === 'asleep';
 }
 
 /** Latest lastActivityAt of any seat in the group, as an ISO string ('' when none reported). */
@@ -317,7 +321,10 @@ const CHROME = [
   /^\s*[⏵▶►⏸]{1,2}\s/,
   /^\s*[└⎿│|]?\s*Tip: /,
   /Update installed|Restart to update|new task\? \/clear/,
+  /paste again to expand|Press up to edit queued messages|queued messages?$/i,
+  /^\s*[❯›>] /, // a draft typed into the input box: the viewer's text, not the seat's work
 ];
+const TIP = /^\s*[└⎿│|]?\s*Tip: |^\s{2,}current work\s*$/;
 const isChrome = (line: string) => {
   const t = stripAnsi(line);
   return t.trim() === '' || CHROME.some((re) => re.test(t));
@@ -330,7 +337,13 @@ const isChrome = (line: string) => {
 export function contentTail(lines: string[], n: number): string[] {
   let end = lines.length;
   while (end > 0 && isChrome(lines[end - 1]!)) end -= 1;
-  return end === 0 ? visibleTail(lines, n) : lines.slice(Math.max(0, end - n), end);
+  if (end === 0) return visibleTail(lines, n);
+  // Blank lines and Claude Code's tips carry nothing on a small tile; keep the n last lines that
+  // say something.
+  const said = lines
+    .slice(0, end)
+    .filter((l) => stripAnsi(l).trim() !== '' && !TIP.test(stripAnsi(l)));
+  return said.slice(Math.max(0, said.length - n));
 }
 
 export function visibleTail(lines: string[], n: number): string[] {

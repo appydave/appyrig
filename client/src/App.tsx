@@ -339,25 +339,6 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           {machines.length === 1 ? '' : 's'}
           {hiddenShown.length > 0 ? ` · ${hiddenShown.length} hidden` : ''}
         </span>
-        {allMachines.length > 1 && (view === 'wall' || view === 'map' || view === 'flow') && (
-          <div className="machine-filter" role="group" aria-label="Machines shown">
-            <span className="label">Show</span>
-            {allMachines.map((m) => (
-              <button
-                key={m.machine.id}
-                type="button"
-                className="pill-btn"
-                data-testid="machine-filter"
-                data-machine-id={m.machine.id}
-                aria-pressed={!hidden.includes(m.machine.id)}
-                title={`${hidden.includes(m.machine.id) ? 'Show' : 'Hide'} ${m.machine.label} on the Wall and in the rig lists`}
-                onClick={() => toggleMachine(m.machine.id)}
-              >
-                {hidden.includes(m.machine.id) ? '○' : '●'} {m.machine.label}
-              </button>
-            ))}
-          </div>
-        )}
         <div className="controls" role="group" aria-label="Group tiles by" hidden={view !== 'wall'}>
           {/* B11: the API is findable from the UI. /v1/docs is open and carries no fleet data. */}
           <a
@@ -391,6 +372,27 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         received={state.received}
         error={state.error}
         onOpen={open}
+        filter={
+          allMachines.length > 1 && (view === 'wall' || view === 'map' || view === 'flow') ? (
+            <div className="machine-filter" role="group" aria-label="Machines shown">
+              <span className="label">Show</span>
+              {allMachines.map((m) => (
+                <button
+                  key={m.machine.id}
+                  type="button"
+                  className="pill-btn"
+                  data-testid="machine-filter"
+                  data-machine-id={m.machine.id}
+                  aria-pressed={!hidden.includes(m.machine.id)}
+                  title={`${hidden.includes(m.machine.id) ? 'Show' : 'Hide'} ${m.machine.label} on the Wall and in the rig lists`}
+                  onClick={() => toggleMachine(m.machine.id)}
+                >
+                  {hidden.includes(m.machine.id) ? '○' : '●'} {m.machine.label}
+                </button>
+              ))}
+            </div>
+          ) : undefined
+        }
       />
       {legend && !focusTile && <Legend view={view} onClose={toggleLegend} />}
       {view === 'wall' && (
