@@ -98,6 +98,15 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
     let when = '';
     if (start !== null && w.elapsedPct && used > 0) {
       const at = start + (100 / used) * (w.elapsedPct / 100) * w.windowMs;
+      // An old reading can project a time that has already gone: say so, don't promise the past.
+      if (at <= now) {
+        return {
+          ...story,
+          kind: 'runs-out',
+          glyph: '■',
+          text: `likely ran out ~${hhmm(at, now)} (reading is older than that)`,
+        };
+      }
       when = ` ~${hhmm(at, now)}`;
     }
     return { ...story, kind: 'runs-out', glyph: '■', text: `will run out${when}` };

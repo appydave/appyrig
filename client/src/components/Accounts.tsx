@@ -49,11 +49,14 @@ function Window({
   w,
   now,
   testId,
+  stale = false,
 }: {
   label: string;
   w: AccountWindow;
   now: number;
   testId: string;
+  /** An old reading: "% left" is as of then, and says so. */
+  stale?: boolean;
 }) {
   const st = windowStory(w, now);
   const used = Math.min(100, st.usedPct ?? 0);
@@ -65,7 +68,9 @@ function Window({
           {st.leftPct !== null && (
             <>
               {' · '}
-              <b data-testid={`${testId}-left`}>{st.leftPct}% left</b>
+              <b data-testid={`${testId}-left`}>
+                {st.leftPct}% left{stale ? ' at the reading' : ''}
+              </b>
             </>
           )}
         </span>
@@ -170,8 +175,20 @@ export default function Accounts({ machines, now }: Props) {
               </header>
               {d ? (
                 <>
-                  <Window label="5-hour" w={d.fiveHour} now={now} testId="window-5h" />
-                  <Window label="Weekly" w={d.sevenDay} now={now} testId="window-7d" />
+                  <Window
+                    label="5-hour"
+                    w={d.fiveHour}
+                    now={now}
+                    testId="window-5h"
+                    stale={(ageMs ?? 0) > STALE_READING_MS}
+                  />
+                  <Window
+                    label="Weekly"
+                    w={d.sevenDay}
+                    now={now}
+                    testId="window-7d"
+                    stale={(ageMs ?? 0) > STALE_READING_MS}
+                  />
                   <p
                     className="account-monthly"
                     data-testid="account-monthly"

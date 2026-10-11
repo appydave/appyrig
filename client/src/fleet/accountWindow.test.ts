@@ -46,6 +46,16 @@ describe('windowStory (S5)', () => {
     expect(s.projectedPct).toBe(100);
   });
 
+  it('a run-out time already in the past (old reading) is said as past, never promised', () => {
+    // 60% at 30% gone: 100% at 50% of the window; the clock is now at 70%.
+    const s = windowStory(
+      w({ usedPct: 60, elapsedPct: 30, paceDeltaPct: 30, projectedPct: 200 }),
+      at(70)
+    );
+    expect(s.kind).toBe('runs-out');
+    expect(s.text).toMatch(/^likely ran out ~.* \(reading is older than that\)$/);
+  });
+
   it('spent at 100%, too early under 5%, ended and no reading said in words', () => {
     expect(windowStory(w({ usedPct: 102 }), at(80)).kind).toBe('spent');
     expect(windowStory(w({ projectedPct: null, elapsedPct: 2 }), at(2)).text).toBe(
