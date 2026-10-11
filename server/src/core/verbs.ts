@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import {
+  HandoffGetInputSchema,
+  HandoffGetOutputSchema,
+  RigEntryInputSchema,
+  RigEntryOutputSchema,
+  type HandoffGetOutput,
   AccountListOutputSchema,
   FleetGetOutputSchema,
   HandoffSchema,
@@ -41,6 +46,7 @@ import {
   defineFailureCodes,
 } from './vendor/failure-codes.js';
 import type { FleetStore } from '../hub/fleetStore.js';
+import { rigEntryOf } from './rigEntry.js';
 import type { AppIdentity } from './identity.js';
 
 /**
@@ -60,6 +66,8 @@ export const FAILURE_CODES = defineFailureCodes({
   'machine-not-found': -32002,
   'seat-not-found': -32003,
   'principal-header': -32004,
+  'handoff-not-found': -32005,
+  'rig-not-found': -32006,
 });
 
 export const MachineNotFoundDetails = z.object({
@@ -155,6 +163,8 @@ const place = (m: FleetMachine) => ({
 
 const NOT_FOUND = ['machine-not-found'];
 const SEAT_NOT_FOUND = ['machine-not-found', 'seat-not-found'];
+const HANDOFF_NOT_FOUND = ['machine-not-found', 'handoff-not-found'];
+const RIG_NOT_FOUND = ['machine-not-found', 'rig-not-found'];
 
 // ── the verbs ──────────────────────────────────────────────────────────────────────────────────
 
@@ -291,6 +301,62 @@ const VERB_SET = {
           (h) => input.rig === undefined || [h.from, h.to].some((s) => s?.endsWith(`@${input.rig}`))
         )
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  ),
+
+  'handoff.get': query(
+    "One handoff in full: who sent it to whom, when, its state, and the whole message (redacted). bodyStatus 'pending' means the hub has not been sent the message yet; it does not mean the message is empty.",
+    HandoffGetInputSchema,
+    HandoffGetOutputSchema,
+    HANDOFF_NOT_FOUND,
+    (input, ctx): HandoffGetOutput => {
+      const [m] = machinesOf(ctx, input.machine);
+      const q = m!.snapshot.queue.find((x) => x.id === input.id);
+      if (!q) {
+        throw new CapabilityRefusal(
+          'handoff-not-found',
+          `Machine "${input.machine}" has no queue item "${input.id}" in its last snapshot.`,
+          { machine: input.machine, id: input.id }
+        );
+      }
+      const stored = ctx.store.getHandoff(input.machine, input.id);
+      return {
+        machine: input.machine,
+        id: q.id,
+        from: q.source,
+        to: q.destination,
+        state: q.state,
+        tags: q.tags,
+        summary: q.summary,
+        createdAt: q.createdAt,
+        updatedAt: q.updatedAt,
+        body: stored?.body ?? null,
+        bodyStatus: stored ? 'present' : 'pending',
+        bodyTruncated: stored?.truncated ?? false,
+      };
+    }
+  ),
+
+  'rig.entry': query(
+    "Where a rig's work came in: the earliest instruction across its seats' histories, and whether it came through the queue. 'unknown' says why it cannot tell; seatsWithoutHistory lists seats whose prompts are not visible.",
+    RigEntryInputSchema,
+    RigEntryOutputSchema,
+    RIG_NOT_FOUND,
+    (input, ctx) => {
+      const [m] = machinesOf(ctx, input.machine);
+      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          { machine: input.machine, rig: input.rig, known: m!.snapshot.rigs.map((r) => r.name) }
+        );
+      }
+      const seats = m!.snapshot.seats.filter((s) => s.rig === input.rig).map((s) => s.id);
+      return {
+        machine: input.machine,
+        rig: input.rig,
+        entry: rigEntryOf(seats, (seat) => ctx.store.getHistory(input.machine, seat)),
+      };
+    }
   ),
 
   'rig.topology': query(

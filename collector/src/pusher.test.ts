@@ -148,6 +148,27 @@ describe('pusher', () => {
     await until(() => hub!.received.length >= 1, 15_000);
   }, 20_000);
 
+  it('calls onConnect on every (re)connect, so queue bodies can go out again after a hub restart', async () => {
+    hub = await startHub();
+    const port = Number(new URL(hub.url).port);
+    let connects = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 50,
+      log: () => {},
+      onConnect: () => {
+        connects += 1;
+      },
+    });
+    await until(() => connects === 1);
+    await hub.close();
+    hub = await startHub(port);
+    await until(() => connects === 2, 15_000);
+  }, 20_000);
+
   it('does not overlap ticks when a build is slow', async () => {
     hub = await startHub();
     let running = 0;

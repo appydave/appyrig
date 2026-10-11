@@ -11,3 +11,4 @@ export * from './events.js';
 export * from './verbs.js';
 export * from './history.js';
 export * from './appConfig.js';
+export * from './handoffs.js';

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
 import { createSpecIndex } from './specs.js';
-import { parseNodes, parsePs, parseQueue } from './daemon.js';
+import { parseNodes, parsePs, parseQueue, parseQueueBodies } from './daemon.js';
 import { capturePaneArgs, isNoServer, LIST_PANES_ARGS, parsePanes } from './tmux.js';
 import { AGENT_LIST_ARGS, parseAgentList } from './viewer.js';
 import type { DaemonRead, Sources, TmuxPane, ViewerAgent } from './types.js';
@@ -87,7 +87,11 @@ export function createSources(opts: SourceOptions = {}): Sources {
     return res.json();
   };
 
-  let queueCache: { at: number; value: ReturnType<typeof parseQueue> } | null = null;
+  let queueCache: {
+    at: number;
+    value: ReturnType<typeof parseQueue>;
+    bodies: Map<string, string>;
+  } | null = null;
   const readQueue = async () => {
     if (queueCache && Date.now() - queueCache.at < queueTtl) return queueCache.value;
     const r = await run(rigBin, [
@@ -102,7 +106,12 @@ export function createSources(opts: SourceOptions = {}): Sources {
     ]);
     if (r.code !== 0)
       throw new Error(`rig queue list exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
-    queueCache = { at: Date.now(), value: parseQueue(JSON.parse(r.stdout)) };
+    const parsedJson: unknown = JSON.parse(r.stdout);
+    queueCache = {
+      at: Date.now(),
+      value: parseQueue(parsedJson),
+      bodies: parseQueueBodies(parsedJson),
+    };
     return queueCache.value;
   };
 
@@ -158,6 +167,11 @@ export function createSources(opts: SourceOptions = {}): Sources {
     },
 
     account: () => readAccount(),
+    /** Bodies from the latest queue read (reads it if it is stale). */
+    async queueBodies() {
+      await readQueue();
+      return queueCache?.bodies ?? new Map<string, string>();
+    },
     ...(opts.specFolders ? { specs: createSpecIndex(opts.specFolders) } : {}),
     async viewerAgents(): Promise<ViewerAgent[]> {
       const r = await run(viewerBin, AGENT_LIST_ARGS);
