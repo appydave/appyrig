@@ -22,6 +22,7 @@ import { errorHandler } from '../middleware/errorHandler.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 import healthRouter from '../routes/health.js';
 import infoRouter from '../routes/info.js';
+import { applyAccountDerived } from './accounts.js';
 import { applyRigLabels, defaultConfigPath, watchConfig } from './appConfig.js';
 import { browserAuth, isAuthorised } from './browserAuth.js';
 import { attachCollectorIngest } from './collectorIngest.js';
@@ -76,7 +77,10 @@ export function createHub(opts: HubOptions): Hub {
   const now = opts.now ?? (() => new Date());
   const config = watchConfig(opts.configPath ?? defaultConfigPath(), opts.onDiskError);
   const store = new FleetStore({
-    decorate: (m) => applyRigLabels(m, config.current()),
+    decorate: (m) => {
+      const cfg = config.current();
+      return applyAccountDerived(applyRigLabels(m, cfg), cfg, now());
+    },
     dataDir: opts.dataDir,
     now,
     asleepAfterMs: opts.asleepAfterMs,

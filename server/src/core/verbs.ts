@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  type AccountListOutput,
   HandoffGetInputSchema,
   HandoffGetOutputSchema,
   RigEntryInputSchema,
@@ -386,11 +387,44 @@ const VERB_SET = {
   ),
 
   'account.list': query(
-    'Accounts and the machines that draw on them. Not configured in v1: says so with configured: false.',
+    "Claude accounts, each with the machines signed into it (read from every machine's last push, so a changed login moves a machine on the next push), its plan tier and where it came from, and the 5-hour and 7-day windows against their resets. monthly is always not-reported: no source carries one.",
     NoInputSchema,
     AccountListOutputSchema,
     [],
-    () => ({ configured: false, accounts: [] })
+    (_input, ctx): AccountListOutput => {
+      const byEmail = new Map<string, FleetMachine[]>();
+      const unreported: string[] = [];
+      for (const m of ctx.store.list()) {
+        const email = m.snapshot.account?.email;
+        if (!email || !m.snapshot.account?.derived) {
+          unreported.push(m.machine.id);
+          continue;
+        }
+        const key = email.toLowerCase();
+        byEmail.set(key, [...(byEmail.get(key) ?? []), m]);
+      }
+      const accounts = [...byEmail.values()].map((ms) => {
+        const sampledAt = (m: FleetMachine) => Date.parse(m.snapshot.account?.sampledAt ?? '') || 0;
+        const best = ms.reduce((a, b) => (sampledAt(b) > sampledAt(a) ? b : a));
+        const acct = best.snapshot.account!;
+        // The windows come from the freshest reading, but the tier is a fact about the account:
+        // if any machine's login record names it, that beats a machine that cannot (older collector).
+        const reporter = ms.find((m) => m.snapshot.account?.derived?.tier.source === 'reported');
+        return {
+          ...acct.derived!,
+          tier: (reporter ?? best).snapshot.account!.derived!.tier,
+          email: acct.email!,
+          plan: acct.plan,
+          machines: ms.map((m) => m.machine.id),
+          readingFrom: sampledAt(best) ? best.machine.id : null,
+        };
+      });
+      return {
+        configured: accounts.length > 0,
+        accounts: accounts.sort((a, b) => a.email.localeCompare(b.email)),
+        unreported,
+      };
+    }
   ),
 
   'history.list': query(
