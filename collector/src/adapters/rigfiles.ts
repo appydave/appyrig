@@ -165,6 +165,13 @@ export interface PendingRigFiles {
 }
 
 /**
+ * Most file text one tick hands over. A first connect carries every rig at once (all of them
+ * arrive within one push cycle); a very large fleet of specs spills into the next tick, which
+ * does not wait for the rescan interval while there is still something unsent.
+ */
+export const RIG_FILES_TICK_BYTES = 4 * 1024 * 1024;
+
+/**
  * Finds rigs whose files changed since the hub last accepted them. Cheap when nothing changed: one
  * directory listing and a stat per allowed file (the signature), no reads. Rescans at most every `ttlMs`.
  */
@@ -186,7 +193,10 @@ export class RigFilesReader {
 
   async next(specs: Map<string, SpecInfo>): Promise<PendingRigFiles | null> {
     if (this.now().getTime() - this.lastScan < this.ttlMs) return null;
-    this.lastScan = this.now().getTime();
+    const pushes: RigFilesPush[] = [];
+    const sigs = new Map<string, string>();
+    let bytes = 0;
+    let leftOver = false;
     for (const [rig, spec] of specs) {
       const cands = await candidatesFor(spec);
       const sig = (
@@ -202,12 +212,18 @@ export class RigFilesReader {
         )
       ).join('|');
       if (this.sent.get(rig) === sig) continue;
+      if (bytes >= RIG_FILES_TICK_BYTES) {
+        leftOver = true; // the budget is spent: this rig goes out on the next tick
+        continue;
+      }
       const files = await readRigFiles(spec);
-      return {
-        pushes: chunkRigFiles(this.machineId, rig, files, this.now().toISOString()),
-        markSent: () => this.sent.set(rig, sig),
-      };
+      bytes += files.reduce((n, f) => n + Buffer.byteLength(f.content), 0);
+      pushes.push(...chunkRigFiles(this.machineId, rig, files, this.now().toISOString()));
+      sigs.set(rig, sig);
     }
-    return null;
+    // Only a scan that found nothing left over waits for the rescan interval.
+    if (!leftOver) this.lastScan = this.now().getTime();
+    if (pushes.length === 0) return null;
+    return { pushes, markSent: () => sigs.forEach((sig, rig) => this.sent.set(rig, sig)) };
   }
 }

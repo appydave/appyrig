@@ -3,7 +3,13 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, utimesSync 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RIG_FILES_CHUNK_BYTES, RIG_FILE_MAX_BYTES, type RigFile } from '@appydave/shared';
-import { candidatesFor, chunkRigFiles, readRigFiles, RigFilesReader } from './rigfiles.js';
+import {
+  candidatesFor,
+  chunkRigFiles,
+  readRigFiles,
+  RigFilesReader,
+  RIG_FILES_TICK_BYTES,
+} from './rigfiles.js';
 import type { SpecInfo } from './specs.js';
 
 const dirs: string[] = [];
@@ -203,6 +209,55 @@ describe('chunking and change detection', () => {
     expect(await r.next(specs)).toBeNull();
     r.reset();
     expect(await r.next(specs)).not.toBeNull();
+  });
+
+  it('QA D1: every changed rig goes out in ONE scan, not one per interval (a reconnect fills the viewer at once)', async () => {
+    const root = tmp();
+    const specs = new Map<string, SpecInfo>();
+    for (let i = 0; i < 9; i++) {
+      put(join(root, `rig${i}`, 'rig.yaml'), `name: rig${i}\n`);
+      put(join(root, `rig${i}`, 'CULTURE.md'), `culture ${i}\n`);
+      specs.set(`rig${i}`, { path: join(root, `rig${i}`, 'rig.yaml'), root, summary: null });
+    }
+    let t = 100_000;
+    const r = new RigFilesReader('m2', () => new Date(t), 30_000);
+    const first = await r.next(specs);
+    expect(new Set(first!.pushes.map((p) => p.rig)).size).toBe(9);
+    expect(first!.pushes.filter((p) => p.replace)).toHaveLength(9); // each rig starts with a replace
+    first!.markSent();
+    t += 31_000;
+    expect(await r.next(specs)).toBeNull(); // all sent; nothing left
+    // a reconnect asks again at once, for all 9
+    r.reset();
+    expect(new Set((await r.next(specs))!.pushes.map((p) => p.rig)).size).toBe(9);
+  });
+
+  it('QA D1: a tick is bounded by bytes; the rest follows on the next call WITHOUT waiting the rescan interval', async () => {
+    const root = tmp();
+    const specs = new Map<string, SpecInfo>();
+    for (let i = 0; i < 20; i++) {
+      put(join(root, `big${i}`, 'rig.yaml'), `name: big${i}\n`);
+      put(join(root, `big${i}`, 'MISSION.md'), 'x'.repeat(RIG_FILE_MAX_BYTES - 100));
+      specs.set(`big${i}`, { path: join(root, `big${i}`, 'rig.yaml'), root, summary: null });
+    }
+    const t = 100_000;
+    const r = new RigFilesReader('m2', () => new Date(t), 30_000); // the clock never moves
+    const sentRigs = new Set<string>();
+    let ticks = 0;
+    for (; ticks < 10; ticks++) {
+      const p = await r.next(specs);
+      if (!p) break;
+      const bytes = p.pushes.reduce(
+        (n, x) => n + x.files.reduce((m, f) => m + Buffer.byteLength(f.content), 0),
+        0
+      );
+      expect(bytes).toBeLessThanOrEqual(RIG_FILES_TICK_BYTES + RIG_FILE_MAX_BYTES + 1000);
+      p.pushes.filter((x) => x.replace).forEach((x) => sentRigs.add(x.rig));
+      p.markSent();
+    }
+    expect(sentRigs.size).toBe(20); // all of them…
+    expect(ticks).toBeGreaterThan(1); // …over more than one tick…
+    expect(ticks).toBeLessThan(10); // …and not one rig per tick
   });
 
   it('does not rescan inside the ttl', async () => {

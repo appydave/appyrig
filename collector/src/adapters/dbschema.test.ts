@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -50,6 +50,54 @@ describe('readTables (read-only)', () => {
     ]);
     expect(t.find((x) => x.name === 'nodes')!.foreignKeys).toEqual([
       { from: 'rig_id', table: 'rigs', to: 'id' },
+    ]);
+  });
+
+  /** name, size and mtime of everything in a folder: what "nothing was created or touched" means. */
+  const listing = (dir: string) =>
+    readdirSync(dir)
+      .sort()
+      .map((n) => [n, statSync(join(dir, n)).size, statSync(join(dir, n)).mtimeMs]);
+
+  it('QA D2: with OpenRig STOPPED (no -wal, no -shm) a read creates nothing beside the database', async () => {
+    const path = makeDb(); // closed cleanly: only the .sqlite file is left
+    const dir = join(path, '..');
+    expect(readdirSync(dir)).toEqual(['openrig.sqlite']);
+    const before = listing(dir);
+    readTables(path);
+    readTables(path);
+    await sampleSchema('m2', rigRun(), { dbPath: path });
+    expect(listing(dir)).toEqual(before);
+    expect(readdirSync(dir)).toEqual(['openrig.sqlite']); // no -wal, no -shm appeared
+    // and it still reads the real contents
+    expect(readTables(path).map((t) => t.name)).toEqual(['nodes', 'rigs', 'running_nodes']);
+  });
+
+  it('QA D2: with OpenRig RUNNING (a -wal exists) a read still creates and changes nothing, and sees the WAL', () => {
+    const path = makeDb();
+    const dir = join(path, '..');
+    const writer = new DatabaseSync(path);
+    writer.exec('ALTER TABLE rigs ADD COLUMN in_the_wal TEXT'); // committed to the -wal, not yet checkpointed
+    expect(readdirSync(dir).sort()).toEqual([
+      'openrig.sqlite',
+      'openrig.sqlite-shm',
+      'openrig.sqlite-wal',
+    ]);
+    const before = listing(dir);
+    const t = readTables(path);
+    expect(listing(dir)).toEqual(before);
+    expect(t.find((x) => x.name === 'rigs')!.columns.map((c) => c.name)).toContain('in_the_wal');
+    writer.close();
+  });
+
+  it('a path with spaces and odd characters opens (the immutable form is a file: URL)', () => {
+    const path = makeDb();
+    const odd = join(path, '..', 'my openrig #1 %20.sqlite');
+    copyFileSync(path, odd);
+    expect(readTables(odd).map((t) => t.name)).toContain('rigs');
+    expect(readdirSync(join(path, '..')).sort()).toEqual([
+      'my openrig #1 %20.sqlite',
+      'openrig.sqlite',
     ]);
   });
 
