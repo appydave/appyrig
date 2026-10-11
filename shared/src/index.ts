@@ -10,3 +10,4 @@ export * from './snapshot.js';
 export * from './events.js';
 export * from './verbs.js';
 export * from './history.js';
+export * from './appConfig.js';

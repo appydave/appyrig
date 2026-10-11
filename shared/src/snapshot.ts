@@ -103,6 +103,9 @@ export const SeatSchema = z.strictObject({
 });
 export type Seat = z.infer<typeof SeatSchema>;
 
+/** Longest rig.yaml summary kept. */
+export const RIG_SUMMARY_MAX = 600;
+
 export const RigSummarySchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -111,8 +114,42 @@ export const RigSummarySchema = z.strictObject({
   nodeCount: z.number().int().nonnegative(),
   runningCount: z.number().int().nonnegative(),
   attentionCount: z.number().int().nonnegative(),
+  /**
+   * v1.4 · S3. Every field below is optional and additive: older collectors omit them, and a missing
+   * field means "this collector did not say", never "none". Deploy the hub before the collectors.
+   *
+   * Collector-set, from the rig.yaml found in the machine's configured spec folders (matched on `name:`):
+   * `specStatus` is `not-found` when none matches (never a guess), and absent when the collector does not look.
+   */
+  specStatus: z.enum(['found', 'not-found']).optional(),
+  /** Absolute path of the matched rig.yaml on the collector's disk. */
+  specPath: z.string().nullable().optional(),
+  /** The rig.yaml `summary:` text, whitespace-folded and cut to RIG_SUMMARY_MAX. */
+  summary: z.string().max(RIG_SUMMARY_MAX).nullable().optional(),
+  /**
+   * Recency: the newest of any of the rig's seats' `lastActivityAt` and any queue item `updatedAt`
+   * sent from or to one of its seats. Null when neither exists. Collector-set.
+   */
+  recentAt: isoDate.nullable().optional(),
+  /** Hub-set from AppyRig's own config file (never from OpenRig); the UI falls back to `name`. */
+  displayName: z.string().min(1).max(80).optional(),
+  /** Hub-set, as displayName. */
+  owner: z.string().min(1).max(80).optional(),
 });
 export type RigSummary = z.infer<typeof RigSummarySchema>;
+
+/**
+ * The rig shape before v1.4, kept so a test can prove what an old hub would do with a new
+ * collector's push (a strict-schema refusal: deploy the hub first). Not used at runtime.
+ */
+export const RigSummaryStrictV13 = RigSummarySchema.omit({
+  specStatus: true,
+  specPath: true,
+  summary: true,
+  recentAt: true,
+  displayName: true,
+  owner: true,
+});
 
 /** One queue row, body-free. The collector keeps the most recent QUEUE_MAX_ITEMS. */
 export const QUEUE_MAX_ITEMS = 500;

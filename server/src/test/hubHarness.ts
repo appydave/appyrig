@@ -1,5 +1,6 @@
+import { tmpdir } from 'node:os';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { io as ioc, type Socket } from 'socket.io-client';
 import { FLEET_EVENTS, type FleetUpdate, type MachineSnapshot } from '@appydave/shared';
 import { createHub, type Hub, type HubOptions } from '../hub/createHub.js';
@@ -35,7 +36,13 @@ export interface RunningHub {
 }
 
 export async function startHub(opts: Partial<HubOptions> = {}): Promise<RunningHub> {
-  const hub = createHub({ hubToken: TOKEN, clientUrl: 'http://localhost:1', ...opts });
+  const hub = createHub({
+    hubToken: TOKEN,
+    clientUrl: 'http://localhost:1',
+    // Never the developer's real ~/.config/appyrig/config.json.
+    configPath: join(tmpdir(), 'appyrig-no-such-config.json'),
+    ...opts,
+  });
   const { port } = await hub.listen(0, ['127.0.0.1']);
   const url = `http://127.0.0.1:${port}`;
   const sockets: Socket[] = [];

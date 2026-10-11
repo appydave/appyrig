@@ -3,11 +3,13 @@ import {
   SNAPSHOT_SCHEMA_VERSION,
   type MachineIdentity,
   type MachineSnapshot,
+  type QueueItem,
+  type RigSummary,
   type Seat,
   type SourceHealth,
 } from '@appydave/shared';
 import { runtimeOfCommand, stripAnsi, tailLines } from './adapters/index.js';
-import type { DaemonRead, Sources, TmuxPane, ViewerAgent } from './adapters/index.js';
+import type { DaemonRead, SpecInfo, Sources, TmuxPane, ViewerAgent } from './adapters/index.js';
 import { redactDeep, redactString } from './redact.js';
 
 export interface BuilderConfig {
@@ -98,17 +100,50 @@ export function mergeViewer(seats: Seat[], agents: ViewerAgent[]): void {
   }
 }
 
+/**
+ * v1.4 · S3: what each rig is (its rig.yaml summary and path) and how recently it did anything.
+ * `specs` undefined = this collector does not look for specs (or the scan failed), so the fields
+ * are left out entirely rather than saying "not found" about something nobody checked.
+ */
+export function enrichRigs(
+  rigs: RigSummary[],
+  seats: Seat[],
+  queue: QueueItem[],
+  specs: Map<string, SpecInfo> | null | undefined
+): RigSummary[] {
+  return rigs.map((rig) => {
+    const mine = new Set(seats.filter((s) => s.rig === rig.name).map((s) => s.id));
+    let recent: string | null = null;
+    const consider = (iso: string | null) => {
+      if (iso && (recent === null || Date.parse(iso) > Date.parse(recent))) recent = iso;
+    };
+    for (const s of seats) if (mine.has(s.id)) consider(s.lastActivityAt);
+    for (const q of queue)
+      if ((q.source && mine.has(q.source)) || (q.destination && mine.has(q.destination)))
+        consider(q.updatedAt);
+    const out: RigSummary = { ...rig, recentAt: recent };
+    if (specs) {
+      const spec = specs.get(rig.name);
+      out.specStatus = spec ? 'found' : 'not-found';
+      out.specPath = spec?.path ?? null;
+      out.summary = spec?.summary ?? null;
+    }
+    return out;
+  });
+}
+
 /** One machine, one snapshot. Never throws on a source failure: it reports it in `sources`. */
 export async function buildSnapshot(
   sources: Sources,
   config: BuilderConfig,
   now: Date = new Date()
 ): Promise<MachineSnapshot> {
-  const [daemonR, tmuxR, viewerR, accountR] = await Promise.all([
+  const [daemonR, tmuxR, viewerR, accountR, specsR] = await Promise.all([
     settle(sources.daemon()),
     settle(sources.tmuxPanes()),
     settle(sources.viewerAgents()),
     settle(sources.account ? sources.account() : Promise.resolve(null)),
+    settle(sources.specs ? sources.specs() : Promise.resolve(null)),
   ]);
 
   const daemon: DaemonRead | null = 'value' in daemonR ? daemonR.value : null;
@@ -191,7 +226,15 @@ export async function buildSnapshot(
       tmux: tmuxHealth,
       viewer: 'error' in viewerR ? failed(viewerR.error) : ok(),
     },
-    rigs: daemon?.rigs ?? [],
+    // Only collectors with a spec source add the v1.4 rig fields; recorded fixtures stay byte-identical.
+    rigs: sources.specs
+      ? enrichRigs(
+          daemon?.rigs ?? [],
+          seats,
+          daemon?.queue ?? [],
+          'value' in specsR ? specsR.value : undefined
+        )
+      : (daemon?.rigs ?? []),
     seats,
     queue: daemon?.queue ?? [],
     // Only collectors with an account source report one; recorded fixtures stay byte-identical.

@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
+import { createSpecIndex } from './specs.js';
 import { parseNodes, parsePs, parseQueue } from './daemon.js';
 import { capturePaneArgs, isNoServer, LIST_PANES_ARGS, parsePanes } from './tmux.js';
 import { AGENT_LIST_ARGS, parseAgentList } from './viewer.js';
@@ -21,6 +22,8 @@ export interface SourceOptions {
   timeoutMs?: number;
   /** How long a queue read is reused (the queue is large; panes and nodes are read every push). */
   queueTtlMs?: number;
+  /** Folders searched for rig.yaml (v1.4). Absent = the collector does not look for specs. */
+  specFolders?: string[];
 }
 
 interface ExecResult {
@@ -155,6 +158,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     },
 
     account: () => readAccount(),
+    ...(opts.specFolders ? { specs: createSpecIndex(opts.specFolders) } : {}),
     async viewerAgents(): Promise<ViewerAgent[]> {
       const r = await run(viewerBin, AGENT_LIST_ARGS);
       if (r.code !== 0) {
