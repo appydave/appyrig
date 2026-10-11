@@ -10,7 +10,10 @@ import {
   countSeats,
   findSeat,
   freshness,
+  contentTail,
   groupSeats,
+  groupState,
+  collapsedByDefault,
   modelChip,
   pipFor,
   seatName,
@@ -125,6 +128,55 @@ describe('groupSeats', () => {
     expect(groupSeats(fleet, 'machine').map((g) => g.key)).toEqual(['roamy', 'm2', 'zz']);
   });
 
+  it('S3: working before idle before stopped; newest activity first inside a rank', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const seat = (id: string, status: Seat['status'], rig: string, at: string | null) => ({
+      ...fm.snapshot.seats[0]!,
+      id,
+      rig,
+      status,
+      lastActivityAt: at,
+    });
+    const fleet = [
+      {
+        ...fm,
+        snapshot: {
+          ...fm.snapshot,
+          seats: [
+            seat('a', 'stopped', 'old', '2026-10-11T09:00:00Z'),
+            seat('b', 'idle', 'quiet', '2026-10-11T10:00:00Z'),
+            seat('c', 'working', 'busy', '2026-10-11T08:00:00Z'),
+            seat('d', 'idle', 'fresh', '2026-10-11T11:00:00Z'),
+            seat('e', 'unknown', 'tmuxy', '2026-10-11T11:30:00Z'),
+          ],
+        },
+      },
+    ];
+    const groups = groupSeats(fleet, 'rig');
+    expect(groups.map((g) => g.name)).toEqual(['busy', 'fresh', 'quiet', 'tmuxy', 'old']);
+    expect(groups.map(groupState)).toEqual(['working', 'idle', 'idle', 'unknown', 'stopped']);
+    // S3 rework (variant C): idle-only teams start as cards in the idle strip.
+    expect(groups.map(collapsedByDefault)).toEqual([false, true, true, false, true]);
+  });
+
+  it('S3: a rig group carries its RigSummary, so the Wall can show displayName and summary', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const named = {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        rigs: fm.snapshot.rigs.map((r) =>
+          r.name === 'fliedit-team' ? { ...r, displayName: 'FliEdit', summary: 'Edits videos.' } : r
+        ),
+      },
+    };
+    const g = groupSeats([named], 'rig').find((x) => x.name === 'fliedit-team')!;
+    expect(g.rig?.displayName).toBe('FliEdit');
+    expect(g.rig?.summary).toBe('Edits videos.');
+    expect(g.key).toBe('m2:fliedit-team');
+    expect(groupSeats([named], 'rig').find((x) => x.name === 'tmux sessions')?.rig).toBeUndefined();
+  });
+
   it('keeps every seat exactly once, whichever grouping', () => {
     const total = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
     for (const by of ['rig', 'machine'] as const) {
@@ -203,5 +255,41 @@ describe('text helpers', () => {
   it('visibleTail drops trailing blank padding before taking the last n', () => {
     expect(visibleTail(['a', 'b', 'c', '', '\u001b[0m  ', ''], 2)).toEqual(['b', 'c']);
     expect(visibleTail(['', ''], 5)).toEqual([]);
+  });
+});
+
+describe('contentTail (S3)', () => {
+  it('drops the input box and footer under a turn, keeping the work above it', () => {
+    const lines = [
+      '⏺ Ran the tests: 147 passed.',
+      '✻ Percolating… (7m 36s · ↓ 34.5k tokens)',
+      '  └ Tip: Use /btw to ask a quick side question',
+      '──────────────────────────────── dev-ui@appyrig-v14 ─',
+      '❯ ',
+      '────────────────────────────────────────────────────',
+      '  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents',
+      '',
+    ];
+    expect(contentTail(lines, 2)).toEqual([
+      '⏺ Ran the tests: 147 passed.',
+      '✻ Percolating… (7m 36s · ↓ 34.5k tokens)',
+    ]);
+  });
+  it('drops Claude Code tips anywhere in the tail, and blank lines', () => {
+    const lines = [
+      'Bash(npx playwright test)',
+      '',
+      '  └ Tip: Use /btw to ask a quick side question without interrupting Claude’s',
+      '    current work',
+      '✻ Flowing… (1m 6s · ↓ 2.0k tokens)',
+    ];
+    expect(contentTail(lines, 3)).toEqual([
+      'Bash(npx playwright test)',
+      '✻ Flowing… (1m 6s · ↓ 2.0k tokens)',
+    ]);
+  });
+
+  it('a screen that is all chrome falls back to the plain tail, never to nothing', () => {
+    expect(contentTail(['❯ ', '  ⏵⏵ auto mode on (shift+tab to cycle)'], 3)).toHaveLength(2);
   });
 });

@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wall Fit Mockups</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ar-canvas: #faf5ec;
+        --ar-ink: #342d2d;
+        --ar-ink-muted: #7a6e5e;
+        --ar-surface: #f0ebe4;
+        --ar-surface-raised: #ffffff;
+        --ar-line: #d4cdc4;
+        --ar-cta: #ffde59;
+        --ar-sequence: #c8841a;
+        --ar-term-bg: #25201e;
+        --ar-term-bg-deep: #1a1515;
+        --ar-term-fg: #e8e0d4;
+        --ar-term-line: #3a3330;
+        --ar-term-dim: #9a8f80;
+        --ar-term-meta: #ccba9d;
+        --ar-working: #16a34a;
+        --ar-working-text: #4ade80;
+        --ar-idle: #9ca3af;
+        --ar-idle-text: #c2c7cf;
+        --ar-unknown: #8b8fa3;
+        --ar-unknown-text: #b8bccb;
+        --ar-stopped: #6b5f55;
+        --ar-stopped-text: #a89c90;
+        --opus: #7a4f9e;
+        --sonnet: #2f7d6b;
+        --fable: #b5562f;
+        --other: #5b524a;
+        --codex: #3b5b8c;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--ar-canvas);
+        color: var(--ar-ink);
+        font:
+          14px Roboto,
+          system-ui,
+          sans-serif;
+      }
+      .banner {
+        padding: 8px 16px;
+        font-size: 12px;
+        color: var(--ar-ink-muted);
+        background: var(--ar-surface);
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .banner a {
+        color: var(--ar-ink);
+        text-decoration: none;
+        border: 1px solid var(--ar-line);
+        border-radius: 999px;
+        padding: 2px 10px;
+      }
+      .banner a[aria-current] {
+        background: var(--ar-ink);
+        color: var(--ar-canvas);
+      }
+      .app {
+        padding: 14px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .fakehead {
+        height: 44px;
+        border-radius: 8px;
+        background: var(--ar-surface);
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        font:
+          600 13px Oswald,
+          sans-serif;
+        letter-spacing: 0.1em;
+        color: var(--ar-ink-muted);
+      }
+      .fakestrip {
+        height: 42px;
+        border: 1px solid var(--ar-line);
+        border-radius: 10px;
+        background: #fff;
+      }
+      .order {
+        font-size: 13px;
+        color: var(--ar-ink-muted);
+        margin: 0;
+      }
+      .fold {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 900px;
+        border-top: 2px dashed #dc2626;
+        pointer-events: none;
+      }
+      .fold span {
+        position: absolute;
+        right: 8px;
+        top: -18px;
+        font-size: 11px;
+        color: #dc2626;
+        background: var(--ar-canvas);
+        padding: 0 4px;
+      }
+
+      /* group head */
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font:
+          12px Oswald,
+          sans-serif;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ar-ink-muted);
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .head b {
+        color: var(--ar-ink);
+        font-weight: 600;
+      }
+      .head .c {
+        text-transform: none;
+        letter-spacing: 0.04em;
+        font-family: Roboto, sans-serif;
+      }
+      .head i {
+        flex: 1;
+        height: 1px;
+        background: var(--ar-line);
+      }
+      .w {
+        color: var(--ar-working);
+      }
+      .o {
+        color: var(--ar-idle);
+      }
+      .q {
+        color: var(--ar-unknown);
+      }
+      .x {
+        color: var(--ar-stopped);
+      }
+
+      /* tiles */
+      .tile {
+        background: var(--ar-term-bg);
+        color: var(--ar-term-fg);
+        border-radius: 6px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .bar {
+        height: 3px;
+        background: var(--ar-idle);
+      }
+      .tile.working {
+        box-shadow: inset 0 0 0 1.5px var(--ar-working);
+      }
+      .tile.working .bar {
+        height: 4px;
+        background: var(--ar-working);
+      }
+      .tile.idle .bar {
+        background: repeating-linear-gradient(90deg, var(--ar-idle) 0 10px, transparent 10px 16px);
+      }
+      .tile.unknown .bar {
+        background: repeating-linear-gradient(90deg, var(--ar-unknown) 0 3px, transparent 3px 7px);
+      }
+      .th {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 7px 10px 5px;
+        border-bottom: 1px solid var(--ar-term-line);
+        font:
+          500 13px Oswald,
+          sans-serif;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .th span:first-child {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chip {
+        font:
+          10px 'Roboto Mono',
+          monospace;
+        padding: 1px 6px;
+        border-radius: 3px;
+        color: var(--ar-canvas);
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .meta {
+        padding: 5px 10px 0;
+        font:
+          11px Oswald,
+          sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+      }
+      .meta.working {
+        color: var(--ar-working-text);
+      }
+      .meta.idle {
+        color: var(--ar-idle-text);
+      }
+      .meta.unknown {
+        color: var(--ar-unknown-text);
+      }
+      .term {
+        padding: 6px 10px;
+        font:
+          11px/1.5 'Roboto Mono',
+          monospace;
+        white-space: pre;
+        overflow: hidden;
+        color: var(--ar-term-fg);
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 10px 6px;
+        font:
+          10px 'Roboto Mono',
+          monospace;
+        color: var(--ar-term-meta);
+        border-top: 1px solid var(--ar-term-line);
+      }
+
+      /* A: rows (today) */
+      .rows {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 12px;
+        align-items: start;
+        margin-top: 8px;
+      }
+
+      /* B: packed blocks */
+      .packed {
+        display: grid;
+        grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+        gap: 16px 12px;
+        align-items: start;
+      }
+      .packed .grp {
+        min-width: 0;
+      }
+      .packed .grp .grid {
+        grid-template-columns: repeat(var(--span), minmax(0, 1fr));
+      }
+      .packed .full {
+        grid-column: 1 / -1;
+      }
+
+      /* compact idle tile (C, D) */
+      .compact .tile.idle .term,
+      .compact .tile.unknown .term {
+        display: none;
+      }
+      .compact .tile.idle .foot,
+      .compact .tile.unknown .foot {
+        border-top: 0;
+      }
+
+      /* C: dense strip for idle-only teams */
+      .strip {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 10px;
+      }
+      .team {
+        background: #fff;
+        border: 1px solid var(--ar-line);
+        border-left: 4px dashed var(--ar-idle);
+        border-radius: 8px;
+        padding: 8px 10px;
+      }
+      .team b {
+        font:
+          600 13px Oswald,
+          sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .team .seats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--ar-ink-muted);
+      }
+      .collapsed {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .note {
+        font-size: 12px;
+        color: var(--ar-ink-muted);
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+      Mochaccino — wall-fit-running-teams — 2026-10-11 · <a href="?v=A">A · rows (today)</a
+      ><a href="?v=B">B · packed blocks</a><a href="?v=C">C · dense idle strip</a
+      ><a href="?v=D">D · packed + compact idle</a> <span id="measure"></span>
+    </div>
+    <div class="fold"><span>900 px fold (1440×900)</span></div>
+    <div class="app" id="app"></div>
+    <script>
+      const FAM = { opus: '--opus', sonnet: '--sonnet', fable: '--fable', codex: '--codex' };
+      const S = (name, st, model, lines) => ({ name, st, model, lines });
+      const RUNNING = [
+        {
+          name: 'appyrig-v14',
+          where: 'M2',
+          seats: [
+            S('orch-lead', 'idle', 'opus 5.5', ['S3 UI side   waiting behind S1 fixes']),
+            S('dev-data', 'working', 'sonnet 5.5', [
+              'import { describe, it, expect }',
+              '  Running… (3s · timeout 3m 20s)',
+              '* Levitating… (2m 19s · ↓ 18.0k tokens)',
+            ]),
+            S('dev-ui', 'working', 'opus 5.5', [
+              'Bash(npx playwright test)',
+              '  Running… (4s)',
+              '* Symbioting… (21m 7s · ↓ 78.8k tokens)',
+            ]),
+            S('dev-qa', 'working', 'opus 5.5', [
+              'nohup node tools/replay.mjs',
+              '  Running…',
+              '* Meandering… (3m 43s · ↓ 9.4k tokens)',
+            ]),
+            S('review-r1', 'working', 'fable 5.1', [
+              'api/openrpc.json',
+              '  … +620 lines',
+              '* Manifesting… (1m 20s · ↓ 3.0k tokens)',
+            ]),
+          ],
+        },
+        {
+          name: 'kernel',
+          where: 'Roamy',
+          seats: [
+            S('advisor-lead', 'idle', 'claude-code', ['> what rigs were running before the']),
+            S('operator-agent', 'idle', 'codex', ['> Write tests for @filename']),
+            S('operator-human', 'working', 'terminal', [
+              '↑↓ move · ←→ pane · ↵ open',
+              '[kernel] specs',
+            ]),
+            S('queue-worker', 'idle', 'codex', ['> Implement {feature}']),
+          ],
+        },
+        {
+          name: 'ylo-thumbs',
+          where: 'M4',
+          seats: [
+            S('ylo-lead', 'idle', 'opus 5.5', ['d07-pair-c.json drafted']),
+            S('ylo-check', 'idle', 'fable 5.1', ['NOTES.md and the message is sitting']),
+            S('ylo-drip', 'idle', 'sonnet 5.5', ['> rig queue list']),
+          ],
+        },
+        {
+          name: 'control',
+          where: 'M2',
+          seats: [S('orch-boss', 'idle', 'sonnet 5.5', ['Account check: the M2 is on appydave'])],
+        },
+        {
+          name: 'flicut-reapply',
+          where: 'M2',
+          seats: [
+            S('dev-build', 'idle', 'opus 5.5', ['Read test/r2-jump-to-time.test']),
+            S('dev-qa', 'idle', 'opus 5.5', ['All four slices passed QA']),
+            S('review-r1', 'idle', 'fable 5.1', ['Skills restored (review-team)']),
+          ],
+        },
+        {
+          name: 'openrig-watch',
+          where: 'M2',
+          seats: [S('watch-keeper', 'idle', 'sonnet 5.5', ['go, run the daily briefing'])],
+        },
+        {
+          name: 'starter',
+          where: 'Roamy',
+          seats: [
+            S('dev-build', 'idle', 'opus 5.5', ['> ']),
+            S('orch-lead', 'idle', 'opus 5.5', ['> ']),
+          ],
+        },
+      ];
+      const TMUX = [
+        {
+          name: 'tmux sessions',
+          where: 'M4',
+          seats: ['d07-buzz-coding-team', 'flivideo-orch', 'jev-test', 'openrig', 'ylo'].map((n) =>
+            S(n, 'unknown', 'terminal', ['ok, keeping this one open'])
+          ),
+        },
+        {
+          name: 'tmux sessions',
+          where: 'Roamy',
+          seats: ['openrig-orch', 'workflow-mine'].map((n) => S(n, 'unknown', 'terminal', ['> '])),
+        },
+      ];
+      const STOPPED = [
+        'appyrig-build M2 · ✕ 7',
+        'factory-claude M2 · ✕ 4',
+        'flicut-ab M2 · ✕ 5',
+        'fliedit-team M2 · ✕ 5',
+        'kernel M2 · ✕ 4',
+        'skool-research M2 · ✕ 2',
+        'starter M2 · ✕ 2',
+        'kernel M4 · ✕ 4',
+      ];
+
+      const glyph = { working: '●', idle: '○', unknown: '?' };
+      const cls = { working: 'w', idle: 'o', unknown: 'q' };
+      function counts(g) {
+        const n = {};
+        g.seats.forEach((s) => (n[s.st] = (n[s.st] || 0) + 1));
+        return ['working', 'idle', 'unknown']
+          .filter((k) => n[k])
+          .map((k) => `<span class="${cls[k]}">${glyph[k]}</span> ${n[k]} ${k}`)
+          .join(' · ');
+      }
+      function head(g, open = true) {
+        return `<div class="head"><span>${open ? '▾' : '▸'}</span><b>${g.name}</b><span>${g.where}</span><span class="c">${counts(g)}</span><i></i></div>`;
+      }
+      function tile(s, maxLines) {
+        const fam = Object.keys(FAM).find((f) => s.model.startsWith(f));
+        const lines = s.lines.slice(-(s.st === 'working' ? 7 : maxLines)).join('\n');
+        return `<div class="tile ${s.st}"><div class="bar"></div><div class="th"><span>${s.name}</span><span class="chip" style="background:var(${fam ? FAM[fam] : '--other'})">${s.model}</span></div>
+    <div class="meta ${s.st}"><span>${glyph[s.st]} ${s.st}</span><span style="color:var(--ar-term-dim)">M2</span></div>
+    <div class="term">${lines}</div><div class="foot"><span>live · 1s</span><span>q 0/0/0</span></div></div>`;
+      }
+      const group = (g, max = 3) =>
+        `<section class="grp">${head(g)}<div class="grid">${g.seats.map((s) => tile(s, max)).join('')}</div></section>`;
+      const collapsed = () =>
+        `<div class="collapsed">${STOPPED.map((t) => `<div class="head"><span>▸</span><b>${t.split(' · ')[0]}</b><span class="c"><span class="x">✕</span> ${t.split('✕ ')[1]} stopped</span><i></i></div>`).join('')}</div>`;
+      const working = (g) => g.seats.some((s) => s.st === 'working');
+
+      function packed(groups, cols, max) {
+        return `<div class="packed" style="--cols:${cols}">${groups
+          .map((g) => {
+            const span = Math.min(g.seats.length, cols);
+            return `<section class="grp" style="grid-column: span ${span}; --span:${span}">${head(g)}<div class="grid">${g.seats.map((s) => tile(s, max)).join('')}</div></section>`;
+          })
+          .join('')}</div>`;
+      }
+
+      const v = new URLSearchParams(location.search).get('v') || 'A';
+      document
+        .querySelectorAll('.banner a')
+        .forEach((a) => a.href.endsWith('v=' + v) && a.setAttribute('aria-current', 'page'));
+      const app = document.getElementById('app');
+      const chrome = `<div class="fakehead">AppyRig header · tabs · Explain · Legend · Keys · Show ● M2 ● M4 ● Roamy</div><div class="fakestrip"></div>
+  <p class="order">Order: blocked → working → idle → state unknown → stopped → asleep machine · newest activity first within each · stopped and asleep start collapsed</p>`;
+      const cols = Math.max(1, Math.floor((window.innerWidth - 56 + 12) / (232 + 12)));
+      let body = '';
+      if (v === 'A')
+        body = `<div class="rows">${[...RUNNING, ...TMUX].map((g) => group(g)).join('')}${collapsed()}</div>`;
+      if (v === 'B') body = packed([...RUNNING, ...TMUX], cols, 3) + collapsed();
+      if (v === 'C') {
+        const busy = RUNNING.filter(working),
+          quiet = RUNNING.filter((g) => !working(g));
+        body = `<div class="rows compact">${busy.map((g) => group(g, 1)).join('')}
+    <section><div class="head"><b>Idle teams</b><span class="c">${quiet.length} running, nobody working · click a team to open its tiles</span><i></i></div>
+    <div class="strip" style="margin-top:8px">${quiet.map((g) => `<div class="team" data-running><b>${g.name}</b> <span class="note">${g.where}</span><div class="seats">${g.seats.map((s) => `<span><span class="o">○</span> ${s.name}</span>`).join('')}</div></div>`).join('')}</div></section>
+    ${TMUX.map((g) => group(g, 1)).join('')}${collapsed()}</div>`;
+      }
+      if (v === 'D')
+        body = `<div class="compact">${packed([...RUNNING, ...TMUX], cols, 1)}</div>` + collapsed();
+      app.innerHTML = chrome + body;
+
+      // Measure: where the last running group ends.
+      requestAnimationFrame(() => {
+        const groups = [...document.querySelectorAll('.grp, [data-running]')].slice(0, 99);
+        const runNames = new Set(RUNNING.map((g) => g.name));
+        let bottom = 0;
+        document.querySelectorAll('.grp').forEach((el) => {
+          if (runNames.has(el.querySelector('.head b')?.textContent))
+            bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
+        });
+        document
+          .querySelectorAll('[data-running]')
+          .forEach((el) => (bottom = Math.max(bottom, el.getBoundingClientRect().bottom)));
+        document.getElementById('measure').textContent =
+          `· running groups end at ${Math.round(bottom)} px`;
+        window.__runningBottom = Math.round(bottom);
+      });
+    </script>
+  </body>
+</html>

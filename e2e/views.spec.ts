@@ -109,7 +109,7 @@ test.describe('v1.1 screens', () => {
     await page.getByTestId('lesson-link').filter({ hasText: 'Refocus' }).click();
     await expect(page.getByTestId('lesson')).toContainText('--plugin-dir');
     await page.getByTestId('lesson-link').filter({ hasText: 'Every term' }).click();
-    await expect(page.getByTestId('lesson')).toContainText('Rework');
+    await expect(page.getByTestId('lesson')).toContainText('Sent back');
     await page.getByTestId('lesson-link').filter({ hasText: 'OpenRig concepts' }).click();
     await expect(page.getByTestId('atlas-term').first()).toBeVisible();
     await expect(

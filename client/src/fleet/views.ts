@@ -86,36 +86,50 @@ export interface RigRef {
   seatCount: number;
   handoffs: number;
   lastActivity: string | null;
+  /** S3: from AppyRig's config (hub-set) and the rig's rig.yaml (collector-set); see RigSummary. */
+  displayName?: string;
+  owner?: string;
+  summary?: string | null;
+  specPath?: string | null;
+  /** Absent = the collector did not look (older collector), never "not found". */
+  specStatus?: 'found' | 'not-found';
 }
 
-/** Every rig on every machine, most recent queue activity first (the run you most likely want). */
+/** Every rig on every machine: running first, then the most recent sign of life (a queue row or a seat). */
 export function listRigs(machines: FleetMachine[]): RigRef[] {
   const out: RigRef[] = [];
   for (const fm of machines) {
     for (const rig of fm.snapshot.rigs) {
       const items = rigQueue(fm, rig.name);
-      const last = items.reduce<string | null>(
-        (acc, q) => (acc === null || q.updatedAt > acc ? q.updatedAt : acc),
-        null
-      );
+      const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
+      // Most recent sign of life: a queue row moving, or any of its seats doing something.
+      const last = [...items.map((q) => q.updatedAt), ...seats.map((s) => s.lastActivityAt)].reduce<
+        string | null
+      >((acc, at) => (at && (acc === null || at > acc) ? at : acc), null);
       out.push({
         key: `${fm.machine.id}:${rig.name}`,
         machineId: fm.machine.id,
         machineLabel: fm.machine.label,
         name: rig.name,
         status: rig.status,
-        seatCount: fm.snapshot.seats.filter((s) => s.rig === rig.name).length,
+        seatCount: seats.length,
         handoffs: items.length,
-        lastActivity: last,
+        // The collector's recentAt is the same rule computed over the full queue; prefer it.
+        lastActivity: rig.recentAt !== undefined ? rig.recentAt : last,
+        displayName: rig.displayName,
+        owner: rig.owner,
+        summary: rig.summary,
+        specPath: rig.specPath,
+        specStatus: rig.specStatus,
       });
     }
   }
+  // S3: every rig list reads running first, then most recent (Wall groups, Map and Flow chips).
   const running = (r: RigRef) => (r.status === 'running' ? 0 : 1);
   return out.sort(
     (a, b) =>
-      (b.handoffs > 0 ? 1 : 0) - (a.handoffs > 0 ? 1 : 0) ||
-      (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '') ||
       running(a) - running(b) ||
+      (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '') ||
       a.key.localeCompare(b.key)
   );
 }
@@ -354,7 +368,10 @@ export interface FlowEdge {
   count: number;
   /** Items on this edge in flight at the replay time. */
   inFlight: QueueItem[];
-  /** Going back to an earlier stage: a FAIL or a fix request (roles mode only). */
+  /**
+   * Sent back to an earlier stage other than the Lead (roles mode only): rework, but also verdicts
+   * (PASS too) and answers. The name is historical; the UI calls it "sent back" (legend, glossary).
+   */
   rework: boolean;
 }
 
@@ -381,6 +398,7 @@ export interface FlowView {
   stages: FlowStageView[];
   edges: FlowEdge[];
   total: number;
+  /** Items sent back (see FlowEdge.rework), not only FAILs. */
   rework: number;
   /** Median minutes from handoff to close, over closed items up to `at`. */
   medianTurnaroundMin: number | null;
@@ -542,7 +560,7 @@ const hhmm = (t: number) =>
 
 /**
  * The moments worth pausing on in a run, found from the queue alone so any rig gets them:
- * the first handoff, the first rework, the biggest fresh queue, the longest real wait, the end.
+ * the first handoff, the first item sent back, the biggest fresh queue, the longest real wait, the end.
  */
 export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapter[] {
   const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -570,8 +588,8 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
       out.push({
         at: t,
         kind: 'first-rework',
-        title: 'First rework',
-        text: `${hhmm(t)} · ${bare(q.source)} sends work back to ${bare(q.destination)}. A check found a real problem.`,
+        title: 'First sent back',
+        text: `${hhmm(t)} · ${bare(q.source)} sends an item back to ${bare(q.destination)}: a verdict, an answer or rework.`,
       });
     }
     const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
@@ -609,7 +627,7 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
     at: range.end,
     kind: 'end',
     title: 'Where it ended',
-    text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back for rework` : ''}.`,
+    text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back` : ''}.`,
   });
   return out.sort((a, b) => a.at - b.at);
 }

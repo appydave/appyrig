@@ -960,6 +960,9 @@ a:hover {
 }
 .flow-count.rework {
   fill: var(--ar-sequence);
+  /* A wider halo also covers the gap in "6 back", so the arc never shows through it (QA S1). */
+  stroke-width: 9px;
+  stroke-linejoin: round;
 }
 .pulse {
   fill: var(--ar-cta);
@@ -1478,4 +1481,618 @@ a:hover {
   font-size: 11.5px;
   opacity: 0.8;
   overflow-wrap: anywhere;
+}
+
+/* ---------- v1.4 S1: legend, first-visit hint, channel captions ---------- */
+/* The hint hangs under the Explain button and points up at it (QA M1). */
+.explain-anchor {
+  position: relative;
+  display: inline-flex;
+}
+.first-hint {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  width: 380px;
+  box-shadow: 0 4px 14px rgb(52 45 45 / 0.18);
+  display: block;
+  line-height: 1.5;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 13px;
+  background: var(--ar-blocked-bg);
+  border: 1px solid var(--ar-cta);
+  border-radius: 8px;
+  padding: 8px 10px;
+  max-width: calc(100vw - 32px);
+}
+.first-hint .pill-btn {
+  margin-left: 6px;
+  min-height: 26px;
+  padding: 2px 10px;
+}
+.first-hint > span[aria-hidden] {
+  color: var(--ar-sequence);
+  font-weight: 700;
+}
+/* Narrower than the header's one-line width the button can sit near the right edge, so the hint
+   drops into the flow as its own row instead of hanging off-screen. */
+@media (max-width: 1000px) {
+  .explain-anchor {
+    flex-wrap: wrap;
+  }
+  .first-hint {
+    position: static;
+    width: auto;
+    margin-top: 8px;
+  }
+}
+.legend {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-radius: 12px;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.legend-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+.legend-top .label b {
+  color: var(--ar-ink);
+  font-weight: 600;
+}
+.legend-top .pill-btn {
+  margin-left: auto;
+}
+.legend-hint {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.legend-hint kbd {
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+  border: 1px solid var(--ar-line);
+  border-radius: 3px;
+  padding: 0 4px;
+  background: var(--ar-canvas);
+}
+.legend-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 10px 24px;
+}
+.legend-section h3 {
+  margin: 0 0 4px;
+  font-weight: 500;
+}
+.legend-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.legend-section li {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.legend-section li b {
+  font-weight: 600;
+}
+.legend-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+}
+.legend-head {
+  fill: var(--ar-ink);
+  fill-opacity: 0.5;
+}
+.legend-box-text {
+  font-family: var(--ar-font-label);
+  font-size: 9px;
+  fill: var(--ar-ink);
+  text-anchor: middle;
+}
+.legend-panel {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+  stroke-width: 1.5;
+}
+.legend-band {
+  fill: var(--ar-surface);
+  stroke: var(--ar-line);
+  stroke-dasharray: 3 2;
+}
+.legend-seat {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+}
+.legend-seat-edge {
+  fill: var(--ar-working);
+}
+.legend-pip {
+  font-size: 15px;
+}
+.legend-chips {
+  display: inline-flex;
+  gap: 2px;
+}
+.legend-chips .chip {
+  width: 10px;
+  height: 12px;
+  padding: 0;
+}
+.legend-chip-solo {
+  font-size: 9px;
+}
+.legend-tile {
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  border-radius: 3px;
+  background: var(--ar-term-bg);
+  overflow: hidden;
+}
+.legend-tile i {
+  display: block;
+  height: 3px;
+  background: var(--pip);
+}
+.legend-ring {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.legend-term {
+  color: var(--ar-term-fg);
+  font-family: var(--ar-font-term);
+  font-size: 10px;
+  text-align: center;
+  line-height: 20px;
+}
+.legend-mono {
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+}
+.legend-rule {
+  display: inline-block;
+  width: 40px;
+  border-top: 2px solid var(--ar-ink);
+}
+.legend-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ar-working);
+}
+.legend-pill {
+  font-size: 9px;
+  border: 1px solid var(--ar-line);
+  background: var(--ar-surface);
+  border-radius: 999px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+.legend-pill-dark {
+  background: var(--ar-ink);
+  color: var(--ar-cta);
+  border-color: var(--ar-ink);
+}
+.legend-lines {
+  display: inline-block;
+  width: 40px;
+  height: 14px;
+  background: repeating-linear-gradient(to bottom, var(--ar-ink-muted) 0 1px, transparent 1px 5px);
+  opacity: 0.6;
+}
+.legend-bar {
+  display: inline-block;
+  width: 44px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ar-line-soft);
+  overflow: hidden;
+}
+.legend-bar i {
+  display: block;
+  width: 45%;
+  height: 100%;
+  background: var(--ar-working);
+}
+.channel-caption {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.channel-caption b {
+  color: var(--ar-ink);
+}
+
+/* ---------- v1.4 S2: keys overlay ---------- */
+.keys-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgb(52 45 45 / 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 16px 16px;
+}
+.keys-help {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-ink);
+  border-radius: 12px;
+  padding: 14px 18px 16px;
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.keys-help header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.keys-help h2,
+.keys-help h3 {
+  margin: 0;
+  font-weight: 500;
+}
+.keys-help ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.keys-help li {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  font-size: 14px;
+}
+.keys-help kbd {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  border: 1px solid var(--ar-line);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  background: var(--ar-canvas);
+  justify-self: start;
+}
+.keys-note {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.legend-num {
+  font-family: var(--ar-font-display);
+  font-size: 20px;
+  line-height: 1;
+}
+.legend-num-sm {
+  font-size: 16px;
+}
+.legend-refused {
+  display: inline-block;
+  width: 40px;
+  height: 18px;
+  border: 1px solid var(--ar-error);
+  background: var(--ar-error-bg);
+  color: var(--ar-error-ink);
+  border-radius: 4px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 18px;
+}
+.legend-because {
+  display: inline-block;
+  width: 40px;
+  height: 18px;
+  border: 1px solid var(--ar-blocked);
+  background: var(--ar-blocked-bg);
+  border-radius: 4px;
+}
+
+/* ---------- v1.4 S3: a calmer Wall ---------- */
+.wall-order {
+  margin: 0;
+}
+button.group-head {
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  text-align: left;
+}
+button.group-head:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 2px;
+}
+.group-caret {
+  width: 12px;
+  color: var(--ar-ink);
+}
+.group-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-family: var(--ar-font-body);
+}
+.group-count .pip-glyph {
+  color: var(--pip);
+}
+.group[data-open='false'] .group-head b {
+  color: var(--ar-ink-muted);
+}
+
+/* Status by shape as well as colour (lab rule: never colour alone). The pip glyph says it in text;
+   the tile's top bar and outline say it in shape: working = solid bar + solid outline,
+   blocked = thick solid bar + thick outline, idle = dashed bar, unknown = dotted bar,
+   stopped = no bar, dashed outline, dimmed. */
+.tile[data-pip='working'] {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.tile[data-pip='working'] .tile-bar {
+  height: 4px;
+}
+.tile[data-pip='blocked'] {
+  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
+}
+.tile[data-pip='blocked'] .tile-bar {
+  height: 6px;
+}
+.tile[data-pip='idle'] .tile-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 10px, transparent 10px 16px);
+}
+.tile[data-pip='unknown'] .tile-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 3px, transparent 3px 7px);
+}
+.tile[data-pip='stopped'] {
+  background: var(--ar-term-bg-deep);
+  box-shadow: inset 0 0 0 1px var(--ar-stopped);
+  outline: 1px dashed var(--ar-stopped-text);
+  outline-offset: -4px;
+  opacity: 0.75;
+}
+.tile[data-pip='stopped'] .tile-bar {
+  background: transparent;
+}
+.tile[data-pip='stopped'] .tile-term {
+  flex: none;
+}
+.tile[data-pip]:hover,
+.tile[data-pip]:focus-visible {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.machine-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.machine-filter .pill-btn[aria-pressed='false'] {
+  color: var(--ar-ink-muted);
+  border-style: dashed;
+}
+.filter-note {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+}
+.legend-shapes {
+  display: inline-flex;
+  gap: 3px;
+}
+.legend-tile.mini {
+  width: 16px;
+  height: 18px;
+}
+.legend-tile[data-pip='working'] {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.legend-tile[data-pip='idle'] i {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 4px, transparent 4px 7px);
+}
+.legend-tile[data-pip='stopped'] {
+  outline: 1px dashed var(--ar-stopped-text);
+  outline-offset: -3px;
+  opacity: 0.75;
+}
+.legend-tile[data-pip='stopped'] i {
+  background: transparent;
+}
+
+/* ---------- v1.4 S3: rig names, summaries and the rig-info panel ---------- */
+.rig-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rig-chip {
+  max-width: 280px;
+}
+.rig-chip .rig-chip-summary {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+.rig-info {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-left: 4px solid var(--ar-sequence);
+  border-radius: 10px;
+  padding: 8px 14px 10px;
+  font-size: 13px;
+  max-width: 900px;
+}
+.rig-info[data-preview='true'] {
+  border-left-style: dashed;
+}
+.rig-info header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.rig-info header b {
+  font-family: var(--ar-font-label);
+  font-size: 15px;
+}
+.rig-info code {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.rig-info p {
+  margin: 4px 0 6px;
+}
+.rig-info dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 0;
+}
+.rig-info dt {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.rig-info dd {
+  margin: 0;
+}
+.rig-info dd[data-status='not-found'],
+.rig-info dd[data-status='unreported'] {
+  color: var(--ar-ink-muted);
+  font-style: italic;
+}
+.group-summary {
+  margin: -4px 0 0 22px;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* S3: tiles keep their own height, so a short idle tile is not stretched to a working one. */
+.group .grid {
+  align-items: start;
+}
+.group .tile-term {
+  min-height: 0;
+}
+
+/* ---------- v1.4 S3 rework: idle teams as a strip of cards (mochaccino variant C) ---------- */
+.idle-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.idle-strip-head {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.idle-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 10px;
+}
+.idle-team {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  /* The idle shape: a dashed edge, as on idle tiles. */
+  border-left: 4px dashed var(--ar-idle);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.idle-team:hover,
+.idle-team:focus-visible {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.idle-team-name b {
+  font-family: var(--ar-font-label);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.idle-team-name span,
+.idle-team-summary {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.idle-team-summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.idle-team-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.idle-team-seats .pip-glyph {
+  color: var(--pip);
+}
+.legend-idle-card {
+  display: inline-block;
+  width: 44px;
+  font-size: 10px;
+  padding: 2px 4px;
+  border: 1px solid var(--ar-line);
+  border-left: 3px dashed var(--ar-idle);
+  border-radius: 4px;
+  background: var(--ar-surface-raised);
+  color: var(--ar-ink-muted);
 }
