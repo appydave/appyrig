@@ -67,7 +67,7 @@ function edgePath(
     };
   }
   if (e.rework) {
-    // Below the row, amber: work sent back to an earlier stage.
+    // Below the row, amber: anything sent back to an earlier stage (rework, verdicts, answers).
     const y0 = ROW_Y + BOX_H / 2;
     const dip = 70 + gap * 28;
     return {
@@ -100,7 +100,8 @@ const clock = (t: number) =>
 
 /**
  * Concept 4 · Handoff Flow: queue handoffs moving lead → builders → QA → reviewer, as pulses.
- * Amber arcs below the row are rework (a FAIL sent back). The scrubber replays a finished run.
+ * Amber arcs below the row are items sent back to an earlier stage (rework, verdicts, answers).
+ * The scrubber replays a finished run.
  * A team with no QA or review seat is drawn one box per seat instead of being squashed into roles.
  */
 export default function HandoffFlow({ machine, rig, now, socket, keys = true }: Props) {
@@ -234,7 +235,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
         </span>
         {flow.mode === 'roles' && (
           <span data-testid="flow-rework" data-explain="rework">
-            <b className="amber">{flow.rework}</b> sent back for rework
+            <b className="amber">{flow.rework}</b> sent back
           </span>
         )}
         <span data-explain="median-turnaround">

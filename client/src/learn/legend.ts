@@ -51,7 +51,19 @@ export type Swatch =
   | 'scrubber'
   | 'bar'
   | 'resets'
-  | 'headroom';
+  | 'headroom'
+  | 'arc-skip'
+  | 'rig-chip'
+  | 'stats'
+  | 'consoles'
+  | 'lane-head'
+  | 'seat-get-ok'
+  | 'seat-get-refused'
+  | 'rich-toggle'
+  | 'state-badge'
+  | 'rows'
+  | 'because'
+  | 'back-btn';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -95,7 +107,7 @@ const STATUS: LegendSection = {
     {
       swatch: 'chip-runtime',
       mark: 'claude-code · terminal',
-      means: 'Grey chip: the model is not reported, so the runtime is shown instead.',
+      means: 'Dark grey chip: the model is not reported, so the runtime is shown instead.',
     },
   ],
 };
@@ -144,27 +156,24 @@ const WALL: LegendSection[] = [
       },
     ],
   },
-  {
-    title: 'Seat panel (open a tile)',
-    entries: [
-      {
-        swatch: 'terminal',
-        mark: 'Black box',
-        means: "The seat's terminal screen: what it is saying and doing.",
-      },
-      {
-        swatch: 'queue-list',
-        mark: 'Queue · latest 6',
-        means: 'Formal handoffs through the OpenRig queue. A different channel from the terminal.',
-      },
-      {
-        swatch: 'queue-dir',
-        mark: '→ to · ← from',
-        means: '→ this seat sent it; ← this seat received it. done / handed-off = its state.',
-      },
-    ],
-  },
 ];
+
+const RIG_PICKER: LegendSection = {
+  title: 'Rig chips (top row)',
+  entries: [
+    {
+      swatch: 'rig-chip',
+      mark: 'flicut-ab · M2 · 5 seats · 27 handoffs',
+      means:
+        'One chip per rig: its machine, seats, and queue handoffs so far. Dark chip = the rig shown.',
+    },
+    {
+      swatch: 'rig-chip',
+      mark: '· running',
+      means: 'Shown only when OpenRig reports the rig as running; no word = stopped.',
+    },
+  ],
+};
 
 const MAP: LegendSection[] = [
   {
@@ -177,9 +186,21 @@ const MAP: LegendSection[] = [
           'A machine. The first holds this rig; "talks to this rig" panels hold seats from elsewhere.',
       },
       {
+        swatch: 'lane-head',
+        mark: 'M2  rig flicut-ab · stopped',
+        means: "This rig's machine and the rig's OpenRig status (running / stopped).",
+      },
+      {
+        swatch: 'lane-head',
+        mark: 'M2 · OTHER RIGS  talks to this rig',
+        means:
+          'Seats in other rigs that handed work to or from this one. "Not placed" = a queue name no machine reports.',
+      },
+      {
         swatch: 'pod-band',
         mark: 'Grey band · POD',
-        means: 'A pod: a group of seats inside a rig.',
+        means:
+          'A pod: a group of seats inside a rig. In "talks to this rig" panels, POD · SEATS only gathers the outside seats; it is not a real pod.',
       },
       {
         swatch: 'seat-box',
@@ -214,6 +235,7 @@ const MAP: LegendSection[] = [
       { swatch: 'self', mark: '↺ N to itself', means: 'The seat queued work for itself.' },
     ],
   },
+  RIG_PICKER,
 ];
 
 const FLOW: LegendSection[] = [
@@ -224,15 +246,20 @@ const FLOW: LegendSection[] = [
         swatch: 'stage-box',
         mark: 'LEAD · BUILDERS · QA · REVIEWER',
         means:
-          'Stages guessed from seat names: qa → QA, review / r1 → Reviewer, lead / orch → Lead, the rest → Builders.',
+          'Stages guessed from seat names: qa / tester → QA, review / r1 → Reviewer, orch / lead / boss → Lead, the rest → Builders. Seats from other rigs count too, by their name.',
       },
       {
         swatch: 'outside-box',
-        mark: 'name@rig',
+        mark: 'name@rig · name@machine',
         means:
-          "A seat from another rig, shown by its full address (rigs that don't fit the four stages draw one box per seat).",
+          'A seat outside this rig, by its full address. Rigs with no QA or review seat draw one box per seat instead of stages.',
       },
-      { swatch: 'no-seat', mark: 'no seat', means: 'This rig has no seat for that stage.' },
+      {
+        swatch: 'no-seat',
+        mark: 'no seat',
+        means:
+          'This rig has none of its own seats in that stage. Work can still land there from another rig (e.g. orch-boss@control as Lead), so it can show "1 waiting".',
+      },
       {
         swatch: 'box-waiting',
         mark: 'Amber box · N waiting',
@@ -255,30 +282,139 @@ const FLOW: LegendSection[] = [
     entries: [
       {
         swatch: 'flow-forward',
-        mark: 'Grey line → (number)',
-        means: 'Work moving on. Thicker = more handoffs; the number is the count.',
+        mark: 'Straight grey line →',
+        means:
+          'Work moving on to the next stage. Thicker = more handoffs; the number is the count.',
+      },
+      {
+        swatch: 'arc-skip',
+        mark: 'Solid arc above →',
+        means:
+          'Work moving on that skips a stage, e.g. Builders → Reviewer sent at the same time as Builders → QA.',
       },
       {
         swatch: 'flow-report',
         mark: 'Dashed arc above',
         means:
-          'Going back up the line, not rework: verdicts, reports, questions. In the control rig, reports arriving from other rigs.',
+          'Going back to the Lead: reports, verdicts, questions (in the control rig, reports arriving from other rigs). In a rig drawn one box per seat: anything going back to an earlier box.',
       },
       {
         swatch: 'flow-rework',
         mark: 'Amber arc below · N back',
-        means: 'Rework: work sent back to an earlier stage.',
+        means:
+          'Anything sent back to an earlier stage other than the Lead: rework, verdicts (PASS or FAIL), answers.',
       },
       {
         swatch: 'dot-flight',
         mark: 'Yellow dot',
         means: 'One item in flight at the time shown (open, not yet closed).',
       },
-      { swatch: 'dot-rework', mark: 'Amber dot', means: 'A rework item in flight.' },
+      { swatch: 'dot-rework', mark: 'Amber dot', means: 'An item going back, in flight.' },
+    ],
+  },
+  {
+    title: 'Handoff Flow · numbers and controls',
+    entries: [
+      {
+        swatch: 'stats',
+        mark: 'N handoffs · N sent back',
+        means: 'Queue items so far, and how many went back to an earlier stage (the amber arcs).',
+      },
+      {
+        swatch: 'stats',
+        mark: 'median handoff → close',
+        means: 'Typical minutes from an item being sent to being closed. "–" = none closed yet.',
+      },
+      {
+        swatch: 'stats',
+        mark: 'queue builds at QA · nothing queued',
+        means: 'The stage with the most items waiting right now.',
+      },
       {
         swatch: 'scrubber',
         mark: 'Replay · ◀ ▶ · chapters',
         means: 'Scrub or step through the run; "Handoff 3 of 25" names the item.',
+      },
+      {
+        swatch: 'consoles',
+        mark: '▸ Consoles',
+        means: "Opens each seat's terminal output at the replay time.",
+      },
+    ],
+  },
+  RIG_PICKER,
+];
+
+/** The seat panel (Focus): the legend opens there too (QA D3). */
+const FOCUS: LegendSection[] = [
+  {
+    title: 'Seat panel · the two channels',
+    entries: [
+      {
+        swatch: 'terminal',
+        mark: 'Black box',
+        means: "The seat's terminal screen: what it is saying and doing.",
+      },
+      {
+        swatch: 'rich-toggle',
+        mark: 'Rich text · Terminal',
+        means:
+          'Rich text = the latest turn, cleaned up. Terminal = the exact screen (the source of truth).',
+      },
+      {
+        swatch: 'queue-list',
+        mark: 'Queue · latest 6',
+        means: 'Formal handoffs through the OpenRig queue. A different channel from the terminal.',
+      },
+      {
+        swatch: 'queue-dir',
+        mark: '→ to · ← from',
+        means:
+          '→ this seat sent it; ← this seat received it. done / handed-off / pending = its state.',
+      },
+    ],
+  },
+  {
+    title: 'Seat panel · details',
+    entries: [
+      {
+        swatch: 'state-badge',
+        mark: '○ IDLE · live · 10s',
+        means:
+          "The seat's status (shape and colour as below), and how fresh its machine's feed is.",
+      },
+      {
+        swatch: 'seat-get-ok',
+        mark: 'seat.get · ok · as human:ui',
+        means:
+          'AppyRig asked the hub for this seat just now and got an answer. human:ui = who asked (this screen, read-only).',
+      },
+      {
+        swatch: 'seat-get-refused',
+        mark: 'Red box · SEAT.GET REFUSED · TIMEOUT',
+        means:
+          "The hub didn't answer within 5 s, so the panel shows the last state from the live feed. Not something you did.",
+      },
+      {
+        swatch: 'rows',
+        mark: 'Lifecycle running · running',
+        means: "OpenRig's lifecycle state, then its session status.",
+      },
+      {
+        swatch: 'rows',
+        mark: 'Context used · Queue · Folder',
+        means: "How full the seat's context is, its queue counts, and its working folder.",
+      },
+      {
+        swatch: 'because',
+        mark: 'Blocked because · Machine asleep',
+        means:
+          "Why the seat is stuck, or that its machine stopped reporting. Answer a block in the seat's own terminal; AppyRig only shows it.",
+      },
+      {
+        swatch: 'back-btn',
+        mark: '← Wall · Esc · ⌘↵',
+        means: 'Back to where you opened the seat from.',
       },
     ],
   },
@@ -303,15 +439,20 @@ const ACCOUNTS: LegendSection[] = [
   },
 ];
 
+/** A screen the legend can describe: every tab, plus the seat panel. */
+export type LegendScreen = View | 'focus';
+
 /** The legend for one screen: its own marks first, then the status marks every screen shares. */
-export function legendFor(view: View): LegendSection[] {
-  switch (view) {
+export function legendFor(screen: LegendScreen): LegendSection[] {
+  switch (screen) {
     case 'wall':
       return [...WALL, STATUS];
     case 'map':
       return [...MAP, STATUS];
     case 'flow':
       return [...FLOW, STATUS];
+    case 'focus':
+      return [...FOCUS, STATUS];
     case 'accounts':
       return [...ACCOUNTS, STATUS];
     case 'learn':
@@ -319,10 +460,11 @@ export function legendFor(view: View): LegendSection[] {
   }
 }
 
-export const VIEW_TITLE: Record<View, string> = {
+export const VIEW_TITLE: Record<LegendScreen, string> = {
   wall: 'The Wall',
   map: 'Rig Map',
   flow: 'Handoff Flow',
+  focus: 'Seat panel',
   accounts: 'Accounts',
   learn: 'Learn',
 };

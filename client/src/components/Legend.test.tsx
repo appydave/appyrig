@@ -1,11 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import Legend from './Legend.js';
-import { legendFor } from '../learn/legend.js';
-import type { View } from '../App.js';
+import { legendFor, type LegendScreen } from '../learn/legend.js';
 
-const VIEWS: View[] = ['wall', 'map', 'flow', 'accounts', 'learn'];
-const marks = (v: View) => legendFor(v).flatMap((s) => s.entries.map((e) => e.mark));
+const VIEWS: LegendScreen[] = ['wall', 'map', 'flow', 'focus', 'accounts', 'learn'];
+const marks = (v: LegendScreen) => legendFor(v).flatMap((s) => s.entries.map((e) => e.mark));
 
 describe('legend data (S1)', () => {
   it('every screen names the six seat states by glyph as well as colour', () => {
@@ -53,6 +52,32 @@ describe('legend data (S1)', () => {
     ]) {
       expect(all).toContain(want);
     }
+  });
+
+  it('QA S1 rework: the Flow legend says what the code draws (D1, D2, D5, text fixes)', () => {
+    const all = legendFor('flow')
+      .flatMap((s) => s.entries.map((e) => `${e.mark} ${e.means}`))
+      .join(' | ');
+    for (const want of [
+      'Solid arc above', // D1: a forward brief that skips a stage
+      'Anything sent back to an earlier stage other than the Lead: rework, verdicts (PASS or FAIL), answers', // D2
+      'Going back to the Lead', // D2: dashed = to the lead
+      'median handoff → close', // D5
+      'queue builds at QA',
+      '▸ Consoles',
+      'Dark chip = the rig shown',
+      '· running',
+      'orch-boss@control as Lead', // D5: "no seat" can still show waiting
+      'name@rig · name@machine', // text fix: test-team@m2
+    ]) {
+      expect(all).toContain(want);
+    }
+    const map = legendFor('map')
+      .flatMap((s) => s.entries.map((e) => `${e.mark} ${e.means}`))
+      .join(' | ');
+    expect(map).toContain('POD · SEATS only gathers the outside seats'); // text fix
+    expect(map).toContain('rig flicut-ab · stopped'); // D5
+    expect(marks('wall').join(' ')).not.toContain('Black box'); // seat panel marks moved to Focus
   });
 
   it('no screen lists the same mark twice', () => {

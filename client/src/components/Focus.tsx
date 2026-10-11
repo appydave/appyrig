@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { UI_PRINCIPAL, type QueueItem, type Refusal, type SeatGetOutput } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
@@ -98,9 +98,22 @@ interface Props {
   now: number;
   hubConnected: boolean;
   onClose: () => void;
+  /** S1 (QA D3): the legend for this panel, rendered under the header when open. */
+  legend?: ReactNode;
+  legendOpen?: boolean;
+  onToggleLegend?: () => void;
 }
 
-export default function Focus({ tile: storeTile, socket, now, hubConnected, onClose }: Props) {
+export default function Focus({
+  tile: storeTile,
+  socket,
+  now,
+  hubConnected,
+  onClose,
+  legend,
+  legendOpen = false,
+  onToggleLegend,
+}: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
   const [call, setCall] = useState<SeatCall>({ state: 'pending' });
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -219,9 +232,22 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
           >
             {mode === 'terminal' ? 'Rich text' : 'Terminal'}
           </button>
+          {onToggleLegend && (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="focus-legend-toggle"
+              aria-pressed={legendOpen}
+              aria-keyshortcuts="L"
+              onClick={onToggleLegend}
+            >
+              Legend · L
+            </button>
+          )}
           <span className="label">⌘↵ back to wall</span>
         </span>
       </header>
+      {legend}
 
       <div className="focus-body">
         <div className="focus-main">

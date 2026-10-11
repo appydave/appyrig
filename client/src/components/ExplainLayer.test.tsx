@@ -42,7 +42,7 @@ describe('ExplainLayer', () => {
       </>
     );
     await hover(screen.getByText('12 back'));
-    expect(screen.getByTestId('explain-card')).toHaveTextContent('Rework');
+    expect(screen.getByTestId('explain-card')).toHaveTextContent('Sent back');
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('explain-card')).toBeNull();
   });

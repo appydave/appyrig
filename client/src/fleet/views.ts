@@ -542,7 +542,7 @@ const hhmm = (t: number) =>
 
 /**
  * The moments worth pausing on in a run, found from the queue alone so any rig gets them:
- * the first handoff, the first rework, the biggest fresh queue, the longest real wait, the end.
+ * the first handoff, the first item sent back, the biggest fresh queue, the longest real wait, the end.
  */
 export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapter[] {
   const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -570,8 +570,8 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
       out.push({
         at: t,
         kind: 'first-rework',
-        title: 'First rework',
-        text: `${hhmm(t)} · ${bare(q.source)} sends work back to ${bare(q.destination)}. A check found a real problem.`,
+        title: 'First sent back',
+        text: `${hhmm(t)} · ${bare(q.source)} sends an item back to ${bare(q.destination)}: a verdict, an answer or rework.`,
       });
     }
     const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
@@ -609,7 +609,7 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
     at: range.end,
     kind: 'end',
     title: 'Where it ended',
-    text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back for rework` : ''}.`,
+    text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back` : ''}.`,
   });
   return out.sort((a, b) => a.at - b.at);
 }

@@ -502,6 +502,14 @@ describe('class names (QA M1)', () => {
 });
 
 describe('App: S1 legend and Explain discoverability', () => {
+  const noResize = () =>
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
   function connected() {
     const fake = renderApp();
     fake.fire('connect');
@@ -552,21 +560,37 @@ describe('App: S1 legend and Explain discoverability', () => {
     vi.unstubAllGlobals();
   });
 
-  it('the header button and the L key toggle it, and the choice is remembered', () => {
+  it('the header button and the L key toggle it, and the choice is remembered per screen', () => {
+    noResize();
     connected();
+    const choice = () => JSON.parse(localStorage.getItem('appyrig.legend') ?? '{}');
     fireEvent.click(screen.getByTestId('legend-toggle'));
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'wall');
-    expect(localStorage.getItem('appyrig.legend')).toBe('on');
+    expect(choice()).toEqual({ wall: 'on' });
     fireEvent.keyDown(window, { key: 'l' });
     expect(screen.queryByTestId('legend')).toBeNull();
-    expect(localStorage.getItem('appyrig.legend')).toBe('off');
-    fireEvent.keyDown(window, { key: 'L' });
+    expect(choice()).toEqual({ wall: 'off' });
+    // QA M2: closing it on the Map leaves the Wall's choice alone, and the reverse.
+    fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
     fireEvent.click(screen.getByTestId('legend-close'));
+    expect(choice()).toEqual({ wall: 'off', map: 'off' });
+    fireEvent.click(screen.getByTestId('view-wall'));
+    fireEvent.keyDown(window, { key: 'L' });
+    fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(choice()).toEqual({ wall: 'on', map: 'off' });
+    vi.unstubAllGlobals();
+  });
+
+  it('an old single on/off value is ignored, not misread', () => {
+    localStorage.setItem('appyrig.legend', 'on');
+    connected();
     expect(screen.queryByTestId('legend')).toBeNull();
   });
 
   it('L typed into a field, or with a modifier, is not a shortcut', () => {
-    localStorage.setItem('appyrig.legend', 'on');
+    localStorage.setItem('appyrig.legend', JSON.stringify({ wall: 'on' }));
     connected();
     const input = document.createElement('input');
     document.body.appendChild(input);
@@ -576,18 +600,32 @@ describe('App: S1 legend and Explain discoverability', () => {
     input.remove();
   });
 
-  it('Focus hides the legend and labels its two channels: terminal vs queue', () => {
-    localStorage.setItem('appyrig.legend', 'on');
+  it('QA D3: the seat panel has its own legend (button or L) naming its marks', () => {
+    localStorage.setItem('appyrig.legend', JSON.stringify({ wall: 'on' }));
     connected();
     fireEvent.click(screen.getByTestId('blocked-alert'));
+    // The Wall's choice does not carry into the panel; the panel starts closed.
     expect(screen.queryByTestId('legend')).toBeNull();
     expect(screen.getByTestId('channel-terminal')).toHaveTextContent('the seat’s own screen');
     expect(screen.getByTestId('channel-queue')).toHaveTextContent(
       'OpenRig queue, not the terminal'
     );
-    // L inside Focus does nothing.
     fireEvent.keyDown(window, { key: 'l' });
-    expect(localStorage.getItem('appyrig.legend')).toBe('on');
+    const legend = screen.getByTestId('legend');
+    expect(legend).toHaveAttribute('data-view', 'focus');
+    for (const mark of [
+      'SEAT.GET REFUSED · TIMEOUT',
+      'seat.get · ok · as human:ui',
+      'Rich text · Terminal',
+      'Lifecycle running · running',
+      'Queue · latest 6',
+    ]) {
+      expect(legend).toHaveTextContent(mark);
+    }
+    fireEvent.click(screen.getByTestId('focus-legend-toggle'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    // Still in the panel; the toggle did not close it.
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
   });
 });
 

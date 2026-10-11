@@ -8,6 +8,7 @@ import Learn from './components/Learn.js';
 import KeysHelp from './components/KeysHelp.js';
 import Legend from './components/Legend.js';
 import { isShortcutBlocked } from './lib/keys.js';
+import type { LegendScreen } from './learn/legend.js';
 import RigMap from './components/RigMap.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
@@ -48,18 +49,19 @@ function readExplain(): boolean {
   }
 }
 
-type LegendChoice = 'on' | 'off' | null;
+type LegendChoice = Partial<Record<LegendScreen, 'on' | 'off'>>;
 
 /**
- * S1: until the viewer chooses, the legend is open on the two diagram screens (Rig Map, Handoff
- * Flow) and closed elsewhere, so it never pushes the Wall's tiles down. A choice then sticks.
+ * S1: the legend choice is per screen (QA M2). Until the viewer chooses on a screen, it is open on
+ * the two diagram screens (Rig Map, Handoff Flow) and closed elsewhere, so it never pushes the
+ * Wall's tiles down. A choice on one screen never opens it on another.
  */
 function readLegend(): LegendChoice {
   try {
-    const v = localStorage.getItem(LEGEND_KEY);
-    return v === 'on' || v === 'off' ? v : null;
+    const v = JSON.parse(localStorage.getItem(LEGEND_KEY) ?? '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? (v as LegendChoice) : {};
   } catch {
-    return null;
+    return {};
   }
 }
 
@@ -156,12 +158,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     dismissHint();
   };
 
-  const legend = legendChoice ? legendChoice === 'on' : view === 'map' || view === 'flow';
+  const screen: LegendScreen = focused ? 'focus' : view;
+  const legend = legendChoice[screen]
+    ? legendChoice[screen] === 'on'
+    : screen === 'map' || screen === 'flow';
   const toggleLegend = useCallback(() => {
-    const next = legend ? 'off' : 'on';
+    const next: LegendChoice = { ...legendChoice, [screen]: legend ? 'off' : 'on' };
     setLegendChoice(next);
-    remember(LEGEND_KEY, next);
-  }, [legend]);
+    remember(LEGEND_KEY, JSON.stringify(next));
+  }, [legendChoice, screen, legend]);
 
   const chooseGroup = (g: GroupBy) => {
     setGroupBy(g);
@@ -180,7 +185,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   }, []);
   const close = useCallback(() => setFocused(null), []);
 
-  // Screen keys (S1 L, S2 ? and Esc), on every screen except Focus, which owns its own Esc.
+  // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
     if (focused) return;
@@ -196,11 +201,21 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       if (e.key === '?') {
         e.preventDefault();
         setHelp((h) => !h);
-      } else if ((e.key === 'l' || e.key === 'L') && !help) toggleLegend();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, help, toggleLegend, goBack]);
+  }, [focused, help, goBack]);
+
+  // L shows or hides the legend for this screen, the seat panel included (QA D3).
+  useEffect(() => {
+    if (help) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [help, toggleLegend]);
 
   // Return keyboard focus to whatever opened Focus: a Wall tile, a Rig Map node, a strip alert.
   useEffect(() => {
@@ -236,16 +251,41 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             </button>
           ))}
         </nav>
-        <button
-          type="button"
-          className="pill-btn explain-toggle"
-          data-testid="explain-toggle"
-          aria-pressed={explain}
-          title="Explain mode: hover anything to see what it means"
-          onClick={toggleExplain}
-        >
-          ? Explain {explain ? 'on' : 'off'}
-        </button>
+        <span className="explain-anchor">
+          <button
+            type="button"
+            className="pill-btn explain-toggle"
+            data-testid="explain-toggle"
+            aria-pressed={explain}
+            title="Explain mode: hover anything to see what it means"
+            onClick={toggleExplain}
+          >
+            ? Explain {explain ? 'on' : 'off'}
+          </button>
+          {hint && (
+            <span className="first-hint" role="note" data-testid="explain-hint">
+              <span aria-hidden="true">↑</span> New here?{' '}
+              {explain ? (
+                <>
+                  <b>Explain</b> is on: hover anything to see what it means.
+                </>
+              ) : (
+                <>
+                  Turn on <b>Explain</b>, then hover anything to see what it means.
+                </>
+              )}{' '}
+              <b>Legend</b> names every mark on the screen.
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="explain-hint-dismiss"
+                onClick={dismissHint}
+              >
+                Got it
+              </button>
+            </span>
+          )}
+        </span>
         <button
           type="button"
           className="pill-btn"
@@ -268,29 +308,6 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         >
           Keys · ?
         </button>
-        {hint && (
-          <span className="first-hint" role="note" data-testid="explain-hint">
-            <span aria-hidden="true">←</span> New here?{' '}
-            {explain ? (
-              <>
-                <b>Explain</b> is on: hover anything to see what it means.
-              </>
-            ) : (
-              <>
-                Turn on <b>Explain</b>, then hover anything to see what it means.
-              </>
-            )}{' '}
-            <b>Legend</b> names every mark on the screen.
-            <button
-              type="button"
-              className="pill-btn"
-              data-testid="explain-hint-dismiss"
-              onClick={dismissHint}
-            >
-              Got it
-            </button>
-          </span>
-        )}
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}
@@ -376,6 +393,9 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           now={now}
           hubConnected={hubConnected}
           onClose={close}
+          legendOpen={legend}
+          onToggleLegend={toggleLegend}
+          legend={legend ? <Legend view="focus" onClose={toggleLegend} /> : null}
         />
       )}
       {focused && !focusTile && (

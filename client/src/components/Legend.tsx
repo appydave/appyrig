@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
-import type { View } from '../App.js';
-import { legendFor, VIEW_TITLE, type Swatch } from '../learn/legend.js';
+import { legendFor, VIEW_TITLE, type LegendScreen, type Swatch } from '../learn/legend.js';
 
 interface Props {
-  view: View;
+  view: LegendScreen;
   onClose: () => void;
 }
 
@@ -139,6 +138,22 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   ),
   resets: () => <span className="legend-mono">⟳ 39m</span>,
   headroom: () => <span className="legend-pill legend-pill-dark">→</span>,
+  'arc-skip': () => arc('flow-edge forward', false),
+  'rig-chip': () => <span className="legend-pill legend-pill-dark">rig</span>,
+  stats: () => <span className="legend-num">27</span>,
+  consoles: () => <span className="legend-mono">▸</span>,
+  'lane-head': () => <span className="legend-num legend-num-sm">M2</span>,
+  'seat-get-ok': () => <span className="legend-mono">ok</span>,
+  'seat-get-refused': () => <span className="legend-refused">!</span>,
+  'rich-toggle': () => <span className="legend-pill">Rich</span>,
+  'state-badge': () => (
+    <span className="legend-pill" data-pip="idle">
+      ○ idle
+    </span>
+  ),
+  rows: () => <span className="legend-lines" />,
+  because: () => <span className="legend-because" />,
+  'back-btn': () => <span className="legend-pill">← Esc</span>,
 };
 
 /**
