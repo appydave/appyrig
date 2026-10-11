@@ -63,10 +63,18 @@ export type Swatch =
   | 'state-badge'
   | 'rows'
   | 'because'
-  | 'back-btn';
+  | 'back-btn'
+  | 'tile-shapes'
+  | 'group-collapsed'
+  | 'order'
+  | 'machine-filter'
+  | 'map-arcs'
+  | 'idle-card';
 
 export interface LegendEntry {
   swatch: Swatch;
+  /** Glossary term id (learn/glossary.ts): the one place the full meaning lives (r1 S1). */
+  term?: string;
   /** The mark, as it reads on screen. */
   mark: string;
   /** What it means, in one line. */
@@ -127,7 +135,36 @@ const WALL: LegendSection[] = [
         mark: 'TMUX SESSIONS  M4',
         means: 'Sessions outside OpenRig on that machine, one group per machine.',
       },
-      { swatch: 'tile-bar', mark: 'Coloured top bar', means: 'The seat status colour (above).' },
+      {
+        swatch: 'tile-shapes',
+        mark: 'Top bar + outline',
+        means:
+          'Status by shape: solid bar + outline = working; thick bar + thick outline = blocked; dashed bar = idle; dotted bar = unknown; no bar, dashed outline, dimmed = stopped.',
+      },
+      {
+        swatch: 'group-collapsed',
+        mark: '▸ GROUP · ✕ 4 stopped',
+        means:
+          'A collapsed group: click it (or Enter) to open. The counts say what is inside. Stopped and asleep groups start collapsed; your choice is remembered.',
+      },
+      {
+        swatch: 'idle-card',
+        mark: 'IDLE TEAMS · ○ dev-build ○ dev-qa',
+        means:
+          'A team that is running but where nobody is working, as one card. Open it (click or Enter) for its tiles; your choice is remembered.',
+      },
+      {
+        swatch: 'order',
+        mark: 'Order: blocked → working → …',
+        means:
+          'How the Wall sorts its groups, stated above them; newest activity first within each.',
+      },
+      {
+        swatch: 'machine-filter',
+        mark: 'Show  ● M2  ○ M4',
+        means:
+          'The machine filter, at the end of the machine strip: ○ = hidden from the Wall and the rig lists. The strip itself still lists and counts every machine.',
+      },
       { swatch: 'fresh', mark: 'live · 2s', means: 'How long since that machine last reported.' },
       {
         swatch: 'queue-counts',
@@ -231,6 +268,12 @@ const MAP: LegendSection[] = [
         swatch: 'line-dashed',
         mark: 'Dashed line · N left open',
         means: 'An item left open for more than 2 hours.',
+      },
+      {
+        swatch: 'map-arcs',
+        mark: 'Arc over · arc under',
+        means:
+          'Within a row, arcs over the boxes run left → right and arcs under run right → left, so a pair never overlaps.',
       },
       { swatch: 'self', mark: '↺ N to itself', means: 'The seat queued work for itself.' },
     ],
@@ -439,11 +482,63 @@ const ACCOUNTS: LegendSection[] = [
   },
 ];
 
+/**
+ * Which glossary term each mark is. The legend line is the one-glance name; with Explain on,
+ * hovering the line shows the glossary card, so the long meaning is written once (r1 S1 note).
+ */
+export const TERM_FOR: Partial<Record<Swatch, string>> = {
+  'status-working': 'status-working',
+  'status-idle': 'status-idle',
+  'status-blocked': 'status-blocked',
+  'status-stopped': 'status-stopped',
+  'status-unknown': 'status-unknown',
+  'status-asleep': 'status-asleep',
+  chips: 'model',
+  'chip-runtime': 'model',
+  tile: 'seat',
+  'seat-box': 'seat',
+  'machine-dot': 'machine',
+  'no-openrig': 'no-openrig',
+  'machine-panel': 'machine',
+  'pod-band': 'pod',
+  'line-width': 'handoff',
+  'line-count': 'handoff',
+  'line-amber': 'waiting',
+  'line-dashed': 'stale',
+  self: 'self-handoff',
+  'stage-box': 'stage',
+  'outside-box': 'seat-mode',
+  'box-waiting': 'waiting',
+  'box-stale': 'stale',
+  'flow-forward': 'flow-forward',
+  'arc-skip': 'flow-forward',
+  'flow-report': 'flow-report',
+  'flow-rework': 'rework',
+  'dot-flight': 'flow-forward',
+  'dot-rework': 'rework',
+  scrubber: 'replay',
+  consoles: 'console',
+  'lane-head': 'outside-lane',
+  'idle-card': 'status-idle',
+};
+
+const withTerms = (sections: LegendSection[]): LegendSection[] =>
+  sections.map((s) => ({
+    ...s,
+    entries: s.entries.map((e) =>
+      e.term || !TERM_FOR[e.swatch] ? e : { ...e, term: TERM_FOR[e.swatch] }
+    ),
+  }));
+
 /** A screen the legend can describe: every tab, plus the seat panel. */
 export type LegendScreen = View | 'focus';
 
 /** The legend for one screen: its own marks first, then the status marks every screen shares. */
 export function legendFor(screen: LegendScreen): LegendSection[] {
+  return withTerms(sectionsFor(screen));
+}
+
+function sectionsFor(screen: LegendScreen): LegendSection[] {
   switch (screen) {
     case 'wall':
       return [...WALL, STATUS];

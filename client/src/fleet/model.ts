@@ -1,4 +1,10 @@
-import { ASLEEP_AFTER_MS, type FleetMachine, type Seat, type SeatStatus } from '@appydave/shared';
+import {
+  ASLEEP_AFTER_MS,
+  type FleetMachine,
+  type RigSummary,
+  type Seat,
+  type SeatStatus,
+} from '@appydave/shared';
 
 /**
  * Pure view-model helpers for the Wall, Focus and Fleet Strip. No React, no socket: everything
@@ -101,6 +107,52 @@ export interface WallGroup {
   where: string;
   asleep: boolean;
   tiles: TileRef[];
+  /** S3: the rig this group is, when grouped by rig and the machine reports it. */
+  rig?: RigSummary;
+}
+
+/** S3: what a Wall group is doing as a whole, which decides its place and whether it starts open. */
+export type GroupState = 'blocked' | 'working' | 'idle' | 'unknown' | 'stopped' | 'asleep';
+
+export const GROUP_STATES: GroupState[] = [
+  'blocked',
+  'working',
+  'idle',
+  'unknown',
+  'stopped',
+  'asleep',
+];
+
+/** Stated on screen above the Wall (S3: "the sort order is stated on screen"). */
+export const WALL_ORDER_TEXT =
+  'Order: blocked → working → idle (one card per team; open a card for its tiles) → state unknown → stopped → asleep machine · newest activity first within each · stopped and asleep start collapsed';
+
+export function groupState(g: WallGroup): GroupState {
+  if (g.asleep) return 'asleep';
+  const has = (st: SeatStatus) => g.tiles.some((t) => t.seat.status === st);
+  if (has('blocked')) return 'blocked';
+  if (has('working')) return 'working';
+  if (has('idle')) return 'idle';
+  if (has('unknown')) return 'unknown';
+  return 'stopped';
+}
+
+/**
+ * Collapsed until the viewer opens it. Stopped and asleep groups become one head line; idle-only
+ * teams become one card in the idle strip (S3 rework, mochaccino wall-fit-running-teams, variant C),
+ * so the teams that are working fit above the fold however many teams sit idle.
+ */
+export function collapsedByDefault(g: WallGroup): boolean {
+  const st = groupState(g);
+  return st === 'idle' || st === 'stopped' || st === 'asleep';
+}
+
+/** Latest lastActivityAt of any seat in the group, as an ISO string ('' when none reported). */
+export function groupLastActivity(g: WallGroup): string {
+  return g.tiles.reduce((acc, t) => {
+    const at = t.seat.lastActivityAt ?? '';
+    return at > acc ? at : acc;
+  }, '');
 }
 
 /** Machines in a stable order (by id), so the wall does not reshuffle as updates arrive. */
@@ -109,14 +161,11 @@ export function orderedMachines(machines: Record<string, FleetMachine>): FleetMa
 }
 
 /**
- * D53: what needs eyes comes first. Groups with a blocked seat, then groups with any running seat,
- * then groups whose seats are all stopped, then asleep machines. Order inside a rank is stable.
+ * D53 + v1.4 S3: what needs eyes comes first, then what is running. Blocked, working, idle, state
+ * unknown (plain tmux), all stopped, then asleep machines. Ties: newest activity first, then stable.
  */
 export function groupRank(g: WallGroup): number {
-  if (g.asleep) return 3;
-  if (g.tiles.some((t) => t.seat.status === 'blocked')) return 0;
-  if (g.tiles.some((t) => t.seat.status !== 'stopped')) return 1;
-  return 2;
+  return GROUP_STATES.indexOf(groupState(g));
 }
 
 /**
@@ -124,7 +173,10 @@ export function groupRank(g: WallGroup): number {
  * on Roamy and `kernel` on the M2 are different rigs. Seats outside OpenRig group as "tmux sessions".
  */
 export function groupSeats(machines: FleetMachine[], by: GroupBy): WallGroup[] {
-  return collectGroups(machines, by).sort((a, b) => groupRank(a) - groupRank(b));
+  return collectGroups(machines, by)
+    .map((g) => ({ g, rank: groupRank(g), last: groupLastActivity(g) }))
+    .sort((a, b) => a.rank - b.rank || b.last.localeCompare(a.last))
+    .map((x) => x.g);
 }
 
 function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
@@ -148,7 +200,14 @@ function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
       const key = `${fm.machine.id}:${rig ?? '~tmux'}`;
       let g = byRig.get(key);
       if (!g) {
-        g = { key, name: rig ?? 'tmux sessions', where: fm.machine.label, asleep, tiles: [] };
+        g = {
+          key,
+          name: rig ?? 'tmux sessions',
+          where: fm.machine.label,
+          asleep,
+          tiles: [],
+          rig: rig ? fm.snapshot.rigs.find((r) => r.name === rig) : undefined,
+        };
         byRig.set(key, g);
         groups.push(g);
       }
@@ -250,6 +309,43 @@ export function stripAnsi(line: string): string {
 }
 
 /** Drop trailing blank lines (panes are mostly padding at the bottom), then keep the last `n`. */
+/**
+ * Claude Code's input box and footer, which sit under every turn: rules, the empty prompt, the mode
+ * line ("auto mode on (shift+tab to cycle)"), "? for shortcuts" and tips. None of it says what the
+ * seat is doing.
+ */
+const CHROME = [
+  /^[\s─━—-]{8,}[\w@.-]*[\s─━—-]*$/, // a rule, maybe with the session name in it
+  /^\s*[❯›>]\s*$/, // the empty prompt
+  /shift\+tab to cycle|\? for shortcuts|esc to interrupt|ctrl\+[a-z] to /i,
+  /^\s*[⏵▶►⏸]{1,2}\s/,
+  /^\s*[└⎿│|]?\s*Tip: /,
+  /Update installed|Restart to update|new task\? \/clear/,
+  /paste again to expand|Press up to edit queued messages|queued messages?$/i,
+  /^\s*[❯›>] /, // a draft typed into the input box: the viewer's text, not the seat's work
+];
+const TIP = /^\s*[└⎿│|]?\s*Tip: |^\s{2,}current work\s*$/;
+const isChrome = (line: string) => {
+  const t = stripAnsi(line);
+  return t.trim() === '' || CHROME.some((re) => re.test(t));
+};
+
+/**
+ * S3: the last n lines of what the seat is doing, for a Wall tile. Trailing input-box chrome is
+ * dropped first, so a short tile still shows the work. Focus keeps the exact screen.
+ */
+export function contentTail(lines: string[], n: number): string[] {
+  let end = lines.length;
+  while (end > 0 && isChrome(lines[end - 1]!)) end -= 1;
+  if (end === 0) return visibleTail(lines, n);
+  // Blank lines and Claude Code's tips carry nothing on a small tile; keep the n last lines that
+  // say something.
+  const said = lines
+    .slice(0, end)
+    .filter((l) => stripAnsi(l).trim() !== '' && !TIP.test(stripAnsi(l)));
+  return said.slice(Math.max(0, said.length - n));
+}
+
 export function visibleTail(lines: string[], n: number): string[] {
   let end = lines.length;
   while (end > 0 && stripAnsi(lines[end - 1]).trim() === '') end -= 1;

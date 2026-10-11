@@ -21,6 +21,7 @@ const VIEW_KEY = 'appyrig.view';
 const EXPLAIN_KEY = 'appyrig.explain';
 const LEGEND_KEY = 'appyrig.legend';
 const HINT_KEY = 'appyrig.hint';
+const HIDDEN_KEY = 'appyrig.hiddenMachines';
 
 export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'learn';
 const VIEWS: { key: View; label: string }[] = [
@@ -62,6 +63,16 @@ function readLegend(): LegendChoice {
     return v && typeof v === 'object' && !Array.isArray(v) ? (v as LegendChoice) : {};
   } catch {
     return {};
+  }
+}
+
+/** S3: machine ids the viewer has filtered out (per viewer; unknown ids are harmless). */
+function readHidden(): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
   }
 }
 
@@ -112,7 +123,20 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const history = useRef<View[]>([]);
   const [help, setHelp] = useState(false);
 
-  const machines = useMemo(() => orderedMachines(state.machines), [state.machines]);
+  const allMachines = useMemo(() => orderedMachines(state.machines), [state.machines]);
+  const [hidden, setHidden] = useState<string[]>(readHidden);
+  // S3: the machine filter. The Fleet Strip keeps every machine (a blocked seat is never hidden);
+  // the Wall and the rig lists show only the machines switched on.
+  const machines = useMemo(
+    () => allMachines.filter((m) => !hidden.includes(m.machine.id)),
+    [allMachines, hidden]
+  );
+  const hiddenShown = allMachines.filter((m) => hidden.includes(m.machine.id));
+  const toggleMachine = (id: string) => {
+    const next = hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id];
+    setHidden(next);
+    remember(HIDDEN_KEY, JSON.stringify(next));
+  };
   const seatCount = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
   const focusTile = focused ? findSeat(state.machines, focused) : null;
   const hubConnected = link === 'connected';
@@ -121,8 +145,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const minute = Math.floor(now / 60_000) * 60_000;
   const activeRig = rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null;
   const rigMap = useMemo(
-    () => (view === 'map' && activeRig ? buildRigMap(machines, activeRig.key, minute) : null),
-    [view, activeRig, machines, minute]
+    () => (view === 'map' && activeRig ? buildRigMap(allMachines, activeRig.key, minute) : null),
+    [view, activeRig, allMachines, minute]
   );
 
   const showView = (v: View) => {
@@ -181,6 +205,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     lastFocused.current = key;
     const active = document.activeElement;
     opener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    // r1 S2: a seat opened from under the keys overlay closes it, so Esc never brings it back.
+    setHelp(false);
     setFocused(key);
   }, []);
   const close = useCallback(() => setFocused(null), []);
@@ -311,6 +337,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}
+          {hiddenShown.length > 0 ? ` · ${hiddenShown.length} hidden` : ''}
         </span>
         <div className="controls" role="group" aria-label="Group tiles by" hidden={view !== 'wall'}>
           {/* B11: the API is findable from the UI. /v1/docs is open and carries no fleet data. */}
@@ -339,12 +366,33 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         </div>
       </header>
       <FleetStrip
-        machines={machines}
+        machines={allMachines}
         now={now}
         link={link}
         received={state.received}
         error={state.error}
         onOpen={open}
+        filter={
+          allMachines.length > 1 && (view === 'wall' || view === 'map' || view === 'flow') ? (
+            <div className="machine-filter" role="group" aria-label="Machines shown">
+              <span className="label">Show</span>
+              {allMachines.map((m) => (
+                <button
+                  key={m.machine.id}
+                  type="button"
+                  className="pill-btn"
+                  data-testid="machine-filter"
+                  data-machine-id={m.machine.id}
+                  aria-pressed={!hidden.includes(m.machine.id)}
+                  title={`${hidden.includes(m.machine.id) ? 'Show' : 'Hide'} ${m.machine.label} on the Wall and in the rig lists`}
+                  onClick={() => toggleMachine(m.machine.id)}
+                >
+                  {hidden.includes(m.machine.id) ? '○' : '●'} {m.machine.label}
+                </button>
+              ))}
+            </div>
+          ) : undefined
+        }
       />
       {legend && !focusTile && <Legend view={view} onClose={toggleLegend} />}
       {view === 'wall' && (
@@ -356,6 +404,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           received={state.received}
           onOpen={open}
           keys={!focusTile && !help}
+          hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
+          onShow={toggleMachine}
         />
       )}
       {(view === 'map' || view === 'flow') && (
@@ -365,7 +415,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             <RigMap map={rigMap} onOpen={open} />
           ) : (
             <HandoffFlow
-              machine={machines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
+              machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
               rig={activeRig?.name ?? null}
               now={now}
               socket={getSocket()}
@@ -376,13 +426,13 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       )}
       {view === 'accounts' && (
         <main className="view" data-testid="view-body-accounts">
-          <Accounts machines={machines} now={now} />
+          <Accounts machines={allMachines} now={now} />
         </main>
       )}
       <ExplainLayer enabled={explain && !focusTile && !help} />
       {view === 'learn' && (
         <main className="view" data-testid="view-body-learn">
-          <Learn machines={machines} now={now} onGoTo={chooseView} />
+          <Learn machines={allMachines} now={now} onGoTo={chooseView} />
         </main>
       )}
       {help && !focusTile && <KeysHelp view={view} onClose={() => setHelp(false)} />}

@@ -1814,3 +1814,285 @@ a:hover {
   background: var(--ar-blocked-bg);
   border-radius: 4px;
 }
+
+/* ---------- v1.4 S3: a calmer Wall ---------- */
+.wall-order {
+  margin: 0;
+}
+button.group-head {
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  text-align: left;
+}
+button.group-head:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 2px;
+}
+.group-caret {
+  width: 12px;
+  color: var(--ar-ink);
+}
+.group-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-family: var(--ar-font-body);
+}
+.group-count .pip-glyph {
+  color: var(--pip);
+}
+.group[data-open='false'] .group-head b {
+  color: var(--ar-ink-muted);
+}
+
+/* Status by shape as well as colour (lab rule: never colour alone). The pip glyph says it in text;
+   the tile's top bar and outline say it in shape: working = solid bar + solid outline,
+   blocked = thick solid bar + thick outline, idle = dashed bar, unknown = dotted bar,
+   stopped = no bar, dashed outline, dimmed. */
+.tile[data-pip='working'] {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.tile[data-pip='working'] .tile-bar {
+  height: 4px;
+}
+.tile[data-pip='blocked'] {
+  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
+}
+.tile[data-pip='blocked'] .tile-bar {
+  height: 6px;
+}
+.tile[data-pip='idle'] .tile-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 10px, transparent 10px 16px);
+}
+.tile[data-pip='unknown'] .tile-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 3px, transparent 3px 7px);
+}
+.tile[data-pip='stopped'] {
+  background: var(--ar-term-bg-deep);
+  box-shadow: inset 0 0 0 1px var(--ar-stopped);
+  outline: 1px dashed var(--ar-stopped-text);
+  outline-offset: -4px;
+  opacity: 0.75;
+}
+.tile[data-pip='stopped'] .tile-bar {
+  background: transparent;
+}
+.tile[data-pip='stopped'] .tile-term {
+  flex: none;
+}
+.tile[data-pip]:hover,
+.tile[data-pip]:focus-visible {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.machine-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.machine-filter .pill-btn[aria-pressed='false'] {
+  color: var(--ar-ink-muted);
+  border-style: dashed;
+}
+.filter-note {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+}
+.legend-shapes {
+  display: inline-flex;
+  gap: 3px;
+}
+.legend-tile.mini {
+  width: 16px;
+  height: 18px;
+}
+.legend-tile[data-pip='working'] {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.legend-tile[data-pip='idle'] i {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 4px, transparent 4px 7px);
+}
+.legend-tile[data-pip='stopped'] {
+  outline: 1px dashed var(--ar-stopped-text);
+  outline-offset: -3px;
+  opacity: 0.75;
+}
+.legend-tile[data-pip='stopped'] i {
+  background: transparent;
+}
+
+/* ---------- v1.4 S3: rig names, summaries and the rig-info panel ---------- */
+.rig-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rig-chip {
+  max-width: 280px;
+}
+.rig-chip .rig-chip-summary {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+.rig-info {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-left: 4px solid var(--ar-sequence);
+  border-radius: 10px;
+  padding: 8px 14px 10px;
+  font-size: 13px;
+  max-width: 900px;
+}
+.rig-info[data-preview='true'] {
+  border-left-style: dashed;
+}
+.rig-info header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.rig-info header b {
+  font-family: var(--ar-font-label);
+  font-size: 15px;
+}
+.rig-info code {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.rig-info p {
+  margin: 4px 0 6px;
+}
+.rig-info dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 0;
+}
+.rig-info dt {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.rig-info dd {
+  margin: 0;
+}
+.rig-info dd[data-status='not-found'],
+.rig-info dd[data-status='unreported'] {
+  color: var(--ar-ink-muted);
+  font-style: italic;
+}
+.group-summary {
+  margin: -4px 0 0 22px;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* S3: tiles keep their own height, so a short idle tile is not stretched to a working one. */
+.group .grid {
+  align-items: start;
+}
+.group .tile-term {
+  min-height: 0;
+}
+
+/* ---------- v1.4 S3 rework: idle teams as a strip of cards (mochaccino variant C) ---------- */
+.idle-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.idle-strip-head {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.idle-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: 10px;
+}
+.idle-team {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  /* The idle shape: a dashed edge, as on idle tiles. */
+  border-left: 4px dashed var(--ar-idle);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.idle-team:hover,
+.idle-team:focus-visible {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.idle-team-name b {
+  font-family: var(--ar-font-label);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.idle-team-name span,
+.idle-team-summary {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.idle-team-summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.idle-team-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.idle-team-seats .pip-glyph {
+  color: var(--pip);
+}
+.legend-idle-card {
+  display: inline-block;
+  width: 44px;
+  font-size: 10px;
+  padding: 2px 4px;
+  border: 1px solid var(--ar-line);
+  border-left: 3px dashed var(--ar-idle);
+  border-radius: 4px;
+  background: var(--ar-surface-raised);
+  color: var(--ar-ink-muted);
+}

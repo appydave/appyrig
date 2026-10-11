@@ -71,13 +71,26 @@ export async function signIn(page: Page): Promise<void> {
     .request.get(`${hub}/?token=${encodeURIComponent(token)}`, { maxRedirects: 0 });
 }
 
+/** Opens every collapsed Wall group (S3), keyboard-free and idempotent. */
+export async function openAllGroups(page: Page): Promise<void> {
+  const cards = page.getByTestId('idle-team');
+  while ((await cards.count()) > 0) await cards.first().click();
+  const closed = page.locator('[data-testid="wall-group-head"][aria-expanded="false"]');
+  while ((await closed.count()) > 0) await closed.first().click();
+}
+
 /** Signs in, opens the Wall and waits until every fixture seat has a tile. */
 export async function openWall(page: Page): Promise<ExpectedSeat[]> {
   const seats = expectedSeats();
   await signIn(page);
   await page.goto('/');
   await expect(page.getByTestId('wall')).toBeVisible();
-  await expect(page.getByTestId('seat-tile')).toHaveCount(seats.length, { timeout: 15_000 });
+  // S3: stopped and asleep groups start collapsed; open them so every fixture seat has a tile.
+  await expect(page.getByTestId('wall-group-head').first()).toBeVisible({ timeout: 15_000 });
+  await expect(async () => {
+    await openAllGroups(page);
+    await expect(page.getByTestId('seat-tile')).toHaveCount(seats.length, { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
   return seats;
 }
 

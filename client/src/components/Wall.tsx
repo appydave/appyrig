@@ -1,16 +1,22 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
+  WALL_ORDER_TEXT,
+  collapsedByDefault,
   freshness,
   groupSeats,
+  groupState,
+  type PipKey,
+  type WallGroup,
   modelChip,
   pipFor,
   seatName,
-  visibleTail,
+  contentTail,
   type GroupBy,
 } from '../fleet/model.js';
 import AnsiText from './AnsiText.js';
+import { rigTitle } from './RigInfo.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 
 export interface Box {
@@ -18,6 +24,30 @@ export interface Box {
   y: number;
   w: number;
   h: number;
+}
+
+const OPEN_KEY = 'appyrig.groups';
+
+/** Per-viewer open/closed overrides by group key; anything not listed follows its default. */
+function readOpen(): Record<string, boolean> {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPEN_KEY) ?? '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+const PIP_ORDER: PipKey[] = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
+
+/** "● 2 working · ○ 3 idle": a group's seats by status, glyph first (never colour alone). */
+function statusCounts(g: WallGroup): { pip: PipKey; n: number }[] {
+  const n = new Map<PipKey, number>();
+  for (const t of g.tiles) {
+    const pip = pipFor(t.seat, t.machine);
+    n.set(pip, (n.get(pip) ?? 0) + 1);
+  }
+  return PIP_ORDER.filter((p) => n.has(p)).map((pip) => ({ pip, n: n.get(pip)! }));
 }
 
 const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] as const;
@@ -53,8 +83,21 @@ export function nextTile(boxes: Box[], cur: number, key: Arrow): number {
   return best;
 }
 
-/** Lines a tile shows; the store keeps up to TAIL_MAX_LINES for Focus. */
-const TILE_LINES = 14;
+/**
+ * Lines a tile shows; the store keeps up to TAIL_MAX_LINES for Focus. S3: a working seat shows
+ * enough to see what it is doing; every other seat a glance, so running teams fit on one screen.
+ */
+const TILE_LINES_BUSY = 3;
+/** Plain tmux (unknown): its terminal is the only signal there is, so it keeps a few lines. */
+const TILE_LINES_UNKNOWN = 3;
+/** Idle, stopped, asleep: one line, the last thing it said. */
+const TILE_LINES_QUIET = 1;
+const linesFor = (pip: PipKey) =>
+  pip === 'working' || pip === 'blocked'
+    ? TILE_LINES_BUSY
+    : pip === 'unknown'
+      ? TILE_LINES_UNKNOWN
+      : TILE_LINES_QUIET;
 
 interface TileProps {
   tileKey: string;
@@ -68,7 +111,7 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
-  const lines = seat.tail ? visibleTail(seat.tail.lines, TILE_LINES) : [];
+  const lines = seat.tail ? contentTail(seat.tail.lines, linesFor(pip)) : [];
   const w = seat.work;
   return (
     <button
@@ -146,6 +189,9 @@ interface WallProps {
   onOpen: (key: string) => void;
   /** S2: arrow keys move between tiles. Off while Focus or an overlay owns the keyboard. */
   keys?: boolean;
+  /** S3: machines the viewer filtered out, named on the Wall so nothing vanishes silently. */
+  hidden?: { id: string; label: string }[];
+  onShow?: (machineId: string) => void;
 }
 
 export default function Wall({
@@ -156,9 +202,22 @@ export default function Wall({
   received,
   onOpen,
   keys = true,
+  hidden = [],
+  onShow,
 }: WallProps) {
   const groups = groupSeats(machines, groupBy);
   const box = useRef<HTMLElement>(null);
+  const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
+  const isOpen = (g: WallGroup) => openAt[g.key] ?? !collapsedByDefault(g);
+  const toggle = (g: WallGroup) => {
+    const next = { ...openAt, [g.key]: !isOpen(g) };
+    setOpenAt(next);
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(next));
+    } catch {
+      // per-viewer convenience only
+    }
+  };
 
   useEffect(() => {
     if (!keys) return;
@@ -169,7 +228,12 @@ export default function Wall({
       const active = document.activeElement;
       // From anywhere on the page (a header tab, the body, a tile), but never out of a dialog.
       if (active?.closest('[role="dialog"]')) return;
-      const tiles = [...wall.querySelectorAll<HTMLElement>('[data-testid="seat-tile"]')];
+      // Tiles and idle-team cards, in reading order: a card is one stop, Enter opens it.
+      const tiles = [
+        ...wall.querySelectorAll<HTMLElement>(
+          '[data-testid="seat-tile"],[data-testid="idle-team"]'
+        ),
+      ];
       const boxes = tiles.map((t) => {
         const r = t.getBoundingClientRect();
         return { x: r.left, y: r.top, w: r.width, h: r.height };
@@ -190,36 +254,143 @@ export default function Wall({
       ref={box}
       data-testid="wall"
       aria-label="The Wall"
-      style={{ display: 'flex', flexDirection: 'column', gap: 22 }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
-      {received && groups.length === 0 && (
+      {received && groups.length === 0 && hidden.length === 0 && (
         <p className="empty">
           No seats yet. Machines appear here as soon as their collector reports.
         </p>
       )}
-      {groups.map((g) => {
+      {hidden.length > 0 && (
+        <p className="filter-note" data-testid="wall-hidden">
+          Hidden by the machine filter:{' '}
+          {hidden.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="pill-btn"
+              data-testid="wall-show-machine"
+              onClick={() => onShow?.(m.id)}
+            >
+              ○ {m.label} · show
+            </button>
+          ))}
+        </p>
+      )}
+      {groups.length > 0 && (
+        <p className="view-caption wall-order" data-testid="wall-order">
+          {WALL_ORDER_TEXT}
+        </p>
+      )}
+      {groups.map((g, i) => {
+        // S3 variant C: idle-only teams the viewer has not opened sit as cards in one strip, drawn
+        // where the first of them would be.
+        if (groupState(g) === 'idle' && !isOpen(g)) {
+          if (groups.findIndex((x) => groupState(x) === 'idle' && !isOpen(x)) !== i) return null;
+          const quiet = groups.filter((x) => groupState(x) === 'idle' && !isOpen(x));
+          return (
+            <section
+              key="idle-strip"
+              className="idle-strip"
+              data-testid="idle-strip"
+              aria-label="Idle teams"
+            >
+              <div className="group-head idle-strip-head">
+                <b>Idle teams</b>
+                <span className="group-counts">
+                  {quiet.length} team{quiet.length === 1 ? '' : 's'} running, nobody working · open
+                  a card for its tiles
+                </span>
+                <i />
+              </div>
+              <div className="idle-cards">
+                {quiet.map((q) => (
+                  <button
+                    key={q.key}
+                    type="button"
+                    className="idle-team"
+                    data-testid="idle-team"
+                    data-group-key={q.key}
+                    aria-expanded={false}
+                    title={q.rig ? rigTitle(q.rig) : undefined}
+                    onClick={() => toggle(q)}
+                  >
+                    <span className="idle-team-name">
+                      <b>{q.rig?.displayName ?? q.name}</b> <span>{q.where}</span>
+                    </span>
+                    {q.rig?.summary && <span className="idle-team-summary">{q.rig.summary}</span>}
+                    <span className="idle-team-seats">
+                      {q.tiles.map((t) => {
+                        const pip = pipFor(t.seat, t.machine);
+                        return (
+                          <span key={t.key} data-pip={pip}>
+                            <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        }
         // One freshness label per machine per tick, shared by its tiles.
         const fresh = freshness(g.tiles[0]?.machine ?? machines[0], now, hubConnected).label;
+        const open = isOpen(g);
+        const state = groupState(g);
         return (
-          <section key={g.key} className="group" data-testid="wall-group" data-group-key={g.key}>
-            <div className="group-head">
-              <b>{g.name}</b>
+          <section
+            key={g.key}
+            className="group"
+            data-testid="wall-group"
+            data-group-key={g.key}
+            data-state={state}
+            data-open={open}
+          >
+            <button
+              type="button"
+              className="group-head"
+              data-testid="wall-group-head"
+              aria-expanded={open}
+              aria-controls={`grid-${g.key}`}
+              title={g.rig ? rigTitle(g.rig) : undefined}
+              onClick={() => toggle(g)}
+            >
+              <span className="group-caret" aria-hidden="true">
+                {open ? '▾' : '▸'}
+              </span>
+              <b data-testid="wall-group-name">{g.rig?.displayName ?? g.name}</b>
               <span>{g.where}</span>
               {g.asleep && <span>· asleep</span>}
+              <span className="group-counts" data-testid="wall-group-counts">
+                {statusCounts(g).map(({ pip, n }) => (
+                  <span key={pip} className="group-count" data-pip={pip}>
+                    <span className="pip-glyph">{PIP[pip].glyph}</span> {n} {PIP[pip].label}
+                  </span>
+                ))}
+              </span>
               <i />
-            </div>
-            <div className="grid">
-              {g.tiles.map((t) => (
-                <SeatTile
-                  key={t.key}
-                  tileKey={t.key}
-                  machine={t.machine}
-                  seat={t.seat}
-                  freshLabel={fresh}
-                  onOpen={onOpen}
-                />
-              ))}
-            </div>
+            </button>
+            {g.rig?.summary && (
+              <p className="group-summary" data-testid="wall-group-summary">
+                {g.rig.summary}
+              </p>
+            )}
+            {open && (
+              <div className="grid" id={`grid-${g.key}`}>
+                {g.tiles.map((t) => (
+                  <SeatTile
+                    key={t.key}
+                    tileKey={t.key}
+                    machine={t.machine}
+                    seat={t.seat}
+                    freshLabel={fresh}
+                    onOpen={onOpen}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         );
       })}

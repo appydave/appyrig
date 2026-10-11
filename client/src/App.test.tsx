@@ -98,6 +98,14 @@ function renderApp(onCall?: CallHandler) {
   return fake;
 }
 
+/** S3: stopped, asleep and idle groups start collapsed; open them all to inspect every tile. */
+function openAllGroups() {
+  for (const card of screen.queryAllByTestId('idle-team')) fireEvent.click(card);
+  for (const head of screen.queryAllByTestId('wall-group-head')) {
+    if (head.getAttribute('aria-expanded') === 'false') fireEvent.click(head);
+  }
+}
+
 beforeEach(() => {
   terminals.length = 0;
   try {
@@ -120,6 +128,7 @@ describe('App: Wall and Fleet Strip', () => {
       FLEET_EVENTS.UPDATE,
       update([fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))])
     );
+    openAllGroups();
     const tiles = screen.getAllByTestId('seat-tile');
     expect(tiles).toHaveLength(25);
     for (const t of tiles) {
@@ -184,6 +193,7 @@ describe('App: Wall and Fleet Strip', () => {
       FLEET_EVENTS.UPDATE,
       update([fleetMachine(snapshot('roamy'), { liveness: 'asleep', lastSeen })])
     );
+    openAllGroups();
     const tiles = screen.getAllByTestId('seat-tile');
     expect(tiles.length).toBe(7);
     for (const t of tiles) {
@@ -209,6 +219,7 @@ describe('App: Wall and Fleet Strip', () => {
     );
     expect(screen.queryByTestId('blocked-alert')).toBeNull();
     fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))], false));
+    openAllGroups();
     expect(screen.getAllByTestId('seat-tile')).toHaveLength(25);
     expect(screen.getByTestId('blocked-alert')).toBeInTheDocument();
   });
@@ -447,6 +458,7 @@ describe('App: Focus', () => {
     const { fire } = renderApp();
     fire('connect');
     fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy'), { liveness: 'asleep' })]));
+    openAllGroups();
     fireEvent.click(screen.getAllByTestId('seat-tile')[0]);
     expect(screen.getByTestId('focus-side')).toHaveTextContent('Machine asleep');
     expect(screen.queryByTestId('blocked-because')).toBeNull();
@@ -727,6 +739,26 @@ describe('App: S2 keyboard', () => {
     vi.unstubAllGlobals();
   });
 
+  it('r1 S2: opening a seat from under the keys overlay closes it for good', () => {
+    connected('roamy--blocked');
+    fireEvent.keyDown(window, { key: '?' });
+    expect(screen.getByTestId('keys-help')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('blocked-alert'));
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+  });
+
+  it('r1 S2: Tab stays inside the keys overlay', () => {
+    connected('roamy--blocked');
+    fireEvent.keyDown(window, { key: '?' });
+    const close = screen.getByTestId('keys-close');
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(close, { key: 'Tab' });
+    expect(document.activeElement).toBe(close);
+  });
+
   it('keys never fire while typing in a field', () => {
     connected('roamy--blocked');
     const input = document.createElement('input');
@@ -737,5 +769,99 @@ describe('App: S2 keyboard', () => {
     expect(screen.queryByTestId('keys-help')).toBeNull();
     expect(document.activeElement).toBe(input);
     input.remove();
+  });
+});
+
+describe('App: S3 calmer Wall + machine filter', () => {
+  function connected() {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))])
+    );
+    return fake;
+  }
+  const states = () =>
+    screen.getAllByTestId('wall-group').map((g) => g.getAttribute('data-state') ?? '');
+
+  it('states the order on screen, and groups never go back up the order', () => {
+    connected();
+    expect(screen.getByTestId('wall-order')).toHaveTextContent(
+      /blocked → working → idle .* → state unknown → stopped/
+    );
+    const rank = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
+    const ranks = states().map((st) => rank.indexOf(st));
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+  });
+
+  it('stopped groups start collapsed and say what is in them; the choice is remembered', () => {
+    connected();
+    const stopped = screen
+      .getAllByTestId('wall-group')
+      .find((g) => g.getAttribute('data-state') === 'stopped')!;
+    expect(stopped).toHaveAttribute('data-open', 'false');
+    expect(within(stopped).queryAllByTestId('seat-tile')).toHaveLength(0);
+    expect(within(stopped).getByTestId('wall-group-counts')).toHaveTextContent(/✕ \d+ stopped/);
+    const running = screen
+      .getAllByTestId('wall-group')
+      .find((g) => g.getAttribute('data-state') !== 'stopped')!;
+    expect(running).toHaveAttribute('data-open', 'true');
+    fireEvent.click(within(stopped).getByTestId('wall-group-head'));
+    expect(within(stopped).queryAllByTestId('seat-tile').length).toBeGreaterThan(0);
+    const key = stopped.getAttribute('data-group-key')!;
+    expect(JSON.parse(localStorage.getItem('appyrig.groups')!)[key]).toBe(true);
+  });
+
+  it('variant C: idle-only teams are cards in one strip; opening a card shows its tiles', () => {
+    // The fixtures have no idle-only team, so make Roamy's kernel one.
+    const roamy = fleetMachine(snapshot('roamy--blocked'));
+    const idleKernel = {
+      ...roamy,
+      snapshot: {
+        ...roamy.snapshot,
+        seats: roamy.snapshot.seats.map((x) =>
+          x.rig === 'kernel' ? { ...x, status: 'idle' as const } : x
+        ),
+      },
+    };
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([idleKernel, fleetMachine(snapshot('m2'))]));
+    expect(screen.getByTestId('idle-strip')).toBeInTheDocument();
+    const cards = screen.getAllByTestId('idle-team');
+    expect(cards.map((c) => c.dataset.groupKey)).toEqual(['roamy:kernel']);
+    expect(cards[0]).toHaveTextContent('○');
+    // No idle-only team is drawn as a tile row while collapsed.
+    expect(
+      screen.getAllByTestId('wall-group').filter((g) => g.getAttribute('data-state') === 'idle')
+    ).toHaveLength(0);
+    const key = cards[0]!.dataset.groupKey!;
+    fireEvent.click(cards[0]!);
+    const opened = screen
+      .getAllByTestId('wall-group')
+      .find((g) => g.getAttribute('data-group-key') === key)!;
+    expect(opened).toHaveAttribute('data-state', 'idle');
+    expect(within(opened).getAllByTestId('seat-tile').length).toBeGreaterThan(0);
+    expect(JSON.parse(localStorage.getItem('appyrig.groups')!)[key]).toBe(true);
+  });
+
+  it('the machine filter hides a machine on the Wall, says so, and is remembered', () => {
+    connected();
+    openAllGroups();
+    const before = screen.getAllByTestId('seat-tile').length;
+    fireEvent.click(
+      screen.getAllByTestId('machine-filter').find((b) => b.dataset.machineId === 'm2')!
+    );
+    expect(JSON.parse(localStorage.getItem('appyrig.hiddenMachines')!)).toEqual(['m2']);
+    openAllGroups();
+    const after = screen.getAllByTestId('seat-tile');
+    expect(after.length).toBeLessThan(before);
+    expect(after.every((t) => t.dataset.machineId !== 'm2')).toBe(true);
+    expect(screen.getByTestId('wall-hidden')).toHaveTextContent('M2 · show');
+    // The Fleet Strip still reports every machine, so a blocked seat can never be filtered away.
+    expect(screen.getAllByTestId('machine-chip')).toHaveLength(2);
+    fireEvent.click(screen.getByTestId('wall-show-machine'));
+    expect(screen.queryByTestId('wall-hidden')).toBeNull();
   });
 });

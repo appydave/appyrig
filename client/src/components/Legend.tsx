@@ -154,6 +154,31 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   rows: () => <span className="legend-lines" />,
   because: () => <span className="legend-because" />,
   'back-btn': () => <span className="legend-pill">← Esc</span>,
+  'tile-shapes': () => (
+    <span className="legend-shapes">
+      <span className="legend-tile mini" data-pip="working">
+        <i />
+      </span>
+      <span className="legend-tile mini" data-pip="idle">
+        <i />
+      </span>
+      <span className="legend-tile mini" data-pip="stopped">
+        <i />
+      </span>
+    </span>
+  ),
+  'group-collapsed': () => <span className="legend-mono">▸ ✕ 4</span>,
+  order: () => <span className="legend-mono">→ →</span>,
+  'machine-filter': () => <span className="legend-pill">● M2</span>,
+  'idle-card': () => <span className="legend-idle-card">○ ○</span>,
+  'map-arcs': () => (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
+      <path d="M8,9 C8,1 48,1 48,9" className="rigmap-edge" strokeWidth={2} />
+      <path d="M44,6 L49,10 L50,4 z" className="legend-head" />
+      <path d="M48,13 C48,21 8,21 8,13" className="rigmap-edge" strokeWidth={2} />
+      <path d="M12,16 L7,12 L6,18 z" className="legend-head" />
+    </svg>
+  ),
 };
 
 /**
@@ -187,7 +212,12 @@ export default function Legend({ view, onClose }: Props) {
             <h3 className="label">{s.title}</h3>
             <ul>
               {s.entries.map((e) => (
-                <li key={`${e.swatch}:${e.mark}`} data-testid="legend-entry" data-swatch={e.swatch}>
+                <li
+                  key={`${e.swatch}:${e.mark}`}
+                  data-testid="legend-entry"
+                  data-swatch={e.swatch}
+                  data-explain={e.term}
+                >
                   <span className="legend-swatch">{SWATCH[e.swatch]()}</span>
                   <span>
                     <b>{e.mark}</b> {e.means}
