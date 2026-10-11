@@ -169,6 +169,31 @@ describe('pusher', () => {
     await until(() => connects === 2, 15_000);
   }, 20_000);
 
+  it('logs the missing queue-body ack once, not every tick, against a hub that has no listener for it', async () => {
+    hub = await startHub(); // this fake hub only answers snapshots: like a pre-1.4 hub
+    const lines: string[] = [];
+    let batches = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      ackTimeoutMs: 20,
+      handoffIntervalMs: 30,
+      log: (l) => lines.push(l),
+      handoffs: async () => {
+        batches++;
+        return {
+          bodies: { machineId: 'roamy', collectedAt: new Date().toISOString(), items: [] },
+          markSent: () => {},
+        };
+      },
+    });
+    await until(() => batches >= 4, 10_000);
+    expect(lines.filter((l) => l.includes('no ack for queue bodies'))).toHaveLength(1);
+  }, 15_000);
+
   it('does not overlap ticks when a build is slow', async () => {
     hub = await startHub();
     let running = 0;
