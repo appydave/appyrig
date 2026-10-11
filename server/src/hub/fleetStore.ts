@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { FeedbackStore } from './feedbackStore.js';
 import { RigFileStore } from './rigFileStore.js';
 import { SchemaStore } from './schemaStore.js';
 import {
@@ -68,6 +69,8 @@ export class FleetStore {
   /** v1.4 · S7: rig files and the OpenRig database shape, as collectors pushed them. */
   readonly rigFiles = new RigFileStore();
   readonly schemas: SchemaStore;
+  /** v1.4 · S8: in-app feedback notes. The only thing AppyRig writes. */
+  readonly feedback: FeedbackStore;
   private readonly machines = new Map<string, FleetMachine>();
   private readonly now: () => Date;
   private readonly asleepAfterMs: number;
@@ -93,6 +96,7 @@ export class FleetStore {
     this.dir = opts.dataDir ? join(opts.dataDir, 'snapshots') : undefined;
     this.historyDir = opts.dataDir ? join(opts.dataDir, 'history') : undefined;
     this.handoffDir = opts.dataDir ? join(opts.dataDir, 'handoffs') : undefined;
+    this.feedback = new FeedbackStore(opts.dataDir);
     this.schemas = new SchemaStore(
       opts.dataDir ? join(opts.dataDir, 'schemas') : undefined,
       opts.onDiskError

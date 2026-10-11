@@ -80,6 +80,7 @@ export function createCore(opts: CoreOptions): Core {
           asleepAfterMs: opts.asleepAfterMs ?? ASLEEP_AFTER_MS,
           principal,
           verbCount: names.length,
+          dryRun: callOpts.dryRun === true,
         });
         const out = verb.contract.output.safeParse(value);
         if (!out.success) {
