@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { hostname } from 'node:os';
-import type { MachineIdentity } from '@appydave/shared';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { AppConfigSchema, DEFAULT_SPEC_FOLDERS, type MachineIdentity } from '@appydave/shared';
 import type { SourceOptions } from './adapters/index.js';
 
 /**
@@ -12,6 +14,7 @@ import type { SourceOptions } from './adapters/index.js';
  *   APPYRIG_MACHINE_ID    lower-case slug: m2, roamy, m4                 (required)
  *   APPYRIG_MACHINE_LABEL display name, default = id upper-cased
  *   APPYRIG_DAEMON_URL    OpenRig daemon, loopback only, default http://127.0.0.1:7433
+ *   APPYRIG_CONFIG        AppyRig's own config file, default ~/.config/appyrig/config.json (specFolders)
  *   APPYRIG_RIG_BIN / APPYRIG_TMUX_BIN / APPYRIG_VIEWER_BIN   absolute binary paths
  */
 export interface CollectorSettings {
@@ -39,6 +42,7 @@ export function loadSettings(
     (env.APPYRIG_TOKEN_FILE ? readFile(env.APPYRIG_TOKEN_FILE).trim() : '');
   if (!token) throw new Error('hub token missing: set APPYRIG_TOKEN_FILE (or APPYRIG_TOKEN)');
   const sources: SourceOptions = { env };
+  sources.specFolders = specFoldersOf(env, readFile);
   if (env.APPYRIG_DAEMON_URL) sources.daemonUrl = env.APPYRIG_DAEMON_URL;
   if (env.APPYRIG_RIG_BIN) sources.rigBin = env.APPYRIG_RIG_BIN;
   if (env.APPYRIG_TMUX_BIN) sources.tmuxBin = env.APPYRIG_TMUX_BIN;
@@ -53,4 +57,19 @@ export function loadSettings(
     },
     sources,
   };
+}
+
+/**
+ * The folders searched for rig.yaml: `specFolders` from AppyRig's config file, or the seeded
+ * defaults when the file is missing, unreadable or says nothing. A broken file never stops a collector.
+ */
+export function specFoldersOf(env: NodeJS.ProcessEnv, readFile: (p: string) => string): string[] {
+  const file = env.APPYRIG_CONFIG?.trim() || join(homedir(), '.config', 'appyrig', 'config.json');
+  try {
+    const cfg = AppConfigSchema.parse(JSON.parse(readFile(file)));
+    if (cfg.specFolders?.length) return cfg.specFolders;
+  } catch {
+    // no config file (or not valid): use the defaults
+  }
+  return [...DEFAULT_SPEC_FOLDERS];
 }

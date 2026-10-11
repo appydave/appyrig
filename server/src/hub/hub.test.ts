@@ -102,7 +102,8 @@ describe('AC 6 — liveness', () => {
     const live = nextUpdate(browser);
     const ack = await push(h.collector({ token: TOKEN, machineId: 'roamy' }), snapshot);
     const lastSeen = ack.receivedAt;
-    // Let the push's own update land first; compressed frames arrive a beat after the ack.
+    // The push's ack (collector socket) and its fleet:update (browser socket) are independent, and a
+    // compressed frame can reach the browser after the ack. Wait for that update before sweeping.
     expect((await live).machines[0]?.liveness).toBe('live');
 
     clock.advance(ASLEEP_AFTER_MS - 1);

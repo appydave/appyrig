@@ -22,6 +22,7 @@ import { errorHandler } from '../middleware/errorHandler.js';
 import { apiLimiter } from '../middleware/rateLimiter.js';
 import healthRouter from '../routes/health.js';
 import infoRouter from '../routes/info.js';
+import { applyRigLabels, defaultConfigPath, watchConfig } from './appConfig.js';
 import { browserAuth, isAuthorised } from './browserAuth.js';
 import { attachCollectorIngest } from './collectorIngest.js';
 import { FleetStore, type LivenessChange } from './fleetStore.js';
@@ -38,6 +39,8 @@ export interface HubOptions {
   clientUrl: string;
   /** Holds `snapshots/`. Undefined = memory only. */
   dataDir?: string;
+  /** AppyRig's own config file (rig displayName/owner). Default ~/.config/appyrig/config.json. */
+  configPath?: string;
   /** Serve the built client from here (production). */
   clientDist?: string;
   now?: () => Date;
@@ -71,7 +74,9 @@ export interface Hub {
 
 export function createHub(opts: HubOptions): Hub {
   const now = opts.now ?? (() => new Date());
+  const config = watchConfig(opts.configPath ?? defaultConfigPath(), opts.onDiskError);
   const store = new FleetStore({
+    decorate: (m) => applyRigLabels(m, config.current()),
     dataDir: opts.dataDir,
     now,
     asleepAfterMs: opts.asleepAfterMs,
@@ -94,7 +99,7 @@ export function createHub(opts: HubOptions): Hub {
     cors: { origin: opts.clientUrl, methods: ['GET', 'POST'], credentials: true },
     // Fleet pushes are ~300 KB of mostly ANSI terminal text, resent every second or so. Uncompressed,
     // a seat.get ack queues behind them on a slow link and the UI's 5 s timeout fires. socket.io
-    // leaves per-message deflate off by default; text like this shrinks about tenfold.
+    // leaves per-message deflate off by default; a full push measured 5.2x smaller (486 KB to 93 KB).
     perMessageDeflate: { threshold: 1024 },
   });
 

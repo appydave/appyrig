@@ -1,3 +1,4 @@
+import type { SpecInfo } from './specs.js';
 import type { AccountUsage, QueueItem, RigSummary, Seat, ViewerStatus } from '@appydave/shared';
 
 /** What the daemon adapter returns: AppyRig-shaped pieces, no OpenRig shapes leak out. */
@@ -40,4 +41,6 @@ export interface Sources {
   viewerAgents(): Promise<ViewerAgent[]>;
   /** The machine's Claude account + latest usage reading (v1.1). Optional: fixtures may omit it. */
   account?(): Promise<AccountUsage | null>;
+  /** rig name → its rig.yaml, from the configured spec folders (v1.4). Optional: fixtures may omit it. */
+  specs?(): Promise<Map<string, SpecInfo>>;
 }

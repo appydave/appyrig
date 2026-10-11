@@ -35,6 +35,8 @@ export interface FleetStoreOptions {
   onDiskError?: (message: string, err: unknown) => void;
   /** Told when a machine's liveness changes: first push (from null), live → asleep, asleep → live. */
   onLiveness?: (change: LivenessChange) => void;
+  /** Laid over a machine on every read and emit (v1.4: rig labels). Never stored or written to disk. */
+  decorate?: (machine: FleetMachine) => FleetMachine;
 }
 
 export interface LivenessChange {
@@ -52,6 +54,7 @@ export class FleetStore {
   private readonly dir: string | undefined;
   private readonly onDiskError: (message: string, err: unknown) => void;
   private readonly onLiveness: (change: LivenessChange) => void;
+  private readonly decorate: (machine: FleetMachine) => FleetMachine;
   /** Per machine: the write in flight, and the latest entry waiting behind it (coalesced). */
   private readonly writes = new Map<string, Promise<void>>();
   private readonly pending = new Map<string, FleetMachine>();
@@ -66,6 +69,7 @@ export class FleetStore {
     this.historyDir = opts.dataDir ? join(opts.dataDir, 'history') : undefined;
     this.onDiskError = opts.onDiskError ?? (() => {});
     this.onLiveness = opts.onLiveness ?? (() => {});
+    this.decorate = opts.decorate ?? ((m) => m);
   }
 
   livenessAt(lastSeen: string): Liveness {
@@ -73,11 +77,14 @@ export class FleetStore {
   }
 
   list(): FleetMachine[] {
-    return [...this.machines.values()].sort((a, b) => a.machine.id.localeCompare(b.machine.id));
+    return [...this.machines.values()]
+      .sort((a, b) => a.machine.id.localeCompare(b.machine.id))
+      .map(this.decorate);
   }
 
   get(machineId: string): FleetMachine | undefined {
-    return this.machines.get(machineId);
+    const m = this.machines.get(machineId);
+    return m && this.decorate(m);
   }
 
   /** Record a validated snapshot as received now. Returns the new entry (always `live`). */
@@ -99,7 +106,7 @@ export class FleetStore {
         lastSeen: entry.lastSeen,
       });
     }
-    return entry;
+    return this.decorate(entry);
   }
 
   /**
@@ -112,7 +119,7 @@ export class FleetStore {
       if (entry.liveness === 'live' && this.livenessAt(entry.lastSeen) === 'asleep') {
         const asleep: FleetMachine = { ...entry, liveness: 'asleep' };
         this.machines.set(entry.machine.id, asleep);
-        changed.push(asleep);
+        changed.push(this.decorate(asleep));
         this.onLiveness({
           machine: entry.machine.id,
           from: 'live',
