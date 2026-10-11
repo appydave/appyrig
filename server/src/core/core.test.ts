@@ -29,6 +29,7 @@ describe('AC 9 — no write verbs', () => {
       'fleet.get',
       'handoff.get',
       'handoff.list',
+      'health.get',
       'history.list',
       'machine.list',
       'queue.list',
@@ -229,7 +230,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 14 },
+      value: { app: 'AppyRig', version: real.version, verbs: 15 },
     });
   });
 

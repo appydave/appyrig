@@ -9,7 +9,14 @@ import {
   type AccountUsage,
   type FleetMachine,
 } from '@appydave/shared';
-import { accountViews, deriveAccount, reportedTier, tierOf, windowOf } from './accounts.js';
+import {
+  accountViews,
+  applyAccountDerived,
+  deriveAccount,
+  reportedTier,
+  tierOf,
+  windowOf,
+} from './accounts.js';
 import { loadSnapshot, push, startHub, TOKEN } from '../test/hubHarness.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');
@@ -216,6 +223,35 @@ describe('QA D2: one answer per account', () => {
       sampleAgeMs: null,
       fiveHour: { status: 'no-reading' },
     });
+  });
+
+  it('a sample stamped just before the hub noticed the switch still counts (clock tolerance)', () => {
+    const roamy = machineWith(
+      'roamy',
+      usage({ email: 'david@ideasmen.com.au', fiveHourPct: 77, sampledAt: at(-310_000) })
+    );
+    const changedAt = (id: string) => (id === 'roamy' ? NOW.getTime() - 300_000 : undefined); // 10 s earlier than the sample
+    expect(
+      accountViews([roamy], {}, NOW, changedAt).get('david@ideasmen.com.au')!.derived.readingFrom
+    ).toBe('roamy');
+    // …but one well before it does not
+    const old = machineWith(
+      'roamy',
+      usage({ email: 'david@ideasmen.com.au', sampledAt: at(-600_000) })
+    );
+    expect(
+      accountViews([old], {}, NOW, changedAt).get('david@ideasmen.com.au')!.derived.readingFrom
+    ).toBeNull();
+  });
+
+  it('a derived part a collector sent is dropped when there is no account to attach it to, and replaced when there is', () => {
+    const forged = { fiveHour: { status: 'reading' } } as never;
+    const noEmail = machineWith('m2', { ...usage({ email: null }), derived: forged });
+    const stripped = applyAccountDerived(noEmail, accountViews([noEmail], {}, NOW));
+    expect(stripped.snapshot.account).not.toHaveProperty('derived');
+    const real = machineWith('m4', { ...usage(), derived: forged });
+    const out = applyAccountDerived(real, accountViews([real], {}, NOW));
+    expect(out.snapshot.account?.derived?.fiveHour.status).toBe('reading');
   });
 
   it("right after a login switch, the old account's reading is not used for the new account", () => {

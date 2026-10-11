@@ -13,3 +13,4 @@ export * from './history.js';
 export * from './appConfig.js';
 export * from './handoffs.js';
 export * from './accounts.js';
+export * from './health.js';
