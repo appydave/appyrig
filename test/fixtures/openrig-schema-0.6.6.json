@@ -1,0 +1,4603 @@
+{
+ "openrigVersion": "0.6.6 (2620dea8)",
+ "note": "Names and types only, read from a real OpenRig 0.6.6 database on 2026-10-11. No rows.",
+ "tables": [
+  {
+   "name": "applied_launch_observation_invalidations",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "invalidated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "generation_uuid",
+     "table": "occupant_tenures",
+     "to": "generation_uuid"
+    }
+   ]
+  },
+  {
+   "name": "applied_launch_observations",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "runtime",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "axis",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "observation_state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "value",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "observed_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "approval_policy",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "generation_uuid",
+     "table": "occupant_tenures",
+     "to": "generation_uuid"
+    }
+   ]
+  },
+  {
+   "name": "bindings",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tmux_session",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tmux_window",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tmux_pane",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "cmux_workspace",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "cmux_surface",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "attachment_type",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'tmux'"
+    },
+    {
+     "name": "external_session_name",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "bootstrap_actions",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "bootstrap_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "seq",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "action_kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "subject_type",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "subject_name",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "provider",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "command_preview",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'planned'"
+    },
+    {
+     "name": "detail_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "bootstrap_id",
+     "table": "bootstrap_runs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "bootstrap_runs",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "source_kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_ref",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'planned'"
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "applied_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "chat_messages",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "sender",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'message'"
+    },
+    {
+     "name": "body",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "''"
+    },
+    {
+     "name": "topic",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "rig_id",
+     "table": "rigs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "checkpoints",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "summary",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "current_task",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "next_step",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "blocked_on",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "key_artifacts",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "confidence",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "pod_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "continuity_source",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "continuity_artifacts_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "pod_id",
+     "table": "pods",
+     "to": "id"
+    },
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "classification_attempts",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "attempt_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "stream_item_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classifier_version",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "taxonomy_version",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "evidence_epoch",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "attempt_count",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "execution_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "lease_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classifier_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "retry_after",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "stream_item_id",
+     "table": "stream_items",
+     "to": "stream_item_id"
+    }
+   ]
+  },
+  {
+   "name": "classifier_leases",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "lease_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "classifier_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "acquired_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "expires_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_heartbeat",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'active'"
+    },
+    {
+     "name": "reclaimed_by_session",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reclaim_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "context_usage",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "session_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "session_name",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "availability",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'unknown'"
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "used_percentage",
+     "type": "REAL",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "remaining_percentage",
+     "type": "REAL",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "context_window_size",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "total_input_tokens",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "total_output_tokens",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "current_usage",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "transcript_path",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "sampled_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "continuity_state",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "pod_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 2,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'healthy'"
+    },
+    {
+     "name": "artifacts_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_sync_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    },
+    {
+     "from": "pod_id",
+     "table": "pods",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "daemon_lifecycle",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "singleton",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "boot_epoch",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "started_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_heartbeat_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "stopped_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "discovered_sessions",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "tmux_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tmux_window",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tmux_pane",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "pid",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "cwd",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "active_command",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "runtime_hint",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'unknown'"
+    },
+    {
+     "name": "confidence",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'low'"
+    },
+    {
+     "name": "evidence_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "config_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'active'"
+    },
+    {
+     "name": "claimed_node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "first_seen_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "last_seen_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "claimed_node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "edges",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "target_id",
+     "table": "nodes",
+     "to": "id"
+    },
+    {
+     "from": "source_id",
+     "table": "nodes",
+     "to": "id"
+    },
+    {
+     "from": "rig_id",
+     "table": "rigs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "events",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "seq",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "type",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "payload",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "inbox_entries",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "inbox_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "destination_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "sender_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "body",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tags",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "urgency",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'routine'"
+    },
+    {
+     "name": "ts_dropped",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'pending'"
+    },
+    {
+     "name": "absorbed_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "absorbed_qitem_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "denied_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "denied_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "audit_pointer",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "install_journal",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "install_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "seq",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "action",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "export_type",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classification",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_path",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "backup_path",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "before_hash",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "after_hash",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'pending'"
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "install_id",
+     "table": "package_installs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "mission_control_actions",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "action_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "action_verb",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "qitem_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "acted_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "before_state_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "after_state_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "annotation",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "notify_attempted",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "notify_result",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "audit_notes_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "qitem_id",
+     "table": "queue_items",
+     "to": "qitem_id"
+    }
+   ]
+  },
+  {
+   "name": "node_permission_selections",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "runtime",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "mode",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "node_startup_context",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "projection_entries_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resolved_files_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "startup_actions_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "runtime",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "nodes",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "logical_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "role",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "runtime",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "model",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "cwd",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "surface_hint",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "workspace",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "restore_policy",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "package_refs",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "pod_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "agent_ref",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "profile",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "label",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resolved_spec_name",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resolved_spec_version",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resolved_spec_hash",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "occupant_lifecycle",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "continuity_outcome",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "handover_result",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "previous_occupant",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "handover_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "codex_config_profile",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "permission_policy",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "policy_origin",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "policy_resolved_target",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "policy_declaring_dir",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "policy_launch_posture",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "session_source_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "effort",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "pod_id",
+     "table": "pods",
+     "to": "id"
+    },
+    {
+     "from": "rig_id",
+     "table": "rigs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "occupant_tenures",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "generation_ordinal",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "generation_uuid",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "native_session_id_at_boot",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "boot_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "operator_context_mode_bindings",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "scope",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "qualifier",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "mode",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "record_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "set_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "set_by",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "outbox_entries",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "outbox_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "sender_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "destination_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "body",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tags",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "urgency",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'routine'"
+    },
+    {
+     "name": "ts_dispatched",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "delivery_state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'pending'"
+    },
+    {
+     "name": "delivered_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "audit_pointer",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "guard_binding",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "retired_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "retired_by",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "retirement_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "package_installs",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "package_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_root",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "scope",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'planned'"
+    },
+    {
+     "name": "risk_tier",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "applied_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "rolled_back_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "bootstrap_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "bootstrap_id",
+     "table": "bootstrap_runs",
+     "to": "id"
+    },
+    {
+     "from": "package_id",
+     "table": "packages",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "packages",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "version",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_ref",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "manifest_hash",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "summary",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "pods",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "label",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "summary",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "continuity_policy_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "namespace",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "''"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "rig_id",
+     "table": "rigs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "project_classifications",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "project_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "stream_item_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classification_type",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classification_urgency",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classification_maturity",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classification_confidence",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classification_destination",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "action",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classifier_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "ts_projected",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "area",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "scope_ref",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "duplicate_of_stream_item_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "needs_human",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "lease_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "classifier_version",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "taxonomy_version",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "candidate_set_version",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "duplicate_of_stream_item_id",
+     "table": "stream_items",
+     "to": "stream_item_id"
+    },
+    {
+     "from": "stream_item_id",
+     "table": "stream_items",
+     "to": "stream_item_id"
+    }
+   ]
+  },
+  {
+   "name": "projection_manifest",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "target_path",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "last_hash",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "written_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_spec",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "category",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "queue_items",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "qitem_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "ts_created",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "ts_updated",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "destination_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "priority",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'routine'"
+    },
+    {
+     "name": "tier",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "tags",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "blocked_on",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "handed_off_to",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "handed_off_from",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "expires_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "chain_of_record",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "body",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_target",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_required_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "claimed_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_nudge_attempt",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_nudge_result",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_heartbeat",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resolution",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_repo",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "summary",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "evidence_ref",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "minting_generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "claimed_by_generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "human_intent",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "human_detail",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reply_to",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "human_questions",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "human_answers",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "queue_transition_wakes",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "transition_id",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "qitem_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "phase",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "wake_kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "wake_ref",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "delivery_status",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "queue_transitions",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "transition_id",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "qitem_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "ts",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "transition_note",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_target",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "owner_notification_kind",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "owner_notification_level",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "queue_transitions_archive",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "transition_id",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "qitem_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "ts",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "transition_note",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_target",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "archived_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "owner_notification_kind",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "owner_notification_level",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "rig_services",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "spec_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "rig_root",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "compose_file",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "project_name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "latest_receipt_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "rig_id",
+     "table": "rigs",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "rigs",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "updated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "workspace_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "archived_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "permission_policy",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "rig_policy_origin",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "rig_policy_resolved_target",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "rig_policy_declaring_dir",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "rig_policy_launch_posture",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "claude_managed_block_file",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "non_interruptive",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "runtime_verifications",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "runtime",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "version",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "capabilities_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "verified_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "error",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "schema_migrations",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "name",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "applied_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "seat_delivery_guard_changes",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "desired",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "previous_desired",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "previous_effective",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "requested_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "effective_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "seat_delivery_guards",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "desired",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "effective",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "changed_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "seat_identity_verdicts",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "verdict",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "evidence_source",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "registered_pane",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "observed_pid",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "observed_command",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "matched_layer",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "session_name",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "observed_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "self_host_identity",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "singleton",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "host_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "minted_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "reconciled_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "sessions",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "session_name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'unknown'"
+    },
+    {
+     "name": "last_seen_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    },
+    {
+     "name": "resume_type",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resume_token",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "restore_policy",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'resume_if_possible'"
+    },
+    {
+     "name": "origin",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'launched'"
+    },
+    {
+     "name": "startup_status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'pending'"
+    },
+    {
+     "name": "startup_completed_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resume_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resume_last_verified",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resume_last_probe_status",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "node_id",
+     "table": "nodes",
+     "to": "id"
+    }
+   ]
+  },
+  {
+   "name": "snapshots",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "rig_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "kind",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'complete'"
+    },
+    {
+     "name": "data",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "datetime('now')"
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "stream_items",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "stream_item_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "ts_emitted",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "stream_sort_key",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "body",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "format",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'text'"
+    },
+    {
+     "name": "hint_type",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "hint_urgency",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "hint_destination",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "hint_tags",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "interrupt",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "archived_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "identity_provenance",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "thread_seat_map",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "thread_ts",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "channel",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "human",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "seat",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "conversation_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'open'"
+    },
+    {
+     "name": "opened_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closed_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "usage_samples",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "id",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "lane",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "seat_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "node_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "sampled_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "captured_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "total_input_tokens",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "total_output_tokens",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "used_percentage",
+     "type": "REAL",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "window",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "window_used_percent",
+     "type": "REAL",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resets_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "views_custom",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "view_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "view_name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "definition",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "registered_by_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "registered_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_evaluated_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "watchdog_history",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "history_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "job_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "evaluated_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "outcome",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "skip_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "delivery_target_session",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "delivery_status",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "delivery_message",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "evaluation_notes",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "job_id",
+     "table": "watchdog_jobs",
+     "to": "job_id"
+    }
+   ]
+  },
+  {
+   "name": "watchdog_jobs",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "job_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "policy",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "spec_yaml",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "interval_seconds",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "active_wake_interval_seconds",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "scan_interval_seconds",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_evaluation_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_fire_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actionable",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "last_actionable_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "state",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'active'"
+    },
+    {
+     "name": "registered_by_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "registered_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "terminal_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "registered_by_generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "watched_file_path",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "threshold_bytes",
+     "type": "INTEGER",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "requires_job_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_fired_generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "watched_file_generation_uuid",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_fired_condition",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "workflow_failure_occurrences",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "occurrence_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "instance_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "failed_packet_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "step_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "branch_drive",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "hop_count",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "hops_baseline",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "failure_reason",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'unresolved'"
+    },
+    {
+     "name": "redrive_packet_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resume_decision",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "failed_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "resolved_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "redrive_packet_id",
+     "table": "queue_items",
+     "to": "qitem_id"
+    },
+    {
+     "from": "failed_packet_id",
+     "table": "queue_items",
+     "to": "qitem_id"
+    },
+    {
+     "from": "instance_id",
+     "table": "workflow_instances",
+     "to": "instance_id"
+    }
+   ]
+  },
+  {
+   "name": "workflow_frontier_bindings",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "instance_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "packet_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 2,
+     "default": null
+    },
+    {
+     "name": "step_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "branch_drive",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "hop_count",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "hops_baseline",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "packet_id",
+     "table": "queue_items",
+     "to": "qitem_id"
+    },
+    {
+     "from": "instance_id",
+     "table": "workflow_instances",
+     "to": "instance_id"
+    }
+   ]
+  },
+  {
+   "name": "workflow_instances",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "instance_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "workflow_name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "workflow_version",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_by_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "created_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'active'"
+    },
+    {
+     "name": "current_frontier_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'[]'"
+    },
+    {
+     "name": "current_step_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "hop_count",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "fallback_synthesis",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "last_continuation_decision_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "completed_at",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "version",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "resume_count",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "hops_baseline",
+     "type": "INTEGER",
+     "notNull": true,
+     "pk": 0,
+     "default": "0"
+    },
+    {
+     "name": "bound_rig",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "lifecycle_operation_key",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "compiled_input_digest",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "lifecycle_binding_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "workflow_specs",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "spec_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "name",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "version",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "purpose",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "target_rig",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "roles_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "steps_json",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "coordination_terminal_turn_rule",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'hot_potato'"
+    },
+    {
+     "name": "source_path",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "source_hash",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "cached_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "status",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": "'valid'"
+    },
+    {
+     "name": "error_message",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "spec_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": []
+  },
+  {
+   "name": "workflow_step_trails",
+   "kind": "table",
+   "columns": [
+    {
+     "name": "trail_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 1,
+     "default": null
+    },
+    {
+     "name": "instance_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "step_id",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "step_role",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closed_at",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_reason",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "closure_evidence_json",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "actor_session",
+     "type": "TEXT",
+     "notNull": true,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "next_qitem_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    },
+    {
+     "name": "prior_qitem_id",
+     "type": "TEXT",
+     "notNull": false,
+     "pk": 0,
+     "default": null
+    }
+   ],
+   "foreignKeys": [
+    {
+     "from": "prior_qitem_id",
+     "table": "queue_items",
+     "to": "qitem_id"
+    },
+    {
+     "from": "next_qitem_id",
+     "table": "queue_items",
+     "to": "qitem_id"
+    },
+    {
+     "from": "instance_id",
+     "table": "workflow_instances",
+     "to": "instance_id"
+    }
+   ]
+  }
+ ]
+}

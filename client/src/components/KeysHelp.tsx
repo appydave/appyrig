@@ -8,7 +8,7 @@ interface Props {
 
 type Row = [keys: string, does: string];
 
-const SCREEN: Record<View, Row[]> = {
+export const SCREEN: Record<View, Row[]> = {
   wall: [
     ['← ↑ → ↓', 'Move between tiles'],
     ['Enter', 'Open the tile'],
@@ -17,18 +17,30 @@ const SCREEN: Record<View, Row[]> = {
   map: [
     ['Tab', 'Move between seats'],
     ['Enter', 'Open the seat'],
+    ['O', "Open the chosen rig's files"],
     ['Esc', 'From an open seat: back to the map'],
   ],
   flow: [
     ['← →', 'Previous / next handoff'],
+    ['O', "Open the chosen rig's files"],
     ['Tab', 'Reach the replay, chapters and consoles'],
   ],
   accounts: [],
   machines: [],
+  schema: [
+    ['/', 'Search tables by name'],
+    ['Esc', 'In the search box: clear it, then leave it'],
+  ],
   learn: [],
 };
 
-const EVERYWHERE: Row[] = [
+/** The files viewer (map and flow, or a seat panel): its own keys, shown under every screen that can open it. */
+export const FILES: Row[] = [
+  ['↑ ↓', 'In the files viewer: move between files'],
+  ['Esc', 'In the files viewer: close it'],
+];
+
+export const EVERYWHERE: Row[] = [
   ['?', 'Show or hide these keys'],
   ['L', 'Show or hide the legend'],
   ['F', 'Feedback: a note about this screen, saved with a screenshot (⌘↵ files it)'],
@@ -42,6 +54,7 @@ const TITLE: Record<View, string> = {
   flow: 'Handoff Flow',
   accounts: 'Accounts',
   machines: 'Machines',
+  schema: 'OpenRig DB',
   learn: 'Learn',
 };
 
@@ -89,6 +102,7 @@ export default function KeysHelp({ view, onClose }: Props) {
           </button>
         </header>
         {SCREEN[view].length > 0 && <ul data-testid="keys-screen">{rows(SCREEN[view])}</ul>}
+        {(view === 'map' || view === 'flow') && <ul data-testid="keys-files">{rows(FILES)}</ul>}
         <h3 className="label">Anywhere</h3>
         <ul>{rows(EVERYWHERE)}</ul>
         <p className="keys-note">Keys never fire while you are typing in a field.</p>

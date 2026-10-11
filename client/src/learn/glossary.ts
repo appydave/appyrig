@@ -57,6 +57,48 @@ export const GLOSSARY: Record<string, Term> = {
     why: 'You learn the words on the other screens by seeing them on your own teams.',
   },
 
+  // ---------------------------------------------------------------- v1.4: rig files and the OpenRig database
+  'view-schema': {
+    term: 'OpenRig DB',
+    what: "The shape of OpenRig's own database on a machine: its tables, their columns, and the links between tables. Names and types only, never the data in them.",
+    why: 'OpenRig changes between versions. This shows what the installed version actually stores, and what changed since the last one AppyRig saw.',
+  },
+  'schema-version': {
+    term: 'OpenRig version read',
+    what: 'The release and build of OpenRig that was installed when this shape was read, from `rig --version`.',
+    why: 'Every table below belongs to that version. When it changes, AppyRig compares the new shape with the old one.',
+  },
+  'schema-changes': {
+    term: 'Changed since the last version',
+    what: "A comparison of this OpenRig version's tables and columns with the previous version AppyRig saw on this machine. The first version seen is a baseline: nothing to compare yet.",
+    why: 'It tells you when an OpenRig upgrade added, removed or reshaped something AppyRig might read.',
+  },
+  'schema-pk': {
+    term: 'Primary key',
+    what: 'The column (or columns) that identify one row in a table. PK1, PK2 mean the key is made of several columns, in that order.',
+    why: 'Other tables point at a row by its key; those pointers are the links.',
+  },
+  'schema-fk': {
+    term: 'Link between tables',
+    what: 'A column that holds the key of a row in another table (a foreign key). Shown as an arrow to that table.',
+    why: 'Follow the arrows to see how OpenRig connects rigs, pods, seats and queue items.',
+  },
+  'schema-notnull': {
+    term: 'NOT NULL',
+    what: 'The database refuses a row where this column is empty.',
+    why: 'A column that can be empty ("null ok") may be missing in real data; plan for that.',
+  },
+  'schema-view': {
+    term: 'View',
+    what: 'A saved query that reads like a table but stores nothing of its own.',
+    why: 'It is a convenience for reading; the data lives in the tables it draws from.',
+  },
+  'rig-files': {
+    term: 'Rig files',
+    what: 'The files that define a rig, found next to its rig.yaml: the spec itself, plus mission, culture, brief, report and LEARNED notes. YAML is coloured and can be folded; Markdown is shown formatted.',
+    why: 'The spec holds fields the diagrams do not show (models, working folders, edges). The notes say what the team was told to do and what it learned. Read-only: AppyRig never changes them.',
+  },
+
   // ---------------------------------------------------------------- machines and sources
   machine: {
     term: 'Machine',

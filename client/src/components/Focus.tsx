@@ -102,9 +102,12 @@ interface Props {
   legend?: ReactNode;
   legendOpen?: boolean;
   onToggleLegend?: () => void;
+  /** S7-ui: open this seat's rig files (its rig.yaml, mission and culture notes). */
+  onOpenRigFiles?: (machineId: string, rig: string) => void;
   /**
-   * S8-ui fix (r1): Focus owns Esc and ⌘↵ only while nothing sits on top of it. With the feedback
-   * composer open over the panel, these keys belong to the composer (one Esc closes one thing).
+   * The one pause mechanism (r1): Focus owns Esc and ⌘↵ only while nothing sits on top of it.
+   * App passes false while the feedback composer (S8) or the rig files viewer (S7) is open over
+   * the panel, so one Esc closes one thing. Same convention as Wall and HandoffFlow.
    */
   keys?: boolean;
 }
@@ -118,6 +121,7 @@ export default function Focus({
   legend,
   legendOpen = false,
   onToggleLegend,
+  onOpenRigFiles,
   keys = true,
 }: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
@@ -242,6 +246,18 @@ export default function Focus({
           >
             {mode === 'terminal' ? 'Rich text' : 'Terminal'}
           </button>
+          {onOpenRigFiles && seat.rig && (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="focus-rig-files"
+              data-explain="rig-files"
+              title="Open this rig's files: rig.yaml, mission and culture notes"
+              onClick={() => onOpenRigFiles(machine.machine.id, seat.rig!)}
+            >
+              Rig files
+            </button>
+          )}
           {onToggleLegend && (
             <button
               type="button"

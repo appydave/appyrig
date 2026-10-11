@@ -2,6 +2,7 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
   writeFileSync,
@@ -29,7 +30,15 @@ import {
  * Folder names are ids this class makes (`fb-` + a counter); a client's text never becomes part of a
  * path. A note's files are written first and the index line last, so the index never names a note
  * that is not fully on disk. Files 0600, folders 0700 (the notes can quote anything on screen).
- * The index is a sidecar of the notes, not their source: if it is deleted, the folders remain.
+ * The index is a sidecar of the notes, not their source: the folders are. A note must never be lost or
+ * overwritten (r1 S8 HIGH), so:
+ *   - on load, the summaries are rebuilt from `fb-*\/note.json` for any note the index lacks (a crash
+ *     between writing the files and the index line, or a deleted or short index), and the index is
+ *     rewritten whole; `list`, `count` and the 500-note cap therefore count the notes that exist;
+ *   - the next id is above every id seen in the index AND every `fb-*` folder, even an unreadable or
+ *     half-made one (its id stays reserved);
+ *   - a note's folder is created WITHOUT `recursive`, so an existing folder is an error, never a
+ *     target: add() moves on to the next id instead of writing into it.
  */
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -114,23 +123,46 @@ export class FeedbackStore {
     return this.dir !== undefined;
   }
 
-  /** Reads the index once; later calls use memory. Lines that do not parse are skipped, not fatal. */
+  /**
+   * Reads the index once (later calls use memory), then reconciles it with the note folders on disk.
+   * Lines that do not parse are skipped, not fatal.
+   */
   private load(): FeedbackSummary[] {
     if (this.summaries) return this.summaries;
-    const rows: FeedbackSummary[] = [];
+    const byId = new Map<string, FeedbackSummary>();
     if (this.dir && existsSync(this.indexFile!)) {
       for (const line of readFileSync(this.indexFile!, 'utf8').split('\n')) {
         if (!line.trim()) continue;
         try {
           const parsed = FeedbackSummarySchema.safeParse(JSON.parse(line));
-          if (parsed.success) rows.push(parsed.data);
+          if (parsed.success) byId.set(parsed.data.id, parsed.data);
         } catch {
           // a torn last line after a crash: skipped
         }
       }
     }
+    let maxSeen = [...byId.keys()].reduce((m, id) => Math.max(m, Number(id.slice(3))), 0);
+    let rebuilt = false;
+    if (this.dir && existsSync(this.dir)) {
+      for (const name of readdirSync(this.dir)) {
+        if (!/^fb-\d{4,}$/.test(name)) continue;
+        maxSeen = Math.max(maxSeen, Number(name.slice(3))); // reserved even if its note is unreadable
+        if (byId.has(name)) continue;
+        const found = this.get(name);
+        if (found) {
+          byId.set(name, summaryOf(found.note));
+          rebuilt = true;
+        }
+      }
+    }
+    const rows = [...byId.values()].sort((a, b) => Number(a.id.slice(3)) - Number(b.id.slice(3)));
     this.summaries = rows;
-    this.nextId = rows.reduce((m, r) => Math.max(m, Number(r.id.slice(3))), 0) + 1;
+    this.nextId = maxSeen + 1;
+    if (rebuilt && this.dir) {
+      // the index was missing notes: write it out whole so cat index.jsonl is truthful again
+      mkdirSync(this.dir, { recursive: true, mode: 0o700 });
+      this.writeAtomic(this.indexFile!, rows.map((r) => `${JSON.stringify(r)}\n`).join(''));
+    }
     return rows;
   }
 
@@ -185,7 +217,27 @@ export class FeedbackStore {
       );
     }
     const png = input.screenshotPng ? inspectPng(input.screenshotPng) : null;
-    const id = `fb-${String(this.nextId).padStart(4, '0')}`;
+    // Reserve a folder that does not exist yet. mkdir without `recursive` fails on an existing
+    // folder, so a filed note is never written into, whatever the index or the counter says.
+    if (!dryRun) mkdirSync(this.dir, { recursive: true, mode: 0o700 });
+    let id = '';
+    let folder = '';
+    for (let tries = 0; ; tries++) {
+      id = `fb-${String(this.nextId).padStart(4, '0')}`;
+      folder = join(this.dir, id);
+      if (dryRun) {
+        if (!existsSync(folder)) break;
+        this.nextId += 1;
+        continue;
+      }
+      try {
+        mkdirSync(folder, { mode: 0o700 });
+        break;
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'EEXIST' || tries >= 1000) throw e;
+        this.nextId += 1; // taken (by a note, or by one a crash left half-made): never write into it
+      }
+    }
     const fields: Omit<FeedbackAddInput, 'screenshotPng'> & { screenshotPng?: string } = {
       ...input,
     };
@@ -205,8 +257,6 @@ export class FeedbackStore {
     };
     if (dryRun) return { note, count: rows.length + 1 };
 
-    const folder = join(this.dir, id);
-    mkdirSync(folder, { recursive: true, mode: 0o700 });
     if (png) this.writeAtomic(join(folder, 'screenshot.png'), png.bytes);
     this.writeAtomic(join(folder, 'note.json'), `${JSON.stringify(note, null, 2)}\n`);
     const summary = summaryOf(note);

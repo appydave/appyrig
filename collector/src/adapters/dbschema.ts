@@ -1,13 +1,15 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { DB_COLUMNS_MAX, DB_TABLES_MAX, type DbTable, type SchemaPush } from '@appydave/shared';
 import type { Run } from './health.js';
 
 /**
  * v1.4 · S7: the shape of the OpenRig database on this machine. READ-ONLY, three ways over:
- *   - the connection is opened with SQLite's read-only flag, and `PRAGMA query_only = ON` is set;
+ *   - the connection is opened with SQLite's read-only flag (immutable when nothing is writing, see
+ *     openReadOnly), and `PRAGMA query_only = ON` is set;
  *   - the only statements run are SELECTs on sqlite_master and the table-valued pragma functions
  *     pragma_table_info / pragma_foreign_key_list (table and column names and types, never a row);
  *   - the database is in WAL mode, and a read-only connection can neither write nor checkpoint.
@@ -19,8 +21,26 @@ export const defaultOpenrigDb = (home = homedir()): string =>
 const SELECT_OBJECTS =
   "SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name";
 
+/**
+ * How to open the database without leaving a trace. A WAL-mode database read through an ordinary
+ * read-only connection still CREATES `-wal` and `-shm` beside it when they are absent (QA S7 D2),
+ * which would put files in ~/.openrig whenever OpenRig is stopped. So:
+ *   - no `-wal` beside it: nothing is writing (OpenRig is stopped), so open it `immutable`, which
+ *     takes no WAL or shared-memory files at all and creates nothing;
+ *   - a `-wal` exists: a live (or crashed) writer's files are already there; open read-only normally
+ *     so the reader sees the committed state in the WAL, and creates nothing new.
+ */
+export function openReadOnly(dbPath: string): DatabaseSync {
+  if (!existsSync(`${dbPath}-wal`)) {
+    return new DatabaseSync(`${pathToFileURL(dbPath).href}?mode=ro&immutable=1`, {
+      readOnly: true,
+    });
+  }
+  return new DatabaseSync(dbPath, { readOnly: true });
+}
+
 export function readTables(dbPath: string): DbTable[] {
-  const db = new DatabaseSync(dbPath, { readOnly: true });
+  const db = openReadOnly(dbPath);
   try {
     db.exec('PRAGMA query_only = ON');
     const objects = db.prepare(SELECT_OBJECTS).all() as { name: string; type: 'table' | 'view' }[];

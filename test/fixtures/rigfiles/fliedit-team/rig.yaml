@@ -1,0 +1,38 @@
+version: "0.2"
+name: fliedit-team
+culture_file: CULTURE.md
+# A fixture modelled on a real rig spec, for AppyRig's own tests. It is not a live rig.
+summary: >
+  Team #1 of a two-team run: FliEdit overlay gaps plus viewer verbs.
+  Two builders in their own worktrees, one QA, one reviewer.
+managed_blocks:
+  claude-code: CLAUDE.local.md
+permission_policy: builtin:auto
+
+pods:
+  - id: orch
+    label: Orchestration
+    members:
+      - id: lead
+        # Slices the brief, routes, merges accepted work.
+        runtime: claude-code
+        model: claude-opus-5-5
+        cwd: "/work/fliedit"
+    edges: []
+
+  - id: dev
+    label: Development
+    members:
+      - id: ui
+        runtime: claude-code
+        model: claude-sonnet-5-5
+        retries: 3
+        interactive: true
+        notes: ~
+      - id: qa
+        runtime: codex
+        model: gpt-5
+    edges:
+      - from: ui
+        to: qa
+        kind: delegates_to

@@ -13,7 +13,9 @@ import type { FeedbackViewState } from '@appydave/shared';
 import Legend from './components/Legend.js';
 import { isShortcutBlocked } from './lib/keys.js';
 import type { LegendScreen } from './learn/legend.js';
+import RigFiles from './components/RigFiles.js';
 import RigMap from './components/RigMap.js';
+import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
 import { findSeat, orderedMachines, seatName, type GroupBy } from './fleet/model.js';
@@ -27,13 +29,14 @@ const LEGEND_KEY = 'appyrig.legend';
 const HINT_KEY = 'appyrig.hint';
 const HIDDEN_KEY = 'appyrig.hiddenMachines';
 
-export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'machines' | 'learn';
+export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'machines' | 'schema' | 'learn';
 const VIEWS: { key: View; label: string }[] = [
   { key: 'wall', label: 'The Wall' },
   { key: 'map', label: 'Rig Map' },
   { key: 'flow', label: 'Handoff Flow' },
   { key: 'accounts', label: 'Accounts' },
   { key: 'machines', label: 'Machines' },
+  { key: 'schema', label: 'OpenRig DB' },
   { key: 'learn', label: 'Learn' },
 ];
 
@@ -140,6 +143,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     const id = window.setTimeout(() => setToast(null), 8000);
     return () => window.clearTimeout(id);
   }, [toast]);
+  /** S7-ui: the rig whose files are open (rig.yaml, mission and culture notes). */
+  const [filesFor, setFilesFor] = useState<{ machineId: string; rig: string } | null>(null);
+  const filesOpener = useRef<HTMLElement | null>(null);
+  /** Something sits on top of the screen (keys overlay, feedback composer, files viewer): screen keys stand down. */
+  const overlay = help || !!feedback || !!filesFor;
 
   const allMachines = useMemo(() => orderedMachines(state.machines), [state.machines]);
   const [hidden, setHidden] = useState<string[]>(readHidden);
@@ -260,11 +268,22 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     setFocused(key);
   }, []);
   const close = useCallback(() => setFocused(null), []);
+  const openFiles = useCallback((machineId: string, rig: string) => {
+    const active = document.activeElement;
+    filesOpener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    setHelp(false);
+    setFilesFor({ machineId, rig });
+  }, []);
+  const closeFiles = useCallback(() => {
+    setFilesFor(null);
+    const back = filesOpener.current;
+    if (back?.isConnected) back.focus();
+  }, []);
 
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
-    if (focused || feedback) return;
+    if (focused || feedback || filesFor) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Already spent: Focus closing (it re-attaches this listener mid-keypress) or a card.
@@ -281,11 +300,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, help, feedback, goBack]);
+  }, [focused, help, feedback, filesFor, goBack]);
 
-  // S8: F opens the feedback composer, on every screen and in the seat panel.
+  // S8: F opens the feedback composer, on every screen and in the seat panel (O is Files').
   useEffect(() => {
-    if (help || feedback) return;
+    if (help || feedback || filesFor) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'f' || e.key === 'F') && !isShortcutBlocked(e)) {
         e.preventDefault();
@@ -298,13 +317,34 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   // L shows or hides the legend for this screen, the seat panel included (QA D3).
   useEffect(() => {
-    if (help || feedback) return;
+    if (help || feedback || filesFor) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [help, feedback, toggleLegend]);
+  }, [help, feedback, filesFor, toggleLegend]);
+
+  // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
+  useEffect(() => {
+    if (
+      help ||
+      feedback ||
+      filesFor ||
+      focused ||
+      !activeRig ||
+      (view !== 'map' && view !== 'flow')
+    )
+      return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'o' || e.key === 'O') && !isShortcutBlocked(e)) {
+        e.preventDefault();
+        openFiles(activeRig.machineId, activeRig.name);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [help, feedback, filesFor, focused, activeRig, view, openFiles]);
 
   // Return keyboard focus to whatever opened Focus: a Wall tile, a Rig Map node, a strip alert.
   useEffect(() => {
@@ -479,14 +519,19 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           hubConnected={hubConnected}
           received={state.received}
           onOpen={open}
-          keys={!focusTile && !help && !feedback}
+          keys={!focusTile && !overlay}
           hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
           onShow={toggleMachine}
         />
       )}
       {(view === 'map' || view === 'flow') && (
         <main className="view" data-testid={`view-body-${view}`}>
-          <RigPicker rigs={rigs} selected={activeRig?.key ?? null} onSelect={setRigKey} />
+          <RigPicker
+            rigs={rigs}
+            selected={activeRig?.key ?? null}
+            onSelect={setRigKey}
+            onOpenFiles={(r) => openFiles(r.machineId, r.name)}
+          />
           {view === 'map' ? (
             <RigMap map={rigMap} onOpen={open} />
           ) : (
@@ -495,7 +540,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               rig={activeRig?.name ?? null}
               now={now}
               socket={getSocket()}
-              keys={!focusTile && !help && !feedback}
+              keys={!focusTile && !overlay}
             />
           )}
         </main>
@@ -510,7 +555,17 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           <Accounts machines={allMachines} now={now} />
         </main>
       )}
-      <ExplainLayer enabled={explain && !focusTile && !help} />
+      {view === 'schema' && (
+        <main className="view" data-testid="view-body-schema">
+          <SchemaView
+            socket={getSocket()}
+            machines={allMachines.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
+            now={now}
+            keys={!focusTile && !overlay}
+          />
+        </main>
+      )}
+      <ExplainLayer enabled={explain && !focusTile && !overlay} />
       {view === 'learn' && (
         <main className="view" data-testid="view-body-learn">
           <Learn machines={allMachines} now={now} onGoTo={chooseView} />
@@ -553,8 +608,25 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onClose={close}
           legendOpen={legend}
           onToggleLegend={toggleLegend}
-          keys={!feedback}
+          onOpenRigFiles={openFiles}
+          keys={!feedback && !filesFor}
           legend={legend ? <Legend view="focus" onClose={toggleLegend} /> : null}
+        />
+      )}
+      {filesFor && (
+        <RigFiles
+          socket={getSocket()}
+          machineId={filesFor.machineId}
+          machineLabel={
+            allMachines.find((m) => m.machine.id === filesFor.machineId)?.machine.label ??
+            filesFor.machineId
+          }
+          rig={filesFor.rig}
+          title={
+            rigs.find((r) => r.machineId === filesFor.machineId && r.name === filesFor.rig)
+              ?.displayName ?? filesFor.rig
+          }
+          onClose={closeFiles}
         />
       )}
       {focused && !focusTile && (
