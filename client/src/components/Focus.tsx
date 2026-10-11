@@ -102,6 +102,11 @@ interface Props {
   legend?: ReactNode;
   legendOpen?: boolean;
   onToggleLegend?: () => void;
+  /**
+   * S8-ui fix (r1): Focus owns Esc and ⌘↵ only while nothing sits on top of it. With the feedback
+   * composer open over the panel, these keys belong to the composer (one Esc closes one thing).
+   */
+  keys?: boolean;
 }
 
 export default function Focus({
@@ -113,6 +118,7 @@ export default function Focus({
   legend,
   legendOpen = false,
   onToggleLegend,
+  keys = true,
 }: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
   const [call, setCall] = useState<SeatCall>({ state: 'pending' });
@@ -152,6 +158,10 @@ export default function Focus({
 
   useEffect(() => {
     closeRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!keys) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault();
@@ -163,7 +173,7 @@ export default function Focus({
     // when this attaches, so it cannot close Focus straight away.
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+  }, [onClose, keys]);
 
   const w = seat.work;
   const rows: [string, string][] = [

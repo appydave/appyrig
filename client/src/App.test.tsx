@@ -1291,6 +1291,38 @@ describe('App: S8 feedback capture', () => {
     vi.unstubAllGlobals();
   });
 
+  it('r1 S8: over a seat panel, Esc closes only the composer and ⌘↵ files without closing the seat', async () => {
+    withFetch(201, {
+      ok: true,
+      value: {
+        id: 'fb-0004',
+        createdAt: '2026-10-11T12:50:00.000Z',
+        hasScreenshot: false,
+        screenshot: null,
+        count: 4,
+        dryRun: false,
+      },
+    });
+    connected();
+    fireEvent.click(screen.getByTestId('blocked-alert'));
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'f' });
+    expect(screen.getByTestId('feedback-region').getAttribute('value')).toMatch(/^seat:/);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('feedback-composer')).toBeNull();
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'f' });
+    const note = screen.getByTestId('feedback-note');
+    fireEvent.change(note, { target: { value: 'this panel' } });
+    fireEvent.keyDown(note, { key: 'Enter', metaKey: true });
+    expect(await screen.findByTestId('feedback-toast')).toHaveTextContent('Filed fb-0004');
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    // With the composer gone, Esc belongs to the seat panel again.
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
   it('an empty note is not filed', () => {
     const sent = withFetch(201, {});
     connected();

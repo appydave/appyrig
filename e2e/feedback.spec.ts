@@ -86,4 +86,30 @@ test.describe('v1.4 S8 feedback capture', () => {
     await page.keyboard.press('Escape');
     expect(errors, 'no console errors').toEqual([]);
   });
+
+  test('r1 S8: over a seat panel, Esc closes only the composer; ⌘↵ files and the seat stays open', async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await openWall(page);
+    await page.getByTestId('seat-tile').first().click();
+    const seat = page.getByTestId('focus-view');
+    await expect(seat).toBeVisible();
+    await page.keyboard.press('f');
+    await expect(page.getByTestId('feedback-note')).toBeFocused();
+    await page.getByTestId('feedback-note').fill('about this seat');
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('feedback-composer')).toHaveCount(0);
+    await expect(seat).toBeVisible();
+    await page.keyboard.press('f');
+    await page.getByTestId('feedback-note').fill('about this seat, filed');
+    await page.getByTestId('feedback-note').press('ControlOrMeta+Enter');
+    await expect(page.getByTestId('feedback-toast')).toContainText(/Filed fb-\d+/);
+    await expect(page.getByTestId('feedback-composer')).toHaveCount(0);
+    await expect(seat).toBeVisible();
+    // Then Esc belongs to the seat panel again.
+    await page.keyboard.press('Escape');
+    await expect(seat).toHaveCount(0);
+    expect(errors, 'no console errors').toEqual([]);
+  });
 });

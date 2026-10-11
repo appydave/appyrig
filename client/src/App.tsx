@@ -553,6 +553,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onClose={close}
           legendOpen={legend}
           onToggleLegend={toggleLegend}
+          keys={!feedback}
           legend={legend ? <Legend view="focus" onClose={toggleLegend} /> : null}
         />
       )}
