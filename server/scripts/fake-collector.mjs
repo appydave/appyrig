@@ -53,7 +53,12 @@ function load(scenario) {
     // v1.4 rig fields: one rig has a spec (its files are replayed below), the rest were looked for and not found.
     snap.rigs = snap.rigs.map((r) =>
       r.name === 'fliedit-team'
-        ? { ...r, specStatus: 'found', specPath: '/fixtures/fliedit-team/rig.yaml', summary: 'FliEdit overlay gaps plus viewer verbs (fixture).' }
+        ? {
+            ...r,
+            specStatus: 'found',
+            specPath: '/fixtures/fliedit-team/rig.yaml',
+            summary: 'FliEdit overlay gaps plus viewer verbs (fixture).',
+          }
         : { ...r, specStatus: 'not-found', specPath: null, summary: null }
     );
   }
@@ -78,7 +83,13 @@ function rigFilesPush(machineId) {
         content,
       };
     });
-  return { machineId, collectedAt: new Date().toISOString(), rig: 'fliedit-team', replace: true, files };
+  return {
+    machineId,
+    collectedAt: new Date().toISOString(),
+    rig: 'fliedit-team',
+    replace: true,
+    files,
+  };
 }
 
 /** The real OpenRig 0.6.6 shape, and an invented 0.6.5 that differs: one table fewer, one column fewer, one type. */
@@ -89,7 +100,14 @@ function schemaPushes(machineId) {
   const first = older.find((t) => t.columns.length > 2);
   first.columns.pop();
   first.columns[0].type = 'INTEGER';
-  const mk = (version, tables) => ({ machineId, collectedAt: new Date().toISOString(), status: 'ok', reason: null, openrigVersion: version, tables });
+  const mk = (version, tables) => ({
+    machineId,
+    collectedAt: new Date().toISOString(),
+    status: 'ok',
+    reason: null,
+    openrigVersion: version,
+    tables,
+  });
   return [mk('0.6.5 (fixture00)', older), mk(real.openrigVersion, real.tables)];
 }
 
@@ -116,15 +134,23 @@ function run(scenario) {
       });
     };
     const emitAcked = (event, payload) =>
-      new Promise((r) => socket.timeout(5000).emit(event, payload, (err, ack) => r(err ? { ok: false, failureMode: 'timeout' } : ack)));
+      new Promise((r) =>
+        socket
+          .timeout(5000)
+          .emit(event, payload, (err, ack) => r(err ? { ok: false, failureMode: 'timeout' } : ack))
+      );
     socket.on('connect', () => {
       console.log(`[${scenario}] connected to ${values.hub}/collector as ${machineId}`);
       push();
       if (scenario === 'm2' && !values.once) {
         void (async () => {
-          console.log(`[${scenario}] rig files ${JSON.stringify(await emitAcked('collector:rigfiles', rigFilesPush(machineId)))}`);
+          console.log(
+            `[${scenario}] rig files ${JSON.stringify(await emitAcked('collector:rigfiles', rigFilesPush(machineId)))}`
+          );
           for (const s of schemaPushes(machineId)) {
-            console.log(`[${scenario}] schema ${s.openrigVersion} ${JSON.stringify(await emitAcked('collector:schema', s))}`);
+            console.log(
+              `[${scenario}] schema ${s.openrigVersion} ${JSON.stringify(await emitAcked('collector:schema', s))}`
+            );
             await new Promise((r) => setTimeout(r, 300));
           }
         })();
