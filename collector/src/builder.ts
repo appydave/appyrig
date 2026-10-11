@@ -2,14 +2,23 @@ import {
   MachineSnapshotSchema,
   SNAPSHOT_SCHEMA_VERSION,
   type MachineIdentity,
+  type MachineHealth,
   type MachineSnapshot,
+  type Reading,
   type QueueItem,
   type RigSummary,
   type Seat,
   type SourceHealth,
 } from '@appydave/shared';
 import { runtimeOfCommand, stripAnsi, tailLines } from './adapters/index.js';
-import type { DaemonRead, SpecInfo, Sources, TmuxPane, ViewerAgent } from './adapters/index.js';
+import type {
+  DaemonRead,
+  HealthSample,
+  SpecInfo,
+  Sources,
+  TmuxPane,
+  ViewerAgent,
+} from './adapters/index.js';
 import { redactDeep, redactString } from './redact.js';
 
 export interface BuilderConfig {
@@ -100,6 +109,42 @@ export function mergeViewer(seats: Seat[], agents: ViewerAgent[]): void {
   }
 }
 
+/** The sampler's health plus tmux sessions, which come from the pane list already read for the snapshot. */
+function withTmux(
+  healthR: { value: HealthSample | null } | { error: unknown },
+  tmuxR: { value: TmuxPane[] } | { error: unknown },
+  now: Date = new Date()
+): MachineHealth {
+  const sample: HealthSample | null = 'value' in healthR ? healthR.value : null;
+  const why = 'error' in healthR ? String(healthR.error) : 'health was not sampled';
+  const gone = <T>(): Reading<T> => ({ status: 'unavailable', reason: why.slice(0, 200) });
+  const base: HealthSample = sample ?? {
+    sampledAt: now.toISOString(),
+    memory: {
+      totalBytes: gone(),
+      usedBytes: gone(),
+      pressureLevel: gone(),
+      freePct: gone(),
+      swapUsedBytes: gone(),
+      swapTotalBytes: gone(),
+    },
+    processes: { claude: gone(), terminalShells: gone(), terminalApps: gone() },
+  };
+  return {
+    ...base,
+    processes: {
+      ...base.processes,
+      tmuxSessions:
+        'value' in tmuxR
+          ? { status: 'ok', value: tmuxR.value.length }
+          : {
+              status: 'unavailable',
+              reason: `tmux unreadable: ${String(tmuxR.error)}`.slice(0, 200),
+            },
+    },
+  };
+}
+
 /**
  * v1.4 · S3: what each rig is (its rig.yaml summary and path) and how recently it did anything.
  * `specs` undefined = this collector does not look for specs (or the scan failed), so the fields
@@ -138,12 +183,13 @@ export async function buildSnapshot(
   config: BuilderConfig,
   now: Date = new Date()
 ): Promise<MachineSnapshot> {
-  const [daemonR, tmuxR, viewerR, accountR, specsR] = await Promise.all([
+  const [daemonR, tmuxR, viewerR, accountR, specsR, healthR] = await Promise.all([
     settle(sources.daemon()),
     settle(sources.tmuxPanes()),
     settle(sources.viewerAgents()),
     settle(sources.account ? sources.account() : Promise.resolve(null)),
     settle(sources.specs ? sources.specs() : Promise.resolve(null)),
+    settle(sources.health ? sources.health() : Promise.resolve(null)),
   ]);
 
   const daemon: DaemonRead | null = 'value' in daemonR ? daemonR.value : null;
@@ -239,6 +285,8 @@ export async function buildSnapshot(
     queue: daemon?.queue ?? [],
     // Only collectors with an account source report one; recorded fixtures stay byte-identical.
     ...(sources.account ? { account: 'value' in accountR ? accountR.value : null } : {}),
+    // Only collectors with a health source report one; an older one sends none (the hub says so).
+    ...(sources.health ? { health: withTmux(healthR, tmuxR) } : {}),
   };
   return MachineSnapshotSchema.parse(redactDeep(snapshot));
 }

@@ -1,4 +1,5 @@
 import type { SpecInfo } from './specs.js';
+import type { HealthSample } from './health.js';
 import type { AccountUsage, QueueItem, RigSummary, Seat, ViewerStatus } from '@appydave/shared';
 
 /** What the daemon adapter returns: AppyRig-shaped pieces, no OpenRig shapes leak out. */
@@ -45,4 +46,6 @@ export interface Sources {
   specs?(): Promise<Map<string, SpecInfo>>;
   /** queue id → message body from the latest queue read (v1.4). Optional: fixtures may omit it. */
   queueBodies?(): Promise<Map<string, string>>;
+  /** Machine health (v1.4 · S6), without tmux sessions: the builder adds those. Optional: fixtures omit it. */
+  health?(): Promise<HealthSample>;
 }

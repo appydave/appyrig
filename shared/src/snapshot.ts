@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AccountDerivedSchema } from './accounts.js';
+import { MachineHealthSchema } from './health.js';
 
 /**
  * The AppyRig snapshot contract (P0b).
@@ -214,6 +215,8 @@ export const MachineSnapshotSchema = z.strictObject({
   queue: z.array(QueueItemSchema).max(QUEUE_MAX_ITEMS),
   /** Optional and additive (v1.1): older collectors omit it. Deploy the hub before the collectors. */
   account: AccountUsageSchema.nullable().optional(),
+  /** v1.4 · S6, optional and additive: older collectors omit it (the hub then says "no health data yet"). Hub first. */
+  health: MachineHealthSchema.optional(),
 });
 export type MachineSnapshot = z.infer<typeof MachineSnapshotSchema>;
 

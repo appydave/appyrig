@@ -155,6 +155,13 @@ export interface AccountView {
   derived: AccountDerived;
 }
 
+/**
+ * The hub sees a login switch a push or two after it happens, so a sample stamped just before the
+ * hub noticed can still belong to the new account. Readings this close to the switch are kept
+ * (the other way round, an old-account sample this close to the switch slips in: a small, brief error).
+ */
+export const SWITCH_TOLERANCE_MS = 60_000;
+
 const hasReading = (a: AccountUsage): boolean =>
   (a.fiveHourPct !== null || a.sevenDayPct !== null) && a.sampledAt !== null;
 
@@ -179,7 +186,10 @@ export function accountViews(
   for (const [key, ms] of groups) {
     const usable = ms.filter((m) => {
       const a = m.snapshot.account!;
-      return hasReading(a) && Date.parse(a.sampledAt!) >= (changedAt(m.machine.id) ?? 0);
+      return (
+        hasReading(a) &&
+        Date.parse(a.sampledAt!) >= (changedAt(m.machine.id) ?? 0) - SWITCH_TOLERANCE_MS
+      );
     });
     const best = usable.reduce<FleetMachine | null>(
       (a, b) =>
@@ -214,8 +224,15 @@ export function applyAccountDerived(
   views: Map<string, AccountView>
 ): FleetMachine {
   const account = machine.snapshot.account;
-  const view = account?.email ? views.get(account.email.toLowerCase()) : undefined;
-  if (!account || !view) return machine;
+  if (!account) return machine;
+  const view = account.email ? views.get(account.email.toLowerCase()) : undefined;
+  if (!view) {
+    // `derived` is the hub's alone: one a collector sent (or one with no account to attach it to) is dropped.
+    if (!account.derived) return machine;
+    const bare: Record<string, unknown> = { ...account };
+    delete bare.derived;
+    return { ...machine, snapshot: { ...machine.snapshot, account: bare as typeof account } };
+  }
   return {
     ...machine,
     snapshot: { ...machine.snapshot, account: { ...account, derived: view.derived } },
