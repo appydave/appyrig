@@ -17,6 +17,19 @@ describe('Express app (via index.ts export)', () => {
     expect(res.body.status).toBe('ok');
   });
 
+  it('v1.4 S8: the CSP lets the page fetch its own Google Fonts (feedback screenshot) and nothing else off-origin', async () => {
+    const res = await request(app).get('/health');
+    const csp = String(res.headers['content-security-policy']);
+    const connect = csp
+      .split(';')
+      .find((d) => d.trim().startsWith('connect-src'))!
+      .trim();
+    expect(connect).toBe(
+      "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com"
+    );
+    expect(csp).toMatch(/default-src 'self'/);
+  });
+
   it('GET /api/info returns 200 with a session', async () => {
     const res = await request(app).get('/api/info').set(BEARER);
     expect(res.status).toBe(200);

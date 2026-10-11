@@ -6,14 +6,17 @@ import Focus from './components/Focus.js';
 import HandoffFlow from './components/HandoffFlow.js';
 import Learn from './components/Learn.js';
 import Machines from './components/Machines.js';
+import FeedbackComposer, { type ShotState } from './components/FeedbackComposer.js';
 import KeysHelp from './components/KeysHelp.js';
+import { captureScreen, composeSnapshot, regionOf } from './feedback/capture.js';
+import type { FeedbackViewState } from '@appydave/shared';
 import Legend from './components/Legend.js';
 import { isShortcutBlocked } from './lib/keys.js';
 import type { LegendScreen } from './learn/legend.js';
 import RigMap from './components/RigMap.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
-import { findSeat, orderedMachines, type GroupBy } from './fleet/model.js';
+import { findSeat, orderedMachines, seatName, type GroupBy } from './fleet/model.js';
 import { buildRigMap, listRigs } from './fleet/views.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 
@@ -124,6 +127,19 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   /** S2: screens visited, so Esc returns to the one you came from. */
   const history = useRef<View[]>([]);
   const [help, setHelp] = useState(false);
+  /** S8: the open feedback composer, with what it captured when it opened. */
+  const [feedback, setFeedback] = useState<{
+    region: string;
+    snapshot: string;
+    viewState: FeedbackViewState;
+    shot: ShotState;
+  } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), 8000);
+    return () => window.clearTimeout(id);
+  }, [toast]);
 
   const allMachines = useMemo(() => orderedMachines(state.machines), [state.machines]);
   const [hidden, setHidden] = useState<string[]>(readHidden);
@@ -150,6 +166,38 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     () => (view === 'map' && activeRig ? buildRigMap(allMachines, activeRig.key, minute) : null),
     [view, activeRig, allMachines, minute]
   );
+
+  // S8: file feedback about what is on screen. The screenshot is taken with the composer left out.
+  const openFeedback = () => {
+    if (feedback) return;
+    const viewLabel = VIEWS.find((v) => v.key === view)?.label ?? view;
+    const seat = focusTile ? seatName(focusTile.seat) : null;
+    const rig = view === 'map' || view === 'flow' ? (activeRig?.key ?? null) : null;
+    const region = regionOf(
+      seat ? `seat:${seat}` : rig ? `${view}:${rig.split(':')[1] ?? rig}` : view
+    );
+    const viewState: FeedbackViewState = {
+      route: `${location.pathname}${location.hash}`,
+      view,
+      selectedRig: rig,
+      selectedSeat: focused,
+      machines: machines.map((m) => m.machine.id),
+      filters: { groupBy, hiddenMachines: hidden.length ? hidden.join(',') : null },
+      legend,
+      explain,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+    };
+    const snapshot = composeSnapshot(
+      `${seat ? `Seat panel: ${seat}` : viewLabel}${rig ? ` · rig ${rig}` : ''} · ${seatCount} seats on ${machines.length} machine${machines.length === 1 ? '' : 's'}${hidden.length ? ` (${hidden.join(', ')} hidden)` : ''}`
+    );
+    setFeedback({ region, snapshot, viewState, shot: { state: 'capturing' } });
+    const root = document.querySelector<HTMLElement>('.app') ?? document.body;
+    captureScreen(root).then(
+      (shot) => setFeedback((f) => (f ? { ...f, shot: { state: 'ready', shot } } : f)),
+      (e: Error) =>
+        setFeedback((f) => (f ? { ...f, shot: { state: 'failed', message: e.message } } : f))
+    );
+  };
 
   const showView = (v: View) => {
     setView(v);
@@ -216,7 +264,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
-    if (focused) return;
+    if (focused || feedback) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Already spent: Focus closing (it re-attaches this listener mid-keypress) or a card.
@@ -233,17 +281,30 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, help, goBack]);
+  }, [focused, help, feedback, goBack]);
+
+  // S8: F opens the feedback composer, on every screen and in the seat panel.
+  useEffect(() => {
+    if (help || feedback) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'f' || e.key === 'F') && !isShortcutBlocked(e)) {
+        e.preventDefault();
+        openFeedback();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
 
   // L shows or hides the legend for this screen, the seat panel included (QA D3).
   useEffect(() => {
-    if (help) return;
+    if (help || feedback) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [help, toggleLegend]);
+  }, [help, feedback, toggleLegend]);
 
   // Return keyboard focus to whatever opened Focus: a Wall tile, a Rig Map node, a strip alert.
   useEffect(() => {
@@ -336,6 +397,17 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         >
           Keys · ?
         </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="feedback-open"
+          data-explain="feedback"
+          aria-keyshortcuts="F"
+          title="Feedback: say what is wrong or good about this screen; it is saved with a screenshot (F)"
+          onClick={openFeedback}
+        >
+          ⚑ Feedback · F
+        </button>
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}
@@ -407,7 +479,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           hubConnected={hubConnected}
           received={state.received}
           onOpen={open}
-          keys={!focusTile && !help}
+          keys={!focusTile && !help && !feedback}
           hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
           onShow={toggleMachine}
         />
@@ -423,7 +495,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               rig={activeRig?.name ?? null}
               now={now}
               socket={getSocket()}
-              keys={!focusTile && !help}
+              keys={!focusTile && !help && !feedback}
             />
           )}
         </main>
@@ -445,6 +517,33 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         </main>
       )}
       {help && !focusTile && <KeysHelp view={view} onClose={() => setHelp(false)} />}
+      {feedback && (
+        <FeedbackComposer
+          region={feedback.region}
+          snapshot={feedback.snapshot}
+          viewState={feedback.viewState}
+          shot={feedback.shot}
+          socket={getSocket()}
+          onClose={() => setFeedback(null)}
+          onFiled={(msg) => {
+            setFeedback(null);
+            setToast(msg);
+          }}
+        />
+      )}
+      {toast && (
+        <p
+          className="feedback-toast"
+          role="status"
+          data-testid="feedback-toast"
+          data-feedback-skip=""
+        >
+          ⚑ {toast}
+          <button type="button" className="pill-btn" onClick={() => setToast(null)}>
+            OK
+          </button>
+        </p>
+      )}
       {focusTile && (
         <Focus
           tile={focusTile}

@@ -120,7 +120,15 @@ export function createHub(opts: HubOptions): Hub {
   // /assets/* over https, which fails and leaves a blank page.
   app.use(
     helmet({
-      contentSecurityPolicy: { directives: { upgradeInsecureRequests: null } },
+      contentSecurityPolicy: {
+        directives: {
+          upgradeInsecureRequests: null,
+          // v1.4 S8: the feedback screenshot (html-to-image) inlines the page's own web fonts, so it
+          // fetches the Google Fonts CSS and font files the page already loads through style-src and
+          // font-src. Nothing else is fetched from off-origin.
+          connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
+        },
+      },
       strictTransportSecurity: false,
     })
   );

@@ -31,6 +31,7 @@ const SCREEN: Record<View, Row[]> = {
 const EVERYWHERE: Row[] = [
   ['?', 'Show or hide these keys'],
   ['L', 'Show or hide the legend'],
+  ['F', 'Feedback: a note about this screen, saved with a screenshot (⌘↵ files it)'],
   ['Esc', 'Back: closes what is on top, else returns to the screen you came from'],
   ['⌘ Enter', 'Open a tile, or close an open seat'],
 ];

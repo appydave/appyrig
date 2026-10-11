@@ -345,6 +345,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: '"No health data yet": the machine’s collector predates v1.4 and sends none. "–": that one reading could not be taken; hover for why.',
     why: 'Neither is ever shown as 0 or as "fine". Nothing is assumed.',
   },
+  feedback: {
+    term: 'Feedback (F)',
+    what: 'A note about what is on screen: a verdict (wrong, don’t get it, good, idea), your sentence, a screenshot of the app, and where you were (screen, rig, seat, filters).',
+    why: 'Saved by the hub in AppyRig’s own store (data/feedback/), never to OpenRig. An agent lists them back with feedback.list, so feedback no longer means screenshots in chat.',
+  },
   sampler: {
     term: 'Usage sampler',
     what: "A small script called by Claude Code's status line that saves the 5-hour and weekly % to ~/.claude/usage-log.csv. It costs no tokens.",

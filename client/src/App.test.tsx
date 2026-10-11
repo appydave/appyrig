@@ -1166,3 +1166,136 @@ describe('App: S6 machine health', () => {
     );
   });
 });
+
+describe('App: S8 feedback capture', () => {
+  type Sent = { url: string; init: RequestInit };
+  function withFetch(status: number, body: unknown) {
+    const sent: Sent[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        sent.push({ url, init });
+        return new Response(JSON.stringify(body), { status });
+      })
+    );
+    return sent;
+  }
+  function connected() {
+    const fake = renderApp((r) =>
+      r.verb === 'feedback.list'
+        ? {
+            ok: true,
+            value: {
+              total: 2,
+              indexFile: '/x/data/feedback/index.jsonl',
+              notes: [
+                {
+                  id: 'fb-0002',
+                  createdAt: '2026-10-11T12:00:00.000Z',
+                  viewer: 'human:ui',
+                  verdict: 'idea',
+                  region: 'wall',
+                  note: 'group the stopped rigs',
+                  route: '/',
+                  view: 'wall',
+                  selectedRig: null,
+                  hasScreenshot: true,
+                  appVersion: '0.1.0',
+                },
+              ],
+            },
+          }
+        : undefined
+    );
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    return fake;
+  }
+
+  it('F opens the composer with the note focused, the region and view state composed', async () => {
+    connected();
+    fireEvent.keyDown(window, { key: 'f' });
+    const composer = screen.getByTestId('feedback-composer');
+    expect(document.activeElement).toBe(screen.getByTestId('feedback-note'));
+    expect(screen.getByTestId('feedback-region')).toHaveValue('wall');
+    expect(composer.closest('[data-feedback-skip]')).not.toBeNull();
+    expect(await screen.findByTestId('feedback-recent')).toHaveTextContent('fb-0002');
+    // jsdom has no canvas: the screenshot fails in words, and the note can still go.
+    await waitFor(() =>
+      expect(screen.getByTestId('feedback-shot')).toHaveAttribute('data-state', 'failed')
+    );
+  });
+
+  it('typing in the note fires no shortcut; Esc cancels and stays on the screen', () => {
+    connected();
+    fireEvent.click(screen.getByTestId('feedback-open'));
+    const note = screen.getByTestId('feedback-note');
+    fireEvent.keyDown(note, { key: 'l' });
+    fireEvent.keyDown(note, { key: 'f' });
+    fireEvent.keyDown(note, { key: '?' });
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('feedback-composer')).toBeNull();
+    expect(screen.getByTestId('wall')).toBeInTheDocument();
+  });
+
+  it('⌘↵ files the note to POST /v1/feedback as human:ui, and says so', async () => {
+    const sent = withFetch(201, {
+      ok: true,
+      value: {
+        id: 'fb-0003',
+        createdAt: '2026-10-11T12:30:00.000Z',
+        hasScreenshot: false,
+        screenshot: null,
+        count: 3,
+        dryRun: false,
+      },
+    });
+    connected();
+    fireEvent.keyDown(window, { key: 'F' });
+    fireEvent.click(screen.getByTestId('feedback-verdict-question'));
+    const note = screen.getByTestId('feedback-note');
+    fireEvent.change(note, { target: { value: 'What does the dashed bar mean?' } });
+    fireEvent.keyDown(note, { key: 'Enter', metaKey: true });
+    expect(await screen.findByTestId('feedback-toast')).toHaveTextContent(
+      'Filed fb-0003 · 3 notes in all'
+    );
+    expect(screen.queryByTestId('feedback-composer')).toBeNull();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.url).toBe('/v1/feedback');
+    expect((sent[0]!.init.headers as Record<string, string>)['x-fli-principal']).toBe('human:ui');
+    const body = JSON.parse(sent[0]!.init.body as string);
+    expect(body).toMatchObject({
+      verdict: 'question',
+      region: 'wall',
+      note: 'What does the dashed bar mean?',
+      viewState: { route: '/', view: 'wall', machines: ['roamy'] },
+    });
+    expect(body.snapshot).toMatch(/^The Wall · \d+ seats on 1 machine/);
+    vi.unstubAllGlobals();
+  });
+
+  it('a refusal is said in words and the note stays to try again', async () => {
+    withFetch(413, { ok: false, error: { failureMode: 'too-large', message: 'body over 5 MB' } });
+    connected();
+    fireEvent.keyDown(window, { key: 'f' });
+    fireEvent.change(screen.getByTestId('feedback-note'), { target: { value: 'too big' } });
+    fireEvent.click(screen.getByTestId('feedback-send'));
+    expect(await screen.findByTestId('feedback-error')).toHaveTextContent(
+      'Too big for the hub; try again without the screenshot: body over 5 MB. Nothing was filed.'
+    );
+    expect(screen.getByTestId('feedback-note')).toHaveValue('too big');
+    vi.unstubAllGlobals();
+  });
+
+  it('an empty note is not filed', () => {
+    const sent = withFetch(201, {});
+    connected();
+    fireEvent.keyDown(window, { key: 'f' });
+    fireEvent.click(screen.getByTestId('feedback-send'));
+    expect(screen.getByTestId('feedback-error')).toHaveTextContent('the note is the point');
+    expect(sent).toHaveLength(0);
+    vi.unstubAllGlobals();
+  });
+});
