@@ -11,6 +11,7 @@ import {
   type FlowEdge,
 } from '../fleet/views.js';
 import ReplayConsoles from './ReplayConsoles.js';
+import { isShortcutBlocked, isSlider } from '../lib/keys.js';
 
 interface Props {
   machine: FleetMachine | null;
@@ -18,6 +19,8 @@ interface Props {
   now: number;
   /** For the consoles' seat.history calls; without it the consoles show handoffs only. */
   socket?: FleetSocket;
+  /** S2: ← → step through handoffs. Off while an overlay owns the keyboard. */
+  keys?: boolean;
 }
 
 const W = 1000;
@@ -64,7 +67,7 @@ function edgePath(
     };
   }
   if (e.rework) {
-    // Below the row, amber: work sent back to an earlier stage.
+    // Below the row, amber: anything sent back to an earlier stage (rework, verdicts, answers).
     const y0 = ROW_Y + BOX_H / 2;
     const dip = 70 + gap * 28;
     return {
@@ -97,10 +100,11 @@ const clock = (t: number) =>
 
 /**
  * Concept 4 · Handoff Flow: queue handoffs moving lead → builders → QA → reviewer, as pulses.
- * Amber arcs below the row are rework (a FAIL sent back). The scrubber replays a finished run.
+ * Amber arcs below the row are items sent back to an earlier stage (rework, verdicts, answers).
+ * The scrubber replays a finished run.
  * A team with no QA or review seat is drawn one box per seat instead of being squashed into roles.
  */
-export default function HandoffFlow({ machine, rig, now, socket }: Props) {
+export default function HandoffFlow({ machine, rig, now, socket, keys = true }: Props) {
   const range = useMemo(
     () => (machine && rig ? flowRange(rigQueue(machine, rig)) : null),
     [machine, rig]
@@ -123,6 +127,21 @@ export default function HandoffFlow({ machine, rig, now, socket }: Props) {
     setAt(t);
     setStepId(step);
   };
+
+  // S2: ← → press the step buttons. The handler reads the latest step functions from a ref.
+  const stepKeys = useRef<{ prev: () => void; next: () => void } | null>(null);
+  useEffect(() => {
+    if (!keys) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      if (isShortcutBlocked(e) || isSlider(e.target) || !stepKeys.current) return;
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') stepKeys.current.prev();
+      else stepKeys.current.next();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [keys]);
 
   // A new rig starts at its end (the current state).
   useEffect(() => {
@@ -154,6 +173,7 @@ export default function HandoffFlow({ machine, rig, now, socket }: Props) {
     return () => window.clearInterval(id);
   }, [playing, range, chapters]);
 
+  stepKeys.current = null;
   if (!machine || !rig) return <p className="empty">Pick a rig.</p>;
   if (!range) {
     return (
@@ -194,6 +214,10 @@ export default function HandoffFlow({ machine, rig, now, socket }: Props) {
     });
     stepTo(i);
   };
+  stepKeys.current = {
+    prev: () => stepIdx !== 0 && prevStep(),
+    next: () => stepIdx !== steps.length - 1 && nextStep(),
+  };
   const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
   const staleCount = staleStages.reduce((n, s) => n + s.stale, 0);
   const oldestStale = Math.max(0, ...staleStages.map((s) => s.oldestStaleMs ?? 0));
@@ -211,7 +235,7 @@ export default function HandoffFlow({ machine, rig, now, socket }: Props) {
         </span>
         {flow.mode === 'roles' && (
           <span data-testid="flow-rework" data-explain="rework">
-            <b className="amber">{flow.rework}</b> sent back for rework
+            <b className="amber">{flow.rework}</b> sent back
           </span>
         )}
         <span data-explain="median-turnaround">

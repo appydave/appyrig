@@ -500,3 +500,242 @@ describe('class names (QA M1)', () => {
     expect(css).not.toMatch(/(^|[\s,}])\.focus\s*[{,:]/m);
   });
 });
+
+describe('App: S1 legend and Explain discoverability', () => {
+  const noResize = () =>
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+  function connected() {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    return fake;
+  }
+
+  it('a first visit shows a hint pointing at Explain; Got it hides it for good', () => {
+    connected();
+    const hint = screen.getByTestId('explain-hint');
+    expect(hint).toHaveTextContent(/Explain/);
+    fireEvent.click(screen.getByTestId('explain-hint-dismiss'));
+    expect(screen.queryByTestId('explain-hint')).toBeNull();
+    expect(localStorage.getItem('appyrig.hint')).toBe('seen');
+  });
+
+  it('with Explain off, the hint says to turn it on; toggling Explain dismisses the hint', () => {
+    localStorage.setItem('appyrig.explain', 'off');
+    connected();
+    expect(screen.getByTestId('explain-hint')).toHaveTextContent('Turn on Explain');
+    fireEvent.click(screen.getByTestId('explain-toggle'));
+    expect(screen.queryByTestId('explain-hint')).toBeNull();
+  });
+
+  it('the hint stays gone on a later visit', () => {
+    localStorage.setItem('appyrig.hint', 'seen');
+    connected();
+    expect(screen.queryByTestId('explain-hint')).toBeNull();
+  });
+
+  it('unchosen, the legend is closed on the Wall and open on the two diagram screens', () => {
+    // jsdom has no ResizeObserver; the Rig Map only needs one to re-measure its lines.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+    connected();
+    expect(screen.queryByTestId('legend')).toBeNull();
+    fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
+    expect(screen.getByTestId('legend')).toHaveTextContent('Grey band · POD');
+    fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'flow');
+    expect(screen.getByTestId('legend')).toHaveTextContent('Amber arc below · N back');
+    vi.unstubAllGlobals();
+  });
+
+  it('the header button and the L key toggle it, and the choice is remembered per screen', () => {
+    noResize();
+    connected();
+    const choice = () => JSON.parse(localStorage.getItem('appyrig.legend') ?? '{}');
+    fireEvent.click(screen.getByTestId('legend-toggle'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'wall');
+    expect(choice()).toEqual({ wall: 'on' });
+    fireEvent.keyDown(window, { key: 'l' });
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(choice()).toEqual({ wall: 'off' });
+    // QA M2: closing it on the Map leaves the Wall's choice alone, and the reverse.
+    fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
+    fireEvent.click(screen.getByTestId('legend-close'));
+    expect(choice()).toEqual({ wall: 'off', map: 'off' });
+    fireEvent.click(screen.getByTestId('view-wall'));
+    fireEvent.keyDown(window, { key: 'L' });
+    fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(choice()).toEqual({ wall: 'on', map: 'off' });
+    vi.unstubAllGlobals();
+  });
+
+  it('an old single on/off value is ignored, not misread', () => {
+    localStorage.setItem('appyrig.legend', 'on');
+    connected();
+    expect(screen.queryByTestId('legend')).toBeNull();
+  });
+
+  it('L typed into a field, or with a modifier, is not a shortcut', () => {
+    localStorage.setItem('appyrig.legend', JSON.stringify({ wall: 'on' }));
+    connected();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: 'l' });
+    fireEvent.keyDown(window, { key: 'l', metaKey: true });
+    expect(screen.getByTestId('legend')).toBeInTheDocument();
+    input.remove();
+  });
+
+  it('QA D3: the seat panel has its own legend (button or L) naming its marks', () => {
+    localStorage.setItem('appyrig.legend', JSON.stringify({ wall: 'on' }));
+    connected();
+    fireEvent.click(screen.getByTestId('blocked-alert'));
+    // The Wall's choice does not carry into the panel; the panel starts closed.
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.getByTestId('channel-terminal')).toHaveTextContent('the seat’s own screen');
+    expect(screen.getByTestId('channel-queue')).toHaveTextContent(
+      'OpenRig queue, not the terminal'
+    );
+    fireEvent.keyDown(window, { key: 'l' });
+    const legend = screen.getByTestId('legend');
+    expect(legend).toHaveAttribute('data-view', 'focus');
+    for (const mark of [
+      'SEAT.GET REFUSED · TIMEOUT',
+      'seat.get · ok · as human:ui',
+      'Rich text · Terminal',
+      'Lifecycle running · running',
+      'Queue · latest 6',
+    ]) {
+      expect(legend).toHaveTextContent(mark);
+    }
+    fireEvent.click(screen.getByTestId('focus-legend-toggle'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    // Still in the panel; the toggle did not close it.
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+  });
+});
+
+describe('App: S2 keyboard', () => {
+  const noResize = () =>
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+
+  function connected(...names: ('roamy--blocked' | 'm2')[]) {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update(names.map((n) => fleetMachine(snapshot(n)))));
+    return fake;
+  }
+
+  it('Wall: arrows from the page move focus onto the tiles, Enter opens, Esc returns to that tile', () => {
+    connected('roamy--blocked');
+    const tiles = screen.getAllByTestId('seat-tile');
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(tiles[0]);
+    fireEvent.keyDown(tiles[0]!, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(tiles[1]);
+    fireEvent.keyDown(tiles[1]!, { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(tiles[0]);
+    // Enter on a focused button is a click.
+    fireEvent.click(tiles[0]!);
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    expect(document.activeElement).toBe(screen.getAllByTestId('seat-tile')[0]);
+  });
+
+  it('Esc goes back to the screen you came from, one step at a time', () => {
+    noResize();
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('wall')).toBeInTheDocument();
+    // Nothing further back: stays put.
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('wall')).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it('Rig Map: Esc from a seat lands back on the map node that opened it', () => {
+    noResize();
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    const node = screen.getAllByTestId('rig-map-node')[0]!;
+    node.focus();
+    fireEvent.click(node);
+    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    expect(document.activeElement).toBe(node);
+    vi.unstubAllGlobals();
+  });
+
+  it('Handoff Flow: → and ← step through handoffs', () => {
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(screen.getByTestId('flow-narration')).toHaveTextContent(/^Handoff 1 of \d+/);
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    expect(screen.getByTestId('flow-narration')).toHaveTextContent(/^Handoff 3 of \d+/);
+    fireEvent.keyDown(document.body, { key: 'ArrowLeft' });
+    expect(screen.getByTestId('flow-narration')).toHaveTextContent(/^Handoff 2 of \d+/);
+  });
+
+  it('? opens the keys for this screen; Esc closes it without leaving the screen', () => {
+    noResize();
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.keyDown(window, { key: '?' });
+    expect(screen.getByTestId('keys-help')).toHaveAttribute('data-view', 'map');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
+  it('keys never fire while typing in a field', () => {
+    connected('roamy--blocked');
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    input.focus();
+    fireEvent.keyDown(input, { key: '?' });
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+    expect(screen.queryByTestId('keys-help')).toBeNull();
+    expect(document.activeElement).toBe(input);
+    input.remove();
+  });
+});

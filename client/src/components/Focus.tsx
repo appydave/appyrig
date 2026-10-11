@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { UI_PRINCIPAL, type QueueItem, type Refusal, type SeatGetOutput } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
@@ -98,9 +98,22 @@ interface Props {
   now: number;
   hubConnected: boolean;
   onClose: () => void;
+  /** S1 (QA D3): the legend for this panel, rendered under the header when open. */
+  legend?: ReactNode;
+  legendOpen?: boolean;
+  onToggleLegend?: () => void;
 }
 
-export default function Focus({ tile: storeTile, socket, now, hubConnected, onClose }: Props) {
+export default function Focus({
+  tile: storeTile,
+  socket,
+  now,
+  hubConnected,
+  onClose,
+  legend,
+  legendOpen = false,
+  onToggleLegend,
+}: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
   const [call, setCall] = useState<SeatCall>({ state: 'pending' });
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -219,12 +232,29 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
           >
             {mode === 'terminal' ? 'Rich text' : 'Terminal'}
           </button>
+          {onToggleLegend && (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="focus-legend-toggle"
+              aria-pressed={legendOpen}
+              aria-keyshortcuts="L"
+              onClick={onToggleLegend}
+            >
+              Legend · L
+            </button>
+          )}
           <span className="label">⌘↵ back to wall</span>
         </span>
       </header>
+      {legend}
 
       <div className="focus-body">
         <div className="focus-main">
+          <p className="channel-caption" data-testid="channel-terminal">
+            <b>{mode === 'terminal' ? 'Terminal' : 'Rich text'}</b> · the seat&rsquo;s own screen:
+            what it is saying and doing. One channel; the queue on the right is the other.
+          </p>
           <FocusTerminal lines={lines} hidden={mode !== 'terminal'} />
           <article className="focus-rich" data-testid="focus-rich" hidden={mode !== 'rich'}>
             {paragraphs.length === 0 ? (
@@ -303,6 +333,10 @@ export default function Focus({ tile: storeTile, socket, now, hubConnected, onCl
             <div className="label" style={{ marginBottom: 4 }}>
               Queue · latest {queue.length}
             </div>
+            <p className="channel-caption" data-testid="channel-queue">
+              Formal handoffs through the OpenRig queue, not the terminal. → sent by this seat · ←
+              received.
+            </p>
             {queue.length === 0 && <p className="fresh">No queue rows to or from this seat.</p>}
             {queue.map((q) => (
               <div className="qrow" key={q.id}>

@@ -204,13 +204,13 @@ export const GLOSSARY: Record<string, Term> = {
   },
   'flow-report': {
     term: 'Report back',
-    what: 'Items going back up the line that are not rework: a verdict to the lead, a status report, a question.',
-    why: 'Dashed arcs above the row. The reviewer → lead arc carries the verdicts.',
+    what: 'Items going back to the Lead: a verdict, a status report, a question. In a rig drawn one box per seat, anything going back to an earlier box.',
+    why: 'Dashed arcs above the row. Items going back to any other stage are the amber arcs below.',
   },
   rework: {
-    term: 'Rework',
-    what: 'Work sent back to an earlier stage: QA failing a build and returning it to a builder.',
-    why: 'Each one is a fix round. In the AppyRig build, 12 of 107 handoffs were rework: the checkers were finding real problems.',
+    term: 'Sent back',
+    what: 'Anything sent back to an earlier stage other than the Lead: rework after a FAIL, but also verdicts (PASS too) and answers.',
+    why: 'Drawn as the amber arcs below the row. Many items sent back with few FAILs is normal: every verdict travels back.',
   },
   stage: {
     term: 'Stage',
@@ -255,7 +255,7 @@ export const GLOSSARY: Record<string, Term> = {
   replay: {
     term: 'Replay run',
     what: "Plays the rig's whole queue history back in 40 seconds. The slider jumps to any moment.",
-    why: 'The chapter buttons jump to the moments that mattered (first rework, the biggest queue, the end) and the caption line says what happened.',
+    why: 'The chapter buttons jump to the moments that mattered (the first item sent back, the biggest queue, the end) and the caption line says what happened.',
   },
 
   step: {
