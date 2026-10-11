@@ -1,9 +1,14 @@
-import { memo, useEffect, useRef } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
+  WALL_ORDER_TEXT,
+  collapsedByDefault,
   freshness,
   groupSeats,
+  groupState,
+  type PipKey,
+  type WallGroup,
   modelChip,
   pipFor,
   seatName,
@@ -18,6 +23,30 @@ export interface Box {
   y: number;
   w: number;
   h: number;
+}
+
+const OPEN_KEY = 'appyrig.groups';
+
+/** Per-viewer open/closed overrides by group key; anything not listed follows its default. */
+function readOpen(): Record<string, boolean> {
+  try {
+    const v = JSON.parse(localStorage.getItem(OPEN_KEY) ?? '{}');
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+const PIP_ORDER: PipKey[] = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
+
+/** "● 2 working · ○ 3 idle": a group's seats by status, glyph first (never colour alone). */
+function statusCounts(g: WallGroup): { pip: PipKey; n: number }[] {
+  const n = new Map<PipKey, number>();
+  for (const t of g.tiles) {
+    const pip = pipFor(t.seat, t.machine);
+    n.set(pip, (n.get(pip) ?? 0) + 1);
+  }
+  return PIP_ORDER.filter((p) => n.has(p)).map((pip) => ({ pip, n: n.get(pip)! }));
 }
 
 const ARROWS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'] as const;
@@ -146,6 +175,9 @@ interface WallProps {
   onOpen: (key: string) => void;
   /** S2: arrow keys move between tiles. Off while Focus or an overlay owns the keyboard. */
   keys?: boolean;
+  /** S3: machines the viewer filtered out, named on the Wall so nothing vanishes silently. */
+  hidden?: { id: string; label: string }[];
+  onShow?: (machineId: string) => void;
 }
 
 export default function Wall({
@@ -156,9 +188,22 @@ export default function Wall({
   received,
   onOpen,
   keys = true,
+  hidden = [],
+  onShow,
 }: WallProps) {
   const groups = groupSeats(machines, groupBy);
   const box = useRef<HTMLElement>(null);
+  const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
+  const isOpen = (g: WallGroup) => openAt[g.key] ?? !collapsedByDefault(g);
+  const toggle = (g: WallGroup) => {
+    const next = { ...openAt, [g.key]: !isOpen(g) };
+    setOpenAt(next);
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(next));
+    } catch {
+      // per-viewer convenience only
+    }
+  };
 
   useEffect(() => {
     if (!keys) return;
@@ -192,34 +237,83 @@ export default function Wall({
       aria-label="The Wall"
       style={{ display: 'flex', flexDirection: 'column', gap: 22 }}
     >
-      {received && groups.length === 0 && (
+      {received && groups.length === 0 && hidden.length === 0 && (
         <p className="empty">
           No seats yet. Machines appear here as soon as their collector reports.
+        </p>
+      )}
+      {hidden.length > 0 && (
+        <p className="filter-note" data-testid="wall-hidden">
+          Hidden by the machine filter:{' '}
+          {hidden.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="pill-btn"
+              data-testid="wall-show-machine"
+              onClick={() => onShow?.(m.id)}
+            >
+              ○ {m.label} · show
+            </button>
+          ))}
+        </p>
+      )}
+      {groups.length > 0 && (
+        <p className="view-caption wall-order" data-testid="wall-order">
+          {WALL_ORDER_TEXT}
         </p>
       )}
       {groups.map((g) => {
         // One freshness label per machine per tick, shared by its tiles.
         const fresh = freshness(g.tiles[0]?.machine ?? machines[0], now, hubConnected).label;
+        const open = isOpen(g);
+        const state = groupState(g);
         return (
-          <section key={g.key} className="group" data-testid="wall-group" data-group-key={g.key}>
-            <div className="group-head">
+          <section
+            key={g.key}
+            className="group"
+            data-testid="wall-group"
+            data-group-key={g.key}
+            data-state={state}
+            data-open={open}
+          >
+            <button
+              type="button"
+              className="group-head"
+              data-testid="wall-group-head"
+              aria-expanded={open}
+              aria-controls={`grid-${g.key}`}
+              onClick={() => toggle(g)}
+            >
+              <span className="group-caret" aria-hidden="true">
+                {open ? '▾' : '▸'}
+              </span>
               <b>{g.name}</b>
               <span>{g.where}</span>
               {g.asleep && <span>· asleep</span>}
+              <span className="group-counts" data-testid="wall-group-counts">
+                {statusCounts(g).map(({ pip, n }) => (
+                  <span key={pip} className="group-count" data-pip={pip}>
+                    <span className="pip-glyph">{PIP[pip].glyph}</span> {n} {PIP[pip].label}
+                  </span>
+                ))}
+              </span>
               <i />
-            </div>
-            <div className="grid">
-              {g.tiles.map((t) => (
-                <SeatTile
-                  key={t.key}
-                  tileKey={t.key}
-                  machine={t.machine}
-                  seat={t.seat}
-                  freshLabel={fresh}
-                  onOpen={onOpen}
-                />
-              ))}
-            </div>
+            </button>
+            {open && (
+              <div className="grid" id={`grid-${g.key}`}>
+                {g.tiles.map((t) => (
+                  <SeatTile
+                    key={t.key}
+                    tileKey={t.key}
+                    machine={t.machine}
+                    seat={t.seat}
+                    freshLabel={fresh}
+                    onOpen={onOpen}
+                  />
+                ))}
+              </div>
+            )}
           </section>
         );
       })}

@@ -1814,3 +1814,125 @@ a:hover {
   background: var(--ar-blocked-bg);
   border-radius: 4px;
 }
+
+/* ---------- v1.4 S3: a calmer Wall ---------- */
+.wall-order {
+  margin: 0;
+}
+button.group-head {
+  width: 100%;
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  text-align: left;
+}
+button.group-head:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 2px;
+}
+.group-caret {
+  width: 12px;
+  color: var(--ar-ink);
+}
+.group-counts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-family: var(--ar-font-body);
+}
+.group-count .pip-glyph {
+  color: var(--pip);
+}
+.group[data-open='false'] .group-head b {
+  color: var(--ar-ink-muted);
+}
+
+/* Status by shape as well as colour (lab rule: never colour alone). The pip glyph says it in text;
+   the tile's top bar and outline say it in shape: working = solid bar + solid outline,
+   blocked = thick solid bar + thick outline, idle = dashed bar, unknown = dotted bar,
+   stopped = no bar, dashed outline, dimmed. */
+.tile[data-pip='working'] {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.tile[data-pip='working'] .tile-bar {
+  height: 4px;
+}
+.tile[data-pip='blocked'] {
+  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
+}
+.tile[data-pip='blocked'] .tile-bar {
+  height: 6px;
+}
+.tile[data-pip='idle'] .tile-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 10px, transparent 10px 16px);
+}
+.tile[data-pip='unknown'] .tile-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 3px, transparent 3px 7px);
+}
+.tile[data-pip='stopped'] {
+  background: var(--ar-term-bg-deep);
+  box-shadow: inset 0 0 0 1px var(--ar-stopped);
+  outline: 1px dashed var(--ar-stopped-text);
+  outline-offset: -4px;
+  opacity: 0.75;
+}
+.tile[data-pip='stopped'] .tile-bar {
+  background: transparent;
+}
+.tile[data-pip='stopped'] .tile-term {
+  flex: none;
+}
+.tile[data-pip]:hover,
+.tile[data-pip]:focus-visible {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.machine-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.machine-filter .pill-btn[aria-pressed='false'] {
+  color: var(--ar-ink-muted);
+  border-style: dashed;
+}
+.filter-note {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+}
+.legend-shapes {
+  display: inline-flex;
+  gap: 3px;
+}
+.legend-tile.mini {
+  width: 16px;
+  height: 18px;
+}
+.legend-tile[data-pip='working'] {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.legend-tile[data-pip='idle'] i {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 4px, transparent 4px 7px);
+}
+.legend-tile[data-pip='stopped'] {
+  outline: 1px dashed var(--ar-stopped-text);
+  outline-offset: -3px;
+  opacity: 0.75;
+}
+.legend-tile[data-pip='stopped'] i {
+  background: transparent;
+}

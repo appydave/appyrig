@@ -6,7 +6,7 @@ interface Props {
   onSelect: (key: string) => void;
 }
 
-/** One chip per rig, busiest run first. Shared by the Rig Map and Handoff Flow. */
+/** One chip per rig, running first, then most recent (S3). Shared by the Rig Map and Handoff Flow. */
 export default function RigPicker({ rigs, selected, onSelect }: Props) {
   if (!rigs.length) return <p className="empty">No rigs reported by any machine.</p>;
   return (

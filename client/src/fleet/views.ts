@@ -88,34 +88,35 @@ export interface RigRef {
   lastActivity: string | null;
 }
 
-/** Every rig on every machine, most recent queue activity first (the run you most likely want). */
+/** Every rig on every machine: running first, then the most recent sign of life (a queue row or a seat). */
 export function listRigs(machines: FleetMachine[]): RigRef[] {
   const out: RigRef[] = [];
   for (const fm of machines) {
     for (const rig of fm.snapshot.rigs) {
       const items = rigQueue(fm, rig.name);
-      const last = items.reduce<string | null>(
-        (acc, q) => (acc === null || q.updatedAt > acc ? q.updatedAt : acc),
-        null
-      );
+      const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
+      // Most recent sign of life: a queue row moving, or any of its seats doing something.
+      const last = [...items.map((q) => q.updatedAt), ...seats.map((s) => s.lastActivityAt)].reduce<
+        string | null
+      >((acc, at) => (at && (acc === null || at > acc) ? at : acc), null);
       out.push({
         key: `${fm.machine.id}:${rig.name}`,
         machineId: fm.machine.id,
         machineLabel: fm.machine.label,
         name: rig.name,
         status: rig.status,
-        seatCount: fm.snapshot.seats.filter((s) => s.rig === rig.name).length,
+        seatCount: seats.length,
         handoffs: items.length,
         lastActivity: last,
       });
     }
   }
+  // S3: every rig list reads running first, then most recent (Wall groups, Map and Flow chips).
   const running = (r: RigRef) => (r.status === 'running' ? 0 : 1);
   return out.sort(
     (a, b) =>
-      (b.handoffs > 0 ? 1 : 0) - (a.handoffs > 0 ? 1 : 0) ||
-      (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '') ||
       running(a) - running(b) ||
+      (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '') ||
       a.key.localeCompare(b.key)
   );
 }

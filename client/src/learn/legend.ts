@@ -63,7 +63,12 @@ export type Swatch =
   | 'state-badge'
   | 'rows'
   | 'because'
-  | 'back-btn';
+  | 'back-btn'
+  | 'tile-shapes'
+  | 'group-collapsed'
+  | 'order'
+  | 'machine-filter'
+  | 'map-arcs';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -127,7 +132,30 @@ const WALL: LegendSection[] = [
         mark: 'TMUX SESSIONS  M4',
         means: 'Sessions outside OpenRig on that machine, one group per machine.',
       },
-      { swatch: 'tile-bar', mark: 'Coloured top bar', means: 'The seat status colour (above).' },
+      {
+        swatch: 'tile-shapes',
+        mark: 'Top bar + outline',
+        means:
+          'Status by shape: solid bar + outline = working; thick bar + thick outline = blocked; dashed bar = idle; dotted bar = unknown; no bar, dashed outline, dimmed = stopped.',
+      },
+      {
+        swatch: 'group-collapsed',
+        mark: '▸ GROUP · ✕ 4 stopped',
+        means:
+          'A collapsed group: click it (or Enter) to open. The counts say what is inside. Stopped and asleep groups start collapsed; your choice is remembered.',
+      },
+      {
+        swatch: 'order',
+        mark: 'Order: blocked → working → …',
+        means:
+          'How the Wall sorts its groups, stated above them; newest activity first within each.',
+      },
+      {
+        swatch: 'machine-filter',
+        mark: 'Show  ● M2  ○ M4',
+        means:
+          'The machine filter: ○ = hidden from the Wall and the rig lists. The strip below the header still shows every machine.',
+      },
       { swatch: 'fresh', mark: 'live · 2s', means: 'How long since that machine last reported.' },
       {
         swatch: 'queue-counts',
@@ -231,6 +259,12 @@ const MAP: LegendSection[] = [
         swatch: 'line-dashed',
         mark: 'Dashed line · N left open',
         means: 'An item left open for more than 2 hours.',
+      },
+      {
+        swatch: 'map-arcs',
+        mark: 'Arc over · arc under',
+        means:
+          'Within a row, arcs over the boxes run left → right and arcs under run right → left, so a pair never overlaps.',
       },
       { swatch: 'self', mark: '↺ N to itself', means: 'The seat queued work for itself.' },
     ],

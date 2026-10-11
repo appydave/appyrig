@@ -11,6 +11,8 @@ import {
   findSeat,
   freshness,
   groupSeats,
+  groupState,
+  collapsedByDefault,
   modelChip,
   pipFor,
   seatName,
@@ -123,6 +125,36 @@ describe('groupSeats', () => {
     expect(ranks.indexOf('Roamy:kernel')).toBeLessThan(ranks.indexOf('M2:control'));
     expect(ranks.slice(-3).every((r) => r.startsWith('ZZ:'))).toBe(true);
     expect(groupSeats(fleet, 'machine').map((g) => g.key)).toEqual(['roamy', 'm2', 'zz']);
+  });
+
+  it('S3: working before idle before stopped; newest activity first inside a rank', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const seat = (id: string, status: Seat['status'], rig: string, at: string | null) => ({
+      ...fm.snapshot.seats[0]!,
+      id,
+      rig,
+      status,
+      lastActivityAt: at,
+    });
+    const fleet = [
+      {
+        ...fm,
+        snapshot: {
+          ...fm.snapshot,
+          seats: [
+            seat('a', 'stopped', 'old', '2026-10-11T09:00:00Z'),
+            seat('b', 'idle', 'quiet', '2026-10-11T10:00:00Z'),
+            seat('c', 'working', 'busy', '2026-10-11T08:00:00Z'),
+            seat('d', 'idle', 'fresh', '2026-10-11T11:00:00Z'),
+            seat('e', 'unknown', 'tmuxy', '2026-10-11T11:30:00Z'),
+          ],
+        },
+      },
+    ];
+    const groups = groupSeats(fleet, 'rig');
+    expect(groups.map((g) => g.name)).toEqual(['busy', 'fresh', 'quiet', 'tmuxy', 'old']);
+    expect(groups.map(groupState)).toEqual(['working', 'idle', 'idle', 'unknown', 'stopped']);
+    expect(groups.map(collapsedByDefault)).toEqual([false, false, false, false, true]);
   });
 
   it('keeps every seat exactly once, whichever grouping', () => {

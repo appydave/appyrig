@@ -173,7 +173,43 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     return () => window.clearInterval(id);
   }, [playing, range, chapters]);
 
-  stepKeys.current = null;
+  // Step logic sits above the early returns so the key handler can read it from an effect
+  // (r1 S2: a ref written during render is not safe under concurrent rendering).
+  const tStep = at ?? range?.end ?? 0;
+  const stepIdx = stepId ? steps.findIndex((q) => q.id === stepId) : -1;
+  const stepTo = (i: number) => {
+    const q = steps[i];
+    if (!q) return;
+    setPlaying(false);
+    jump(Date.parse(q.createdAt), q.id);
+  };
+  const nextStep = () =>
+    stepTo(
+      stepIdx >= 0
+        ? stepIdx + 1
+        : at === null
+          ? 0
+          : steps.findIndex((q) => Date.parse(q.createdAt) > tStep)
+    );
+  const prevStep = () => {
+    if (stepIdx >= 0) return stepTo(stepIdx - 1);
+    if (at === null) return stepTo(steps.length - 1);
+    let i = -1;
+    steps.forEach((q, k) => {
+      if (Date.parse(q.createdAt) < tStep) i = k;
+    });
+    stepTo(i);
+  };
+  const ready = !!(machine && rig && range);
+  useEffect(() => {
+    stepKeys.current = ready
+      ? {
+          prev: () => stepIdx !== 0 && prevStep(),
+          next: () => stepIdx !== steps.length - 1 && nextStep(),
+        }
+      : null;
+  });
+
   if (!machine || !rig) return <p className="empty">Pick a rig.</p>;
   if (!range) {
     return (
@@ -190,34 +226,6 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   const staleStages = flow.stages.filter((s) => s.stale > 0);
   // During a replay, narrate the latest chapter reached.
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
-  const stepIdx = stepId ? steps.findIndex((q) => q.id === stepId) : -1;
-  const stepTo = (i: number) => {
-    const q = steps[i];
-    if (!q) return;
-    setPlaying(false);
-    jump(Date.parse(q.createdAt), q.id);
-  };
-  const nextStep = () =>
-    stepTo(
-      stepIdx >= 0
-        ? stepIdx + 1
-        : at === null
-          ? 0
-          : steps.findIndex((q) => Date.parse(q.createdAt) > t)
-    );
-  const prevStep = () => {
-    if (stepIdx >= 0) return stepTo(stepIdx - 1);
-    if (at === null) return stepTo(steps.length - 1);
-    let i = -1;
-    steps.forEach((q, k) => {
-      if (Date.parse(q.createdAt) < t) i = k;
-    });
-    stepTo(i);
-  };
-  stepKeys.current = {
-    prev: () => stepIdx !== 0 && prevStep(),
-    next: () => stepIdx !== steps.length - 1 && nextStep(),
-  };
   const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
   const staleCount = staleStages.reduce((n, s) => n + s.stale, 0);
   const oldestStale = Math.max(0, ...staleStages.map((s) => s.oldestStaleMs ?? 0));

@@ -103,20 +103,57 @@ export interface WallGroup {
   tiles: TileRef[];
 }
 
+/** S3: what a Wall group is doing as a whole, which decides its place and whether it starts open. */
+export type GroupState = 'blocked' | 'working' | 'idle' | 'unknown' | 'stopped' | 'asleep';
+
+export const GROUP_STATES: GroupState[] = [
+  'blocked',
+  'working',
+  'idle',
+  'unknown',
+  'stopped',
+  'asleep',
+];
+
+/** Stated on screen above the Wall (S3: "the sort order is stated on screen"). */
+export const WALL_ORDER_TEXT =
+  'Order: blocked → working → idle → state unknown → stopped → asleep machine · newest activity first within each · stopped and asleep start collapsed';
+
+export function groupState(g: WallGroup): GroupState {
+  if (g.asleep) return 'asleep';
+  const has = (st: SeatStatus) => g.tiles.some((t) => t.seat.status === st);
+  if (has('blocked')) return 'blocked';
+  if (has('working')) return 'working';
+  if (has('idle')) return 'idle';
+  if (has('unknown')) return 'unknown';
+  return 'stopped';
+}
+
+/** Collapsed until the viewer opens it: nothing is happening in a stopped or asleep group. */
+export function collapsedByDefault(g: WallGroup): boolean {
+  const st = groupState(g);
+  return st === 'stopped' || st === 'asleep';
+}
+
+/** Latest lastActivityAt of any seat in the group, as an ISO string ('' when none reported). */
+export function groupLastActivity(g: WallGroup): string {
+  return g.tiles.reduce((acc, t) => {
+    const at = t.seat.lastActivityAt ?? '';
+    return at > acc ? at : acc;
+  }, '');
+}
+
 /** Machines in a stable order (by id), so the wall does not reshuffle as updates arrive. */
 export function orderedMachines(machines: Record<string, FleetMachine>): FleetMachine[] {
   return Object.values(machines).sort((a, b) => a.machine.id.localeCompare(b.machine.id));
 }
 
 /**
- * D53: what needs eyes comes first. Groups with a blocked seat, then groups with any running seat,
- * then groups whose seats are all stopped, then asleep machines. Order inside a rank is stable.
+ * D53 + v1.4 S3: what needs eyes comes first, then what is running. Blocked, working, idle, state
+ * unknown (plain tmux), all stopped, then asleep machines. Ties: newest activity first, then stable.
  */
 export function groupRank(g: WallGroup): number {
-  if (g.asleep) return 3;
-  if (g.tiles.some((t) => t.seat.status === 'blocked')) return 0;
-  if (g.tiles.some((t) => t.seat.status !== 'stopped')) return 1;
-  return 2;
+  return GROUP_STATES.indexOf(groupState(g));
 }
 
 /**
@@ -124,7 +161,10 @@ export function groupRank(g: WallGroup): number {
  * on Roamy and `kernel` on the M2 are different rigs. Seats outside OpenRig group as "tmux sessions".
  */
 export function groupSeats(machines: FleetMachine[], by: GroupBy): WallGroup[] {
-  return collectGroups(machines, by).sort((a, b) => groupRank(a) - groupRank(b));
+  return collectGroups(machines, by)
+    .map((g) => ({ g, rank: groupRank(g), last: groupLastActivity(g) }))
+    .sort((a, b) => a.rank - b.rank || b.last.localeCompare(a.last))
+    .map((x) => x.g);
 }
 
 function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {

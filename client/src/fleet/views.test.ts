@@ -81,19 +81,22 @@ describe('queue basics', () => {
 });
 
 describe('listRigs', () => {
-  it('lists every rig on every machine, most recent activity first', () => {
+  it('S3: lists every rig on every machine, running first, then most recent', () => {
     const rigs = listRigs([m2(), roamy()]);
     expect(rigs.map((r) => r.key)).toContain('roamy:starter');
-    const latest = rigs
-      .map((r) => r.lastActivity ?? '')
-      .sort()
-      .at(-1);
-    expect(rigs[0]!.lastActivity).toBe(latest);
+    const firstStopped = rigs.findIndex((r) => r.status !== 'running');
+    if (firstStopped >= 0) {
+      expect(rigs.slice(firstStopped).every((r) => r.status !== 'running')).toBe(true);
+    }
+    for (const part of [
+      rigs.filter((r) => r.status === 'running'),
+      rigs.filter((r) => r.status !== 'running'),
+    ]) {
+      const at = part.map((r) => r.lastActivity ?? '');
+      expect(at).toEqual([...at].sort().reverse());
+    }
     const fliedit = rigs.find((r) => r.key === 'm2:fliedit-team')!;
     expect(fliedit.handoffs).toBe(rigQueue(m2(), 'fliedit-team').length);
-    const empty = rigs.filter((r) => r.handoffs === 0);
-    // Rigs with no handoffs sort after every rig that has some.
-    expect(rigs.slice(rigs.length - empty.length).every((r) => r.handoffs === 0)).toBe(true);
   });
 });
 

@@ -65,6 +65,13 @@ export default function KeysHelp({ view, onClose }: Props) {
         data-testid="keys-help"
         data-view={view}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          // r1 S2: aria-modal means focus stays here; the close button is the only control.
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            close.current?.focus();
+          }
+        }}
       >
         <header>
           <h2 className="label">Keys · {TITLE[view]}</h2>
