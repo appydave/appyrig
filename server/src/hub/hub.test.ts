@@ -99,8 +99,11 @@ describe('AC 6 — liveness', () => {
     const browser = h.browser();
     await nextUpdate(browser);
     const snapshot = loadSnapshot('roamy');
+    const live = nextUpdate(browser);
     const ack = await push(h.collector({ token: TOKEN, machineId: 'roamy' }), snapshot);
     const lastSeen = ack.receivedAt;
+    // Let the push's own update land first; compressed frames arrive a beat after the ack.
+    expect((await live).machines[0]?.liveness).toBe('live');
 
     clock.advance(ASLEEP_AFTER_MS - 1);
     expect(h.hub.sweep()).toEqual([]);
@@ -286,5 +289,20 @@ describe('S8 — disk store: a restarted hub shows last-known state at once', ()
     });
     expect(await h.hub.load()).toEqual([]);
     expect(errors).toEqual([]);
+  });
+});
+
+describe('seat.get timeout (BUG-seatget) — fleet pushes are compressed', () => {
+  it('negotiates permessage-deflate on the browser websocket', async () => {
+    const h = await start();
+    const browser = h.browser();
+    await nextUpdate(browser);
+    // The engine upgrades polling → websocket; wait for it, then read the negotiated extensions.
+    await new Promise<void>((resolve) => {
+      if (browser.io.engine.transport.name === 'websocket') resolve();
+      else browser.io.engine.once('upgrade', () => resolve());
+    });
+    const ws = (browser.io.engine.transport as unknown as { ws: { extensions: string } }).ws;
+    expect(ws.extensions).toContain('permessage-deflate');
   });
 });

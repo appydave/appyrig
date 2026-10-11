@@ -92,6 +92,10 @@ export function createHub(opts: HubOptions): Hub {
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: { origin: opts.clientUrl, methods: ['GET', 'POST'], credentials: true },
+    // Fleet pushes are ~300 KB of mostly ANSI terminal text, resent every second or so. Uncompressed,
+    // a seat.get ack queues behind them on a slow link and the UI's 5 s timeout fires. socket.io
+    // leaves per-message deflate off by default; text like this shrinks about tenfold.
+    perMessageDeflate: { threshold: 1024 },
   });
 
   // The hub is served over plain http on the tailnet (http://<tailscale-ip>:7191).
