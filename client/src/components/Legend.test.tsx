@@ -4,7 +4,7 @@ import Legend from './Legend.js';
 import { legendFor, type LegendScreen } from '../learn/legend.js';
 import { GLOSSARY } from '../learn/glossary.js';
 
-const VIEWS: LegendScreen[] = ['wall', 'map', 'flow', 'focus', 'accounts', 'learn'];
+const VIEWS: LegendScreen[] = ['wall', 'map', 'flow', 'focus', 'accounts', 'machines', 'learn'];
 const marks = (v: LegendScreen) => legendFor(v).flatMap((s) => s.entries.map((e) => e.mark));
 
 describe('legend data (S1)', () => {

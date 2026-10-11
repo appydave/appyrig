@@ -1077,3 +1077,92 @@ describe('App: S5 accounts over time', () => {
     expect(screen.getByTestId('account-tier')).toHaveTextContent('Max · tier not reported');
   });
 });
+
+describe('App: S6 machine health', () => {
+  const ok = <T,>(value: T) => ({ status: 'ok' as const, value });
+  const health = (level: 'normal' | 'warn' | 'critical') => ({
+    sampledAt: new Date(Date.now() - 12_000).toISOString(),
+    memory: {
+      totalBytes: ok(16 * 1024 ** 3),
+      usedBytes: ok(Math.round(11.8 * 1024 ** 3)),
+      pressureLevel: ok(level),
+      freePct: ok(31),
+      swapUsedBytes: ok(Math.round(1.2 * 1024 ** 3)),
+      swapTotalBytes: ok(2 * 1024 ** 3),
+    },
+    processes: {
+      claude: ok(9),
+      tmuxSessions: ok(14),
+      terminalShells: { status: 'unavailable' as const, reason: 'ps was not allowed to list ttys' },
+      terminalApps: ok([
+        { app: 'iTerm2', processes: 3, rssBytes: Math.round(4.1 * 1024 ** 3) },
+        { app: 'tmux', processes: 15, rssBytes: 600 * 1024 ** 2 },
+      ]),
+    },
+  });
+  const withHealth = (name: 'roamy--blocked' | 'm2', level: 'normal' | 'warn' | 'critical') => {
+    const fm = fleetMachine(snapshot(name));
+    return {
+      ...fm,
+      snapshot: { ...fm.snapshot, health: health(level) },
+    } as unknown as FleetMachine;
+  };
+
+  it('the strip marks each machine’s pressure in words; no health data is said, never 0', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([withHealth('m2', 'warn'), fleetMachine(snapshot('roamy--blocked'))])
+    );
+    const marks = screen.getAllByTestId('health-mark');
+    const byKind = Object.fromEntries(marks.map((m) => [m.dataset.kind, m.textContent]));
+    expect(byKind['warn']).toBe('▲ warning');
+    expect(byKind['no-data']).toBe('– no data');
+    expect(marks.find((m) => m.dataset.kind === 'no-data')!.title).toMatch(/predates v1\.4/);
+    fireEvent.click(marks[0]!);
+    expect(screen.getByTestId('view-body-machines')).toBeInTheDocument();
+  });
+
+  it('a Machines card shows memory, swap, counts and terminal apps; a missing reading is "–" with why', () => {
+    localStorage.setItem('appyrig.view', 'machines');
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([withHealth('m2', 'normal'), fleetMachine(snapshot('roamy--blocked'))])
+    );
+    const m2 = screen.getAllByTestId('machine-card').find((c) => c.dataset.machineId === 'm2')!;
+    expect(within(m2).getByTestId('machine-pressure')).toHaveTextContent('● normal · 31% free');
+    expect(within(m2).getByTestId('machine-memory')).toHaveTextContent('11.8 GB of 16 GB');
+    expect(within(m2).getByTestId('count-claude')).toHaveTextContent('9');
+    const shells = within(m2).getByTestId('count-shells');
+    expect(shells).toHaveTextContent('–');
+    expect(shells).toHaveAttribute('title', 'ps was not allowed to list ttys');
+    expect(within(m2).getByTestId('machine-apps')).toHaveTextContent('iTerm2');
+    expect(within(m2).getByTestId('machine-apps')).toHaveTextContent('4.1 GB');
+    const roamy = screen
+      .getAllByTestId('machine-card')
+      .find((c) => c.dataset.machineId === 'roamy')!;
+    expect(roamy).toHaveAttribute('data-health', 'no-data');
+    expect(within(roamy).getByTestId('machine-no-data')).toHaveTextContent('predates v1.4');
+    expect(roamy).not.toHaveTextContent(/\b0\b/);
+  });
+
+  it('the Machines view follows the machine filter', () => {
+    localStorage.setItem('appyrig.view', 'machines');
+    localStorage.setItem('appyrig.hiddenMachines', JSON.stringify(['m2']));
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([withHealth('m2', 'normal'), fleetMachine(snapshot('roamy--blocked'))])
+    );
+    expect(screen.getAllByTestId('machine-card').map((c) => c.dataset.machineId)).toEqual([
+      'roamy',
+    ]);
+    expect(screen.getByTestId('machines')).toHaveTextContent(
+      '1 machine hidden by the machine filter'
+    );
+  });
+});

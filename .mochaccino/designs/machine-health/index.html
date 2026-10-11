@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Machine Health</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --canvas: #faf5ec;
+        --ink: #342d2d;
+        --muted: #7a6e5e;
+        --surface: #f0ebe4;
+        --raised: #fff;
+        --line: #d4cdc4;
+        --soft: #e8e0d4;
+        --ok: #16a34a;
+        --okink: #15803d;
+        --warn: #f59e0b;
+        --warnbg: #fef3c7;
+        --warnink: #92400e;
+        --bad: #dc2626;
+        --badbg: #fee2e2;
+        --badink: #991b1b;
+        --seq: #c8841a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--ink);
+        font:
+          14px Roboto,
+          system-ui,
+          sans-serif;
+      }
+      .banner {
+        padding: 8px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        background: var(--surface);
+      }
+      h2 {
+        font:
+          600 13px Oswald,
+          sans-serif;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 22px 28px 10px;
+      }
+      .wrap {
+        padding: 0 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 14px;
+        font:
+          12px 'Roboto Mono',
+          monospace;
+        color: var(--muted);
+      }
+      .m b {
+        font:
+          600 14px Oswald,
+          sans-serif;
+        color: var(--okink);
+        margin-right: 4px;
+      }
+      .p {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        font:
+          600 12px Roboto,
+          sans-serif;
+        padding: 1px 6px;
+        border-radius: 5px;
+      }
+      .p.normal {
+        color: var(--okink);
+        background: #dcfce7;
+      }
+      .p.warn {
+        color: var(--warnink);
+        background: var(--warnbg);
+      }
+      .p.critical {
+        color: var(--badink);
+        background: var(--badbg);
+      }
+      .p.none {
+        color: var(--muted);
+        background: var(--surface);
+        font-weight: 400;
+        border: 1px dashed var(--line);
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .card header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .card header b {
+        font:
+          600 20px 'Bebas Neue',
+          Oswald;
+        letter-spacing: 0.04em;
+      }
+      .lbl {
+        font: 11px Oswald;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .bar {
+        position: relative;
+        height: 12px;
+        border-radius: 6px;
+        background: var(--soft);
+      }
+      .bar i {
+        position: absolute;
+        inset: 0 auto 0 0;
+        border-radius: 6px;
+        background: var(--ink);
+      }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+      }
+      .row span {
+        color: var(--muted);
+      }
+      .counts {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        text-align: center;
+      }
+      .counts div {
+        background: var(--surface);
+        border-radius: 8px;
+        padding: 6px;
+      }
+      .counts b {
+        display: block;
+        font:
+          600 22px 'Bebas Neue',
+          Oswald;
+      }
+      .apps {
+        font-size: 13px;
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 2px 12px;
+      }
+      .apps span {
+        color: var(--muted);
+      }
+      .none {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .fake {
+        height: 40px;
+        background: var(--surface);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        padding: 0 12px;
+        font: 12px Oswald;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner">
+      Mochaccino — machine-health — 2026-10-11 · A: health inside the Fleet Strip only · B: a
+      Machines tab with cards + a one-glyph pressure mark in the strip
+    </div>
+
+    <h2>A · Fleet Strip only (always visible, compact)</h2>
+    <div class="wrap">
+      <div class="strip">
+        <span class="m"><b>● M2</b> live · 0s · 39 seats</span>
+        <span class="p normal">● normal</span
+        ><span>mem 11.8/16 GB · swap 1.2 GB · claude 9 · tmux 14 · shells 21</span>
+        <span class="m"><b>● M4</b> live · 1s · 14 seats</span
+        ><span class="p none">– no health data yet</span>
+        <span class="m"><b>● ROAMY</b> live · 0s · 9 seats</span
+        ><span class="p none">– no health data yet</span>
+      </div>
+      <p class="none">
+        The terminal-app memory (iTerm 4.1 GB) has no room here; it would be a hover only.
+      </p>
+    </div>
+
+    <h2>B · Machines tab (cards) + a pressure mark per machine in the strip</h2>
+    <div class="wrap">
+      <div class="strip">
+        <span class="m"><b>● M2</b> live · 0s · 39 seats</span
+        ><span class="p normal">● mem normal</span>
+        <span class="m"><b>● M4</b> live · 1s · 14 seats</span
+        ><span class="p none">– no health data</span>
+        <span class="m"><b>● ROAMY</b> live · 0s · 9 seats</span
+        ><span class="p none">– no health data</span>
+      </div>
+      <div class="fake">
+        THE WALL · RIG MAP · HANDOFF FLOW · ACCOUNTS ·
+        <b style="color: var(--ink)">&nbsp;MACHINES&nbsp;</b> · LEARN
+      </div>
+      <div class="cards">
+        <article class="card">
+          <header><b>M2</b><span class="p normal">● normal · 31% free</span></header>
+          <div>
+            <div class="row"><span class="lbl">Memory used</span><b>11.8 of 16 GB</b></div>
+            <div class="bar"><i style="width: 74%"></i></div>
+          </div>
+          <div class="row"><span>Swap</span><b>1.2 of 2.0 GB</b></div>
+          <div class="counts">
+            <div><b>9</b><span class="lbl">Claude</span></div>
+            <div><b>14</b><span class="lbl">tmux</span></div>
+            <div><b>21</b><span class="lbl">Shells</span></div>
+          </div>
+          <div>
+            <span class="lbl">Terminal apps · memory</span>
+            <div class="apps">
+              <b>iTerm2</b><span>3 procs</span><b>4.1 GB</b><b>tmux</b><span>15 procs</span
+              ><b>0.6 GB</b><b>herdr</b><span>1 proc</span><b>0.1 GB</b>
+            </div>
+          </div>
+          <div class="row"><span>sampled 12s ago</span><span></span></div>
+        </article>
+        <article class="card">
+          <header><b>M4</b><span class="p none">– no health data yet</span></header>
+          <p class="none">
+            This machine's collector predates v1.4, so it sends no health readings. Never shown as
+            0.
+          </p>
+        </article>
+        <article class="card">
+          <header><b>Roamy</b><span class="p warn">▲ warning · 9% free</span></header>
+          <div>
+            <div class="row"><span class="lbl">Memory used</span><b>14.9 of 16 GB</b></div>
+            <div class="bar"><i style="width: 93%"></i></div>
+          </div>
+          <div class="row"><span>Swap</span><b>5.6 of 6.0 GB</b></div>
+          <div class="counts">
+            <div><b>6</b><span class="lbl">Claude</span></div>
+            <div><b>2</b><span class="lbl">tmux</span></div>
+            <div>
+              <b class="none" title="ps was not allowed">–</b
+              ><span class="lbl">Shells · unavailable</span>
+            </div>
+          </div>
+          <div class="row"><span>sampled 3m ago</span><span class="p none">old reading</span></div>
+        </article>
+      </div>
+    </div>
+  </body>
+</html>
