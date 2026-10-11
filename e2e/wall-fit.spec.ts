@@ -30,5 +30,14 @@ test('4 working teams + 5 idle-only teams fit above the fold at 1440×900', asyn
   // fit: 6 working seats (3 + 1 + 1 + 1) and 8 quiet seats in working teams (2 + 2 + 3 + 1).
   await expect(page.getByTestId('seat-tile')).toHaveCount(6);
   await expect(page.getByTestId('seat-chip')).toHaveCount(8);
+  // QA S3-fit D1: the arrow keys walk chips too (S2: arrows everywhere on the Wall).
+  let onChip = false;
+  for (let i = 0; i < 20 && !onChip; i++) {
+    await page.keyboard.press('ArrowRight');
+    onChip = await page.evaluate(
+      () => (document.activeElement as HTMLElement | null)?.dataset.testid === 'seat-chip'
+    );
+  }
+  expect(onChip, 'ArrowRight reaches a seat chip').toBe(true);
   expect(errors, 'no console errors').toEqual([]);
 });

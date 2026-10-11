@@ -285,7 +285,7 @@ export default function Wall({
       // Tiles and idle-team cards, in reading order: a card is one stop, Enter opens it.
       const tiles = [
         ...wall.querySelectorAll<HTMLElement>(
-          '[data-testid="seat-tile"],[data-testid="idle-team"]'
+          '[data-testid="seat-tile"],[data-testid="seat-chip"],[data-testid="idle-team"]'
         ),
       ];
       const boxes = tiles.map((t) => {

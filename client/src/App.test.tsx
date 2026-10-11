@@ -664,11 +664,19 @@ describe('App: S2 keyboard', () => {
   it('Wall: arrows from the page move focus onto the tiles, Enter opens, Esc returns to that tile', () => {
     connected('roamy--blocked');
     const tiles = screen.getAllByTestId('seat-tile');
+    // Arrow stops in reading order: tiles, seat chips (S3-fit) and idle cards.
+    const stops = [
+      ...screen
+        .getByTestId('wall')
+        .querySelectorAll<HTMLElement>(
+          '[data-testid="seat-tile"],[data-testid="seat-chip"],[data-testid="idle-team"]'
+        ),
+    ];
     fireEvent.keyDown(document.body, { key: 'ArrowRight' });
     expect(document.activeElement).toBe(tiles[0]);
     fireEvent.keyDown(tiles[0]!, { key: 'ArrowRight' });
-    expect(document.activeElement).toBe(tiles[1]);
-    fireEvent.keyDown(tiles[1]!, { key: 'ArrowLeft' });
+    expect(document.activeElement).toBe(stops[1]);
+    fireEvent.keyDown(stops[1]!, { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(tiles[0]);
     // Enter on a focused button is a click.
     fireEvent.click(tiles[0]!);
@@ -1358,6 +1366,26 @@ describe('App: S3-fit working teams pack side by side', () => {
         screen.getAllByTestId('wall-group').find((g) => g.dataset.groupKey === 'roamy:kernel')!
       ).getAllByTestId('seat-chip')[0]
     );
+  });
+
+  it('QA S3-fit D1: the arrow keys reach seat chips as well as tiles', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy--blocked'))]));
+    const stops = [
+      ...screen
+        .getByTestId('wall')
+        .querySelectorAll<HTMLElement>(
+          '[data-testid="seat-tile"],[data-testid="seat-chip"],[data-testid="idle-team"]'
+        ),
+    ];
+    const chip = stops.findIndex((e) => e.dataset.testid === 'seat-chip');
+    expect(chip).toBeGreaterThan(0);
+    fireEvent.keyDown(document.body, { key: 'ArrowRight' });
+    for (let i = 0; i < chip; i++)
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(stops[chip]);
+    expect((document.activeElement as HTMLElement).dataset.testid).toBe('seat-chip');
   });
 
   it('"show N as tiles" expands a team, and the choice is remembered', () => {
