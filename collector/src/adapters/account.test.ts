@@ -8,17 +8,26 @@ const HEADER =
   'epoch,iso,five_pct,five_resets_at,seven_pct,seven_resets_at,session_cost_usd,session';
 
 describe('account adapter', () => {
-  it('reads only the email and plan type from the login record', () => {
+  it('reads only the email, plan type and rate-limit tier from the login record', () => {
     const text = JSON.stringify({
       oauthAccount: {
         emailAddress: 'david@example.com',
         organizationType: 'claude_max',
+        organizationRateLimitTier: 'default_claude_max_20x',
         accountUuid: 'should-not-travel',
       },
       someSecret: 'nope',
     });
-    expect(parseAccountIdentity(text)).toEqual({ email: 'david@example.com', plan: 'claude_max' });
-    expect(parseAccountIdentity('not json')).toEqual({ email: null, plan: null });
+    expect(parseAccountIdentity(text)).toEqual({
+      email: 'david@example.com',
+      plan: 'claude_max',
+      rateLimitTier: 'default_claude_max_20x',
+    });
+    expect(parseAccountIdentity('not json')).toEqual({
+      email: null,
+      plan: null,
+      rateLimitTier: null,
+    });
   });
 
   it('takes each window from the latest row that has it, and keeps >100%', () => {

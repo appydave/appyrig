@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { hostname } from 'node:os';
-import { homedir } from 'node:os';
+import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 import { AppConfigSchema, DEFAULT_SPEC_FOLDERS, type MachineIdentity } from '@appydave/shared';
 import type { SourceOptions } from './adapters/index.js';

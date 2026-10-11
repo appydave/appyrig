@@ -2,9 +2,19 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { RigSummarySchema, RigSummaryStrictV13, type FleetMachine } from '@appydave/shared';
+import { RigSummarySchema, type FleetMachine } from '@appydave/shared';
 import { applyRigLabels, watchConfig } from './appConfig.js';
 import { loadSnapshot, nextUpdate, push, startHub, TOKEN } from '../test/hubHarness.js';
+
+/** The rig shape before v1.4: what an old hub would still enforce. Test-only. */
+const RigSummaryStrictV13 = RigSummarySchema.omit({
+  specStatus: true,
+  specPath: true,
+  summary: true,
+  recentAt: true,
+  displayName: true,
+  owner: true,
+});
 
 const dirs: string[] = [];
 const tmp = () => {
@@ -69,6 +79,21 @@ describe('applyRigLabels', () => {
     const m = machine();
     expect(applyRigLabels(m, {})).toBe(m);
     expect(applyRigLabels(m, { rigs: { 'no-such-rig': { displayName: 'x' } } })).toBe(m);
+  });
+
+  it('ignores displayName/owner a collector sends: config wins, and no config means none', () => {
+    const m = machine();
+    const rig = m.snapshot.rigs[0]!;
+    const sent = {
+      ...m,
+      snapshot: { ...m.snapshot, rigs: [{ ...rig, displayName: 'Spoofed', owner: 'Nobody' }] },
+    };
+    const none = applyRigLabels(sent, {});
+    expect(none.snapshot.rigs[0]).not.toHaveProperty('displayName');
+    expect(none.snapshot.rigs[0]).not.toHaveProperty('owner');
+    const set = applyRigLabels(sent, { rigs: { [rig.name]: { displayName: 'Real' } } });
+    expect(set.snapshot.rigs[0]).toMatchObject({ displayName: 'Real' });
+    expect(set.snapshot.rigs[0]).not.toHaveProperty('owner');
   });
 
   it('does not treat a rig called "constructor" or "__proto__" as a label key', () => {

@@ -5,7 +5,7 @@ import type { AccountUsage } from '@appydave/shared';
 
 /**
  * The machine's Claude account and its latest rate-limit reading, from files only:
- * - `~/.claude.json` → `oauthAccount.emailAddress` and `organizationType`. Nothing else is read
+ * - `~/.claude.json` → `oauthAccount.emailAddress`, `organizationType` and `organizationRateLimitTier`. Nothing else is read
  *   out of it; credentials live in the Keychain, not here, and are never touched.
  * - `~/.claude/usage-log.csv` → the last row the status-line sampler wrote
  *   (`epoch,iso,five_pct,five_resets_at,seven_pct,seven_resets_at,session_cost_usd,session`).
@@ -24,13 +24,22 @@ export function defaultAccountPaths(home = homedir()): AccountPaths {
   };
 }
 
-export function parseAccountIdentity(text: string): { email: string | null; plan: string | null } {
+export function parseAccountIdentity(text: string): {
+  email: string | null;
+  plan: string | null;
+  rateLimitTier: string | null;
+} {
   try {
     const acct = (JSON.parse(text) as { oauthAccount?: Record<string, unknown> }).oauthAccount;
     const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
-    return { email: str(acct?.emailAddress), plan: str(acct?.organizationType) };
+    // organizationRateLimitTier names the Max tier (e.g. default_claude_max_20x); plan alone does not.
+    return {
+      email: str(acct?.emailAddress),
+      plan: str(acct?.organizationType),
+      rateLimitTier: str(acct?.organizationRateLimitTier),
+    };
   } catch {
-    return { email: null, plan: null };
+    return { email: null, plan: null, rateLimitTier: null };
   }
 }
 
@@ -102,7 +111,7 @@ async function readTail(path: string, bytes = 16_384): Promise<string> {
 export async function readAccount(
   paths: AccountPaths = defaultAccountPaths()
 ): Promise<AccountUsage | null> {
-  let identity: { email: string | null; plan: string | null };
+  let identity: ReturnType<typeof parseAccountIdentity>;
   try {
     identity = parseAccountIdentity(await readFile(paths.claudeJson, 'utf8'));
   } catch {

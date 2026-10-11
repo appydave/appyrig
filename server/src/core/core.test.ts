@@ -192,11 +192,12 @@ describe('core.call — the one seam', () => {
     );
   });
 
-  it('v1 says plainly that accounts and history are not configured / not recorded', () => {
+  it('accounts say plainly when no machine reports one, and history says it is not recorded', () => {
     const { core } = fleet();
-    expect(core.call(AGENT, 'account.list', {})).toEqual({
+    // The recorded fixtures carry no account: "no data" (configured: false), with the machines named.
+    expect(core.call(AGENT, 'account.list', {})).toMatchObject({
       ok: true,
-      value: { configured: false, accounts: [] },
+      value: { configured: false, accounts: [], unreported: expect.arrayContaining(['roamy']) },
     });
     expect(core.call(AGENT, 'history.list', {})).toEqual({
       ok: true,
