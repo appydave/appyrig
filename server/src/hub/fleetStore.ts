@@ -51,7 +51,7 @@ export interface FleetStoreOptions {
   /** Told when a machine's liveness changes: first push (from null), live → asleep, asleep → live. */
   onLiveness?: (change: LivenessChange) => void;
   /** Laid over a machine on every read and emit (v1.4: rig labels). Never stored or written to disk. */
-  decorate?: (machine: FleetMachine) => FleetMachine;
+  decorate?: (machine: FleetMachine, all: FleetMachine[]) => FleetMachine;
 }
 
 export interface LivenessChange {
@@ -69,7 +69,9 @@ export class FleetStore {
   private readonly dir: string | undefined;
   private readonly onDiskError: (message: string, err: unknown) => void;
   private readonly onLiveness: (change: LivenessChange) => void;
-  private readonly decorate: (machine: FleetMachine) => FleetMachine;
+  private readonly decorate: (machine: FleetMachine, all: FleetMachine[]) => FleetMachine;
+  /** When (ms) the hub saw each machine's login change from one account to another. Not persisted. */
+  private readonly emailChanged = new Map<string, number>();
   /** Per machine: the write in flight, and the latest entry waiting behind it (coalesced). */
   private readonly writes = new Map<string, Promise<void>>();
   private readonly pending = new Map<string, FleetMachine>();
@@ -91,19 +93,25 @@ export class FleetStore {
     this.decorate = opts.decorate ?? ((m) => m);
   }
 
+  /** When (ms since epoch) the hub saw this machine login change accounts, if it has. */
+  emailChangedAt(machineId: string): number | undefined {
+    return this.emailChanged.get(machineId);
+  }
+
   livenessAt(lastSeen: string): Liveness {
     return this.now().getTime() - Date.parse(lastSeen) >= this.asleepAfterMs ? 'asleep' : 'live';
   }
 
   list(): FleetMachine[] {
-    return [...this.machines.values()]
-      .sort((a, b) => a.machine.id.localeCompare(b.machine.id))
-      .map(this.decorate);
+    const raw = [...this.machines.values()].sort((a, b) =>
+      a.machine.id.localeCompare(b.machine.id)
+    );
+    return raw.map((m) => this.decorate(m, raw));
   }
 
   get(machineId: string): FleetMachine | undefined {
     const m = this.machines.get(machineId);
-    return m && this.decorate(m);
+    return m && this.decorate(m, [...this.machines.values()]);
   }
 
   /** Record a validated snapshot as received now. Returns the new entry (always `live`). */
@@ -114,7 +122,11 @@ export class FleetStore {
       lastSeen: this.now().toISOString(),
       snapshot,
     };
-    const before = this.machines.get(entry.machine.id)?.liveness ?? null;
+    const prior = this.machines.get(entry.machine.id);
+    const before = prior?.liveness ?? null;
+    const was = prior?.snapshot.account?.email?.toLowerCase();
+    const is = snapshot.account?.email?.toLowerCase();
+    if (was && is && was !== is) this.emailChanged.set(entry.machine.id, this.now().getTime());
     this.machines.set(entry.machine.id, entry);
     this.persist(entry);
     if (before !== 'live') {
@@ -125,7 +137,7 @@ export class FleetStore {
         lastSeen: entry.lastSeen,
       });
     }
-    return this.decorate(entry);
+    return this.decorate(entry, [...this.machines.values()]);
   }
 
   /**
@@ -138,7 +150,7 @@ export class FleetStore {
       if (entry.liveness === 'live' && this.livenessAt(entry.lastSeen) === 'asleep') {
         const asleep: FleetMachine = { ...entry, liveness: 'asleep' };
         this.machines.set(entry.machine.id, asleep);
-        changed.push(this.decorate(asleep));
+        changed.push(this.decorate(asleep, [...this.machines.values()]));
         this.onLiveness({
           machine: entry.machine.id,
           from: 'live',

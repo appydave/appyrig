@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AccountDerivedSchema } from './accounts.js';
 import {
   FleetMachineSchema,
   LivenessSchema,
@@ -156,8 +157,20 @@ export type RigTopology = z.infer<typeof RigTopologySchema>;
 
 /** v1 has no account config: `configured: false` says so, rather than an empty list that could mean "none". */
 export const AccountListOutputSchema = z.strictObject({
+  /** True once any machine reports a Claude account. False = none has (so an empty list means "no data", not "no accounts"). */
   configured: z.boolean(),
-  accounts: z.array(z.strictObject({ id: z.string(), machines: z.array(MachineId) })),
+  accounts: z.array(
+    AccountDerivedSchema.extend({
+      /** The account's email, as machines report it (compared case-insensitively). */
+      email: z.string(),
+      /** Plan type as the login record names it (`claude_max`, …); the Max tier is in `tier`. */
+      plan: z.string().nullable(),
+      /** Every machine currently signed into this account, read from each machine's last push. */
+      machines: z.array(MachineId),
+    })
+  ),
+  /** Machines that reported no account at all (no login, an old collector, or asleep without ever pushing one). */
+  unreported: z.array(MachineId),
 });
 export type AccountListOutput = z.infer<typeof AccountListOutputSchema>;
 

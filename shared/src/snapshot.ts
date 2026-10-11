@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AccountDerivedSchema } from './accounts.js';
 
 /**
  * The AppyRig snapshot contract (P0b).
@@ -138,19 +139,6 @@ export const RigSummarySchema = z.strictObject({
 });
 export type RigSummary = z.infer<typeof RigSummarySchema>;
 
-/**
- * The rig shape before v1.4, kept so a test can prove what an old hub would do with a new
- * collector's push (a strict-schema refusal: deploy the hub first). Not used at runtime.
- */
-export const RigSummaryStrictV13 = RigSummarySchema.omit({
-  specStatus: true,
-  specPath: true,
-  summary: true,
-  recentAt: true,
-  displayName: true,
-  owner: true,
-});
-
 /** One queue row, body-free. The collector keeps the most recent QUEUE_MAX_ITEMS. */
 export const QUEUE_MAX_ITEMS = 500;
 export const QueueItemSchema = z.strictObject({
@@ -201,6 +189,13 @@ export const AccountUsageSchema = z.strictObject({
   sevenDayResetsAt: isoDate.nullable(),
   /** When the sampler last wrote a reading (it writes on change, or every 5 min while active). */
   sampledAt: isoDate.nullable(),
+  /**
+   * v1.4 · S5, optional and additive (older collectors omit it; hub first). The login record's own
+   * rate-limit tier string (e.g. `default_claude_max_20x`), which names the Max tier. Collector-set.
+   */
+  rateLimitTier: z.string().max(80).nullable().optional(),
+  /** Hub-set (never sent by a collector): tier and windows against their resets. */
+  derived: AccountDerivedSchema.optional(),
 });
 export type AccountUsage = z.infer<typeof AccountUsageSchema>;
 

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  type AccountListOutput,
   HandoffGetInputSchema,
   HandoffGetOutputSchema,
   RigEntryInputSchema,
@@ -386,11 +387,38 @@ const VERB_SET = {
   ),
 
   'account.list': query(
-    'Accounts and the machines that draw on them. Not configured in v1: says so with configured: false.',
+    "Claude accounts, each with the machines signed into it (read from every machine's last push, so a changed login moves a machine on the next push), its plan tier and where it came from, and the 5-hour and 7-day windows against their resets. monthly is always not-reported: no source carries one.",
     NoInputSchema,
     AccountListOutputSchema,
     [],
-    () => ({ configured: false, accounts: [] })
+    (_input, ctx): AccountListOutput => {
+      const byEmail = new Map<string, FleetMachine[]>();
+      const unreported: string[] = [];
+      for (const m of ctx.store.list()) {
+        const email = m.snapshot.account?.email;
+        if (!email || !m.snapshot.account?.derived) {
+          unreported.push(m.machine.id);
+          continue;
+        }
+        const key = email.toLowerCase();
+        byEmail.set(key, [...(byEmail.get(key) ?? []), m]);
+      }
+      // The derived part is already account-level (the same answer on every machine of the account).
+      const accounts = [...byEmail.values()].map((ms) => {
+        const acct = ms[0]!.snapshot.account!;
+        return {
+          ...acct.derived!,
+          email: acct.email!,
+          plan: acct.plan,
+          machines: ms.map((m) => m.machine.id),
+        };
+      });
+      return {
+        configured: accounts.length > 0,
+        accounts: accounts.sort((a, b) => a.email.localeCompare(b.email)),
+        unreported,
+      };
+    }
   ),
 
   'history.list': query(

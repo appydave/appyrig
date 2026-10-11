@@ -47,17 +47,22 @@ export function watchConfig(
 
 /** Lays displayName and owner from the config over each rig. Returns the same object when nothing applies. */
 export function applyRigLabels(machine: FleetMachine, config: AppConfig): FleetMachine {
-  const labels = config.rigs;
-  if (!labels || machine.snapshot.rigs.length === 0) return machine;
+  // displayName and owner belong to the hub's config. A collector that sends them is ignored: config wins.
+  const labels = config.rigs ?? {};
+  if (machine.snapshot.rigs.length === 0) return machine;
   let changed = false;
   const rigs = machine.snapshot.rigs.map((rig) => {
     const label = Object.hasOwn(labels, rig.name) ? labels[rig.name] : undefined;
-    if (!label?.displayName && !label?.owner) return rig;
+    const bare: Record<string, unknown> = { ...rig };
+    delete bare.displayName;
+    delete bare.owner;
+    if (!label?.displayName && !label?.owner && !('displayName' in rig) && !('owner' in rig))
+      return rig;
     changed = true;
     return {
-      ...rig,
-      ...(label.displayName ? { displayName: label.displayName } : {}),
-      ...(label.owner ? { owner: label.owner } : {}),
+      ...(bare as typeof rig),
+      ...(label?.displayName ? { displayName: label.displayName } : {}),
+      ...(label?.owner ? { owner: label.owner } : {}),
     };
   });
   return changed ? { ...machine, snapshot: { ...machine.snapshot, rigs } } : machine;
