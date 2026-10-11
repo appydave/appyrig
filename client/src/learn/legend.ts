@@ -544,7 +544,7 @@ const FILES: LegendSection = {
   entries: [
     {
       swatch: 'files-button',
-      mark: 'Files · F',
+      mark: 'Files · O',
       means: "Opens this rig's rig.yaml and its mission and culture notes, read-only.",
     },
     {

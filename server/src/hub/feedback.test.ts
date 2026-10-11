@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -445,5 +446,163 @@ describe('what the client can and cannot reach', () => {
     rmSync(join(dir, 'feedback', 'index.jsonl'));
     const got = await call(h, 'feedback.get', { id: 'fb-0001' });
     expect(got.body.value.note.id).toBe('fb-0001');
+  });
+});
+
+describe('r1 S8 HIGH: a filed note is never lost or overwritten', () => {
+  const notePath = (dir: string, id: string) => join(dir, 'feedback', id, 'note.json');
+  const text = (dir: string, id: string) =>
+    JSON.parse(readFileSync(notePath(dir, id), 'utf8')).note as string;
+  const fileThree = async (dir: string) => {
+    const h = await start(dir);
+    for (const n of ['first', 'second', 'third'])
+      expect((await post(h, note({ note: n }))).status).toBe(201);
+    await h.stop();
+    running.splice(running.indexOf(h), 1);
+  };
+
+  it('crash between the files and the index line: the note is still listed, the index is repaired, and the next note gets a NEW id', async () => {
+    const dir = tempDir();
+    await fileThree(dir);
+    const idx = join(dir, 'feedback', 'index.jsonl');
+    const lines = readFileSync(idx, 'utf8').trim().split('\n');
+    writeFileSync(idx, `${lines.slice(0, 2).join('\n')}\n`); // fb-0003's folder exists, its index line never landed
+    const h = await start(dir);
+    expect(
+      (await call(h, 'feedback.list', {})).body.value.notes.map((n: { id: string }) => n.id)
+    ).toEqual(['fb-0003', 'fb-0002', 'fb-0001']);
+    const fourth = await post(h, note({ note: 'fourth' }));
+    expect(fourth.body.value.id).toBe('fb-0004');
+    expect(text(dir, 'fb-0003')).toBe('third'); // not overwritten (r1's probe overwrote it)
+    expect(text(dir, 'fb-0004')).toBe('fourth');
+    expect(
+      readFileSync(idx, 'utf8')
+        .trim()
+        .split('\n')
+        .map((l) => JSON.parse(l).id)
+    ).toEqual(['fb-0001', 'fb-0002', 'fb-0003', 'fb-0004']);
+  });
+
+  it('index deleted: every note is listed again from its folder, and the next id is still new', async () => {
+    const dir = tempDir();
+    await fileThree(dir);
+    rmSync(join(dir, 'feedback', 'index.jsonl'));
+    const h = await start(dir);
+    const listed = (await call(h, 'feedback.list', {})).body.value;
+    expect(listed.total).toBe(3);
+    expect(listed.notes.map((n: { note: string }) => n.note)).toEqual(['third', 'second', 'first']);
+    expect((await post(h, note({ note: 'fourth' }))).body.value).toMatchObject({
+      id: 'fb-0004',
+      count: 4,
+    });
+    for (const [id, t] of [
+      ['fb-0001', 'first'],
+      ['fb-0002', 'second'],
+      ['fb-0003', 'third'],
+    ] as const)
+      expect(text(dir, id)).toBe(t);
+    // and the screenshots stayed with their notes
+    expect(readdirSync(join(dir, 'feedback', 'fb-0001')).sort()).toEqual([
+      'note.json',
+      'screenshot.png',
+    ]);
+  });
+
+  it('a half-made folder (a crash after the folder, before the note) keeps its id reserved and is not listed', async () => {
+    const dir = tempDir();
+    await fileThree(dir);
+    mkdirSync(join(dir, 'feedback', 'fb-0004'));
+    writeFileSync(join(dir, 'feedback', 'fb-0004', 'screenshot.png'), 'orphan bytes');
+    const h = await start(dir);
+    expect((await call(h, 'feedback.list', {})).body.value.total).toBe(3);
+    expect((await post(h, note())).body.value.id).toBe('fb-0005');
+    expect(readFileSync(join(dir, 'feedback', 'fb-0004', 'screenshot.png'), 'utf8')).toBe(
+      'orphan bytes'
+    ); // untouched
+  });
+
+  it('a folder that appears while the hub runs (stale counter) is skipped, never written into', async () => {
+    const dir = tempDir();
+    const h = await start(dir);
+    expect((await call(h, 'feedback.list', {})).body.value.total).toBe(0); // loads the store: next id is fb-0001
+    mkdirSync(join(dir, 'feedback', 'fb-0001'), { recursive: true });
+    writeFileSync(join(dir, 'feedback', 'fb-0001', 'note.json'), '{"keep":"me"}');
+    const res = await post(h, note());
+    expect(res.body.value.id).toBe('fb-0002');
+    expect(readFileSync(join(dir, 'feedback', 'fb-0001', 'note.json'), 'utf8')).toBe(
+      '{"keep":"me"}'
+    );
+  });
+
+  it('the note limit counts the notes that exist, even with no index', async () => {
+    const dir = tempDir();
+    mkdirSync(join(dir, 'feedback'), { recursive: true });
+    for (let i = 1; i <= FEEDBACK_NOTES_MAX; i++) {
+      const id = `fb-${String(i).padStart(4, '0')}`;
+      mkdirSync(join(dir, 'feedback', id));
+      writeFileSync(
+        join(dir, 'feedback', id, 'note.json'),
+        JSON.stringify({
+          id,
+          createdAt: '2026-10-11T12:00:00.000Z',
+          viewer: 'human:ui',
+          appVersion: '1.0.0',
+          clientBuild: null,
+          verdict: 'up',
+          region: 'wall',
+          note: 'x',
+          snapshot: null,
+          viewState: { route: '/' },
+          screenshot: null,
+          status: 'open',
+        })
+      );
+    }
+    const h = await start(dir);
+    const res = await post(h, note());
+    expect(res.status).toBe(409);
+    expect(res.body.error.failureMode).toBe('feedback-full');
+    expect((await call(h, 'feedback.list', {})).body.value.total).toBe(FEEDBACK_NOTES_MAX);
+  });
+
+  it('a dry run reports the id a real note would get, even past a taken folder, and writes nothing', async () => {
+    const dir = tempDir();
+    await fileThree(dir);
+    const h = await start(dir);
+    const dry = await post(h, note(), { ...HUMAN, 'x-fli-dry-run': '1' });
+    expect(dry.body.value).toMatchObject({ id: 'fb-0004', dryRun: true });
+    expect(existsSync(join(dir, 'feedback', 'fb-0004'))).toBe(false);
+  });
+});
+
+describe('r1 S8 LOW: a trailing slash gets the same 5 MB parser', () => {
+  it('POST /v1/feedback/ with a real-size screenshot is filed, not refused as too large', async () => {
+    const dir = tempDir();
+    const h = await start(dir);
+    const big = pngHeader(1600, 900, 1024 * 1024); // ~1.4 MB of JSON: over the 100 KB default
+    const res = await request(h.hub.app)
+      .post('/v1/feedback/')
+      .set('Cookie', COOKIE)
+      .set(HUMAN)
+      .send(note({ screenshotPng: big }));
+    expect(res.status).toBe(201);
+    expect(res.body.value.hasScreenshot).toBe(true);
+    // and several slashes, and the same for the no-slash form
+    expect(
+      (
+        await request(h.hub.app)
+          .post('/v1/feedback//')
+          .set('Cookie', COOKIE)
+          .set(HUMAN)
+          .send(note({ screenshotPng: big }))
+      ).status
+    ).toBe(201);
+    // other routes keep their 100 KB limit
+    const other = await request(h.hub.app)
+      .post('/v1/call/')
+      .set('Cookie', COOKIE)
+      .set('x-fli-principal', 'human:ui')
+      .send({ verb: 'feedback.list', input: { pad: 'y'.repeat(150_000) } });
+    expect(other.status).toBe(413);
   });
 });

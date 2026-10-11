@@ -68,11 +68,11 @@ export default function RigInfo({ rig, preview, onOpenFiles }: Props) {
             className="pill-btn"
             data-testid="rig-files-open"
             data-explain="rig-files"
-            aria-keyshortcuts="F"
-            title="Open this rig's files: rig.yaml, mission and culture notes (F)"
+            aria-keyshortcuts="O"
+            title="Open this rig's files: rig.yaml, mission and culture notes (O)"
             onClick={() => onOpenFiles(rig)}
           >
-            Files · F
+            Files · O
           </button>
         )}
       </header>

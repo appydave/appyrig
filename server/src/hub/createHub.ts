@@ -128,6 +128,14 @@ export function createHub(opts: HubOptions): Hub {
   app.use(cors({ origin: opts.clientUrl, credentials: true }));
   // The feedback route parses its own (5 MB) body; everything else keeps the default 100 KB limit.
   const defaultJson = express.json();
+  // "/v1/feedback/" and "/v1/feedback//" are the same route as "/v1/feedback": one spelling, so the
+  // big-body parser below cannot be missed by a trailing slash.
+  app.use((req, _res, next) => {
+    if (req.path !== FEEDBACK_ROUTE && req.path.replace(/\/+$/, '') === FEEDBACK_ROUTE) {
+      req.url = FEEDBACK_ROUTE + req.url.slice(req.path.length);
+    }
+    next();
+  });
   app.use((req, res, next) => (req.path === FEEDBACK_ROUTE ? next() : defaultJson(req, res, next)));
   app.use(requestLogger);
   app.use(apiLimiter);

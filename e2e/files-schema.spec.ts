@@ -100,7 +100,7 @@ test.describe('v1.4 S7-ui: rig files', () => {
     expect(errors, 'no console errors in the files viewer').toEqual([]);
   });
 
-  test("F opens the chosen rig's files; the keys overlay lists it; a rig with no spec says why", async ({
+  test("O opens the chosen rig's files; the keys overlay lists it; a rig with no spec says why", async ({
     page,
   }) => {
     await openWall(page);
@@ -110,7 +110,7 @@ test.describe('v1.4 S7-ui: rig files', () => {
     await expect(page.getByTestId('keys-help')).toContainText("Open the chosen rig's files");
     await expect(page.getByTestId('keys-files')).toContainText('move between files');
     await page.keyboard.press('Escape');
-    await page.keyboard.press('f');
+    await page.keyboard.press('o');
     await expect(page.getByTestId('rig-files')).toBeVisible();
     await page.keyboard.press('Escape');
     // kernel has no rig.yaml in the fixtures: the replay marks it not-found

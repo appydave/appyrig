@@ -260,11 +260,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [help, filesFor, toggleLegend]);
 
-  // F opens the chosen rig's files from the Rig Map and Handoff Flow.
+  // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
   useEffect(() => {
     if (help || filesFor || focused || !activeRig || (view !== 'map' && view !== 'flow')) return;
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === 'f' || e.key === 'F') && !isShortcutBlocked(e)) {
+      if ((e.key === 'o' || e.key === 'O') && !isShortcutBlocked(e)) {
         e.preventDefault();
         openFiles(activeRig.machineId, activeRig.name);
       }

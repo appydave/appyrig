@@ -8,7 +8,7 @@ interface Props {
 
 type Row = [keys: string, does: string];
 
-const SCREEN: Record<View, Row[]> = {
+export const SCREEN: Record<View, Row[]> = {
   wall: [
     ['← ↑ → ↓', 'Move between tiles'],
     ['Enter', 'Open the tile'],
@@ -17,12 +17,12 @@ const SCREEN: Record<View, Row[]> = {
   map: [
     ['Tab', 'Move between seats'],
     ['Enter', 'Open the seat'],
-    ['F', "Open the chosen rig's files"],
+    ['O', "Open the chosen rig's files"],
     ['Esc', 'From an open seat: back to the map'],
   ],
   flow: [
     ['← →', 'Previous / next handoff'],
-    ['F', "Open the chosen rig's files"],
+    ['O', "Open the chosen rig's files"],
     ['Tab', 'Reach the replay, chapters and consoles'],
   ],
   accounts: [],
@@ -34,12 +34,12 @@ const SCREEN: Record<View, Row[]> = {
 };
 
 /** The files viewer (map and flow, or a seat panel): its own keys, shown under every screen that can open it. */
-const FILES: Row[] = [
+export const FILES: Row[] = [
   ['↑ ↓', 'In the files viewer: move between files'],
   ['Esc', 'In the files viewer: close it'],
 ];
 
-const EVERYWHERE: Row[] = [
+export const EVERYWHERE: Row[] = [
   ['?', 'Show or hide these keys'],
   ['L', 'Show or hide the legend'],
   ['Esc', 'Back: closes what is on top, else returns to the screen you came from'],

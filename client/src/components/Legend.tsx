@@ -71,7 +71,7 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   'sch-changed': () => <span className="sch-chg legend-mono">~</span>,
   'sch-view': () => <span className="legend-pill">view</span>,
   'sch-version': () => <span className="legend-mono">0.6.6</span>,
-  'files-button': () => <span className="legend-pill">FILES · F</span>,
+  'files-button': () => <span className="legend-pill">FILES · O</span>,
   'yaml-fold': () => <span className="legend-mono">▾ ▸</span>,
   'status-working': () => pip('working', '●'),
   'status-idle': () => pip('idle', '○'),
