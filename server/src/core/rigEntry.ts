@@ -17,7 +17,8 @@ interface FirstAct {
   seat: string;
   h: SeatHistory;
   actedAt: string;
-  trigger: SeatHistoryEvent;
+  /** The prompt that woke it; null when no prompt precedes the action in the history we have. */
+  trigger: SeatHistoryEvent | null;
 }
 
 function firstActOf(seat: string, h: SeatHistory): FirstAct | null {
@@ -26,7 +27,7 @@ function firstActOf(seat: string, h: SeatHistory): FirstAct | null {
     if (e.kind === 'prompt') {
       if (e.origin !== undefined && TRIGGERS.has(e.origin)) trigger = e;
     } else {
-      return trigger ? { seat, h, actedAt: e.at, trigger } : null;
+      return { seat, h, actedAt: e.at, trigger };
     }
   }
   return null;
@@ -60,25 +61,31 @@ export function rigEntryOf(
     const act = firstActOf(seat, h);
     if (act && (!best || Date.parse(act.actedAt) < Date.parse(best.actedAt))) best = act;
   }
-  if (!best)
-    return unknown('no seat of this rig has acted yet, or what woke it is not in the history');
+  if (!best) return unknown('no seat of this rig has acted yet');
+  // The earliest visible action wins even when we cannot see what woke it: skipping it would name a
+  // later seat as "first" while this one visibly acted before it.
+  if (!best.trigger)
+    return unknown(
+      `${best.seat} acted first (${best.actedAt}) but what woke it is not in the history we have`
+    );
 
-  // Dropped (oldest) events could hold an earlier action on any seat whose view starts after it.
-  const cutoff = Date.parse(best.actedAt);
-  const blind = histories.find(({ h }) => h.truncated && Date.parse(h.events[0]!.at) >= cutoff);
+  // Dropped events are always OLDER than the window we hold, wherever that window starts, so a
+  // truncated history can hide an earlier action on its seat. Not knowable, so not answered.
+  const blind = histories.find(({ h }) => h.truncated);
   if (blind)
     return unknown(`older events of ${blind.seat} were dropped; an earlier action may be missing`);
 
-  const origin = best.trigger.origin!;
+  const trigger = best.trigger;
+  const origin = trigger.origin!;
   return {
     status: origin === 'queue' ? 'via-queue' : 'outside-queue',
     reason: null,
     entry: {
       seat: best.seat,
-      at: best.trigger.at,
+      at: trigger.at,
       actedAt: best.actedAt,
       origin,
-      excerpt: best.trigger.text || null,
+      excerpt: trigger.text || null,
     },
     seatsWithoutHistory: without,
   };

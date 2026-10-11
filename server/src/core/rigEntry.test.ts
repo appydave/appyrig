@@ -100,15 +100,38 @@ describe('rigEntryOf', () => {
     expect(out.reason).toMatch(/b@r.*dropped/);
   });
 
-  it('a truncated seat whose view starts BEFORE the entry cannot hide an earlier one', () => {
+  it("r1's probe: a truncated seat that visibly acted first, with no visible waking prompt, is unknown, not a later seat", () => {
     const out = of([
-      hist('a@r', [ev('10:00:00', 'prompt', 'typed', 'x'), ev('10:00:02', 'tool')]),
-      hist('b@r', [ev('09:00:00', 'tool'), ev('11:00:00', 'prompt', 'queue')], true),
+      hist('a@r', [ev('10:00:00', 'prompt', 'startup'), ev('10:05:00', 'reply')]),
+      hist(
+        'b@r',
+        [ev('09:00:00', 'reply'), ev('09:10:00', 'prompt', 'typed', 'x'), ev('09:11:00', 'reply')],
+        true
+      ),
     ]);
-    // b's earlier action (09:00:00) has no waking prompt in view, so a@r (10:00:02) is the answer only
-    // because b's window starts before it: nothing earlier can be hidden.
-    expect(out.status).toBe('outside-queue');
-    expect(out.entry?.seat).toBe('a@r');
+    expect(out.status).toBe('unknown');
+    expect(out.entry).toBeNull();
+    expect(out.reason).toMatch(/b@r/);
+  });
+
+  it('an untruncated seat that acted first with no visible waking prompt is also unknown (a transcript that opens with a non-trigger prompt)', () => {
+    const out = of([
+      hist('a@r', [ev('10:00:00', 'prompt', 'startup'), ev('10:05:00', 'reply')]),
+      hist('b@r', [ev('09:00:00', 'prompt', 'system'), ev('09:00:05', 'reply')]),
+    ]);
+    expect(out.status).toBe('unknown');
+    expect(out.reason).toMatch(/b@r acted first/);
+  });
+
+  it('any truncated history is a blind spot, wherever its window starts', () => {
+    // b's window starts before a's action AND after it: both are unanswerable.
+    for (const bStart of ['09:00:00', '10:30:00']) {
+      const out = of([
+        hist('a@r', [ev('10:00:00', 'prompt', 'typed', 'x'), ev('10:00:02', 'tool')]),
+        hist('b@r', [ev(bStart, 'prompt', 'queue'), ev('10:31:00', 'tool')], true),
+      ]);
+      expect(out.status, bStart).toBe('unknown');
+    }
   });
 
   it('lists seats whose prompts cannot be seen, even when it can answer', () => {
