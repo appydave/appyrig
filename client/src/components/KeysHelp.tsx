@@ -17,15 +17,27 @@ const SCREEN: Record<View, Row[]> = {
   map: [
     ['Tab', 'Move between seats'],
     ['Enter', 'Open the seat'],
+    ['F', "Open the chosen rig's files"],
     ['Esc', 'From an open seat: back to the map'],
   ],
   flow: [
     ['← →', 'Previous / next handoff'],
+    ['F', "Open the chosen rig's files"],
     ['Tab', 'Reach the replay, chapters and consoles'],
   ],
   accounts: [],
+  schema: [
+    ['/', 'Search tables by name'],
+    ['Esc', 'In the search box: clear it, then leave it'],
+  ],
   learn: [],
 };
+
+/** The files viewer (map and flow, or a seat panel): its own keys, shown under every screen that can open it. */
+const FILES: Row[] = [
+  ['↑ ↓', 'In the files viewer: move between files'],
+  ['Esc', 'In the files viewer: close it'],
+];
 
 const EVERYWHERE: Row[] = [
   ['?', 'Show or hide these keys'],
@@ -39,6 +51,7 @@ const TITLE: Record<View, string> = {
   map: 'Rig Map',
   flow: 'Handoff Flow',
   accounts: 'Accounts',
+  schema: 'OpenRig DB',
   learn: 'Learn',
 };
 
@@ -86,6 +99,7 @@ export default function KeysHelp({ view, onClose }: Props) {
           </button>
         </header>
         {SCREEN[view].length > 0 && <ul data-testid="keys-screen">{rows(SCREEN[view])}</ul>}
+        {(view === 'map' || view === 'flow') && <ul data-testid="keys-files">{rows(FILES)}</ul>}
         <h3 className="label">Anywhere</h3>
         <ul>{rows(EVERYWHERE)}</ul>
         <p className="keys-note">Keys never fire while you are typing in a field.</p>

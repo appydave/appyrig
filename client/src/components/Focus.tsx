@@ -102,6 +102,10 @@ interface Props {
   legend?: ReactNode;
   legendOpen?: boolean;
   onToggleLegend?: () => void;
+  /** S7-ui: open this seat's rig files (its rig.yaml, mission and culture notes). */
+  onOpenRigFiles?: (machineId: string, rig: string) => void;
+  /** S7-ui: something sits on top of the seat panel (the rig files viewer); its Esc is not ours. */
+  keysPaused?: boolean;
 }
 
 export default function Focus({
@@ -113,6 +117,8 @@ export default function Focus({
   legend,
   legendOpen = false,
   onToggleLegend,
+  onOpenRigFiles,
+  keysPaused = false,
 }: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
   const [call, setCall] = useState<SeatCall>({ state: 'pending' });
@@ -150,9 +156,12 @@ export default function Focus({
   const paragraphs = useMemo(() => toParagraphs(lastTurn(lines)), [lines]);
   const queue = queueFor(tile);
 
+  const paused = useRef(keysPaused);
+  paused.current = keysPaused;
   useEffect(() => {
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
+      if (paused.current) return;
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault();
         onClose();
@@ -232,6 +241,18 @@ export default function Focus({
           >
             {mode === 'terminal' ? 'Rich text' : 'Terminal'}
           </button>
+          {onOpenRigFiles && seat.rig && (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="focus-rig-files"
+              data-explain="rig-files"
+              title="Open this rig's files: rig.yaml, mission and culture notes"
+              onClick={() => onOpenRigFiles(machine.machine.id, seat.rig!)}
+            >
+              Rig files
+            </button>
+          )}
           {onToggleLegend && (
             <button
               type="button"

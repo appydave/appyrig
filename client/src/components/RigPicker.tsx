@@ -6,6 +6,8 @@ interface Props {
   rigs: RigRef[];
   selected: string | null;
   onSelect: (key: string) => void;
+  /** S7-ui: open a rig's files. */
+  onOpenFiles?: (rig: RigRef) => void;
 }
 
 /**
@@ -13,7 +15,7 @@ interface Props {
  * Each chip shows the rig's friendly name and one-line purpose; hovering or focusing a chip shows
  * its summary, owner and spec path in the panel below (the chosen rig's when nothing is hovered).
  */
-export default function RigPicker({ rigs, selected, onSelect }: Props) {
+export default function RigPicker({ rigs, selected, onSelect, onOpenFiles }: Props) {
   const [peek, setPeek] = useState<string | null>(null);
   if (!rigs.length) return <p className="empty">No rigs reported by any machine.</p>;
   const shown = rigs.find((r) => r.key === peek) ?? rigs.find((r) => r.key === selected) ?? null;
@@ -55,7 +57,7 @@ export default function RigPicker({ rigs, selected, onSelect }: Props) {
           </button>
         ))}
       </div>
-      {shown && <RigInfo rig={shown} preview={shown.key !== selected} />}
+      {shown && <RigInfo rig={shown} preview={shown.key !== selected} onOpenFiles={onOpenFiles} />}
     </div>
   );
 }

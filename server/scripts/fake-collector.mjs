@@ -12,10 +12,13 @@
  *
  * Scenarios: roamy (live Roamy kernel + starter), m2 (6 stopped rigs), roamy--blocked (synthetic
  * permission prompt on dev-build@starter). Token falls back to $HUB_TOKEN.
+ * The m2 scenario also replays the v1.4 channels (not with --once): rig files for fliedit-team
+ * (test/fixtures/rigfiles/) and the OpenRig database shape (test/fixtures/openrig-schema-0.6.6.json),
+ * first as a slightly older version (0.6.5) and then as 0.6.6, so the hub has a schema change to show.
  * --once pushes one snapshot per scenario, prints the acks and exits 1 if any was refused.
  * Stop it (Ctrl-C) to watch the hub mark the machine asleep after 15 s.
  */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -23,6 +26,7 @@ import { io } from 'socket.io-client';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const snapshotsDir = resolve(here, '../../test/fixtures/snapshots');
+const fixturesDir = resolve(here, '../../test/fixtures');
 
 const { values } = parseArgs({
   options: {
@@ -44,7 +48,49 @@ const scenarios = values.scenario?.length ? values.scenario : ['roamy', 'm2'];
 const intervalMs = Number(values.interval);
 
 function load(scenario) {
-  return JSON.parse(readFileSync(resolve(snapshotsDir, `${scenario}.json`), 'utf8'));
+  const snap = JSON.parse(readFileSync(resolve(snapshotsDir, `${scenario}.json`), 'utf8'));
+  if (scenario === 'm2') {
+    // v1.4 rig fields: one rig has a spec (its files are replayed below), the rest were looked for and not found.
+    snap.rigs = snap.rigs.map((r) =>
+      r.name === 'fliedit-team'
+        ? { ...r, specStatus: 'found', specPath: '/fixtures/fliedit-team/rig.yaml', summary: 'FliEdit overlay gaps plus viewer verbs (fixture).' }
+        : { ...r, specStatus: 'not-found', specPath: null, summary: null }
+    );
+  }
+  return snap;
+}
+
+/** The fliedit-team fixture files, shaped as the collector sends them (one chunk, first replaces). */
+function rigFilesPush(machineId) {
+  const dir = resolve(fixturesDir, 'rigfiles/fliedit-team');
+  const files = readdirSync(dir)
+    .sort()
+    .map((name) => {
+      const content = readFileSync(resolve(dir, name), 'utf8');
+      const cut = name.startsWith('LEARNED');
+      return {
+        id: `spec:${name}`,
+        name,
+        scope: 'spec',
+        bytes: cut ? 900_000 : Buffer.byteLength(content),
+        modifiedAt: statSync(resolve(dir, name)).mtime.toISOString(),
+        truncated: cut, // the fixture pretends this one was cut, so the viewer's "cut" notice has something to show
+        content,
+      };
+    });
+  return { machineId, collectedAt: new Date().toISOString(), rig: 'fliedit-team', replace: true, files };
+}
+
+/** The real OpenRig 0.6.6 shape, and an invented 0.6.5 that differs: one table fewer, one column fewer, one type. */
+function schemaPushes(machineId) {
+  const real = JSON.parse(readFileSync(resolve(fixturesDir, 'openrig-schema-0.6.6.json'), 'utf8'));
+  const older = structuredClone(real.tables);
+  older.pop();
+  const first = older.find((t) => t.columns.length > 2);
+  first.columns.pop();
+  first.columns[0].type = 'INTEGER';
+  const mk = (version, tables) => ({ machineId, collectedAt: new Date().toISOString(), status: 'ok', reason: null, openrigVersion: version, tables });
+  return [mk('0.6.5 (fixture00)', older), mk(real.openrigVersion, real.tables)];
 }
 
 function run(scenario) {
@@ -69,9 +115,20 @@ function run(scenario) {
         }
       });
     };
+    const emitAcked = (event, payload) =>
+      new Promise((r) => socket.timeout(5000).emit(event, payload, (err, ack) => r(err ? { ok: false, failureMode: 'timeout' } : ack)));
     socket.on('connect', () => {
       console.log(`[${scenario}] connected to ${values.hub}/collector as ${machineId}`);
       push();
+      if (scenario === 'm2' && !values.once) {
+        void (async () => {
+          console.log(`[${scenario}] rig files ${JSON.stringify(await emitAcked('collector:rigfiles', rigFilesPush(machineId)))}`);
+          for (const s of schemaPushes(machineId)) {
+            console.log(`[${scenario}] schema ${s.openrigVersion} ${JSON.stringify(await emitAcked('collector:schema', s))}`);
+            await new Promise((r) => setTimeout(r, 300));
+          }
+        })();
+      }
       if (!values.once) timer = setInterval(push, intervalMs);
     });
     socket.on('connect_error', (err) => {

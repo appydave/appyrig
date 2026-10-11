@@ -59,6 +59,20 @@ const pip = (key: string, glyph: string) => (
 );
 
 const SWATCH: Record<Swatch, () => ReactNode> = {
+  'sch-tag': () => <span className="legend-pill">NOT NULL</span>,
+  'sch-pk': () => <span className="legend-pill sch-pk">PK</span>,
+  'sch-notnull': () => <span className="legend-pill">NOT NULL</span>,
+  'sch-fk': () => <span className="legend-mono">→ rigs.id</span>,
+  'sch-added': () => (
+    <span className="legend-mono">
+      <span className="sch-add">+</span> <span className="sch-chg">~</span>
+    </span>
+  ),
+  'sch-changed': () => <span className="sch-chg legend-mono">~</span>,
+  'sch-view': () => <span className="legend-pill">view</span>,
+  'sch-version': () => <span className="legend-mono">0.6.6</span>,
+  'files-button': () => <span className="legend-pill">FILES · F</span>,
+  'yaml-fold': () => <span className="legend-mono">▾ ▸</span>,
   'status-working': () => pip('working', '●'),
   'status-idle': () => pip('idle', '○'),
   'status-blocked': () => pip('blocked', '▲'),

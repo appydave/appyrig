@@ -39,10 +39,12 @@ interface Props {
   rig: RigRef;
   /** True while a chip is hovered or focused, false when it is the selected rig. */
   preview: boolean;
+  /** S7-ui: open this rig's files (rig.yaml, mission and culture notes). */
+  onOpenFiles?: (rig: RigRef) => void;
 }
 
 /** S3: the panel under the rig chips: summary, owner and spec path of the hovered or chosen rig. */
-export default function RigInfo({ rig, preview }: Props) {
+export default function RigInfo({ rig, preview, onOpenFiles }: Props) {
   const f = rigFacts(rig);
   return (
     <section
@@ -60,6 +62,19 @@ export default function RigInfo({ rig, preview }: Props) {
         <span className="label">
           {rig.machineLabel} · {rig.status}
         </span>
+        {onOpenFiles && (
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="rig-files-open"
+            data-explain="rig-files"
+            aria-keyshortcuts="F"
+            title="Open this rig's files: rig.yaml, mission and culture notes (F)"
+            onClick={() => onOpenFiles(rig)}
+          >
+            Files · F
+          </button>
+        )}
       </header>
       <p data-testid="rig-info-summary">{f.summary}</p>
       <dl>

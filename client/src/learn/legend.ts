@@ -58,6 +58,16 @@ export type Swatch =
   | 'consoles'
   | 'lane-head'
   | 'seat-get-ok'
+  | 'sch-tag'
+  | 'sch-pk'
+  | 'sch-notnull'
+  | 'sch-fk'
+  | 'sch-added'
+  | 'sch-changed'
+  | 'sch-view'
+  | 'sch-version'
+  | 'files-button'
+  | 'yaml-fold'
   | 'seat-get-refused'
   | 'rich-toggle'
   | 'state-badge'
@@ -482,6 +492,69 @@ const ACCOUNTS: LegendSection[] = [
   },
 ];
 
+const SCHEMA: LegendSection[] = [
+  {
+    title: 'OpenRig database',
+    entries: [
+      {
+        swatch: 'sch-version',
+        mark: '0.6.6 (2620dea8)',
+        means:
+          "The OpenRig version the shape was read under, from `rig --version`. The tables below are that version's.",
+      },
+      {
+        swatch: 'sch-added',
+        mark: '+ table · ~ table',
+        means: 'Added, or changed, since the previous OpenRig version AppyRig saw on this machine.',
+      },
+      { swatch: 'sch-tag', mark: 'NOT NULL', means: 'The column must always have a value.' },
+      {
+        swatch: 'sch-pk',
+        mark: 'PK',
+        means:
+          "Part of the table's primary key: what identifies a row. PK1, PK2… when it takes several columns.",
+      },
+      {
+        swatch: 'sch-fk',
+        mark: '→ rigs.id',
+        means: 'A link: this column holds an id from another table. Click to jump there.',
+      },
+      {
+        swatch: 'sch-view',
+        mark: 'view',
+        means: 'A saved query that reads like a table but stores nothing itself.',
+      },
+    ],
+  },
+  {
+    title: 'Names and types only',
+    entries: [
+      {
+        swatch: 'no-openrig',
+        mark: 'M4 · no OpenRig',
+        means: 'That machine has no OpenRig database, so there is no schema to show.',
+      },
+    ],
+  },
+];
+
+/** The rig files viewer (map, flow, seat panel): its marks, listed with the screens that open it. */
+const FILES: LegendSection = {
+  title: 'Rig files',
+  entries: [
+    {
+      swatch: 'files-button',
+      mark: 'Files · F',
+      means: "Opens this rig's rig.yaml and its mission and culture notes, read-only.",
+    },
+    {
+      swatch: 'yaml-fold',
+      mark: '▾ / ▸',
+      means: 'Fold or unfold a section of the YAML. A folded one shows how many lines it hides.',
+    },
+  ],
+};
+
 /**
  * Which glossary term each mark is. The legend line is the one-glance name; with Explain on,
  * hovering the line shows the glossary card, so the long meaning is written once (r1 S1 note).
@@ -520,6 +593,14 @@ export const TERM_FOR: Partial<Record<Swatch, string>> = {
   consoles: 'console',
   'lane-head': 'outside-lane',
   'idle-card': 'status-idle',
+  'sch-version': 'schema-version',
+  'sch-added': 'schema-changes',
+  'sch-pk': 'schema-pk',
+  'sch-fk': 'schema-fk',
+  'sch-tag': 'schema-notnull',
+  'sch-view': 'schema-view',
+  'files-button': 'rig-files',
+  'yaml-fold': 'rig-files',
 };
 
 const withTerms = (sections: LegendSection[]): LegendSection[] =>
@@ -543,13 +624,15 @@ function sectionsFor(screen: LegendScreen): LegendSection[] {
     case 'wall':
       return [...WALL, STATUS];
     case 'map':
-      return [...MAP, STATUS];
+      return [...MAP, FILES, STATUS];
     case 'flow':
-      return [...FLOW, STATUS];
+      return [...FLOW, FILES, STATUS];
     case 'focus':
       return [...FOCUS, STATUS];
     case 'accounts':
       return [...ACCOUNTS, STATUS];
+    case 'schema':
+      return SCHEMA;
     case 'learn':
       return [STATUS];
   }
@@ -561,5 +644,6 @@ export const VIEW_TITLE: Record<LegendScreen, string> = {
   flow: 'Handoff Flow',
   focus: 'Seat panel',
   accounts: 'Accounts',
+  schema: 'OpenRig DB',
   learn: 'Learn',
 };
