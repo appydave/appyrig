@@ -1,4 +1,10 @@
-import { ASLEEP_AFTER_MS, type FleetMachine, type Seat, type SeatStatus } from '@appydave/shared';
+import {
+  ASLEEP_AFTER_MS,
+  type FleetMachine,
+  type RigSummary,
+  type Seat,
+  type SeatStatus,
+} from '@appydave/shared';
 
 /**
  * Pure view-model helpers for the Wall, Focus and Fleet Strip. No React, no socket: everything
@@ -101,6 +107,8 @@ export interface WallGroup {
   where: string;
   asleep: boolean;
   tiles: TileRef[];
+  /** S3: the rig this group is, when grouped by rig and the machine reports it. */
+  rig?: RigSummary;
 }
 
 /** S3: what a Wall group is doing as a whole, which decides its place and whether it starts open. */
@@ -188,7 +196,14 @@ function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
       const key = `${fm.machine.id}:${rig ?? '~tmux'}`;
       let g = byRig.get(key);
       if (!g) {
-        g = { key, name: rig ?? 'tmux sessions', where: fm.machine.label, asleep, tiles: [] };
+        g = {
+          key,
+          name: rig ?? 'tmux sessions',
+          where: fm.machine.label,
+          asleep,
+          tiles: [],
+          rig: rig ? fm.snapshot.rigs.find((r) => r.name === rig) : undefined,
+        };
         byRig.set(key, g);
         groups.push(g);
       }
@@ -290,6 +305,34 @@ export function stripAnsi(line: string): string {
 }
 
 /** Drop trailing blank lines (panes are mostly padding at the bottom), then keep the last `n`. */
+/**
+ * Claude Code's input box and footer, which sit under every turn: rules, the empty prompt, the mode
+ * line ("auto mode on (shift+tab to cycle)"), "? for shortcuts" and tips. None of it says what the
+ * seat is doing.
+ */
+const CHROME = [
+  /^[\s─━—-]{8,}[\w@.-]*[\s─━—-]*$/, // a rule, maybe with the session name in it
+  /^\s*[❯›>]\s*$/, // the empty prompt
+  /shift\+tab to cycle|\? for shortcuts|esc to interrupt|ctrl\+[a-z] to /i,
+  /^\s*[⏵▶►⏸]{1,2}\s/,
+  /^\s*[└⎿│|]?\s*Tip: /,
+  /Update installed|Restart to update|new task\? \/clear/,
+];
+const isChrome = (line: string) => {
+  const t = stripAnsi(line);
+  return t.trim() === '' || CHROME.some((re) => re.test(t));
+};
+
+/**
+ * S3: the last n lines of what the seat is doing, for a Wall tile. Trailing input-box chrome is
+ * dropped first, so a short tile still shows the work. Focus keeps the exact screen.
+ */
+export function contentTail(lines: string[], n: number): string[] {
+  let end = lines.length;
+  while (end > 0 && isChrome(lines[end - 1]!)) end -= 1;
+  return end === 0 ? visibleTail(lines, n) : lines.slice(Math.max(0, end - n), end);
+}
+
 export function visibleTail(lines: string[], n: number): string[] {
   let end = lines.length;
   while (end > 0 && stripAnsi(lines[end - 1]).trim() === '') end -= 1;

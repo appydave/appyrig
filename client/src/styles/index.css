@@ -1936,3 +1936,88 @@ button.group-head:focus-visible {
 .legend-tile[data-pip='stopped'] i {
   background: transparent;
 }
+
+/* ---------- v1.4 S3: rig names, summaries and the rig-info panel ---------- */
+.rig-picker-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rig-chip {
+  max-width: 280px;
+}
+.rig-chip .rig-chip-summary {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+.rig-info {
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-left: 4px solid var(--ar-sequence);
+  border-radius: 10px;
+  padding: 8px 14px 10px;
+  font-size: 13px;
+  max-width: 900px;
+}
+.rig-info[data-preview='true'] {
+  border-left-style: dashed;
+}
+.rig-info header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.rig-info header b {
+  font-family: var(--ar-font-label);
+  font-size: 15px;
+}
+.rig-info code {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.rig-info p {
+  margin: 4px 0 6px;
+}
+.rig-info dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 0;
+}
+.rig-info dt {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.rig-info dd {
+  margin: 0;
+}
+.rig-info dd[data-status='not-found'],
+.rig-info dd[data-status='unreported'] {
+  color: var(--ar-ink-muted);
+  font-style: italic;
+}
+.group-summary {
+  margin: -4px 0 0 22px;
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* S3: tiles keep their own height, so a short idle tile is not stretched to a working one. */
+.group .grid {
+  align-items: start;
+}
+.group .tile-term {
+  min-height: 0;
+}

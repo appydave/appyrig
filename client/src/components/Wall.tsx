@@ -12,10 +12,11 @@ import {
   modelChip,
   pipFor,
   seatName,
-  visibleTail,
+  contentTail,
   type GroupBy,
 } from '../fleet/model.js';
 import AnsiText from './AnsiText.js';
+import { rigTitle } from './RigInfo.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 
 export interface Box {
@@ -82,8 +83,12 @@ export function nextTile(boxes: Box[], cur: number, key: Arrow): number {
   return best;
 }
 
-/** Lines a tile shows; the store keeps up to TAIL_MAX_LINES for Focus. */
-const TILE_LINES = 14;
+/**
+ * Lines a tile shows; the store keeps up to TAIL_MAX_LINES for Focus. S3: a working seat shows
+ * enough to see what it is doing; every other seat a glance, so running teams fit on one screen.
+ */
+const TILE_LINES_WORKING = 7;
+const TILE_LINES_OTHER = 3;
 
 interface TileProps {
   tileKey: string;
@@ -97,7 +102,9 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
-  const lines = seat.tail ? visibleTail(seat.tail.lines, TILE_LINES) : [];
+  const lines = seat.tail
+    ? contentTail(seat.tail.lines, pip === 'working' ? TILE_LINES_WORKING : TILE_LINES_OTHER)
+    : [];
   const w = seat.work;
   return (
     <button
@@ -283,12 +290,13 @@ export default function Wall({
               data-testid="wall-group-head"
               aria-expanded={open}
               aria-controls={`grid-${g.key}`}
+              title={g.rig ? rigTitle(g.rig) : undefined}
               onClick={() => toggle(g)}
             >
               <span className="group-caret" aria-hidden="true">
                 {open ? '▾' : '▸'}
               </span>
-              <b>{g.name}</b>
+              <b data-testid="wall-group-name">{g.rig?.displayName ?? g.name}</b>
               <span>{g.where}</span>
               {g.asleep && <span>· asleep</span>}
               <span className="group-counts" data-testid="wall-group-counts">
@@ -300,6 +308,11 @@ export default function Wall({
               </span>
               <i />
             </button>
+            {g.rig?.summary && (
+              <p className="group-summary" data-testid="wall-group-summary">
+                {g.rig.summary}
+              </p>
+            )}
             {open && (
               <div className="grid" id={`grid-${g.key}`}>
                 {g.tiles.map((t) => (

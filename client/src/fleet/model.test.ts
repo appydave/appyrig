@@ -10,6 +10,7 @@ import {
   countSeats,
   findSeat,
   freshness,
+  contentTail,
   groupSeats,
   groupState,
   collapsedByDefault,
@@ -157,6 +158,24 @@ describe('groupSeats', () => {
     expect(groups.map(collapsedByDefault)).toEqual([false, false, false, false, true]);
   });
 
+  it('S3: a rig group carries its RigSummary, so the Wall can show displayName and summary', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const named = {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        rigs: fm.snapshot.rigs.map((r) =>
+          r.name === 'fliedit-team' ? { ...r, displayName: 'FliEdit', summary: 'Edits videos.' } : r
+        ),
+      },
+    };
+    const g = groupSeats([named], 'rig').find((x) => x.name === 'fliedit-team')!;
+    expect(g.rig?.displayName).toBe('FliEdit');
+    expect(g.rig?.summary).toBe('Edits videos.');
+    expect(g.key).toBe('m2:fliedit-team');
+    expect(groupSeats([named], 'rig').find((x) => x.name === 'tmux sessions')?.rig).toBeUndefined();
+  });
+
   it('keeps every seat exactly once, whichever grouping', () => {
     const total = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
     for (const by of ['rig', 'machine'] as const) {
@@ -235,5 +254,27 @@ describe('text helpers', () => {
   it('visibleTail drops trailing blank padding before taking the last n', () => {
     expect(visibleTail(['a', 'b', 'c', '', '\u001b[0m  ', ''], 2)).toEqual(['b', 'c']);
     expect(visibleTail(['', ''], 5)).toEqual([]);
+  });
+});
+
+describe('contentTail (S3)', () => {
+  it('drops the input box and footer under a turn, keeping the work above it', () => {
+    const lines = [
+      '⏺ Ran the tests: 147 passed.',
+      '✻ Percolating… (7m 36s · ↓ 34.5k tokens)',
+      '  └ Tip: Use /btw to ask a quick side question',
+      '──────────────────────────────── dev-ui@appyrig-v14 ─',
+      '❯ ',
+      '────────────────────────────────────────────────────',
+      '  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents',
+      '',
+    ];
+    expect(contentTail(lines, 2)).toEqual([
+      '⏺ Ran the tests: 147 passed.',
+      '✻ Percolating… (7m 36s · ↓ 34.5k tokens)',
+    ]);
+  });
+  it('a screen that is all chrome falls back to the plain tail, never to nothing', () => {
+    expect(contentTail(['❯ ', '  ⏵⏵ auto mode on (shift+tab to cycle)'], 3)).toHaveLength(2);
   });
 });

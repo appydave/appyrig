@@ -211,7 +211,12 @@ export default function Legend({ view, onClose }: Props) {
             <h3 className="label">{s.title}</h3>
             <ul>
               {s.entries.map((e) => (
-                <li key={`${e.swatch}:${e.mark}`} data-testid="legend-entry" data-swatch={e.swatch}>
+                <li
+                  key={`${e.swatch}:${e.mark}`}
+                  data-testid="legend-entry"
+                  data-swatch={e.swatch}
+                  data-explain={e.term}
+                >
                   <span className="legend-swatch">{SWATCH[e.swatch]()}</span>
                   <span>
                     <b>{e.mark}</b> {e.means}

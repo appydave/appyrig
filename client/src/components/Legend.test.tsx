@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import Legend from './Legend.js';
 import { legendFor, type LegendScreen } from '../learn/legend.js';
+import { GLOSSARY } from '../learn/glossary.js';
 
 const VIEWS: LegendScreen[] = ['wall', 'map', 'flow', 'focus', 'accounts', 'learn'];
 const marks = (v: LegendScreen) => legendFor(v).flatMap((s) => s.entries.map((e) => e.mark));
@@ -78,6 +79,18 @@ describe('legend data (S1)', () => {
     expect(map).toContain('POD · SEATS only gathers the outside seats'); // text fix
     expect(map).toContain('rig flicut-ab · stopped'); // D5
     expect(marks('wall').join(' ')).not.toContain('Black box'); // seat panel marks moved to Focus
+  });
+
+  it('every linked glossary term exists, and the amber arc links to the one "Sent back" meaning', () => {
+    for (const v of VIEWS) {
+      for (const e of legendFor(v).flatMap((s) => s.entries)) {
+        if (e.term) expect(GLOSSARY[e.term], `${v}: ${e.mark} → ${e.term}`).toBeDefined();
+      }
+    }
+    const amber = legendFor('flow')
+      .flatMap((s) => s.entries)
+      .find((e) => e.swatch === 'flow-rework')!;
+    expect(GLOSSARY[amber.term!]!.term).toBe('Sent back');
   });
 
   it('no screen lists the same mark twice', () => {

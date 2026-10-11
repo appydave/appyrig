@@ -86,6 +86,13 @@ export interface RigRef {
   seatCount: number;
   handoffs: number;
   lastActivity: string | null;
+  /** S3: from AppyRig's config (hub-set) and the rig's rig.yaml (collector-set); see RigSummary. */
+  displayName?: string;
+  owner?: string;
+  summary?: string | null;
+  specPath?: string | null;
+  /** Absent = the collector did not look (older collector), never "not found". */
+  specStatus?: 'found' | 'not-found';
 }
 
 /** Every rig on every machine: running first, then the most recent sign of life (a queue row or a seat). */
@@ -107,7 +114,13 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
         status: rig.status,
         seatCount: seats.length,
         handoffs: items.length,
-        lastActivity: last,
+        // The collector's recentAt is the same rule computed over the full queue; prefer it.
+        lastActivity: rig.recentAt !== undefined ? rig.recentAt : last,
+        displayName: rig.displayName,
+        owner: rig.owner,
+        summary: rig.summary,
+        specPath: rig.specPath,
+        specStatus: rig.specStatus,
       });
     }
   }
@@ -355,7 +368,10 @@ export interface FlowEdge {
   count: number;
   /** Items on this edge in flight at the replay time. */
   inFlight: QueueItem[];
-  /** Going back to an earlier stage: a FAIL or a fix request (roles mode only). */
+  /**
+   * Sent back to an earlier stage other than the Lead (roles mode only): rework, but also verdicts
+   * (PASS too) and answers. The name is historical; the UI calls it "sent back" (legend, glossary).
+   */
   rework: boolean;
 }
 
@@ -382,6 +398,7 @@ export interface FlowView {
   stages: FlowStageView[];
   edges: FlowEdge[];
   total: number;
+  /** Items sent back (see FlowEdge.rework), not only FAILs. */
   rework: number;
   /** Median minutes from handoff to close, over closed items up to `at`. */
   medianTurnaroundMin: number | null;

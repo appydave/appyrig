@@ -72,6 +72,8 @@ export type Swatch =
 
 export interface LegendEntry {
   swatch: Swatch;
+  /** Glossary term id (learn/glossary.ts): the one place the full meaning lives (r1 S1). */
+  term?: string;
   /** The mark, as it reads on screen. */
   mark: string;
   /** What it means, in one line. */
@@ -473,11 +475,62 @@ const ACCOUNTS: LegendSection[] = [
   },
 ];
 
+/**
+ * Which glossary term each mark is. The legend line is the one-glance name; with Explain on,
+ * hovering the line shows the glossary card, so the long meaning is written once (r1 S1 note).
+ */
+export const TERM_FOR: Partial<Record<Swatch, string>> = {
+  'status-working': 'status-working',
+  'status-idle': 'status-idle',
+  'status-blocked': 'status-blocked',
+  'status-stopped': 'status-stopped',
+  'status-unknown': 'status-unknown',
+  'status-asleep': 'status-asleep',
+  chips: 'model',
+  'chip-runtime': 'model',
+  tile: 'seat',
+  'seat-box': 'seat',
+  'machine-dot': 'machine',
+  'no-openrig': 'no-openrig',
+  'machine-panel': 'machine',
+  'pod-band': 'pod',
+  'line-width': 'handoff',
+  'line-count': 'handoff',
+  'line-amber': 'waiting',
+  'line-dashed': 'stale',
+  self: 'self-handoff',
+  'stage-box': 'stage',
+  'outside-box': 'seat-mode',
+  'box-waiting': 'waiting',
+  'box-stale': 'stale',
+  'flow-forward': 'flow-forward',
+  'arc-skip': 'flow-forward',
+  'flow-report': 'flow-report',
+  'flow-rework': 'rework',
+  'dot-flight': 'flow-forward',
+  'dot-rework': 'rework',
+  scrubber: 'replay',
+  consoles: 'console',
+  'lane-head': 'outside-lane',
+};
+
+const withTerms = (sections: LegendSection[]): LegendSection[] =>
+  sections.map((s) => ({
+    ...s,
+    entries: s.entries.map((e) =>
+      e.term || !TERM_FOR[e.swatch] ? e : { ...e, term: TERM_FOR[e.swatch] }
+    ),
+  }));
+
 /** A screen the legend can describe: every tab, plus the seat panel. */
 export type LegendScreen = View | 'focus';
 
 /** The legend for one screen: its own marks first, then the status marks every screen shares. */
 export function legendFor(screen: LegendScreen): LegendSection[] {
+  return withTerms(sectionsFor(screen));
+}
+
+function sectionsFor(screen: LegendScreen): LegendSection[] {
   switch (screen) {
     case 'wall':
       return [...WALL, STATUS];
