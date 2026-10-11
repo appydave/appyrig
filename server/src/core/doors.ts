@@ -299,12 +299,10 @@ export function apiRouter(
     const id = FeedbackIdSchema.safeParse(req.params.id);
     const png = id.success ? screenshotOf(id.data) : undefined;
     if (!png) {
-      res
-        .status(404)
-        .json({
-          ok: false,
-          error: { failureMode: 'feedback-not-found', message: 'No such screenshot.' },
-        });
+      res.status(404).json({
+        ok: false,
+        error: { failureMode: 'feedback-not-found', message: 'No such screenshot.' },
+      });
       return;
     }
     res
