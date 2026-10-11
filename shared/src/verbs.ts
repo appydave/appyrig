@@ -167,8 +167,6 @@ export const AccountListOutputSchema = z.strictObject({
       plan: z.string().nullable(),
       /** Every machine currently signed into this account, read from each machine's last push. */
       machines: z.array(MachineId),
-      /** The machine whose sampler reading the windows come from (the freshest); null with no reading anywhere. */
-      readingFrom: MachineId.nullable(),
     })
   ),
   /** Machines that reported no account at all (no login, an old collector, or asleep without ever pushing one). */

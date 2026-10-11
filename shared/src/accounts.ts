@@ -5,8 +5,10 @@ import { z } from 'zod';
  * AppyRig's own config. Everything here is derived on the hub; none of it is sent by a collector.
  *
  * A window is shown *against its reset*: how much is used, how much of the window has gone, and
- * where that is heading. Elapsed time is as of `asOf`; a UI that stays open should recompute it
- * from `resetsAt` and `windowMs` rather than trust it to be current.
+ * where that is heading. `usedPct` is as of the sample, so `elapsedPct`, the pace and the
+ * projection are all worked out as of the sample too (comparing a stale reading with the clock
+ * now would make a hot account look calm). `elapsedNowPct` is where the clock is now, for a "now"
+ * tick; a UI that stays open should recompute it from `resetsAt` and `windowMs`.
  */
 
 const isoDate = z.iso.datetime({ offset: true });
@@ -32,11 +34,13 @@ export const AccountWindowSchema = z.strictObject({
   windowMs: z.number().int().positive(),
   /** resetsAt − windowMs. */
   startsAt: isoDate.nullable(),
-  /** Share of the window gone as of `asOf`, 0–100; null unless status is `reading`. */
+  /** Share of the window gone when the reading was taken (same moment as usedPct), 0–100; null unless status is `reading`. */
   elapsedPct: z.number().min(0).max(100).nullable(),
-  /** usedPct − elapsedPct: positive = burning faster than time passes. Null unless `reading`. */
+  /** Share of the window gone as of `asOf`, 0–100; null unless status is `reading`. Always >= elapsedPct. */
+  elapsedNowPct: z.number().min(0).max(100).nullable(),
+  /** usedPct − elapsedPct, both at the sample: positive = burning faster than time passes. Null unless `reading`. */
   paceDeltaPct: z.number().nullable(),
-  /** Where usedPct lands at the reset if the pace holds; null before PROJECTION_MIN_ELAPSED_PCT of the window. */
+  /** Where usedPct lands at the reset if the pace at the sample holds; null before PROJECTION_MIN_ELAPSED_PCT of the window. */
   projectedPct: z.number().min(0).nullable(),
 });
 export type AccountWindow = z.infer<typeof AccountWindowSchema>;
@@ -54,8 +58,10 @@ export type AccountTier = z.infer<typeof AccountTierSchema>;
 /** The hub-derived part, laid on a machine's reported account and returned by account.list. */
 export const AccountDerivedSchema = z.strictObject({
   tier: AccountTierSchema,
-  /** When these windows were worked out; elapsed/pace are as of this moment. */
+  /** When these were worked out. `elapsedNowPct` and `sampleAgeMs` are as of this moment. */
   asOf: isoDate,
+  /** The machine whose reading the windows come from (the account's freshest usable one); null with none. */
+  readingFrom: z.string().nullable(),
   /** Age of the reading in ms (asOf − sampledAt); null with no reading. */
   sampleAgeMs: z.number().int().min(0).nullable(),
   fiveHour: AccountWindowSchema,
