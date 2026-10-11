@@ -69,7 +69,9 @@ export type Swatch =
   | 'order'
   | 'machine-filter'
   | 'map-arcs'
-  | 'idle-card';
+  | 'idle-card'
+  | 'entry-mark'
+  | 'handoff-panel';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -314,6 +316,13 @@ const FLOW: LegendSection[] = [
         means: 'Something has been open there for more than 2 hours.',
       },
       {
+        swatch: 'entry-mark',
+        term: 'entry-outside',
+        mark: '↘ work entered here · at launch',
+        means:
+          'The first seat to act, when what woke it was not the queue: its launch prompt (normal), a prompt typed in, or a direct message. The line above the diagram says which.',
+      },
+      {
         swatch: 'stage-chips',
         mark: 'Builders  dev-build',
         means: 'The seats in each stage, coloured by model.',
@@ -353,6 +362,13 @@ const FLOW: LegendSection[] = [
         means: 'One item in flight at the time shown (open, not yet closed).',
       },
       { swatch: 'dot-rework', mark: 'Amber dot', means: 'An item going back, in flight.' },
+      {
+        swatch: 'handoff-panel',
+        term: 'handoff',
+        mark: 'Handoff details (right)',
+        means:
+          'Hover or Tab to a line or dot: who handed what to whom, when, its state, and the full message. Click or Enter pins it; Esc closes. "On hover / Pinned" sets the default.',
+      },
     ],
   },
   {

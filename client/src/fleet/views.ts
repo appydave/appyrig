@@ -368,6 +368,8 @@ export interface FlowEdge {
   count: number;
   /** Items on this edge in flight at the replay time. */
   inFlight: QueueItem[];
+  /** S4: every item counted on this edge up to the replay time, oldest first. */
+  items: QueueItem[];
   /**
    * Sent back to an earlier stage other than the Lead (roles mode only): rework, but also verdicts
    * (PASS too) and answers. The name is historical; the UI calls it "sent back" (legend, glossary).
@@ -486,8 +488,9 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     const back = mode === 'roles' && order.indexOf(to) < order.indexOf(from) && to !== 'lead';
     if (back) rework += 1;
     const k = `${from}→${to}`;
-    const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], rework: back };
+    const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], items: [], rework: back };
     e.count += 1;
+    e.items.push(q);
     const closedAt = isOpen(q) ? now : ms(q.updatedAt);
     // Still open = still in flight, even when the replay time is "now".
     if (isOpen(q) || closedAt > at) {

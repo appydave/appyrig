@@ -37,11 +37,19 @@ export default function RigMap({ map, onOpen }: Props) {
     if (!el || !map) return;
     const measure = () => {
       const base = el.getBoundingClientRect();
+      // Content coordinates: the edge layer scrolls with the cards, so add the canvas's own scroll
+      // offset. Without it a sideways scroll of a wide map moved every line by scrollLeft (the
+      // "connector detaches while scrolling" bug, reproduced at 173–215 px off).
       const rect = (key: string) => {
         const n = el.querySelector<HTMLElement>(`[data-node-key="${CSS.escape(key)}"]`);
         if (!n) return null;
         const r = n.getBoundingClientRect();
-        return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
+        return {
+          x: r.left - base.left + el.scrollLeft,
+          y: r.top - base.top + el.scrollTop,
+          w: r.width,
+          h: r.height,
+        };
       };
       const out: Placed[] = [];
       map.edges
@@ -88,9 +96,17 @@ export default function RigMap({ map, onOpen }: Props) {
       setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
     measure();
+    // Re-measure when any card or lane changes size, not only the canvas: a card that grows in its
+    // row (a "waiting" badge, a late web font) moves its neighbours without resizing the canvas.
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
+    el.querySelectorAll('[data-node-key], .lane').forEach((n) => ro.observe(n));
+    let live = true;
+    void document.fonts?.ready.then(() => live && measure());
+    return () => {
+      live = false;
+      ro.disconnect();
+    };
   }, [map]);
 
   if (!map) return <p className="empty">Pick a rig.</p>;

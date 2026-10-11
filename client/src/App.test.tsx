@@ -865,3 +865,113 @@ describe('App: S3 calmer Wall + machine filter', () => {
     expect(screen.queryByTestId('wall-hidden')).toBeNull();
   });
 });
+
+describe('App: S4 handoff details + where work came in', () => {
+  type Req = { verb: string; input?: unknown };
+  function flowWith(onCall: (r: Req) => Answer | undefined) {
+    const fake = renderApp(onCall);
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    return fake;
+  }
+  const handoff = (r: Req, body: string | null): Answer => {
+    const id = (r.input as { id: string }).id;
+    return {
+      ok: true,
+      value: {
+        machine: 'm2',
+        id,
+        from: 'dev-qa@fliedit-team',
+        to: 'dev-build@fliedit-team',
+        state: 'done',
+        tags: [],
+        summary: 'QA verdict',
+        createdAt: '2026-10-11T10:00:00.000Z',
+        updatedAt: '2026-10-11T10:05:00.000Z',
+        body,
+        bodyStatus: body === null ? 'pending' : 'present',
+        bodyTruncated: false,
+      },
+    };
+  };
+  const entry = (status: 'outside-queue' | 'unknown'): Answer => ({
+    ok: true,
+    value: {
+      machine: 'm2',
+      rig: 'fliedit-team',
+      entry: {
+        status,
+        reason: status === 'unknown' ? 'older events were dropped' : null,
+        entry:
+          status === 'unknown'
+            ? null
+            : {
+                seat: 'orch-lead@fliedit-team',
+                at: '2026-10-11T09:00:00.000Z',
+                actedAt: '2026-10-11T09:00:05.000Z',
+                origin: 'startup',
+                excerpt: null,
+              },
+        seatsWithoutHistory: [],
+      },
+    },
+  });
+
+  it('focusing a line shows the full message, readable; Enter pins; Esc closes and stays on the Flow', async () => {
+    const DEFECT =
+      'VERDICT: RETURN — 1 material defect on the window’s real path (exportArms): the cancelled arm still lands after Esc, and the undo stack records it twice.';
+    const { calls } = flowWith((r) =>
+      r.verb === 'handoff.get'
+        ? handoff(r, DEFECT)
+        : r.verb === 'rig.entry'
+          ? entry('outside-queue')
+          : undefined
+    );
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-empty', 'true');
+    const edge = screen.getAllByTestId('flow-edge')[0]!;
+    fireEvent.focus(edge);
+    expect(await screen.findByTestId('handoff-text')).toHaveTextContent(DEFECT);
+    expect(calls.some((c) => c.request.verb === 'handoff.get')).toBe(true);
+    fireEvent.keyDown(edge, { key: 'Enter' });
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-pinned', 'true');
+    fireEvent.blur(edge);
+    expect(screen.getByTestId('handoff-text')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-empty', 'true');
+    // The Esc that closed the panel did not also take the screen back.
+    expect(screen.getByTestId('handoff-flow')).toBeInTheDocument();
+  });
+
+  it('a body the collector has not sent yet reads "loading message…", not an empty panel', async () => {
+    flowWith((r) => (r.verb === 'handoff.get' ? handoff(r, null) : undefined));
+    fireEvent.focus(screen.getAllByTestId('flow-edge')[0]!);
+    await waitFor(() =>
+      expect(screen.getByTestId('handoff-body')).toHaveAttribute('data-status', 'pending')
+    );
+    expect(screen.getByTestId('handoff-body')).toHaveTextContent('loading message…');
+  });
+
+  it('marks where work came in, calmly, on the first seat to act', async () => {
+    flowWith((r) => (r.verb === 'rig.entry' ? entry('outside-queue') : undefined));
+    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
+      'orch-lead: started at launch, not via the queue'
+    );
+    const mark = screen.getByTestId('flow-entry-mark');
+    expect(mark).toHaveTextContent('work entered here · at launch');
+    expect(mark.closest('[data-testid="flow-stage"]')).toHaveAttribute('data-stage', 'lead');
+  });
+
+  it('an unknown entry says so and draws no marker', async () => {
+    flowWith((r) => (r.verb === 'rig.entry' ? entry('unknown') : undefined));
+    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
+      'not known: older events were dropped'
+    );
+    expect(screen.queryByTestId('flow-entry-mark')).toBeNull();
+  });
+});
