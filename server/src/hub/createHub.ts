@@ -204,6 +204,7 @@ export function createHub(opts: HubOptions): Hub {
       const loaded = await store.load();
       await store.loadHistories();
       await store.loadHandoffs();
+      await store.schemas.load();
       return loaded;
     },
     sweep,

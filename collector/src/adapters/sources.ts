@@ -170,6 +170,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     account: () => readAccount(),
     /** Cached machine health, re-sampled in the background (v1.4 · S6). */
     health: createHealthSampler(run),
+    exec: run,
     /** Bodies from the latest queue read (reads it if it is stale). */
     async queueBodies() {
       await readQueue();

@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import {
   type AccountListOutput,
+  DbSchemaInputSchema,
+  DbSchemaOutputSchema,
+  RigFileInputSchema,
+  RigFileOutputSchema,
+  RigFilesInputSchema,
+  RigFilesOutputSchema,
+  type RigFilesOutput,
   HandoffGetInputSchema,
   HealthGetInputSchema,
   HealthGetOutputSchema,
@@ -72,6 +79,7 @@ export const FAILURE_CODES = defineFailureCodes({
   'principal-header': -32004,
   'handoff-not-found': -32005,
   'rig-not-found': -32006,
+  'file-not-found': -32007,
 });
 
 export const MachineNotFoundDetails = z.object({
@@ -169,6 +177,7 @@ const NOT_FOUND = ['machine-not-found'];
 const SEAT_NOT_FOUND = ['machine-not-found', 'seat-not-found'];
 const HANDOFF_NOT_FOUND = ['machine-not-found', 'handoff-not-found'];
 const RIG_NOT_FOUND = ['machine-not-found', 'rig-not-found'];
+const FILE_NOT_FOUND = ['machine-not-found', 'rig-not-found', 'file-not-found'];
 
 // ── the verbs ──────────────────────────────────────────────────────────────────────────────────
 
@@ -360,6 +369,93 @@ const VERB_SET = {
         bodyStatus: stored ? 'present' : 'pending',
         bodyTruncated: stored?.truncated ?? false,
       };
+    }
+  ),
+
+  'rig.files': query(
+    "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
+    RigFilesInputSchema,
+    RigFilesOutputSchema,
+    RIG_NOT_FOUND,
+    (input, ctx): RigFilesOutput => {
+      const [m] = machinesOf(ctx, input.machine);
+      const rig = m!.snapshot.rigs.find((r) => r.name === input.rig);
+      if (!rig) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: m!.snapshot.rigs.map((r) => r.name),
+          }
+        );
+      }
+      const out = (status: RigFilesOutput['status'], reason: string | null) => ({
+        machine: input.machine,
+        rig: input.rig,
+        status,
+        reason,
+        files: ctx.store.rigFiles.list(input.machine, input.rig),
+      });
+      if (rig.specStatus === undefined)
+        return out(
+          'no-data',
+          "this machine's collector does not report rig specs yet (it predates v1.4)"
+        );
+      if (rig.specStatus === 'not-found')
+        return out('no-spec', 'no rig.yaml for this rig was found in the configured spec folders');
+      return ctx.store.rigFiles.has(input.machine, input.rig)
+        ? out('ok', null)
+        : out(
+            'pending',
+            'a rig.yaml was found but its files have not arrived yet (the collector may predate the file viewer)'
+          );
+    }
+  ),
+
+  'rig.file': query(
+    'One file of a rig, by the id rig.files gave (e.g. spec:rig.yaml), never by path. The text is redacted and capped at 256 KB (truncated says so).',
+    RigFileInputSchema,
+    RigFileOutputSchema,
+    FILE_NOT_FOUND,
+    (input, ctx) => {
+      const [m] = machinesOf(ctx, input.machine);
+      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: m!.snapshot.rigs.map((r) => r.name),
+          }
+        );
+      }
+      const file = ctx.store.rigFiles.get(input.machine, input.rig, input.fileId);
+      if (!file) {
+        throw new CapabilityRefusal(
+          'file-not-found',
+          `Rig "${input.rig}" has no file "${input.fileId}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: ctx.store.rigFiles.list(input.machine, input.rig).map((f) => f.id),
+          }
+        );
+      }
+      return { machine: input.machine, rig: input.rig, file };
+    }
+  ),
+
+  'db.schema': query(
+    "The live shape of the OpenRig database on a machine: tables, columns (type, nullability, primary key), foreign keys, the OpenRig version it was read under, and what changed since the previous OpenRig version seen (baseline on the first). Read-only: names and types only, never a row. status: 'no-openrig' (no database on that machine), 'unreadable' (reason says why), 'no-data' (older collector).",
+    DbSchemaInputSchema,
+    DbSchemaOutputSchema,
+    NOT_FOUND,
+    (input, ctx) => {
+      machinesOf(ctx, input.machine);
+      return ctx.store.schemas.get(input.machine, ctx.now());
     }
   ),
 

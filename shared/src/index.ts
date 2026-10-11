@@ -14,3 +14,5 @@ export * from './appConfig.js';
 export * from './handoffs.js';
 export * from './accounts.js';
 export * from './health.js';
+export * from './rigfiles.js';
+export * from './dbschema.js';

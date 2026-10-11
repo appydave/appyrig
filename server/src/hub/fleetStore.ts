@@ -1,6 +1,8 @@
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { RigFileStore } from './rigFileStore.js';
+import { SchemaStore } from './schemaStore.js';
 import {
   ASLEEP_AFTER_MS,
   MachineSnapshotSchema,
@@ -63,6 +65,9 @@ export interface LivenessChange {
 }
 
 export class FleetStore {
+  /** v1.4 · S7: rig files and the OpenRig database shape, as collectors pushed them. */
+  readonly rigFiles = new RigFileStore();
+  readonly schemas: SchemaStore;
   private readonly machines = new Map<string, FleetMachine>();
   private readonly now: () => Date;
   private readonly asleepAfterMs: number;
@@ -88,6 +93,10 @@ export class FleetStore {
     this.dir = opts.dataDir ? join(opts.dataDir, 'snapshots') : undefined;
     this.historyDir = opts.dataDir ? join(opts.dataDir, 'history') : undefined;
     this.handoffDir = opts.dataDir ? join(opts.dataDir, 'handoffs') : undefined;
+    this.schemas = new SchemaStore(
+      opts.dataDir ? join(opts.dataDir, 'schemas') : undefined,
+      opts.onDiskError
+    );
     this.onDiskError = opts.onDiskError ?? (() => {});
     this.onLiveness = opts.onLiveness ?? (() => {});
     this.decorate = opts.decorate ?? ((m) => m);
@@ -345,6 +354,7 @@ export class FleetStore {
 
   /** Resolves when every write queued so far has finished. */
   async flush(): Promise<void> {
+    await this.schemas.flush();
     while (this.writes.size > 0) await Promise.all([...this.writes.values()]);
   }
 

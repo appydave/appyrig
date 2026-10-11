@@ -26,6 +26,7 @@ describe('AC 9 — no write verbs', () => {
   it('the registry is exactly the plan §0.2 verb list', () => {
     expect(Object.keys(VERBS).sort()).toEqual([
       'account.list',
+      'db.schema',
       'fleet.get',
       'handoff.get',
       'handoff.list',
@@ -34,6 +35,8 @@ describe('AC 9 — no write verbs', () => {
       'machine.list',
       'queue.list',
       'rig.entry',
+      'rig.file',
+      'rig.files',
       'rig.topology',
       'seat.get',
       'seat.history',
@@ -215,7 +218,31 @@ describe('core.call — the one seam', () => {
       'seat.history': { machine: 'roamy', seat },
       'handoff.get': { machine: 'roamy', id: store.get('roamy')!.snapshot.queue[0]!.id },
       'rig.entry': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
+      'rig.files': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
+      'rig.file': {
+        machine: 'roamy',
+        rig: store.get('roamy')!.snapshot.rigs[0]!.name,
+        fileId: 'spec:rig.yaml',
+      },
+      'db.schema': { machine: 'roamy' },
     };
+    store.rigFiles.put({
+      machineId: 'roamy',
+      collectedAt: '2026-10-11T12:00:00.000Z',
+      rig: store.get('roamy')!.snapshot.rigs[0]!.name,
+      replace: true,
+      files: [
+        {
+          id: 'spec:rig.yaml',
+          name: 'rig.yaml',
+          scope: 'spec',
+          bytes: 5,
+          modifiedAt: '2026-10-11T12:00:00.000Z',
+          truncated: false,
+          content: 'a: 1\n',
+        },
+      ],
+    });
     for (const name of Object.keys(VERB_REGISTRY)) {
       const a = core.call(AGENT, name, inputs[name] ?? {});
       expect(a.ok, `${name}: ${a.ok ? '' : a.error.message}`).toBe(true);
@@ -230,7 +257,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 15 },
+      value: { app: 'AppyRig', version: real.version, verbs: 18 },
     });
   });
 
@@ -251,6 +278,7 @@ describe('B14 + refusal table', () => {
       'principal-header': -32004,
       'handoff-not-found': -32005,
       'rig-not-found': -32006,
+      'file-not-found': -32007,
     });
   });
 });

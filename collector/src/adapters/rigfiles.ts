@@ -1,0 +1,213 @@
+import { lstat, open, readdir, realpath } from 'node:fs/promises';
+import { dirname, join, sep } from 'node:path';
+import {
+  RIG_FILES_CHUNK_BYTES,
+  RIG_FILES_MAX,
+  RIG_FILE_MAX_BYTES,
+  type RigFile,
+  type RigFilesPush,
+} from '@appydave/shared';
+import { redactString } from '../redact.js';
+import type { SpecInfo } from './specs.js';
+
+/**
+ * v1.4 · S7: which of a rig's files the collector will ever read, and the reading of them.
+ *
+ * This is the security boundary for the file viewer. Nothing a client sends reaches this code (a
+ * client names a file id; the hub only serves what was pushed). What is read is decided here, from
+ * the rig's own spec location, by these rules, all of which must hold:
+ *   - the name is on the list below (exact names, or LEARNED*.md), in the spec's folder
+ *     (`spec:`) or its parent mission folder (`mission:`), and only inside the configured spec folder;
+ *   - the extension is .yaml, .yml or .md;
+ *   - the REAL path (symlinks resolved) is a regular file whose real folder is still inside the
+ *     configured spec folder's real path;
+ *   - at most RIG_FILE_MAX_BYTES are read (a `truncated` flag says so), and the text is redacted.
+ */
+
+const SPEC_NAMES = new Set([
+  'rig.yaml',
+  'MISSION.md',
+  'CULTURE.md',
+  'brief.md',
+  'REPORT.md',
+  'DEBRIEF.md',
+]);
+const MISSION_NAMES = new Set(['MISSION.md', 'CULTURE.md', 'brief.md', 'REPORT.md', 'DEBRIEF.md']);
+const LEARNED = /^LEARNED[A-Za-z0-9._-]*\.md$/;
+const EXT = /\.(?:yaml|yml|md)$/;
+
+export interface Candidate {
+  id: string;
+  name: string;
+  scope: 'spec' | 'mission';
+  /** The path to read. Only ever set here, from a directory listing under the configured folder. */
+  path: string;
+}
+
+const isUnder = (child: string, parent: string): boolean =>
+  child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
+
+const allowedName = (scope: 'spec' | 'mission', name: string): boolean =>
+  EXT.test(name) &&
+  ((scope === 'spec' ? SPEC_NAMES : MISSION_NAMES).has(name) || LEARNED.test(name));
+
+/**
+ * The files of one rig that may be read. Real paths are used for every containment check, so a
+ * symlinked folder or file that leads outside the configured spec folder is dropped.
+ */
+export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
+  let root: string;
+  let specDir: string;
+  try {
+    root = await realpath(spec.root);
+    specDir = await realpath(dirname(spec.path));
+  } catch {
+    return [];
+  }
+  if (!isUnder(specDir, root)) return [];
+  const folders: { scope: 'spec' | 'mission'; dir: string }[] = [{ scope: 'spec', dir: specDir }];
+  const parent = dirname(specDir);
+  // The mission folder is the spec folder's parent, and only when that is still inside the configured folder.
+  if (parent !== specDir && isUnder(parent, root)) folders.push({ scope: 'mission', dir: parent });
+
+  const out: Candidate[] = [];
+  for (const { scope, dir } of folders) {
+    let names: string[];
+    try {
+      names = await readdir(dir);
+    } catch {
+      continue;
+    }
+    for (const name of names.sort()) {
+      if (!allowedName(scope, name)) continue;
+      let real: string;
+      try {
+        real = await realpath(join(dir, name));
+        if (!(await lstat(real)).isFile()) continue;
+      } catch {
+        continue; // broken link, vanished file, permission
+      }
+      if (!isUnder(dirname(real), root)) continue; // a link out of the configured folder
+      out.push({ id: `${scope}:${name}`, name, scope, path: real });
+    }
+  }
+  return out.slice(0, RIG_FILES_MAX);
+}
+
+async function readCapped(
+  path: string
+): Promise<{ text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
+  let fh;
+  try {
+    fh = await open(path, 'r');
+    const st = await fh.stat();
+    if (!st.isFile()) return null;
+    const want = Math.min(st.size, RIG_FILE_MAX_BYTES);
+    const buf = Buffer.alloc(want);
+    const { bytesRead } = await fh.read(buf, 0, want, 0);
+    const slice = buf.subarray(0, bytesRead);
+    if (slice.includes(0)) return null; // binary, not a text file
+    return {
+      text: slice.toString('utf8'),
+      bytes: st.size,
+      mtime: st.mtime,
+      truncated: st.size > RIG_FILE_MAX_BYTES,
+    };
+  } catch {
+    return null;
+  } finally {
+    await fh?.close();
+  }
+}
+
+export async function readRigFiles(spec: SpecInfo): Promise<RigFile[]> {
+  const files: RigFile[] = [];
+  for (const c of await candidatesFor(spec)) {
+    const r = await readCapped(c.path);
+    if (!r) continue;
+    files.push({
+      id: c.id,
+      name: c.name,
+      scope: c.scope,
+      bytes: r.bytes,
+      modifiedAt: r.mtime.toISOString(),
+      truncated: r.truncated,
+      content: redactString(r.text),
+    });
+  }
+  return files;
+}
+
+/** Splits a rig's files into messages of at most RIG_FILES_CHUNK_BYTES of content; the first replaces. */
+export function chunkRigFiles(
+  machineId: string,
+  rig: string,
+  files: RigFile[],
+  collectedAt: string
+): RigFilesPush[] {
+  const chunks: RigFile[][] = [[]];
+  let size = 0;
+  for (const f of files) {
+    const n = Buffer.byteLength(f.content);
+    if (size + n > RIG_FILES_CHUNK_BYTES && chunks[chunks.length - 1]!.length > 0) {
+      chunks.push([]);
+      size = 0;
+    }
+    chunks[chunks.length - 1]!.push(f);
+    size += n;
+  }
+  return chunks.map((c, i) => ({ machineId, collectedAt, rig, replace: i === 0, files: c }));
+}
+
+export interface PendingRigFiles {
+  pushes: RigFilesPush[];
+  markSent(): void;
+}
+
+/**
+ * Finds rigs whose files changed since the hub last accepted them. Cheap when nothing changed: one
+ * directory listing and a stat per allowed file (the signature), no reads. Rescans at most every `ttlMs`.
+ */
+export class RigFilesReader {
+  private readonly sent = new Map<string, string>();
+  private lastScan = 0;
+
+  constructor(
+    private readonly machineId: string,
+    private readonly now: () => Date = () => new Date(),
+    private readonly ttlMs = 30_000
+  ) {}
+
+  /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
+  reset(): void {
+    this.sent.clear();
+    this.lastScan = 0;
+  }
+
+  async next(specs: Map<string, SpecInfo>): Promise<PendingRigFiles | null> {
+    if (this.now().getTime() - this.lastScan < this.ttlMs) return null;
+    this.lastScan = this.now().getTime();
+    for (const [rig, spec] of specs) {
+      const cands = await candidatesFor(spec);
+      const sig = (
+        await Promise.all(
+          cands.map(async (c) => {
+            try {
+              const st = await lstat(c.path);
+              return `${c.id}:${st.size}:${st.mtimeMs}`;
+            } catch {
+              return `${c.id}:gone`;
+            }
+          })
+        )
+      ).join('|');
+      if (this.sent.get(rig) === sig) continue;
+      const files = await readRigFiles(spec);
+      return {
+        pushes: chunkRigFiles(this.machineId, rig, files, this.now().toISOString()),
+        markSent: () => this.sent.set(rig, sig),
+      };
+    }
+    return null;
+  }
+}

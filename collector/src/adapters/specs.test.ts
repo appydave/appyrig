@@ -51,6 +51,7 @@ describe('scanSpecs', () => {
     expect([...found.keys()].sort()).toEqual(['alpha', 'beta']);
     expect(found.get('alpha')).toEqual({
       path: join(a, 'deep', 'team', 'rig.yaml'),
+      root: a,
       summary: 'from a',
     });
     expect(found.get('beta')!.summary).toBeNull();
@@ -127,7 +128,7 @@ describe('enrichRigs', () => {
   });
 
   it('a scan that finds one rig and not another says so for each', () => {
-    const specs = new Map([['a', { path: '/p/rig.yaml', summary: 'about a' }]]);
+    const specs = new Map([['a', { path: '/p/rig.yaml', root: '/p', summary: 'about a' }]]);
     const [a, b] = enrichRigs([rig('a'), rig('b')], [], [], specs);
     expect(a).toMatchObject({ specStatus: 'found', specPath: '/p/rig.yaml', summary: 'about a' });
     expect(b).toMatchObject({ specStatus: 'not-found', specPath: null, summary: null });

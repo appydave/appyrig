@@ -3,7 +3,7 @@
   "info": {
     "title": "AppyRig",
     "version": "0.1.0",
-    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n15 methods; 0 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
+    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n18 methods; 0 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
   },
   "servers": [
     {
@@ -545,6 +545,567 @@
       "x-expected-duration": "fast",
       "x-failure-modes": [],
       "x-required": []
+    },
+    {
+      "name": "db.schema",
+      "summary": "The live shape of the OpenRig database on a machine: tables, columns (type, nullability, primary key), foreign keys, the OpenRig version it was read under, and what changed since the previous OpenRig version seen (baseline on the first). Read-only: names and types only, never a row. status: 'no-openrig' (no database on that machine), 'unreadable' (reason says why), 'no-data' (older collector).",
+      "tags": [
+        {
+          "name": "db"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "summary": "machine id, e.g. m2",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "machine id, e.g. m2"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "The call envelope: `ok: true` with the value, or `ok: false` with a named refusal.",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "value"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "value": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "const": false
+                },
+                "error": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "x-value": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "machine": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "no-openrig",
+                  "unreadable",
+                  "no-data"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "openrigVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "sampledAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sampleAgeMs": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "tables": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "table",
+                        "view"
+                      ]
+                    },
+                    "columns": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "type": {
+                            "type": "string",
+                            "maxLength": 80
+                          },
+                          "notNull": {
+                            "type": "boolean"
+                          },
+                          "pk": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "default": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 200
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "type",
+                          "notNull",
+                          "pk",
+                          "default"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "foreignKeys": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "table": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          },
+                          "to": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "maxLength": 120
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "table",
+                          "to"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "kind",
+                    "columns",
+                    "foreignKeys"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "changes": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "baseline",
+                          "unchanged",
+                          "changed"
+                        ]
+                      },
+                      "comparedTo": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "addedTables": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "removedTables": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "changedTables": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "addedColumns": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "removedColumns": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "changedColumns": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "from": {
+                                    "type": "string"
+                                  },
+                                  "to": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "from",
+                                  "to"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "addedForeignKeys": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "removedForeignKeys": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "addedColumns",
+                            "removedColumns",
+                            "changedColumns",
+                            "addedForeignKeys",
+                            "removedForeignKeys"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "comparedTo",
+                      "addedTables",
+                      "removedTables",
+                      "changedTables"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "versionsSeen": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string"
+                    },
+                    "firstSeenAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "firstSeenAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "machine",
+              "status",
+              "reason",
+              "openrigVersion",
+              "sampledAt",
+              "sampleAgeMs",
+              "tables",
+              "changes",
+              "versionsSeen"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32001,
+          "message": "forbidden",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "forbidden"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "principal": {
+                    "type": "string"
+                  },
+                  "allowed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "human",
+                        "agent",
+                        "cli"
+                      ]
+                    }
+                  },
+                  "humanOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capability",
+                  "principal",
+                  "allowed",
+                  "humanOnly"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32002,
+          "message": "machine-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "machine-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32601,
+          "message": "unknown-capability",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "unknown-capability"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32602,
+          "message": "invalid-input",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "invalid-input"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32603,
+          "message": "internal",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "internal"
+              },
+              "details": {}
+            }
+          }
+        }
+      ],
+      "x-kind": "query",
+      "x-family": "db",
+      "x-principals": [
+        "human",
+        "agent",
+        "cli"
+      ],
+      "x-human-only": false,
+      "x-side-effects": "read-only",
+      "x-idempotent": true,
+      "x-confirmation-required": false,
+      "x-expected-duration": "fast",
+      "x-failure-modes": [
+        "machine-not-found"
+      ],
+      "x-required": [
+        "machine"
+      ]
     },
     {
       "name": "fleet.get",
@@ -5114,6 +5675,742 @@
       ]
     },
     {
+      "name": "rig.file",
+      "summary": "One file of a rig, by the id rig.files gave (e.g. spec:rig.yaml), never by path. The text is redacted and capped at 256 KB (truncated says so).",
+      "tags": [
+        {
+          "name": "rig"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "summary": "machine id, e.g. m2",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "machine id, e.g. m2"
+          }
+        },
+        {
+          "name": "rig",
+          "required": true,
+          "summary": "rig name, e.g. flicut-ab",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "description": "rig name, e.g. flicut-ab"
+          }
+        },
+        {
+          "name": "fileId",
+          "required": true,
+          "summary": "a file id from rig.files, e.g. spec:rig.yaml",
+          "schema": {
+            "type": "string",
+            "pattern": "^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$",
+            "description": "a file id from rig.files, e.g. spec:rig.yaml"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "The call envelope: `ok: true` with the value, or `ok: false` with a named refusal.",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "value"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "value": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "const": false
+                },
+                "error": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "x-value": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "machine": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "rig": {
+                "type": "string"
+              },
+              "file": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "spec",
+                      "mission"
+                    ]
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "modifiedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  "truncated": {
+                    "type": "boolean"
+                  },
+                  "content": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "scope",
+                  "bytes",
+                  "modifiedAt",
+                  "truncated",
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "machine",
+              "rig",
+              "file"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32001,
+          "message": "forbidden",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "forbidden"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "principal": {
+                    "type": "string"
+                  },
+                  "allowed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "human",
+                        "agent",
+                        "cli"
+                      ]
+                    }
+                  },
+                  "humanOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capability",
+                  "principal",
+                  "allowed",
+                  "humanOnly"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32002,
+          "message": "machine-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "machine-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32006,
+          "message": "rig-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "rig-not-found"
+              },
+              "details": {}
+            }
+          }
+        },
+        {
+          "code": -32007,
+          "message": "file-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "file-not-found"
+              },
+              "details": {}
+            }
+          }
+        },
+        {
+          "code": -32601,
+          "message": "unknown-capability",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "unknown-capability"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32602,
+          "message": "invalid-input",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "invalid-input"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32603,
+          "message": "internal",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "internal"
+              },
+              "details": {}
+            }
+          }
+        }
+      ],
+      "x-kind": "query",
+      "x-family": "rig",
+      "x-principals": [
+        "human",
+        "agent",
+        "cli"
+      ],
+      "x-human-only": false,
+      "x-side-effects": "read-only",
+      "x-idempotent": true,
+      "x-confirmation-required": false,
+      "x-expected-duration": "fast",
+      "x-failure-modes": [
+        "machine-not-found",
+        "rig-not-found",
+        "file-not-found"
+      ],
+      "x-required": [
+        "machine",
+        "rig",
+        "fileId"
+      ]
+    },
+    {
+      "name": "rig.files",
+      "summary": "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
+      "tags": [
+        {
+          "name": "rig"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "summary": "machine id, e.g. m2",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "machine id, e.g. m2"
+          }
+        },
+        {
+          "name": "rig",
+          "required": true,
+          "summary": "rig name, e.g. flicut-ab",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "description": "rig name, e.g. flicut-ab"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "The call envelope: `ok: true` with the value, or `ok: false` with a named refusal.",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "value"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "value": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "const": false
+                },
+                "error": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "x-value": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "machine": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "rig": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "no-spec",
+                  "no-data",
+                  "pending"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "spec",
+                        "mission"
+                      ]
+                    },
+                    "bytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "modifiedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "scope",
+                    "bytes",
+                    "modifiedAt",
+                    "truncated"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "machine",
+              "rig",
+              "status",
+              "reason",
+              "files"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32001,
+          "message": "forbidden",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "forbidden"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "principal": {
+                    "type": "string"
+                  },
+                  "allowed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "human",
+                        "agent",
+                        "cli"
+                      ]
+                    }
+                  },
+                  "humanOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capability",
+                  "principal",
+                  "allowed",
+                  "humanOnly"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32002,
+          "message": "machine-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "machine-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32006,
+          "message": "rig-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "rig-not-found"
+              },
+              "details": {}
+            }
+          }
+        },
+        {
+          "code": -32601,
+          "message": "unknown-capability",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "unknown-capability"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32602,
+          "message": "invalid-input",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "invalid-input"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32603,
+          "message": "internal",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "internal"
+              },
+              "details": {}
+            }
+          }
+        }
+      ],
+      "x-kind": "query",
+      "x-family": "rig",
+      "x-principals": [
+        "human",
+        "agent",
+        "cli"
+      ],
+      "x-human-only": false,
+      "x-side-effects": "read-only",
+      "x-idempotent": true,
+      "x-confirmation-required": false,
+      "x-expected-duration": "fast",
+      "x-failure-modes": [
+        "machine-not-found",
+        "rig-not-found"
+      ],
+      "x-required": [
+        "machine",
+        "rig"
+      ]
+    },
+    {
       "name": "rig.topology",
       "summary": "Rigs with their seats grouped by pod, per machine.",
       "tags": [
@@ -7666,6 +8963,7 @@
     "principal-header": -32004,
     "handoff-not-found": -32005,
     "rig-not-found": -32006,
+    "file-not-found": -32007,
     "missing": -32013,
     "no-brand-root": -32014,
     "not-a-project": -32029,

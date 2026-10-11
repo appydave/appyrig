@@ -14,6 +14,8 @@ import { redactString } from '../redact.js';
 export interface SpecInfo {
   /** Absolute path of the rig.yaml. */
   path: string;
+  /** The configured spec folder it was found under: the outer limit for anything read about this rig. */
+  root: string;
   /** The `summary:` text with whitespace folded; null when the file has none. */
   summary: string | null;
 }
@@ -62,7 +64,8 @@ export async function scanSpecs(folders: string[]): Promise<Map<string, SpecInfo
     for (const path of files) {
       try {
         const spec = parseSpec(await readFile(path, 'utf8'));
-        if (spec && !found.has(spec.name)) found.set(spec.name, { path, summary: spec.summary });
+        if (spec && !found.has(spec.name))
+          found.set(spec.name, { path, root: folder, summary: spec.summary });
       } catch {
         // unreadable file: skip it
       }

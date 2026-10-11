@@ -104,6 +104,35 @@ describe('redaction of unprefixed secrets in message bodies', () => {
     expect(redactString('Authorization: Basic dXNlcjpwYXNzd29yZDEyMw==')).not.toContain('dXNlcjpw');
   });
 
+  it('Basic credentials: with an Authorization header or a credential-shaped value; plain prose is left alone', () => {
+    expect(redactString('Authorization: Basic dXNlcjpwYXNz')).toBe(
+      `Authorization: Basic ${REDACTED}`
+    );
+    expect(redactString('sent Basic dXNlcjpwYXNzd29yZDEyMw== to the proxy')).toContain(
+      `Basic ${REDACTED}`
+    );
+    for (const calm of [
+      'Basic authentication is enabled',
+      'Basic configuration instructions follow',
+      'the Basic Operating Procedure document',
+    ]) {
+      expect(redactString(calm), calm).toBe(calm);
+    }
+  });
+
+  it('Tailscale auth keys never survive', () => {
+    for (const k of [
+      'tskey-auth-k1AbCdEf11CNTRL-9gXyZaBcDeFgHiJkLmNoPqRsTuVwXy',
+      'tskey-api-kABCDEFGHIJKLMN-0123456789abcdef',
+      'tskey-client-kABCDEF123456CNTRL-abcdefghijklmnop',
+    ]) {
+      const out = redactString(`use ${k} to join`);
+      expect(out, k).not.toContain(k.slice(10));
+      expect(out).toContain(REDACTED);
+    }
+    expect(redactString('the tskey- prefix is documented')).toBe('the tskey- prefix is documented');
+  });
+
   it('leaves ordinary message text alone: paths, ids, versions, camelCase names, headings, tables', () => {
     const calm = [
       '/Users/davidcruwys/dev/ad/apps/appyrig-worktrees/v14-data/server/src/hub/fleetStore.ts:79',

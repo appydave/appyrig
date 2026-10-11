@@ -544,3 +544,290 @@ describe('v1.4 S6 — machine health', () => {
     expect(ack).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
   });
 });
+
+describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
+  const file = (id: string, content = 'name: x\n') => ({
+    id,
+    name: id.split(':')[1]!,
+    scope: id.split(':')[0] as 'spec' | 'mission',
+    bytes: content.length,
+    modifiedAt: '2026-10-11T12:00:00.000Z',
+    truncated: false,
+    content,
+  });
+  const emit = (s: Parameters<typeof push>[0], event: string, payload: unknown) =>
+    new Promise<{ ok: boolean; failureMode?: string }>((resolve) =>
+      s
+        .timeout(2_000)
+        .emit(event, payload, (err: unknown, ack: never) =>
+          resolve(err ? { ok: false, failureMode: 'timeout' } : ack)
+        )
+    );
+  const rigOf = (machine: 'm2' | 'roamy', over: object = {}) => {
+    const snap = loadSnapshot(machine);
+    const rig = {
+      ...snap.rigs[0]!,
+      specStatus: 'found' as const,
+      specPath: '/x/rig.yaml',
+      ...over,
+    };
+    return { snap: { ...snap, rigs: [rig, ...snap.rigs.slice(1)] }, name: rig.name };
+  };
+  // Loosely typed on purpose: these tests poke at verb answers by shape.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type Answer = { ok: boolean; value?: any; error?: { failureMode: string } };
+  const call = (
+    h: { hub: { core: { call: (p: string, v: string, i: unknown) => unknown } } },
+    verb: string,
+    input: unknown
+  ) => h.hub.core.call('cli', verb, input) as Answer;
+
+  it('rig.files: pending until the files arrive, then ok; no-spec and no-data say why', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const { snap, name } = rigOf('m2');
+    await push(c, snap);
+    expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value).toMatchObject({
+      status: 'pending',
+      files: [],
+    });
+
+    const ack = await emit(c, 'collector:rigfiles', {
+      machineId: 'm2',
+      collectedAt: '2026-10-11T12:00:00.000Z',
+      rig: name,
+      replace: true,
+      files: [file('spec:rig.yaml'), file('mission:MISSION.md', '# m')],
+    });
+    expect(ack.ok).toBe(true);
+    const list = call(h, 'rig.files', { machine: 'm2', rig: name }).value;
+    expect(list).toMatchObject({ status: 'ok', reason: null });
+    expect(list.files.map((f: { id: string }) => f.id)).toEqual([
+      'spec:rig.yaml',
+      'mission:MISSION.md',
+    ]);
+    expect(list.files[0]).not.toHaveProperty('content'); // names and sizes only
+    expect(
+      call(h, 'rig.file', { machine: 'm2', rig: name, fileId: 'mission:MISSION.md' }).value.file
+        .content
+    ).toBe('# m');
+
+    const none = rigOf('roamy', { specStatus: 'not-found', specPath: null });
+    await push(h.collector({ token: TOKEN, machineId: 'roamy' }), none.snap);
+    expect(call(h, 'rig.files', { machine: 'roamy', rig: none.name }).value).toMatchObject({
+      status: 'no-spec',
+    });
+    const old = loadSnapshot('roamy');
+    await push(h.collector({ token: TOKEN, machineId: 'roamy' }), old);
+    expect(call(h, 'rig.files', { machine: 'roamy', rig: old.rigs[0]!.name }).value).toMatchObject({
+      status: 'no-data',
+    });
+  });
+
+  it('a later chunk adds files; a new replace drops what is no longer there', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const { snap, name } = rigOf('m2');
+    await push(c, snap);
+    const base = { machineId: 'm2', collectedAt: '2026-10-11T12:00:00.000Z', rig: name };
+    await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
+    await emit(c, 'collector:rigfiles', {
+      ...base,
+      replace: false,
+      files: [file('spec:CULTURE.md')],
+    });
+    expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value.files).toHaveLength(2);
+    await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
+    expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value.files).toHaveLength(1);
+  });
+
+  it('PATH ESCAPES: a client can only name a file id; paths, dots and absolute paths are refused as input', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const { snap, name } = rigOf('m2');
+    await push(c, snap);
+    await emit(c, 'collector:rigfiles', {
+      machineId: 'm2',
+      collectedAt: '2026-10-11T12:00:00.000Z',
+      rig: name,
+      replace: true,
+      files: [file('spec:rig.yaml')],
+    });
+    for (const fileId of [
+      '../../etc/passwd',
+      '/etc/passwd',
+      'spec:../../etc/passwd',
+      'spec:..',
+      'spec:a/b.md',
+      'spec:/etc/passwd',
+      'rig.yaml',
+      'spec:',
+      'other:rig.yaml',
+      '',
+      'spec:rig.yaml/../../x',
+    ]) {
+      const r = call(h, 'rig.file', { machine: 'm2', rig: name, fileId });
+      expect(r.ok, fileId).toBe(false);
+      expect(r.error?.failureMode, fileId).toBe('invalid-input');
+    }
+    // a well-formed id nobody pushed is simply not found, and the answer lists what exists
+    const missing = call(h, 'rig.file', { machine: 'm2', rig: name, fileId: 'spec:shadow.md' });
+    expect(missing.error?.failureMode).toBe('file-not-found');
+    // an extra field (a smuggled path) is refused by the strict input
+    expect(
+      call(h, 'rig.file', {
+        machine: 'm2',
+        rig: name,
+        fileId: 'spec:rig.yaml',
+        path: '/etc/passwd',
+      }).error?.failureMode
+    ).toBe('invalid-input');
+  });
+
+  it('refuses malformed pushes, another machine, and a file id that is a path', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    await push(c, loadSnapshot('m2'));
+    const base = { collectedAt: '2026-10-11T12:00:00.000Z', rig: 'r', replace: true };
+    expect(
+      await emit(c, 'collector:rigfiles', { ...base, machineId: 'roamy', files: [] })
+    ).toMatchObject({ failureMode: 'machine_mismatch' });
+    expect(
+      await emit(c, 'collector:rigfiles', {
+        ...base,
+        machineId: 'm2',
+        files: [file('spec:../../x')],
+      })
+    ).toMatchObject({ failureMode: 'invalid_snapshot' });
+    expect(
+      await emit(c, 'collector:rigfiles', { ...base, machineId: 'm2', files: 'no' })
+    ).toMatchObject({ failureMode: 'invalid_snapshot' });
+  });
+
+  const col = (name: string, type = 'TEXT') => ({
+    name,
+    type,
+    notNull: false,
+    pk: 0,
+    default: null,
+  });
+  const schemaPush = (version: string | null, cols: string[], over: object = {}) => ({
+    machineId: 'm2',
+    collectedAt: '2026-10-11T12:00:00.000Z',
+    status: 'ok' as const,
+    reason: null,
+    openrigVersion: version,
+    tables: [
+      { name: 'rigs', kind: 'table' as const, columns: cols.map((c) => col(c)), foreignKeys: [] },
+    ],
+    ...over,
+  });
+
+  it('db.schema: baseline on the first version, then a diff when the OpenRig version changes', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    await push(c, loadSnapshot('m2'));
+    expect(call(h, 'db.schema', { machine: 'm2' }).value).toMatchObject({
+      status: 'no-data',
+      tables: [],
+      changes: null,
+    });
+
+    await emit(c, 'collector:schema', schemaPush('0.6.6 (2620dea8)', ['id', 'name']));
+    expect(call(h, 'db.schema', { machine: 'm2' }).value).toMatchObject({
+      status: 'ok',
+      openrigVersion: '0.6.6 (2620dea8)',
+      changes: { status: 'baseline', comparedTo: null },
+      versionsSeen: [{ version: '0.6.6 (2620dea8)' }],
+    });
+    expect(
+      call(h, 'db.schema', { machine: 'm2' }).value.tables[0].columns.map(
+        (x: { name: string }) => x.name
+      )
+    ).toEqual(['id', 'name']);
+
+    await emit(c, 'collector:schema', schemaPush('0.7.0 (abc12345)', ['id', 'name', 'owner']));
+    const v = call(h, 'db.schema', { machine: 'm2' }).value;
+    expect(v.openrigVersion).toBe('0.7.0 (abc12345)');
+    expect(v.changes).toMatchObject({
+      status: 'changed',
+      comparedTo: '0.6.6 (2620dea8)',
+      changedTables: [{ name: 'rigs', addedColumns: ['owner'] }],
+    });
+    expect(v.versionsSeen.map((x: { version: string }) => x.version)).toEqual([
+      '0.6.6 (2620dea8)',
+      '0.7.0 (abc12345)',
+    ]);
+
+    // a re-sample under the same version just replaces it; the comparison stays against the previous version
+    await emit(
+      c,
+      'collector:schema',
+      schemaPush('0.7.0 (abc12345)', ['id', 'name', 'owner', 'extra'])
+    );
+    expect(
+      call(h, 'db.schema', { machine: 'm2' }).value.changes.changedTables[0].addedColumns
+    ).toEqual(['owner', 'extra']);
+  });
+
+  it('db.schema: no-openrig and unreadable keep their reason and list no tables; a bad status is refused', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    await push(c, loadSnapshot('m2'));
+    await emit(
+      c,
+      'collector:schema',
+      schemaPush(null, [], {
+        status: 'no-openrig',
+        reason: 'no OpenRig database at ~/.openrig/openrig.sqlite',
+        tables: [],
+      })
+    );
+    expect(call(h, 'db.schema', { machine: 'm2' }).value).toMatchObject({
+      status: 'no-openrig',
+      reason: expect.stringContaining('no OpenRig database'),
+      tables: [],
+      changes: null,
+    });
+    expect(
+      await emit(c, 'collector:schema', schemaPush(null, [], { status: 'fine' }))
+    ).toMatchObject({ failureMode: 'invalid_snapshot' });
+  });
+
+  it('db.schema: the history survives a hub restart (kept in AppyRig data dir)', async () => {
+    const dir = tempDir();
+    const h1 = await start({ dataDir: dir });
+    const c = h1.collector({ token: TOKEN, machineId: 'm2' });
+    await push(c, loadSnapshot('m2'));
+    await emit(c, 'collector:schema', schemaPush('0.6.6', ['id']));
+    await emit(c, 'collector:schema', schemaPush('0.7.0', ['id', 'n']));
+    await h1.hub.store.flush();
+    await h1.stop();
+    running.splice(running.indexOf(h1), 1);
+    const h2 = await start({ dataDir: dir });
+    await h2.hub.load();
+    await push(h2.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'));
+    expect(call(h2, 'db.schema', { machine: 'm2' }).value).toMatchObject({
+      openrigVersion: '0.7.0',
+      changes: { status: 'changed', comparedTo: '0.6.6' },
+    });
+  });
+
+  it('db.schema: an unknown machine is refused', async () => {
+    const h = await start();
+    expect(call(h, 'db.schema', { machine: 'nope' }).error?.failureMode).toBe('machine-not-found');
+  });
+
+  it('both directions: pre-1.4 hubs know neither event (no listener, no ack); a new hub accepts old collectors, which send neither', async () => {
+    // New hub, old collector: simply never sends these. Nothing to refuse; the verbs say so.
+    const h = await start();
+    await push(h.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'));
+    expect(call(h, 'db.schema', { machine: 'm2' }).value.status).toBe('no-data');
+    // New collector, old hub: the event has no listener there, so no ack comes back. The pusher
+    // treats that as "hub older than v1.4" (pusher tests) and the connection stays up.
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    expect((await emit(c, 'collector:no-such-event-on-an-old-hub', {})).failureMode).toBe(
+      'timeout'
+    );
+  });
+});
