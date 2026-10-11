@@ -75,11 +75,17 @@ export interface Hub {
 
 export function createHub(opts: HubOptions): Hub {
   const now = opts.now ?? (() => new Date());
+  const viewsOf = new WeakMap<FleetMachine[], ReturnType<typeof accountViews>>();
   const config = watchConfig(opts.configPath ?? defaultConfigPath(), opts.onDiskError);
   const store = new FleetStore({
     decorate: (m, all) => {
       const cfg = config.current();
-      const views = accountViews(all, cfg, now(), (id) => store.emailChangedAt(id));
+      // One computation (and one `asOf`) per fleet read, shared by every machine in it.
+      let views = viewsOf.get(all);
+      if (!views) {
+        views = accountViews(all, cfg, now(), (id) => store.emailChangedAt(id));
+        viewsOf.set(all, views);
+      }
       return applyAccountDerived(applyRigLabels(m, cfg), views);
     },
     dataDir: opts.dataDir,

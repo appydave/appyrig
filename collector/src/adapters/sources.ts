@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
 import { createSpecIndex } from './specs.js';
+import { createHealthSampler } from './health.js';
 import { parseNodes, parsePs, parseQueue, parseQueueBodies } from './daemon.js';
 import { capturePaneArgs, isNoServer, LIST_PANES_ARGS, parsePanes } from './tmux.js';
 import { AGENT_LIST_ARGS, parseAgentList } from './viewer.js';
@@ -167,6 +168,8 @@ export function createSources(opts: SourceOptions = {}): Sources {
     },
 
     account: () => readAccount(),
+    /** Cached machine health, re-sampled in the background (v1.4 · S6). */
+    health: createHealthSampler(run),
     /** Bodies from the latest queue read (reads it if it is stale). */
     async queueBodies() {
       await readQueue();

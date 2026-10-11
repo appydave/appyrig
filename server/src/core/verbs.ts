@@ -2,6 +2,9 @@ import { z } from 'zod';
 import {
   type AccountListOutput,
   HandoffGetInputSchema,
+  HealthGetInputSchema,
+  HealthGetOutputSchema,
+  type HealthRow,
   HandoffGetOutputSchema,
   RigEntryInputSchema,
   RigEntryOutputSchema,
@@ -302,6 +305,29 @@ const VERB_SET = {
           (h) => input.rig === undefined || [h.from, h.to].some((s) => s?.endsWith(`@${input.rig}`))
         )
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  ),
+
+  'health.get': query(
+    "Machine health as each machine's collector last sampled it: Claude processes, tmux sessions, terminal shells and terminal apps (with their memory), memory used and total, memory pressure, swap. Each reading is a value or 'unavailable' with a reason, never 0. status 'no-data' means that machine's collector predates health (it is not an error and not a clean bill of health). sampleAgeMs is the age of the readings now.",
+    HealthGetInputSchema,
+    HealthGetOutputSchema,
+    NOT_FOUND,
+    (input, ctx): HealthRow[] =>
+      machinesOf(ctx, input.machine).map((m) => {
+        const health = m.snapshot.health ?? null;
+        return {
+          machine: m.machine.id,
+          liveness: m.liveness,
+          status: health ? 'ok' : 'no-data',
+          reason: health
+            ? null
+            : 'no health data from this collector yet (it predates machine health)',
+          sampleAgeMs: health
+            ? Math.max(0, ctx.now().getTime() - Date.parse(health.sampledAt))
+            : null,
+          health,
+        };
+      })
   ),
 
   'handoff.get': query(

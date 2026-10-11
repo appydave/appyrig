@@ -8,6 +8,7 @@ import {
   AUTH_ERRORS,
   SESSION_COOKIE,
   SeatHistoryEventSchema,
+  MachineSnapshotSchema,
 } from '@appydave/shared';
 import {
   COOKIE,
@@ -445,5 +446,101 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
       ok: false,
       error: { failureMode: 'rig-not-found' },
     });
+  });
+});
+
+describe('v1.4 S6 — machine health', () => {
+  const ok = <T>(value: T) => ({ status: 'ok' as const, value });
+  const health = (sampledAt: string) => ({
+    sampledAt,
+    memory: {
+      totalBytes: ok(34359738368),
+      usedBytes: ok(12 * 1024 ** 3),
+      pressureLevel: ok('normal' as const),
+      freePct: ok(87),
+      swapUsedBytes: ok(0),
+      swapTotalBytes: {
+        status: 'unavailable' as const,
+        reason: 'vm.swapusage not reported by sysctl',
+      },
+    },
+    processes: {
+      claude: ok(10),
+      tmuxSessions: ok(3),
+      terminalShells: ok(14),
+      terminalApps: ok([{ app: 'iTerm2', processes: 3, rssBytes: 90_000_000 }]),
+    },
+  });
+
+  it('an old-shape snapshot (no health) answers no-data with a reason, not an error and not zeros', async () => {
+    const h = await start();
+    await push(h.collector({ token: TOKEN, machineId: 'roamy' }), loadSnapshot('roamy'));
+    expect(h.hub.core.call('cli', 'health.get', {})).toMatchObject({
+      ok: true,
+      value: [
+        {
+          machine: 'roamy',
+          status: 'no-data',
+          sampleAgeMs: null,
+          health: null,
+          reason: expect.stringMatching(/no health data from this collector yet/),
+        },
+      ],
+    });
+  });
+
+  it('a snapshot with health returns every reading and the age of the sample; unavailable stays unavailable', async () => {
+    const clock = manualClock();
+    const h = await start({ now: clock.now });
+    const sampled = new Date(clock.now().getTime() - 25_000).toISOString();
+    const ack = await push(h.collector({ token: TOKEN, machineId: 'm2' }), {
+      ...loadSnapshot('m2'),
+      health: health(sampled),
+    });
+    expect(ack.ok).toBe(true);
+    const row = (
+      h.hub.core.call('cli', 'health.get', { machine: 'm2' }) as {
+        value: { status: string; sampleAgeMs: number; health: ReturnType<typeof health> }[];
+      }
+    ).value[0]!;
+    expect(row).toMatchObject({ status: 'ok', sampleAgeMs: 25_000 });
+    expect(row.health.memory.swapTotalBytes).toMatchObject({ status: 'unavailable' });
+    expect(row.health.processes.terminalApps).toMatchObject({ status: 'ok' });
+    clock.advance(60_000);
+    expect(
+      (
+        h.hub.core.call('cli', 'health.get', { machine: 'm2' }) as {
+          value: { sampleAgeMs: number }[];
+        }
+      ).value[0]!.sampleAgeMs
+    ).toBe(85_000);
+  });
+
+  it('both directions: old collector → new hub accepted; new collector → old hub refused (hub first)', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    expect((await push(c, loadSnapshot('m2'))).ok).toBe(true);
+    expect(
+      (await push(c, { ...loadSnapshot('m2'), health: health('2026-10-11T12:00:00.000Z') })).ok
+    ).toBe(true);
+    // The pre-1.4 snapshot schema is strict and has no `health`: an old hub would refuse the push.
+    const v13 = MachineSnapshotSchema.omit({ health: true });
+    expect(
+      v13.safeParse({ ...loadSnapshot('m2'), health: health('2026-10-11T12:00:00.000Z') }).success
+    ).toBe(false);
+    expect(v13.safeParse(loadSnapshot('m2')).success).toBe(true);
+  });
+
+  it('refuses a malformed health reading (a half-made value, or an ok with no value)', async () => {
+    const h = await start();
+    const bad = {
+      ...health('2026-10-11T12:00:00.000Z'),
+      memory: { ...health('2026-10-11T12:00:00.000Z').memory, freePct: { status: 'ok' } },
+    };
+    const ack = await push(h.collector({ token: TOKEN, machineId: 'm2' }), {
+      ...loadSnapshot('m2'),
+      health: bad,
+    });
+    expect(ack).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
   });
 });
