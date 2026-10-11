@@ -78,7 +78,7 @@ export class FleetStore {
   /** v1.2: seat histories for the replay consoles, by `<machine>/<seat>`. */
   private readonly histories = new Map<string, SeatHistory>();
   private readonly historyDir: string | undefined;
-  /** v1.4 · S4: queue message bodies by machine, then queue id; insertion order = arrival order. */
+  /** v1.4 · S4: queue message bodies by machine, then queue id. Over the cap the oldest items (by queue createdAt) are dropped. */
   private readonly handoffs = new Map<string, Map<string, { body: string; truncated: boolean }>>();
   private readonly handoffDir: string | undefined;
 

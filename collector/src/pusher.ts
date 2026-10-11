@@ -68,6 +68,18 @@ export function startPusher(opts: PusherOptions): Pusher {
     }
   };
 
+  // A warning that repeats for as long as its cause lasts (an older hub with no listener for queue
+  // bodies) is logged once per WARN_EVERY_MS, however much other news arrives in between.
+  const WARN_EVERY_MS = 10 * 60_000;
+  const lastWarn = new Map<string, number>();
+  const warnSometimes = (key: string, line: string) => {
+    const t = Date.now();
+    if (t - (lastWarn.get(key) ?? 0) >= WARN_EVERY_MS) {
+      lastWarn.set(key, t);
+      log(line);
+    }
+  };
+
   socket.on('connect', () => {
     opts.onConnect?.();
     note(`connected to ${opts.hubUrl} as ${opts.machineId}`);
@@ -152,7 +164,8 @@ export function startPusher(opts: PusherOptions): Pusher {
                 resolve(err || !a ? { ok: false, timeout: true } : a);
               });
           });
-          if ('timeout' in ack) note('no ack for queue bodies (is the hub older than v1.4?)');
+          if ('timeout' in ack)
+            warnSometimes('handoffs', 'no ack for queue bodies (is the hub older than v1.4?)');
           else if (ack.ok) pending.markSent();
           else note(`queue bodies refused: ${ack.failureMode}: ${ack.message}`);
         }

@@ -31,9 +31,54 @@ const PATTERNS: RegExp[] = [
   /\b[0-9a-fA-F]{40,}\b/g,
 ];
 
+/**
+ * Whole-message bodies are shown over the tailnet, so a secret that has no prefix and no `=` must
+ * not slip by either. These rules deliberately err towards over-redacting.
+ */
+
+// -----BEGIN … PRIVATE KEY----- … -----END … PRIVATE KEY-----  (the whole block, even across lines)
+const PRIVATE_KEY_BLOCK =
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
+
+// user:password@ inside a URL; the user stays, the password goes
+const URL_CREDENTIALS = /(?<=:\/\/[^\s/:@]{1,64}:)[^\s/@]+(?=@)/g;
+
+// HTTP Basic credentials
+const BASIC_AUTH = /\bBasic\s+[A-Za-z0-9+/]{12,}={0,2}/g;
+
+// A label that names a secret, then (after "is", "=", ":", quotes or spaces) a value that looks like
+// one: "secret key is wJal…", "aws secret access key: wJal…", "token \"abc123…\"".
+const LABELLED_VALUE =
+  /\b((?:secret|private|access|api|auth|signing|aws|session|client)[ _-]*(?:[a-z]+[ _-]+)?(?:key|token|secret|password|passwd)s?\b(?:\s+(?:is|was|are|=|:))?[\s:="'`(]{1,8})([A-Za-z0-9/+=_.~-]{12,})/gi;
+
+const hasAll = (t: string, ...res: RegExp[]) => res.every((re) => re.test(t));
+const entropy = (t: string): number => {
+  const counts = new Map<string, number>();
+  for (const c of t) counts.set(c, (counts.get(c) ?? 0) + 1);
+  let h = 0;
+  for (const n of counts.values()) h -= (n / t.length) * Math.log2(n / t.length);
+  return h;
+};
+
+// A bare 32–88 character base64-looking run (AWS secret keys are 40) with upper, lower and digits
+// and high entropy. Paths (they carry '-', '.', or a leading '/') and ordinary words do not qualify.
+const BARE_SECRET = /(?<![A-Za-z0-9/+=_.~-])[A-Za-z0-9/+]{32,88}={0,2}(?![A-Za-z0-9/+=_.~-])/g;
+const looksLikeBareSecret = (t: string): boolean =>
+  !t.startsWith('/') &&
+  hasAll(t, /[A-Z]/, /[a-z]/, /\d/) &&
+  (t.match(/\//g)?.length ?? 0) <= 6 &&
+  entropy(t) >= 4.3;
+
 export function redactString(input: string): string {
-  let out = input;
+  // The key block first: the line-level patterns below would otherwise chew its header and leave the body.
+  let out = input.replace(PRIVATE_KEY_BLOCK, REDACTED);
   for (const re of PATTERNS) out = out.replace(re, REDACTED);
+  out = out.replace(URL_CREDENTIALS, REDACTED);
+  out = out.replace(BASIC_AUTH, `Basic ${REDACTED}`);
+  out = out.replace(LABELLED_VALUE, (_m, label: string, value: string) =>
+    value === REDACTED || label.endsWith(REDACTED) ? _m : `${label}${REDACTED}`
+  );
+  out = out.replace(BARE_SECRET, (m) => (looksLikeBareSecret(m) ? REDACTED : m));
   return out;
 }
 
