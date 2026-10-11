@@ -71,7 +71,18 @@ export type Swatch =
   | 'map-arcs'
   | 'idle-card'
   | 'entry-mark'
-  | 'handoff-panel';
+  | 'handoff-panel'
+  | 'window-bar'
+  | 'now-tick'
+  | 'proj-ghost'
+  | 'verdict'
+  | 'pace'
+  | 'monthly'
+  | 'tier'
+  | 'reading'
+  | 'old'
+  | 'drawers'
+  | 'unreported';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -481,18 +492,90 @@ const FOCUS: LegendSection[] = [
 
 const ACCOUNTS: LegendSection[] = [
   {
-    title: 'Accounts',
+    title: 'Accounts · each window',
     entries: [
       {
-        swatch: 'bar',
-        mark: 'Green bar · 45% used',
-        means: 'Share of that usage window spent so far.',
+        swatch: 'window-bar',
+        term: 'window-now',
+        mark: 'Bar · 18% left',
+        means:
+          'The whole window, from its start to its reset. Dark fill = used; "18% left" = what remains before the reset.',
+      },
+      {
+        swatch: 'now-tick',
+        term: 'window-now',
+        mark: 'Amber tick',
+        means:
+          'Where the clock is in the window now. Fill past the tick = spending faster than time passes.',
+      },
+      {
+        swatch: 'proj-ghost',
+        term: 'window-now',
+        mark: 'Dashed ghost',
+        means: 'Where use lands at the reset if the pace at the reading holds.',
+      },
+      {
+        swatch: 'verdict',
+        term: 'window-verdict',
+        mark: '● plenty of room · ▲ be careful · ■ will run out ~12:48',
+        means:
+          'The projection at reset in words: under 80%, 80–99%, 100%+ (with when). "○ too early to tell" before 5% of the window; "■ spent" at 100%.',
+      },
+      {
+        swatch: 'pace',
+        term: 'window-now',
+        mark: '▲ 24 points ahead of the clock',
+        means: 'Used % minus time gone %, at the reading. ▼ behind = room to spare.',
       },
       { swatch: 'resets', mark: 'resets in 39m', means: 'When that window refills.' },
       {
+        swatch: 'monthly',
+        term: 'monthly',
+        mark: 'Monthly: not reported',
+        means: 'No source reports a monthly window, so none is drawn. Not the same as zero.',
+      },
+    ],
+  },
+  {
+    title: 'Accounts · the card',
+    entries: [
+      {
+        swatch: 'tier',
+        term: 'account-tier',
+        mark: 'MAX $200 · FROM CONFIG',
+        means:
+          'The plan tier and where it came from: reported by the login, from AppyRig’s config, or "tier not reported" when neither says.',
+      },
+      {
+        swatch: 'reading',
+        term: 'sampler',
+        mark: 'read on Roamy · 2m ago',
+        means: 'Which machine’s status line the figures came from, and when.',
+      },
+      {
+        swatch: 'old',
+        term: 'old-reading',
+        mark: 'old reading',
+        means: 'Read more than 15 minutes ago; the verdict is as of then.',
+      },
+      {
+        swatch: 'drawers',
+        term: 'drawers',
+        mark: 'Who draws on it · Machines signed in',
+        means:
+          'The machines signed into this account right now (it moves when a login switches), and their running Claude seats.',
+      },
+      {
         swatch: 'headroom',
+        term: 'headroom',
         mark: 'Next team → most headroom',
-        means: 'The account with the most room left. A suggestion only.',
+        means: 'The account with the most 5-hour room left. A suggestion only.',
+      },
+      {
+        swatch: 'unreported',
+        term: 'account',
+        mark: 'Not reporting an account',
+        means: 'A machine with no Claude login, or a collector too old to say.',
       },
     ],
   },
