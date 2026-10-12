@@ -385,3 +385,25 @@ describe('B2 rigState (fb-0001): follows rig ps', () => {
     for (const r of listRigs([fleetMachine(snapshot('m2'))])) expect(r.state).toMatch(/\w/);
   });
 });
+
+describe('B3 (fb-0006): the median stat as one plain sentence', () => {
+  it('names the count and says it is a median, not a grade', async () => {
+    const { medianSentence } = await import('../components/HandoffFlow.js');
+    expect(medianSentence(3.1, 12)).toBe(
+      'Of the 12 handoffs closed so far, half were closed within 3.1 minutes of being handed over and half took longer (the median, the middle value). It is not a grade: there are no thresholds. Handoffs still open are not counted; they show as waiting or left open.'
+    );
+    expect(medianSentence(0.4, 3)).toContain('within 24 seconds');
+    expect(medianSentence(5, 1)).toBe(
+      'The one handoff closed so far took 5.0 minutes from being handed over to being closed.'
+    );
+    expect(medianSentence(null, 0)).toMatch(/No handoff in this rig has been closed yet/);
+  });
+
+  it('buildFlow reports how many closed handoffs the median covers', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const rig = listRigs([fm]).find((r) => r.handoffs > 0)!;
+    const flow = buildFlow(fm, rig.name, Date.now(), Date.now());
+    expect(flow?.closedCount).toBeGreaterThanOrEqual(0);
+    if (flow && flow.closedCount > 0) expect(flow.medianTurnaroundMin).not.toBeNull();
+  });
+});

@@ -92,6 +92,19 @@ function edgePath(
   };
 }
 
+/**
+ * Batch 1 · B3 (fb-0006, "3.1-minute median handoff: what's that really telling me?"): the stat
+ * as one plain sentence. It is a median (the middle value), not a grade: there are no thresholds.
+ */
+export function medianSentence(min: number | null, closed: number): string {
+  if (min === null || closed === 0)
+    return 'No handoff in this rig has been closed yet, so there is no typical time to show.';
+  const t = min < 1 ? `${Math.round(min * 60)} seconds` : `${min.toFixed(1)} minutes`;
+  return closed === 1
+    ? `The one handoff closed so far took ${t} from being handed over to being closed.`
+    : `Of the ${closed} handoffs closed so far, half were closed within ${t} of being handed over and half took longer (the median, the middle value). It is not a grade: there are no thresholds. Handoffs still open are not counted; they show as waiting or left open.`;
+}
+
 const EXPLAIN_EDGE = { forward: 'flow-forward', report: 'flow-report', rework: 'rework' } as const;
 
 const PANEL_KEY = 'appyrig.handoffPanel';
@@ -451,11 +464,15 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
             <b className="amber">{flow.rework}</b> sent back
           </span>
         )}
-        <span data-explain="median-turnaround">
+        <span
+          data-explain="median-turnaround"
+          data-testid="flow-median"
+          title={medianSentence(flow.medianTurnaroundMin, flow.closedCount)}
+        >
           <b>
             {flow.medianTurnaroundMin === null ? '–' : `${flow.medianTurnaroundMin.toFixed(1)} min`}
           </b>{' '}
-          median handoff → close
+          median time, handover → close
         </span>
         <span data-testid="flow-bottleneck" data-explain="bottleneck">
           {flow.bottleneck ? (

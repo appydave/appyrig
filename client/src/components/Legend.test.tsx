@@ -63,7 +63,7 @@ describe('legend data (S1)', () => {
       'Solid arc above', // D1: a forward brief that skips a stage
       'Anything sent back to an earlier stage other than the Lead: rework, verdicts (PASS or FAIL), answers', // D2
       'Going back to the Lead', // D2: dashed = to the lead
-      'median handoff → close', // D5
+      'median time, handover → close', // D5, B3 wording
       'queue builds at QA',
       '▸ Consoles',
       'Dark chip = the rig shown',

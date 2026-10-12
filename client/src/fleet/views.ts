@@ -444,6 +444,8 @@ export interface FlowView {
   rework: number;
   /** Median minutes from handoff to close, over closed items up to `at`. */
   medianTurnaroundMin: number | null;
+  /** B3: how many closed handoffs the median is taken over. */
+  closedCount: number;
   /** The node holding the most fresh waiting items at `at` (the queue), if any. Stale items never count. */
   bottleneck: string | null;
 }
@@ -585,6 +587,7 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     total,
     rework,
     medianTurnaroundMin: median(closedTurn),
+    closedCount: closedTurn.length,
     bottleneck: top && top.waiting > 0 ? top.stage : null,
   };
 }

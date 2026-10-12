@@ -295,9 +295,9 @@ export const GLOSSARY: Record<string, Term> = {
     why: 'A research team (scout → checker) isn\'t a build team. Squashing it into "Builders" would hide who did what.',
   },
   'median-turnaround': {
-    term: 'Median handoff → close',
-    what: 'Half of all handoffs were closed faster than this, half slower.',
-    why: 'A short median means seats pick up work quickly. Long waits show up as waiting or left open.',
+    term: 'Median time, handover → close',
+    what: 'How long a handoff typically took, from the moment one seat handed it over to the moment it was closed (handed on, done or answered). Of the closed handoffs, half took less than this and half took more. "Median" means the middle value; it is not "medium" and not a grade: there are no thresholds.',
+    why: 'A short time means seats pick up and finish work quickly. Handoffs still open are not counted; they show as "waiting" or "left open" on the boxes instead.',
   },
   bottleneck: {
     term: 'Where the queue builds',

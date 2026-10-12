@@ -423,8 +423,9 @@ const FLOW: LegendSection[] = [
       },
       {
         swatch: 'stats',
-        mark: 'median handoff → close',
-        means: 'Typical minutes from an item being sent to being closed. "–" = none closed yet.',
+        mark: 'median time, handover → close',
+        means:
+          'The typical time from a handoff being handed over to it being closed: half the closed handoffs took less, half more (the median, the middle value; not a grade, no thresholds). Hover it for the sentence with the count. "–" = none closed yet.',
       },
       {
         swatch: 'stats',
