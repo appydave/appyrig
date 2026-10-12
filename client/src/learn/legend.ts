@@ -243,9 +243,9 @@ const RIG_PICKER: LegendSection = {
   entries: [
     {
       swatch: 'rig-chip',
-      mark: 'flicut-ab · M2 · 5 seats · 27 handoffs',
+      mark: 'Rig ▾ · flicut-ab · m2 ✕ stopped',
       means:
-        'One chip per rig: its machine, seats, and queue handoffs so far. Dark chip = the rig shown.',
+        'One compact chip per rig in one row (it scrolls sideways), always with its machine, so the same rig name on two machines never reads the same; running rigs first. Hover a chip for its seats, handoffs and summary. The Rig dropdown lists every rig. Dark chip = the rig shown.',
     },
     {
       swatch: 'rig-chip',
