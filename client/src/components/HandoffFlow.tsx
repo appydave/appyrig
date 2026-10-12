@@ -95,12 +95,24 @@ function edgePath(
 const EXPLAIN_EDGE = { forward: 'flow-forward', report: 'flow-report', rework: 'rework' } as const;
 
 const PANEL_KEY = 'appyrig.handoffPanel';
+/**
+ * Batch 1 · B1 (fb-0005: "hovering over something doesn't mean you want it"): the panel shows what
+ * you CLICK unless a viewer chose to have it follow the pointer. A stored choice is kept.
+ */
 function readPanelMode(): PanelMode {
   try {
-    return localStorage.getItem(PANEL_KEY) === 'pinned' ? 'pinned' : 'hover';
+    return localStorage.getItem(PANEL_KEY) === 'hover' ? 'hover' : 'pinned';
   } catch {
-    return 'hover';
+    return 'pinned';
   }
+}
+
+/** A floating card for what is under the pointer (B1): text only, never in the layout. */
+interface HoverCard {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
 }
 
 /**
@@ -143,7 +155,13 @@ const clock = (t: number) =>
  */
 export default function HandoffFlow({ machine, rig, now, socket, keys = true }: Props) {
   // S4: the handoff detail panel. `sel` names a line (edge key) and/or one item on it.
-  const [sel, setSel] = useState<{ edge: string | null; itemId: string | null } | null>(null);
+  // B1: `stage` names a box (a seat or role) instead of a line.
+  const [sel, setSel] = useState<{
+    edge: string | null;
+    itemId: string | null;
+    stage?: string | null;
+  } | null>(null);
+  const [card, setCard] = useState<HoverCard | null>(null);
   const [pinned, setPinned] = useState(false);
   const [mode, setMode] = useState<PanelMode>(readPanelMode);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
@@ -304,8 +322,26 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
   const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
   const edgeKey = (e: FlowEdge) => `${e.from}→${e.to}`;
+  const stageSelection = (stage: string, itemId: string | null): PanelSelection | null => {
+    const lines = flow.edges.filter((e) => e.from === stage || e.to === stage);
+    const seen = new Set<string>();
+    const items = lines
+      .flatMap((e) => e.items)
+      .filter((q) => (seen.has(q.id) ? false : (seen.add(q.id), true)))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    if (!items.length) return null;
+    const inN = lines.filter((e) => e.to === stage).reduce((n, e) => n + e.count, 0);
+    const outN = lines.filter((e) => e.from === stage).reduce((n, e) => n + e.count, 0);
+    return {
+      edge: `stage:${stage}`,
+      title: `${labelOf(stage)} · ${inN} in · ${outN} out`,
+      items,
+      itemId: itemId && items.some((q) => q.id === itemId) ? itemId : items[items.length - 1]!.id,
+    };
+  };
   const selection: PanelSelection | null = (() => {
     if (!sel) return null;
+    if (sel.stage) return stageSelection(sel.stage, sel.itemId);
     const edge =
       (sel.edge && flow.edges.find((e) => edgeKey(e) === sel.edge)) ||
       (sel.itemId && flow.edges.find((e) => e.items.some((q) => q.id === sel.itemId))) ||
@@ -322,14 +358,61 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
       itemId,
     };
   })();
-  const peek = (edge: string, itemId: string | null = null) => {
-    if (!pinned) setSel({ edge, itemId });
+  // B1: in "Follow pointer" mode the panel follows the pointer (it has a fixed size, so nothing
+  // moves); in "On click" mode the pointer only raises a floating card.
+  const cardAt = (
+    ev: { clientX: number; clientY: number } | null,
+    title: string,
+    lines: string[]
+  ) =>
+    // With Explain mode on, its card is the hover help: never float two cards at once.
+    setCard(
+      ev && !document.querySelector('[data-explain-on]')
+        ? { x: ev.clientX + 14, y: ev.clientY + 14, title, lines }
+        : null
+    );
+  const edgeCard = (e: FlowEdge, ev: { clientX: number; clientY: number } | null) => {
+    const last = e.items[e.items.length - 1];
+    cardAt(
+      ev,
+      `${labelOf(e.from)} → ${labelOf(e.to)} · ${e.count} handoff${e.count === 1 ? '' : 's'}`,
+      [...(last ? [`latest: ${last.summary ?? last.id}`] : []), 'Click to show it in the panel.']
+    );
+  };
+  const peek = (
+    edge: string,
+    itemId: string | null = null,
+    ev: { clientX: number; clientY: number } | null = null
+  ) => {
+    if (mode === 'hover' && !pinned) setSel({ edge, itemId });
+    else {
+      const e = flow.edges.find((x) => edgeKey(x) === edge);
+      if (e) edgeCard(e, ev);
+    }
+  };
+  const peekStage = (stage: string, ev: { clientX: number; clientY: number } | null = null) => {
+    if (mode === 'hover' && !pinned) setSel({ edge: null, itemId: null, stage });
+    else {
+      const s = flow.stages.find((x) => x.stage === stage);
+      const sl = stageSelection(stage, null);
+      cardAt(ev, s?.label ?? stage, [
+        ...(s?.seats.length ? [s.seats.map((x) => `${x.name} (${x.model})`).join(', ')] : []),
+        sl ? `${sl.title.split(' · ').slice(1).join(' · ')} · click to list them` : 'no handoffs',
+      ]);
+    }
   };
   const unpeek = () => {
+    setCard(null);
     if (!pinned && mode === 'hover') setSel(null);
   };
   const pin = (edge: string, itemId: string | null = null) => {
+    setCard(null);
     setSel({ edge, itemId });
+    setPinned(true);
+  };
+  const pinStage = (stage: string) => {
+    setCard(null);
+    setSel({ edge: null, itemId: null, stage });
     setPinned(true);
   };
   const chooseMode = (m: PanelMode) => {
@@ -484,7 +567,8 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
                 tabIndex={0}
                 role="button"
                 aria-label={`${labelOf(e.from)} to ${labelOf(e.to)}: ${e.count} handoff${e.count === 1 ? '' : 's'}. Enter pins the details.`}
-                onPointerEnter={() => peek(edgeKey(e))}
+                onPointerEnter={(ev) => peek(edgeKey(e), null, ev)}
+                onPointerMove={(ev) => mode !== 'hover' && edgeCard(e, ev)}
                 onPointerLeave={unpeek}
                 onFocus={() => peek(edgeKey(e))}
                 onBlur={unpeek}
@@ -518,7 +602,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
                     className={`pulse ${p.kind}`}
                     data-testid="flow-pulse"
                     data-item={q.id}
-                    onPointerEnter={() => peek(edgeKey(e), q.id)}
+                    onPointerEnter={(ev) => peek(edgeKey(e), q.id, ev)}
                     onClick={(ev) => {
                       ev.stopPropagation();
                       pin(edgeKey(e), q.id);
@@ -545,6 +629,22 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
                 key={s.stage}
                 data-testid="flow-stage"
                 data-stage={s.stage}
+                data-selected={sel?.stage === s.stage || undefined}
+                tabIndex={0}
+                role="button"
+                aria-label={`${s.label}: Enter lists its handoffs`}
+                onPointerEnter={(ev) => peekStage(s.stage, ev)}
+                onPointerMove={(ev) => mode !== 'hover' && peekStage(s.stage, ev)}
+                onPointerLeave={unpeek}
+                onFocus={() => peekStage(s.stage)}
+                onBlur={unpeek}
+                onClick={() => pinStage(s.stage)}
+                onKeyDown={(ev) => {
+                  if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    pinStage(s.stage);
+                  }
+                }}
                 data-waiting={s.waiting}
                 data-stale={s.stale}
                 data-explain={flow.mode === 'roles' ? `stage-${s.stage}` : 'seat'}
@@ -613,13 +713,33 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
           pinned={pinned}
           socket={socket}
           cache={bodies.current}
-          onPick={(id) => selection && setSel({ edge: selection.edge, itemId: id })}
+          onPick={(id) =>
+            sel &&
+            setSel(
+              sel.stage ? { ...sel, itemId: id } : { edge: selection?.edge ?? null, itemId: id }
+            )
+          }
           onMode={chooseMode}
           onClose={() => {
             setSel(null);
             setPinned(false);
           }}
         />
+        {card && (
+          <div
+            className="hover-card"
+            role="tooltip"
+            data-testid="flow-hover-card"
+            style={{ left: card.x, top: card.y }}
+          >
+            <b>{card.title}</b>
+            {card.lines.map((l, i) => (
+              <span key={i} style={{ display: 'block' }}>
+                {l}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {flow.mode === 'roles' && (

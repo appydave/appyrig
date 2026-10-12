@@ -94,8 +94,9 @@ export default function HandoffPanel({
   }, [itemId, machineId, socket, cache]);
 
   const modeToggle = (
-    <span className="handoff-mode" role="group" aria-label="Show handoff details">
-      {(['hover', 'pinned'] as const).map((m) => (
+    <span className="handoff-mode" role="group" aria-label="Panel shows">
+      <span className="label">Panel shows</span>
+      {(['pinned', 'hover'] as const).map((m) => (
         <button
           key={m}
           type="button"
@@ -104,22 +105,46 @@ export default function HandoffPanel({
           aria-pressed={mode === m}
           onClick={() => onMode(m)}
         >
-          {m === 'hover' ? 'On hover' : 'Pinned'}
+          {m === 'hover' ? 'Follow pointer' : 'On click'}
         </button>
       ))}
     </span>
   );
 
+  // B1 (fb-0007): the panel always says which way it works and what it is showing now.
+  const status = (
+    <p
+      className="handoff-status"
+      data-testid="handoff-status"
+      data-mode={mode}
+      data-pinned={pinned}
+    >
+      {mode === 'hover'
+        ? pinned
+          ? 'Kept because you clicked it. Esc or ✕ lets it follow the pointer again.'
+          : 'Follows the pointer: point at a line, a dot or a box. Click one to keep it here.'
+        : selection
+          ? 'Showing what you clicked. Click another line, dot or box, or press Esc to clear.'
+          : 'Click a line, a dot or a box to show its handoffs here. Pointing only shows a small card.'}
+    </p>
+  );
+
   if (!selection) {
     return (
-      <aside className="handoff-panel" data-testid="handoff-panel" data-empty="true">
+      <aside
+        className="handoff-panel"
+        data-testid="handoff-panel"
+        data-empty="true"
+        data-mode={mode}
+      >
         <header>
           <span className="label">Handoff details</span>
           {modeToggle}
         </header>
+        {status}
         <p className="quiet">
-          Hover or Tab to a line or a dot to see what was handed over: who, when, its state and the
-          full message. Click (or Enter) pins it; Esc closes.
+          Each line is work handed from one seat to another; a box is a seat (or a role). You see
+          who, when, its state and the full message. Tab and Enter work too; Esc closes.
         </p>
       </aside>
     );
@@ -132,11 +157,12 @@ export default function HandoffPanel({
       className="handoff-panel"
       data-testid="handoff-panel"
       data-pinned={pinned}
+      data-mode={mode}
       aria-label={`Handoffs ${selection.title}`}
     >
       <header>
         <span className="label">
-          {pinned ? 'Pinned · ' : ''}
+          {pinned && mode === 'hover' ? 'Kept · ' : ''}
           {selection.title}
         </span>
         {modeToggle}
@@ -150,6 +176,7 @@ export default function HandoffPanel({
           ✕ Esc
         </button>
       </header>
+      {status}
       {item && (
         <div className="handoff-head" data-testid="handoff-head">
           <b data-testid="handoff-title">{item.summary || item.tags.join(', ') || item.id}</b>

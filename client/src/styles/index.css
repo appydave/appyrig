@@ -3433,3 +3433,53 @@ g[data-testid='flow-edge'] {
   color: var(--ar-ink-muted);
   cursor: help;
 }
+
+/* ---------- batch 1 · B1: nothing moves under the pointer ---------- */
+/* The rig panel keeps one height whichever rig is chosen (fb-0002): the summary is cut at three
+   lines (the chip's tooltip and the Files viewer hold the rest). */
+.rig-info {
+  height: 9.5em;
+  overflow: hidden;
+}
+.rig-info p[data-testid='rig-info-summary'] {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The diagram never stretches with the row, and the details panel has one fixed height, so a
+   hover that fills the panel cannot move the drawing away from the pointer (fb-0005/0008/0009). */
+.flow-row {
+  align-items: flex-start;
+}
+.handoff-panel {
+  height: 420px;
+  max-height: none;
+  overflow: hidden;
+}
+.handoff-panel .handoff-list {
+  flex: 0 0 auto;
+}
+/* A floating hint for what is under the pointer: it never takes the pointer and never moves layout. */
+.hover-card {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  max-width: 320px;
+  background: var(--ar-ink);
+  color: var(--ar-canvas);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgb(52 45 45 / 0.25);
+}
+.hover-card b {
+  display: block;
+  font-size: 13px;
+}
+.handoff-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
