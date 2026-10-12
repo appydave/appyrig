@@ -3540,3 +3540,14 @@ g[data-testid='flow-edge'] {
 .rig-chip[aria-pressed='true'] .rig-state[data-state='asleep'] {
   color: var(--ar-idle-text);
 }
+
+/* ---------- batch 1 · B4: the flag button is reachable at every scroll position (R1) ---------- */
+.feedback-float {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 55; /* over the seat panel (50), under the keys overlay (60) and the viewers */
+  background: var(--ar-cta);
+  border-color: var(--ar-ink);
+  box-shadow: 0 4px 14px rgb(52 45 45 / 0.25);
+}
