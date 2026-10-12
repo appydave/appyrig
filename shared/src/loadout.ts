@@ -30,8 +30,17 @@ export const LOADOUT_LAYER_MAX_BYTES = 96 * 1024;
  * - `personal` — in `~/.claude/skills/`
  * - `plugin`   — a namespaced `plugin:skill` name
  * - `builtin`  — none of those: Claude Code's own and account-synced skills
+ * - `unplaced` — none of personal / plugin, and the seat's folder is gone (or not reported), so
+ *                role, repo and built-in cannot be told apart (QA D3: never counted as built-in)
  */
-export const SkillSourceSchema = z.enum(['role', 'repo', 'personal', 'plugin', 'builtin']);
+export const SkillSourceSchema = z.enum([
+  'role',
+  'repo',
+  'personal',
+  'plugin',
+  'builtin',
+  'unplaced',
+]);
 export type SkillSource = z.infer<typeof SkillSourceSchema>;
 
 export const LoadoutSkillSchema = z.strictObject({
@@ -115,6 +124,8 @@ export const SeatLoadoutSchema = z.strictObject({
     .nullable(),
   /** False when the seat cwd is not in a git repo: then nothing counts as tracked. */
   cwdIsGitRepo: z.boolean().nullable(),
+  /** False when the seat's folder no longer exists; null when the daemon reports none. */
+  cwdExists: z.boolean().nullable(),
   skills: z.array(LoadoutSkillSchema).max(LOADOUT_SKILLS_MAX),
   layers: z.array(LoadoutLayerSchema).max(6),
 });
@@ -167,6 +178,7 @@ export function loadoutCounts(skills: LoadoutSkill[]): LoadoutCounts {
     personal: 0,
     plugin: 0,
     builtin: 0,
+    unplaced: 0,
   };
   let shadowed = 0;
   const circlesOf = new Map<string, Set<SkillSource>>();

@@ -533,3 +533,38 @@ describe('a seat with several transcripts (ruling: one transcript, never mixed)'
     expect(newerSet(deltasOnly, full)).toBe(false);
   });
 });
+
+describe('QA D3: a seat whose folder is gone', () => {
+  it('never counts unplaceable names as built-in, and says the folder is gone', async () => {
+    const projects = tmp();
+    const home = tmp();
+    put(join(home, '.claude', 'skills', 'jump', 'SKILL.md'));
+    put(
+      join(projects, '-w', 's.jsonl'),
+      `${titleLine('gone@demo')}\n${listingLine(['recipe', 'jump', 'canvas:x', 'loop'])}\n`
+    );
+    const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
+    const reader = new LoadoutReader('m2', { projectsDir: projects, home, exec });
+    const p = await reader.next(
+      [{ id: 'gone@demo', rig: 'demo', runtime: 'claude-code', cwd: join(tmp(), 'deleted') }],
+      new Map(),
+      new Map()
+    );
+    const l = p!.loadouts[0]!;
+    expect(l).toMatchObject({ cwdExists: false, cwdIsGitRepo: null });
+    expect(Object.fromEntries(l.skills.map((s) => [s.name, s.source]))).toEqual({
+      recipe: 'unplaced',
+      jump: 'personal',
+      'canvas:x': 'plugin',
+      loop: 'unplaced',
+    });
+    expect(SeatLoadoutSchema.safeParse(l).success).toBe(true);
+  });
+
+  it('a folder that exists keeps the usual sorting (cwdExists true)', () => {
+    expect(
+      classifySkills(['loop'], { cwd: new Set(), tracked: new Set(), personal: new Set() })[0]
+        ?.source
+    ).toBe('builtin');
+  });
+});

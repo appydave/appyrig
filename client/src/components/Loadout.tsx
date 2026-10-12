@@ -39,6 +39,7 @@ export const SOURCE_LABEL: Record<SkillSource, string> = {
   personal: 'Personal',
   plugin: 'Plugin',
   builtin: 'Built-in / account',
+  unplaced: 'Role, repo or built-in',
 };
 
 const SOURCE_ABOUT: Record<SkillSource, string> = {
@@ -47,9 +48,11 @@ const SOURCE_ABOUT: Record<SkillSource, string> = {
   personal: 'In ~/.claude/skills on that machine.',
   plugin: 'From an installed plugin (plugin:skill).',
   builtin: "None of the above: Claude Code's own and account-synced skills.",
+  unplaced:
+    "Not personal or a plugin, and the seat's folder is gone, so OpenRig role, repo and built-in can't be told apart.",
 };
 
-const SOURCES: SkillSource[] = ['role', 'repo', 'personal', 'plugin', 'builtin'];
+const SOURCES: SkillSource[] = ['role', 'repo', 'personal', 'plugin', 'builtin', 'unplaced'];
 
 const LAYER_ABOUT: Record<LoadoutLayerId, string> = {
   culture: "The team's culture file, from the rig.yaml folder.",
@@ -98,6 +101,7 @@ function Venn({ skills }: { skills: LoadoutSkill[] }) {
         <rect x="4" y="4" width="412" height="292" rx="12" className="venn-box" />
         <text x="16" y="26" className="venn-box-label">
           Personal {c.bySource.personal} · Built-in / account {c.bySource.builtin}
+          {c.bySource.unplaced > 0 ? ` · Can't place ${c.bySource.unplaced}` : ''}
         </text>
         <circle cx="160" cy="130" r="82" className="venn-c" data-circle="role" />
         <circle cx="260" cy="130" r="82" className="venn-c" data-circle="repo" />
@@ -248,6 +252,7 @@ export default function Loadout({
       personal: [],
       plugin: [],
       builtin: [],
+      unplaced: [],
     };
     for (const s of loadout?.skills ?? []) m[s.source].push(s);
     for (const k of SOURCES) m[k].sort((a, b) => a.name.localeCompare(b.name));
@@ -336,15 +341,23 @@ export default function Loadout({
                 </span>
                 <span className="mono loadout-path" title={loadout.listing.transcript}>
                   {loadout.cwd ?? 'no folder reported'}
-                  {loadout.cwdIsGitRepo === false && ' · not a git repo, so nothing counts as repo'}
+                  {loadout.cwdExists === false &&
+                    " · seat folder no longer exists; role and repo can't be told apart"}
+                  {loadout.cwdExists === null &&
+                    " · no seat folder reported; role and repo can't be told apart"}
+                  {loadout.cwdExists !== false &&
+                    loadout.cwdIsGitRepo === false &&
+                    ' · not a git repo, so nothing counts as repo'}
                 </span>
               </section>
               <div className="loadout-grid">
                 <Venn skills={loadout.skills} />
                 <div className="loadout-groups">
-                  {SOURCES.map((s) => (
-                    <SourceGroup key={s} source={s} skills={bySource[s]} />
-                  ))}
+                  {SOURCES.filter((s) => s !== 'unplaced' || bySource.unplaced.length > 0).map(
+                    (s) => (
+                      <SourceGroup key={s} source={s} skills={bySource[s]} />
+                    )
+                  )}
                 </div>
               </div>
             </>

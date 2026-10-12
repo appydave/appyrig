@@ -733,6 +733,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
         transcript: '/t.jsonl',
       },
       cwdIsGitRepo: true,
+      cwdExists: true,
       skills: [{ name: 'recipe', source: 'repo', plugin: null, alsoIn: [] }],
       layers: [],
     };

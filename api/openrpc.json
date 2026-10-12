@@ -9843,6 +9843,12 @@
                           "null"
                         ]
                       },
+                      "cwdExists": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
                       "skills": {
                         "maxItems": 2000,
                         "type": "array",
@@ -9861,7 +9867,8 @@
                                 "repo",
                                 "personal",
                                 "plugin",
-                                "builtin"
+                                "builtin",
+                                "unplaced"
                               ]
                             },
                             "plugin": {
@@ -9884,7 +9891,8 @@
                                   "repo",
                                   "personal",
                                   "plugin",
-                                  "builtin"
+                                  "builtin",
+                                  "unplaced"
                                 ]
                               }
                             }
@@ -10000,6 +10008,7 @@
                       "status",
                       "listing",
                       "cwdIsGitRepo",
+                      "cwdExists",
                       "skills",
                       "layers"
                     ],

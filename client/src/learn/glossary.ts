@@ -48,7 +48,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   'view-accounts': {
     term: 'Accounts',
-    what: 'Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines draw on it.',
+    what: "Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines' cached profiles name it.",
     why: 'The account shown for a machine is its cached profile. The login a session actually uses can differ: Claude keeps two credential stores.',
   },
   learn: {

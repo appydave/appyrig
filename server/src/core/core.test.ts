@@ -401,6 +401,7 @@ describe('v1.5 · L1 — seat.loadout', () => {
       transcript: '/t.jsonl',
     },
     cwdIsGitRepo: true,
+    cwdExists: true,
     skills: [
       { name: 'recipe', source: 'repo', plugin: null, alsoIn: [] },
       { name: 'canvas:x', source: 'plugin', plugin: 'canvas', alsoIn: [] },

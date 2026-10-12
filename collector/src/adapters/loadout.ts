@@ -190,6 +190,11 @@ export interface SkillPlaces {
   tracked: Set<string>;
   /** Skill folders in `~/.claude/skills/`. */
   personal: Set<string>;
+  /**
+   * False when the seat's folder could not be scanned (gone, or not reported): then a name that is
+   * not personal or a plugin is `unplaced`, not `builtin`. Absent = true.
+   */
+  cwdKnown?: boolean;
 }
 
 /** Sorts each listed name by where it came from, and flags names that exist in more than one place. */
@@ -210,7 +215,7 @@ export function classifySkills(names: string[], places: SkillPlaces): LoadoutSki
     if (colon > 0) source = 'plugin';
     else if (places.cwd.has(name)) source = places.tracked.has(name) ? 'repo' : 'role';
     else if (places.personal.has(name)) source = 'personal';
-    else source = 'builtin';
+    else source = places.cwdKnown === false ? 'unplaced' : 'builtin';
     // A plugin skill is "also in" a plugin only when it is a different plugin's skill of that name.
     const otherPlugins =
       source === 'plugin' &&
@@ -492,16 +497,38 @@ export class LoadoutReader {
     const claude = seats.filter((s) => s.runtime === 'claude-code');
     const transcripts = await this.index.scan(new Set(claude.map((s) => s.id)));
     const personal = await skillFolders(join(this.home, '.claude', 'skills'));
-    const byCwd = new Map<string, Promise<{ places: SkillPlaces; isRepo: boolean }>>();
+    const byCwd = new Map<
+      string,
+      Promise<{ places: SkillPlaces; isRepo: boolean; exists: boolean }>
+    >();
     const placesFor = (cwd: string) => {
       let p = byCwd.get(cwd);
       if (!p) {
         p = (async () => {
+          const exists = await stat(cwd).then(
+            (st) => st.isDirectory(),
+            () => false
+          );
+          if (!exists)
+            return {
+              places: {
+                cwd: new Set<string>(),
+                tracked: new Set<string>(),
+                personal,
+                cwdKnown: false,
+              },
+              isRepo: false,
+              exists,
+            };
           const [dirs, git] = await Promise.all([
             skillFolders(join(cwd, '.claude', 'skills')),
             trackedSkills(this.exec, cwd),
           ]);
-          return { places: { cwd: dirs, tracked: git.tracked, personal }, isRepo: git.isRepo };
+          return {
+            places: { cwd: dirs, tracked: git.tracked, personal },
+            isRepo: git.isRepo,
+            exists,
+          };
         })();
         byCwd.set(cwd, p);
       }
@@ -526,6 +553,7 @@ export class LoadoutReader {
           status: 'not-claude',
           listing: null,
           cwdIsGitRepo: null,
+          cwdExists: null,
           skills: [],
           layers: [],
         };
@@ -545,6 +573,7 @@ export class LoadoutReader {
           cwd: new Set<string>(),
           tracked: new Set<string>(),
           personal,
+          cwdKnown: false,
         };
         loadout = {
           ...base,
@@ -560,7 +589,8 @@ export class LoadoutReader {
                 transcript: best.path,
               }
             : null,
-          cwdIsGitRepo: where ? where.isRepo : null,
+          cwdIsGitRepo: where?.exists ? where.isRepo : null,
+          cwdExists: where ? where.exists : null,
           skills: best ? classifySkills(best.listing.names, places) : [],
           layers: await readLayers(
             seat,

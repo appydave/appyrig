@@ -57,6 +57,7 @@ const LOADOUT: SeatLoadout = {
     transcript: '/t.jsonl',
   },
   cwdIsGitRepo: true,
+  cwdExists: true,
   skills: [
     { name: 'queue-handoff', source: 'role', plugin: null, alsoIn: [] },
     { name: 'recipe', source: 'repo', plugin: null, alsoIn: [] },
@@ -112,7 +113,14 @@ function show(a: Answer, onOpenLayers = vi.fn()) {
 describe('loadoutCounts', () => {
   it('counts by source, shadowing, and the Venn regions by name without plugin prefix', () => {
     const c = loadoutCounts(LOADOUT.skills);
-    expect(c.bySource).toEqual({ role: 1, repo: 2, personal: 1, plugin: 1, builtin: 1 });
+    expect(c.bySource).toEqual({
+      role: 1,
+      repo: 2,
+      personal: 1,
+      plugin: 1,
+      builtin: 1,
+      unplaced: 0,
+    });
     expect(c.shadowed).toBe(2);
     // mochaccino (repo) and mochaccino:mochaccino (plugin) are one name in two circles
     expect(c.regions).toEqual({ role: 1, repo: 1, 'plugin+repo': 1, '': 2 });
