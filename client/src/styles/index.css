@@ -809,7 +809,8 @@ a:hover {
 }
 .pod {
   background: var(--ar-surface);
-  border: 1px dashed var(--ar-line);
+  /* solid on purpose (C7-1): on the Map a broken outline means only "left open over 2 hours" */
+  border: 1px solid var(--ar-line);
   border-radius: 10px;
   padding: 8px 10px 10px;
 }
