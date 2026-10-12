@@ -102,6 +102,13 @@ export const SeatSchema = z.strictObject({
   cwd: z.string().nullable(),
   recoveryGuidance: z.string().nullable(),
   tail: SeatTailSchema.nullable(),
+  /**
+   * v1.5 · L1, the skill-count pill. Optional and additive (older collectors omit it; hub first).
+   * `skillCount` from the latest `skill_listing` in the seat's transcript: the skills Claude Code
+   * listed to the model (available, not used). null = the collector looked and found none (a Codex
+   * seat, or no listing yet); absent = this collector does not report it.
+   */
+  skillCount: z.number().int().nonnegative().nullable().optional(),
 });
 export type Seat = z.infer<typeof SeatSchema>;
 

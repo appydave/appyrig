@@ -154,6 +154,8 @@ export interface MapSeat {
   /** Open items older than STALE_MS: left behind, not waiting in a live queue. */
   stale: number;
   oldestStaleMs: number | null;
+  /** v1.5 · L1: the seat's skillCount for the pill (null: none; undefined: not reported). */
+  skills?: number | null;
 }
 
 export interface MapPod {
@@ -207,6 +209,7 @@ function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
     name: seatName(seat),
     model: modelChip(seat),
     pip: pipFor(seat, fm),
+    skills: seat.skillCount,
     ...c,
   };
 }

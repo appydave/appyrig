@@ -739,7 +739,13 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       status: 'ok',
       loadout: { skills: [{ name: 'recipe', source: 'repo' }] },
     });
-    // the snapshot keeps flowing alongside, unchanged
+    // the snapshot keeps flowing alongside; with the pill's optional skillCount it is accepted and served
+    const withPill = {
+      ...snap,
+      seats: snap.seats.map((s) => (s.id === seat ? { ...s, skillCount: 313 } : s)),
+    };
+    expect(await push(c, withPill)).toMatchObject({ ok: true });
+    expect(call(h, 'seat.get', { machine: 'm2', seat }).value.seat.skillCount).toBe(313);
     expect(await push(c, snap)).toMatchObject({ ok: true });
     expect(await emit(c, 'collector:loadout', { ...loadout, machineId: 'roamy' })).toMatchObject({
       failureMode: 'machine_mismatch',

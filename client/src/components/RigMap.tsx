@@ -1,10 +1,13 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { ago, PIP } from '../fleet/model.js';
 import type { MapEdge, RigMap as RigMapView } from '../fleet/views.js';
+import SkillPill from './SkillPill.js';
 
 interface Props {
   map: RigMapView | null;
   onOpen: (key: string) => void;
+  /** v1.5 · L1: the skill-count pill opens the seat's Loadout debug view. */
+  onOpenSkills?: (key: string) => void;
 }
 
 /** Highest an arc may rise above (or dip below) its row; .pod-seats pads for it. */
@@ -27,7 +30,7 @@ interface Placed {
  * Concept 3 · Rig Map: machines as lanes, pods as bands, seats as cards. The lines are real queue
  * traffic (who handed work to whom, and how often), drawn over the cards from measured positions.
  */
-export default function RigMap({ map, onOpen }: Props) {
+export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [placed, setPlaced] = useState<Placed[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -213,6 +216,12 @@ export default function RigMap({ map, onOpen }: Props) {
                         <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
                           <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
                         </span>
+                        {!s.key.startsWith('?/') && (
+                          <SkillPill
+                            count={s.skills}
+                            onOpen={onOpenSkills ? () => onOpenSkills(s.key) : undefined}
+                          />
+                        )}
                         {s.open > 0 && (
                           <span className="node-wait" data-explain="waiting">
                             {s.open} waiting

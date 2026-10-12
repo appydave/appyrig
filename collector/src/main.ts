@@ -7,6 +7,7 @@ import {
   LoadoutReader,
   RigFilesReader,
   SchemaReader,
+  withSkillCounts,
   type LoadoutSeat,
 } from './adapters/index.js';
 import { buildSnapshot } from './builder.js';
@@ -45,7 +46,8 @@ function main() {
       knownSeats = new Set(own.map((s) => s.id));
       openrigSeats = own.map((s) => ({ id: s.id, rig: s.rig, runtime: s.runtime, cwd: s.cwd }));
       queueOrder = snap.queue.map((q) => q.id);
-      return snap;
+      // v1.5 · L1: the skill-count pill, from the loadout reader's latest scan.
+      return { ...snap, seats: withSkillCounts(snap.seats, loadouts.skillCounts()) };
     },
     onConnect: () => {
       handoffs.reset();

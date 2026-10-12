@@ -98,6 +98,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'The files that define a rig, found next to its rig.yaml: the spec itself, plus mission, culture, brief, report and LEARNED notes. YAML is coloured and can be folded; Markdown is shown formatted.',
     why: 'The spec holds fields the diagrams do not show (models, working folders, edges). The notes say what the team was told to do and what it learned. Read-only: AppyRig never changes them.',
   },
+  'skill-pill': {
+    term: 'Skills',
+    what: "How many skills Claude Code listed to this session's model, from the latest skill listing in its own transcript. It counts what was available, not what was used. A dash means no count: a Codex seat, no listing yet, or an older collector.",
+    why: 'Click it for the Debug view: each skill sorted by where it came from (OpenRig role, the repo, personal, a plugin, built-in) and the prompt files the seat started with.',
+  },
 
   // ---------------------------------------------------------------- machines and sources
   machine: {

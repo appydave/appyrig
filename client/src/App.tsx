@@ -298,6 +298,16 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     const back = debugOpener.current;
     if (back?.isConnected) back.focus();
   }, []);
+  // v1.5 · L1: a skill-count pill opens that seat, with its Debug view on top.
+  const openSkills = useCallback(
+    (key: string) => {
+      const found = findSeat(state.machines, key);
+      if (!found) return;
+      open(key);
+      setDebugFor({ machineId: found.machine.machine.id, seatId: found.seat.id });
+    },
+    [state.machines, open]
+  );
   const openLayers = useCallback((files: PresetFile[], initialId: string) => {
     const active = document.activeElement;
     layersOpener.current =
@@ -556,6 +566,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           hubConnected={hubConnected}
           received={state.received}
           onOpen={open}
+          onOpenSkills={openSkills}
           keys={!focusTile && !overlay}
           hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
           onShow={toggleMachine}
@@ -570,7 +581,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             onOpenFiles={(r) => openFiles(r.machineId, r.name)}
           />
           {view === 'map' ? (
-            <RigMap map={rigMap} onOpen={open} />
+            <RigMap map={rigMap} onOpen={open} onOpenSkills={openSkills} />
           ) : (
             <HandoffFlow
               machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}

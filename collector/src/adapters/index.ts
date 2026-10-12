@@ -27,6 +27,7 @@ export {
   readLayers,
   skillFolders,
   trackedSkills,
+  withSkillCounts,
   type LoadoutSeat,
   type PendingLoadouts,
 } from './loadout.js';

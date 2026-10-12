@@ -398,6 +398,8 @@ export class LoadoutReader {
   private readonly now: () => Date;
   private readonly ttlMs: number;
   private lastScan = 0;
+  /** seat → skillCount from the latest scan (null: Codex, or no listing). Kept for the snapshot's pill. */
+  private counts = new Map<string, number | null>();
 
   constructor(
     private readonly machineId: string,
@@ -408,6 +410,11 @@ export class LoadoutReader {
     this.exec = opts.exec;
     this.now = opts.now ?? (() => new Date());
     this.ttlMs = opts.ttlMs ?? 30_000;
+  }
+
+  /** The latest skillCount per seat this reader has scanned (the pill); empty before the first scan. */
+  skillCounts(): Map<string, number | null> {
+    return this.counts;
   }
 
   /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
@@ -444,6 +451,7 @@ export class LoadoutReader {
 
     const out: SeatLoadout[] = [];
     const sigs = new Map<string, string>();
+    const counts = new Map<string, number | null>();
     for (const seat of seats) {
       const base = {
         machineId: this.machineId,
@@ -502,6 +510,7 @@ export class LoadoutReader {
           ),
         };
       }
+      counts.set(seat.id, loadout.listing?.skillCount ?? null);
       const sig = createHash('sha1')
         .update(JSON.stringify({ ...loadout, collectedAt: '' }))
         .digest('hex');
@@ -509,10 +518,22 @@ export class LoadoutReader {
       out.push(loadout);
       sigs.set(seat.id, sig);
     }
+    this.counts = counts;
     if (out.length === 0) return null;
     return {
       loadouts: out,
       markSent: () => sigs.forEach((sig, seat) => this.sent.set(seat, sig)),
     };
   }
+}
+
+/**
+ * The pill: each scanned seat gets its `skillCount` (or null). A seat the reader has not scanned
+ * yet is left without the field, which says "not reported", never 0.
+ */
+export function withSkillCounts<T extends { id: string }>(
+  seats: T[],
+  counts: Map<string, number | null>
+): (T & { skillCount?: number | null })[] {
+  return seats.map((s) => (counts.has(s.id) ? { ...s, skillCount: counts.get(s.id)! } : s));
 }

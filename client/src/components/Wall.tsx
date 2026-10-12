@@ -15,6 +15,7 @@ import {
   contentTail,
   type GroupBy,
 } from '../fleet/model.js';
+import SkillPill from './SkillPill.js';
 import AnsiText from './AnsiText.js';
 import { rigTitle } from './RigInfo.js';
 import { isShortcutBlocked } from '../lib/keys.js';
@@ -124,9 +125,18 @@ interface TileProps {
   seat: Seat;
   freshLabel: string;
   onOpen: (key: string) => void;
+  /** v1.5 · L1: the skill-count pill opens the seat's Loadout debug view. */
+  onOpenSkills?: (key: string) => void;
 }
 
-const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, onOpen }: TileProps) {
+const SeatTile = memo(function SeatTile({
+  tileKey,
+  machine,
+  seat,
+  freshLabel,
+  onOpen,
+  onOpenSkills,
+}: TileProps) {
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
@@ -176,6 +186,10 @@ const SeatTile = memo(function SeatTile({ tileKey, machine, seat, freshLabel, on
           {PIP[pip].label}
         </span>
         <span className="tile-where">{machine.machine.label}</span>
+        <SkillPill
+          count={seat.skillCount}
+          onOpen={onOpenSkills ? () => onOpenSkills(tileKey) : undefined}
+        />
       </span>
       {lines.length > 0 && seat.tail ? (
         <AnsiText className="tile-term" testId="seat-tail" lines={lines} ansi={seat.tail.ansi} />
@@ -206,6 +220,8 @@ interface WallProps {
   hubConnected: boolean;
   received: boolean;
   onOpen: (key: string) => void;
+  /** v1.5 · L1: the skill-count pill opens the seat's Loadout debug view. */
+  onOpenSkills?: (key: string) => void;
   /** S2: arrow keys move between tiles. Off while Focus or an overlay owns the keyboard. */
   keys?: boolean;
   /** S3: machines the viewer filtered out, named on the Wall so nothing vanishes silently. */
@@ -220,6 +236,7 @@ export default function Wall({
   hubConnected,
   received,
   onOpen,
+  onOpenSkills,
   keys = true,
   hidden = [],
   onShow,
@@ -387,7 +404,11 @@ export default function Wall({
                         const pip = pipFor(t.seat, t.machine);
                         return (
                           <span key={t.key} data-pip={pip}>
-                            <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}
+                            <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}{' '}
+                            <SkillPill
+                              count={t.seat.skillCount}
+                              onOpen={onOpenSkills ? () => onOpenSkills(t.key) : undefined}
+                            />
                           </span>
                         );
                       })}
@@ -462,6 +483,7 @@ export default function Wall({
                     seat={t.seat}
                     freshLabel={fresh}
                     onOpen={onOpen}
+                    onOpenSkills={onOpenSkills}
                   />
                 ))}
               </div>
@@ -482,7 +504,11 @@ export default function Wall({
                       title={`${seatName(t.seat)} · ${PIP[pip].label}: open`}
                       onClick={() => onOpen(t.key)}
                     >
-                      <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}
+                      <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}{' '}
+                      <SkillPill
+                        count={t.seat.skillCount}
+                        onOpen={onOpenSkills ? () => onOpenSkills(t.key) : undefined}
+                      />
                     </button>
                   );
                 })}

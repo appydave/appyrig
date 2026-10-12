@@ -17,6 +17,7 @@ import {
 } from '../fleet/model.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 import FocusTerminal from './FocusTerminal.js';
+import SkillPill from './SkillPill.js';
 
 type Mode = 'terminal' | 'rich';
 
@@ -244,6 +245,10 @@ export default function Focus({
           {PIP[pip].glyph} {PIP[pip].label}
           {pip === 'blocked' ? ` · ${blockedBecause(seat)}` : ''}
         </span>
+        <SkillPill
+          count={seat.skillCount}
+          onOpen={onOpenDebug ? () => onOpenDebug(machine.machine.id, seat.id) : undefined}
+        />
         <span className="fresh">{fresh.label}</span>
         <span className="controls">
           <button

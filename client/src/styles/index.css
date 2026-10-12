@@ -3401,3 +3401,27 @@ g[data-testid='flow-edge'] {
 .files-sub {
   overflow-wrap: anywhere;
 }
+
+/* v1.5 L1: the skill-count pill on every session (available skills; "—" when none) */
+.skill-pill {
+  display: inline-block;
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 0 7px;
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.skill-pill:hover {
+  border-color: var(--ar-ink);
+  color: var(--ar-ink);
+}
+.skill-pill[data-skills='none'],
+.skill-pill[data-skills='unreported'] {
+  cursor: default;
+  opacity: 0.75;
+}

@@ -19,6 +19,7 @@ import {
   readLayers,
   skillFolders,
   trackedSkills,
+  withSkillCounts,
   type Exec,
   type LoadoutSeat,
 } from './loadout.js';
@@ -385,5 +386,48 @@ describe('LoadoutReader', () => {
     changed!.markSent();
     reader.reset();
     expect((await reader.next(seats, new Map(), new Map()))?.loadouts).toHaveLength(2);
+  });
+});
+
+describe('the skill-count pill', () => {
+  it('the reader keeps the latest skillCount per scanned seat: a number, or null for Codex / no listing', async () => {
+    const projects = tmp();
+    put(
+      join(projects, '-w', 's.jsonl'),
+      `${titleLine('a@demo')}\n${listingLine(['x', 'y', 'z'])}\n`
+    );
+    const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
+    const reader = new LoadoutReader('m2', { projectsDir: projects, home: tmp(), exec });
+    expect(reader.skillCounts().size).toBe(0);
+    await reader.next(
+      [
+        { id: 'a@demo', rig: 'demo', runtime: 'claude-code', cwd: null },
+        { id: 'b@demo', rig: 'demo', runtime: 'claude-code', cwd: null },
+        { id: 'c@demo', rig: 'demo', runtime: 'codex', cwd: null },
+      ],
+      new Map(),
+      new Map()
+    );
+    expect([...reader.skillCounts()]).toEqual([
+      ['a@demo', 3],
+      ['b@demo', null],
+      ['c@demo', null],
+    ]);
+  });
+
+  it('withSkillCounts adds the field only to scanned seats (absent = not reported, never 0)', () => {
+    const out = withSkillCounts(
+      [{ id: 'a' }, { id: 'b' }, { id: 'tmux-only' }],
+      new Map<string, number | null>([
+        ['a', 313],
+        ['b', null],
+      ])
+    );
+    expect(out).toEqual([
+      { id: 'a', skillCount: 313 },
+      { id: 'b', skillCount: null },
+      { id: 'tmux-only' },
+    ]);
+    expect('skillCount' in out[2]!).toBe(false);
   });
 });
