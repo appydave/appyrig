@@ -3782,3 +3782,19 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
 .rig-picker-bar .rig-chip > b {
   display: inline;
 }
+
+/* ---------- batch 2 · C7: the colours/marks/lines section spans the legend, in columns ---------- */
+.legend-styles {
+  grid-column: 1 / -1;
+}
+.legend-styles ul {
+  columns: 3 280px;
+  column-gap: 24px;
+}
+.legend-styles li {
+  break-inside: avoid;
+  margin-bottom: 6px;
+}
+.legend-styles li {
+  display: block;
+}

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { legendFor, VIEW_TITLE, type LegendScreen, type Swatch } from '../learn/legend.js';
+import { stylesFor } from '../learn/styleRegistry.js';
 
 interface Props {
   view: LegendScreen;
@@ -273,6 +274,21 @@ export default function Legend({ view, onClose }: Props) {
             </ul>
           </section>
         ))}
+        {/* C7: every colour, mark and line style this screen uses, from the one style registry. */}
+        {stylesFor(view).length > 0 && (
+          <section className="legend-section legend-styles" data-testid="legend-styles">
+            <h3 className="label">Colours, marks and line styles</h3>
+            <ul>
+              {stylesFor(view).map((st) => (
+                <li key={st.id} data-testid="legend-style" data-style={st.id}>
+                  <span>
+                    <b>{st.look}</b> {st.means}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </aside>
   );
