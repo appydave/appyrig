@@ -3798,3 +3798,12 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
 .legend-styles li {
   display: block;
 }
+
+/* ---------- batch 2 · C6-A: Map routing room (levels) and the left gutter ---------- */
+.rigmap-canvas {
+  padding-left: var(--gutter, 0px);
+}
+.pod-seats {
+  padding-top: var(--arc-top, 58px);
+  padding-bottom: var(--arc-bottom, 58px);
+}

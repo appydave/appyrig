@@ -25,8 +25,15 @@ interface Card {
   lines: string[];
 }
 
-/** Highest an arc may rise above (or dip below) its row; .pod-seats pads for it. */
-const ARC_MAX = 64;
+/** C6-A: the lowest arc's height above (or below) the row, and the step between stacked arcs. */
+const ARC_BASE = 16;
+const ARC_STEP = 11;
+/** Room a label needs above its arc's peak. */
+const ARC_LABEL = 14;
+/** The least room above and below a row of cards, arcs or not. */
+const ARC_MIN = 24;
+/** C6-A: the gutter left of every lane that lines between lanes run down. */
+const GUTTER = 26;
 /** Each further outside lane steps right, so a line to the rig never runs through another card. */
 const LANE_STEP = 240;
 
@@ -34,7 +41,14 @@ const LANE_STEP = 240;
 const bez = (t: number, p0: number, p1: number, p2: number, p3: number) =>
   (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3;
 
-interface Placed {
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface Placed {
   edge: MapEdge;
   d: string;
   lx: number;
@@ -75,6 +89,116 @@ export function spreadLabels<T extends { lx: number; ly: number; c: Placed['c'] 
   });
 }
 
+/** What the router needs to know about the measured layout (content coordinates). */
+export interface MapLook {
+  card: (key: string) => Box | null;
+  pod: (key: string) => Box | null;
+  lane: (key: string) => string;
+}
+
+/**
+ * C6-A: where every line goes, from measured boxes. Pure, so it can be tested without a browser:
+ * same-row arcs packed into levels (labels at their own peaks), other lines down the left gutter
+ * via the corridors below the pods. Returns the room each lane needs above and below its cards.
+ */
+export function routeLines(
+  mapEdges: MapEdge[],
+  look: MapLook
+): { placed: Placed[]; roomTop: Map<string, number>; roomBottom: Map<string, number> } {
+  const out: Placed[] = [];
+  const edges = mapEdges.filter((e) => !e.self);
+
+  // C6-A, same row: arcs are stacked by span, each at its own height (the shortest lowest), so
+  // they don't bundle and each count label sits at its own arc's peak. Left-to-right go over the
+  // row, right-to-left under it.
+  type Arc = { edge: MapEdge; a: Box; b: Box; over: boolean; span: number; row: string };
+  const arcs: Arc[] = [];
+  const routed: { edge: MapEdge; a: Box; b: Box }[] = [];
+  for (const edge of edges) {
+    const a = look.card(edge.from);
+    const b = look.card(edge.to);
+    if (!a || !b) continue;
+    if (Math.abs(a.y - b.y) < 20) {
+      const over = b.x > a.x;
+      arcs.push({
+        edge,
+        a,
+        b,
+        over,
+        span: Math.abs(b.x - a.x),
+        row: `${Math.round(a.y / 10)}:${over}`,
+      });
+    } else routed.push({ edge, a, b });
+  }
+  // Pack arcs into levels: an arc takes the lowest level where it overlaps no arc already there
+  // (sideways, with a margin). Nested or overlapping arcs stack; disjoint ones share a level.
+  // Room is counted per lane, above and below separately, so only rows that stack grow.
+  const roomTop = new Map<string, number>();
+  const roomBottom = new Map<string, number>();
+  const rows = new Map<string, Arc[]>();
+  for (const arc of arcs) rows.set(arc.row, [...(rows.get(arc.row) ?? []), arc]);
+  for (const list of rows.values()) {
+    list.sort((x, y) => x.span - y.span);
+    const levels: [number, number][][] = [];
+    for (const arc of list) {
+      const { a, b, over, edge } = arc;
+      const lo = Math.min(a.x, b.x) + Math.min(a.w, b.w) / 2 - 16;
+      const hi = Math.max(a.x, b.x) + Math.min(a.w, b.w) / 2 + 16;
+      let level = levels.findIndex((iv) => iv.every(([l, h]) => hi < l || lo > h));
+      if (level === -1) {
+        level = levels.length;
+        levels.push([]);
+      }
+      levels[level]!.push([lo, hi]);
+      const lift = (over ? -1 : 1) * (ARC_BASE + level * ARC_STEP);
+      const need = ARC_BASE + level * ARC_STEP + ARC_LABEL;
+      const lane = look.lane(edge.from);
+      const side = over ? roomTop : roomBottom;
+      side.set(lane, Math.max(side.get(lane) ?? 0, need));
+      const sx = a.x + a.w / 2 + (over ? 12 : -12);
+      const ex = b.x + b.w / 2 + (over ? -12 : 12);
+      const sy = over ? a.y : a.y + a.h;
+      const ey = over ? b.y : b.y + b.h;
+      // a cubic with both handles at `lift` peaks at 3/4 of it
+      const peak = (lift * 4) / 3;
+      out.push({
+        edge,
+        d: `M${sx},${sy} C${sx},${sy + peak} ${ex},${ey + peak} ${ex},${ey}`,
+        lx: (sx + ex) / 2,
+        ly: (sy + ey) / 2 + lift,
+        c: [sx, sy, sx, sy + peak, ex, ey + peak, ex, ey],
+      });
+    }
+  }
+
+  // C6-A, another row or lane: never straight across. Out of the card's bottom, along the
+  // corridor just below its pod (between pod rows, or above the lane's bottom edge), down or up
+  // the gutter left of every lane, along the corridor below the target's pod, and up into the
+  // target's bottom.
+  routed.forEach(({ edge, a, b }, k) => {
+    const pa = look.pod(edge.from);
+    const pb = look.pod(edge.to);
+    if (!pa || !pb) return;
+    // Always via the cards' bottoms and the corridors below their pods: a pod's heading sits at
+    // its top and spans its width, so a line coming in from above would cross it.
+    const gx = GUTTER - 6 - (k % 4) * 4;
+    const sx = a.x + a.w - 22;
+    const ex = b.x + b.w - 22;
+    const sy = a.y + a.h;
+    const ey = b.y + b.h;
+    const c1 = pa.y + pa.h + 7;
+    const c2 = pb.y + pb.h + 7;
+    out.push({
+      edge,
+      d: `M${sx},${sy} L${sx},${c1} L${gx},${c1} L${gx},${c2} L${ex},${c2} L${ex},${ey}`,
+      lx: gx + 12,
+      ly: (c1 + c2) / 2,
+      c: [gx + 12, c1 + 12, gx + 12, c1 + 12, gx + 12, c2 - 12, gx + 12, c2 - 12],
+    });
+  });
+  return { placed: out, roomTop, roomBottom };
+}
+
 /**
  * Concept 3 · Rig Map: machines as lanes, pods as bands, seats as cards. The lines are real queue
  * traffic (who handed work to whom, and how often), drawn over the cards from measured positions.
@@ -83,6 +207,12 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
   const box = useRef<HTMLDivElement>(null);
   const [placed, setPlaced] = useState<Placed[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  /** C6-A: per lane, the room its stacked arcs need above and below the cards (JSON, for a stable compare). */
+  const [arcRoom, setArcRoom] = useState('{"top":{},"bottom":{}}');
+  const rooms = JSON.parse(arcRoom) as {
+    top: Record<string, number>;
+    bottom: Record<string, number>;
+  };
   // C6a: lines and boxes answer hover (a floating card) and click (a details drawer for a line).
   const [card, setCard] = useState<Card | null>(null);
   const [pinned, setPinned] = useState<{ edge: string; itemId: string | null } | null>(null);
@@ -121,49 +251,39 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
           h: r.height,
         };
       };
-      const out: Placed[] = [];
-      map.edges
-        .filter((e) => !e.self)
-        .forEach((edge) => {
-          const a = rect(edge.from);
-          const b = rect(edge.to);
-          if (!a || !b) return;
-          const acx = a.x + a.w / 2;
-          const bcx = b.x + b.w / 2;
-          if (Math.abs(a.y - b.y) < 20) {
-            // Same row: left→right arcs over the top, right→left arcs under, so a pair never overlaps.
-            const over = bcx > acx;
-            const sy = over ? a.y : a.y + a.h;
-            const ey = over ? b.y : b.y + b.h;
-            const sx = acx + (over ? 12 : -12);
-            const ex = bcx + (over ? -12 : 12);
-            const lift = (over ? -1 : 1) * Math.min(ARC_MAX, 22 + Math.abs(ex - sx) * 0.12);
-            out.push({
-              edge,
-              d: `M${sx},${sy} C${sx},${sy + lift} ${ex},${ey + lift} ${ex},${ey}`,
-              lx: (sx + ex) / 2,
-              ly: (sy + ey) / 2 + lift * 0.75,
-              c: [sx, sy, sx, sy + lift, ex, ey + lift, ex, ey],
-            });
-            return;
-          }
-          // Different rows (another pod line or another machine): leave from the facing edge.
-          const down = b.y > a.y;
-          const sx = acx + (down ? 10 : -10);
-          const ex = bcx + (down ? 10 : -10);
-          const sy = down ? a.y + a.h : a.y;
-          const ey = down ? b.y : b.y + b.h;
-          const mid = (sy + ey) / 2;
-          // The label sits near the start, clear of the lane headings halfway down.
-          const t = 0.22;
-          out.push({
-            edge,
-            d: `M${sx},${sy} C${sx},${mid} ${ex},${mid} ${ex},${ey}`,
-            lx: bez(t, sx, sx, ex, ex) + 10,
-            ly: bez(t, sy, mid, mid, ey),
-            c: [sx, sy, sx, mid, ex, mid, ex, ey],
-          });
-        });
+      const boxOf = (n: Element) => {
+        const r = n.getBoundingClientRect();
+        return {
+          x: r.left - base.left + el.scrollLeft,
+          y: r.top - base.top + el.scrollTop,
+          w: r.width,
+          h: r.height,
+        };
+      };
+      const podOf = (key: string) => {
+        const n = el.querySelector<HTMLElement>(`[data-node-key="${CSS.escape(key)}"]`);
+        const pod = n?.closest('.pod');
+        return pod ? boxOf(pod) : null;
+      };
+      const laneOf = (key: string) =>
+        el
+          .querySelector<HTMLElement>(`[data-node-key="${CSS.escape(key)}"]`)
+          ?.closest('.lane')
+          ?.getAttribute('data-lane') ?? '';
+      const {
+        placed: out,
+        roomTop,
+        roomBottom,
+      } = routeLines(map.edges, {
+        card: rect,
+        pod: podOf,
+        lane: laneOf,
+      });
+      const nextRoom = JSON.stringify({
+        top: Object.fromEntries(roomTop),
+        bottom: Object.fromEntries(roomBottom),
+      });
+      setArcRoom((r) => (r === nextRoom ? r : nextRoom));
       setPlaced(spreadLabels(out));
       setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
@@ -244,7 +364,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
         · line width = how often one seat handed work to another · amber = still waiting · dashed =
         left open over 2 h
       </p>
-      <div className="rigmap-canvas" ref={box}>
+      <div className="rigmap-canvas" ref={box} style={{ ['--gutter' as string]: `${GUTTER}px` }}>
         <svg
           className="rigmap-edges"
           width={size.w}
@@ -312,6 +432,11 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
           <div
             className="lane"
             key={lane.machineId}
+            data-lane={lane.machineId}
+            style={{
+              ['--arc-top' as string]: `${Math.max(ARC_MIN, rooms.top[lane.machineId] ?? 0)}px`,
+              ['--arc-bottom' as string]: `${Math.max(ARC_MIN, rooms.bottom[lane.machineId] ?? 0)}px`,
+            }}
             data-testid="rig-map-lane"
             data-liveness={lane.liveness}
           >
