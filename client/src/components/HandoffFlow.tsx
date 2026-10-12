@@ -342,14 +342,15 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
       .flatMap((e) => e.items)
       .filter((q) => (seen.has(q.id) ? false : (seen.add(q.id), true)))
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-    if (!items.length) return null;
     const inN = lines.filter((e) => e.to === stage).reduce((n, e) => n + e.count, 0);
     const outN = lines.filter((e) => e.from === stage).reduce((n, e) => n + e.count, 0);
     return {
       edge: `stage:${stage}`,
       title: `${labelOf(stage)} · ${inN} in · ${outN} out`,
       items,
-      itemId: itemId && items.some((q) => q.id === itemId) ? itemId : items[items.length - 1]!.id,
+      // QA B1-1: a box with no handoffs still answers a click, saying so (never the idle text).
+      itemId:
+        itemId && items.some((q) => q.id === itemId) ? itemId : (items[items.length - 1]?.id ?? ''),
     };
   };
   const selection: PanelSelection | null = (() => {
@@ -410,7 +411,9 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
       const sl = stageSelection(stage, null);
       cardAt(ev, s?.label ?? stage, [
         ...(s?.seats.length ? [s.seats.map((x) => `${x.name} (${x.model})`).join(', ')] : []),
-        sl ? `${sl.title.split(' · ').slice(1).join(' · ')} · click to list them` : 'no handoffs',
+        sl && sl.items.length
+          ? `${sl.title.split(' · ').slice(1).join(' · ')} · click to list them`
+          : 'no handoffs through the queue',
       ]);
     }
   };
@@ -470,7 +473,11 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
           title={medianSentence(flow.medianTurnaroundMin, flow.closedCount)}
         >
           <b>
-            {flow.medianTurnaroundMin === null ? '–' : `${flow.medianTurnaroundMin.toFixed(1)} min`}
+            {flow.medianTurnaroundMin === null
+              ? '–'
+              : flow.medianTurnaroundMin < 1
+                ? `${Math.round(flow.medianTurnaroundMin * 60)} s`
+                : `${flow.medianTurnaroundMin.toFixed(1)} min`}
           </b>{' '}
           median time, handover → close
         </span>

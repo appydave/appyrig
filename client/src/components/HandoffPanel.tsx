@@ -150,6 +150,40 @@ export default function HandoffPanel({
     );
   }
 
+  if (selection.items.length === 0) {
+    return (
+      <aside
+        className="handoff-panel"
+        data-testid="handoff-panel"
+        data-pinned={pinned}
+        data-mode={mode}
+        data-none="true"
+        aria-label={`Handoffs ${selection.title}`}
+      >
+        <header>
+          <span className="label" data-testid="handoff-none-title">
+            {selection.title}: no handoffs through the queue
+          </span>
+          {modeToggle}
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="handoff-close"
+            aria-label="Close handoff details"
+            onClick={onClose}
+          >
+            ✕ Esc
+          </button>
+        </header>
+        {status}
+        <p className="quiet" data-testid="handoff-none">
+          No handoffs through the queue to or from this seat. It may still talk to others directly
+          (typed messages), which the queue does not record.
+        </p>
+      </aside>
+    );
+  }
+
   const item = selection.items.find((q) => q.id === selection.itemId) ?? null;
   const v = got.state === 'ok' ? got.value : null;
   return (
