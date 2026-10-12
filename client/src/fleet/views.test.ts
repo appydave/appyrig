@@ -19,6 +19,7 @@ import {
   rigQueue,
   stageOf,
   STALE_MS,
+  rigState,
 } from './views.js';
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
@@ -366,5 +367,21 @@ describe('Replay consoles', () => {
     const fm = withAccount(m2(), undefined);
     fm.snapshot.queue = [items[2]!, items[0]!, items[1]!];
     expect(replaySteps(fm, 'x').map((i) => i.id)).toEqual(['1', '2', '3']);
+  });
+});
+
+describe('B2 rigState (fb-0001): follows rig ps', () => {
+  it('asleep machine > stopped > attention (blocked or ATTN) > working > idle', () => {
+    expect(rigState('asleep', 'running', 0, ['working'])).toBe('asleep');
+    expect(rigState('live', 'stopped', 2, ['blocked'])).toBe('stopped');
+    expect(rigState('live', 'running', 1, ['idle'])).toBe('attention');
+    expect(rigState('live', 'running', 0, ['working', 'blocked'])).toBe('attention');
+    expect(rigState('live', 'running', 0, ['idle', 'working'])).toBe('working');
+    expect(rigState('live', 'running', 0, ['idle', 'stopped'])).toBe('idle');
+    expect(rigState('live', 'running', 0, [])).toBe('idle');
+  });
+
+  it('every listed rig carries a state', () => {
+    for (const r of listRigs([fleetMachine(snapshot('m2'))])) expect(r.state).toMatch(/\w/);
   });
 });

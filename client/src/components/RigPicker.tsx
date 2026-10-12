@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { RigRef } from '../fleet/views.js';
+import { RIG_STATE, type RigRef } from '../fleet/views.js';
 import RigInfo, { rigTitle } from './RigInfo.js';
 import { useStableOrder } from '../lib/stableOrder.js';
 
@@ -51,14 +51,19 @@ export default function RigPicker({ rigs, selected, onSelect, onOpenFiles }: Pro
             data-testid="rig-chip"
             data-rig-key={r.key}
             data-status={r.status}
-            title={rigTitle(r)}
+            data-state={r.state}
+            title={`${RIG_STATE[r.state].glyph} ${RIG_STATE[r.state].label}\n${rigTitle(r)}`}
             onClick={() => onSelect(r.key)}
           >
-            <b data-testid="rig-chip-name">{r.displayName ?? r.name}</b>
+            <span className="rig-chip-top">
+              <b data-testid="rig-chip-name">{r.displayName ?? r.name}</b>
+              <span className="rig-state" data-testid="rig-state" data-state={r.state}>
+                {RIG_STATE[r.state].glyph} {RIG_STATE[r.state].label}
+              </span>
+            </span>
             <span>
               {r.machineLabel} · {r.seatCount} seat{r.seatCount === 1 ? '' : 's'}
               {r.handoffs ? ` · ${r.handoffs} handoffs` : ''}
-              {r.status === 'running' ? ' · running' : ''}
             </span>
             {r.summary && (
               <span className="rig-chip-summary" data-testid="rig-chip-summary">

@@ -67,7 +67,8 @@ describe('legend data (S1)', () => {
       'queue builds at QA',
       '▸ Consoles',
       'Dark chip = the rig shown',
-      '· running',
+      '▲ needs attention', // B2: the rig state on every chip, not a trailing "· running"
+      'Panel shows: On click | Follow pointer', // B1: the panel says how it works
       'orch-boss@control as Lead', // D5: "no seat" can still show waiting
       'name@rig · name@machine', // text fix: test-team@m2
     ]) {

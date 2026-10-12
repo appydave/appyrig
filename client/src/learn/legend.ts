@@ -249,8 +249,9 @@ const RIG_PICKER: LegendSection = {
     },
     {
       swatch: 'rig-chip',
-      mark: '· running',
-      means: 'Shown only when OpenRig reports the rig as running; no word = stopped.',
+      mark: '● working · ○ idle · ▲ needs attention · ✕ stopped · ◌ machine asleep',
+      means:
+        "The rig's state at a glance, as `rig ps` has it, with a glyph, a word and a coloured left edge (never colour alone). Working = a seat is working; needs attention = a seat is blocked or OpenRig flags it; idle = running, nobody working.",
     },
   ],
 };
@@ -406,9 +407,9 @@ const FLOW: LegendSection[] = [
       {
         swatch: 'handoff-panel',
         term: 'handoff',
-        mark: 'Handoff details (right)',
+        mark: 'Handoff details (right) · Panel shows: On click | Follow pointer',
         means:
-          'Hover or Tab to a line or dot: who handed what to whom, when, its state, and the full message. Click or Enter pins it; Esc closes. "On hover / Pinned" sets the default.',
+          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box lists its handoffs in and out. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes.',
       },
     ],
   },

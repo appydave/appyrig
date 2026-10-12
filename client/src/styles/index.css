@@ -3483,3 +3483,60 @@ g[data-testid='flow-edge'] {
   font-size: 12px;
   color: var(--ar-ink-muted);
 }
+
+/* ---------- batch 1 · B2: rig state on every chip (fb-0001), glyph + word + colour ---------- */
+.rig-chip {
+  border-left-width: 5px;
+}
+.rig-chip[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.rig-chip[data-state='idle'] {
+  border-left-color: var(--ar-idle);
+}
+.rig-chip[data-state='attention'] {
+  border-left-color: var(--ar-blocked);
+}
+.rig-chip[data-state='stopped'] {
+  border-left-color: var(--ar-stopped);
+  border-left-style: dashed;
+}
+.rig-chip[data-state='asleep'] {
+  border-left-color: var(--ar-asleep);
+  border-left-style: dotted;
+}
+.rig-chip-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.rig-state {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.rig-state[data-state='working'] {
+  color: var(--ar-working-ink);
+}
+.rig-state[data-state='attention'] {
+  color: var(--ar-blocked-ink);
+  font-weight: 700;
+}
+.rig-state[data-state='idle'],
+.rig-state[data-state='stopped'],
+.rig-state[data-state='asleep'] {
+  color: var(--ar-ink-muted);
+}
+/* the chosen chip is dark: use the light-on-dark state colours */
+.rig-chip[aria-pressed='true'] .rig-state[data-state='working'] {
+  color: var(--ar-working-text);
+}
+.rig-chip[aria-pressed='true'] .rig-state[data-state='attention'] {
+  color: var(--ar-blocked-text);
+}
+.rig-chip[aria-pressed='true'] .rig-state[data-state='idle'],
+.rig-chip[aria-pressed='true'] .rig-state[data-state='stopped'],
+.rig-chip[aria-pressed='true'] .rig-state[data-state='asleep'] {
+  color: var(--ar-idle-text);
+}
