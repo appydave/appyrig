@@ -574,7 +574,7 @@ const ACCOUNTS: LegendSection[] = [
         term: 'account-tier',
         mark: 'MAX $200 · FROM CONFIG',
         means:
-          'The plan tier and where it came from: reported by the login, from AppyRig’s config, or "tier not reported" when neither says.',
+          'The plan tier and where it came from: the cached profile, AppyRig’s config, or "tier not reported" when neither says.',
       },
       {
         swatch: 'reading',
@@ -591,9 +591,9 @@ const ACCOUNTS: LegendSection[] = [
       {
         swatch: 'drawers',
         term: 'drawers',
-        mark: 'Who draws on it · Machines whose cached profile names it',
+        mark: 'Machines whose cached profile names this account',
         means:
-          'The machines whose cached Claude profile names this account, with how old each cache is, and their running Claude seats. The cache is not the login: a seat can be using another account.',
+          'The machines whose cached Claude profile names this account, with how old each cache is, and the Claude seats running there. The cache is not the login: a seat there can be using another account.',
       },
       {
         swatch: 'headroom',

@@ -114,7 +114,8 @@ function Window({
 }
 
 const TIER_SOURCE: Record<AccountTier['source'], string> = {
-  reported: 'reported by the login',
+  // QA C1: the tier comes from the same cached profile as the email, not from a login.
+  reported: 'from the cached profile',
   config: 'from config',
   unknown: '',
 };
@@ -153,7 +154,7 @@ export default function Accounts({ machines, now }: Props) {
   return (
     <section className="accounts" data-testid="accounts" aria-label="Claude accounts">
       <p className="view-caption">
-        Every machine on the same account spends <b>one</b> 5-hour window. Each bar is a whole
+        Every session using the same account spends <b>one</b> 5-hour window. Each bar is a whole
         window up to its reset: dark = used, amber tick = now, dashed = where use lands at the reset
         at this pace.
       </p>
@@ -257,9 +258,8 @@ export default function Accounts({ machines, now }: Props) {
                 )}
               </p>
               <div className="drawers" data-explain="drawers">
-                <span className="label">Who draws on it</span>
+                <span className="label">Machines whose cached profile names this account</span>
                 <p data-testid="account-machines">
-                  Machines whose cached profile names it:{' '}
                   {a.profiles.map((p, i) => (
                     <span key={p.machine} data-testid="account-profile" data-machine={p.machine}>
                       {i > 0 && ' · '}
@@ -271,13 +271,14 @@ export default function Accounts({ machines, now }: Props) {
                   <ul>
                     {a.drawers.map((dr) => (
                       <li key={dr.machineLabel}>
-                        <b>{dr.machineLabel}</b> · {dr.seats.length} active seat
-                        {dr.seats.length === 1 ? '' : 's'}: {dr.seats.join(', ')}
+                        <b>{dr.machineLabel}</b> · {dr.seats.length} seat
+                        {dr.seats.length === 1 ? '' : 's'} running there (which login they use is
+                        not read): {dr.seats.join(', ')}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="quiet">No running agent seats on it right now.</p>
+                  <p className="quiet">No Claude seats running on those machines right now.</p>
                 )}
               </div>
             </article>

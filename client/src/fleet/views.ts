@@ -706,7 +706,7 @@ export interface AccountView {
   reading: (AccountUsage & { from: string }) | null;
   machines: string[];
   drawers: AccountDrawer[];
-  /** Live, non-stopped Claude seats drawing on it right now. */
+  /** Live, non-stopped Claude seats on the machines whose cached profile names it (their login is not read). */
   activeSeats: number;
   /** S5: the hub's view of the account (tier, windows against their resets); null from an older hub. */
   derived: AccountDerived | null;
@@ -732,8 +732,8 @@ export function planLabel(plan: string | null): string {
 const isClaudeSeat = (s: Seat) => s.runtime === 'claude-code' || /^claude-/.test(s.model ?? '');
 
 /**
- * Accounts across the fleet. A machine names its account; a seat draws on its machine's account
- * (OpenRig seats run as the machine's user). Readings come only from machines with a sampler; the
+ * Accounts across the fleet, grouped by each machine's CACHED profile (v1.5 C), which is not
+ * proof of the login its seats use. The seats listed are those running on those machines. Readings come only from machines with a sampler; the
  * freshest one wins, because every machine on the account sees the same window.
  */
 export interface UnreportedMachine {

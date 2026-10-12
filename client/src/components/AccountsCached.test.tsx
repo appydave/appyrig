@@ -56,10 +56,25 @@ describe('v1.5 C: the account email is a cached profile, not proof of login', ()
       />
     );
     const line = screen.getByTestId('account-machines').textContent ?? '';
-    expect(line).toContain('cached profile names it');
     expect(line).not.toMatch(/signed in/i);
     expect(line).toMatch(/M2 \(cached 1h ago\)/);
     expect(line).toContain('collector older than v1.5');
+  });
+
+  it('QA C1–C3: nothing on the card or in its help claims a login', async () => {
+    const { container } = render(
+      <Accounts machines={[on('m2', 'b@x.com', '2026-10-12T11:00:00.000Z')]} now={NOW} />
+    );
+    const text = container.textContent ?? '';
+    expect(text).not.toMatch(/reported by the login|who draws on it|signed in/i);
+    expect(text).toMatch(/Machines whose cached profile names this account/);
+    expect(text).toMatch(
+      /running there \(which login they use is not read\)|No Claude seats running/
+    );
+    const { GLOSSARY } = await import('../learn/glossary.js');
+    const { legendFor } = await import('../learn/legend.js');
+    const help = JSON.stringify([GLOSSARY, legendFor('accounts')]);
+    expect(help).not.toMatch(/reported by the login|signed into|who draws on it/i);
   });
 
   it('profileAge says unknown rather than guessing', () => {

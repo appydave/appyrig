@@ -49,7 +49,7 @@ export const GLOSSARY: Record<string, Term> = {
   'view-accounts': {
     term: 'Accounts',
     what: 'Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines draw on it.',
-    why: 'Every machine signed into one account spends one allowance. Seven seats on one account can empty it fast.',
+    why: 'The account shown for a machine is its cached profile. The login a session actually uses can differ: Claude keeps two credential stores.',
   },
   learn: {
     term: 'Learn',
@@ -344,8 +344,8 @@ export const GLOSSARY: Record<string, Term> = {
   },
   'account-tier': {
     term: 'Plan tier',
-    what: 'Which plan the account is on, e.g. Max $200, and where AppyRig learned it: reported by the login itself, set in AppyRig’s config, or not reported at all.',
-    why: 'The tier sets how big each window is. "Tier not reported" means neither the login nor the config names it; AppyRig does not guess.',
+    what: 'Which plan the account is on, e.g. Max $200, and where AppyRig learned it: from the cached profile (the same one the email comes from), set in AppyRig’s config, or not reported at all.',
+    why: 'The tier sets how big each window is. "Tier not reported" means neither the cached profile nor the config names it; AppyRig does not guess.',
   },
   'window-now': {
     term: 'Window against its reset',
@@ -413,9 +413,9 @@ export const GLOSSARY: Record<string, Term> = {
     why: 'Where the next team should run. A suggestion only; AppyRig never moves work.',
   },
   drawers: {
-    term: 'Who draws on it',
-    what: 'The machines on this account and their running Claude seats.',
-    why: 'Each running seat spends from the same window.',
+    term: 'Machines whose cached profile names this account',
+    what: 'The machines whose cached Claude profile names this account, how old each cache is, and the Claude seats running on those machines.',
+    why: 'It is not proof those seats spend this account: each seat uses whatever login its session found (Keychain or ~/.claude/.credentials.json), which AppyRig never reads.',
   },
 };
 
