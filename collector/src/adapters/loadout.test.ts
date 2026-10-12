@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { LOADOUT_LAYER_MAX_BYTES, SeatLoadoutSchema } from '@appydave/shared';
 import {
   classifySkills,
+  foldListing,
   ListingTracker,
   listingOfLine,
   LoadoutReader,
@@ -88,6 +89,55 @@ describe('listingOfLine', () => {
   });
 });
 
+describe('foldListing: the initial listing plus later deltas (QA D1)', () => {
+  const l = (names: string[], isInitial: boolean, at = '2026-10-09T13:48:12.600Z') => ({
+    at,
+    skillCount: names.length,
+    isInitial,
+    names,
+  });
+  const many = (n: number, p = 's') => Array.from({ length: n }, (_, i) => `${p}${i}`);
+
+  it('the real shape: 307 initial, then deltas of 3 and 1, is 311 shown, not 1', () => {
+    let s = foldListing(null, l(many(307), true));
+    s = foldListing(
+      s,
+      l(['agent-browser', 'development-team', 'dogfood'], false, '2026-10-09T13:48:26.880Z')
+    );
+    s = foldListing(s, l(['review-team'], false, '2026-10-09T13:48:38.367Z'));
+    expect(s).toMatchObject({
+      skillCount: 311,
+      reported: 311,
+      isInitial: true,
+      deltas: 2,
+      at: '2026-10-09T13:48:38.367Z',
+    });
+    expect(s.names).toHaveLength(311);
+    expect(s.names.slice(-1)).toEqual(['review-team']);
+  });
+
+  it('a later full listing starts the set again', () => {
+    let s = foldListing(null, l(many(5), true));
+    s = foldListing(s, l(['extra'], false));
+    s = foldListing(s, l(['only', 'these'], true));
+    expect(s).toMatchObject({ names: ['only', 'these'], skillCount: 2, deltas: 0 });
+  });
+
+  it('a name repeated in a delta is kept once; the summed count then disagrees, which the view flags', () => {
+    let s = foldListing(null, l(['a', 'b'], true));
+    s = foldListing(s, l(['b'], false));
+    expect(s.names).toEqual(['a', 'b']);
+    expect(s.skillCount).toBe(2); // the union, per the ruling
+    expect(s.reported).toBe(3); // Claude Code's own counts added up
+  });
+
+  it('deltas with no full listing before them say so', () => {
+    let s = foldListing(null, l(['x'], false));
+    s = foldListing(s, l(['y'], false));
+    expect(s).toMatchObject({ names: ['x', 'y'], isInitial: false, deltas: 1, skillCount: 2 });
+  });
+});
+
 describe('ListingTracker: the latest listing, read incrementally', () => {
   it('finds the latest listing and counts them, reading only appended bytes', async () => {
     const path = join(tmp(), 't.jsonl');
@@ -97,9 +147,9 @@ describe('ListingTracker: the latest listing, read incrementally', () => {
     expect(r?.listing.names).toEqual(['one']);
     expect(r?.count).toBe(1);
 
-    appendFileSync(path, `${listingLine(['one', 'two'], '2026-10-11T02:00:00Z', false)}\n`);
+    appendFileSync(path, `${listingLine(['two'], '2026-10-11T02:00:00Z', false)}\n`);
     r = await tracker.latest(fileOf(path));
-    expect(r?.listing).toMatchObject({ names: ['one', 'two'], isInitial: false });
+    expect(r?.listing).toMatchObject({ names: ['one', 'two'], isInitial: true, deltas: 1 });
     expect(r?.count).toBe(2);
   });
 
@@ -382,7 +432,15 @@ describe('LoadoutReader', () => {
     clock.tick(30_000);
     const changed = await reader.next(seats, new Map(), new Map());
     expect(changed?.loadouts.map((l) => l.seat)).toEqual(['dev-build@demo']);
-    expect(changed?.loadouts[0]?.listing).toMatchObject({ skillCount: 1, listings: 2 });
+    // a later non-initial listing is a delta: it adds to the set, it does not replace it (QA D1)
+    expect(changed?.loadouts[0]?.listing).toMatchObject({
+      skillCount: 5, // recipe was already listed: the union does not grow
+      reported: 6,
+      isInitial: true,
+      deltas: 1,
+      listings: 2,
+    });
+    expect(changed?.loadouts[0]?.skills).toHaveLength(5);
     changed!.markSent();
     reader.reset();
     expect((await reader.next(seats, new Map(), new Map()))?.loadouts).toHaveLength(2);

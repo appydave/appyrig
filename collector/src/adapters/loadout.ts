@@ -39,6 +39,51 @@ export interface SkillListing {
   names: string[];
 }
 
+/**
+ * What the model has been shown so far. Claude Code writes one full listing (`isInitial: true`),
+ * then listings carrying ONLY skills added later (`isInitial: false`, e.g. OpenRig copying role
+ * skills in after start). So the set is the last initial listing plus every later delta, not the
+ * last line (QA D1: a 307-skill seat read as "1" from its last delta).
+ */
+export interface ShownSkills extends SkillListing {
+  /** The names, initial first, each once. */
+  names: string[];
+  /** The count shown: the size of the union (ruling, openrig-orch-m4 2026-10-12). */
+  skillCount: number;
+  /** Claude Code's own `skillCount`s summed over the initial listing and its deltas: a cross-check. */
+  reported: number;
+  /** True when the set starts from an initial listing (false: only deltas were seen). */
+  isInitial: boolean;
+  /** How many delta listings were added on top. */
+  deltas: number;
+  /** When the newest listing in the set was written. */
+  at: string;
+}
+
+/** Folds one listing into the set: an initial listing starts it again; a delta adds to it. */
+export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkills {
+  if (l.isInitial || !cur) {
+    const names = [...new Set(l.names)];
+    return {
+      at: l.at,
+      names,
+      skillCount: names.length,
+      reported: l.skillCount,
+      isInitial: l.isInitial,
+      deltas: 0,
+    };
+  }
+  const names = [...new Set([...cur.names, ...l.names])];
+  return {
+    at: l.at,
+    names,
+    skillCount: names.length,
+    reported: cur.reported + l.skillCount,
+    isInitial: cur.isInitial,
+    deltas: cur.deltas + 1,
+  };
+}
+
 /** The listing on one transcript line, or null when the line is anything else. */
 export function listingOfLine(line: string): SkillListing | null {
   if (!line.includes('"skill_listing"')) return null;
@@ -67,21 +112,21 @@ export function listingOfLine(line: string): SkillListing | null {
 
 interface ScanState {
   offset: number;
-  latest: SkillListing | null;
+  latest: ShownSkills | null;
   count: number;
 }
 
 const BLOCK = 1024 * 1024;
 
 /**
- * Remembers, per transcript, how far it was read and the latest listing in it. A transcript only
+ * Remembers, per transcript, how far it was read and the skills shown so far (foldListing). A transcript only
  * grows, so each scan reads just the new bytes; a file that shrank is read again from the start.
  * A line still being written (no newline yet) is left for the next scan.
  */
 export class ListingTracker {
   private readonly state = new Map<string, ScanState>();
 
-  async latest(file: TranscriptFile): Promise<{ listing: SkillListing; count: number } | null> {
+  async latest(file: TranscriptFile): Promise<{ listing: ShownSkills; count: number } | null> {
     let s = this.state.get(file.path);
     if (!s || file.size < s.offset) s = { offset: 0, latest: null, count: 0 };
     if (file.size > s.offset) s = await this.scan(file.path, s, file.size);
@@ -105,7 +150,7 @@ export class ListingTracker {
         while (nl !== -1) {
           const found = listingOfLine(chunk.subarray(0, nl).toString('utf8'));
           if (found) {
-            s.latest = found;
+            s.latest = foldListing(s.latest, found);
             s.count += 1;
           }
           chunk = chunk.subarray(nl + 1);
@@ -471,7 +516,7 @@ export class LoadoutReader {
           layers: [],
         };
       } else {
-        let best: { listing: SkillListing; count: number; path: string } | null = null;
+        let best: { listing: ShownSkills; count: number; path: string } | null = null;
         let total = 0;
         for (const f of transcripts.get(seat.id) ?? []) {
           try {
@@ -497,6 +542,8 @@ export class LoadoutReader {
                 at: best.listing.at,
                 skillCount: best.listing.skillCount,
                 isInitial: best.listing.isInitial,
+                deltas: best.listing.deltas,
+                reported: best.listing.reported,
                 listings: Math.max(1, total),
                 transcript: best.path,
               }

@@ -15,6 +15,7 @@ describe('SkillPill', () => {
       title: expect.stringMatching(/predates v1.5/),
     });
     expect(skillPillText(0).text).toBe('0 skills'); // a real zero stays a zero
+    expect(skillPillText(1).text).toBe('1 skill');
   });
 
   it('opens the loadout and keeps the click from the tile it sits in', () => {

@@ -51,6 +51,8 @@ const LOADOUT: SeatLoadout = {
     at: '2026-10-11T11:18:09.715Z',
     skillCount: 6,
     isInitial: true,
+    deltas: 0,
+    reported: 6,
     listings: 1,
     transcript: '/t.jsonl',
   },
@@ -123,7 +125,7 @@ describe('Loadout (Debug view)', () => {
     await screen.findByTestId('loadout-summary');
     expect(calls).toEqual(['seat.loadout']);
     expect(screen.getByTestId('loadout-listed').textContent).toBe('6');
-    expect(screen.getByTestId('loadout-skillcount').textContent).toBe('6');
+    expect(screen.getByTestId('loadout-reported').textContent).toBe('6');
     expect(screen.getByTestId('loadout-honesty').textContent).toBe(HONESTY);
     const groups = screen.getAllByTestId('loadout-group');
     expect(groups.map((g) => g.getAttribute('data-source'))).toEqual([

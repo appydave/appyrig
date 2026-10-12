@@ -727,6 +727,8 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
         at: '2026-10-11T11:18:09.715Z',
         skillCount: 1,
         isInitial: true,
+        deltas: 0,
+        reported: 1,
         listings: 1,
         transcript: '/t.jsonl',
       },

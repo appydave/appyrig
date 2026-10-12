@@ -92,14 +92,22 @@ export const SeatLoadoutSchema = z.strictObject({
   runtime: z.string().nullable(),
   cwd: z.string().nullable(),
   status: LoadoutStatusSchema,
-  /** The latest listing's own record; null unless status is ok. */
+  /**
+   * What the model was shown: the last full listing (`isInitial`) plus every later delta listing
+   * (Claude Code lists only newly added skills after the first). Null unless status is ok.
+   */
   listing: z
     .strictObject({
+      /** When the newest listing in the set was written. */
       at: isoDate,
-      /** Claude Code's own count (`skillCount`). */
+      /** Skills shown to the model: the size of the union of names (also the pill's number). */
       skillCount: z.number().int().nonnegative(),
-      /** True when the latest listing is still the session's first one. */
+      /** Claude Code's own `skillCount`s summed over the initial listing and its deltas: a cross-check. */
+      reported: z.number().int().nonnegative(),
+      /** True when the set starts from a full (initial) listing; false = only deltas were found. */
       isInitial: z.boolean(),
+      /** Delta listings added on top of the initial one. */
+      deltas: z.number().int().nonnegative(),
       /** How many listings the transcript(s) held. */
       listings: z.number().int().positive(),
       transcript: z.string().max(1024),

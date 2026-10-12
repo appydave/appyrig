@@ -4,8 +4,8 @@ import type { MouseEvent } from 'react';
 export function skillPillText(count: number | null | undefined): { text: string; title: string } {
   if (typeof count === 'number')
     return {
-      text: `${count} skills`,
-      title: `${count} skills listed to this session's model (available, not used). Click for the loadout.`,
+      text: `${count} ${count === 1 ? 'skill' : 'skills'}`,
+      title: `${count} ${count === 1 ? 'skill' : 'skills'} listed to this session's model (available, not used). Click for the loadout.`,
     };
   if (count === null)
     return {

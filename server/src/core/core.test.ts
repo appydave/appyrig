@@ -395,6 +395,8 @@ describe('v1.5 · L1 — seat.loadout', () => {
       at: '2026-10-11T11:18:09.715Z',
       skillCount: 2,
       isInitial: true,
+      deltas: 0,
+      reported: 2,
       listings: 1,
       transcript: '/t.jsonl',
     },

@@ -319,18 +319,20 @@ export default function Loadout({
                 <span>
                   Listed <b data-testid="loadout-listed">{loadout.skills.length}</b> skills
                 </span>
-                <span>
-                  transcript skillCount{' '}
-                  <b data-testid="loadout-skillcount">{loadout.listing.skillCount}</b>
-                  {loadout.listing.skillCount !== loadout.skills.length && (
+                <span title="Claude Code's own skillCount of each listing, added up: a check on the names read">
+                  Claude Code&rsquo;s own counts add up to{' '}
+                  <b data-testid="loadout-reported">{loadout.listing.reported}</b>
+                  {loadout.listing.reported !== loadout.skills.length && (
                     <span className="skill-shadow"> ⚑ differs from the names read</span>
                   )}
                 </span>
-                <span className="label">
-                  listing of {new Date(loadout.listing.at).toLocaleString()} ·{' '}
+                <span className="label" data-testid="loadout-basis">
                   {loadout.listing.isInitial
-                    ? "the session's first"
-                    : `latest of ${loadout.listing.listings}`}
+                    ? 'the full listing'
+                    : 'no full listing found, only additions'}
+                  {loadout.listing.deltas > 0 &&
+                    ` + ${loadout.listing.deltas} later addition${loadout.listing.deltas === 1 ? '' : 's'}`}{' '}
+                  · newest {new Date(loadout.listing.at).toLocaleString()}
                 </span>
                 <span className="mono loadout-path" title={loadout.listing.transcript}>
                   {loadout.cwd ?? 'no folder reported'}

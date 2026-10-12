@@ -203,6 +203,8 @@ export function startPusher(opts: PusherOptions): Pusher {
     key: string,
     event: string,
     everyMs: number,
+    /** The hub version that first listens for this event, for the "no ack" warning. */
+    since: string,
     take: () => Promise<{ payloads: unknown[]; markSent(): void } | null>
   ) => {
     let t: NodeJS.Timeout | undefined;
@@ -216,7 +218,7 @@ export function startPusher(opts: PusherOptions): Pusher {
             for (const p of pending.payloads) {
               const ack = await sendAcked(event, p);
               if ('timeout' in ack) {
-                warnSometimes(key, `no ack for ${key} (is the hub older than v1.4?)`);
+                warnSometimes(key, `no ack for ${key} (is the hub older than ${since}?)`);
                 all = false;
                 break;
               }
@@ -242,24 +244,36 @@ export function startPusher(opts: PusherOptions): Pusher {
   };
   if (opts.rigFiles) {
     const take = opts.rigFiles;
-    channel('rig files', FLEET_EVENTS.RIGFILES, opts.rigFilesIntervalMs ?? 15_000, async () => {
-      const p = await take();
-      return p && { payloads: p.pushes, markSent: p.markSent };
-    });
+    channel(
+      'rig files',
+      FLEET_EVENTS.RIGFILES,
+      opts.rigFilesIntervalMs ?? 15_000,
+      'v1.4',
+      async () => {
+        const p = await take();
+        return p && { payloads: p.pushes, markSent: p.markSent };
+      }
+    );
   }
   if (opts.loadouts) {
     const take = opts.loadouts;
-    channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, async () => {
+    channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, 'v1.5', async () => {
       const p = await take();
       return p && { payloads: p.loadouts, markSent: p.markSent };
     });
   }
   if (opts.schema) {
     const take = opts.schema;
-    channel('database schema', FLEET_EVENTS.SCHEMA, opts.schemaIntervalMs ?? 30_000, async () => {
-      const p = await take();
-      return p && { payloads: [p.push], markSent: p.markSent };
-    });
+    channel(
+      'database schema',
+      FLEET_EVENTS.SCHEMA,
+      opts.schemaIntervalMs ?? 30_000,
+      'v1.4',
+      async () => {
+        const p = await take();
+        return p && { payloads: [p.push], markSent: p.markSent };
+      }
+    );
   }
 
   return {
