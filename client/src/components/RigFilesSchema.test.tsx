@@ -302,13 +302,35 @@ const renderSchema = (
   bymachine: Record<string, Partial<DbSchemaOutput>>,
   machines = Object.keys(bymachine)
 ) => {
-  const s = socketWith((req) => ({
-    ok: true,
-    value: schemaOut({
-      machine: String(req.input?.machine),
-      ...bymachine[String(req.input?.machine)],
-    }),
-  }));
+  const s = socketWith((req) =>
+    req.verb === 'db.rows'
+      ? // B5: the rows pane asks too; answer as a hub with no rows yet would
+        {
+          ok: true,
+          value: {
+            machine: String(req.input?.machine),
+            table: String(req.input?.table),
+            status: 'pending',
+            reason: 'no rows yet',
+            collectedAt: null,
+            columns: [],
+            total: 0,
+            held: 0,
+            truncated: false,
+            order: null,
+            hiddenColumns: [],
+            offset: 0,
+            rows: [],
+          },
+        }
+      : {
+          ok: true,
+          value: schemaOut({
+            machine: String(req.input?.machine),
+            ...bymachine[String(req.input?.machine)],
+          }),
+        }
+  );
   render(
     <SchemaView
       socket={s.socket}
@@ -329,7 +351,8 @@ describe('SchemaView', () => {
     expect(screen.getByTestId('schema-changes')).toHaveTextContent(
       /Baseline.*nothing to compare yet/
     );
-    expect(s.calls.every((c) => c.verb === 'db.schema')).toBe(true);
+    // read-only verbs only (B5 adds db.rows, also a read-only query)
+    expect(s.calls.every((c) => c.verb === 'db.schema' || c.verb === 'db.rows')).toBe(true);
   });
 
   it('lists columns with type, NOT NULL, primary key and default; a link jumps to its table', async () => {

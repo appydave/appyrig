@@ -36,6 +36,12 @@ import {
   RigTopologySchema,
   SeatHistoryInputSchema,
   SeatLoadoutInputSchema,
+  DB_ROWS_BYTES_MAX,
+  DB_ROWS_MAX,
+  DB_ROWS_PAGE_MAX,
+  DbRowsInputSchema,
+  DbRowsOutputSchema,
+  type DbRowsOutput,
   SeatLoadoutOutputSchema,
   type SeatLoadoutOutput,
   SeatHistoryOutputSchema,
@@ -313,6 +319,51 @@ const VERB_SET = {
         collectedAt: h?.collectedAt ?? null,
         truncated: h?.truncated ?? false,
         events: h?.events ?? [],
+      };
+    }
+  ),
+
+  'db.rows': query(
+    `Rows of one table of a machine's OpenRig database (~/.openrig/openrig.sqlite), read-only: its collector opens it read-only (query_only; immutable when OpenRig is stopped) and pushes each table's newest rows by rowid, at most ${DB_ROWS_MAX} rows and ${Math.round(DB_ROWS_BYTES_MAX / 1024)} KB per table, every text cell redacted, and any column whose name looks secret (token, key, password, secret, credential) blanked. truncated / total vs held say when a table is cut. status 'pending' = no rows from that machine's collector for that table (older than v1.5, or not sent yet). Paged: offset, limit (max ${DB_ROWS_PAGE_MAX}).`,
+    DbRowsInputSchema,
+    DbRowsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): DbRowsOutput => {
+      machinesOf(ctx, input.machine);
+      const p = ctx.store.dbRows.get(input.machine, input.table);
+      const offset = input.offset ?? 0;
+      const limit = input.limit ?? 50;
+      if (!p)
+        return {
+          machine: input.machine,
+          table: input.table,
+          status: 'pending',
+          reason:
+            "no rows from this machine's collector for this table yet: it predates v1.5, has no OpenRig database, or has not sent them (it re-reads at most once a minute, when the database changed)",
+          collectedAt: null,
+          columns: [],
+          total: 0,
+          held: 0,
+          truncated: false,
+          order: null,
+          hiddenColumns: [],
+          offset,
+          rows: [],
+        };
+      return {
+        machine: input.machine,
+        table: input.table,
+        status: 'ok',
+        reason: null,
+        collectedAt: p.collectedAt,
+        columns: p.columns,
+        total: p.total,
+        held: p.rows.length,
+        truncated: p.truncated,
+        order: p.order,
+        hiddenColumns: p.hiddenColumns,
+        offset,
+        rows: p.rows.slice(offset, offset + limit),
       };
     }
   ),

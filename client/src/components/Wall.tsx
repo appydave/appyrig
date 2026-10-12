@@ -5,6 +5,7 @@ import {
   WALL_ORDER_TEXT,
   collapsedByDefault,
   freshness,
+  groupRank,
   groupSeats,
   groupState,
   type PipKey,
@@ -19,6 +20,7 @@ import SkillPill from './SkillPill.js';
 import AnsiText from './AnsiText.js';
 import { rigTitle } from './RigInfo.js';
 import { isShortcutBlocked } from '../lib/keys.js';
+import { useStableOrder } from '../lib/stableOrder.js';
 
 export interface Box {
   x: number;
@@ -241,7 +243,16 @@ export default function Wall({
   hidden = [],
   onShow,
 }: WallProps) {
-  const groups = groupSeats(machines, groupBy);
+  // B1 (fb-0004): teams in the same state used to swap places on every push by latest activity.
+  // The order holds while the pointer is over the Wall, and otherwise re-sorts at most once a
+  // minute, or at once when a team's state changes (blocked/working/idle/stopped is news).
+  const [over, setOver] = useState(false);
+  const groups = useStableOrder(
+    groupSeats(machines, groupBy),
+    (g) => g.key,
+    (g) => String(groupRank(g)),
+    over
+  );
   const box = useRef<HTMLElement>(null);
   const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
   // S3-fit: working teams show their quiet seats as chips until asked for all tiles.
@@ -327,6 +338,9 @@ export default function Wall({
       aria-label="The Wall"
       className="wall-pack"
       style={{ ['--wall-cols' as string]: cols }}
+      data-frozen={over || undefined}
+      onPointerEnter={() => setOver(true)}
+      onPointerLeave={() => setOver(false)}
     >
       {received && groups.length === 0 && hidden.length === 0 && (
         <p className="empty">

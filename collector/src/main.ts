@@ -4,6 +4,7 @@ import { HistoryReader } from './adapters/history.js';
 import {
   createSources,
   HandoffReader,
+  DbRowsReader,
   LoadoutReader,
   RigFilesReader,
   SchemaReader,
@@ -35,6 +36,7 @@ function main() {
   const schema = new SchemaReader(settings.machine.id, sources.exec!, {
     rigBin: settings.sources.rigBin,
   });
+  const dbRows = new DbRowsReader(settings.machine.id);
   const loadouts = new LoadoutReader(settings.machine.id, { exec: sources.exec! });
   const pusher = startPusher({
     hubUrl: settings.hubUrl,
@@ -54,9 +56,11 @@ function main() {
       rigFiles.reset();
       schema.reset();
       loadouts.reset();
+      dbRows.reset();
     },
     rigFiles: async () => (sources.specs ? rigFiles.next(await sources.specs()) : null),
     schema: () => schema.next(),
+    dbRows: () => dbRows.next(),
     loadouts: async () =>
       loadouts.next(
         openrigSeats,

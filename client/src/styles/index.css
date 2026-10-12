@@ -3433,3 +3433,171 @@ g[data-testid='flow-edge'] {
   color: var(--ar-ink-muted);
   cursor: help;
 }
+
+/* ---------- batch 1 · B1: nothing moves under the pointer ---------- */
+/* The rig panel keeps one height whichever rig is chosen (fb-0002): the summary is cut at three
+   lines (the chip's tooltip and the Files viewer hold the rest). */
+.rig-info {
+  height: 9.5em;
+  overflow: hidden;
+}
+.rig-info p[data-testid='rig-info-summary'] {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The diagram never stretches with the row, and the details panel has one fixed height, so a
+   hover that fills the panel cannot move the drawing away from the pointer (fb-0005/0008/0009). */
+.flow-row {
+  align-items: flex-start;
+}
+.handoff-panel {
+  height: 420px;
+  max-height: none;
+  overflow: hidden;
+}
+.handoff-panel .handoff-list {
+  flex: 0 0 auto;
+}
+/* A floating hint for what is under the pointer: it never takes the pointer and never moves layout. */
+.hover-card {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  max-width: 320px;
+  background: var(--ar-ink);
+  color: var(--ar-canvas);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgb(52 45 45 / 0.25);
+}
+.hover-card b {
+  display: block;
+  font-size: 13px;
+}
+.handoff-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+
+/* ---------- batch 1 · B2: rig state on every chip (fb-0001), glyph + word + colour ---------- */
+.rig-chip {
+  border-left-width: 5px;
+}
+.rig-chip[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.rig-chip[data-state='idle'] {
+  border-left-color: var(--ar-idle);
+}
+.rig-chip[data-state='attention'] {
+  border-left-color: var(--ar-blocked);
+}
+.rig-chip[data-state='stopped'] {
+  border-left-color: var(--ar-stopped);
+  border-left-style: dashed;
+}
+.rig-chip[data-state='asleep'] {
+  border-left-color: var(--ar-asleep);
+  border-left-style: dotted;
+}
+.rig-chip-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.rig-state {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.rig-state[data-state='working'] {
+  color: var(--ar-working-ink);
+}
+.rig-state[data-state='attention'] {
+  color: var(--ar-blocked-ink);
+  font-weight: 700;
+}
+.rig-state[data-state='idle'],
+.rig-state[data-state='stopped'],
+.rig-state[data-state='asleep'] {
+  color: var(--ar-ink-muted);
+}
+/* the chosen chip is dark: use the light-on-dark state colours */
+.rig-chip[aria-pressed='true'] .rig-state[data-state='working'] {
+  color: var(--ar-working-text);
+}
+.rig-chip[aria-pressed='true'] .rig-state[data-state='attention'] {
+  color: var(--ar-blocked-text);
+}
+.rig-chip[aria-pressed='true'] .rig-state[data-state='idle'],
+.rig-chip[aria-pressed='true'] .rig-state[data-state='stopped'],
+.rig-chip[aria-pressed='true'] .rig-state[data-state='asleep'] {
+  color: var(--ar-idle-text);
+}
+
+/* ---------- batch 1 · B4: the flag button is reachable at every scroll position (R1) ---------- */
+.feedback-float {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 55; /* over the seat panel (50), under the keys overlay (60) and the viewers */
+  background: var(--ar-cta);
+  border-color: var(--ar-ink);
+  box-shadow: 0 4px 14px rgb(52 45 45 / 0.25);
+}
+
+/* ---------- batch 1 · B5: read-only table rows in the schema view (fb-0003) ---------- */
+.schema-rows {
+  margin-top: 14px;
+  border-top: 1px solid var(--ar-line-soft);
+  padding-top: 8px;
+}
+.schema-rows-caption {
+  margin: 4px 0;
+  font-size: 13px;
+}
+.schema-rows-scroll {
+  max-width: 100%;
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+}
+.schema-rows-table {
+  border-collapse: collapse;
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+}
+.schema-rows-table th {
+  position: sticky;
+  top: 0;
+  background: var(--ar-surface);
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--ar-line);
+  white-space: nowrap;
+}
+.schema-rows-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--ar-line-soft);
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+.schema-rows-table td[data-null] {
+  color: var(--ar-ink-muted);
+  font-style: italic;
+}
+.schema-rows-pager {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 0;
+}

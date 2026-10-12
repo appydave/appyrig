@@ -10,6 +10,7 @@ const rig = (over: Partial<RigRef> = {}): RigRef => ({
   machineLabel: 'M2',
   name: 'appyrig-v14',
   status: 'running',
+  state: 'working',
   seatCount: 5,
   handoffs: 19,
   lastActivity: '2026-10-11T11:40:00Z',
@@ -52,18 +53,42 @@ describe('<RigPicker> with S3 fields', () => {
     expect(within(chip).getByTestId('rig-chip-summary')).toHaveTextContent('Builds AppyRig');
   });
 
-  it('the chosen rig shows summary, owner and spec path; hovering another previews it', () => {
+  it('the chosen rig shows summary, owner and spec path; hovering another never swaps the panel (B1 fb-0002)', () => {
     render(<RigPicker rigs={rigs} selected="m2:appyrig-v14" onSelect={() => {}} />);
     const info = () => screen.getByTestId('rig-info');
     expect(info()).toHaveAttribute('data-rig-key', 'm2:appyrig-v14');
     expect(screen.getByTestId('rig-info-id')).toHaveTextContent('appyrig-v14');
     expect(screen.getByTestId('rig-info-owner')).toHaveTextContent('openrig-orch-m4');
     expect(screen.getByTestId('rig-info-spec')).toHaveTextContent('appyrig-v1.4/team/rig.yaml');
-    fireEvent.pointerEnter(screen.getAllByTestId('rig-chip')[1]!);
-    expect(info()).toHaveAttribute('data-rig-key', 'm2:flicut-ab');
-    expect(info()).toHaveAttribute('data-preview', 'true');
-    expect(screen.getByTestId('rig-info-spec')).toHaveTextContent('Spec not found');
-    fireEvent.pointerLeave(screen.getByTestId('rig-picker'));
+    const other = screen.getAllByTestId('rig-chip')[1]!;
+    fireEvent.pointerEnter(screen.getByTestId('rig-picker'));
+    fireEvent.pointerEnter(other);
+    // The panel stays on the chosen rig; the hovered rig's facts float in the chip's own tooltip.
     expect(info()).toHaveAttribute('data-rig-key', 'm2:appyrig-v14');
+    expect(other.getAttribute('title')).toMatch(/Spec: .*not found/i);
+    expect(screen.getByTestId('rig-picker')).toHaveAttribute('data-frozen', 'true');
+    fireEvent.pointerLeave(screen.getByTestId('rig-picker'));
+    expect(screen.getByTestId('rig-picker')).not.toHaveAttribute('data-frozen');
+  });
+});
+
+describe('B2 (fb-0001): every rig chip shows its state as glyph + word + colour', () => {
+  it('renders the state on each chip, never colour alone', () => {
+    render(
+      <RigPicker
+        rigs={[
+          rig({ key: 'a', name: 'a', state: 'working' }),
+          rig({ key: 'b', name: 'b', state: 'attention' }),
+          rig({ key: 'c', name: 'c', status: 'stopped', state: 'stopped' }),
+        ]}
+        selected="a"
+        onSelect={() => {}}
+      />
+    );
+    const states = screen.getAllByTestId('rig-state').map((e) => e.textContent);
+    expect(states).toEqual(['● working', '▲ needs attention', '✕ stopped']);
+    const chip = screen.getAllByTestId('rig-chip')[1]!;
+    expect(chip).toHaveAttribute('data-state', 'attention');
+    expect(chip.getAttribute('title')).toMatch(/^▲ needs attention/);
   });
 });

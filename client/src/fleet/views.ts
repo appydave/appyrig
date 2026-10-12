@@ -78,12 +78,42 @@ export function isOpen(item: QueueItem): boolean {
 
 // ---------------------------------------------------------------- rigs
 
+/**
+ * Batch 1 · B2 (fb-0001): one state per rig, readable at a glance on its chip, with a glyph and a
+ * word as well as a colour. It follows `rig ps`: STATUS running/stopped, ATTN, and ACTIVE (working).
+ */
+export type RigState = 'attention' | 'working' | 'idle' | 'stopped' | 'asleep';
+
+export const RIG_STATE: Record<RigState, { glyph: string; label: string }> = {
+  attention: { glyph: '▲', label: 'needs attention' },
+  working: { glyph: '●', label: 'working' },
+  idle: { glyph: '○', label: 'idle' },
+  stopped: { glyph: '✕', label: 'stopped' },
+  asleep: { glyph: '◌', label: 'machine asleep' },
+};
+
+/** asleep machine > stopped > a seat blocked or OpenRig's attention count > a seat working > idle. */
+export function rigState(
+  liveness: string,
+  status: string,
+  attentionCount: number,
+  seatPips: PipKey[]
+): RigState {
+  if (liveness === 'asleep') return 'asleep';
+  if (status !== 'running') return 'stopped';
+  if (attentionCount > 0 || seatPips.includes('blocked')) return 'attention';
+  if (seatPips.includes('working')) return 'working';
+  return 'idle';
+}
+
 export interface RigRef {
   key: string;
   machineId: string;
   machineLabel: string;
   name: string;
   status: string;
+  /** B2: the state its chip shows (see rigState). */
+  state: RigState;
   seatCount: number;
   handoffs: number;
   lastActivity: string | null;
@@ -113,6 +143,12 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
         machineLabel: fm.machine.label,
         name: rig.name,
         status: rig.status,
+        state: rigState(
+          fm.liveness,
+          rig.status,
+          rig.attentionCount,
+          seats.map((s) => pipFor(s, fm))
+        ),
         seatCount: seats.length,
         handoffs: items.length,
         // The collector's recentAt is the same rule computed over the full queue; prefer it.
@@ -408,6 +444,8 @@ export interface FlowView {
   rework: number;
   /** Median minutes from handoff to close, over closed items up to `at`. */
   medianTurnaroundMin: number | null;
+  /** B3: how many closed handoffs the median is taken over. */
+  closedCount: number;
   /** The node holding the most fresh waiting items at `at` (the queue), if any. Stale items never count. */
   bottleneck: string | null;
 }
@@ -549,6 +587,7 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     total,
     rework,
     medianTurnaroundMin: median(closedTurn),
+    closedCount: closedTurn.length,
     bottleneck: top && top.waiting > 0 ? top.stage : null,
   };
 }

@@ -26,6 +26,7 @@ describe('AC 9 — exactly one write verb', () => {
   it('the registry is exactly the plan §0.2 verb list', () => {
     expect(Object.keys(VERBS).sort()).toEqual([
       'account.list',
+      'db.rows',
       'db.schema',
       'feedback.add',
       'feedback.get',
@@ -282,6 +283,7 @@ describe('core.call — the one seam', () => {
         fileId: 'spec:rig.yaml',
       },
       'db.schema': { machine: 'roamy' },
+      'db.rows': { machine: 'roamy', table: 'queue_items' },
     };
     store.rigFiles.put({
       machineId: 'roamy',
@@ -331,7 +333,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 22 },
+      value: { app: 'AppyRig', version: real.version, verbs: 23 },
     });
   });
 
@@ -459,5 +461,73 @@ describe('v1.5 · L1 — seat.loadout', () => {
       ok: false,
       error: { failureMode: 'seat-not-found' },
     });
+  });
+});
+
+describe('batch 1 · B5 — db.rows', () => {
+  const push = {
+    machineId: 'roamy',
+    collectedAt: '2026-10-12T00:00:00.000Z',
+    table: 'queue_items',
+    columns: ['id', 'body', 'resume_token'],
+    total: 900,
+    rows: Array.from({ length: 120 }, (_, i) => [
+      120 - i,
+      `row ${120 - i}`,
+      '(hidden: column name looks secret)',
+    ]),
+    truncated: true,
+    order: 'rowid' as const,
+    hiddenColumns: ['resume_token'],
+  };
+
+  it('pages what the collector pushed, newest first, and says the table was cut', () => {
+    const { core, store } = fleet();
+    store.dbRows.put(push);
+    const a = core.call(AGENT, 'db.rows', {
+      machine: 'roamy',
+      table: 'queue_items',
+      offset: 50,
+      limit: 50,
+    });
+    expect(a).toMatchObject({
+      ok: true,
+      value: {
+        status: 'ok',
+        total: 900,
+        held: 120,
+        truncated: true,
+        offset: 50,
+        hiddenColumns: ['resume_token'],
+      },
+    });
+    if (a.ok)
+      expect((a.value as { rows: unknown[][] }).rows[0]).toEqual([
+        70,
+        'row 70',
+        '(hidden: column name looks secret)',
+      ]);
+  });
+
+  it('"pending" (never an empty table) when nothing came for it: an older collector', () => {
+    const { core } = fleet();
+    expect(core.call(AGENT, 'db.rows', { machine: 'roamy', table: 'events' })).toMatchObject({
+      ok: true,
+      value: { status: 'pending', held: 0, reason: expect.stringMatching(/predates v1.5/) },
+    });
+  });
+
+  it('refuses an unknown machine and a page bigger than 100', () => {
+    const { core } = fleet();
+    expect(core.call(AGENT, 'db.rows', { machine: 'nope', table: 't' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'machine-not-found' },
+    });
+    expect(core.call(AGENT, 'db.rows', { machine: 'roamy', table: 't', limit: 101 })).toMatchObject(
+      {
+        ok: false,
+        error: { failureMode: 'invalid-input' },
+      }
+    );
   });
 });

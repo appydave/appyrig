@@ -936,7 +936,7 @@ describe('App: S4 handoff details + where work came in', () => {
     },
   });
 
-  it('focusing a line shows the full message, readable; Enter pins; Esc closes and stays on the Flow', async () => {
+  it('B1: by default focus only points; Enter shows the full message and keeps it; Esc closes and stays on the Flow', async () => {
     const DEFECT =
       'VERDICT: RETURN — 1 material defect on the window’s real path (exportArms): the cancelled arm still lands after Esc, and the undo stack records it twice.';
     const { calls } = flowWith((r) =>
@@ -949,9 +949,12 @@ describe('App: S4 handoff details + where work came in', () => {
     expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-empty', 'true');
     const edge = screen.getAllByTestId('flow-edge')[0]!;
     fireEvent.focus(edge);
+    // "On click" is the default: pointing (or focusing) does not change the panel.
+    expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-empty', 'true');
+    expect(screen.getByTestId('handoff-status')).toHaveTextContent('Click a line, a dot or a box');
+    fireEvent.keyDown(edge, { key: 'Enter' });
     expect(await screen.findByTestId('handoff-text')).toHaveTextContent(DEFECT);
     expect(calls.some((c) => c.request.verb === 'handoff.get')).toBe(true);
-    fireEvent.keyDown(edge, { key: 'Enter' });
     expect(screen.getByTestId('handoff-panel')).toHaveAttribute('data-pinned', 'true');
     fireEvent.blur(edge);
     expect(screen.getByTestId('handoff-text')).toBeInTheDocument();
@@ -963,11 +966,30 @@ describe('App: S4 handoff details + where work came in', () => {
 
   it('a body the collector has not sent yet reads "loading message…", not an empty panel', async () => {
     flowWith((r) => (r.verb === 'handoff.get' ? handoff(r, null) : undefined));
-    fireEvent.focus(screen.getAllByTestId('flow-edge')[0]!);
+    fireEvent.keyDown(screen.getAllByTestId('flow-edge')[0]!, { key: 'Enter' });
     await waitFor(() =>
       expect(screen.getByTestId('handoff-body')).toHaveAttribute('data-status', 'pending')
     );
     expect(screen.getByTestId('handoff-body')).toHaveTextContent('loading message…');
+  });
+
+  it('B1: "Follow pointer" mode shows a line on focus, says so, and the choice is remembered', async () => {
+    flowWith((r) => (r.verb === 'handoff.get' ? handoff(r, 'hello') : undefined));
+    fireEvent.click(screen.getByTestId('handoff-mode-hover'));
+    expect(screen.getByTestId('handoff-status')).toHaveTextContent('Follows the pointer');
+    fireEvent.focus(screen.getAllByTestId('flow-edge')[0]!);
+    expect(await screen.findByTestId('handoff-text')).toHaveTextContent('hello');
+    expect(localStorage.getItem('appyrig.handoffPanel')).toBe('hover');
+    localStorage.removeItem('appyrig.handoffPanel');
+  });
+
+  it('B1 (fb-0007): a seat box lists its handoffs in and out when clicked', async () => {
+    flowWith((r) => (r.verb === 'handoff.get' ? handoff(r, 'hello') : undefined));
+    const box = screen.getAllByTestId('flow-stage')[0]!;
+    fireEvent.click(box);
+    expect(box).toHaveAttribute('data-selected', 'true');
+    expect(screen.getByTestId('handoff-panel').getAttribute('aria-label')).toMatch(/ in · \d+ out/);
+    expect(await screen.findByTestId('handoff-text')).toHaveTextContent('hello');
   });
 
   it('marks where work came in, calmly, on the first seat to act', async () => {

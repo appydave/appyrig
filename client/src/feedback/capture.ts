@@ -76,7 +76,56 @@ export function embeddedFonts(): Promise<string | null> {
 /** Elements marked `data-feedback-skip` (the composer, its toast) never appear in a screenshot. */
 const keep = (n: HTMLElement) => !(n.dataset && 'feedbackSkip' in n.dataset);
 
+/** SVG paint that the stylesheet sets by class and the capture copy would otherwise lose. */
+const SVG_PAINT = [
+  'fill',
+  'fill-opacity',
+  'stroke',
+  'stroke-width',
+  'stroke-opacity',
+  'stroke-dasharray',
+  'stroke-linejoin',
+  'stroke-linecap',
+  // the count labels draw a white halo BEHIND the text; without this it paints over it
+  'paint-order',
+  'opacity',
+  'font-family',
+  'font-size',
+  'font-weight',
+  'letter-spacing',
+  'text-anchor',
+] as const;
+
+/**
+ * B4: SVG shapes came out of the screenshot as black blobs (David's own fb-000x screenshots show
+ * it): the copy the capture draws loses the stylesheet's class-based fills, so every path falls
+ * back to black. Before capturing, each SVG shape's computed paint is written onto the element
+ * itself; the returned function puts every element back exactly as it was.
+ */
+export function inlineSvgPaint(root: HTMLElement): () => void {
+  const undo: (() => void)[] = [];
+  for (const el of root.querySelectorAll<SVGElement>('svg *')) {
+    const cs = getComputedStyle(el);
+    const before = el.getAttribute('style');
+    const paint = SVG_PAINT.map((p) => `${p}:${cs.getPropertyValue(p)}`).join(';');
+    el.setAttribute('style', before ? `${before};${paint}` : paint);
+    undo.push(() =>
+      before === null ? el.removeAttribute('style') : el.setAttribute('style', before)
+    );
+  }
+  return () => undo.forEach((u) => u());
+}
+
 export async function captureScreen(root: HTMLElement): Promise<Shot> {
+  const restore = inlineSvgPaint(root);
+  try {
+    return await captureInlined(root);
+  } finally {
+    restore();
+  }
+}
+
+async function captureInlined(root: HTMLElement): Promise<Shot> {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const fonts = await embeddedFonts();

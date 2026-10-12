@@ -19,6 +19,7 @@ import {
   rigQueue,
   stageOf,
   STALE_MS,
+  rigState,
 } from './views.js';
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
@@ -366,5 +367,43 @@ describe('Replay consoles', () => {
     const fm = withAccount(m2(), undefined);
     fm.snapshot.queue = [items[2]!, items[0]!, items[1]!];
     expect(replaySteps(fm, 'x').map((i) => i.id)).toEqual(['1', '2', '3']);
+  });
+});
+
+describe('B2 rigState (fb-0001): follows rig ps', () => {
+  it('asleep machine > stopped > attention (blocked or ATTN) > working > idle', () => {
+    expect(rigState('asleep', 'running', 0, ['working'])).toBe('asleep');
+    expect(rigState('live', 'stopped', 2, ['blocked'])).toBe('stopped');
+    expect(rigState('live', 'running', 1, ['idle'])).toBe('attention');
+    expect(rigState('live', 'running', 0, ['working', 'blocked'])).toBe('attention');
+    expect(rigState('live', 'running', 0, ['idle', 'working'])).toBe('working');
+    expect(rigState('live', 'running', 0, ['idle', 'stopped'])).toBe('idle');
+    expect(rigState('live', 'running', 0, [])).toBe('idle');
+  });
+
+  it('every listed rig carries a state', () => {
+    for (const r of listRigs([fleetMachine(snapshot('m2'))])) expect(r.state).toMatch(/\w/);
+  });
+});
+
+describe('B3 (fb-0006): the median stat as one plain sentence', () => {
+  it('names the count and says it is a median, not a grade', async () => {
+    const { medianSentence } = await import('../components/HandoffFlow.js');
+    expect(medianSentence(3.1, 12)).toBe(
+      'Of the 12 handoffs closed so far, half were closed within 3.1 minutes of being handed over and half took longer (the median, the middle value). It is not a grade: there are no thresholds. Handoffs still open are not counted; they show as waiting or left open.'
+    );
+    expect(medianSentence(0.4, 3)).toContain('within 24 seconds');
+    expect(medianSentence(5, 1)).toBe(
+      'The one handoff closed so far took 5.0 minutes from being handed over to being closed.'
+    );
+    expect(medianSentence(null, 0)).toMatch(/No handoff in this rig has been closed yet/);
+  });
+
+  it('buildFlow reports how many closed handoffs the median covers', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const rig = listRigs([fm]).find((r) => r.handoffs > 0)!;
+    const flow = buildFlow(fm, rig.name, Date.now(), Date.now());
+    expect(flow?.closedCount).toBeGreaterThanOrEqual(0);
+    if (flow && flow.closedCount > 0) expect(flow.medianTurnaroundMin).not.toBeNull();
   });
 });

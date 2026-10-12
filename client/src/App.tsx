@@ -184,6 +184,19 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   );
 
   // S8: file feedback about what is on screen. The screenshot is taken with the composer left out.
+  // B4 (R1, David: "you can't click on feedback if you scroll down"): the header's flag button
+  // scrolls away with the page, so a fixed copy shows whenever that one is out of view (including
+  // in a seat panel, where the header is hidden). Never both at once; never in the screenshot.
+  const flagRef = useRef<HTMLButtonElement>(null);
+  const [flagInView, setFlagInView] = useState(true);
+  useEffect(() => {
+    const el = flagRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setFlagInView(!!e?.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   const openFeedback = () => {
     if (feedback) return;
     const viewLabel = VIEWS.find((v) => v.key === view)?.label ?? view;
@@ -485,6 +498,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           Keys · ?
         </button>
         <button
+          ref={flagRef}
           type="button"
           className="pill-btn"
           data-testid="feedback-open"
@@ -633,6 +647,19 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             setToast(msg);
           }}
         />
+      )}
+      {(!flagInView || !!focusTile) && !feedback && (
+        <button
+          type="button"
+          className="pill-btn feedback-float"
+          data-testid="feedback-float"
+          data-feedback-skip=""
+          aria-keyshortcuts="F"
+          title="Feedback: say what is wrong or good about what is on screen; saved with a screenshot of it (F)"
+          onClick={openFeedback}
+        >
+          ⚑ Feedback · F
+        </button>
       )}
       {toast && (
         <p
