@@ -15,6 +15,7 @@ import { isShortcutBlocked } from './lib/keys.js';
 import type { LegendScreen } from './learn/legend.js';
 import RigFiles, { type PresetFile } from './components/RigFiles.js';
 import Loadout from './components/Loadout.js';
+import FeedbackNotes from './components/FeedbackNotes.js';
 import RigMap from './components/RigMap.js';
 import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
@@ -157,6 +158,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   /** S7-ui: the rig whose files are open (rig.yaml, mission and culture notes). */
   const [filesFor, setFilesFor] = useState<{ machineId: string; rig: string } | null>(null);
   const filesOpener = useRef<HTMLElement | null>(null);
+  /** C4 (F23): the list of filed notes is open. */
+  const [notesOpen, setNotesOpen] = useState(false);
   /** v1.5 · L1: the seat whose Debug view is open, and prompt-layer files open over it. */
   const [debugFor, setDebugFor] = useState<{ machineId: string; seatId: string } | null>(null);
   const [layersOpen, setLayersOpen] = useState<{ files: PresetFile[]; initialId: string } | null>(
@@ -165,7 +168,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const debugOpener = useRef<HTMLElement | null>(null);
   const layersOpener = useRef<HTMLElement | null>(null);
   /** Something sits on top of the screen (keys overlay, feedback composer, files viewer, Debug): screen keys stand down. */
-  const overlay = help || !!feedback || !!filesFor || !!debugFor;
+  const overlay = help || !!feedback || !!filesFor || !!debugFor || notesOpen;
 
   const allMachines = useMemo(() => orderedMachines(state.machines), [state.machines]);
   const [hidden, setHidden] = useState<string[]>(readHidden);
@@ -382,7 +385,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
-    if (focused || feedback || filesFor) return;
+    if (focused || feedback || filesFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Already spent: Focus closing (it re-attaches this listener mid-keypress) or a card.
@@ -399,11 +402,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, help, feedback, filesFor, goBack]);
+  }, [focused, help, feedback, filesFor, notesOpen, goBack]);
 
   // S8: F opens the feedback composer, on every screen and in the seat panel (O is Files').
   useEffect(() => {
-    if (help || feedback || filesFor || debugFor) return;
+    if (help || feedback || filesFor || debugFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'f' || e.key === 'F') && !isShortcutBlocked(e)) {
         e.preventDefault();
@@ -416,13 +419,13 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   // L shows or hides the legend for this screen, the seat panel included (QA D3).
   useEffect(() => {
-    if (help || feedback || filesFor || debugFor) return;
+    if (help || feedback || filesFor || debugFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [help, feedback, filesFor, debugFor, toggleLegend]);
+  }, [help, feedback, filesFor, debugFor, notesOpen, toggleLegend]);
 
   // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
   useEffect(() => {
@@ -547,6 +550,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onClick={openFeedback}
         >
           ⚑ Feedback · F
+        </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="notes-open"
+          title="The notes filed with Feedback, newest first, with their screenshots"
+          onClick={() => setNotesOpen(true)}
+        >
+          Notes
         </button>
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
@@ -699,6 +711,10 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           shot={feedback.shot}
           socket={getSocket()}
           onClose={() => setFeedback(null)}
+          onShowNotes={() => {
+            setFeedback(null);
+            setNotesOpen(true);
+          }}
           onFiled={(msg) => {
             setFeedback(null);
             setToast(msg);
@@ -718,6 +734,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           ⚑ Feedback · F
         </button>
       )}
+      {notesOpen && <FeedbackNotes socket={getSocket()} onClose={() => setNotesOpen(false)} />}
       {toast && (
         <p
           className="feedback-toast"

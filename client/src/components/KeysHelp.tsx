@@ -21,9 +21,14 @@ export const SCREEN: Record<View, Row[]> = {
     ['Esc', 'From an open seat: back to the map'],
   ],
   flow: [
-    ['← →', 'Previous / next handoff'],
+    ['← →', 'Previous / next handoff (replay)'],
     ['O', "Open the chosen rig's files"],
-    ['Tab', 'Reach the replay, chapters and consoles'],
+    [
+      'Tab',
+      'Move between the lines and boxes of the diagram, then the replay, chapters and consoles',
+    ],
+    ['Enter', 'On a line, dot or box: show it in the handoff details panel'],
+    ['Esc', 'Close the handoff details (then, back to the previous screen)'],
   ],
   accounts: [],
   machines: [],

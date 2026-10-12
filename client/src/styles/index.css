@@ -3630,3 +3630,66 @@ g[data-testid='flow-edge'] {
 .explain-card {
   overflow: hidden;
 }
+
+/* ---------- batch 2 · C4: dialogs fit the window; filed notes list (F16, F21, F23) ---------- */
+.feedback-scrim {
+  align-items: center;
+  padding: 16px;
+}
+.feedback-composer {
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+}
+.feedback-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.feedback-shot img {
+  max-height: 200px;
+  object-fit: contain;
+  object-position: left top;
+}
+.feedback-notes {
+  width: min(760px, 100%);
+}
+.notes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.notes-list li {
+  border: 1px solid var(--ar-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--ar-canvas);
+}
+.note-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+.note-verdict {
+  font-weight: 700;
+}
+.note-text {
+  margin: 4px 0 6px;
+  white-space: pre-wrap;
+}
+.note-shot {
+  max-width: 100%;
+  max-height: 220px;
+  border: 1px solid var(--ar-line);
+  border-radius: 6px;
+}
+.keys-help {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}

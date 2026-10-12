@@ -5,7 +5,7 @@ import type { FleetSocket } from '../fleet/useFleet.js';
 import { fileFeedback, regionOf, type Shot } from '../feedback/capture.js';
 
 /** ImageDrip Live UAT's four verdicts, same words. */
-const VERDICTS: { key: FeedbackVerdict; glyph: string; label: string; hint: string }[] = [
+export const VERDICTS: { key: FeedbackVerdict; glyph: string; label: string; hint: string }[] = [
   { key: 'down', glyph: '👎', label: 'wrong', hint: 'wrong, broken or missing' },
   { key: 'question', glyph: '❓', label: "don't get it", hint: "I can't tell what this is or why" },
   { key: 'up', glyph: '👍', label: 'good', hint: 'confirmed good: this works' },
@@ -24,6 +24,8 @@ interface Props {
   onClose: () => void;
   /** Told the new note id after a successful file. */
   onFiled: (message: string) => void;
+  /** C4 (F23): open the list of filed notes. */
+  onShowNotes?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export default function FeedbackComposer({
   socket,
   onClose,
   onFiled,
+  onShowNotes,
 }: Props) {
   const [verdict, setVerdict] = useState<FeedbackVerdict>('down');
   const [note, setNote] = useState('');
@@ -122,78 +125,108 @@ export default function FeedbackComposer({
             Cancel · Esc
           </button>
         </header>
-        <div className="feedback-verdicts" role="radiogroup" aria-label="Verdict">
-          {VERDICTS.map((v) => (
-            <button
-              key={v.key}
-              type="button"
-              role="radio"
-              aria-checked={verdict === v.key}
-              data-testid={`feedback-verdict-${v.key}`}
-              title={v.hint}
-              onClick={() => setVerdict(v.key)}
-            >
-              <span aria-hidden="true">{v.glyph}</span>
-              <span>{v.label}</span>
-            </button>
-          ))}
-        </div>
-        <textarea
-          ref={noteRef}
-          data-testid="feedback-note"
-          value={note}
-          maxLength={4000}
-          aria-label="Your note"
-          placeholder="What's wrong, in your words. This sentence is the whole point."
-          onChange={(e) => setNote(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-              e.preventDefault();
-              void send();
-            }
-          }}
-        />
-        <label className="feedback-region">
-          <span className="label">About</span>
-          <input
-            data-testid="feedback-region"
-            value={region}
-            maxLength={64}
-            onChange={(e) => setRegion(e.target.value)}
+        {/* C4 (F21): the middle scrolls; the header and "File it" always stay in view. */}
+        <div className="feedback-scroll">
+          <div className="feedback-verdicts" role="radiogroup" aria-label="Verdict">
+            {VERDICTS.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                role="radio"
+                aria-checked={verdict === v.key}
+                data-testid={`feedback-verdict-${v.key}`}
+                title={v.hint}
+                onClick={() => setVerdict(v.key)}
+              >
+                <span aria-hidden="true">{v.glyph}</span>
+                <span>{v.label}</span>
+              </button>
+            ))}
+          </div>
+          <textarea
+            ref={noteRef}
+            data-testid="feedback-note"
+            value={note}
+            maxLength={4000}
+            aria-label="Your note"
+            placeholder="What's wrong, in your words. This sentence is the whole point."
+            onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                void send();
+              }
+            }}
           />
-        </label>
-        <div className="feedback-shot" data-testid="feedback-shot" data-state={shot.state}>
-          {shot.state === 'capturing' && <span className="quiet">capturing the screen…</span>}
-          {shot.state === 'failed' && (
-            <span className="quiet">
-              No screenshot ({shot.message}); the note and what was on screen still go.
-            </span>
+          <label className="feedback-region">
+            <span className="label">About</span>
+            <input
+              data-testid="feedback-region"
+              value={region}
+              maxLength={64}
+              onChange={(e) => setRegion(e.target.value)}
+            />
+          </label>
+          <div className="feedback-shot" data-testid="feedback-shot" data-state={shot.state}>
+            {shot.state === 'capturing' && <span className="quiet">capturing the screen…</span>}
+            {shot.state === 'failed' && (
+              <span className="quiet">
+                No screenshot ({shot.message}); the note and what was on screen still go.
+              </span>
+            )}
+            {shot.state === 'ready' && (
+              <>
+                <img
+                  src={`data:image/png;base64,${shot.shot.png}`}
+                  alt="The screen as it was when you pressed Feedback"
+                  data-testid="feedback-thumb"
+                />
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={withShot}
+                    data-testid="feedback-with-shot"
+                    onChange={(e) => setWithShot(e.target.checked)}
+                  />{' '}
+                  Include this screenshot ({shot.shot.width}×{shot.shot.height},{' '}
+                  {Math.round(shot.shot.bytes / 1024)} KB)
+                </label>
+                <span className="quiet" data-testid="feedback-shot-note">
+                  The screenshot is as it was; it can&rsquo;t be drawn on. Say in the note what to
+                  look at.
+                </span>
+              </>
+            )}
+          </div>
+          {error && (
+            <p className="feedback-error" role="alert" data-testid="feedback-error">
+              {error}
+            </p>
           )}
-          {shot.state === 'ready' && (
-            <>
-              <img
-                src={`data:image/png;base64,${shot.shot.png}`}
-                alt="The screen as it was when you pressed Feedback"
-                data-testid="feedback-thumb"
-              />
-              <label>
-                <input
-                  type="checkbox"
-                  checked={withShot}
-                  data-testid="feedback-with-shot"
-                  onChange={(e) => setWithShot(e.target.checked)}
-                />{' '}
-                Include this screenshot ({shot.shot.width}×{shot.shot.height},{' '}
-                {Math.round(shot.shot.bytes / 1024)} KB)
-              </label>
-            </>
+          {recent && recent.total > 0 && (
+            <div className="feedback-recent" data-testid="feedback-recent">
+              <span className="label">Your notes · {recent.total} in all</span>
+              <ul>
+                {recent.notes.map((n) => (
+                  <li key={n.id}>
+                    <code>{n.id}</code> {VERDICTS.find((v) => v.key === n.verdict)?.glyph}{' '}
+                    <span className="quiet">{n.region}</span> {n.note}
+                  </li>
+                ))}
+              </ul>
+              {onShowNotes && (
+                <button
+                  type="button"
+                  className="pill-btn"
+                  data-testid="feedback-show-notes"
+                  onClick={onShowNotes}
+                >
+                  See all filed notes
+                </button>
+              )}
+            </div>
           )}
         </div>
-        {error && (
-          <p className="feedback-error" role="alert" data-testid="feedback-error">
-            {error}
-          </p>
-        )}
         <footer>
           <span className="quiet">
             Also saved: what was on screen as text, and where you were (screen, rig, seat, filters).
@@ -208,19 +241,6 @@ export default function FeedbackComposer({
             {sending ? 'Filing…' : 'File it · ⌘↵'}
           </button>
         </footer>
-        {recent && recent.total > 0 && (
-          <div className="feedback-recent" data-testid="feedback-recent">
-            <span className="label">Your notes · {recent.total} in all</span>
-            <ul>
-              {recent.notes.map((n) => (
-                <li key={n.id}>
-                  <code>{n.id}</code> {VERDICTS.find((v) => v.key === n.verdict)?.glyph}{' '}
-                  <span className="quiet">{n.region}</span> {n.note}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </section>
     </div>
   );
