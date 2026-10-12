@@ -3750,7 +3750,8 @@ g[data-testid='flow-edge'] {
   cursor: pointer;
 }
 .rigmap-label:hover rect,
-g[data-testid='rig-map-edge'][data-selected] + g rect {
+/* r1 LOW-1: the selected line's own label (labels are drawn after every line, not next to it) */
+.rigmap-label[data-selected] rect {
   stroke: var(--ar-sequence);
 }
 g[data-testid='rig-map-edge'] {

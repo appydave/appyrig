@@ -224,15 +224,16 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     }
   }, []);
   const toggleFollow = useCallback(() => {
-    setFollowLatest((f) => {
-      try {
-        localStorage.setItem(FOLLOW_KEY, f ? 'off' : 'on');
-      } catch {
-        // per-viewer convenience only
-      }
-      return !f;
-    });
-  }, []);
+    // r1 MEDIUM-1: turning following OFF keeps the rig that is on screen, rather than jumping
+    // back to the rig chosen before following was turned on.
+    if (followLatest && activeRig) setRigKey(activeRig.key);
+    setFollowLatest(!followLatest);
+    try {
+      localStorage.setItem(FOLLOW_KEY, followLatest ? 'off' : 'on');
+    } catch {
+      // per-viewer convenience only
+    }
+  }, [followLatest, activeRig]);
   const rigMap = useMemo(
     () => (view === 'map' && activeRig ? buildRigMap(allMachines, activeRig.key, minute) : null),
     [view, activeRig, allMachines, minute]

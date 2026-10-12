@@ -1497,6 +1497,12 @@ describe('batch 2 · C1: the chosen rig holds; "Follow latest" is explicit and o
     fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T11:00:00.000Z' })]));
     expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
     expect(localStorage.getItem('appyrig.followLatest')).toBe('on');
+    // r1 MEDIUM-1: turning following OFF keeps the rig on screen (b), not the one before it (a)
+    fireEvent.click(screen.getByTestId('follow-latest'));
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
+    expect(localStorage.getItem('appyrig.followLatest')).toBe('off');
+    fireEvent.click(screen.getByTestId('follow-latest')); // on again, to test the click path too
     fireEvent.click(screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === `m2:${a}`)!);
     expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
     fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T12:00:00.000Z' })]));

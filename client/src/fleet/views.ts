@@ -365,7 +365,13 @@ export function buildRigMap(
   }
   lanes.push(...byMachine.values());
 
-  return { rig, lanes, edges: [...edgeMap.values()], handoffs: items.length };
+  // r1 HIGH-1: the collector delivers queue rows newest first, but a line's items are read
+  // oldest first (the drawer's list, and "latest" = the last one), so sort them once here.
+  const edges = [...edgeMap.values()].map((e) => ({
+    ...e,
+    items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+  }));
+  return { rig, lanes, edges, handoffs: items.length };
 }
 
 // ---------------------------------------------------------------- Handoff Flow

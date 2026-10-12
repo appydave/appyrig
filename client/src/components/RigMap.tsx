@@ -296,6 +296,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
               className="rigmap-label"
               data-testid="rig-map-edge-label"
               data-edge={edgeKey(p.edge)}
+              data-selected={pinned?.edge === edgeKey(p.edge) || undefined}
               {...edgeHandlers(p.edge)}
               tabIndex={-1}
               aria-hidden="true"

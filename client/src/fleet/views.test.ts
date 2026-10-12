@@ -407,3 +407,20 @@ describe('B3 (fb-0006): the median stat as one plain sentence', () => {
     if (flow && flow.closedCount > 0) expect(flow.medianTurnaroundMin).not.toBeNull();
   });
 });
+
+describe('r1 HIGH-1: a Map line lists its handoffs oldest first, so "latest" is the newest', () => {
+  it('sorts each line by time, whatever order the collector delivered', () => {
+    const fm = fleetMachine(snapshot('m2'));
+    const map = buildRigMap([fm], `m2:${fm.snapshot.rigs[0]!.name}`, Date.now())!;
+    for (const e of map.edges) {
+      const at = e.items.map((q) => q.createdAt);
+      expect(at, `${e.from}→${e.to}`).toEqual([...at].sort());
+    }
+    // the probe's case: three items delivered newest first
+    const line = map.edges.find((e) => e.items.length >= 2);
+    if (line) {
+      const newest = [...line.items].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]!;
+      expect(line.items[line.items.length - 1]!.id).toBe(newest.id);
+    }
+  });
+});
