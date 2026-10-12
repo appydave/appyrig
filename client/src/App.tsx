@@ -37,6 +37,8 @@ const VIEW_KEY = 'appyrig.view';
 const EXPLAIN_KEY = 'appyrig.explain';
 const LEGEND_KEY = 'appyrig.legend';
 const HINT_KEY = 'appyrig.hint';
+/** Ruling (batch 2): the Map's legend starts closed; a one-time hint points at the button. */
+const MAP_HINT_KEY = 'appyrig.mapLegendHint';
 const HIDDEN_KEY = 'appyrig.hiddenMachines';
 
 export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'machines' | 'schema' | 'learn';
@@ -132,6 +134,17 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const [explain, setExplain] = useState<boolean>(readExplain);
   const [legendChoice, setLegendChoice] = useState<LegendChoice>(readLegend);
   const [hint, setHint] = useState<boolean>(readHint);
+  const [mapHint, setMapHint] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(MAP_HINT_KEY) !== 'seen';
+    } catch {
+      return false;
+    }
+  });
+  const dismissMapHint = useCallback(() => {
+    setMapHint(false);
+    remember(MAP_HINT_KEY, 'seen');
+  }, []);
   const [rigKey, setRigKey] = useState<string | null>(null);
   /** Batch 2 · C1: off by default. On, Map and Flow show the most recently active rig, live. */
   const [followLatest, setFollowLatest] = useState<boolean>(readFollow);
@@ -304,14 +317,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   };
 
   const screen: LegendScreen = focused ? 'focus' : view;
-  const legend = legendChoice[screen]
-    ? legendChoice[screen] === 'on'
-    : screen === 'map' || screen === 'flow';
+  // Ruling (batch 2, QA C5): the Map's legend starts CLOSED for every viewer who hasn't chosen
+  // (open, it is 697 px and pushes the map below the fold); a choice is remembered per viewer.
+  const legend = legendChoice[screen] ? legendChoice[screen] === 'on' : screen === 'flow';
   const toggleLegend = useCallback(() => {
     const next: LegendChoice = { ...legendChoice, [screen]: legend ? 'off' : 'on' };
     setLegendChoice(next);
     remember(LEGEND_KEY, JSON.stringify(next));
-  }, [legendChoice, screen, legend]);
+    if (screen === 'map') dismissMapHint();
+  }, [legendChoice, screen, legend, dismissMapHint]);
 
   const chooseGroup = (g: GroupBy) => {
     setGroupBy(g);
@@ -493,7 +507,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           >
             ? Explain {explain ? 'on' : 'off'}
           </button>
-          {hint && (
+          {hint && !(view === 'map' && mapHint && !legend) && (
             <span className="first-hint" role="note" data-testid="explain-hint">
               <span aria-hidden="true">↑</span> New here?{' '}
               {explain ? (
@@ -517,17 +531,33 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             </span>
           )}
         </span>
-        <button
-          type="button"
-          className="pill-btn"
-          data-testid="legend-toggle"
-          aria-pressed={legend}
-          aria-keyshortcuts="L"
-          title="Legend: what every line, colour and box on this screen means (L)"
-          onClick={toggleLegend}
-        >
-          Legend · L
-        </button>
+        <span className="explain-anchor">
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="legend-toggle"
+            aria-pressed={legend}
+            aria-keyshortcuts="L"
+            title="Legend: what every line, colour and box on this screen means (L)"
+            onClick={toggleLegend}
+          >
+            Legend · L
+          </button>
+          {view === 'map' && mapHint && !legend && !focusTile && (
+            <span className="first-hint" role="note" data-testid="legend-hint">
+              <span aria-hidden="true">↑</span> New here? Press <b>L</b> or click <b>Legend</b> to
+              see what the marks mean.
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="legend-hint-dismiss"
+                onClick={dismissMapHint}
+              >
+                Got it
+              </button>
+            </span>
+          )}
+        </span>
         <button
           type="button"
           className="pill-btn"

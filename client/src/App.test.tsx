@@ -555,7 +555,7 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(screen.queryByTestId('explain-hint')).toBeNull();
   });
 
-  it('unchosen, the legend is closed on the Wall and open on the two diagram screens', () => {
+  it('unchosen, the legend is closed on the Wall and the Map (ruling), open on the Flow; the Map shows a one-time hint', () => {
     // jsdom has no ResizeObserver; the Rig Map only needs one to re-measure its lines.
     vi.stubGlobal(
       'ResizeObserver',
@@ -567,8 +567,14 @@ describe('App: S1 legend and Explain discoverability', () => {
     connected();
     expect(screen.queryByTestId('legend')).toBeNull();
     fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.getByTestId('legend-hint')).toHaveTextContent('Press L or click Legend');
+    fireEvent.keyDown(window, { key: 'l' });
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
     expect(screen.getByTestId('legend')).toHaveTextContent('Grey band · POD');
+    // the hint is spent once the legend has been opened, and never comes back
+    expect(screen.queryByTestId('legend-hint')).toBeNull();
+    expect(localStorage.getItem('appyrig.mapLegendHint')).toBe('seen');
     fireEvent.click(screen.getByTestId('view-flow'));
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'flow');
     expect(screen.getByTestId('legend')).toHaveTextContent('Amber arc below · N back');
@@ -585,8 +591,10 @@ describe('App: S1 legend and Explain discoverability', () => {
     fireEvent.keyDown(window, { key: 'l' });
     expect(screen.queryByTestId('legend')).toBeNull();
     expect(choice()).toEqual({ wall: 'off' });
-    // QA M2: closing it on the Map leaves the Wall's choice alone, and the reverse.
+    // QA M2: a choice on the Map leaves the Wall's alone, and the reverse. (The Map starts closed.)
     fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    fireEvent.click(screen.getByTestId('legend-toggle'));
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
     fireEvent.click(screen.getByTestId('legend-close'));
     expect(choice()).toEqual({ wall: 'off', map: 'off' });
