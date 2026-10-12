@@ -3807,4 +3807,6 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
 .pod-seats {
   padding-top: var(--arc-top, 58px);
   padding-bottom: var(--arc-bottom, 58px);
+  /* C6-A.1: when seats wrap, the gap between rows holds the arcs under one row and over the next */
+  row-gap: max(70px, calc(var(--arc-top, 58px) + var(--arc-bottom, 58px)));
 }
