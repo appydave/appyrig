@@ -179,6 +179,8 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   const [mode, setMode] = useState<PanelMode>(readPanelMode);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
   const [entry, setEntry] = useState<RigEntry | null>(null);
+  // C1 (F9): the row is always there, so its answer arriving never pushes the diagram down.
+  const [entryLoaded, setEntryLoaded] = useState(false);
   const machineId = machine?.machine.id ?? null;
 
   const range = useMemo(
@@ -222,12 +224,15 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   // S4: where this rig's work came in (rig.entry, read-only), once per rig.
   useEffect(() => {
     setEntry(null);
+    setEntryLoaded(false);
     setSel(null);
     setPinned(false);
     if (!socket || !machineId || !rig) return;
     let current = true;
     void callVerb<RigEntryOutput>(socket, 'rig.entry', { machine: machineId, rig }).then((a) => {
-      if (current && a.ok) setEntry(a.value.entry);
+      if (!current) return;
+      if (a.ok) setEntry(a.value.entry);
+      setEntryLoaded(true);
     });
     return () => {
       current = false;
@@ -518,6 +523,16 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
         )
       )}
 
+      {!entry && (
+        <p
+          className="flow-entry"
+          data-testid="flow-entry"
+          data-status={entryLoaded ? 'none' : 'loading'}
+        >
+          <b>Where work came in · </b>
+          {entryLoaded ? 'not known.' : 'checking…'}
+        </p>
+      )}
       {entry && (
         <p className="flow-entry" data-testid="flow-entry" data-status={entry.status}>
           <b>Where work came in · </b>

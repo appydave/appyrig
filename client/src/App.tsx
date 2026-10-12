@@ -24,6 +24,14 @@ import { buildRigMap, listRigs } from './fleet/views.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
+const FOLLOW_KEY = 'appyrig.followLatest';
+function readFollow(): boolean {
+  try {
+    return localStorage.getItem(FOLLOW_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
 const VIEW_KEY = 'appyrig.view';
 const EXPLAIN_KEY = 'appyrig.explain';
 const LEGEND_KEY = 'appyrig.legend';
@@ -124,6 +132,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const [legendChoice, setLegendChoice] = useState<LegendChoice>(readLegend);
   const [hint, setHint] = useState<boolean>(readHint);
   const [rigKey, setRigKey] = useState<string | null>(null);
+  /** Batch 2 · C1: off by default. On, Map and Flow show the most recently active rig, live. */
+  const [followLatest, setFollowLatest] = useState<boolean>(readFollow);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
   /** S2: the element that opened Focus (tile, map node, strip alert), so Esc lands back on it. */
@@ -177,7 +187,36 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const rigs = useMemo(() => listRigs(machines), [machines]);
   // Stale/fresh splits only need minute precision; a per-second value would re-lay the map every tick.
   const minute = Math.floor(now / 60_000) * 60_000;
-  const activeRig = rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null;
+  // Batch 2 · C1 (F1, F2): the chosen rig HOLDS. It used to be "the first in the live order" until
+  // a chip was clicked, so it switched whenever the order did, and the header could name one rig
+  // over another's numbers. Now the first rig is chosen once and kept; it changes only on a click,
+  // or live when "Follow latest" is on. A chosen rig that stops being reported falls back for now
+  // and comes back if it returns.
+  useEffect(() => {
+    if (rigKey === null && rigs.length) setRigKey(rigs[0]!.key);
+  }, [rigKey, rigs]);
+  const activeRig = followLatest
+    ? (rigs[0] ?? null)
+    : (rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null);
+  const chooseRig = useCallback((key: string) => {
+    setRigKey(key);
+    setFollowLatest(false);
+    try {
+      localStorage.setItem(FOLLOW_KEY, 'off');
+    } catch {
+      // per-viewer convenience only
+    }
+  }, []);
+  const toggleFollow = useCallback(() => {
+    setFollowLatest((f) => {
+      try {
+        localStorage.setItem(FOLLOW_KEY, f ? 'off' : 'on');
+      } catch {
+        // per-viewer convenience only
+      }
+      return !f;
+    });
+  }, []);
   const rigMap = useMemo(
     () => (view === 'map' && activeRig ? buildRigMap(allMachines, activeRig.key, minute) : null),
     [view, activeRig, allMachines, minute]
@@ -588,10 +627,27 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       )}
       {(view === 'map' || view === 'flow') && (
         <main className="view" data-testid={`view-body-${view}`}>
+          <p className="follow-row">
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="follow-latest"
+              aria-pressed={followLatest}
+              title="On: show whichever rig was active most recently, switching by itself. Off: the rig you click stays."
+              onClick={toggleFollow}
+            >
+              {followLatest ? '● Following latest' : '○ Follow latest'}
+            </button>
+            <span className="quiet" data-testid="follow-status">
+              {followLatest
+                ? 'The view switches to the most recently active rig by itself. Click a rig to stop.'
+                : 'Showing the rig you chose. It changes only when you click another.'}
+            </span>
+          </p>
           <RigPicker
             rigs={rigs}
             selected={activeRig?.key ?? null}
-            onSelect={setRigKey}
+            onSelect={chooseRig}
             onOpenFiles={(r) => openFiles(r.machineId, r.name)}
           />
           {view === 'map' ? (

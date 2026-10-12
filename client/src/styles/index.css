@@ -3601,3 +3601,28 @@ g[data-testid='flow-edge'] {
   gap: 8px;
   margin: 8px 0 0;
 }
+
+/* ---------- batch 2 · C1: the selection holds; "Follow latest" is explicit and off by default ---------- */
+.follow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.follow-row .pill-btn[aria-pressed='true'] {
+  background: var(--ar-cta);
+  border-color: var(--ar-ink);
+}
+/* C1 (F9): the "Where work came in" row keeps one height, loading or loaded */
+.flow-entry {
+  min-height: 4.2em;
+  max-height: 4.2em;
+  overflow: hidden;
+}
+.flow-entry .flow-entry-excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

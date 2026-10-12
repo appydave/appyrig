@@ -994,8 +994,11 @@ describe('App: S4 handoff details + where work came in', () => {
 
   it('marks where work came in, calmly, on the first seat to act', async () => {
     flowWith((r) => (r.verb === 'rig.entry' ? entry('outside-queue') : undefined));
-    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
-      'orch-lead: started at launch, not via the queue'
+    // C1 (F9): the row is there at once ("checking…"); wait for its answer
+    await waitFor(() =>
+      expect(screen.getByTestId('flow-entry')).toHaveTextContent(
+        'orch-lead: started at launch, not via the queue'
+      )
     );
     const mark = screen.getByTestId('flow-entry-mark');
     expect(mark).toHaveTextContent('work entered here · at launch');
@@ -1004,8 +1007,11 @@ describe('App: S4 handoff details + where work came in', () => {
 
   it('an unknown entry says so and draws no marker', async () => {
     flowWith((r) => (r.verb === 'rig.entry' ? entry('unknown') : undefined));
-    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
-      'not known: older events were dropped'
+    // C1 (F9): the row is there at once ("checking…"); wait for its answer
+    await waitFor(() =>
+      expect(screen.getByTestId('flow-entry')).toHaveTextContent(
+        'not known: older events were dropped'
+      )
     );
     expect(screen.queryByTestId('flow-entry-mark')).toBeNull();
   });
@@ -1423,5 +1429,64 @@ describe('App: S3-fit working teams pack side by side', () => {
     expect(JSON.parse(localStorage.getItem('appyrig.groupsFull')!)['roamy:kernel']).toBe(true);
     fireEvent.click(within(kernel()).getByTestId('group-show-busy'));
     expect(within(kernel()).getAllByTestId('seat-tile')).toHaveLength(before);
+  });
+});
+
+describe('batch 2 · C1: the chosen rig holds; "Follow latest" is explicit and off by default', () => {
+  /** m2 with its running rigs' recency set, so the live order can be flipped push by push. */
+  const m2With = (recent: Record<string, string>) => {
+    const fm = fleetMachine(snapshot('m2'));
+    return {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        rigs: fm.snapshot.rigs.map((r) => ({
+          ...r,
+          status: 'running',
+          recentAt: recent[r.name] ?? '2026-10-01T00:00:00.000Z',
+        })),
+      },
+    };
+  };
+  const names = () => {
+    const rigs = snapshot('m2').rigs.map((r) => r.name);
+    return [rigs[0]!, rigs[1]!];
+  };
+  const selected = () =>
+    screen.getAllByTestId('rig-chip').find((c) => c.getAttribute('aria-pressed') === 'true')
+      ?.dataset.rigKey;
+
+  it('a busier rig never takes over the view by itself (F1, fb-0004)', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    const [a, b] = names();
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [a]: '2026-10-12T10:00:00.000Z' })]));
+    fireEvent.click(screen.getByTestId('view-flow')); // Map and Flow share the picker and selection
+    expect(selected()).toBe(`m2:${a}`);
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
+    // the other rig becomes the most recent: the view stays where it is
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T11:00:00.000Z' })]));
+    expect(selected()).toBe(`m2:${a}`);
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${a}`);
+  });
+
+  it('Follow latest tracks the most recent rig; clicking a rig turns it off and holds', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    const [a, b] = names();
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [a]: '2026-10-12T10:00:00.000Z' })]));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(screen.getByTestId('follow-latest'));
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'true');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T11:00:00.000Z' })]));
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
+    expect(localStorage.getItem('appyrig.followLatest')).toBe('on');
+    fireEvent.click(screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === `m2:${a}`)!);
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T12:00:00.000Z' })]));
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${a}`);
+    localStorage.removeItem('appyrig.followLatest');
   });
 });
