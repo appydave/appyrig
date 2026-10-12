@@ -14,8 +14,11 @@ import { MachineIdentitySchema } from './snapshot.js';
 
 /** Most rows kept per table: newest first. */
 export const DB_ROWS_MAX = 500;
-/** Most characters kept per cell; longer text ends in "…". */
-export const DB_CELL_MAX = 1000;
+/**
+ * Text cells stay readable but short (David, 2026-10-12): about 200 characters, then "…" and the
+ * full length, e.g. "…(1,234 chars)".
+ */
+export const DB_CELL_MAX = 200;
 /**
  * Most bytes per push (one table), measured as the serialized rows, so one message stays well under
  * socket.io's 1 MB limit. Rows past it are left out and the table reads as cut.
@@ -26,7 +29,7 @@ export const DB_ROWS_BYTES_MAX = 600 * 1024;
  * Columns blanked whatever they hold (ruling, openrig-orch-m4): the redactor misses unprefixed
  * secrets, so a column whose NAME looks secret never leaves the collector.
  */
-export const DB_SECRET_COLUMN = /token|secret|key|passw|credential|auth/i;
+export const DB_SECRET_COLUMN = /token|key|password|secret|credential/i;
 export const DB_HIDDEN_CELL = '(hidden: column name looks secret)';
 /** Most rows one db.rows call returns. */
 export const DB_ROWS_PAGE_MAX = 100;

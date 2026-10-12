@@ -33,7 +33,9 @@ export function cellOf(v: unknown): DbCell {
       : v.toString();
   if (v instanceof Uint8Array) return `(blob ${v.byteLength} bytes)`;
   const s = redactString(String(v));
-  return s.length > DB_CELL_MAX ? `${s.slice(0, DB_CELL_MAX - 1)}…` : s;
+  return s.length > DB_CELL_MAX
+    ? `${s.slice(0, DB_CELL_MAX)}… (${s.length.toLocaleString('en-US')} chars)`
+    : s;
 }
 
 export function readAllTableRows(
