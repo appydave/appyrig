@@ -101,7 +101,25 @@ export function nodeToSeat(node: LenientNodeT): Seat {
 }
 
 export function parseNodes(raw: unknown): Seat[] {
-  return parseList(LenientNode, raw, '/api/rigs/:id/nodes').map(nodeToSeat);
+  return parseNodesWithRefs(raw).seats;
+}
+
+/**
+ * v1.5 · L1: the seats, plus seat id → agent spec folder from each node's `agentRef`
+ * (`path:/…/agents/development/implementer`). Kept out of the snapshot: only the loadout reads it.
+ */
+export function parseNodesWithRefs(raw: unknown): {
+  seats: Seat[];
+  agentDirs: Map<string, string>;
+} {
+  const nodes = parseList(LenientNode, raw, '/api/rigs/:id/nodes');
+  const agentDirs = new Map<string, string>();
+  for (const n of nodes) {
+    const ref = n.agentRef;
+    if (typeof ref === 'string' && ref.startsWith('path:') && ref.length > 5)
+      agentDirs.set(n.canonicalSessionName, ref.slice(5));
+  }
+  return { seats: nodes.map(nodeToSeat), agentDirs };
 }
 
 const SUMMARY_MAX = 160;

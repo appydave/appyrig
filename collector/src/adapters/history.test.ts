@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HistoryReader, parseTranscript, seatOfFirstLine, toolSummary } from './history.js';
+import {
+  HistoryReader,
+  parseTranscript,
+  seatOfFirstLine,
+  seatOfHead,
+  TITLE_HEAD_LINES,
+  toolSummary,
+  TranscriptIndex,
+} from './history.js';
 
 const title = (t: string) =>
   JSON.stringify({ type: 'custom-title', customTitle: t, sessionId: 's' });
@@ -81,5 +89,38 @@ describe('seat history adapter', () => {
     );
     const again = await reader.changed(new Set(['dev-hub@appyrig-build']));
     expect(again[0]!.history.events.at(-1)!.text).toBe('done');
+  });
+});
+
+describe('seat title beyond line 1 (QA D2: M4 ylo-lead / ylo-copy)', () => {
+  const lastPrompt = line({ type: 'last-prompt', leafUuid: 'x', sessionId: 's' });
+
+  it('finds the title after a last-prompt row', () => {
+    expect(seatOfHead(`${lastPrompt}\n${title('ylo-lead@ylo-thumbs')}\n`, true)).toBe(
+      'ylo-lead@ylo-thumbs'
+    );
+  });
+
+  it('only within the first lines, and never from a cut-off last line', () => {
+    const filler = Array.from({ length: TITLE_HEAD_LINES }, () => lastPrompt).join('\n');
+    expect(seatOfHead(`${filler}\n${title('late@x')}\n`, true)).toBeNull();
+    expect(seatOfHead(`${lastPrompt}\n${title('cut@x')}`, false)).toBeNull();
+    // a person's own session titled without @ is never a seat
+    expect(seatOfHead(`${title('my notes')}\n`, true)).toBeNull();
+  });
+
+  it('the index matches a last-prompt-first transcript, and an untitled file once its title lands', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appyrig-ti-'));
+    mkdirSync(join(dir, '-p'));
+    writeFileSync(join(dir, '-p', 'a.jsonl'), `${lastPrompt}\n${title('ylo-copy@ylo-thumbs')}\n`);
+    const late = join(dir, '-p', 'b.jsonl');
+    writeFileSync(late, `${lastPrompt}\n`);
+    const index = new TranscriptIndex(dir);
+    const seats = new Set(['ylo-copy@ylo-thumbs', 'ylo-lead@ylo-thumbs']);
+    let found = await index.scan(seats);
+    expect([...found.keys()]).toEqual(['ylo-copy@ylo-thumbs']);
+    appendFileSync(late, `${title('ylo-lead@ylo-thumbs')}\n`);
+    found = await index.scan(seats);
+    expect([...found.keys()].sort()).toEqual(['ylo-copy@ylo-thumbs', 'ylo-lead@ylo-thumbs']);
   });
 });

@@ -1,7 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { pid } from 'node:process';
 import { HistoryReader } from './adapters/history.js';
-import { createSources, HandoffReader, RigFilesReader, SchemaReader } from './adapters/index.js';
+import {
+  createSources,
+  HandoffReader,
+  LoadoutReader,
+  RigFilesReader,
+  SchemaReader,
+  withSkillCounts,
+  type LoadoutSeat,
+} from './adapters/index.js';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
 import { startPusher } from './pusher.js';
@@ -19,6 +27,7 @@ function main() {
   const config = { machine: settings.machine, version: VERSION, pid };
   // Seat histories are read only for seats the daemon reported in the latest snapshot.
   let knownSeats = new Set<string>();
+  let openrigSeats: LoadoutSeat[] = [];
   let queueOrder: string[] = [];
   const history = new HistoryReader(settings.machine.id);
   const handoffs = new HandoffReader(settings.machine.id);
@@ -26,23 +35,34 @@ function main() {
   const schema = new SchemaReader(settings.machine.id, sources.exec!, {
     rigBin: settings.sources.rigBin,
   });
+  const loadouts = new LoadoutReader(settings.machine.id, { exec: sources.exec! });
   const pusher = startPusher({
     hubUrl: settings.hubUrl,
     token: settings.token,
     machineId: settings.machine.id,
     build: async () => {
       const snap = await buildSnapshot(sources, config);
-      knownSeats = new Set(snap.seats.filter((s) => s.rig !== null).map((s) => s.id));
+      const own = snap.seats.filter((s) => s.rig !== null);
+      knownSeats = new Set(own.map((s) => s.id));
+      openrigSeats = own.map((s) => ({ id: s.id, rig: s.rig, runtime: s.runtime, cwd: s.cwd }));
       queueOrder = snap.queue.map((q) => q.id);
-      return snap;
+      // v1.5 · L1: the skill-count pill, from the loadout reader's latest scan.
+      return { ...snap, seats: withSkillCounts(snap.seats, loadouts.skillCounts()) };
     },
     onConnect: () => {
       handoffs.reset();
       rigFiles.reset();
       schema.reset();
+      loadouts.reset();
     },
     rigFiles: async () => (sources.specs ? rigFiles.next(await sources.specs()) : null),
     schema: () => schema.next(),
+    loadouts: async () =>
+      loadouts.next(
+        openrigSeats,
+        sources.specs ? await sources.specs() : new Map(),
+        sources.agentDirs?.() ?? new Map()
+      ),
     histories: () => history.changed(knownSeats),
     handoffs: async () =>
       sources.queueBodies ? handoffs.next(queueOrder, await sources.queueBodies()) : null,

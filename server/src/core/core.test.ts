@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { SeatStatusSchema } from '@appydave/shared';
+import { SeatStatusSchema, type SeatLoadout } from '@appydave/shared';
 import { createCore } from './core.js';
 import { FAILURE_CODES, VERBS, VERB_REGISTRY, WRITE_VERBS, defineVerbs } from './verbs.js';
 import { FleetStore } from '../hub/fleetStore.js';
@@ -44,6 +44,7 @@ describe('AC 9 — exactly one write verb', () => {
       'seat.get',
       'seat.history',
       'seat.list',
+      'seat.loadout',
       'seat.tail',
       'system.status',
     ]);
@@ -271,6 +272,7 @@ describe('core.call — the one seam', () => {
       'seat.get': { machine: 'roamy', seat },
       'seat.tail': { machine: 'roamy', seat },
       'seat.history': { machine: 'roamy', seat },
+      'seat.loadout': { machine: 'roamy', seat },
       'handoff.get': { machine: 'roamy', id: store.get('roamy')!.snapshot.queue[0]!.id },
       'rig.entry': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
       'rig.files': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
@@ -329,7 +331,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 21 },
+      value: { app: 'AppyRig', version: real.version, verbs: 22 },
     });
   });
 
@@ -378,5 +380,84 @@ describe('v1.2 seat.history', () => {
     });
     const bad = core.call(AGENT, 'seat.history', { machine: 'nowhere', seat });
     expect(bad.ok).toBe(false);
+  });
+});
+
+describe('v1.5 · L1 — seat.loadout', () => {
+  const loadout = (seat: string, over: Partial<SeatLoadout> = {}): SeatLoadout => ({
+    machineId: 'roamy',
+    seat,
+    collectedAt: '2026-10-12T00:00:00.000Z',
+    runtime: 'claude-code',
+    cwd: '/w',
+    status: 'ok',
+    listing: {
+      at: '2026-10-11T11:18:09.715Z',
+      skillCount: 2,
+      isInitial: true,
+      deltas: 0,
+      reported: 2,
+      listings: 1,
+      transcript: '/t.jsonl',
+    },
+    cwdIsGitRepo: true,
+    cwdExists: true,
+    skills: [
+      { name: 'recipe', source: 'repo', plugin: null, alsoIn: [] },
+      { name: 'canvas:x', source: 'plugin', plugin: 'canvas', alsoIn: [] },
+    ],
+    layers: [],
+    ...over,
+  });
+
+  it('answers what the collector sent for a Claude seat', () => {
+    const { core, store } = fleet();
+    store.loadouts.put(loadout('advisor-lead@kernel'));
+    const a = core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'advisor-lead@kernel' });
+    expect(a).toMatchObject({
+      ok: true,
+      value: { status: 'ok', reason: null, loadout: { listing: { skillCount: 2 } } },
+    });
+  });
+
+  it('"pending" (never an empty list) when this machine sent nothing for the seat: an older collector', () => {
+    const { core } = fleet();
+    expect(
+      core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'advisor-lead@kernel' })
+    ).toMatchObject({
+      ok: true,
+      value: { status: 'pending', loadout: null, reason: expect.stringMatching(/predates v1.5/) },
+    });
+  });
+
+  it('a Codex seat is "not read for Codex yet", whatever was or was not sent', () => {
+    const { core } = fleet();
+    expect(
+      core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'operator-agent@kernel' })
+    ).toMatchObject({
+      ok: true,
+      value: { status: 'not-claude', reason: 'not read for Codex yet.' },
+    });
+    expect(
+      core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'operator-human@kernel' })
+    ).toMatchObject({ ok: true, value: { status: 'not-claude' } });
+  });
+
+  it('a Claude seat with no listing says so', () => {
+    const { core, store } = fleet();
+    store.loadouts.put(
+      loadout('advisor-lead@kernel', { status: 'no-listing', listing: null, skills: [] })
+    );
+    expect(
+      core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'advisor-lead@kernel' })
+    ).toMatchObject({ ok: true, value: { status: 'no-listing' } });
+  });
+
+  it('an unknown seat is refused by name', () => {
+    const { core } = fleet();
+    expect(core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'nope@x' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'seat-not-found' },
+    });
   });
 });

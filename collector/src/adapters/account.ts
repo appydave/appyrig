@@ -5,8 +5,11 @@ import type { AccountUsage } from '@appydave/shared';
 
 /**
  * The machine's Claude account and its latest rate-limit reading, from files only:
- * - `~/.claude.json` → `oauthAccount.emailAddress`, `organizationType` and `organizationRateLimitTier`. Nothing else is read
- *   out of it; credentials live in the Keychain, not here, and are never touched.
+ * - `~/.claude.json` → `oauthAccount.emailAddress`, `organizationType`, `organizationRateLimitTier`
+ *   and `profileFetchedAt`. Nothing else is read out of it. This is Claude Code's CACHED profile
+ *   (refreshed about daily), not the login: logins live in the Keychain and in
+ *   ~/.claude/.credentials.json, which are never opened, read or stat-ed (v1.5 · C).
+ *   The file's own modified time is not used: Claude Code rewrites it constantly.
  * - `~/.claude/usage-log.csv` → the last row the status-line sampler wrote
  *   (`epoch,iso,five_pct,five_resets_at,seven_pct,seven_resets_at,session_cost_usd,session`).
  * A machine without the sampler reports null percentages, never 0.
@@ -28,18 +31,24 @@ export function parseAccountIdentity(text: string): {
   email: string | null;
   plan: string | null;
   rateLimitTier: string | null;
+  profileFetchedAt: string | null;
 } {
   try {
     const acct = (JSON.parse(text) as { oauthAccount?: Record<string, unknown> }).oauthAccount;
     const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
     // organizationRateLimitTier names the Max tier (e.g. default_claude_max_20x); plan alone does not.
+    // profileFetchedAt is epoch milliseconds; anything else is "not reported", never a guess.
+    const f = acct?.profileFetchedAt;
+    const fetched =
+      typeof f === 'number' && Number.isFinite(f) && f > 0 ? new Date(f).toISOString() : null;
     return {
       email: str(acct?.emailAddress),
       plan: str(acct?.organizationType),
       rateLimitTier: str(acct?.organizationRateLimitTier),
+      profileFetchedAt: fetched,
     };
   } catch {
-    return { email: null, plan: null, rateLimitTier: null };
+    return { email: null, plan: null, rateLimitTier: null, profileFetchedAt: null };
   }
 }
 

@@ -114,7 +114,8 @@ function Window({
 }
 
 const TIER_SOURCE: Record<AccountTier['source'], string> = {
-  reported: 'reported by the login',
+  // QA C1: the tier comes from the same cached profile as the email, not from a login.
+  reported: 'from the cached profile',
   config: 'from config',
   unknown: '',
 };
@@ -129,9 +130,23 @@ function tierLine(a: AccountView): string {
 
 /**
  * Accounts (v1.1, S5 over time): every Claude account the fleet runs on, each window drawn against
- * its reset in plain words, the plan tier with where it came from, and the machines signed into it
- * right now. All machines on one account share its windows.
+ * its reset in plain words, the plan tier with where it came from, and the machines whose cached
+ * profile names it. All machines on one account share its windows. v1.5 · C: the email is a
+ * cached profile, not proof of which login a session uses, and every card says so.
  */
+export const CACHED_LABEL =
+  'Email from the cached profile, refreshed ~24 h — not proof of which login a session uses.';
+
+const CACHED_WHY =
+  "A Mac keeps the Claude login in two places: the Keychain (sessions started in a desktop terminal) and ~/.claude/.credentials.json (sessions started over SSH, which is how rigs and seats run). The email shown here comes from neither: it is Claude Code's cached profile in ~/.claude.json, refreshed about once a day. So the two can disagree, and a seat can be spending a different account's limits from the one named on this card. AppyRig never reads either login store.";
+
+/** How old a machine's cached profile is, in plain words. */
+export function profileAge(fetchedAt: string | null | undefined, now: number): string {
+  if (fetchedAt === undefined) return '(cache age not reported: collector older than v1.5)';
+  if (fetchedAt === null) return '(cache age unknown)';
+  return `(cached ${ago(now - Date.parse(fetchedAt))} ago)`;
+}
+
 export default function Accounts({ machines, now }: Props) {
   const { accounts, unknown } = buildAccounts(machines);
   const best = accounts.length > 1 ? mostHeadroom(accounts) : null;
@@ -139,9 +154,9 @@ export default function Accounts({ machines, now }: Props) {
   return (
     <section className="accounts" data-testid="accounts" aria-label="Claude accounts">
       <p className="view-caption">
-        Every machine signed into the same account spends <b>one</b> 5-hour window. Each bar is a
-        whole window up to its reset: dark = used, amber tick = now, dashed = where use lands at the
-        reset at this pace.
+        Every session using the same account spends <b>one</b> 5-hour window. Each bar is a whole
+        window up to its reset: dark = used, amber tick = now, dashed = where use lands at the reset
+        at this pace.
       </p>
       {best && (
         <div className="headroom" data-testid="headroom" data-explain="headroom">
@@ -173,6 +188,14 @@ export default function Accounts({ machines, now }: Props) {
                   {tierLine(a)}
                 </span>
               </header>
+              <p
+                className="account-cached"
+                data-testid="account-cached"
+                data-explain="account-cached"
+                title={CACHED_WHY}
+              >
+                {CACHED_LABEL} <span aria-hidden="true">?</span>
+              </p>
               {d ? (
                 <>
                   <Window
@@ -235,21 +258,27 @@ export default function Accounts({ machines, now }: Props) {
                 )}
               </p>
               <div className="drawers" data-explain="drawers">
-                <span className="label">Who draws on it</span>
+                <span className="label">Machines whose cached profile names this account</span>
                 <p data-testid="account-machines">
-                  Machines signed in: <b>{a.machines.join(' · ')}</b>
+                  {a.profiles.map((p, i) => (
+                    <span key={p.machine} data-testid="account-profile" data-machine={p.machine}>
+                      {i > 0 && ' · '}
+                      <b>{p.machine}</b> {profileAge(p.fetchedAt, now)}
+                    </span>
+                  ))}
                 </p>
                 {a.drawers.length ? (
                   <ul>
                     {a.drawers.map((dr) => (
                       <li key={dr.machineLabel}>
-                        <b>{dr.machineLabel}</b> · {dr.seats.length} active seat
-                        {dr.seats.length === 1 ? '' : 's'}: {dr.seats.join(', ')}
+                        <b>{dr.machineLabel}</b> · {dr.seats.length} seat
+                        {dr.seats.length === 1 ? '' : 's'} running there (which login they use is
+                        not read): {dr.seats.join(', ')}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="quiet">No running agent seats on it right now.</p>
+                  <p className="quiet">No Claude seats running on those machines right now.</p>
                 )}
               </div>
             </article>

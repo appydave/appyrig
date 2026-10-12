@@ -17,3 +17,4 @@ export * from './health.js';
 export * from './rigfiles.js';
 export * from './dbschema.js';
 export * from './feedback.js';
+export * from './loadout.js';

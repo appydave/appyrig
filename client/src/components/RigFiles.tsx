@@ -6,6 +6,21 @@ import { isTextEntry } from '../lib/keys.js';
 import MarkdownView from './MarkdownView.js';
 import YamlView from './YamlView.js';
 
+/**
+ * v1.5 · L1: a file handed to the viewer instead of fetched (the Debug view's prompt layers), so
+ * they open in this same viewer. `sub` replaces the "team folder" line under its name.
+ */
+export interface PresetFile {
+  id: string;
+  name: string;
+  sub: string;
+  about?: string;
+  bytes: number;
+  modifiedAt: string;
+  truncated: boolean;
+  content: string;
+}
+
 interface Props {
   socket: FleetSocket;
   machineId: string;
@@ -15,6 +30,8 @@ interface Props {
   /** What to call it on screen. */
   title: string;
   onClose: () => void;
+  /** v1.5 · L1: show these files (no rig.files / rig.file calls), opened at `initialId`. */
+  preset?: { files: PresetFile[]; initialId?: string; what: string };
 }
 
 type ListState =
@@ -42,6 +59,30 @@ const ABOUT: Record<string, string> = {
 const aboutFile = (f: RigFileMeta): string =>
   ABOUT[f.name] ?? (f.name.startsWith('LEARNED') ? 'What a seat learned while working.' : '');
 
+const subOf = (f: RigFileMeta, preset: Props['preset']): string =>
+  preset?.files.find((p) => p.id === f.id)?.sub ??
+  (f.scope === 'spec' ? 'team folder' : 'mission folder');
+const aboutOf = (f: RigFileMeta, preset: Props['preset']): string =>
+  preset ? (preset.files.find((p) => p.id === f.id)?.about ?? '') : aboutFile(f);
+
+/** The given files as the list rig.files would have answered. */
+function presetList(machine: string, rig: string, files: PresetFile[]): RigFilesOutput {
+  return {
+    machine,
+    rig,
+    status: 'ok',
+    reason: null,
+    files: files.map((f) => ({
+      id: f.id,
+      name: f.name,
+      scope: 'spec',
+      bytes: f.bytes,
+      modifiedAt: f.modifiedAt,
+      truncated: f.truncated,
+    })) as RigFilesOutput['files'],
+  };
+}
+
 const WHY: Record<RigFilesOutput['status'], string> = {
   ok: '',
   'no-spec':
@@ -57,14 +98,27 @@ const WHY: Record<RigFilesOutput['status'], string> = {
  * The viewer asks the hub by {machine, rig, file id} only; the collector decides which files exist.
  * Esc closes; ↑ ↓ move between files.
  */
-export default function RigFiles({ socket, machineId, machineLabel, rig, title, onClose }: Props) {
-  const [list, setList] = useState<ListState>({ state: 'loading' });
-  const [selected, setSelected] = useState<string | null>(null);
+export default function RigFiles({
+  socket,
+  machineId,
+  machineLabel,
+  rig,
+  title,
+  onClose,
+  preset,
+}: Props) {
+  const [list, setList] = useState<ListState>(() =>
+    preset ? { state: 'ok', out: presetList(machineId, rig, preset.files) } : { state: 'loading' }
+  );
+  const [selected, setSelected] = useState<string | null>(
+    () => preset?.initialId ?? preset?.files[0]?.id ?? null
+  );
   const [file, setFile] = useState<FileState>({ state: 'idle' });
   const [source, setSource] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const loadList = useCallback(() => {
+    if (preset) return;
     setList({ state: 'loading' });
     void callVerb<RigFilesOutput>(socket, 'rig.files', { machine: machineId, rig }).then((a) => {
       if (!a.ok) return setList({ state: 'refused', error: a.error });
@@ -77,6 +131,8 @@ export default function RigFiles({ socket, machineId, machineLabel, rig, title, 
           null
       );
     });
+    // `preset` is fixed for the viewer's life: App mounts a new viewer to show other files.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, machineId, rig]);
   useEffect(() => {
     loadList();
@@ -84,6 +140,12 @@ export default function RigFiles({ socket, machineId, machineLabel, rig, title, 
 
   useEffect(() => {
     if (!selected) return setFile({ state: 'idle' });
+    const given = preset?.files.find((f) => f.id === selected);
+    if (preset) {
+      if (given)
+        setFile({ state: 'ok', file: { ...given, scope: 'spec' } as RigFileOutput['file'] });
+      return;
+    }
     let current = true;
     setFile({ state: 'loading', id: selected });
     void callVerb<RigFileOutput>(socket, 'rig.file', {
@@ -101,6 +163,7 @@ export default function RigFiles({ socket, machineId, machineLabel, rig, title, 
     return () => {
       current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, machineId, rig, selected]);
 
   useEffect(() => {
@@ -155,7 +218,10 @@ export default function RigFiles({ socket, machineId, machineLabel, rig, title, 
         <header className="files-head">
           <span>
             <b>{title}</b>
-            <span className="label"> · files · {machineLabel}</span>
+            <span className="label">
+              {' '}
+              · {preset?.what ?? 'files'} · {machineLabel}
+            </span>
           </span>
           <button
             ref={closeRef}
@@ -219,10 +285,12 @@ export default function RigFiles({ socket, machineId, machineLabel, rig, title, 
                   >
                     <b>{f.name}</b>
                     <span className="files-sub">
-                      {f.scope === 'spec' ? 'team folder' : 'mission folder'} · {kb(f.bytes)}
+                      {subOf(f, preset)} · {kb(f.bytes)}
                       {f.truncated ? ' · cut' : ''}
                     </span>
-                    {aboutFile(f) && <span className="files-about">{aboutFile(f)}</span>}
+                    {aboutOf(f, preset) && (
+                      <span className="files-about">{aboutOf(f, preset)}</span>
+                    )}
                   </button>
                 </li>
               ))}

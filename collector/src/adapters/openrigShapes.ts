@@ -216,6 +216,8 @@ export const LenientNode = z.looseObject({
   lifecycleState: str,
   model: strN.optional(),
   cwd: strN.optional(),
+  /** v1.5 · L1: `path:<agent spec folder>`, where the seat's role.md lives. */
+  agentRef: strN.optional(),
   lastActivityAt: strN.optional(),
   recoveryGuidance: z.looseObject({ summary: str.optional(), action: str.optional() }).nullish(),
   contextUsage: z.looseObject({ usedPercentage: num.nullable().optional() }).nullish(),

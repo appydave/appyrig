@@ -13,7 +13,8 @@ import type { FeedbackViewState } from '@appydave/shared';
 import Legend from './components/Legend.js';
 import { isShortcutBlocked } from './lib/keys.js';
 import type { LegendScreen } from './learn/legend.js';
-import RigFiles from './components/RigFiles.js';
+import RigFiles, { type PresetFile } from './components/RigFiles.js';
+import Loadout from './components/Loadout.js';
 import RigMap from './components/RigMap.js';
 import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
@@ -146,8 +147,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   /** S7-ui: the rig whose files are open (rig.yaml, mission and culture notes). */
   const [filesFor, setFilesFor] = useState<{ machineId: string; rig: string } | null>(null);
   const filesOpener = useRef<HTMLElement | null>(null);
-  /** Something sits on top of the screen (keys overlay, feedback composer, files viewer): screen keys stand down. */
-  const overlay = help || !!feedback || !!filesFor;
+  /** v1.5 · L1: the seat whose Debug view is open, and prompt-layer files open over it. */
+  const [debugFor, setDebugFor] = useState<{ machineId: string; seatId: string } | null>(null);
+  const [layersOpen, setLayersOpen] = useState<{ files: PresetFile[]; initialId: string } | null>(
+    null
+  );
+  const debugOpener = useRef<HTMLElement | null>(null);
+  const layersOpener = useRef<HTMLElement | null>(null);
+  /** Something sits on top of the screen (keys overlay, feedback composer, files viewer, Debug): screen keys stand down. */
+  const overlay = help || !!feedback || !!filesFor || !!debugFor;
 
   const allMachines = useMemo(() => orderedMachines(state.machines), [state.machines]);
   const [hidden, setHidden] = useState<string[]>(readHidden);
@@ -279,6 +287,45 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     const back = filesOpener.current;
     if (back?.isConnected) back.focus();
   }, []);
+  const openDebug = useCallback((machineId: string, seatId: string) => {
+    const active = document.activeElement;
+    debugOpener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    setDebugFor({ machineId, seatId });
+  }, []);
+  const closeDebug = useCallback(() => {
+    setDebugFor(null);
+    setLayersOpen(null);
+    const back = debugOpener.current;
+    if (back?.isConnected) back.focus();
+  }, []);
+  // v1.5 · L1: a skill-count pill opens that seat, with its Debug view on top.
+  const openSkills = useCallback(
+    (key: string) => {
+      const found = findSeat(state.machines, key);
+      if (!found) return;
+      open(key);
+      setDebugFor({ machineId: found.machine.machine.id, seatId: found.seat.id });
+    },
+    [state.machines, open]
+  );
+  const openLayers = useCallback((files: PresetFile[], initialId: string) => {
+    const active = document.activeElement;
+    layersOpener.current =
+      active instanceof HTMLElement && active !== document.body ? active : null;
+    setLayersOpen({ files, initialId });
+  }, []);
+  const closeLayers = useCallback(() => {
+    setLayersOpen(null);
+    const back = layersOpener.current;
+    if (back?.isConnected) back.focus();
+  }, []);
+  // The Debug view belongs to an open seat: closing the seat closes it.
+  useEffect(() => {
+    if (!focused) {
+      setDebugFor(null);
+      setLayersOpen(null);
+    }
+  }, [focused]);
 
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
@@ -304,7 +351,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   // S8: F opens the feedback composer, on every screen and in the seat panel (O is Files').
   useEffect(() => {
-    if (help || feedback || filesFor) return;
+    if (help || feedback || filesFor || debugFor) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'f' || e.key === 'F') && !isShortcutBlocked(e)) {
         e.preventDefault();
@@ -317,13 +364,13 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   // L shows or hides the legend for this screen, the seat panel included (QA D3).
   useEffect(() => {
-    if (help || feedback || filesFor) return;
+    if (help || feedback || filesFor || debugFor) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [help, feedback, filesFor, toggleLegend]);
+  }, [help, feedback, filesFor, debugFor, toggleLegend]);
 
   // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
   useEffect(() => {
@@ -519,6 +566,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           hubConnected={hubConnected}
           received={state.received}
           onOpen={open}
+          onOpenSkills={openSkills}
           keys={!focusTile && !overlay}
           hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
           onShow={toggleMachine}
@@ -533,7 +581,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             onOpenFiles={(r) => openFiles(r.machineId, r.name)}
           />
           {view === 'map' ? (
-            <RigMap map={rigMap} onOpen={open} />
+            <RigMap map={rigMap} onOpen={open} onOpenSkills={openSkills} />
           ) : (
             <HandoffFlow
               machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
@@ -609,8 +657,38 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           legendOpen={legend}
           onToggleLegend={toggleLegend}
           onOpenRigFiles={openFiles}
-          keys={!feedback && !filesFor}
+          onOpenDebug={openDebug}
+          keys={!feedback && !filesFor && !debugFor}
           legend={legend ? <Legend view="focus" onClose={toggleLegend} /> : null}
+        />
+      )}
+      {debugFor && focusTile && (
+        <Loadout
+          socket={getSocket()}
+          machineId={debugFor.machineId}
+          machineLabel={
+            allMachines.find((m) => m.machine.id === debugFor.machineId)?.machine.label ??
+            debugFor.machineId
+          }
+          seatId={debugFor.seatId}
+          title={debugFor.seatId}
+          onClose={closeDebug}
+          onOpenLayers={openLayers}
+          keys={!layersOpen && !feedback}
+        />
+      )}
+      {debugFor && layersOpen && (
+        <RigFiles
+          socket={getSocket()}
+          machineId={debugFor.machineId}
+          machineLabel={
+            allMachines.find((m) => m.machine.id === debugFor.machineId)?.machine.label ??
+            debugFor.machineId
+          }
+          rig={debugFor.seatId}
+          title={debugFor.seatId}
+          preset={{ ...layersOpen, what: 'prompt layers' }}
+          onClose={closeLayers}
         />
       )}
       {filesFor && (

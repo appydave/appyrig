@@ -7,6 +7,7 @@ import {
   HandoffBodiesSchema,
   RigFilesPushSchema,
   SchemaPushSchema,
+  SeatLoadoutSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -175,6 +176,11 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     socket.on(
       FLEET_EVENTS.SCHEMA,
       guarded(SchemaPushSchema, 'database schema', (d) => opts.store.schemas.put(d))
+    );
+    // v1.5 · L1: one seat's loadout (Debug view). Same checks as the others.
+    socket.on(
+      FLEET_EVENTS.LOADOUT,
+      guarded(SeatLoadoutSchema, 'loadout', (d) => opts.store.loadouts.put(d))
     );
   });
 }

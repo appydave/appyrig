@@ -154,6 +154,8 @@ export interface MapSeat {
   /** Open items older than STALE_MS: left behind, not waiting in a live queue. */
   stale: number;
   oldestStaleMs: number | null;
+  /** v1.5 · L1: the seat's skillCount for the pill (null: none; undefined: not reported). */
+  skills?: number | null;
 }
 
 export interface MapPod {
@@ -207,6 +209,7 @@ function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
     name: seatName(seat),
     model: modelChip(seat),
     pip: pipFor(seat, fm),
+    skills: seat.skillCount,
     ...c,
   };
 }
@@ -703,10 +706,15 @@ export interface AccountView {
   reading: (AccountUsage & { from: string }) | null;
   machines: string[];
   drawers: AccountDrawer[];
-  /** Live, non-stopped Claude seats drawing on it right now. */
+  /** Live, non-stopped Claude seats on the machines whose cached profile names it (their login is not read). */
   activeSeats: number;
   /** S5: the hub's view of the account (tier, windows against their resets); null from an older hub. */
   derived: AccountDerived | null;
+  /**
+   * v1.5 · C: per machine on this card, when its cached profile (where the email comes from) was
+   * fetched. null = not in the cache; undefined = an older collector does not report it.
+   */
+  profiles: { machine: string; fetchedAt: string | null | undefined }[];
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -724,8 +732,8 @@ export function planLabel(plan: string | null): string {
 const isClaudeSeat = (s: Seat) => s.runtime === 'claude-code' || /^claude-/.test(s.model ?? '');
 
 /**
- * Accounts across the fleet. A machine names its account; a seat draws on its machine's account
- * (OpenRig seats run as the machine's user). Readings come only from machines with a sampler; the
+ * Accounts across the fleet, grouped by each machine's CACHED profile (v1.5 C), which is not
+ * proof of the login its seats use. The seats listed are those running on those machines. Readings come only from machines with a sampler; the
  * freshest one wins, because every machine on the account sees the same window.
  */
 export interface UnreportedMachine {
@@ -759,12 +767,14 @@ export function buildAccounts(machines: FleetMachine[]): {
         drawers: [],
         activeSeats: 0,
         derived: null,
+        profiles: [],
       } satisfies AccountView);
     // The hub derives one answer per account; take the one with a reading if machines differ.
     if (acct.derived && (!v.derived || (!v.derived.readingFrom && acct.derived.readingFrom))) {
       v.derived = acct.derived;
     }
     v.machines.push(fm.machine.label);
+    v.profiles.push({ machine: fm.machine.label, fetchedAt: acct.profileFetchedAt });
     if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
       v.reading = { ...acct, from: fm.machine.label };
     }

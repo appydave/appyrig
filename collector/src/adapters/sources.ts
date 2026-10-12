@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
 import { createSpecIndex } from './specs.js';
 import { createHealthSampler } from './health.js';
-import { parseNodes, parsePs, parseQueue, parseQueueBodies } from './daemon.js';
+import { parseNodesWithRefs, parsePs, parseQueue, parseQueueBodies } from './daemon.js';
 import { capturePaneArgs, isNoServer, LIST_PANES_ARGS, parsePanes } from './tmux.js';
 import { AGENT_LIST_ARGS, parseAgentList } from './viewer.js';
 import type { DaemonRead, Sources, TmuxPane, ViewerAgent } from './types.js';
@@ -116,6 +116,9 @@ export function createSources(opts: SourceOptions = {}): Sources {
     return queueCache.value;
   };
 
+  /** v1.5 · L1: seat → agent spec folder, from the latest daemon read. */
+  let agentDirs = new Map<string, string>();
+
   let versionCache: string | null | undefined;
   const readVersion = async (): Promise<string | null> => {
     if (versionCache !== undefined) return versionCache;
@@ -133,9 +136,14 @@ export function createSources(opts: SourceOptions = {}): Sources {
       const rigs = parsePs(await getJson('/api/ps'));
       const seats: DaemonRead['seats'] = [];
       const failures: string[] = [];
+      const dirs = new Map<string, string>();
       for (const rig of rigs) {
         try {
-          seats.push(...parseNodes(await getJson(`/api/rigs/${encodeURIComponent(rig.id)}/nodes`)));
+          const read = parseNodesWithRefs(
+            await getJson(`/api/rigs/${encodeURIComponent(rig.id)}/nodes`)
+          );
+          seats.push(...read.seats);
+          read.agentDirs.forEach((dir, seat) => dirs.set(seat, dir));
         } catch (e) {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
@@ -149,6 +157,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
       } catch (e) {
         warnings.push(`queue unreadable: ${(e as Error).message}`);
       }
+      agentDirs = dirs;
       return { version: await readVersion(), rigs, seats, queue, warnings };
     },
 
@@ -171,6 +180,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     /** Cached machine health, re-sampled in the background (v1.4 · S6). */
     health: createHealthSampler(run),
     exec: run,
+    agentDirs: () => agentDirs,
     /** Bodies from the latest queue read (reads it if it is stale). */
     async queueBodies() {
       await readQueue();

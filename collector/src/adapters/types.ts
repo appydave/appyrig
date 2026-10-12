@@ -50,4 +50,6 @@ export interface Sources {
   health?(): Promise<HealthSample>;
   /** Runs one read-only command with the collector's timeout and environment (v1.4 · S7: `rig --version`). */
   exec?(bin: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }>;
+  /** v1.5 · L1: seat id → its agent spec folder, from the latest daemon read. Optional: fixtures omit it. */
+  agentDirs?(): Map<string, string>;
 }

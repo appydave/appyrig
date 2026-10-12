@@ -3,7 +3,7 @@
   "info": {
     "title": "AppyRig",
     "version": "0.1.0",
-    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n21 methods; 1 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
+    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n22 methods; 1 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
   },
   "servers": [
     {
@@ -2977,6 +2977,18 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "skillCount": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
                               }
                             },
                             "required": [
@@ -3150,6 +3162,18 @@
                                     {
                                       "type": "string",
                                       "maxLength": 80
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "profileFetchedAt": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "format": "date-time",
+                                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
                                     },
                                     {
                                       "type": "null"
@@ -8460,6 +8484,18 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "skillCount": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -9378,6 +9414,18 @@
                         "string",
                         "null"
                       ]
+                    },
+                    "skillCount": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -9605,6 +9653,619 @@
         "machine-not-found"
       ],
       "x-required": []
+    },
+    {
+      "name": "seat.loadout",
+      "summary": "What one seat runs with, for the Debug view: the skills Claude Code listed to it (the newest full skill_listing in its transcript plus its later additions, counted once each; each sorted by source: role, repo, personal, plugin, builtin, or unplaced when the seat's folder is gone; same-named copies flagged) and its prompt-layer files, present or absent. Listed = available to the model; which skills were used is not reported. status: 'not-claude' (Codex and terminal seats are not read yet), 'no-listing' (no skill listing found), 'pending' (no loadout from this machine's collector for this seat: older than v1.5, or not sent yet).",
+      "tags": [
+        {
+          "name": "seat"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "summary": "machine id, e.g. m2",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "machine id, e.g. m2"
+          }
+        },
+        {
+          "name": "seat",
+          "required": true,
+          "summary": "seat id, e.g. orch-lead@appyrig-v14",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "description": "seat id, e.g. orch-lead@appyrig-v14"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "The call envelope: `ok: true` with the value, or `ok: false` with a named refusal.",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "value"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "value": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "const": false
+                },
+                "error": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "x-value": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "machine": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "seat": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "no-listing",
+                  "not-claude",
+                  "pending"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "loadout": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "machineId": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9-]*$"
+                      },
+                      "seat": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "collectedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                      },
+                      "runtime": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "cwd": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "ok",
+                          "no-listing",
+                          "not-claude"
+                        ]
+                      },
+                      "listing": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                              },
+                              "skillCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "reported": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "isInitial": {
+                                "type": "boolean"
+                              },
+                              "deltas": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "listings": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "transcript": {
+                                "type": "string",
+                                "maxLength": 1024
+                              }
+                            },
+                            "required": [
+                              "at",
+                              "skillCount",
+                              "reported",
+                              "isInitial",
+                              "deltas",
+                              "listings",
+                              "transcript"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "cwdIsGitRepo": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "cwdExists": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ]
+                      },
+                      "skills": {
+                        "maxItems": 2000,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            },
+                            "source": {
+                              "type": "string",
+                              "enum": [
+                                "role",
+                                "repo",
+                                "personal",
+                                "plugin",
+                                "builtin",
+                                "unplaced"
+                              ]
+                            },
+                            "plugin": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "alsoIn": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "role",
+                                  "repo",
+                                  "personal",
+                                  "plugin",
+                                  "builtin",
+                                  "unplaced"
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "source",
+                            "plugin",
+                            "alsoIn"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "layers": {
+                        "maxItems": 6,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "enum": [
+                                "culture",
+                                "role",
+                                "claude-md",
+                                "claude-local",
+                                "recap",
+                                "learned"
+                              ]
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 120
+                            },
+                            "present": {
+                              "type": "boolean"
+                            },
+                            "path": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 1024
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "looked": {
+                              "maxItems": 8,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 1024
+                              }
+                            },
+                            "bytes": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "modifiedAt": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "date-time",
+                                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "truncated": {
+                              "type": "boolean"
+                            },
+                            "content": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "present",
+                            "path",
+                            "looked",
+                            "bytes",
+                            "modifiedAt",
+                            "truncated",
+                            "content"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "machineId",
+                      "seat",
+                      "collectedAt",
+                      "runtime",
+                      "cwd",
+                      "status",
+                      "listing",
+                      "cwdIsGitRepo",
+                      "cwdExists",
+                      "skills",
+                      "layers"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "machine",
+              "seat",
+              "status",
+              "reason",
+              "loadout"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32001,
+          "message": "forbidden",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "forbidden"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "principal": {
+                    "type": "string"
+                  },
+                  "allowed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "human",
+                        "agent",
+                        "cli"
+                      ]
+                    }
+                  },
+                  "humanOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capability",
+                  "principal",
+                  "allowed",
+                  "humanOnly"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32002,
+          "message": "machine-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "machine-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32003,
+          "message": "seat-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "seat-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "seat": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "seat",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32601,
+          "message": "unknown-capability",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "unknown-capability"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32602,
+          "message": "invalid-input",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "invalid-input"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32603,
+          "message": "internal",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "internal"
+              },
+              "details": {}
+            }
+          }
+        }
+      ],
+      "x-kind": "query",
+      "x-family": "seat",
+      "x-principals": [
+        "human",
+        "agent",
+        "cli"
+      ],
+      "x-human-only": false,
+      "x-side-effects": "read-only",
+      "x-idempotent": true,
+      "x-confirmation-required": false,
+      "x-expected-duration": "fast",
+      "x-failure-modes": [
+        "machine-not-found",
+        "seat-not-found"
+      ],
+      "x-required": [
+        "machine",
+        "seat"
+      ]
     },
     {
       "name": "seat.tail",

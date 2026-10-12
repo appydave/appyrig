@@ -48,8 +48,8 @@ export const GLOSSARY: Record<string, Term> = {
   },
   'view-accounts': {
     term: 'Accounts',
-    what: 'Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines draw on it.',
-    why: 'Every machine signed into one account spends one allowance. Seven seats on one account can empty it fast.',
+    what: "Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines' cached profiles name it.",
+    why: 'The account shown for a machine is its cached profile. The login a session actually uses can differ: Claude keeps two credential stores.',
   },
   learn: {
     term: 'Learn',
@@ -97,6 +97,11 @@ export const GLOSSARY: Record<string, Term> = {
     term: 'Rig files',
     what: 'The files that define a rig, found next to its rig.yaml: the spec itself, plus mission, culture, brief, report and LEARNED notes. YAML is coloured and can be folded; Markdown is shown formatted.',
     why: 'The spec holds fields the diagrams do not show (models, working folders, edges). The notes say what the team was told to do and what it learned. Read-only: AppyRig never changes them.',
+  },
+  'skill-pill': {
+    term: 'Skills',
+    what: "How many skills Claude Code listed to this session's model, from its own transcript: the newest full skill listing plus the skills added after it, each counted once. It counts what was available, not what was used. A dash means no count: a Codex seat, no listing yet, or an older collector.",
+    why: 'Click it for the Debug view: each skill sorted by where it came from (OpenRig role, the repo, personal, a plugin, built-in) and the prompt files the seat started with.',
   },
 
   // ---------------------------------------------------------------- machines and sources
@@ -319,8 +324,13 @@ export const GLOSSARY: Record<string, Term> = {
   // ---------------------------------------------------------------- accounts
   account: {
     term: 'Claude account',
-    what: "The login a machine's Claude Code uses. Every machine signed into the same account shares its limits.",
-    why: "A machine sits under the account it is signed into right now, read from its own Claude login on every push: switch a machine's login and it moves to the other card.",
+    what: "A Claude login and its limits. Every session using the same account shares them. The email on a card is the machine's cached profile (~/.claude.json), refreshed about once a day.",
+    why: "A machine sits under the account its cached profile names. That cache is not the login a session uses (the Keychain or ~/.claude/.credentials.json, which AppyRig never reads), so a seat can be spending a different account's limits from the card it sits under.",
+  },
+  'account-cached': {
+    term: 'Cached profile',
+    what: "Where the card's email comes from: Claude Code's cached profile in ~/.claude.json, refreshed about once a day. Each machine shows how old its cache is.",
+    why: 'It is not proof of which login a session uses. Logins live in the Keychain (desktop sessions) and ~/.claude/.credentials.json (SSH-started sessions such as rigs), and the two can differ from the cache.',
   },
   'meter-5h': {
     term: '5-hour window',
@@ -334,8 +344,8 @@ export const GLOSSARY: Record<string, Term> = {
   },
   'account-tier': {
     term: 'Plan tier',
-    what: 'Which plan the account is on, e.g. Max $200, and where AppyRig learned it: reported by the login itself, set in AppyRig’s config, or not reported at all.',
-    why: 'The tier sets how big each window is. "Tier not reported" means neither the login nor the config names it; AppyRig does not guess.',
+    what: 'Which plan the account is on, e.g. Max $200, and where AppyRig learned it: from the cached profile (the same one the email comes from), set in AppyRig’s config, or not reported at all.',
+    why: 'The tier sets how big each window is. "Tier not reported" means neither the cached profile nor the config names it; AppyRig does not guess.',
   },
   'window-now': {
     term: 'Window against its reset',
@@ -403,9 +413,9 @@ export const GLOSSARY: Record<string, Term> = {
     why: 'Where the next team should run. A suggestion only; AppyRig never moves work.',
   },
   drawers: {
-    term: 'Who draws on it',
-    what: 'The machines on this account and their running Claude seats.',
-    why: 'Each running seat spends from the same window.',
+    term: 'Machines whose cached profile names this account',
+    what: 'The machines whose cached Claude profile names this account, how old each cache is, and the Claude seats running on those machines.',
+    why: 'It is not proof those seats spend this account: each seat uses whatever login its session found (Keychain or ~/.claude/.credentials.json), which AppyRig never reads.',
   },
 };
 
