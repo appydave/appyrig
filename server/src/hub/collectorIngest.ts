@@ -8,6 +8,7 @@ import {
   RigFilesPushSchema,
   SchemaPushSchema,
   SeatLoadoutSchema,
+  DbRowsPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -181,6 +182,11 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     socket.on(
       FLEET_EVENTS.LOADOUT,
       guarded(SeatLoadoutSchema, 'loadout', (d) => opts.store.loadouts.put(d))
+    );
+    // Batch 1 · B5: one table's newest rows (read-only). Same checks as the others.
+    socket.on(
+      FLEET_EVENTS.DBROWS,
+      guarded(DbRowsPushSchema, 'database rows', (d) => opts.store.dbRows.put(d))
     );
   });
 }

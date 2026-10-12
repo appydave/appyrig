@@ -3551,3 +3551,53 @@ g[data-testid='flow-edge'] {
   border-color: var(--ar-ink);
   box-shadow: 0 4px 14px rgb(52 45 45 / 0.25);
 }
+
+/* ---------- batch 1 · B5: read-only table rows in the schema view (fb-0003) ---------- */
+.schema-rows {
+  margin-top: 14px;
+  border-top: 1px solid var(--ar-line-soft);
+  padding-top: 8px;
+}
+.schema-rows-caption {
+  margin: 4px 0;
+  font-size: 13px;
+}
+.schema-rows-scroll {
+  max-width: 100%;
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+}
+.schema-rows-table {
+  border-collapse: collapse;
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+}
+.schema-rows-table th {
+  position: sticky;
+  top: 0;
+  background: var(--ar-surface);
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--ar-line);
+  white-space: nowrap;
+}
+.schema-rows-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--ar-line-soft);
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+}
+.schema-rows-table td[data-null] {
+  color: var(--ar-ink-muted);
+  font-style: italic;
+}
+.schema-rows-pager {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 0;
+}
