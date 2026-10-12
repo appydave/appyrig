@@ -3,8 +3,9 @@ import { MachineIdentitySchema } from './snapshot.js';
 
 /**
  * v1.5 · L1: a seat's loadout, for the Debug view. What one Claude seat runs with:
- *   - the skills Claude Code listed to the model, from the latest `skill_listing` entry in the
- *     seat's own transcript (not a guess from folders), each sorted by where it came from;
+ *   - the skills Claude Code listed to the model: the newest full `skill_listing` in the seat's
+ *     own transcript plus its later additions (not a guess from folders), each sorted by where it
+ *     came from;
  *   - the prompt-layer files, present or absent, with their text for the file viewer.
  *
  * Listed means available to the model. Which skills were used is not reported here.

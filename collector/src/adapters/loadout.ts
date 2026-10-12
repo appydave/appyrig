@@ -21,8 +21,9 @@ import type { SpecInfo } from './specs.js';
  * v1.5 · L1: what a seat runs with, for the Debug view.
  *
  * Skills: Claude Code writes what it showed the model as an `attachment` line of type
- * `skill_listing` (`skillCount`, `names`, `isInitial`) in the seat's transcript. The latest one is
- * read, found by an incremental scan (only bytes appended since the last scan). Each listed name is
+ * `skill_listing` (`skillCount`, `names`, `isInitial`) in the seat's transcript: one full listing,
+ * then listings of later additions only. The newest full listing plus its later additions is read
+ * (foldListing), by an incremental scan (only bytes appended since the last scan). Each name is
  * then sorted by where it lives on this machine; nothing is guessed from folders alone.
  *
  * Prompt layers: a fixed set of names in fixed places (the seat's cwd, its agent spec folder, its
@@ -30,7 +31,7 @@ import type { SpecInfo } from './specs.js';
  * agentRef) and from the collector's configured spec folders, never from a client.
  */
 
-// ── the latest skill listing in a transcript ───────────────────────────────────────────────────
+// ── the skills shown: newest full listing + later additions ───────────────────────────────────────────────────
 
 export interface SkillListing {
   at: string;

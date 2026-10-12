@@ -100,7 +100,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   'skill-pill': {
     term: 'Skills',
-    what: "How many skills Claude Code listed to this session's model, from the latest skill listing in its own transcript. It counts what was available, not what was used. A dash means no count: a Codex seat, no listing yet, or an older collector.",
+    what: "How many skills Claude Code listed to this session's model, from its own transcript: the newest full skill listing plus the skills added after it, each counted once. It counts what was available, not what was used. A dash means no count: a Codex seat, no listing yet, or an older collector.",
     why: 'Click it for the Debug view: each skill sorted by where it came from (OpenRig role, the repo, personal, a plugin, built-in) and the prompt files the seat started with.',
   },
 

@@ -25,8 +25,8 @@ interface Props {
 }
 
 /**
- * v1.5 · L1: the skill-count pill on every session. Available skills only (`skillCount` from the
- * latest `skill_listing`), "—" when there is none, never 0. It sits inside tiles, chips and map
+ * v1.5 · L1: the skill-count pill on every session. Available skills only (`skillCount`: the
+ * newest full `skill_listing` plus its later additions), "—" when there is none, never 0. It sits inside tiles, chips and map
  * nodes that are buttons themselves, so it is a clickable span that keeps its click to itself;
  * from the keyboard, open the seat and press D.
  */
