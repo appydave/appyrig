@@ -704,6 +704,51 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     ).toMatchObject({ failureMode: 'invalid_snapshot' });
   });
 
+  // v1.5 · L1: the loadout channel. Hub first: an old collector (snapshot only, no loadout) must
+  // still push, and the verb must then say "pending", never an empty loadout.
+  it('loadout: an old collector still pushes; the verb is pending until a loadout arrives, then ok', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const snap = loadSnapshot('m2');
+    expect(await push(c, snap)).toMatchObject({ ok: true });
+    const seat = snap.seats.find((s) => s.runtime === 'claude-code')!.id;
+    expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value).toMatchObject({
+      status: 'pending',
+      loadout: null,
+    });
+    const loadout = {
+      machineId: 'm2',
+      seat,
+      collectedAt: '2026-10-12T00:00:00.000Z',
+      runtime: 'claude-code',
+      cwd: '/w',
+      status: 'ok',
+      listing: {
+        at: '2026-10-11T11:18:09.715Z',
+        skillCount: 1,
+        isInitial: true,
+        listings: 1,
+        transcript: '/t.jsonl',
+      },
+      cwdIsGitRepo: true,
+      skills: [{ name: 'recipe', source: 'repo', plugin: null, alsoIn: [] }],
+      layers: [],
+    };
+    expect(await emit(c, 'collector:loadout', loadout)).toMatchObject({ ok: true });
+    expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value).toMatchObject({
+      status: 'ok',
+      loadout: { skills: [{ name: 'recipe', source: 'repo' }] },
+    });
+    // the snapshot keeps flowing alongside, unchanged
+    expect(await push(c, snap)).toMatchObject({ ok: true });
+    expect(await emit(c, 'collector:loadout', { ...loadout, machineId: 'roamy' })).toMatchObject({
+      failureMode: 'machine_mismatch',
+    });
+    expect(
+      await emit(c, 'collector:loadout', { ...loadout, skills: [{ name: 'x', source: 'guess' }] })
+    ).toMatchObject({ failureMode: 'invalid_snapshot' });
+  });
+
   const col = (name: string, type = 'TEXT') => ({
     name,
     type,

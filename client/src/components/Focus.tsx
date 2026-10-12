@@ -15,6 +15,7 @@ import {
   visibleTail,
   type TileRef,
 } from '../fleet/model.js';
+import { isShortcutBlocked } from '../lib/keys.js';
 import FocusTerminal from './FocusTerminal.js';
 
 type Mode = 'terminal' | 'rich';
@@ -104,6 +105,8 @@ interface Props {
   onToggleLegend?: () => void;
   /** S7-ui: open this seat's rig files (its rig.yaml, mission and culture notes). */
   onOpenRigFiles?: (machineId: string, rig: string) => void;
+  /** v1.5 · L1: open this seat's Debug view (what it runs with). Also the key D. */
+  onOpenDebug?: (machineId: string, seatId: string) => void;
   /**
    * The one pause mechanism (r1): Focus owns Esc and ⌘↵ only while nothing sits on top of it.
    * App passes false while the feedback composer (S8) or the rig files viewer (S7) is open over
@@ -122,6 +125,7 @@ export default function Focus({
   legendOpen = false,
   onToggleLegend,
   onOpenRigFiles,
+  onOpenDebug,
   keys = true,
 }: Props) {
   const [mode, setMode] = useState<Mode>('terminal');
@@ -170,6 +174,11 @@ export default function Focus({
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey))) {
         e.preventDefault();
         onClose();
+        return;
+      }
+      if ((e.key === 'd' || e.key === 'D') && onOpenDebug && !isShortcutBlocked(e)) {
+        e.preventDefault();
+        onOpenDebug(machineId, seatId);
       }
     };
     // Capture phase: Focus sees Esc before anything inside it (the terminal's textarea) can
@@ -177,7 +186,7 @@ export default function Focus({
     // when this attaches, so it cannot close Focus straight away.
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose, keys]);
+  }, [onClose, onOpenDebug, keys, machineId, seatId]);
 
   const w = seat.work;
   const rows: [string, string][] = [
@@ -256,6 +265,18 @@ export default function Focus({
               onClick={() => onOpenRigFiles(machine.machine.id, seat.rig!)}
             >
               Rig files
+            </button>
+          )}
+          {onOpenDebug && (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="focus-debug"
+              aria-keyshortcuts="D"
+              title="Debug: what this seat runs with (listed skills by source, prompt layers)"
+              onClick={() => onOpenDebug(machine.machine.id, seat.id)}
+            >
+              Debug · D
             </button>
           )}
           {onToggleLegend && (

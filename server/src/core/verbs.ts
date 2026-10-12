@@ -35,6 +35,9 @@ import {
   QueueRowSchema,
   RigTopologySchema,
   SeatHistoryInputSchema,
+  SeatLoadoutInputSchema,
+  SeatLoadoutOutputSchema,
+  type SeatLoadoutOutput,
   SeatHistoryOutputSchema,
   SeatGetOutputSchema,
   SeatListInputSchema,
@@ -311,6 +314,39 @@ const VERB_SET = {
         truncated: h?.truncated ?? false,
         events: h?.events ?? [],
       };
+    }
+  ),
+
+  'seat.loadout': query(
+    "What one seat runs with, for the Debug view: the skills Claude Code listed to it (from the latest skill_listing in its transcript, each sorted by source: role, repo, personal, plugin, builtin, with same-named copies flagged) and its prompt-layer files, present or absent. Listed = available to the model; which skills were used is not reported. status: 'not-claude' (Codex and terminal seats are not read yet), 'no-listing' (no skill listing found), 'pending' (no loadout from this machine's collector for this seat: older than v1.5, or not sent yet).",
+    SeatLoadoutInputSchema,
+    SeatLoadoutOutputSchema,
+    SEAT_NOT_FOUND,
+    (input, ctx): SeatLoadoutOutput => {
+      const { seat } = seatOf(ctx, input.machine, input.seat);
+      const loadout = ctx.store.loadouts.get(input.machine, input.seat) ?? null;
+      const out = (status: SeatLoadoutOutput['status'], reason: string | null) => ({
+        machine: input.machine,
+        seat: input.seat,
+        status,
+        reason,
+        loadout,
+      });
+      if (seat.runtime !== 'claude-code')
+        return out(
+          'not-claude',
+          seat.runtime === 'codex'
+            ? 'not read for Codex yet.'
+            : `not read for ${seat.runtime ?? 'unknown-runtime'} seats yet.`
+        );
+      if (!loadout)
+        return out(
+          'pending',
+          "no loadout from this machine's collector for this seat yet: it predates v1.5, or has not sent one (it rescans every 30 s)"
+        );
+      if (loadout.status === 'no-listing')
+        return out('no-listing', 'no transcript with a skill listing was found for this seat');
+      return out(loadout.status, null);
     }
   ),
 

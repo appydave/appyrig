@@ -2,6 +2,7 @@ import type { SeatHistory } from './history.js';
 import type { HandoffBodies } from './handoffs.js';
 import type { RigFilesPush } from './rigfiles.js';
 import type { SchemaPush } from './dbschema.js';
+import type { SeatLoadout } from './loadout.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -41,6 +42,8 @@ export const FLEET_EVENTS = {
   RIGFILES: 'collector:rigfiles',
   /** collector → hub. Payload: SchemaPush (the OpenRig database shape on that machine). Acked with CollectorAck. v1.4 · S7. */
   SCHEMA: 'collector:schema',
+  /** collector → hub. Payload: SeatLoadout (one seat's listed skills and prompt layers). Acked with CollectorAck. v1.5 · L1. */
+  LOADOUT: 'collector:loadout',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -88,6 +91,7 @@ export interface CollectorClientToServerEvents {
   'collector:handoffs': (bodies: HandoffBodies, ack: (result: CollectorAck) => void) => void;
   'collector:rigfiles': (push: RigFilesPush, ack: (result: CollectorAck) => void) => void;
   'collector:schema': (push: SchemaPush, ack: (result: CollectorAck) => void) => void;
+  'collector:loadout': (loadout: SeatLoadout, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */

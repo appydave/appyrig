@@ -40,6 +40,12 @@ export const FILES: Row[] = [
   ['Esc', 'In the files viewer: close it'],
 ];
 
+/** v1.5 · L1: keys of an open seat's panel. Listed under every screen, since any screen can open a seat. */
+export const SEAT: Row[] = [
+  ['D', 'In an open seat: Debug, what it runs with (listed skills by source, prompt layers)'],
+  ['Esc', 'In Debug: close it'],
+];
+
 export const EVERYWHERE: Row[] = [
   ['?', 'Show or hide these keys'],
   ['L', 'Show or hide the legend'],
@@ -103,6 +109,8 @@ export default function KeysHelp({ view, onClose }: Props) {
         </header>
         {SCREEN[view].length > 0 && <ul data-testid="keys-screen">{rows(SCREEN[view])}</ul>}
         {(view === 'map' || view === 'flow') && <ul data-testid="keys-files">{rows(FILES)}</ul>}
+        <h3 className="label">In an open seat</h3>
+        <ul data-testid="keys-seat">{rows(SEAT)}</ul>
         <h3 className="label">Anywhere</h3>
         <ul>{rows(EVERYWHERE)}</ul>
         <p className="keys-note">Keys never fire while you are typing in a field.</p>

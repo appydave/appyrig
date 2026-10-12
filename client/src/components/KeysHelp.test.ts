@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EVERYWHERE, FILES, SCREEN } from './KeysHelp.js';
+import { EVERYWHERE, FILES, SCREEN, SEAT } from './KeysHelp.js';
 import type { View } from '../App.js';
 
 /**
@@ -14,6 +14,7 @@ const listed = (view: View) => {
   const rows = [
     ...SCREEN[view],
     ...(view === 'map' || view === 'flow' ? FILES : []),
+    ...SEAT,
     ...EVERYWHERE,
   ];
   return rows.filter(([k]) => PRINTABLE.test(k));
@@ -34,7 +35,9 @@ describe('keys overlay: every printable key is unique on each screen', () => {
       EVERYWHERE.filter(([k]) => PRINTABLE.test(k)).map(([k]) => k.toUpperCase())
     );
     for (const view of Object.keys(SCREEN) as View[]) {
-      for (const [k] of [...SCREEN[view], ...FILES].filter(([key]) => PRINTABLE.test(key))) {
+      for (const [k] of [...SCREEN[view], ...FILES, ...SEAT].filter(([key]) =>
+        PRINTABLE.test(key)
+      )) {
         expect(everywhere.has(k.toUpperCase()), `${view}: ${k} is also a global key`).toBe(false);
       }
     }

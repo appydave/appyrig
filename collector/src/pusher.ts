@@ -12,6 +12,7 @@ import type { PendingHistory } from './adapters/history.js';
 import type { PendingHandoffs } from './adapters/handoffs.js';
 import type { PendingRigFiles } from './adapters/rigfiles.js';
 import type { PendingSchema } from './adapters/dbschema.js';
+import type { PendingLoadouts } from './adapters/loadout.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -38,6 +39,9 @@ export interface PusherOptions {
   /** v1.4 · S7: the OpenRig database shape, when it changed; null = nothing to send. */
   schema?: () => Promise<PendingSchema | null>;
   schemaIntervalMs?: number;
+  /** v1.5 · L1: seat loadouts that changed since the hub accepted them; null = nothing to send. */
+  loadouts?: () => Promise<PendingLoadouts | null>;
+  loadoutIntervalMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
   onConnect?: () => void;
 }
@@ -241,6 +245,13 @@ export function startPusher(opts: PusherOptions): Pusher {
     channel('rig files', FLEET_EVENTS.RIGFILES, opts.rigFilesIntervalMs ?? 15_000, async () => {
       const p = await take();
       return p && { payloads: p.pushes, markSent: p.markSent };
+    });
+  }
+  if (opts.loadouts) {
+    const take = opts.loadouts;
+    channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, async () => {
+      const p = await take();
+      return p && { payloads: p.loadouts, markSent: p.markSent };
     });
   }
   if (opts.schema) {

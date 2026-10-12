@@ -146,34 +146,32 @@ interface FileInfo {
   mtimeMs: number;
 }
 
-export interface PendingHistory {
-  history: SeatHistory;
-  /** Call once the hub accepted it, so an unchanged seat is not sent again. */
-  markSent(): void;
+/** One seat transcript on disk, with the stat it was found with. */
+export interface TranscriptFile {
+  path: string;
+  size: number;
+  mtimeMs: number;
 }
 
 /**
- * Finds seat transcripts and builds a SeatHistory per seat whose files changed since the last
- * accepted push. A seat with several transcripts (a rebuilt or resumed seat) gets them merged.
+ * Finds seat transcripts: every `.jsonl` under the projects folder whose first line titles it as a
+ * seat the daemon reports. The title never changes, so only a new file has its first line read.
+ * Shared by seat history (v1.2) and the loadout (v1.5 · L1), so both read the same seats only.
  */
-export class HistoryReader {
+export class TranscriptIndex {
   private readonly files = new Map<string, FileInfo>();
-  private readonly sent = new Map<string, string>();
 
-  constructor(
-    private readonly machineId: string,
-    private readonly projectsDir: string = defaultProjectsDir(),
-    private readonly now: () => Date = () => new Date()
-  ) {}
+  constructor(private readonly projectsDir: string = defaultProjectsDir()) {}
 
-  async changed(knownSeats: Set<string>): Promise<PendingHistory[]> {
-    if (knownSeats.size === 0) return [];
-    const bySeat = new Map<string, { path: string; info: FileInfo }[]>();
+  /** seat → its transcripts (several when a seat was rebuilt or resumed). Empty without Claude Code. */
+  async scan(knownSeats: Set<string>): Promise<Map<string, TranscriptFile[]>> {
+    const bySeat = new Map<string, TranscriptFile[]>();
+    if (knownSeats.size === 0) return bySeat;
     let dirs: string[];
     try {
       dirs = await readdir(this.projectsDir);
     } catch {
-      return []; // no Claude Code on this machine
+      return bySeat; // no Claude Code on this machine
     }
     for (const dir of dirs) {
       let names: string[];
@@ -188,24 +186,52 @@ export class HistoryReader {
           const st = await stat(path);
           let info = this.files.get(path);
           if (!info || info.size !== st.size || info.mtimeMs !== st.mtimeMs) {
-            // The title never changes, so only a new file needs its first line read.
             const seat = info ? info.seat : seatOfFirstLine(await firstLine(path));
             info = { seat, size: st.size, mtimeMs: st.mtimeMs };
             this.files.set(path, info);
           }
           if (info.seat && knownSeats.has(info.seat)) {
-            bySeat.set(info.seat, [...(bySeat.get(info.seat) ?? []), { path, info }]);
+            const f = { path, size: info.size, mtimeMs: info.mtimeMs };
+            bySeat.set(info.seat, [...(bySeat.get(info.seat) ?? []), f]);
           }
         } catch {
           // vanished or unreadable: skip this round
         }
       }
     }
+    return bySeat;
+  }
+}
+
+export interface PendingHistory {
+  history: SeatHistory;
+  /** Call once the hub accepted it, so an unchanged seat is not sent again. */
+  markSent(): void;
+}
+
+/**
+ * Finds seat transcripts and builds a SeatHistory per seat whose files changed since the last
+ * accepted push. A seat with several transcripts (a rebuilt or resumed seat) gets them merged.
+ */
+export class HistoryReader {
+  private readonly index: TranscriptIndex;
+  private readonly sent = new Map<string, string>();
+
+  constructor(
+    private readonly machineId: string,
+    projectsDir: string = defaultProjectsDir(),
+    private readonly now: () => Date = () => new Date()
+  ) {
+    this.index = new TranscriptIndex(projectsDir);
+  }
+
+  async changed(knownSeats: Set<string>): Promise<PendingHistory[]> {
+    const bySeat = await this.index.scan(knownSeats);
 
     const out: PendingHistory[] = [];
     for (const [seat, list] of bySeat) {
       const sig = list
-        .map((f) => `${f.path}:${f.info.size}:${f.info.mtimeMs}`)
+        .map((f) => `${f.path}:${f.size}:${f.mtimeMs}`)
         .sort()
         .join('|');
       if (this.sent.get(seat) === sig) continue;

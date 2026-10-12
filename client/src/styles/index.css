@@ -3234,3 +3234,170 @@ g[data-testid='flow-edge'] {
   min-height: 26px;
   padding: 2px 10px;
 }
+
+/* ---------- v1.5 L1: Debug view (a seat's loadout) ---------- */
+.loadout-scrim {
+  z-index: 65; /* above the seat panel (50) and keys overlay (60); the files viewer (70) opens over it */
+}
+.loadout-body {
+  overflow: auto;
+  padding: 12px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.loadout-honesty {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 4px solid var(--ar-sequence);
+  background: var(--ar-surface);
+  font-size: 13px;
+}
+.loadout-sum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  align-items: baseline;
+}
+.loadout-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 400px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .loadout-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.venn {
+  margin: 0;
+}
+.venn svg {
+  width: 100%;
+  height: auto;
+}
+.venn-box {
+  fill: var(--ar-surface);
+  stroke: var(--ar-line);
+}
+.venn-box-label {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  fill: var(--ar-ink-muted);
+}
+.venn-c {
+  fill: var(--ar-cta);
+  fill-opacity: 0.18;
+  stroke: var(--ar-ink);
+  stroke-width: 1.2;
+}
+.venn-c[data-circle='repo'] {
+  fill: var(--ar-link);
+  fill-opacity: 0.12;
+}
+.venn-c[data-circle='plugin'] {
+  fill: var(--ar-sequence);
+  fill-opacity: 0.14;
+}
+.venn-label {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  fill: var(--ar-ink);
+}
+.venn-n {
+  font-family: var(--ar-font-label);
+  font-size: 18px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--ar-ink);
+}
+.venn figcaption {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+  margin-top: 6px;
+}
+.loadout-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.skill-group {
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: var(--ar-surface-raised);
+}
+.skill-group > summary {
+  cursor: pointer;
+}
+.skill-count {
+  font-family: var(--ar-font-label);
+  background: var(--ar-surface);
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  padding: 0 8px;
+}
+.skill-chips {
+  list-style: none;
+  margin: 6px 0 4px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.skill-chip {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  padding: 1px 8px;
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  background: var(--ar-canvas);
+}
+.skill-chip[data-shadowed='true'] {
+  border-color: var(--ar-blocked);
+  background: var(--ar-blocked-bg);
+}
+.skill-shadow {
+  color: var(--ar-blocked-ink);
+  font-size: 11px;
+}
+.skill-plugin {
+  margin-top: 6px;
+}
+.layer-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.layer-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+}
+.layer-on {
+  color: var(--ar-working-ink);
+  font-size: 12px;
+}
+.layer-off {
+  color: var(--ar-ink-muted);
+  font-size: 12px;
+}
+.layer-where {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+.loadout .mono {
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+}
+.loadout-path {
+  color: var(--ar-ink-muted);
+}
+.files-sub {
+  overflow-wrap: anywhere;
+}
