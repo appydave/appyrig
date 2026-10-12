@@ -106,7 +106,11 @@ function Window({
         </div>
       )}
       <span className="window-foot">
-        {st.pace && <span data-testid={`${testId}-pace`}>{st.pace}</span>}
+        {st.pace && (
+          <span data-testid={`${testId}-pace`} title={PACE_WHY}>
+            {st.pace}
+          </span>
+        )}
         {st.resetsAt && <span>resets {resetsIn(st.resetsAt, now)}</span>}
       </span>
     </div>
@@ -134,6 +138,10 @@ function tierLine(a: AccountView): string {
  * profile names it. All machines on one account share its windows. v1.5 · C: the email is a
  * cached profile, not proof of which login a session uses, and every card says so.
  */
+/** C3 (F25): what the pace line compares, in plain words. */
+const PACE_WHY =
+  'Pace compares two shares of this window: how much of the allowance is used, and how much of the time has gone (both as of the reading). "To spare" = using it slower than the clock: at this rate the window ends with room left. "Over pace" = faster than the clock: it may run out before the reset. A "point" is one percentage point between the two.';
+
 export const CACHED_LABEL =
   'Email from the cached profile, refreshed ~24 h — not proof of which login a session uses.';
 
@@ -194,7 +202,7 @@ export default function Accounts({ machines, now }: Props) {
                 data-explain="account-cached"
                 title={CACHED_WHY}
               >
-                {CACHED_LABEL} <span aria-hidden="true">?</span>
+                {CACHED_LABEL}
               </p>
               {d ? (
                 <>

@@ -78,14 +78,18 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
     leftPct: Math.max(0, Math.round(100 - used)),
     nowPct,
     projectedPct: w.projectedPct === null ? null : Math.min(100, w.projectedPct),
+    // C3 (F25): "68 points behind the clock" hid both numbers, so two accounts could read the same
+    // and nobody could say what a point was. The line now shows what it compares, per account.
     pace:
-      delta === null
+      delta === null || w.elapsedPct === null
         ? null
-        : Math.round(delta) === 0
-          ? 'on pace with the clock'
-          : delta > 0
-            ? `▲ ${points(delta)} ahead of the clock`
-            : `▼ ${points(-delta)} behind the clock`,
+        : `${Math.round(delta) === 0 ? '●' : delta > 0 ? '▲' : '▼'} ${Math.round(used)}% used, ${Math.round(w.elapsedPct)}% of the window gone: ${
+            Math.round(delta) === 0
+              ? 'on pace'
+              : delta > 0
+                ? `${points(delta)} over pace`
+                : `${points(-delta)} to spare`
+          }`,
   };
   const resetText = w.resetsAt ? hhmm(Date.parse(w.resetsAt), now) : 'the reset';
   if (used >= 100) {

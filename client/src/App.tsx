@@ -15,6 +15,7 @@ import { isShortcutBlocked } from './lib/keys.js';
 import type { LegendScreen } from './learn/legend.js';
 import RigFiles, { type PresetFile } from './components/RigFiles.js';
 import Loadout from './components/Loadout.js';
+import FeedbackNotes from './components/FeedbackNotes.js';
 import RigMap from './components/RigMap.js';
 import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
@@ -24,10 +25,20 @@ import { buildRigMap, listRigs } from './fleet/views.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
+const FOLLOW_KEY = 'appyrig.followLatest';
+function readFollow(): boolean {
+  try {
+    return localStorage.getItem(FOLLOW_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
 const VIEW_KEY = 'appyrig.view';
 const EXPLAIN_KEY = 'appyrig.explain';
 const LEGEND_KEY = 'appyrig.legend';
 const HINT_KEY = 'appyrig.hint';
+/** Ruling (batch 2): the Map's legend starts closed; a one-time hint points at the button. */
+const MAP_HINT_KEY = 'appyrig.mapLegendHint';
 const HIDDEN_KEY = 'appyrig.hiddenMachines';
 
 export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'machines' | 'schema' | 'learn';
@@ -123,7 +134,20 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const [explain, setExplain] = useState<boolean>(readExplain);
   const [legendChoice, setLegendChoice] = useState<LegendChoice>(readLegend);
   const [hint, setHint] = useState<boolean>(readHint);
+  const [mapHint, setMapHint] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(MAP_HINT_KEY) !== 'seen';
+    } catch {
+      return false;
+    }
+  });
+  const dismissMapHint = useCallback(() => {
+    setMapHint(false);
+    remember(MAP_HINT_KEY, 'seen');
+  }, []);
   const [rigKey, setRigKey] = useState<string | null>(null);
+  /** Batch 2 · C1: off by default. On, Map and Flow show the most recently active rig, live. */
+  const [followLatest, setFollowLatest] = useState<boolean>(readFollow);
   const [focused, setFocused] = useState<string | null>(null);
   const lastFocused = useRef<string | null>(null);
   /** S2: the element that opened Focus (tile, map node, strip alert), so Esc lands back on it. */
@@ -147,6 +171,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   /** S7-ui: the rig whose files are open (rig.yaml, mission and culture notes). */
   const [filesFor, setFilesFor] = useState<{ machineId: string; rig: string } | null>(null);
   const filesOpener = useRef<HTMLElement | null>(null);
+  /** C4 (F23): the list of filed notes is open. */
+  const [notesOpen, setNotesOpen] = useState(false);
   /** v1.5 · L1: the seat whose Debug view is open, and prompt-layer files open over it. */
   const [debugFor, setDebugFor] = useState<{ machineId: string; seatId: string } | null>(null);
   const [layersOpen, setLayersOpen] = useState<{ files: PresetFile[]; initialId: string } | null>(
@@ -155,7 +181,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const debugOpener = useRef<HTMLElement | null>(null);
   const layersOpener = useRef<HTMLElement | null>(null);
   /** Something sits on top of the screen (keys overlay, feedback composer, files viewer, Debug): screen keys stand down. */
-  const overlay = help || !!feedback || !!filesFor || !!debugFor;
+  const overlay = help || !!feedback || !!filesFor || !!debugFor || notesOpen;
 
   const allMachines = useMemo(() => orderedMachines(state.machines), [state.machines]);
   const [hidden, setHidden] = useState<string[]>(readHidden);
@@ -177,7 +203,37 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const rigs = useMemo(() => listRigs(machines), [machines]);
   // Stale/fresh splits only need minute precision; a per-second value would re-lay the map every tick.
   const minute = Math.floor(now / 60_000) * 60_000;
-  const activeRig = rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null;
+  // Batch 2 · C1 (F1, F2): the chosen rig HOLDS. It used to be "the first in the live order" until
+  // a chip was clicked, so it switched whenever the order did, and the header could name one rig
+  // over another's numbers. Now the first rig is chosen once and kept; it changes only on a click,
+  // or live when "Follow latest" is on. A chosen rig that stops being reported falls back for now
+  // and comes back if it returns.
+  useEffect(() => {
+    if (rigKey === null && rigs.length) setRigKey(rigs[0]!.key);
+  }, [rigKey, rigs]);
+  const activeRig = followLatest
+    ? (rigs[0] ?? null)
+    : (rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null);
+  const chooseRig = useCallback((key: string) => {
+    setRigKey(key);
+    setFollowLatest(false);
+    try {
+      localStorage.setItem(FOLLOW_KEY, 'off');
+    } catch {
+      // per-viewer convenience only
+    }
+  }, []);
+  const toggleFollow = useCallback(() => {
+    // r1 MEDIUM-1: turning following OFF keeps the rig that is on screen, rather than jumping
+    // back to the rig chosen before following was turned on.
+    if (followLatest && activeRig) setRigKey(activeRig.key);
+    setFollowLatest(!followLatest);
+    try {
+      localStorage.setItem(FOLLOW_KEY, followLatest ? 'off' : 'on');
+    } catch {
+      // per-viewer convenience only
+    }
+  }, [followLatest, activeRig]);
   const rigMap = useMemo(
     () => (view === 'map' && activeRig ? buildRigMap(allMachines, activeRig.key, minute) : null),
     [view, activeRig, allMachines, minute]
@@ -262,14 +318,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   };
 
   const screen: LegendScreen = focused ? 'focus' : view;
-  const legend = legendChoice[screen]
-    ? legendChoice[screen] === 'on'
-    : screen === 'map' || screen === 'flow';
+  // Ruling (batch 2, QA C5): the Map's legend starts CLOSED for every viewer who hasn't chosen
+  // (open, it is 697 px and pushes the map below the fold); a choice is remembered per viewer.
+  const legend = legendChoice[screen] ? legendChoice[screen] === 'on' : screen === 'flow';
   const toggleLegend = useCallback(() => {
     const next: LegendChoice = { ...legendChoice, [screen]: legend ? 'off' : 'on' };
     setLegendChoice(next);
     remember(LEGEND_KEY, JSON.stringify(next));
-  }, [legendChoice, screen, legend]);
+    if (screen === 'map') dismissMapHint();
+  }, [legendChoice, screen, legend, dismissMapHint]);
 
   const chooseGroup = (g: GroupBy) => {
     setGroupBy(g);
@@ -343,7 +400,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
-    if (focused || feedback || filesFor) return;
+    if (focused || feedback || filesFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         // Already spent: Focus closing (it re-attaches this listener mid-keypress) or a card.
@@ -360,11 +417,11 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, help, feedback, filesFor, goBack]);
+  }, [focused, help, feedback, filesFor, notesOpen, goBack]);
 
   // S8: F opens the feedback composer, on every screen and in the seat panel (O is Files').
   useEffect(() => {
-    if (help || feedback || filesFor || debugFor) return;
+    if (help || feedback || filesFor || debugFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'f' || e.key === 'F') && !isShortcutBlocked(e)) {
         e.preventDefault();
@@ -377,13 +434,13 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   // L shows or hides the legend for this screen, the seat panel included (QA D3).
   useEffect(() => {
-    if (help || feedback || filesFor || debugFor) return;
+    if (help || feedback || filesFor || debugFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [help, feedback, filesFor, debugFor, toggleLegend]);
+  }, [help, feedback, filesFor, debugFor, notesOpen, toggleLegend]);
 
   // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
   useEffect(() => {
@@ -451,7 +508,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           >
             ? Explain {explain ? 'on' : 'off'}
           </button>
-          {hint && (
+          {hint && !(view === 'map' && mapHint && !legend) && (
             <span className="first-hint" role="note" data-testid="explain-hint">
               <span aria-hidden="true">↑</span> New here?{' '}
               {explain ? (
@@ -475,17 +532,33 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             </span>
           )}
         </span>
-        <button
-          type="button"
-          className="pill-btn"
-          data-testid="legend-toggle"
-          aria-pressed={legend}
-          aria-keyshortcuts="L"
-          title="Legend: what every line, colour and box on this screen means (L)"
-          onClick={toggleLegend}
-        >
-          Legend · L
-        </button>
+        <span className="explain-anchor">
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="legend-toggle"
+            aria-pressed={legend}
+            aria-keyshortcuts="L"
+            title="Legend: what every line, colour and box on this screen means (L)"
+            onClick={toggleLegend}
+          >
+            Legend · L
+          </button>
+          {view === 'map' && mapHint && !legend && !focusTile && (
+            <span className="first-hint" role="note" data-testid="legend-hint">
+              <span aria-hidden="true">↑</span> New here? Press <b>L</b> or click <b>Legend</b> to
+              see what the marks mean.
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="legend-hint-dismiss"
+                onClick={dismissMapHint}
+              >
+                Got it
+              </button>
+            </span>
+          )}
+        </span>
         <button
           type="button"
           className="pill-btn"
@@ -508,6 +581,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onClick={openFeedback}
         >
           ⚑ Feedback · F
+        </button>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="notes-open"
+          title="The notes filed with Feedback, newest first, with their screenshots"
+          onClick={() => setNotesOpen(true)}
+        >
+          Notes
         </button>
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
@@ -548,6 +630,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         error={state.error}
         onOpen={open}
         onHealth={() => chooseView('machines')}
+        shown={machines}
         filter={
           allMachines.length > 1 &&
           (view === 'wall' || view === 'map' || view === 'flow' || view === 'machines') ? (
@@ -588,14 +671,37 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       )}
       {(view === 'map' || view === 'flow') && (
         <main className="view" data-testid={`view-body-${view}`}>
+          <p className="follow-row">
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="follow-latest"
+              aria-pressed={followLatest}
+              title="On: show whichever rig was active most recently, switching by itself. Off: the rig you click stays."
+              onClick={toggleFollow}
+            >
+              {followLatest ? '● Following latest' : '○ Follow latest'}
+            </button>
+            <span className="quiet" data-testid="follow-status">
+              {followLatest
+                ? 'The view switches to the most recently active rig by itself. Click a rig to stop.'
+                : 'Showing the rig you chose. It changes only when you click another.'}
+            </span>
+          </p>
           <RigPicker
             rigs={rigs}
             selected={activeRig?.key ?? null}
-            onSelect={setRigKey}
+            onSelect={chooseRig}
             onOpenFiles={(r) => openFiles(r.machineId, r.name)}
           />
           {view === 'map' ? (
-            <RigMap map={rigMap} onOpen={open} onOpenSkills={openSkills} />
+            <RigMap
+              map={rigMap}
+              onOpen={open}
+              onOpenSkills={openSkills}
+              socket={getSocket()}
+              keys={!focusTile && !overlay}
+            />
           ) : (
             <HandoffFlow
               machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
@@ -642,6 +748,10 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           shot={feedback.shot}
           socket={getSocket()}
           onClose={() => setFeedback(null)}
+          onShowNotes={() => {
+            setFeedback(null);
+            setNotesOpen(true);
+          }}
           onFiled={(msg) => {
             setFeedback(null);
             setToast(msg);
@@ -661,6 +771,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           ⚑ Feedback · F
         </button>
       )}
+      {notesOpen && <FeedbackNotes socket={getSocket()} onClose={() => setNotesOpen(false)} />}
       {toast && (
         <p
           className="feedback-toast"

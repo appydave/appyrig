@@ -45,12 +45,36 @@ describe('<RigPicker> with S3 fields', () => {
     rig({ key: 'm2:flicut-ab', name: 'flicut-ab', status: 'stopped', specStatus: 'not-found' }),
   ];
 
-  it('chips show the display name and summary; the rig id stays the key', () => {
+  it('chips show the display name and machine; the summary floats in the tooltip (C5); the rig id stays the key', () => {
     render(<RigPicker rigs={rigs} selected="m2:appyrig-v14" onSelect={() => {}} />);
     const chip = screen.getAllByTestId('rig-chip')[0]!;
     expect(chip).toHaveAttribute('data-rig-key', 'm2:appyrig-v14');
     expect(within(chip).getByTestId('rig-chip-name')).toHaveTextContent('AppyRig v1.4 team');
-    expect(within(chip).getByTestId('rig-chip-summary')).toHaveTextContent('Builds AppyRig');
+    expect(chip).toHaveTextContent('· m2');
+    expect(chip.getAttribute('title')).toContain('Builds AppyRig');
+  });
+
+  it('C5 (F12): no two entries read the same; the dropdown jumps to a rig', () => {
+    const kernels = ['m2', 'm4', 'roamy'].map((m) =>
+      rig({
+        key: `${m}:kernel`,
+        machineId: m,
+        machineLabel: m.toUpperCase(),
+        name: 'kernel',
+        displayName: undefined,
+      })
+    );
+    let picked = '';
+    render(<RigPicker rigs={kernels} selected="m2:kernel" onSelect={(k) => (picked = k)} />);
+    const chipTexts = screen.getAllByTestId('rig-chip').map((c) => c.textContent);
+    expect(new Set(chipTexts).size).toBe(3);
+    const options = [...screen.getByTestId('rig-select').querySelectorAll('option')].map(
+      (o) => o.textContent
+    );
+    expect(new Set(options).size).toBe(3);
+    expect(options.join('|')).toMatch(/kernel · m4/);
+    fireEvent.change(screen.getByTestId('rig-select'), { target: { value: 'roamy:kernel' } });
+    expect(picked).toBe('roamy:kernel');
   });
 
   it('the chosen rig shows summary, owner and spec path; hovering another never swaps the panel (B1 fb-0002)', () => {

@@ -217,6 +217,8 @@ export interface MapEdge {
   stale: number;
   /** A self-handoff (a seat queueing work to itself): drawn as a badge, not a line. */
   self: boolean;
+  /** C6a: the queue items on this line, oldest first (for the details drawer). */
+  items: QueueItem[];
 }
 
 export interface RigMap {
@@ -289,8 +291,10 @@ export function buildRigMap(
       open: 0,
       stale: 0,
       self: from.key === to.key,
+      items: [] as QueueItem[],
     };
     e.count += 1;
+    e.items.push(q);
     if (isOpen(q)) {
       const age = now - ms(q.createdAt);
       const c = { ...(openAt.get(to.key) ?? NONE) };
@@ -361,7 +365,13 @@ export function buildRigMap(
   }
   lanes.push(...byMachine.values());
 
-  return { rig, lanes, edges: [...edgeMap.values()], handoffs: items.length };
+  // r1 HIGH-1: the collector delivers queue rows newest first, but a line's items are read
+  // oldest first (the drawer's list, and "latest" = the last one), so sort them once here.
+  const edges = [...edgeMap.values()].map((e) => ({
+    ...e,
+    items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+  }));
+  return { rig, lanes, edges, handoffs: items.length };
 }
 
 // ---------------------------------------------------------------- Handoff Flow

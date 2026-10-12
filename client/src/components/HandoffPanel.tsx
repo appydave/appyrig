@@ -33,6 +33,8 @@ interface Props {
   onPick: (itemId: string) => void;
   onMode: (m: PanelMode) => void;
   onClose: () => void;
+  /** C6a: false hides the On click / Follow pointer toggle (the Map's drawer opens on click only). */
+  showMode?: boolean;
 }
 
 const clock = (iso: string) =>
@@ -59,6 +61,7 @@ export default function HandoffPanel({
   onPick,
   onMode,
   onClose,
+  showMode = true,
 }: Props) {
   const itemId = selection?.itemId ?? null;
   const [got, setGot] = useState<Got>({ state: 'loading' });
@@ -93,7 +96,7 @@ export default function HandoffPanel({
     };
   }, [itemId, machineId, socket, cache]);
 
-  const modeToggle = (
+  const modeToggle = !showMode ? null : (
     <span className="handoff-mode" role="group" aria-label="Panel shows">
       <span className="label">Panel shows</span>
       {(['pinned', 'hover'] as const).map((m) => (

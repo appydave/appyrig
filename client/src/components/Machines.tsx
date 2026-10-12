@@ -97,16 +97,22 @@ export default function Machines({ machines, hidden, now }: Props) {
                   data-kind={p.kind}
                   data-testid="machine-pressure"
                   data-explain="memory-pressure"
-                  title={p.reason ?? undefined}
+                  title={p.reason ?? p.basis ?? undefined}
                 >
                   {p.glyph} {p.word}
-                  {free.v !== null && ` · ${Math.round(free.v)}% free`}
                 </span>
               </header>
               <div data-explain="memory-used">
                 <div className="machine-row">
                   <span className="label">Memory used</span>
-                  <b data-testid="machine-memory" title={used.why ?? total.why ?? undefined}>
+                  <b
+                    data-testid="machine-memory"
+                    title={
+                      used.why ??
+                      total.why ??
+                      'Memory in use, as Activity Monitor counts "Memory Used": app memory + wired + compressed (from vm_stat), of the installed total.'
+                    }
+                  >
                     {used.v !== null && total.v !== null
                       ? `${gb(used.v)} of ${gb(total.v)}`
                       : '– (not readable)'}
@@ -122,9 +128,27 @@ export default function Machines({ machines, hidden, now }: Props) {
                   </div>
                 )}
               </div>
+              <div
+                className="machine-row"
+                data-testid="machine-free"
+                title={
+                  free.why ??
+                  "macOS's own estimate (the memory_pressure command): memory it could hand out right now, counting free pages plus pages it can reclaim (inactive, purgeable, file cache). It is not total minus used, so it can read high while Memory used is high too."
+                }
+              >
+                <span>Could be freed (macOS estimate)</span>
+                <b>{free.v !== null ? `${Math.round(free.v)}%` : '–'}</b>
+              </div>
               <div className="machine-row" data-explain="swap">
                 <span>Swap</span>
-                <b title={swapU.why ?? swapT.why ?? undefined}>
+                <b
+                  data-testid="machine-swap"
+                  title={
+                    swapU.why ??
+                    swapT.why ??
+                    'Swap: memory written out to disk because RAM ran short (vm.swapusage, used of allocated). High swap means the machine is short of memory even if pressure reads normal.'
+                  }
+                >
                   {swapU.v !== null ? `${gb(swapU.v)}${swapT.v ? ` of ${gb(swapT.v)}` : ''}` : '–'}
                 </b>
               </div>

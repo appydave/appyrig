@@ -555,7 +555,7 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(screen.queryByTestId('explain-hint')).toBeNull();
   });
 
-  it('unchosen, the legend is closed on the Wall and open on the two diagram screens', () => {
+  it('unchosen, the legend is closed on the Wall and the Map (ruling), open on the Flow; the Map shows a one-time hint', () => {
     // jsdom has no ResizeObserver; the Rig Map only needs one to re-measure its lines.
     vi.stubGlobal(
       'ResizeObserver',
@@ -567,8 +567,14 @@ describe('App: S1 legend and Explain discoverability', () => {
     connected();
     expect(screen.queryByTestId('legend')).toBeNull();
     fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.getByTestId('legend-hint')).toHaveTextContent('Press L or click Legend');
+    fireEvent.keyDown(window, { key: 'l' });
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
     expect(screen.getByTestId('legend')).toHaveTextContent('Grey band · POD');
+    // the hint is spent once the legend has been opened, and never comes back
+    expect(screen.queryByTestId('legend-hint')).toBeNull();
+    expect(localStorage.getItem('appyrig.mapLegendHint')).toBe('seen');
     fireEvent.click(screen.getByTestId('view-flow'));
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'flow');
     expect(screen.getByTestId('legend')).toHaveTextContent('Amber arc below · N back');
@@ -585,8 +591,10 @@ describe('App: S1 legend and Explain discoverability', () => {
     fireEvent.keyDown(window, { key: 'l' });
     expect(screen.queryByTestId('legend')).toBeNull();
     expect(choice()).toEqual({ wall: 'off' });
-    // QA M2: closing it on the Map leaves the Wall's choice alone, and the reverse.
+    // QA M2: a choice on the Map leaves the Wall's alone, and the reverse. (The Map starts closed.)
     fireEvent.click(screen.getByTestId('view-map'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    fireEvent.click(screen.getByTestId('legend-toggle'));
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'map');
     fireEvent.click(screen.getByTestId('legend-close'));
     expect(choice()).toEqual({ wall: 'off', map: 'off' });
@@ -994,8 +1002,11 @@ describe('App: S4 handoff details + where work came in', () => {
 
   it('marks where work came in, calmly, on the first seat to act', async () => {
     flowWith((r) => (r.verb === 'rig.entry' ? entry('outside-queue') : undefined));
-    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
-      'orch-lead: started at launch, not via the queue'
+    // C1 (F9): the row is there at once ("checking…"); wait for its answer
+    await waitFor(() =>
+      expect(screen.getByTestId('flow-entry')).toHaveTextContent(
+        'orch-lead: started at launch, not via the queue'
+      )
     );
     const mark = screen.getByTestId('flow-entry-mark');
     expect(mark).toHaveTextContent('work entered here · at launch');
@@ -1004,8 +1015,11 @@ describe('App: S4 handoff details + where work came in', () => {
 
   it('an unknown entry says so and draws no marker', async () => {
     flowWith((r) => (r.verb === 'rig.entry' ? entry('unknown') : undefined));
-    expect(await screen.findByTestId('flow-entry')).toHaveTextContent(
-      'not known: older events were dropped'
+    // C1 (F9): the row is there at once ("checking…"); wait for its answer
+    await waitFor(() =>
+      expect(screen.getByTestId('flow-entry')).toHaveTextContent(
+        'not known: older events were dropped'
+      )
     );
     expect(screen.queryByTestId('flow-entry-mark')).toBeNull();
   });
@@ -1149,7 +1163,7 @@ describe('App: S6 machine health', () => {
     );
     const marks = screen.getAllByTestId('health-mark');
     const byKind = Object.fromEntries(marks.map((m) => [m.dataset.kind, m.textContent]));
-    expect(byKind['warn']).toBe('▲ warning');
+    expect(byKind['warn']).toBe('▲ tight'); // C2 words: normal / tight / under pressure
     expect(byKind['no-data']).toBe('– no data');
     expect(marks.find((m) => m.dataset.kind === 'no-data')!.title).toMatch(/predates v1\.4/);
     fireEvent.click(marks[0]!);
@@ -1165,7 +1179,13 @@ describe('App: S6 machine health', () => {
       update([withHealth('m2', 'normal'), fleetMachine(snapshot('roamy--blocked'))])
     );
     const m2 = screen.getAllByTestId('machine-card').find((c) => c.dataset.machineId === 'm2')!;
-    expect(within(m2).getByTestId('machine-pressure')).toHaveTextContent('● normal · 31% free');
+    // C2: the badge is the verdict only; "% free" is its own row, defined on hover
+    // swap 1.2 of 2 GB (60%) makes it "tight" although macOS's own level says normal
+    expect(within(m2).getByTestId('machine-pressure')).toHaveTextContent(/^▲ tight$/);
+    expect(within(m2).getByTestId('machine-pressure').getAttribute('title')).toMatch(
+      /macOS memory pressure says "normal".*swap 1\.2 GB of 2 GB used \(60%\)/
+    );
+    expect(within(m2).getByTestId('machine-free')).toHaveTextContent('31%');
     expect(within(m2).getByTestId('machine-memory')).toHaveTextContent('11.8 GB of 16 GB');
     expect(within(m2).getByTestId('count-claude')).toHaveTextContent('9');
     const shells = within(m2).getByTestId('count-shells');
@@ -1423,5 +1443,70 @@ describe('App: S3-fit working teams pack side by side', () => {
     expect(JSON.parse(localStorage.getItem('appyrig.groupsFull')!)['roamy:kernel']).toBe(true);
     fireEvent.click(within(kernel()).getByTestId('group-show-busy'));
     expect(within(kernel()).getAllByTestId('seat-tile')).toHaveLength(before);
+  });
+});
+
+describe('batch 2 · C1: the chosen rig holds; "Follow latest" is explicit and off by default', () => {
+  /** m2 with its running rigs' recency set, so the live order can be flipped push by push. */
+  const m2With = (recent: Record<string, string>) => {
+    const fm = fleetMachine(snapshot('m2'));
+    return {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        rigs: fm.snapshot.rigs.map((r) => ({
+          ...r,
+          status: 'running',
+          recentAt: recent[r.name] ?? '2026-10-01T00:00:00.000Z',
+        })),
+      },
+    };
+  };
+  const names = () => {
+    const rigs = snapshot('m2').rigs.map((r) => r.name);
+    return [rigs[0]!, rigs[1]!];
+  };
+  const selected = () =>
+    screen.getAllByTestId('rig-chip').find((c) => c.getAttribute('aria-pressed') === 'true')
+      ?.dataset.rigKey;
+
+  it('a busier rig never takes over the view by itself (F1, fb-0004)', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    const [a, b] = names();
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [a]: '2026-10-12T10:00:00.000Z' })]));
+    fireEvent.click(screen.getByTestId('view-flow')); // Map and Flow share the picker and selection
+    expect(selected()).toBe(`m2:${a}`);
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
+    // the other rig becomes the most recent: the view stays where it is
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T11:00:00.000Z' })]));
+    expect(selected()).toBe(`m2:${a}`);
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${a}`);
+  });
+
+  it('Follow latest tracks the most recent rig; clicking a rig turns it off and holds', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    const [a, b] = names();
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [a]: '2026-10-12T10:00:00.000Z' })]));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(screen.getByTestId('follow-latest'));
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'true');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T11:00:00.000Z' })]));
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
+    expect(localStorage.getItem('appyrig.followLatest')).toBe('on');
+    // r1 MEDIUM-1: turning following OFF keeps the rig on screen (b), not the one before it (a)
+    fireEvent.click(screen.getByTestId('follow-latest'));
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
+    expect(localStorage.getItem('appyrig.followLatest')).toBe('off');
+    fireEvent.click(screen.getByTestId('follow-latest')); // on again, to test the click path too
+    fireEvent.click(screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === `m2:${a}`)!);
+    expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T12:00:00.000Z' })]));
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${a}`);
+    localStorage.removeItem('appyrig.followLatest');
   });
 });
