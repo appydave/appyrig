@@ -1155,7 +1155,7 @@ describe('App: S6 machine health', () => {
     );
     const marks = screen.getAllByTestId('health-mark');
     const byKind = Object.fromEntries(marks.map((m) => [m.dataset.kind, m.textContent]));
-    expect(byKind['warn']).toBe('▲ warning');
+    expect(byKind['warn']).toBe('▲ tight'); // C2 words: normal / tight / under pressure
     expect(byKind['no-data']).toBe('– no data');
     expect(marks.find((m) => m.dataset.kind === 'no-data')!.title).toMatch(/predates v1\.4/);
     fireEvent.click(marks[0]!);
@@ -1171,7 +1171,13 @@ describe('App: S6 machine health', () => {
       update([withHealth('m2', 'normal'), fleetMachine(snapshot('roamy--blocked'))])
     );
     const m2 = screen.getAllByTestId('machine-card').find((c) => c.dataset.machineId === 'm2')!;
-    expect(within(m2).getByTestId('machine-pressure')).toHaveTextContent('● normal · 31% free');
+    // C2: the badge is the verdict only; "% free" is its own row, defined on hover
+    // swap 1.2 of 2 GB (60%) makes it "tight" although macOS's own level says normal
+    expect(within(m2).getByTestId('machine-pressure')).toHaveTextContent(/^▲ tight$/);
+    expect(within(m2).getByTestId('machine-pressure').getAttribute('title')).toMatch(
+      /macOS memory pressure says "normal".*swap 1\.2 GB of 2 GB used \(60%\)/
+    );
+    expect(within(m2).getByTestId('machine-free')).toHaveTextContent('31%');
     expect(within(m2).getByTestId('machine-memory')).toHaveTextContent('11.8 GB of 16 GB');
     expect(within(m2).getByTestId('count-claude')).toHaveTextContent('9');
     const shells = within(m2).getByTestId('count-shells');
