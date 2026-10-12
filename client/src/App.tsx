@@ -587,6 +587,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         error={state.error}
         onOpen={open}
         onHealth={() => chooseView('machines')}
+        shown={machines}
         filter={
           allMachines.length > 1 &&
           (view === 'wall' || view === 'map' || view === 'flow' || view === 'machines') ? (

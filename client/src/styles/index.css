@@ -3626,3 +3626,7 @@ g[data-testid='flow-edge'] {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* C3 (F29): a tall Explain card never runs past the window */
+.explain-card {
+  overflow: hidden;
+}

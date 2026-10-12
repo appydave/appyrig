@@ -28,6 +28,11 @@ interface Props {
   filter?: ReactNode;
   /** S6: the pressure mark opens the Machines view. */
   onHealth?: () => void;
+  /**
+   * C3 (F30): the machines the filter leaves shown. The strip still draws every machine (a blocked
+   * seat is never hidden), but its seat counts follow the filter and name what they leave out.
+   */
+  shown?: FleetMachine[];
 }
 
 function hubMessage(link: HubLink, received: boolean): string | null {
@@ -46,8 +51,10 @@ export default function FleetStrip({
   onOpen,
   onHealth,
   filter,
+  shown,
 }: Props) {
-  const counts = countSeats(machines);
+  const counts = countSeats(shown ?? machines);
+  const left = shown ? machines.filter((m) => !shown.includes(m)) : [];
   const blocked = blockedSeats(machines);
   const hub = hubMessage(link, received);
   const asleep = machines.filter((m) => m.liveness === 'asleep');
@@ -119,7 +126,7 @@ export default function FleetStrip({
               const title =
                 p.kind === 'no-data' || p.kind === 'unavailable'
                   ? `Memory pressure: ${p.word}. ${p.reason ?? ''}`
-                  : `Memory pressure: ${p.word}. Open Machines for memory, swap and processes.`;
+                  : `Memory: ${p.word}. ${p.basis ?? ''} Open Machines for memory, swap and processes.`;
               return (
                 <button
                   type="button"
@@ -158,6 +165,12 @@ export default function FleetStrip({
               {' '}
               · <b>{counts.paused}</b> paused (asleep)
             </>
+          )}
+          {left.length > 0 && (
+            <span className="quiet" data-testid="fleet-counts-hidden">
+              {' '}
+              · not counting {left.map((m) => m.machine.label).join(', ')} (hidden by the filter)
+            </span>
           )}
         </span>
       )}

@@ -24,7 +24,8 @@ describe('windowStory (S5)', () => {
     expect(s.text).toBe('plenty of room · ~40% by reset');
     expect(s.glyph).toBe('●');
     expect(s.leftPct).toBe(80);
-    expect(s.pace).toBe('▼ 30 points behind the clock');
+    // C3 (F25): the line shows what it compares, so two accounts never read the same by accident
+    expect(s.pace).toBe('▼ 20% used, 50% of the window gone: 30 points to spare');
   });
 
   it('be careful from 80%, will run out from 100% with the time it would', () => {
@@ -69,7 +70,7 @@ describe('windowStory (S5)', () => {
 
   it('one point is singular (QA + r1 S5)', () => {
     expect(windowStory(w({ usedPct: 51, paceDeltaPct: 1, projectedPct: 102 }), at(50)).pace).toBe(
-      '▲ 1 point ahead of the clock'
+      '▲ 51% used, 50% of the window gone: 1 point over pace'
     );
   });
 

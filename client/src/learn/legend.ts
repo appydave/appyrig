@@ -556,8 +556,9 @@ const ACCOUNTS: LegendSection[] = [
       {
         swatch: 'pace',
         term: 'window-now',
-        mark: '▲ 24 points ahead of the clock',
-        means: 'Used % minus time gone %, at the reading. ▼ behind = room to spare.',
+        mark: '▼ 18% used, 86% of the window gone: 68 points to spare',
+        means:
+          'Pace, in its own numbers: how much of the allowance is used and how much of the window has gone, as of the reading. ▼ "to spare" = slower than the clock, room left at the reset; ▲ "over pace" = faster than the clock; a point is one percentage point between the two.',
       },
       { swatch: 'resets', mark: 'resets in 39m', means: 'When that window refills.' },
       {
