@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseAccountIdentity, parseUsageLog, readAccount } from './account.js';
@@ -14,6 +14,7 @@ describe('account adapter', () => {
         emailAddress: 'david@example.com',
         organizationType: 'claude_max',
         organizationRateLimitTier: 'default_claude_max_20x',
+        profileFetchedAt: 1791805455044,
         accountUuid: 'should-not-travel',
       },
       someSecret: 'nope',
@@ -22,12 +23,38 @@ describe('account adapter', () => {
       email: 'david@example.com',
       plan: 'claude_max',
       rateLimitTier: 'default_claude_max_20x',
+      profileFetchedAt: new Date(1791805455044).toISOString(),
     });
     expect(parseAccountIdentity('not json')).toEqual({
       email: null,
       plan: null,
       rateLimitTier: null,
+      profileFetchedAt: null,
     });
+  });
+
+  it('v1.5 C: a missing or odd profileFetchedAt is "not reported", never a guess', () => {
+    const at = (v: unknown) =>
+      parseAccountIdentity(
+        JSON.stringify({ oauthAccount: { emailAddress: 'a@b', profileFetchedAt: v } })
+      ).profileFetchedAt;
+    expect(at(undefined)).toBeNull();
+    expect(at('yesterday')).toBeNull();
+    expect(at(-1)).toBeNull();
+  });
+
+  it('v1.5 C hard rule: no collector code names a login store (credentials file or Keychain)', () => {
+    const dir = new URL('..', import.meta.url).pathname;
+    const files = readdirSync(dir, { recursive: true })
+      .map(String)
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
+    for (const f of files) {
+      // comments may explain the rule; code may not name the store
+      const code = readFileSync(join(dir, f), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '');
+      expect(code, f).not.toMatch(/\.credentials\.json|find-generic-password|Keychain|'security'/i);
+    }
   });
 
   it('takes each window from the latest row that has it, and keeps >100%', () => {

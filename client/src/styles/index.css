@@ -3425,3 +3425,11 @@ g[data-testid='flow-edge'] {
   cursor: default;
   opacity: 0.75;
 }
+
+/* v1.5 C: the account email is a cached profile, not proof of login */
+.account-cached {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+  cursor: help;
+}

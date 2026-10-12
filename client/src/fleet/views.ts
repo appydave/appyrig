@@ -710,6 +710,11 @@ export interface AccountView {
   activeSeats: number;
   /** S5: the hub's view of the account (tier, windows against their resets); null from an older hub. */
   derived: AccountDerived | null;
+  /**
+   * v1.5 · C: per machine on this card, when its cached profile (where the email comes from) was
+   * fetched. null = not in the cache; undefined = an older collector does not report it.
+   */
+  profiles: { machine: string; fetchedAt: string | null | undefined }[];
 }
 
 const PLAN_LABEL: Record<string, string> = {
@@ -762,12 +767,14 @@ export function buildAccounts(machines: FleetMachine[]): {
         drawers: [],
         activeSeats: 0,
         derived: null,
+        profiles: [],
       } satisfies AccountView);
     // The hub derives one answer per account; take the one with a reading if machines differ.
     if (acct.derived && (!v.derived || (!v.derived.readingFrom && acct.derived.readingFrom))) {
       v.derived = acct.derived;
     }
     v.machines.push(fm.machine.label);
+    v.profiles.push({ machine: fm.machine.label, fetchedAt: acct.profileFetchedAt });
     if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
       v.reading = { ...acct, from: fm.machine.label };
     }

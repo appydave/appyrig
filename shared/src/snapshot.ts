@@ -202,6 +202,13 @@ export const AccountUsageSchema = z.strictObject({
    * rate-limit tier string (e.g. `default_claude_max_20x`), which names the Max tier. Collector-set.
    */
   rateLimitTier: z.string().max(80).nullable().optional(),
+  /**
+   * v1.5 · C, optional and additive (older collectors omit it; hub first). When Claude Code last
+   * fetched the cached profile the email comes from (`oauthAccount.profileFetchedAt` in
+   * ~/.claude.json). The email is that cache, not proof of which login a session uses: logins live
+   * in the Keychain and ~/.claude/.credentials.json, which AppyRig never reads.
+   */
+  profileFetchedAt: isoDate.nullable().optional(),
   /** Hub-set (never sent by a collector): tier and windows against their resets. */
   derived: AccountDerivedSchema.optional(),
 });

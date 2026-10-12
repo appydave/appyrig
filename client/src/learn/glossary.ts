@@ -324,8 +324,13 @@ export const GLOSSARY: Record<string, Term> = {
   // ---------------------------------------------------------------- accounts
   account: {
     term: 'Claude account',
-    what: "The login a machine's Claude Code uses. Every machine signed into the same account shares its limits.",
-    why: "A machine sits under the account it is signed into right now, read from its own Claude login on every push: switch a machine's login and it moves to the other card.",
+    what: "A Claude login and its limits. Every session using the same account shares them. The email on a card is the machine's cached profile (~/.claude.json), refreshed about once a day.",
+    why: "A machine sits under the account its cached profile names. That cache is not the login a session uses (the Keychain or ~/.claude/.credentials.json, which AppyRig never reads), so a seat can be spending a different account's limits from the card it sits under.",
+  },
+  'account-cached': {
+    term: 'Cached profile',
+    what: "Where the card's email comes from: Claude Code's cached profile in ~/.claude.json, refreshed about once a day. Each machine shows how old its cache is.",
+    why: 'It is not proof of which login a session uses. Logins live in the Keychain (desktop sessions) and ~/.claude/.credentials.json (SSH-started sessions such as rigs), and the two can differ from the cache.',
   },
   'meter-5h': {
     term: '5-hour window',

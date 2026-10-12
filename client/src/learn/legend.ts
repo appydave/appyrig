@@ -591,9 +591,9 @@ const ACCOUNTS: LegendSection[] = [
       {
         swatch: 'drawers',
         term: 'drawers',
-        mark: 'Who draws on it · Machines signed in',
+        mark: 'Who draws on it · Machines whose cached profile names it',
         means:
-          'The machines signed into this account right now (it moves when a login switches), and their running Claude seats.',
+          'The machines whose cached Claude profile names this account, with how old each cache is, and their running Claude seats. The cache is not the login: a seat can be using another account.',
       },
       {
         swatch: 'headroom',
