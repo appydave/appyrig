@@ -664,7 +664,13 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             onOpenFiles={(r) => openFiles(r.machineId, r.name)}
           />
           {view === 'map' ? (
-            <RigMap map={rigMap} onOpen={open} onOpenSkills={openSkills} />
+            <RigMap
+              map={rigMap}
+              onOpen={open}
+              onOpenSkills={openSkills}
+              socket={getSocket()}
+              keys={!focusTile && !overlay}
+            />
           ) : (
             <HandoffFlow
               machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}

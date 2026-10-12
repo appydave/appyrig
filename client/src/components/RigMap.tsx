@@ -1,4 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { HandoffGetOutput } from '@appydave/shared';
+import type { FleetSocket } from '../fleet/useFleet.js';
+import HandoffPanel from './HandoffPanel.js';
 import { ago, PIP } from '../fleet/model.js';
 import type { MapEdge, RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
@@ -8,6 +11,18 @@ interface Props {
   onOpen: (key: string) => void;
   /** v1.5 · L1: the skill-count pill opens the seat's Loadout debug view. */
   onOpenSkills?: (key: string) => void;
+  /** C6a: reads a handoff's message for the details drawer. */
+  socket?: FleetSocket;
+  /** C6a: false while something sits on top (Esc is theirs). */
+  keys?: boolean;
+}
+
+/** C6a: a floating card for what is under the pointer (never in the layout, never takes the pointer). */
+interface Card {
+  x: number;
+  y: number;
+  title: string;
+  lines: string[];
 }
 
 /** Highest an arc may rise above (or dip below) its row; .pod-seats pads for it. */
@@ -24,16 +39,68 @@ interface Placed {
   d: string;
   lx: number;
   ly: number;
+  /** The cubic's control points, so a label can slide along its own line (C6a). */
+  c: [number, number, number, number, number, number, number, number];
+}
+
+const LABEL_W = 22;
+const LABEL_H = 18;
+
+/**
+ * C6a (F14 labels, B1-2): a count label that would sit on top of another is slid along its own
+ * line to the first spot where it overlaps none, so every line's label can be pointed at.
+ * Labels that find no free spot stay where they were (keyboard still reaches every line).
+ */
+export function spreadLabels<T extends { lx: number; ly: number; c: Placed['c'] }>(
+  items: T[]
+): T[] {
+  const taken: { x: number; y: number }[] = [];
+  const clear = (x: number, y: number) =>
+    taken.every((t) => Math.abs(t.x - x) >= LABEL_W + 2 || Math.abs(t.y - y) >= LABEL_H + 2);
+  return items.map((p) => {
+    let best = { x: p.lx, y: p.ly };
+    if (!clear(best.x, best.y)) {
+      const [x0, y0, x1, y1, x2, y2, x3, y3] = p.c;
+      for (const t of [0.5, 0.4, 0.6, 0.3, 0.7, 0.22, 0.78, 0.15, 0.85]) {
+        const x = bez(t, x0, x1, x2, x3);
+        const y = bez(t, y0, y1, y2, y3);
+        if (clear(x, y)) {
+          best = { x, y };
+          break;
+        }
+      }
+    }
+    taken.push(best);
+    return { ...p, lx: best.x, ly: best.y };
+  });
 }
 
 /**
  * Concept 3 · Rig Map: machines as lanes, pods as bands, seats as cards. The lines are real queue
  * traffic (who handed work to whom, and how often), drawn over the cards from measured positions.
  */
-export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
+export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [placed, setPlaced] = useState<Placed[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  // C6a: lines and boxes answer hover (a floating card) and click (a details drawer for a line).
+  const [card, setCard] = useState<Card | null>(null);
+  const [pinned, setPinned] = useState<{ edge: string; itemId: string | null } | null>(null);
+  const bodies = useRef(new Map<string, HandoffGetOutput>());
+  useEffect(() => {
+    setPinned(null);
+    setCard(null);
+  }, [map?.rig.key]);
+  useEffect(() => {
+    if (!pinned || !keys) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      setPinned(null);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [pinned, keys]);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -76,6 +143,7 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
               d: `M${sx},${sy} C${sx},${sy + lift} ${ex},${ey + lift} ${ex},${ey}`,
               lx: (sx + ex) / 2,
               ly: (sy + ey) / 2 + lift * 0.75,
+              c: [sx, sy, sx, sy + lift, ex, ey + lift, ex, ey],
             });
             return;
           }
@@ -93,9 +161,10 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
             d: `M${sx},${sy} C${sx},${mid} ${ex},${mid} ${ex},${ey}`,
             lx: bez(t, sx, sx, ex, ex) + 10,
             ly: bez(t, sy, mid, mid, ey),
+            c: [sx, sy, sx, mid, ex, mid, ex, ey],
           });
         });
-      setPlaced(out);
+      setPlaced(spreadLabels(out));
       setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
     measure();
@@ -119,6 +188,54 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
     map.lanes.flatMap((l) => l.pods.flatMap((p) => p.seats.map((s) => [s.key, s.name] as const)))
   );
   const nameOf = (key: string) => names.get(key) ?? key;
+  const edgeKey = (e: MapEdge) => `${e.from}→${e.to}`;
+  const cardAt = (ev: { clientX: number; clientY: number }, title: string, lines: string[]) =>
+    setCard(
+      document.querySelector('[data-explain-on]')
+        ? null
+        : { x: ev.clientX + 14, y: ev.clientY + 14, title, lines }
+    );
+  const edgeTitle = (e: MapEdge) =>
+    `${nameOf(e.from)} → ${nameOf(e.to)} · ${e.count} handoff${e.count === 1 ? '' : 's'}`;
+  const edgeCard = (e: MapEdge, ev: { clientX: number; clientY: number }) => {
+    const last = e.items[e.items.length - 1];
+    cardAt(ev, edgeTitle(e), [
+      ...(e.open ? [`${e.open} still waiting`] : []),
+      ...(e.stale ? [`${e.stale} left open over 2 h`] : []),
+      ...(last ? [`latest: ${last.summary ?? last.id}`] : []),
+      'Click (or Enter) for the handoffs.',
+    ]);
+  };
+  const seatCard = (key: string, ev: { clientX: number; clientY: number }) => {
+    const ins = map.edges.filter((e) => e.to === key && !e.self).reduce((n, e) => n + e.count, 0);
+    const outs = map.edges
+      .filter((e) => e.from === key && !e.self)
+      .reduce((n, e) => n + e.count, 0);
+    const waiting = map.edges.filter((e) => e.to === key).reduce((n, e) => n + e.open, 0);
+    cardAt(ev, nameOf(key), [
+      `${ins} handed in · ${outs} handed out${waiting ? ` · ${waiting} waiting` : ''}`,
+      'Click to open the seat.',
+    ]);
+  };
+  const pinnedEdge = pinned ? map.edges.find((e) => edgeKey(e) === pinned.edge) : undefined;
+  const edgeHandlers = (e: MapEdge) => ({
+    tabIndex: 0,
+    role: 'button',
+    'aria-label': `${edgeTitle(e)}. Enter shows them.`,
+    onPointerEnter: (ev: React.PointerEvent) => edgeCard(e, ev),
+    onPointerMove: (ev: React.PointerEvent) => edgeCard(e, ev),
+    onPointerLeave: () => setCard(null),
+    onClick: () => {
+      setCard(null);
+      setPinned({ edge: edgeKey(e), itemId: null });
+    },
+    onKeyDown: (ev: React.KeyboardEvent) => {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        setPinned({ edge: edgeKey(e), itemId: null });
+      }
+    },
+  });
 
   return (
     <section className="rigmap" data-testid="rig-map" aria-label={`Rig map of ${map.rig.name}`}>
@@ -132,7 +249,8 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
           className="rigmap-edges"
           width={size.w}
           height={size.h}
-          aria-hidden="true"
+          role="group"
+          aria-label="Handoff lines: Tab to a line, Enter shows its handoffs"
           data-testid="rig-map-edges"
         >
           <defs>
@@ -153,6 +271,9 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
             <g
               key={`${p.edge.from}→${p.edge.to}`}
               data-testid="rig-map-edge"
+              data-edge={edgeKey(p.edge)}
+              data-selected={pinned?.edge === edgeKey(p.edge) || undefined}
+              {...edgeHandlers(p.edge)}
               data-open={p.edge.open > 0}
               data-stale={p.edge.stale > 0}
               data-explain={p.edge.open ? 'waiting' : p.edge.stale ? 'stale' : 'handoff'}
@@ -165,6 +286,21 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
                 markerEnd="url(#rm-arrow)"
               />
               <path d={p.d} className="hit" />
+            </g>
+          ))}
+          {/* C6a (B1-2): the count labels sit above every line's hit area, so each line can be
+              reached by its label even where other lines' wide hit areas cover its path. */}
+          {placed.map((p) => (
+            <g
+              key={`label:${edgeKey(p.edge)}`}
+              className="rigmap-label"
+              data-testid="rig-map-edge-label"
+              data-edge={edgeKey(p.edge)}
+              {...edgeHandlers(p.edge)}
+              tabIndex={-1}
+              aria-hidden="true"
+            >
+              <rect x={p.lx - 11} y={p.ly - 9} width={22} height={18} rx={4} />
               <text x={p.lx} y={p.ly} className="rigmap-count">
                 {p.edge.count}
               </text>
@@ -201,6 +337,9 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
                         data-testid="rig-map-node"
                         data-pip={s.pip}
                         onClick={() => !s.key.startsWith('?/') && onOpen(s.key)}
+                        onPointerEnter={(ev) => seatCard(s.key, ev)}
+                        onPointerMove={(ev) => seatCard(s.key, ev)}
+                        onPointerLeave={() => setCard(null)}
                         aria-label={
                           s.key.startsWith('?/')
                             ? `${s.name}: not a seat any machine reports`
@@ -246,6 +385,45 @@ export default function RigMap({ map, onOpen, onOpenSkills }: Props) {
           </div>
         ))}
       </div>
+      {card && (
+        <div
+          className="hover-card"
+          role="tooltip"
+          data-testid="map-hover-card"
+          style={{ left: card.x, top: card.y }}
+        >
+          <b>{card.title}</b>
+          {card.lines.map((l, i) => (
+            <span key={i} style={{ display: 'block' }}>
+              {l}
+            </span>
+          ))}
+        </div>
+      )}
+      {pinnedEdge && (
+        <div className="map-drawer" data-testid="map-drawer">
+          <HandoffPanel
+            machineId={map.rig.machineId}
+            selection={{
+              edge: pinned!.edge,
+              title: edgeTitle(pinnedEdge),
+              items: pinnedEdge.items,
+              itemId:
+                pinned!.itemId && pinnedEdge.items.some((q) => q.id === pinned!.itemId)
+                  ? pinned!.itemId
+                  : (pinnedEdge.items[pinnedEdge.items.length - 1]?.id ?? ''),
+            }}
+            mode="pinned"
+            pinned
+            socket={socket}
+            cache={bodies.current}
+            showMode={false}
+            onPick={(id) => setPinned({ edge: pinned!.edge, itemId: id })}
+            onMode={() => {}}
+            onClose={() => setPinned(null)}
+          />
+        </div>
+      )}
     </section>
   );
 }

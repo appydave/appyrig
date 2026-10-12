@@ -3731,6 +3731,7 @@ g[data-testid='flow-edge'] {
   max-width: none;
   white-space: nowrap;
   display: inline-flex;
+  flex-direction: row;
   align-items: baseline;
   gap: 6px;
   padding: 4px 10px;
@@ -3739,4 +3740,44 @@ g[data-testid='flow-edge'] {
   font-family: var(--ar-font-label);
   font-size: 12px;
   opacity: 0.8;
+}
+
+/* ---------- batch 2 · C6a: Rig Map lines and boxes respond (F13 hover part, B1-2) ---------- */
+.rigmap-label rect {
+  fill: var(--ar-canvas);
+  stroke: var(--ar-line);
+  pointer-events: all;
+  cursor: pointer;
+}
+.rigmap-label:hover rect,
+g[data-testid='rig-map-edge'][data-selected] + g rect {
+  stroke: var(--ar-sequence);
+}
+g[data-testid='rig-map-edge'] {
+  cursor: pointer;
+  outline: none;
+}
+g[data-testid='rig-map-edge']:hover .rigmap-edge,
+g[data-testid='rig-map-edge']:focus-visible .rigmap-edge,
+g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 1;
+}
+.map-drawer {
+  position: fixed;
+  right: 16px;
+  top: 96px;
+  z-index: 45;
+  width: min(440px, calc(100vw - 32px));
+  box-shadow: 0 10px 30px rgb(52 45 45 / 0.25);
+  border-radius: 12px;
+}
+.map-drawer .handoff-panel {
+  max-width: none;
+  height: min(520px, calc(100vh - 120px));
+}
+/* C5 fix: chips in the compact row are ONE line (an older rule made each span a block) */
+.rig-picker-bar .rig-chip > span,
+.rig-picker-bar .rig-chip > b {
+  display: inline;
 }
