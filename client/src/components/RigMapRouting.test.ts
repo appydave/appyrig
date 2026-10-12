@@ -20,8 +20,13 @@ interface Layout {
   headings: Box[];
 }
 
+/**
+ * As index.css draws it: cards start 15 px inside their pod (border, padding, seats padding);
+ * a pod's seats wrap after `wrap` cards with a row gap of max(70, arc room above + below); pods in
+ * one lane stretch to the same height.
+ */
 function layout(
-  rows: { lane: string; pods: string[][] }[],
+  rows: { lane: string; pods: string[][]; wrap?: number }[],
   room: { top: Map<string, number>; bottom: Map<string, number> }
 ): Layout {
   const cards = new Map<string, Box>();
@@ -32,24 +37,77 @@ function layout(
   for (const row of rows) {
     const top = Math.max(24, room.top.get(row.lane) ?? 0);
     const bottom = Math.max(24, room.bottom.get(row.lane) ?? 0);
+    const gap = Math.max(70, top + bottom);
+    const wrap = row.wrap ?? 99;
     headings.push({ x: 40, y, w: 600, h: LANE_HEAD }); // lane title
-    let x = 40;
     const podY = y + LANE_HEAD + 10;
+    const tallest = Math.max(...row.pods.map((p) => Math.ceil(p.length / wrap)));
+    const h = HEAD + top + tallest * CARD_H + (tallest - 1) * gap + bottom;
+    let x = 40;
     for (const seats of row.pods) {
-      const w = seats.length * (CARD_W + 40) + 10;
-      const h = HEAD + top + CARD_H + bottom;
+      const w = Math.min(seats.length, wrap) * (CARD_W + 40) - 40 + 30;
       const pod = { x, y: podY, w, h };
       headings.push({ x, y: podY, w, h: HEAD }); // the pod heading spans its width
       seats.forEach((k, i) => {
-        cards.set(k, { x: x + 10 + i * (CARD_W + 40), y: podY + HEAD + top, w: CARD_W, h: CARD_H });
+        const col = i % wrap;
+        const r = Math.floor(i / wrap);
+        cards.set(k, {
+          x: x + 15 + col * (CARD_W + 40),
+          y: podY + HEAD + top + r * (CARD_H + gap),
+          w: CARD_W,
+          h: CARD_H,
+        });
         pods.set(k, pod);
         lanes.set(k, row.lane);
       });
       x += w + 14;
     }
-    y = podY + HEAD + top + CARD_H + bottom + 16 + 18;
+    y = podY + h + 16 + 18;
   }
   return { cards, pods, lanes, headings };
+}
+
+/** Route twice, as the browser does: the room asked for the first time is given to the rows. */
+function routeTwice(rows: Parameters<typeof layout>[0], edges: MapEdge[]) {
+  let L = layout(rows, { top: new Map(), bottom: new Map() });
+  const look = () => ({
+    card: (k: string) => L.cards.get(k) ?? null,
+    pod: (k: string) => L.pods.get(k) ?? null,
+    lane: (k: string) => L.lanes.get(k) ?? '',
+    podCards: (k: string) => {
+      const pod = L.pods.get(k);
+      return [...L.cards].filter(([o]) => L.pods.get(o) === pod).map(([, b]) => b);
+    },
+  });
+  const first = routeLines(edges, look());
+  L = layout(rows, { top: first.roomTop, bottom: first.roomBottom });
+  return { L, placed: routeLines(edges, look()).placed };
+}
+
+/** Each line that enters a card other than its own ends, or any heading; and overlapping labels. */
+function faults(L: Layout, placed: ReturnType<typeof routeLines>['placed']) {
+  const crossings: string[] = [];
+  for (const p of placed) {
+    for (const pt of sample(p.d)) {
+      for (const [k, box] of L.cards)
+        if (k !== p.edge.from && k !== p.edge.to && inside(pt, box))
+          crossings.push(`${p.edge.from}→${p.edge.to} over ${k}`);
+      for (const h of L.headings)
+        if (inside(pt, h)) crossings.push(`${p.edge.from}→${p.edge.to} over a heading`);
+    }
+  }
+  const labels = spreadLabels(placed).map((p) => ({ x: p.lx - 11, y: p.ly - 9, w: 22, h: 18 }));
+  const overlaps: string[] = [];
+  for (let i = 0; i < labels.length; i++)
+    for (let j = i + 1; j < labels.length; j++) {
+      const a = labels[i]!;
+      const b = labels[j]!;
+      if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h)
+        overlaps.push(
+          `${placed[i]!.edge.from}→${placed[i]!.edge.to} / ${placed[j]!.edge.from}→${placed[j]!.edge.to}`
+        );
+    }
+  return { crossings: [...new Set(crossings)], overlaps };
 }
 
 const e = (from: string, to: string, count = 1): MapEdge => ({
@@ -122,45 +180,64 @@ const inside = (p: { x: number; y: number }, b: Box) =>
 
 describe('C6-A: Map lines never cross a box or a heading, and labels never overlap', () => {
   it('on a flicut-ab-shaped layout (two-pass, as the browser lays it out)', () => {
-    let room = { top: new Map<string, number>(), bottom: new Map<string, number>() };
-    let L = layout(ROWS, room);
-    const look = () => ({
-      card: (k: string) => L.cards.get(k) ?? null,
-      pod: (k: string) => L.pods.get(k) ?? null,
-      lane: (k: string) => L.lanes.get(k) ?? '',
-    });
-    const first = routeLines(EDGES, look());
-    room = { top: first.roomTop, bottom: first.roomBottom };
-    L = layout(ROWS, room);
-    const { placed } = routeLines(EDGES, look());
+    const { L, placed } = routeTwice(ROWS, EDGES);
     expect(placed).toHaveLength(EDGES.length);
+    expect(faults(L, placed)).toEqual({ crossings: [], overlaps: [] });
+  });
 
-    const crossings: string[] = [];
-    for (const p of placed) {
-      for (const pt of sample(p.d)) {
-        for (const [k, box] of L.cards)
-          if (k !== p.edge.from && k !== p.edge.to && inside(pt, box))
-            crossings.push(`${p.edge.from}→${p.edge.to} over ${k}`);
-        for (const h of L.headings)
-          if (inside(pt, h)) crossings.push(`${p.edge.from}→${p.edge.to} over a heading`);
-      }
+  // C6-A.1 (r1 MEDIUM-1): a narrow window wraps a big pod's seats onto more rows.
+  const WRAPPED = [
+    { lane: 'm2', pods: [['lead'], ['a', 'b', 'c', 'f', 'g', 'h', 'i'], ['r1']], wrap: 3 },
+    { lane: 'other', pods: [['boss']] },
+  ];
+  const WRAPPED_EDGES = [
+    e('a', 'g', 2), // r1's probe: row 1 to row 2 of one pod, f sits under a
+    e('g', 'a', 1),
+    e('b', 'i', 1), // row 1 to row 3
+    e('i', 'c', 1),
+    e('a', 'b', 3), // arcs inside row 1, row 2 and row 3
+    e('c', 'b', 1),
+    e('f', 'h', 2),
+    e('h', 'g', 1),
+    e('lead', 'a', 4), // other pods to a card with rows below it, both ways
+    e('c', 'r1', 2),
+    e('r1', 'f', 1),
+    e('b', 'boss', 1), // another lane, from and to a top-row card
+    e('boss', 'c', 1),
+    e('lead', 'boss', 2),
+  ];
+
+  it('on a pod whose seats wrap to three rows: no line runs through the card under its end', () => {
+    const { L, placed } = routeTwice(WRAPPED, WRAPPED_EDGES);
+    expect(placed).toHaveLength(WRAPPED_EDGES.length);
+    expect(faults(L, placed)).toEqual({ crossings: [], overlaps: [] });
+  });
+
+  it('two rows of one pod join inside the pod, not via the gutter', () => {
+    const { placed } = routeTwice(WRAPPED, WRAPPED_EDGES);
+    const ag = placed.find((p) => p.edge.from === 'a' && p.edge.to === 'g')!;
+    const xs = sample(ag.d).map((p) => p.x);
+    expect(Math.min(...xs)).toBeGreaterThan(40); // never left of the lane: the gutter is x < 26
+  });
+
+  it('a new line does not move the others (slots come from the ends, not the order)', () => {
+    const before = routeTwice(WRAPPED, WRAPPED_EDGES).placed;
+    const after = routeTwice(WRAPPED, [e('i', 'r1'), ...WRAPPED_EDGES]).placed;
+    for (const p of before) {
+      const q = after.find((x) => x.edge.from === p.edge.from && x.edge.to === p.edge.to)!;
+      expect(q.d, `${p.edge.from}→${p.edge.to}`).toBe(p.d);
     }
-    expect([...new Set(crossings)]).toEqual([]);
-
-    const labels = spreadLabels(placed).map((p) => ({ x: p.lx - 11, y: p.ly - 9, w: 22, h: 18 }));
-    for (let i = 0; i < labels.length; i++)
-      for (let j = i + 1; j < labels.length; j++) {
-        const a = labels[i]!;
-        const b = labels[j]!;
-        const overlap = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-        expect(
-          overlap,
-          `labels of ${placed[i]!.edge.from}→${placed[i]!.edge.to} and ${placed[j]!.edge.from}→${placed[j]!.edge.to}`
-        ).toBe(false);
-      }
   });
 
   it('packs arcs into levels: disjoint arcs share one, nested ones stack; room grows only where needed', () => {
+    const { placed: r0 } = routeTwice(
+      [{ lane: 'm2', pods: [['a', 'b', 'c', 'd']] }],
+      [e('a', 'b'), e('c', 'd'), e('a', 'd')]
+    );
+    const ly = (from: string, to: string) =>
+      r0.find((p) => p.edge.from === from && p.edge.to === to)!.ly;
+    expect(ly('a', 'b')).toBe(ly('c', 'd')); // disjoint: same level
+    expect(ly('a', 'd')).toBeLessThan(ly('a', 'b')); // contains both: one level higher
     const L = layout([{ lane: 'm2', pods: [['a', 'b', 'c', 'd']] }], {
       top: new Map(),
       bottom: new Map(),
@@ -169,15 +246,8 @@ describe('C6-A: Map lines never cross a box or a heading, and labels never overl
       card: (k) => L.cards.get(k) ?? null,
       pod: (k) => L.pods.get(k) ?? null,
       lane: () => 'm2',
+      podCards: () => [...L.cards.values()],
     });
-    const peak = (from: string) =>
-      r.placed.find((p) => p.edge.from === from && p.edge.to !== 'd')?.ly;
-    // a→b and c→d do not overlap: same level, so same label height
-    expect(peak('a')).toBe(r.placed.find((p) => p.edge.from === 'c')!.ly);
-    // a→d contains both: one level higher (smaller y, above the row)
-    expect(r.placed.find((p) => p.edge.to === 'd' && p.edge.from === 'a')!.ly).toBeLessThan(
-      peak('a')!
-    );
     expect(r.roomBottom.get('m2')).toBeUndefined(); // nothing goes right-to-left: no room below
   });
 });

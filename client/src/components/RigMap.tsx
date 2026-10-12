@@ -94,6 +94,16 @@ export interface MapLook {
   card: (key: string) => Box | null;
   pod: (key: string) => Box | null;
   lane: (key: string) => string;
+  /** Every card in the same pod as this seat (its own included): finds the rows when seats wrap. */
+  podCards: (key: string) => Box[];
+}
+
+/** A line's slot (0–3): offsets its runs so lines sharing a corridor don't sit on one another.
+ * From its ends, not its order, so a new line never shifts the others (r1 LOW-2). */
+function slotOf(edge: MapEdge): number {
+  let h = 0;
+  for (const ch of `${edge.from}\u0000${edge.to}`) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return Math.abs(h) % 4;
 }
 
 /**
@@ -174,27 +184,81 @@ export function routeLines(
   // C6-A, another row or lane: never straight across. Out of the card's bottom, along the
   // corridor just below its pod (between pod rows, or above the lane's bottom edge), down or up
   // the gutter left of every lane, along the corridor below the target's pod, and up into the
-  // target's bottom.
-  routed.forEach(({ edge, a, b }, k) => {
+  // target's bottom. Always via the bottoms: a pod's heading sits at its top and spans its width,
+  // so a line coming in from above would cross it.
+  // C6-A.1 (r1 MEDIUM-1): when a pod's seats wrap, a card with a row below it leaves through its
+  // own row gap, then down the pod's left padding (left of every card) to the corridor; two rows
+  // of one pod join inside the pod, without the trip to the gutter.
+  type Exit = { y: number; wrapped: boolean; corridor: number };
+  routed.forEach(({ edge, a, b }) => {
     const pa = look.pod(edge.from);
     const pb = look.pod(edge.to);
     if (!pa || !pb) return;
-    // Always via the cards' bottoms and the corridors below their pods: a pod's heading sits at
-    // its top and spans its width, so a line coming in from above would cross it.
-    const gx = GUTTER - 6 - (k % 4) * 4;
+    const s4 = slotOf(edge);
+    // Where a card's line runs sideways: the middle of the gap under its row, or (last row) the
+    // corridor under its pod. Each slot shifts it, so lines from one pod don't merge (LOW-1).
+    const exitOf = (card: Box, pod: Box, key: string): Exit => {
+      const below = look
+        .podCards(key)
+        .filter((o) => o.y >= card.y + card.h - 1)
+        .map((o) => o.y);
+      const corridor = pod.y + pod.h + 3 + s4 * 2.5;
+      return below.length
+        ? {
+            y: (card.y + card.h + Math.min(...below)) / 2 + (s4 - 1.5) * 3,
+            wrapped: true,
+            corridor,
+          }
+        : { y: corridor, wrapped: false, corridor };
+    };
+    const xa = exitOf(a, pa, edge.from);
+    const xb = exitOf(b, pb, edge.to);
     const sx = a.x + a.w - 22;
     const ex = b.x + b.w - 22;
     const sy = a.y + a.h;
     const ey = b.y + b.h;
-    const c1 = pa.y + pa.h + 7;
-    const c2 = pb.y + pb.h + 7;
-    out.push({
-      edge,
-      d: `M${sx},${sy} L${sx},${c1} L${gx},${c1} L${gx},${c2} L${ex},${c2} L${ex},${ey}`,
-      lx: gx + 12,
-      ly: (c1 + c2) / 2,
-      c: [gx + 12, c1 + 12, gx + 12, c1 + 12, gx + 12, c2 - 12, gx + 12, c2 - 12],
-    });
+    const padX = (pod: Box) => pod.x + 4 + s4 * 2; // inside the pod, left of its first card
+    let pts: [number, number][];
+    let label: Pick<Placed, 'lx' | 'ly' | 'c'>;
+    if (pa.x === pb.x && pa.y === pb.y) {
+      const px = padX(pa);
+      pts = [
+        [sx, sy],
+        [sx, xa.y],
+        [px, xa.y],
+        [px, xb.y],
+        [ex, xb.y],
+        [ex, ey],
+      ];
+      label = {
+        lx: (px + ex) / 2,
+        ly: xb.y,
+        c: [px + 14, xb.y, px + 14, xb.y, ex - 14, xb.y, ex - 14, xb.y],
+      };
+    } else {
+      const gx = GUTTER - 6 - s4 * 4;
+      const leg = (x: number, y: number, xit: Exit, pod: Box): [number, number][] =>
+        xit.wrapped
+          ? [
+              [x, y],
+              [x, xit.y],
+              [padX(pod), xit.y],
+              [padX(pod), xit.corridor],
+            ]
+          : [
+              [x, y],
+              [x, xit.corridor],
+            ];
+      const c1 = xa.corridor;
+      const c2 = xb.corridor;
+      pts = [...leg(sx, sy, xa, pa), [gx, c1], [gx, c2], ...leg(ex, ey, xb, pb).reverse()];
+      label = {
+        lx: gx + 12,
+        ly: (c1 + c2) / 2,
+        c: [gx + 12, c1 + 12, gx + 12, c1 + 12, gx + 12, c2 - 12, gx + 12, c2 - 12],
+      };
+    }
+    out.push({ edge, d: pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' '), ...label });
   });
   return { placed: out, roomTop, roomBottom };
 }
@@ -278,6 +342,10 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
         card: rect,
         pod: podOf,
         lane: laneOf,
+        podCards: (key) => {
+          const pod = el.querySelector(`[data-node-key="${CSS.escape(key)}"]`)?.closest('.pod');
+          return pod ? [...pod.querySelectorAll('[data-node-key]')].map(boxOf) : [];
+        },
       });
       const nextRoom = JSON.stringify({
         top: Object.fromEntries(roomTop),
