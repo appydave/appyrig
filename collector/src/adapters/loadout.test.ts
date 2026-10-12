@@ -15,6 +15,7 @@ import {
   classifySkills,
   foldListing,
   ListingTracker,
+  newerSet,
   listingOfLine,
   LoadoutReader,
   readLayers,
@@ -487,5 +488,48 @@ describe('the skill-count pill', () => {
       { id: 'tmux-only' },
     ]);
     expect('skillCount' in out[2]!).toBe(false);
+  });
+});
+
+describe('a seat with several transcripts (ruling: one transcript, never mixed)', () => {
+  it('takes the file whose set starts from the newest full listing; its deltas only', async () => {
+    const projects = tmp();
+    // older session: a full listing, then a delta written AFTER the newer session started
+    put(
+      join(projects, '-w', 'old.jsonl'),
+      `${titleLine('s@demo')}\n${listingLine(['a', 'b'], '2026-10-01T00:00:00Z')}\n${listingLine(['late-delta'], '2026-10-03T00:00:00Z', false)}\n`
+    );
+    put(
+      join(projects, '-w', 'new.jsonl'),
+      `${titleLine('s@demo')}\n${listingLine(['x', 'y', 'z'], '2026-10-02T00:00:00Z')}\n${listingLine(['w'], '2026-10-02T01:00:00Z', false)}\n`
+    );
+    const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
+    const reader = new LoadoutReader('m2', { projectsDir: projects, home: tmp(), exec });
+    const p = await reader.next(
+      [{ id: 's@demo', rig: 'demo', runtime: 'claude-code', cwd: null }],
+      new Map(),
+      new Map()
+    );
+    const l = p!.loadouts[0]!;
+    expect(l.skills.map((s) => s.name)).toEqual(['x', 'y', 'z', 'w']);
+    expect(l.listing).toMatchObject({ skillCount: 4, deltas: 1, listings: 2 });
+    expect(l.listing?.transcript).toMatch(/new\.jsonl$/);
+  });
+
+  it('a set from a full listing beats one built only from deltas', () => {
+    const full = foldListing(null, {
+      at: '2026-10-01T00:00:00Z',
+      skillCount: 1,
+      isInitial: true,
+      names: ['a'],
+    });
+    const deltasOnly = foldListing(null, {
+      at: '2026-10-05T00:00:00Z',
+      skillCount: 1,
+      isInitial: false,
+      names: ['b'],
+    });
+    expect(newerSet(full, deltasOnly)).toBe(true);
+    expect(newerSet(deltasOnly, full)).toBe(false);
   });
 });

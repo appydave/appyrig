@@ -58,6 +58,18 @@ export interface ShownSkills extends SkillListing {
   deltas: number;
   /** When the newest listing in the set was written. */
   at: string;
+  /** When the listing that started the set was written (the full one, unless only deltas exist). */
+  startedAt: string;
+}
+
+/**
+ * Which transcript a seat's skills come from, when it has several (rebuilt or resumed): the one
+ * whose set starts from the newest full listing. Deltas are never mixed across files (QA, ruling).
+ */
+export function newerSet(a: ShownSkills, b: ShownSkills | null): boolean {
+  if (!b) return true;
+  if (a.isInitial !== b.isInitial) return a.isInitial;
+  return a.startedAt > b.startedAt || (a.startedAt === b.startedAt && a.at > b.at);
 }
 
 /** Folds one listing into the set: an initial listing starts it again; a delta adds to it. */
@@ -71,6 +83,7 @@ export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkil
       reported: l.skillCount,
       isInitial: l.isInitial,
       deltas: 0,
+      startedAt: l.at,
     };
   }
   const names = [...new Set([...cur.names, ...l.names])];
@@ -81,6 +94,7 @@ export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkil
     reported: cur.reported + l.skillCount,
     isInitial: cur.isInitial,
     deltas: cur.deltas + 1,
+    startedAt: cur.startedAt,
   };
 }
 
@@ -517,13 +531,11 @@ export class LoadoutReader {
         };
       } else {
         let best: { listing: ShownSkills; count: number; path: string } | null = null;
-        let total = 0;
         for (const f of transcripts.get(seat.id) ?? []) {
           try {
             const r = await this.tracker.latest(f);
             if (!r) continue;
-            total += r.count;
-            if (!best || r.listing.at > best.listing.at) best = { ...r, path: f.path };
+            if (newerSet(r.listing, best?.listing ?? null)) best = { ...r, path: f.path };
           } catch {
             // unreadable this round
           }
@@ -544,7 +556,7 @@ export class LoadoutReader {
                 isInitial: best.listing.isInitial,
                 deltas: best.listing.deltas,
                 reported: best.listing.reported,
-                listings: Math.max(1, total),
+                listings: Math.max(1, best.count),
                 transcript: best.path,
               }
             : null,

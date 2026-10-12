@@ -129,12 +129,31 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
   return out;
 }
 
-async function firstLine(path: string): Promise<string> {
+/** How much of a transcript's start is read to find its seat title, and how many lines of it. */
+export const TITLE_HEAD_BYTES = 64 * 1024;
+export const TITLE_HEAD_LINES = 20;
+
+/**
+ * The seat a transcript belongs to, from the first TITLE_HEAD_LINES whole lines of its head. The
+ * title is usually line 1, but a resumed session can begin with other rows (`last-prompt`, seen on
+ * the M4 for ylo-lead and ylo-copy, QA D2), so line 1 alone missed those seats.
+ */
+export function seatOfHead(head: string, complete: boolean): string | null {
+  const lines = head.split('\n');
+  if (!complete) lines.pop(); // the head was cut: its last line is partial
+  for (const line of lines.slice(0, TITLE_HEAD_LINES)) {
+    const seat = seatOfFirstLine(line);
+    if (seat) return seat;
+  }
+  return null;
+}
+
+async function seatOfFile(path: string): Promise<string | null> {
   const fh = await open(path, 'r');
   try {
-    const buf = Buffer.alloc(4096);
+    const buf = Buffer.alloc(TITLE_HEAD_BYTES);
     const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
-    return buf.subarray(0, bytesRead).toString('utf8').split('\n')[0] ?? '';
+    return seatOfHead(buf.subarray(0, bytesRead).toString('utf8'), bytesRead < buf.length);
   } finally {
     await fh.close();
   }
@@ -186,7 +205,9 @@ export class TranscriptIndex {
           const st = await stat(path);
           let info = this.files.get(path);
           if (!info || info.size !== st.size || info.mtimeMs !== st.mtimeMs) {
-            const seat = info ? info.seat : seatOfFirstLine(await firstLine(path));
+            // A title never changes once found. A file without one is looked at again when it changes:
+            // a new transcript can be seen before its title row is written.
+            const seat = info?.seat ?? (await seatOfFile(path));
             info = { seat, size: st.size, mtimeMs: st.mtimeMs };
             this.files.set(path, info);
           }

@@ -108,7 +108,7 @@ export const SeatLoadoutSchema = z.strictObject({
       isInitial: z.boolean(),
       /** Delta listings added on top of the initial one. */
       deltas: z.number().int().nonnegative(),
-      /** How many listings the transcript(s) held. */
+      /** How many listings the chosen transcript held (the set comes from that one file). */
       listings: z.number().int().positive(),
       transcript: z.string().max(1024),
     })
