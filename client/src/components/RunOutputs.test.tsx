@@ -116,4 +116,29 @@ describe('Run card R4 · outputs', () => {
       'no FliStudio id in its handoffs'
     );
   });
+
+  it('a file list not received or not answered is said so, not "none" (r1 R4 LOW-2)', async () => {
+    const { unmount } = render(
+      <RunOutputs
+        machineId="m4"
+        rig="x"
+        files={{ ...files, status: 'pending', files: [] }}
+        socket={hub({})}
+      />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('run-out-files')).toHaveTextContent('not received yet')
+    );
+    unmount();
+    render(<RunOutputs machineId="m4" rig="x" files={null} socket={hub({})} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('run-out-files')).toHaveTextContent(
+        'not checked: the hub did not answer'
+      )
+    );
+    // r1 R4 LOW-1: commits are "named", not claimed as made.
+    expect(screen.getByTestId('run-out-commits')).toHaveTextContent(
+      'Commits named in its handoffs'
+    );
+  });
 });

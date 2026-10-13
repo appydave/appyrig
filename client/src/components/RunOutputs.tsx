@@ -62,7 +62,18 @@ export default function RunOutputs({ machineId, rig, files, socket }: Props) {
             </span>
           ))
         ) : (
-          <span className="run-from">no REPORT, DEBRIEF or LEARNED file in its folders</span>
+          <span className="run-from">
+            {/* r1 R4 LOW-2: an empty list is only "none" when the hub actually listed the files. */}
+            {list?.status === 'ok'
+              ? 'no REPORT, DEBRIEF or LEARNED file in its folders'
+              : !list
+                ? 'not checked: the hub did not answer'
+                : list.status === 'no-spec'
+                  ? 'not checked: no rig.yaml for this rig, so there is no folder to look in'
+                  : list.status === 'no-data'
+                    ? "not checked: this machine's collector does not send rig files"
+                    : 'not received yet: the machine sends rig files when it reports'}
+          </span>
         )}
         <span className="run-from">
           {' '}
@@ -70,7 +81,8 @@ export default function RunOutputs({ machineId, rig, files, socket }: Props) {
         </span>
       </p>
       <p data-testid="run-out-commits">
-        <b>Commits</b>{' '}
+        {/* r1 R4 LOW-1: a handoff can quote another run's commit; say "named", not "made". */}
+        <b>Commits named in its handoffs</b>{' '}
         {out === 'loading' ? (
           <span className="run-from">reading its handoffs…</span>
         ) : !got ? (
@@ -96,7 +108,7 @@ export default function RunOutputs({ machineId, rig, files, socket }: Props) {
         )}
       </p>
       <p data-testid="run-out-flistudio">
-        <b>FliStudio</b>{' '}
+        <b>FliStudio ids named</b>{' '}
         {!got ? (
           <span className="run-from">{out === 'loading' ? 'reading…' : '—'}</span>
         ) : fli.length ? (
