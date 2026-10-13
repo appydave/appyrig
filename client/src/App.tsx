@@ -520,7 +520,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           </button>
           {hint && !(view === 'map' && mapHint && !legend) && (
             <span className="first-hint" role="note" data-testid="explain-hint">
-              <span aria-hidden="true">↑</span> New here?{' '}
+              <span aria-hidden="true">↗</span> New here?{' '}
               {explain ? (
                 <>
                   <b>Explain</b> is on: hover anything to see what it means.
@@ -556,7 +556,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           </button>
           {view === 'map' && mapHint && !legend && !focusTile && (
             <span className="first-hint" role="note" data-testid="legend-hint">
-              <span aria-hidden="true">↑</span> New here? Press <b>L</b> or click <b>Legend</b> to
+              <span aria-hidden="true">↗</span> New here? Press <b>L</b> or click <b>Legend</b> to
               see what the marks mean.
               <button
                 type="button"
