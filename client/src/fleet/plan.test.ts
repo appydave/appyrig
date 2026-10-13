@@ -150,9 +150,11 @@ describe('R3 · choosing the plan and marking the live step', () => {
         q('c', 'R2: not done yet, folding', [], at(29)),
         q('d', 'R1: REPORT.md first line read', [], at(28)),
         q('g', 'R3 10b827a: r1 PASS with 2 MEDIUM to fold before merge', [], at(27)),
+        // QA: the word belongs to the nearest id: R1 is accepted here, R4 is only "next".
+        q('h', 'R1 deployed (5eb2237); R4 next on r1 confirm', [], at(26)),
       ]
     )!;
-    expect([...plan.done.keys()]).toEqual([]);
+    expect([...plan.done.keys()]).toEqual(['R1']);
     const ok = choosePlan(
       [src],
       [
@@ -162,6 +164,25 @@ describe('R3 · choosing the plan and marking the live step', () => {
     )!;
     expect([...ok.done.keys()]).toEqual(['R1', 'R2', 'R3', 'R4']);
     expect(ok.done.get('R1')!.phrase).toBe('R1 13d7b82: r1 PASS for merge');
+  });
+
+  it('REPORT counts in capitals only; a "report 2" status update does not tick', () => {
+    const src = planIn('| # | Slice |\n|---|---|\n| S1 | **A** |\n| S2 | **B** |\n', 'brief.md')!;
+    const p = choosePlan([src], [q('a', 'appyrig-v14 — report 2 (12:16Z): S1 and S2 built')])!;
+    expect([...p.done.keys()]).toEqual([]);
+    const r = choosePlan([src], [q('b', 'S1 + S2: final REPORT filed')])!;
+    expect([...r.done.keys()]).toEqual(['S1', 'S2']);
+  });
+
+  it('r1 R3 LOW-4: one late mention of an old plan does not flip the card off the current one', () => {
+    const run = planIn(brief('run-card-brief.md'), 'run-card-brief.md')!;
+    const fix = planIn(brief('fix-first-brief.md'), 'fix-first-brief.md')!;
+    const t = (m: number) => `2026-10-13T15:${String(m).padStart(2, '0')}:00.000Z`;
+    const items = [
+      ...[1, 2, 3, 4, 5].map((m) => q(`r${m}`, `Run card R${(m % 4) + 1} work`, [], t(m))),
+      q('late', "QA: v15 F4 is ticked from 'F2 deployed'", [], t(9)),
+    ];
+    expect(choosePlan([fix, run], items)!.file).toBe('run-card-brief.md');
   });
 
   it('r1 R3 LOW-2: a bare number needs "step N"; the reviewer tag r1 is not slice R1', () => {
