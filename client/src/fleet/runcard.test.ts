@@ -99,5 +99,12 @@ describe('R1 · one line from a rig file', () => {
     expect(
       reportLine('---\na: 1\n---\n# R\n\n**Purpose**: boilerplate\n\n**For Agents**: x\n\nDone.')
     ).toBe('Done.');
+    // QA R1 MEDIUM-1: a hard-wrapped boilerplate paragraph is skipped whole, and the paragraph
+    // shown is joined from all its lines (flistudio-launch's REPORT.md shape).
+    expect(
+      reportLine(
+        '# flistudio-launch REPORT\n\n**Purpose**: what was built.\n\n**For Agents**: branch at\n/Users/x/launch), 9 commits on 1dab215, pushed, not merged. Calls made\nby the lead.\n\nWaves 1-3 landed on the branch:\nall gates PASS.\n'
+      )
+    ).toBe('Waves 1-3 landed on the branch: all gates PASS.');
   });
 });

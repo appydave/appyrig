@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FleetMachine, RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
-import { RUN_WORD, missionLine, reportLine, runCard, stepText } from '../fleet/runcard.js';
+import {
+  RUN_WORD,
+  clip,
+  missionLine,
+  plain,
+  reportLine,
+  runCard,
+  stepText,
+} from '../fleet/runcard.js';
 
 interface Props {
   machine: FleetMachine;
@@ -102,7 +110,8 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
       ? { text: null, from: 'reading the rig’s files…' }
       : summary
         ? {
-            text: summary,
+            // QA R1 LOW-2: a rig.yaml summary can run to ~480 characters; one line, like the rest.
+            text: clip(plain(summary)),
             from: `from rig.yaml summary (${missingWhy(list, machine.machine.label, 'mission')})`,
           }
         : { text: null, from: missingWhy(list, machine.machine.label, 'mission') });

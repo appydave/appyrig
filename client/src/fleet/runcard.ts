@@ -142,9 +142,24 @@ export function missionLine(md: string): string | null {
  * the brains' **Purpose** / **For Agents** boilerplate skipped). Null: nothing readable.
  */
 export function reportLine(md: string): string | null {
-  const l = body(md).find(
-    (x) =>
-      x.trim() && !/^\s*(#|\||>|-{3,}|```)/.test(x) && !/^\s*\*\*(purpose|for agents)\*\*/i.test(x)
-  );
-  return l ? clip(plain(l)) : null;
+  // QA R1 MEDIUM-1: paragraphs are the unit. A hard-wrapped **For Agents** paragraph is skipped
+  // whole, and the paragraph shown is all its lines joined, never its tail.
+  const paras: string[][] = [[]];
+  let fenced = false;
+  for (const line of body(md)) {
+    if (/^\s*```/.test(line)) fenced = !fenced;
+    if (fenced || /^\s*```/.test(line)) continue;
+    if (line.trim()) paras[paras.length - 1]!.push(line);
+    else if (paras[paras.length - 1]!.length) paras.push([]);
+  }
+  // A heading glued to its paragraph (no blank line after "# Title") is not part of it.
+  const p = paras
+    .map((lines) => lines.filter((l) => !/^\s*#/.test(l)))
+    .find(
+      (lines) =>
+        lines.length > 0 &&
+        !/^\s*(\||>|-{3,})/.test(lines[0]!) &&
+        !/^\s*\*\*(purpose|for agents)\*\*/i.test(lines[0]!)
+    );
+  return p ? clip(plain(p.join(' '))) : null;
 }
