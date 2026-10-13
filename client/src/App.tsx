@@ -427,8 +427,18 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       }
     };
     place();
+    // QA INFO: web fonts landing (or anything else reflowing the header) move the buttons without
+    // a render here; place again whenever the header's box changes or a font finishes loading.
+    const header = document.querySelector('.first-hint')?.closest('header') ?? null;
+    const ro = typeof ResizeObserver === 'undefined' || !header ? null : new ResizeObserver(place);
+    if (header) for (const el of [header, ...header.children]) ro?.observe(el);
+    document.fonts?.addEventListener('loadingdone', place);
     window.addEventListener('resize', place);
-    return () => window.removeEventListener('resize', place);
+    return () => {
+      ro?.disconnect();
+      document.fonts?.removeEventListener('loadingdone', place);
+      window.removeEventListener('resize', place);
+    };
   });
 
   // Views V2: the chain a handoff on the chosen rig belongs to (the Map's Follow this work).
