@@ -10,7 +10,9 @@ const pairA = d10.snapshot.queue.find((q) => (q.summary ?? '').startsWith('pair 
 describe('Views V1/V2 · Run Timeline on ylo-d10', () => {
   it('draws every handoff as a mark, the phases and the biggest-queue moment', () => {
     render(<RunTimeline machine={d10} rig="ylo-d10" now={NOW} />);
-    expect(screen.getByTestId('timeline-total')).toHaveTextContent('100 handoffs');
+    expect(screen.getByTestId('timeline-total')).toHaveTextContent(
+      '100 handoffs through this rig (10 sent to other rigs, counted there)'
+    );
     expect(screen.getAllByTestId('timeline-mark')).toHaveLength(110);
     expect(screen.getAllByTestId('timeline-phase')).toHaveLength(2);
     expect(screen.getByTestId('timeline-peak')).toHaveAttribute(
@@ -88,5 +90,34 @@ describe('Views V2 · Follow this work from the Handoff Flow panel', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByTestId('follow-work')).toBeNull();
     expect(screen.getByTestId('handoff-panel')).not.toHaveAttribute('data-empty');
+  });
+});
+
+describe('r1 MEDIUM-2 · Follow this work leaves Esc to whatever sits on top', () => {
+  const open = (keys: boolean) => {
+    const view = render(<RunTimeline machine={d10} rig="ylo-d10" now={NOW} keys={keys} />);
+    const mark = screen
+      .getAllByTestId('timeline-mark')
+      .find((m) => m.getAttribute('data-id') === pairA.id && !m.getAttribute('data-flag'))!;
+    fireEvent.click(mark);
+    fireEvent.click(screen.getByTestId('handoff-follow'));
+    expect(screen.getByTestId('follow-work')).toBeInTheDocument();
+    return view;
+  };
+
+  it('with keys off (an overlay owns the keyboard), Esc does not close it', () => {
+    const { rerender } = open(true);
+    rerender(<RunTimeline machine={d10} rig="ylo-d10" now={NOW} keys={false} />);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.getByTestId('follow-work')).toBeInTheDocument();
+  });
+
+  it('Esc typed in a text field does not close it', () => {
+    open(true);
+    const box = document.createElement('textarea');
+    document.body.appendChild(box);
+    fireEvent.keyDown(box, { key: 'Escape' });
+    expect(screen.getByTestId('follow-work')).toBeInTheDocument();
+    box.remove();
   });
 });

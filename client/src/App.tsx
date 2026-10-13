@@ -431,6 +431,15 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     return () => window.removeEventListener('resize', place);
   });
 
+  // Views V2: the chain a handoff on the chosen rig belongs to (the Map's Follow this work).
+  const chainOf = useCallback(
+    (id: string) => {
+      const fm = allMachines.find((m) => m.machine.id === activeRig?.machineId);
+      return fm && activeRig ? followWork(fm, activeRig.name, id) : null;
+    },
+    [allMachines, activeRig]
+  );
+
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
@@ -742,10 +751,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               onOpenSkills={openSkills}
               socket={getSocket()}
               keys={!focusTile && !overlay}
-              chainOf={(id) => {
-                const fm = allMachines.find((m) => m.machine.id === activeRig?.machineId);
-                return fm && activeRig ? followWork(fm, activeRig.name, id) : null;
-              }}
+              chainOf={chainOf}
             />
           ) : view === 'flow' ? (
             <HandoffFlow

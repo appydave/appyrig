@@ -29,6 +29,8 @@ describe('V1 · buildTimeline on ylo-d10 (the hub’s saved M4 copy)', () => {
       'ylo-check',
     ]);
     expect(tl.total).toBe(100);
+    // r1 LOW-2: 10 ylo-lead sent to other rigs count there (F1), so 90 matches the Map chip.
+    expect(tl.sentOut).toBe(10);
   });
 
   it('every handoff is a mark on its sender’s lane; crossing the rig edge adds a flag', () => {
@@ -125,10 +127,39 @@ describe('V2 · followWork', () => {
     expect(chain.ruleText).toMatch(/hand-on links \(handed_off_to\/from\)/);
   });
 
-  it('the same chain from any of its steps (here, the FIX LIST)', () => {
+  it('the same chain from any of its steps, the pair-a-alt ones included (r1 MEDIUM-1)', () => {
     const a = followWork(d10, 'ylo-d10', q('pair A: render').id)!;
-    const b = followWork(d10, 'ylo-d10', q('check: pair A FIX LIST').id)!;
+    for (const from of [
+      'check: pair A FIX LIST',
+      'pair A-alt: check',
+      'check: pair A-alt PASS',
+      'Pair A render is done',
+    ]) {
+      const b = followWork(d10, 'ylo-d10', q(from).id)!;
+      expect(b.key, from).toEqual(['pair-a']);
+      expect(
+        b.steps.map((s) => s.item.id),
+        from
+      ).toEqual(a.steps.map((s) => s.item.id));
+    }
+  });
+
+  it('names the real variants it linked, never an invented “-alt-alt” (r1 LOW-4)', () => {
+    const t = followWork(d10, 'ylo-d10', q('pair A-alt: check').id)!.ruleText;
+    expect(t).toMatch(/shared tag “pair-a”, with “pair-a-alt”/);
+    expect(t).not.toMatch(/alt-alt/);
+    expect(followWork(d10, 'ylo-d10', q('pair B: render').id)!.ruleText).not.toMatch(/with “/);
+  });
+
+  it('equally rare tags are both used, so each copy-batch-2 step gives one chain (r1 LOW-1)', () => {
+    const a = followWork(d10, 'ylo-d10', q('copy batch 2: description').id)!;
+    const b = followWork(d10, 'ylo-d10', q('check: copy batch 2').id)!;
+    expect(a.key).toEqual(['batch2', 'step-7']);
+    expect(b.key).toEqual(['batch2', 'step-7']);
     expect(b.steps.map((s) => s.item.id)).toEqual(a.steps.map((s) => s.item.id));
+    // stage (b) send, copy → check, check PASS, copy → lead: none dropped.
+    expect(a.steps.filter((s) => s.role === 'step')).toHaveLength(4);
+    expect(a.ruleText).toMatch(/equally rare, so both count/);
   });
 
   it('never links by a tag the whole run carries (mission:d10-launch on 98 of 100)', () => {

@@ -3,6 +3,7 @@ import type { HandoffGetOutput } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import { DOT_STATE_LABEL, dotState, type WorkChain } from '../fleet/timeline.js';
+import { isTextEntry } from '../lib/keys.js';
 
 interface Props {
   machineId: string;
@@ -13,6 +14,8 @@ interface Props {
   /** Bodies already fetched, shared with the handoff panel. */
   cache: Map<string, HandoffGetOutput>;
   onClose: () => void;
+  /** r1 MEDIUM-2: false while something sits on top (Files, feedback, a seat, ?): Esc is theirs. */
+  keys?: boolean;
 }
 
 const clock = (iso: string) =>
@@ -37,22 +40,42 @@ const ROLE = {
  * the message through `handoff.get`. The panel says which rule linked the steps, because the
  * snapshot has no hand-on links and the link is a judgement, not a record.
  */
-export default function FollowWork({ machineId, chain, fromId, socket, cache, onClose }: Props) {
+export default function FollowWork({
+  machineId,
+  chain,
+  fromId,
+  socket,
+  cache,
+  onClose,
+  keys = true,
+}: Props) {
   const [open, setOpen] = useState<Record<string, HandoffGetOutput | 'loading' | string>>({});
   const back = useRef<HTMLButtonElement>(null);
   useEffect(() => back.current?.focus(), []);
 
+  // r1 LOW-3: closing hands keyboard focus back to the panel's "Follow this work" button.
+  const close = () => {
+    onClose();
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>('[data-testid="handoff-follow"]')?.focus()
+    );
+  };
+  const closeRef = useRef(close);
+  closeRef.current = close;
+
   // Esc goes back to the handoff panel only (capture, before the panel's own Esc closes it).
+  // r1 MEDIUM-2: not while an overlay owns the keyboard, nor from inside a text field.
   useEffect(() => {
+    if (!keys) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || isTextEntry(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
-      onClose();
+      closeRef.current();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose]);
+  }, [keys]);
 
   const toggle = (id: string) => {
     if (open[id]) {
@@ -103,7 +126,7 @@ export default function FollowWork({ machineId, chain, fromId, socket, cache, on
           type="button"
           className="pill-btn"
           data-testid="follow-close"
-          onClick={onClose}
+          onClick={close}
         >
           ← Back · Esc
         </button>

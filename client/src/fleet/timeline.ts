@@ -1,6 +1,6 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { seatName } from './model.js';
-import { endpointRig, flowChapters, rigQueue, type Chapter } from './views.js';
+import { endpointRig, flowChapters, ownerRig, rigQueue, type Chapter } from './views.js';
 
 /**
  * Views V1 + V2: the run timeline per rig, and the chain one piece of work belongs to. Pure, like
@@ -72,7 +72,11 @@ export interface Timeline {
   phases: TimelinePhase[];
   /** The Flow's "Biggest queue" chapter, when the run had one. */
   peak: Chapter | null;
+  /** Every handoff through the rig: sent, received, or both (each drawn once per lane it is on). */
   total: number;
+  /** r1 LOW-2: of those, the ones F1 counts on another rig (sent out to it), so `total - sentOut`
+   * matches the rig's chip on the Map. */
+  sentOut: number;
 }
 
 /**
@@ -147,6 +151,7 @@ export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timel
     phases,
     peak: flowChapters(fm, rig, now).find((c) => c.kind === 'peak') ?? null,
     total: items.length,
+    sentOut: items.filter((q) => ownerRig(fm, q) !== rig).length,
   };
 }
 
@@ -300,19 +305,45 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
   let key: string[] = [];
   let group: QueueItem[] = [me];
 
-  const tagged = me.tags
+  // r1 MEDIUM-1: a tag's parents are candidates too (`pair-a-alt` → `pair-a`), and a family whose
+  // parent family also qualifies gives way to it, so every step of one piece of work finds the
+  // same chain.
+  const parents = (tag: string) => {
+    const out: string[] = [];
+    for (let t = tag; t.includes('-');) out.push((t = t.slice(0, t.lastIndexOf('-'))));
+    return out;
+  };
+  const qualifying = [...new Set(me.tags.flatMap((t) => [t, ...parents(t)]))]
     .map((tag) => ({ tag, group: items.filter((q) => hasFamily(q, tag)) }))
     .filter(
       (c) =>
         c.group.length >= 2 &&
         c.group.length <= Math.max(12, Math.ceil(items.length / 4)) &&
         replyLinks(c.group) > 0
-    )
-    .sort((a, b) => a.group.length - b.group.length || b.tag.length - a.tag.length);
+    );
+  const tagged = qualifying
+    .filter((c) => !qualifying.some((p) => c.tag.startsWith(`${p.tag}-`)))
+    .sort((a, b) => a.group.length - b.group.length || replyLinks(b.group) - replyLinks(a.group));
   if (tagged[0]) {
+    // r1 LOW-1: families tied on size and reply links are both used, never settled by tag order.
+    const best = tagged[0];
+    const tied = tagged.filter(
+      (c) => c.group.length === best.group.length && replyLinks(c.group) === replyLinks(best.group)
+    );
+    // ...and so are families no larger that share two or more steps with the chain, so a step
+    // carrying only one of two tied tags still finds the same chain.
+    const size = best.group.length;
+    for (const q of items.filter((x) => tied.some((c) => c.group.includes(x))))
+      for (const tag of q.tags) {
+        if (tied.some((c) => c.tag === tag || tag.startsWith(`${c.tag}-`))) continue;
+        const fam = items.filter((x) => hasFamily(x, tag));
+        const shared = fam.filter((x) => tied.some((c) => c.group.includes(x))).length;
+        if (fam.length <= size && shared >= 2 && replyLinks(fam) > 0)
+          tied.push({ tag, group: fam });
+      }
     rule = 'tag';
-    key = [tagged[0].tag];
-    group = tagged[0].group;
+    key = tied.map((c) => c.tag).sort();
+    group = items.filter((q) => tied.some((c) => c.group.includes(q)));
   } else {
     const phase = phaseOf(items, me);
     const df = new Map<string, number>();
@@ -353,7 +384,16 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
     steps,
     rule,
     key,
-    ruleText: ruleText(rule, key, group.length, first, last, !!came, !!went),
+    ruleText: ruleText(
+      rule,
+      key,
+      variantsOf(group, key),
+      group.length,
+      first,
+      last,
+      !!came,
+      !!went
+    ),
   };
 }
 
@@ -371,9 +411,17 @@ function phaseOf(sorted: QueueItem[], q: QueueItem): QueueItem[] {
   return sorted.slice(a, b + 1);
 }
 
+/** The tags in the chain that extend a linking tag (`pair-a-alt` for `pair-a`), for the rule text. */
+function variantsOf(group: QueueItem[], key: string[]): string[] {
+  return [
+    ...new Set(group.flatMap((q) => q.tags.filter((t) => key.some((k) => t.startsWith(`${k}-`))))),
+  ];
+}
+
 function ruleText(
   rule: ChainRule,
   key: string[],
+  variants: string[],
   n: number,
   first: QueueItem,
   last: QueueItem,
@@ -382,7 +430,7 @@ function ruleText(
 ): string {
   const how =
     rule === 'tag'
-      ? `Linked by the shared tag “${key[0]}” (variants such as “${key[0]}-alt” count too): ${n} of this rig's handoffs carry it and answer one another.`
+      ? `Linked by the shared tag${key.length > 1 ? 's' : ''} ${key.map((k) => `“${k}”`).join(' and ')}${key.length > 1 ? ' (equally rare, so both count)' : ''}${variants.length ? `, with ${variants.map((v) => `“${v}”`).join(', ')}` : ''}: ${n} of this rig's handoffs carry ${key.length > 1 ? 'them' : 'it'} and answer one another.`
       : rule === 'words'
         ? `No shared tag, so linked by uncommon words in the title (${key.map((w) => `“${w}”`).join(', ')}) within the same stretch of the run: ${n} handoffs.`
         : 'No other handoff shares a tag or uncommon title words with this one, so it stands alone.';

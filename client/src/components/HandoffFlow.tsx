@@ -252,7 +252,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   useEffect(() => {
     // r1 S4: stand down while a seat panel (or the ? overlay) is on top, so one Esc closes one thing.
     // Views V2: while following work, Esc is FollowWork's (back to this panel).
-    if (!sel || follow || !keys) return;
+    if (!sel || chain || !keys) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
@@ -261,7 +261,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [sel, follow, keys]);
+  }, [sel, chain, keys]);
 
   // A new rig starts at its end (the current state).
   useEffect(() => {
@@ -763,6 +763,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
             socket={socket}
             cache={bodies.current}
             onClose={() => setFollow(null)}
+            keys={keys}
           />
         ) : (
           <HandoffPanel

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { HandoffGetOutput } from '@appydave/shared';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import HandoffPanel from './HandoffPanel.js';
@@ -286,6 +286,8 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
   const [pinned, setPinned] = useState<{ edge: string; itemId: string | null } | null>(null);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
   const [follow, setFollow] = useState<string | null>(null);
+  // r1 INFO-2: computed once per follow, not twice per render.
+  const chain = useMemo(() => (follow && chainOf ? chainOf(follow) : null), [follow, chainOf]);
   useEffect(() => {
     setPinned(null);
     setCard(null);
@@ -296,7 +298,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
   }, [pinned]);
   useEffect(() => {
     // Views V2: while following work, Esc is FollowWork's (back to this drawer).
-    if (!pinned || follow || !keys) return;
+    if (!pinned || chain || !keys) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
@@ -304,7 +306,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [pinned, follow, keys]);
+  }, [pinned, chain, keys]);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -606,14 +608,15 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
       )}
       {pinnedEdge && (
         <div className="map-drawer" data-testid="map-drawer">
-          {follow && chainOf?.(follow) ? (
+          {follow && chain ? (
             <FollowWork
               machineId={map.rig.machineId}
-              chain={chainOf(follow)!}
+              chain={chain}
               fromId={follow}
               socket={socket}
               cache={bodies.current}
               onClose={() => setFollow(null)}
+              keys={keys}
             />
           ) : (
             <HandoffPanel

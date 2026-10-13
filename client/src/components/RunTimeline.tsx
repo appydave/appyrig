@@ -28,7 +28,7 @@ interface Props {
 
 const AXIS_H = 54;
 const LANE_H = 44;
-const ROW_DY = 11;
+const ROW_DY = 13;
 const PAD_X = 16;
 const ZOOMS = [2, 4, 8, 16];
 
@@ -38,7 +38,8 @@ const day = (t: number) =>
   new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 const who = (raw: string | null) => (raw ?? '?').split('@')[0];
 const gapWords = (ms: number) => {
-  const m = Math.round(ms / 60_000);
+  // r1 INFO-4: a pause just over 20 min never reads "20 min" beside "over 20 min".
+  const m = Math.ceil(ms / 60_000);
   return m < 120 ? `${m} min` : `${Math.round(m / 60)} h`;
 };
 
@@ -89,6 +90,22 @@ export default function RunTimeline({ machine, rig, now, socket, keys = true }: 
   const bodies = useRef(new Map<string, HandoffGetOutput>());
   const scroller = useRef<HTMLDivElement>(null);
 
+  // r1 K LOW: J/K and ] keep the selected mark in view inside the scroll box.
+  useEffect(() => {
+    const box = scroller.current;
+    const el = box?.querySelector('[data-testid="timeline-mark"][data-selected]');
+    if (!box || !el) return;
+    const b = box.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    if (r.left < b.left + 24) box.scrollLeft -= b.left + 24 - r.left;
+    else if (r.right > b.right - 24) box.scrollLeft += r.right - (b.right - 24);
+  }, [sel]);
+
+  const chain = useMemo(
+    () => (machine && rig && follow ? followWork(machine, rig, follow) : null),
+    [machine, rig, follow]
+  );
+
   // A new rig starts fresh, at its own fitting scale.
   useEffect(() => {
     setSel(null);
@@ -98,7 +115,8 @@ export default function RunTimeline({ machine, rig, now, socket, keys = true }: 
 
   // Esc closes the panel first (capture, so the screen-level Esc never also goes back).
   useEffect(() => {
-    if (!sel || follow || !keys) return;
+    // While following (and only when the chain exists: r1 INFO-3), Esc is FollowWork's.
+    if (!sel || chain || !keys) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
@@ -106,12 +124,8 @@ export default function RunTimeline({ machine, rig, now, socket, keys = true }: 
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [sel, follow, keys]);
+  }, [sel, chain, keys]);
 
-  const chain = useMemo(
-    () => (machine && rig && follow ? followWork(machine, rig, follow) : null),
-    [machine, rig, follow]
-  );
   const inChain = useMemo(() => new Set(chain?.steps.map((s) => s.item.id) ?? []), [chain]);
 
   if (!machine || !rig) {
@@ -170,7 +184,10 @@ export default function RunTimeline({ machine, rig, now, socket, keys = true }: 
     <section className="timeline" data-testid="run-timeline" aria-label={`Run timeline of ${rig}`}>
       <div className="flow-stats">
         <span data-testid="timeline-total">
-          <b>{tl.total}</b> handoffs
+          <b>{tl.total}</b> handoffs through this rig
+          {tl.sentOut > 0 && (
+            <span className="quiet"> ({tl.sentOut} sent to other rigs, counted there)</span>
+          )}
         </span>
         <span data-testid="timeline-phases">
           <b>{tl.phases.length}</b> phase{tl.phases.length === 1 ? '' : 's'} ·{' '}
@@ -345,6 +362,7 @@ export default function RunTimeline({ machine, rig, now, socket, keys = true }: 
             socket={socket}
             cache={bodies.current}
             onClose={() => setFollow(null)}
+            keys={keys}
           />
         ) : (
           <HandoffPanel
