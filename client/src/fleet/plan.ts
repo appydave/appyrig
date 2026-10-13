@@ -154,10 +154,14 @@ function rangeSpots(text: string, id: string): number[] {
 }
 
 // QA R3 MEDIUM-1: reviewers also write "r1 ACCEPT S7-data/S8-ui".
-const ACCEPTED = /\b(PASS for merge|r1 PASS|merged|deployed|accept(?:ed)?|done|REPORT)\b/gi;
+const ACCEPTED = /\b(PASS for merge|r1 PASS|merged|deployed|accept(?:ed)?|done)\b/gi;
+/** A run's final REPORT, in capitals only: "appyrig-v14 — report 2" is a status update. */
+const REPORT_WORD = /\bREPORT\b/g;
 const NEGATED = /\b(not|never|no|isn'?t|without|pending|awaiting|before)\b[^.;:]{0,20}$/i;
 const NEAR = 30;
-const QUALIFIED = /^[^.;]{0,25}\b(MEDIUM|HIGH|to fold|fold first|but|NOT YET)\b/i;
+const QUALIFIED = /^[^.;]{0,25}\b(MEDIUM|HIGH|to fold|fold first|but|NOT YET|next)\b/i;
+/** Right after a step's id: it is still to come ("F4 next", "R3 pending", "R2 NOT YET"). */
+const OWED = /^\S+\s+(next|pending|to do|todo|NOT YET|in progress|WIP)\b/i;
 
 /**
  * r1 R3 MEDIUM-2: a handoff accepts a step only when an acceptance word sits next to where it
@@ -168,7 +172,10 @@ export function acceptance(q: QueueItem, step: PlanStep, kind: PlanKind): string
   const text = q.summary ?? '';
   const where = spots(text, step, kind);
   if (!where.length) return null;
-  for (const m of text.matchAll(ACCEPTED)) {
+  const words = [...text.matchAll(ACCEPTED), ...text.matchAll(REPORT_WORD)].sort(
+    (a, b) => (a.index ?? 0) - (b.index ?? 0)
+  );
+  for (const m of words) {
     const at = m.index ?? 0;
     const word = m[0];
     if (/^report$/i.test(word) && /^[.\-_]\w/.test(text.slice(at + word.length))) continue;
@@ -177,7 +184,14 @@ export function acceptance(q: QueueItem, step: PlanStep, kind: PlanKind): string
     if (QUALIFIED.test(text.slice(at + word.length, at + word.length + 40))) continue;
     const before = text.slice(0, at);
     if ((before.match(/\(/g)?.length ?? 0) > (before.match(/\)/g)?.length ?? 0)) continue;
-    if (where.some((w) => Math.abs(w - at) <= NEAR))
+    // QA R3: the word and the id share a clause ("V1+V2+K deployed" accepts all three; in
+    // "F2 deployed (…); F4 next" the ";" ends F2's clause), and the id itself is not owed work.
+    const same = (w: number) => {
+      const between = text.slice(Math.min(w, at), Math.max(w, at));
+      return !/[;.\n]\s|[;\n]| [—–] /.test(between);
+    };
+    const owed = (w: number) => OWED.test(text.slice(w, w + step.id.length + 16));
+    if (where.some((w) => Math.abs(w - at) <= NEAR && same(w) && !owed(w)))
       return text
         .slice(Math.max(0, at - 12), at + word.length + 12)
         .replace(/\s+/g, ' ')
@@ -186,11 +200,14 @@ export function acceptance(q: QueueItem, step: PlanStep, kind: PlanKind): string
   return null;
 }
 
+/** How many of a rig's newest handoffs decide which plan it is following. */
+const RECENT = 20;
+
 const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep'));
 
 /**
- * Picks the plan the run is following: of the sources, the one whose steps the newest handoff
- * names (more handoffs naming it breaks a tie). A single source no handoff names is still shown,
+ * Picks the plan the run is following: of the sources, the one the most of the rig's newest 20
+ * handoffs name (then the newest mention, then the most mentions overall). A single source no handoff names is still shown,
  * without a live step. Several such: none (the screen says so rather than guess).
  */
 export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | null {
@@ -202,8 +219,13 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
     return { s, naming };
   });
   const named = scored.filter((x) => x.naming.length);
+  // r1 R3 LOW-4: one passing mention must not flip the plan. Of the rig's newest RECENT handoffs,
+  // the source the most of them name wins; then the newest mention; then the most overall.
+  const recent = new Set(work.slice(0, RECENT).map((q) => q.id));
+  const inRecent = (x: { naming: QueueItem[] }) => x.naming.filter((q) => recent.has(q.id)).length;
   const pick = named.sort(
     (a, b) =>
+      inRecent(b) - inRecent(a) ||
       b.naming[0]!.createdAt.localeCompare(a.naming[0]!.createdAt) ||
       b.naming.length - a.naming.length
   )[0];
