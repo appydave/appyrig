@@ -147,10 +147,18 @@ export function collapsedByDefault(g: WallGroup): boolean {
   return st === 'idle' || st === 'stopped' || st === 'asleep';
 }
 
-/** Latest lastActivityAt of any seat in the group, as an ISO string ('' when none reported). */
+/**
+ * Fix-first F3 (truth #6): when the seat's agent last did something (its transcript), not when its
+ * terminal last changed. An older collector does not report it, so its terminal time stands in.
+ */
+export function agentActivityOf(seat: Seat): string | null {
+  return seat.agentActivityAt !== undefined ? seat.agentActivityAt : seat.lastActivityAt;
+}
+
+/** Latest agent activity of any seat in the group, as an ISO string ('' when none reported). */
 export function groupLastActivity(g: WallGroup): string {
   return g.tiles.reduce((acc, t) => {
-    const at = t.seat.lastActivityAt ?? '';
+    const at = agentActivityOf(t.seat) ?? '';
     return at > acc ? at : acc;
   }, '');
 }

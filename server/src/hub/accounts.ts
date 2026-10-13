@@ -1,5 +1,6 @@
 import {
   FIVE_HOUR_MS,
+  onHubClock,
   PROJECTION_MIN_ELAPSED_PCT,
   SEVEN_DAY_MS,
   type AccountConfig,
@@ -209,7 +210,17 @@ export function accountViews(
     out.set(key, {
       email: first.email!,
       derived: deriveAccount(
-        best?.snapshot.account ?? NO_READING,
+        // F3: the reading's time on the hub's clock, so a skewed machine clock neither ages a fresh
+        // reading nor freezes an old one at "0 s" (and pace is measured at the right moment).
+        best
+          ? {
+              ...best.snapshot.account!,
+              sampledAt: onHubClock(best.snapshot.account!.sampledAt!, {
+                collectedAt: best.snapshot.collectedAt,
+                receivedAt: best.lastSeen,
+              }),
+            }
+          : NO_READING,
         tier,
         best?.machine.id ?? null,
         now

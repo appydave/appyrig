@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   HistoryReader,
+  lastEventMs,
   parseTranscript,
   seatOfFirstLine,
   seatOfHead,
@@ -122,5 +123,43 @@ describe('seat title beyond line 1 (QA D2: M4 ylo-lead / ylo-copy)', () => {
     appendFileSync(late, `${title('ylo-lead@ylo-thumbs')}\n`);
     found = await index.scan(seats);
     expect([...found.keys()].sort()).toEqual(['ylo-copy@ylo-thumbs', 'ylo-lead@ylo-thumbs']);
+  });
+});
+
+describe('F3 (truth #6): agent activity is the newest transcript event, not the file mtime', () => {
+  it('reads the newest event timestamp; rows without one (a rename) do not move it', () => {
+    const renamed = `${TRANSCRIPT}\n${title('dev-hub@appyrig-build')}`;
+    expect(lastEventMs(renamed)).toBe(Date.parse('2026-10-09T13:50:09.000Z'));
+    expect(lastEventMs(title('x@y'))).toBeNull();
+  });
+
+  it("a seat's agent activity follows new events; a transcript rewritten without one keeps it", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'appyrig-act-'));
+    mkdirSync(join(dir, 'proj'));
+    const file = join(dir, 'proj', 'a.jsonl');
+    writeFileSync(file, TRANSCRIPT);
+    const reader = new HistoryReader('m2', dir);
+    const seats = new Set(['dev-hub@appyrig-build', 'dev-qa@appyrig-build']);
+    expect(reader.agentActivity()).toBeNull(); // before the first scan
+    await reader.changed(new Set()); // a scan before any seat is known (QA F3 MEDIUM)
+    expect(reader.agentActivity()).toBeNull();
+    await reader.changed(seats);
+    expect(reader.agentActivity()!.get('dev-hub@appyrig-build')).toBe(
+      Date.parse('2026-10-09T13:50:09.000Z')
+    );
+    expect(reader.agentActivity()!.has('dev-qa@appyrig-build')).toBe(false); // no transcript
+    appendFileSync(file, `\n${title('dev-hub@appyrig-build')}`); // a rename: mtime moves
+    await reader.changed(seats);
+    expect(reader.agentActivity()!.get('dev-hub@appyrig-build')).toBe(
+      Date.parse('2026-10-09T13:50:09.000Z')
+    );
+    appendFileSync(
+      file,
+      `\n${line({ type: 'assistant', timestamp: '2026-10-12T08:00:00.000Z', message: { content: [] } })}`
+    );
+    await reader.changed(seats);
+    expect(reader.agentActivity()!.get('dev-hub@appyrig-build')).toBe(
+      Date.parse('2026-10-12T08:00:00.000Z')
+    );
   });
 });

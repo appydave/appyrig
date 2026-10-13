@@ -468,3 +468,26 @@ describe('account schema compatibility (both directions)', () => {
     expect(AccountUsageSchema.safeParse(usage()).success).toBe(true);
   });
 });
+
+describe('F3 (resilience case 5): a skewed machine clock cannot fake a reading’s age', () => {
+  // The hub received the push now; the machine's clock is `skew` off; the reading was taken 60 s
+  // before the push on the machine's clock.
+  const skewed = (skew: number) => {
+    const collectedAt = at(skew);
+    const m = machineWith('m4', usage({ sampledAt: at(skew - 60_000) }));
+    return { ...m, snapshot: { ...m.snapshot, collectedAt } };
+  };
+  const derived = (skew: number) =>
+    accountViews([skewed(skew)], {}, NOW).get('david@ideasmen.com.au')!.derived;
+
+  it('10 min behind: 60 s old, not 10 min', () => {
+    expect(derived(-10 * 60_000).sampleAgeMs).toBe(60_000);
+  });
+  it('15 min ahead: 60 s old, not clamped to 0', () => {
+    expect(derived(15 * 60_000).sampleAgeMs).toBe(60_000);
+  });
+  it('pace is measured at the true moment of the reading', () => {
+    expect(derived(15 * 60_000).fiveHour.elapsedPct).toBe(derived(0).fiveHour.elapsedPct);
+    expect(derived(-10 * 60_000).fiveHour.elapsedPct).toBe(derived(0).fiveHour.elapsedPct);
+  });
+});

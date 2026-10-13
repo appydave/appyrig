@@ -162,7 +162,10 @@ export function enrichRigs(
     const consider = (iso: string | null) => {
       if (iso && (recent === null || Date.parse(iso) > Date.parse(recent))) recent = iso;
     };
-    for (const s of seats) if (mine.has(s.id)) consider(s.lastActivityAt);
+    // F3: the agent's activity, not the terminal's (an older path without it keeps lastActivityAt).
+    for (const s of seats)
+      if (mine.has(s.id))
+        consider(s.agentActivityAt !== undefined ? s.agentActivityAt : s.lastActivityAt);
     for (const q of queue)
       if ((q.source && mine.has(q.source)) || (q.destination && mine.has(q.destination)))
         consider(q.updatedAt);
@@ -238,6 +241,16 @@ export async function buildSnapshot(
   });
 
   if ('value' in viewerR) mergeViewer(seats, viewerAgents);
+
+  // F3: agent activity from the transcripts, on OpenRig seats only (a plain tmux session has none).
+  const transcripts = sources.agentActivity?.() ?? null;
+  if (transcripts) {
+    for (const seat of seats) {
+      if (seat.rig === null) continue;
+      const at = transcripts.get(seat.id);
+      seat.agentActivityAt = at === undefined ? null : new Date(at).toISOString();
+    }
+  }
 
   for (const seat of seats) {
     if (seat.status !== 'blocked' || !seat.tail) continue;

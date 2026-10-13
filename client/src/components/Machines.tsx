@@ -1,6 +1,7 @@
 import type { FleetMachine } from '@appydave/shared';
 import { ago } from '../fleet/model.js';
-import { HEALTH_STALE_MS, gb, healthAgeMs, pressureOf, value } from '../fleet/health.js';
+import { clockAheadText } from '@appydave/shared';
+import { HEALTH_STALE_MS, gb, healthAge, pressureOf, value } from '../fleet/health.js';
 
 interface Props {
   /** Already filtered by the S3 machine filter. */
@@ -77,7 +78,9 @@ export default function Machines({ machines, hidden, now }: Props) {
           const tmux = value(h.processes.tmuxSessions);
           const shells = value(h.processes.terminalShells);
           const apps = value(h.processes.terminalApps);
-          const age = healthAgeMs(h, now);
+          const sa = healthAge(fm, h, now);
+          const age = sa.ageMs;
+          const ahead = clockAheadText(sa);
           const pct = used.v !== null && total.v ? Math.min(100, (used.v / total.v) * 100) : null;
           return (
             <article
@@ -190,6 +193,18 @@ export default function Machines({ machines, hidden, now }: Props) {
               </div>
               <p className="machine-age" data-testid="machine-age">
                 sampled {ago(age)} ago
+                {ahead && (
+                  <>
+                    {' '}
+                    <span
+                      className="old-reading"
+                      data-testid="clock-ahead"
+                      data-explain="clock-ahead"
+                    >
+                      {ahead}
+                    </span>
+                  </>
+                )}
                 {age > HEALTH_STALE_MS && (
                   <>
                     {' '}

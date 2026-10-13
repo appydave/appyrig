@@ -1,4 +1,10 @@
-import type { AccountTier, AccountWindow, FleetMachine } from '@appydave/shared';
+import {
+  clockAheadText,
+  sampleAge,
+  type AccountTier,
+  type AccountWindow,
+  type FleetMachine,
+} from '@appydave/shared';
 import { ago } from '../fleet/model.js';
 import { buildAccounts, mostHeadroom, resetsIn, type AccountView } from '../fleet/views.js';
 import { STALE_READING_MS, windowStory } from '../fleet/accountWindow.js';
@@ -180,7 +186,10 @@ export default function Accounts({ machines, now }: Props) {
         {accounts.map((a) => {
           const r = a.reading;
           const d = a.derived;
-          const ageMs = r?.sampledAt ? now - Date.parse(r.sampledAt) : null;
+          // F3: aged on the machine's own clock; a clock ahead is said, never shown as "0s".
+          const sa = r?.sampledAt ? sampleAge(r.sampledAt, r.push, now) : null;
+          const ageMs = sa?.ageMs ?? null;
+          const ahead = sa ? clockAheadText(sa) : null;
           return (
             <article
               className="account"
@@ -251,6 +260,18 @@ export default function Accounts({ machines, now }: Props) {
                 {r?.sampledAt ? (
                   <>
                     read on {r.from} · {ago(ageMs!)} ago
+                    {ahead && (
+                      <>
+                        {' '}
+                        <span
+                          className="old-reading"
+                          data-testid="clock-ahead"
+                          data-explain="clock-ahead"
+                        >
+                          {ahead}
+                        </span>
+                      </>
+                    )}
                     {ageMs! > STALE_READING_MS && (
                       <>
                         {' '}

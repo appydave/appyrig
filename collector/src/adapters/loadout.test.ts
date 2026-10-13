@@ -54,7 +54,7 @@ const listingLine = (names: string[], at = '2026-10-11T11:18:09.715Z', isInitial
 const titleLine = (seat: string) => JSON.stringify({ type: 'custom-title', customTitle: seat });
 const fileOf = (path: string) => {
   const st = statSync(path);
-  return { path, size: st.size, mtimeMs: st.mtimeMs };
+  return { path, size: st.size, mtimeMs: st.mtimeMs, lastEventMs: null };
 };
 
 describe('listingOfLine', () => {

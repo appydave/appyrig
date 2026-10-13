@@ -495,6 +495,9 @@ describe('v1.4 S6 — machine health', () => {
     const sampled = new Date(clock.now().getTime() - 25_000).toISOString();
     const ack = await push(h.collector({ token: TOKEN, machineId: 'm2' }), {
       ...loadSnapshot('m2'),
+      // F3: ages are measured on the collector's clock, so the push is stamped now like a real one
+      // (the recorded fixture's collectedAt would read as a clock days behind).
+      collectedAt: clock.now().toISOString(),
       health: health(sampled),
     });
     expect(ack.ok).toBe(true);
