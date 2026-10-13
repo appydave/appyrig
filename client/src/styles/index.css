@@ -4176,3 +4176,36 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
   outline: 2px solid var(--ar-ink);
   outline-offset: 2px;
 }
+/* Run card R3: the plan strip */
+.plan-strip {
+  list-style: none;
+  margin: 0 0 4px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.plan-step {
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 12px;
+  background: var(--ar-surface);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-step[data-mark='done'] {
+  color: var(--ar-ink-muted);
+}
+.plan-step[data-mark='live'] {
+  border-color: var(--ar-ink);
+  box-shadow: inset 0 0 0 1px var(--ar-ink);
+  background: var(--ar-canvas);
+}
+.plan-live {
+  font-family: var(--ar-font-label);
+  font-size: 10px;
+  text-transform: uppercase;
+}

@@ -598,6 +598,22 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     screens: ['map', 'flow', 'timeline'],
     tokens: ['.run-word[data-word=asleep]'],
   },
+  // ── Run card R3: plan strip ──
+  {
+    id: 'plan-done',
+    look: '✓ step chip in grey',
+    means:
+      'Run card plan: a handoff naming this step said PASS for merge, merged, deployed, done or REPORT.',
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.plan-step[data-mark=done]'],
+  },
+  {
+    id: 'plan-live',
+    look: '● step chip with a dark outline, "LATEST NAMED"',
+    means: 'Run card plan: the step the newest handoff names.',
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.plan-step[data-mark=live]'],
+  },
 ];
 
 /**

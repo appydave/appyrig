@@ -21,6 +21,11 @@ export interface SpecInfo {
 }
 
 const MAX_DEPTH = 5;
+/** Run card R3: `rig.yaml`, or a variant `rig-<v>.yaml` (ylo-thumbs/rig-d10.yaml is rig ylo-d10). */
+export const SPEC_FILE = /^rig(?:-[A-Za-z0-9._-]+)?\.ya?ml$/;
+/** The variant of a spec file: `d10` for rig-d10.yaml, null for rig.yaml. */
+export const specVariant = (name: string): string | null =>
+  /^rig-([A-Za-z0-9._-]+)\.ya?ml$/.exec(name)?.[1] ?? null;
 const SKIP = new Set(['node_modules', '.git', 'dist', 'build']);
 
 export function parseSpec(text: string): { name: string; summary: string | null } | null {
@@ -49,7 +54,7 @@ async function walk(dir: string, depth: number, out: string[]): Promise<void> {
     return; // a configured folder that is missing on this machine is simply empty
   }
   for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (e.isFile() && e.name === 'rig.yaml') out.push(join(dir, e.name));
+    if (e.isFile() && SPEC_FILE.test(e.name)) out.push(join(dir, e.name));
     else if (e.isDirectory() && depth < MAX_DEPTH && !SKIP.has(e.name))
       await walk(join(dir, e.name), depth + 1, out);
   }

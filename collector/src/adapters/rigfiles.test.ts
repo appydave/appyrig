@@ -268,3 +268,84 @@ describe('chunking and change detection', () => {
     expect(await r.next(new Map([['demo', spec]]))).toBeNull();
   });
 });
+
+describe('run card R3: variant specs, batch briefs, and the cap', () => {
+  /** The ylo-thumbs shape: one folder, the base rig's rig.yaml and the D10 run's rig-d10.yaml. */
+  function thumbs() {
+    const root = tmp();
+    const dir = join(root, 'rigs', 'ylo-thumbs');
+    put(join(dir, 'rig.yaml'), 'name: ylo-thumbs\n');
+    put(join(dir, 'rig-d10.yaml'), 'name: ylo-d10\n');
+    for (const n of [
+      'MISSION.md',
+      'MISSION-d08.md',
+      'MISSION-d10.md',
+      'MISSION-d10-change-01-openrig-focus.md',
+      'REPORT-d10.md',
+      'CULTURE.md',
+      'LEARNED-lead.md',
+      'secrets.md',
+    ])
+      put(join(dir, n));
+    return {
+      d10: { path: join(dir, 'rig-d10.yaml'), root, summary: null } as SpecInfo,
+      base: { path: join(dir, 'rig.yaml'), root, summary: null } as SpecInfo,
+    };
+  }
+
+  it("a variant spec gets its own yaml and its own MISSION-/REPORT- files, never the base run's", async () => {
+    expect(await ids(thumbs().d10)).toEqual([
+      'spec:CULTURE.md',
+      'spec:LEARNED-lead.md',
+      'spec:MISSION-d10-change-01-openrig-focus.md',
+      'spec:MISSION-d10.md',
+      'spec:REPORT-d10.md',
+      'spec:rig-d10.yaml',
+    ]);
+  });
+
+  it("the base spec keeps its own docs and leaves out a sibling variant's", async () => {
+    expect(await ids(thumbs().base)).toEqual([
+      'spec:CULTURE.md',
+      'spec:LEARNED-lead.md',
+      'spec:MISSION-d08.md',
+      'spec:MISSION.md',
+      'spec:rig.yaml',
+    ]);
+  });
+
+  it('batch briefs are offered in both folders; other .md names still are not', async () => {
+    const { mission, team, spec } = layout();
+    put(join(mission, 'views-brief.md'));
+    put(join(mission, 'run-card-brief.md'));
+    put(join(team, 'fix-first-brief.md'));
+    put(join(mission, 'qa-verdict-x.md'));
+    put(join(mission, 'brief-notes.md'));
+    expect(await ids(spec)).toEqual([
+      'spec:fix-first-brief.md',
+      'spec:rig.yaml',
+      'mission:run-card-brief.md',
+      'mission:views-brief.md',
+    ]);
+  });
+
+  it("over the cap, LEARNED files drop first; the run card's sources stay, in listed order", async () => {
+    const { mission, team, spec } = layout();
+    for (let i = 0; i < 14; i++) put(join(team, `LEARNED-${String(i).padStart(2, '0')}.md`));
+    put(join(team, 'MISSION.md'));
+    put(join(mission, 'views-brief.md'));
+    put(join(mission, 'REPORT.md'));
+    const got = await ids(spec);
+    expect(got).toHaveLength(16);
+    expect(got).toEqual(
+      expect.arrayContaining([
+        'spec:MISSION.md',
+        'spec:rig.yaml',
+        'mission:REPORT.md',
+        'mission:views-brief.md',
+      ])
+    );
+    expect(got.filter((x) => x.startsWith('spec:LEARNED'))).toHaveLength(12);
+    expect(got.indexOf('spec:rig.yaml')).toBeLessThan(got.indexOf('mission:REPORT.md'));
+  });
+});
