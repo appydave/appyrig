@@ -22,7 +22,7 @@ describe('adapter: tmux stripAnsi', () => {
 describe('adapter: tmux', () => {
   it('capture is read-only and asks for ANSI text of one pane', () => {
     const args = capturePaneArgs('%3');
-    expect(args.slice(0, 3)).toEqual(['capture-pane', '-p', '-e']);
+    expect(args.slice(0, 4)).toEqual(['capture-pane', '-p', '-e', '-J']);
     expect(args).toContain('%3');
     expect(args.join(' ')).not.toMatch(/send-keys/);
   });
@@ -78,6 +78,11 @@ describe('adapter: tmux', () => {
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.length).toBeLessThanOrEqual(TAIL_MAX_LINES);
     expect(lines.some((l) => l.includes('\u001b['))).toBe(true);
+  });
+
+  it('F2: drops the end-of-line padding a joined (-J) capture keeps, colours included', () => {
+    const raw = 'prompt >      \n\x1b[32mok\x1b[0m    \x1b[0m\n  indented stays';
+    expect(tailLines(raw)).toEqual(['prompt >', '\x1b[32mok\x1b[0m\x1b[0m', '  indented stays']);
   });
 
   it('guesses the runtime of a plain session from its command', () => {

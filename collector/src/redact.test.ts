@@ -149,3 +149,59 @@ describe('redaction of unprefixed secrets in message bodies', () => {
     for (const text of calm) expect(redactString(text), text).toBe(text);
   });
 });
+
+describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', () => {
+  // Fake strings only, built so no real-looking secret sits in the source as one literal.
+  const tok110 = `sk-ant-oat01-${'Ab3dEf5hIj7lMn9pQr1tUv3xYz5'.repeat(4)}`.slice(0, 110);
+  const FIXTURES: Record<string, [string, string]> = {
+    google: ['maps api AIza' + 'SyB-x9Kq2Lm7Np3Rt_6Vw8Yz1Bc5Df0Gh2X', 'Rt_6Vw8'],
+    stripeRk: ['STRIPE=rk_' + 'live_51H8xYzAbCdEfGhIjKl', 'rk_live_51H8'],
+    stripeSk: ['use sk_' + 'live_4eC39HqLyjWDarjtT1zdp7dc now', 'sk_live_4eC3'],
+    stripeTest: ['sk_' + 'test_4eC39HqLyjWDarjtT1zdp7dc', 'sk_test_4eC3'],
+    npm: [
+      '//registry.npmjs.org/:_authToken npm_' + 'a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8',
+      'npm_a1B2',
+    ],
+    slack: [
+      'curl -X POST https://hooks.slack.com/services/' +
+        'T0123ABCD/B0456EFGH/xYz123AbC456dEf789GhI0',
+      'xYz123AbC456',
+    ],
+    mysql: ['mysql -u root -p' + 'Sup3rS3cret! mydb', 'Sup3rS3cret'],
+    mysqldump: ['mysqldump -h db -u admin -p' + 'hunter2xyz shop > x.sql', 'hunter2xyz'],
+    urlNoUser: ['git clone https://:' + 'ghx9Secretpass@git.example.com/r.git', 'ghx9Secretpass'],
+  };
+
+  for (const [name, [text, leak]] of Object.entries(FIXTURES)) {
+    it(`redacts ${name}`, () => {
+      const out = redactString(text);
+      expect(out).toContain(REDACTED);
+      expect(out).not.toContain(leak);
+    });
+  }
+
+  it('a bare mysql -p (prompts for the password) and ordinary -p flags are left alone', () => {
+    expect(redactString('mysql -u root -p')).toBe('mysql -u root -p');
+    expect(redactString('mkdir -p build/out')).toBe('mkdir -p build/out');
+    expect(redactString('git log -p HEAD')).toBe('git log -p HEAD');
+  });
+
+  it('an ANSI colour code inside a token no longer hides it', () => {
+    const coloured = `export TOKEN_X=1 \x1b[33m${tok110.slice(0, 40)}\x1b[0m\x1b[1m${tok110.slice(40)}\x1b[0m`;
+    const out = redactString(coloured);
+    expect(out).toContain(REDACTED);
+    for (let i = 0; i + 12 <= tok110.length; i += 6)
+      expect(out).not.toContain(tok110.slice(i, i + 12));
+  });
+
+  it('a coloured line without a secret keeps its colours', () => {
+    const line = '\x1b[32m✓\x1b[0m 256 tests passed \x1b[2m(1.2s)\x1b[0m';
+    expect(redactString(line)).toBe(line);
+  });
+
+  it('the 110-char sk-ant token is caught whole once joined (capture-pane -J), and leaks 0 chars', () => {
+    const joined = `CLAUDE_CODE_OAUTH_TOKEN=${tok110}`;
+    const out = redactString(joined);
+    expect(out).toBe(`CLAUDE_CODE_OAUTH_TOKEN=${REDACTED}`);
+  });
+});

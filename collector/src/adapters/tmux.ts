@@ -2,7 +2,7 @@ import { TAIL_MAX_LINES } from '@appydave/shared';
 import type { TmuxPane } from './types.js';
 
 /**
- * tmux adapter. Read-only: `list-panes` and `capture-pane -p -e`, never send-keys. Terminal text
+ * tmux adapter. Read-only: `list-panes` and `capture-pane -p -e -J`, never send-keys. Terminal text
  * comes from here and nowhere else (plan §0.1: never the transcript routes).
  */
 
@@ -26,8 +26,12 @@ export const LIST_PANES_ARGS = [
   ].join(FIELD_SEP),
 ];
 
+/**
+ * `-J` (fix-first F2, security #4): joins lines the terminal wrapped, so a long secret reaches the
+ * redactor whole. Without it a 110-character token wrapped at 80 columns kept a 62-character tail.
+ */
 export function capturePaneArgs(paneId: string): string[] {
-  return ['capture-pane', '-p', '-e', '-t', paneId, '-S', `-${TAIL_MAX_LINES}`];
+  return ['capture-pane', '-p', '-e', '-J', '-t', paneId, '-S', `-${TAIL_MAX_LINES}`];
 }
 
 /** tmux prints this (exit 1) when no server is running: zero sessions, not a failure. */
@@ -88,8 +92,16 @@ export function stripAnsi(text: string): string {
 }
 
 /** Last TAIL_MAX_LINES lines, trailing blank lines dropped. */
+// Trailing spaces, also when only colour resets follow them.
+// eslint-disable-next-line no-control-regex
+const TRAILING_SPACES = / +((?:\x1b\[[0-9;]*m)*)$/;
+
 export function tailLines(raw: string): string[] {
-  const lines = raw.replace(/\r\n/g, '\n').split('\n');
+  // `-J` keeps the padding tmux holds at the end of each line; drop it, as a plain capture does.
+  const lines = raw
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.replace(TRAILING_SPACES, '$1'));
   const blank = (l: string) => stripAnsi(l).trim() === '';
   while (lines.length && blank(lines[lines.length - 1]!)) lines.pop();
   return lines.slice(-TAIL_MAX_LINES);

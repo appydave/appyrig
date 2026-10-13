@@ -25,6 +25,14 @@ const PATTERNS: RegExp[] = [
   /\b[A-Za-z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Za-z0-9_]*["']?\s*[:=]\s*["']?[^\s"'<>,;]{6,}/gi,
   // password: value
   /\bpass(?:word|wd)\s*[:=]\s*["']?[^\s"']{4,}/gi,
+  // Fix-first F2 (security #5): Google API keys, Stripe secret and restricted keys, npm tokens
+  /\bAIza[0-9A-Za-z_-]{20,}/g,
+  /\b[rs]k_(?:live|test)_[A-Za-z0-9]{10,}/g,
+  /\bnpm_[A-Za-z0-9]{20,}/g,
+  // Slack webhook URLs: the path after /services/ (or /workflows/, /triggers/) is the secret
+  /(?<=hooks\.slack\.com\/(?:services|workflows|triggers)\/)[A-Za-z0-9/_-]{8,}/g,
+  // mysql -pPASSWORD (the password glued to -p; a bare -p prompts and holds nothing)
+  /(?<=\bmysql(?:dump|admin|sh)?\b[^\n]*?\s-p)[^\s'"]+/g,
   // JWTs
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g,
   // any hex run of 40+ characters (hashes, long keys)
@@ -41,7 +49,8 @@ const PRIVATE_KEY_BLOCK =
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
 
 // user:password@ inside a URL; the user stays, the password goes
-const URL_CREDENTIALS = /(?<=:\/\/[^\s/:@]{1,64}:)[^\s/@]+(?=@)/g;
+// F2: the user may be empty (https://:pass@host).
+const URL_CREDENTIALS = /(?<=:\/\/[^\s/:@]{0,64}:)[^\s/@]+(?=@)/g;
 
 // HTTP Basic credentials
 // Only with an Authorization header, or when the value is credential-shaped (has a digit): the
@@ -74,7 +83,23 @@ const looksLikeBareSecret = (t: string): boolean =>
   (t.match(/\//g)?.length ?? 0) <= 6 &&
   entropy(t) >= 4.3;
 
+/** CSI and OSC escape sequences (colours, cursor moves, hyperlinks), as tmux `capture-pane -e` emits. */
+// eslint-disable-next-line no-control-regex
+const ANSI = /\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])/g;
+
+/**
+ * Fix-first F2 (security #5): a colour code inside a secret splits it, so matching runs on the text
+ * with escapes stripped. A line that held a secret goes out plain (it loses its colours); every other
+ * line keeps them.
+ */
 export function redactString(input: string): string {
+  if (!input.includes('\x1b')) return redactPlain(input);
+  const plain = input.replace(ANSI, '');
+  const out = redactPlain(plain);
+  return out === plain ? input : out;
+}
+
+function redactPlain(input: string): string {
   // The key block first: the line-level patterns below would otherwise chew its header and leave the body.
   let out = input.replace(PRIVATE_KEY_BLOCK, REDACTED);
   for (const re of PATTERNS) out = out.replace(re, REDACTED);
