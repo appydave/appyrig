@@ -913,7 +913,7 @@ describe('run card R2 — rig.waiting over the hub', () => {
     const item = (id: string, m: number, summary: string) => ({
       id,
       source: `lead@${rig}`,
-      destination: 'human@kernel',
+      destination: 'planner@desk',
       state: 'done',
       priority: null,
       tags: [],
@@ -928,6 +928,17 @@ describe('run card R2 — rig.waiting over the hub', () => {
       item('q4', 4, 'see g_aaaaaaaaaa for the record'),
       // A later bare mention (a list of ids) does not close an open gate.
       item('q6', 7, 'report lists social v3 gate g_8334a98162 (change 03)'),
+      // QA R2 MEDIUM-2: a report to David's mailbox or a handoff inside the rig quoting a gate
+      // as open never opens it (it is often another rig's gate)...
+      { ...item('q7', 8, 'their gate g_cccccccccc is open'), destination: 'human@kernel' },
+      { ...item('q8', 9, 'QA: gate g_dddddddddd open on ylo-d10'), destination: `qa@${rig}` },
+      // ...and LOW-3: "do not wait on it, leave it" closes one.
+      item('q9', 10, 'gate g_eeeeeeeeee open for review'),
+      {
+        ...item('q10', 11, 'Do NOT poll or wait on FliStudio gate g_eeeeeeeeee. Leave it'),
+        source: 'planner@desk',
+        destination: `lead@${rig}`,
+      },
       {
         ...item('q5', 5, 'other rig: gate g_bbbbbbbbbb open'),
         source: 'x@other-rig',
@@ -966,7 +977,7 @@ describe('run card R2 — rig.waiting over the hub', () => {
         'http://100.82.235.39:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162#social',
       ],
     ]);
-    expect(out.value).toMatchObject({ scanned: 5, bodiesMissing: 4 });
+    expect(out.value).toMatchObject({ scanned: 9, bodiesMissing: 8 });
     expect(h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig: 'nope' })).toMatchObject({
       ok: false,
       error: { failureMode: 'rig-not-found' },

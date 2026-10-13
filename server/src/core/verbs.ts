@@ -197,14 +197,15 @@ const query = <I extends z.ZodType, O extends z.ZodType>(
 const GATE = /\bg_[0-9a-f]{10}\b/g;
 const SAYS_OPEN = /\bopen(ed)?\b|\bwaiting\b|\bawaits?\b/i;
 const SAYS_SHUT =
-  /\b(closed|approved|answered|passed|accepted|resolved|rejected|done with|shipped|cleared)\b/i;
+  /\b(closed|approved|answered|passed|accepted|resolved|rejected|done with|shipped|cleared|leave it)\b|\bdo not (poll|wait)|\bdon'?t (poll|wait)/i;
 
 /**
  * Run card R2: the gates a rig's handoffs last called open, and the machine's ssh address. A
  * gate's newest mention that SAYS something decides: open words near it ("gate g_… open",
- * "waiting at …") keep it, any closing word drops it; a bare mention (a list of ids, a link alone)
- * changes nothing, and a gate never called open is not listed. Links are only ones a handoff
- * carried, a Tailscale address before localhost.
+ * "waiting at …") keep it, any closing word ("approved", "leave it", "do not wait") drops it; a
+ * bare mention (a list of ids, a link alone) changes nothing, and a gate never called open is not
+ * listed. Only a handoff a rig seat sends to another rig's seat can open one (QA R2 MEDIUM-2).
+ * Links are only ones a handoff carried, a Tailscale address before localhost.
  */
 function rigWaiting(
   m: FleetMachine,
@@ -222,6 +223,11 @@ function rigWaiting(
   const links = new Map<string, string[]>();
   let bodiesMissing = 0;
   for (const q of items) {
+    // QA R2 MEDIUM-2: a gate is the rig's when one of its seats announces it to another rig's
+    // seat (ylo-lead → the desk). Handoffs inside the rig, or reports to David's mailbox, often
+    // quote other rigs' gates; they may close a gate but never open one.
+    const announces =
+      inRig(q.source) && !inRig(q.destination) && (q.destination ?? '').split('@')[0] !== 'human';
     const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
     if (body === null) bodiesMissing += 1;
     const text = `${q.summary ?? ''}\n${body ?? ''}`;
@@ -246,9 +252,9 @@ function rigWaiting(
     }
     // A mention that says neither (a list of ids, a link alone) leaves the gate as it was.
     for (const [gate, h] of here)
-      if (h.open || h.shut)
+      if ((h.open && announces) || h.shut)
         newest.set(gate, {
-          open: h.open && !h.shut,
+          open: h.open && announces && !h.shut,
           gate: {
             gate,
             itemId: q.id,

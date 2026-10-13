@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
 import type { FleetSocket } from '../fleet/useFleet.js';
-import WaitingOnDavid, { attachLine } from './WaitingOnDavid.js';
+import WaitingOnDavid, { attachLine, copyText } from './WaitingOnDavid.js';
 
 const machine = {
   machine: { id: 'm2', label: 'M2', hostname: null },
@@ -124,5 +124,43 @@ describe('Run card R2 · waiting on David', () => {
 
   it('attachLine never lets a quote out of the session name', () => {
     expect(attachLine("a'b@c", null)).toBe("tmux attach -t 'ab@c'");
+  });
+});
+
+describe('QA R2 MEDIUM-1 · Copy on the plain-http real URL', () => {
+  const props = () => ({
+    machine,
+    rig: 'appyrig-v15-loadout',
+    toDavid: [ask('q1', 'dev-qa@appyrig-v15-loadout')],
+    socket: socket({ ssh: 'davidcruwys@100.126.70.25' }),
+  });
+
+  it('not a secure page: copies through execCommand', async () => {
+    Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
+    const exec = vi.fn(() => true);
+    Object.defineProperty(document, 'execCommand', { value: exec, configurable: true });
+    expect(await copyText('x')).toBe(true);
+    expect(exec).toHaveBeenCalledWith('copy');
+    render(<WaitingOnDavid {...props()} />);
+    await waitFor(() => screen.getByTestId('run-attach'));
+    fireEvent.click(screen.getByTestId('run-copy'));
+    await waitFor(() => expect(screen.getByTestId('run-copy')).toHaveTextContent('Copied'));
+  });
+
+  it('when the browser blocks copying, the line is selected and the screen says press ⌘C', async () => {
+    Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
+    Object.defineProperty(document, 'execCommand', {
+      value: vi.fn(() => false),
+      configurable: true,
+    });
+    render(<WaitingOnDavid {...props()} />);
+    await waitFor(() => screen.getByTestId('run-attach'));
+    fireEvent.click(screen.getByTestId('run-copy'));
+    await waitFor(() =>
+      expect(screen.getByTestId('run-copy-select')).toHaveTextContent(
+        'the line is selected, press ⌘C'
+      )
+    );
+    expect(window.getSelection()?.toString()).toBe(screen.getByTestId('run-attach').textContent);
   });
 });

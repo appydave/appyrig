@@ -22,23 +22,80 @@ export function attachLine(session: string, ssh: string | null): string {
   return ssh ? `ssh -t ${ssh} "${local}"` : local;
 }
 
-function Copy({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState(false);
+/**
+ * Puts text on the clipboard. The clipboard API needs a secure page (https or localhost); the
+ * real URL is plain http over Tailscale, so fall back to a hidden textarea and execCommand.
+ * QA R2 MEDIUM-1: never silent; false means "select it and press ⌘C".
+ */
+export async function copyText(text: string): Promise<boolean> {
+  if (window.isSecureContext && navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fall through to the old way
+    }
+  }
+  const box = document.createElement('textarea');
+  box.value = text;
+  box.setAttribute('readonly', '');
+  box.style.position = 'fixed';
+  box.style.opacity = '0';
+  document.body.appendChild(box);
+  box.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  box.remove();
+  return ok;
+}
+
+function Copy({
+  text,
+  label,
+  target,
+}: {
+  text: string;
+  label: string;
+  target: () => Element | null;
+}) {
+  const [said, setSaid] = useState<'copied' | 'select' | null>(null);
   return (
-    <button
-      type="button"
-      className="pill-btn copy-btn"
-      data-testid="run-copy"
-      aria-label={`Copy ${label}`}
-      onClick={() => {
-        void navigator.clipboard?.writeText(text).then(
-          () => setDone(true),
-          () => setDone(false)
-        );
-      }}
-    >
-      {done ? 'Copied' : 'Copy'}
-    </button>
+    <>
+      <button
+        type="button"
+        className="pill-btn copy-btn"
+        data-testid="run-copy"
+        aria-label={`Copy ${label}`}
+        onClick={() => {
+          void copyText(text).then((ok) => {
+            if (!ok) {
+              // Select the line itself so ⌘C works, and say so.
+              const el = target();
+              const sel = window.getSelection();
+              if (el && sel) {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+            }
+            setSaid(ok ? 'copied' : 'select');
+          });
+        }}
+      >
+        {said === 'copied' ? 'Copied' : 'Copy'}
+      </button>
+      {said === 'select' && (
+        <span className="run-from" role="status" data-testid="run-copy-select">
+          {' '}
+          The browser blocked copying on this page (plain http): the line is selected, press ⌘C.
+        </span>
+      )}
+    </>
   );
 }
 
@@ -97,8 +154,14 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket }: Props)
                 {line ? (
                   <span className="run-act">
                     <span className="run-from">act here:</span>{' '}
-                    <code data-testid="run-attach">{line}</code>
-                    <Copy text={line} label={`the attach line for ${who(q.source)}`} />
+                    <code data-testid="run-attach" id={`attach-${q.id}`}>
+                      {line}
+                    </code>
+                    <Copy
+                      text={line}
+                      label={`the attach line for ${who(q.source)}`}
+                      target={() => document.getElementById(`attach-${q.id}`)}
+                    />
                     {!got?.ssh && (
                       <span className="run-from">
                         {' '}
