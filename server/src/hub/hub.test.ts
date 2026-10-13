@@ -932,6 +932,8 @@ describe('run card R2 — rig.waiting over the hub', () => {
       // as open never opens it (it is often another rig's gate)...
       { ...item('q7', 8, 'their gate g_cccccccccc is open'), destination: 'human@kernel' },
       { ...item('q8', 9, 'QA: gate g_dddddddddd open on ylo-d10'), destination: `qa@${rig}` },
+      // r1 R2 LOW-1: a closing word elsewhere in the sentence does not hide an open gate.
+      item('q11', 12, 'pair B: gate g_ffffffffff OPEN for David; rule check PASSED, copy accepted'),
       // ...and LOW-3: "do not wait on it, leave it" closes one.
       item('q9', 10, 'gate g_eeeeeeeeee open for review'),
       {
@@ -971,13 +973,14 @@ describe('run card R2 — rig.waiting over the hub', () => {
     expect(out.value.ssh).toBe('davidcruwys@100.89.32.35');
     // g_d03e… was opened then closed; g_aaaa… was never called open; g_bbbb… is another rig's.
     expect(out.value.gates.map((g) => [g.gate, g.itemId, g.link])).toEqual([
+      ['g_ffffffffff', 'q11', null],
       [
         'g_8334a98162',
         'q2',
         'http://100.82.235.39:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162#social',
       ],
     ]);
-    expect(out.value).toMatchObject({ scanned: 9, bodiesMissing: 8 });
+    expect(out.value).toMatchObject({ scanned: 10, bodiesMissing: 9 });
     expect(h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig: 'nope' })).toMatchObject({
       ok: false,
       error: { failureMode: 'rig-not-found' },

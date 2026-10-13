@@ -17,10 +17,14 @@ const clock = (iso: string) =>
 const who = (raw: string | null) => (raw ?? '?').split('@')[0];
 
 /** The copyable line that attaches David to a seat's terminal. Shown, never run. */
-export function attachLine(session: string, ssh: string | null): string {
-  const local = `tmux attach -t '${session.replace(/'/g, '')}'`;
+export function attachLine(session: string, ssh: string | null): string | null {
+  // r1 R2 LOW-2: David pastes this into a shell; a name a shell would read gets no line at all.
+  if (!SAFE_SESSION.test(session)) return null;
+  const local = `tmux attach -t '${session}'`;
   return ssh ? `ssh -t ${ssh} "${local}"` : local;
 }
+
+const SAFE_SESSION = /^[A-Za-z0-9@._-]+$/;
 
 /**
  * Puts text on the clipboard. The clipboard API needs a secure page (https or localhost); the
@@ -63,6 +67,12 @@ function Copy({
   target: () => Element | null;
 }) {
   const [said, setSaid] = useState<'copied' | 'select' | null>(null);
+  // r1 INFO-1: "Copied" goes back to "Copy" after a moment.
+  useEffect(() => {
+    if (said !== 'copied') return;
+    const t = setTimeout(() => setSaid(null), 2000);
+    return () => clearTimeout(t);
+  }, [said]);
   return (
     <>
       <button
@@ -132,7 +142,7 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket }: Props)
       <p className="run-from" data-testid="run-waiting-none">
         {w === 'loading'
           ? 'reading its handoffs for open gates…'
-          : `Nothing waiting on David: no open item from this rig to his mailbox${got ? ', and no gate its handoffs still call open' : ' (gates not checked: the hub did not answer)'}.`}
+          : `Nothing waiting on David: no open item from this rig to his mailbox${got ? ', and no gate its seats announced to another rig is still called open' : ' (gates not checked: the hub did not answer)'}.`}
       </p>
     );
   }
@@ -142,7 +152,7 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket }: Props)
         <ul aria-label="Open items to David">
           {toDavid.slice(0, SHOWN).map((q) => {
             const session = q.source && seats.has(q.source) ? q.source : null;
-            const line = session ? attachLine(session, got?.ssh ?? null) : null;
+            const line = session && w !== 'loading' ? attachLine(session, got?.ssh ?? null) : null;
             return (
               <li key={q.id} data-testid="run-to-david" data-id={q.id}>
                 <span>
@@ -165,14 +175,20 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket }: Props)
                     {!got?.ssh && (
                       <span className="run-from">
                         {' '}
-                        (run it on {label}; add machines.{machineId}.ssh to AppyRig config for a
-                        line that works from anywhere)
+                        {got
+                          ? `(run it on ${label}; add machines.${machineId}.ssh to AppyRig config for a line that works from anywhere)`
+                          : `(run it on ${label}; the hub did not answer, so the remote line is not shown)`}
                       </span>
                     )}
                   </span>
                 ) : (
                   <span className="run-from">
-                    act here: no attach line ({who(q.source)} is not a seat {label} reports)
+                    act here:{' '}
+                    {w === 'loading'
+                      ? 'reading…'
+                      : !session
+                        ? `no attach line (${who(q.source)} is not a seat ${label} reports)`
+                        : 'no attach line (the session name has characters a shell would read)'}
                   </span>
                 )}
               </li>

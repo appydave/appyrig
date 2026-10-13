@@ -237,6 +237,7 @@ function rigWaiting(
     for (const url of text.match(/https?:\/\/[^\s"'<>)\]]*gate=g_[0-9a-f]{10}[^\s"'<>)\]]*/g) ??
       []) {
       const id = /gate=(g_[0-9a-f]{10})/.exec(url)![1]!;
+      // Stored bodies can hold a literal backslash-n right after a link ("…#packaging\\n(on").
       links.set(id, [...(links.get(id) ?? []), url.replace(/\\n.*$/, '')]);
     }
     // One handoff decides as a whole: open when some mention in it reads open and none reads
@@ -250,7 +251,10 @@ function rigWaiting(
         .trim();
       const h = here.get(hit[0]) ?? { open: false, shut: false, context: near };
       if (SAYS_OPEN.test(near) && !h.open) Object.assign(h, { open: true, context: near });
-      if (SAYS_SHUT.test(near)) h.shut = true;
+      // r1 R2 LOW-1: a closing word must sit close to the id ("g_… approved", "gate g_… leave
+      // it"), so "gate g_… OPEN: rule check PASSED" still reads open.
+      const close = text.slice(Math.max(0, at - 30), at + 42).replace(/\s+/g, ' ');
+      if (SAYS_SHUT.test(close)) h.shut = true;
       here.set(hit[0], h);
     }
     // A mention that says neither (a list of ids, a link alone) leaves the gate as it was.
