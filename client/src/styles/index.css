@@ -2762,6 +2762,14 @@ g[data-testid='flow-edge'] {
   background: var(--ar-surface);
   color: var(--ar-ink-muted);
 }
+/* F4: a stale account card (machine asleep, or reading past the cut-off): dimmed, verdicts grey. */
+.account[data-stale='true'] {
+  opacity: 0.7;
+}
+.account[data-stale='true'] .verdict {
+  background: var(--ar-asleep);
+  color: var(--ar-asleep-ink);
+}
 .verdict[data-kind='plenty'] {
   background: #dcfce7;
   color: var(--ar-working-ink);
@@ -2886,6 +2894,13 @@ g[data-testid='flow-edge'] {
 .pressure[data-kind='critical'] {
   background: var(--ar-error-bg);
   color: var(--ar-error-ink);
+}
+/* F4: an asleep machine or an old reading: greyed, never a coloured verdict. */
+.health-mark[data-kind='stale'],
+.pressure[data-kind='stale'] {
+  background: var(--ar-asleep);
+  color: var(--ar-asleep-ink);
+  font-style: italic;
 }
 .health-mark[data-kind='no-data'],
 .health-mark[data-kind='unavailable'],
@@ -3604,6 +3619,14 @@ g[data-testid='flow-edge'] {
 }
 
 /* ---------- batch 2 · C1: the selection holds; "Follow latest" is explicit and off by default ---------- */
+/* F4: the chosen rig is no longer reported: said plainly, never swapped for another. */
+.rig-gone {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+}
 .follow-row {
   display: flex;
   align-items: center;

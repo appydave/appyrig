@@ -44,7 +44,7 @@ export default function Machines({ machines, hidden, now }: Props) {
       <div className="machine-grid">
         {machines.map((fm) => {
           const h = fm.snapshot.health;
-          const p = pressureOf(fm);
+          const p = pressureOf(fm, now);
           if (!h) {
             return (
               <article

@@ -1510,3 +1510,33 @@ describe('batch 2 · C1: the chosen rig holds; "Follow latest" is explicit and o
     localStorage.removeItem('appyrig.followLatest');
   });
 });
+
+describe('fix-first F4 (resilience case 4): a chosen rig that vanishes says "rig gone"', () => {
+  it('Map/Flow name the gone rig instead of switching to another; it comes back if the rig returns', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    const full = fleetMachine(snapshot('m2'));
+    const [a, b] = [full.snapshot.rigs[0]!.name, full.snapshot.rigs[1]!.name];
+    const without = {
+      ...full,
+      snapshot: { ...full.snapshot, rigs: full.snapshot.rigs.filter((r) => r.name !== b) },
+    };
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([full]));
+    fireEvent.click(screen.getByTestId('view-flow')); // shares the picker and selection with the Map
+    fireEvent.click(screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === `m2:${b}`)!);
+    expect(screen.queryByTestId('rig-gone')).toBeNull();
+    fake.fire(FLEET_EVENTS.UPDATE, update([without]));
+    const gone = screen.getByTestId('rig-gone');
+    expect(gone.textContent).toContain(`Rig gone: ${b} on M2`);
+    expect(screen.getByTestId('follow-status').textContent).toMatch(/The rig you chose is gone/);
+    expect(screen.queryByTestId('rig-info')).toBeNull(); // not silently another rig's view
+    expect(
+      screen.getAllByTestId('rig-chip').some((c) => c.getAttribute('aria-pressed') === 'true')
+    ).toBe(false);
+    fake.fire(FLEET_EVENTS.UPDATE, update([full]));
+    expect(screen.queryByTestId('rig-gone')).toBeNull();
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
+    expect(a).not.toBe(b);
+  });
+});

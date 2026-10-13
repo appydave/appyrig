@@ -794,7 +794,13 @@ export interface AccountView {
   /** The freshest reading across this account's machines, if any machine has a sampler. */
   /** `push`: the collectedAt and hub receive time of the push it came in, for its age (F3). */
   reading:
-    (AccountUsage & { from: string; push: { collectedAt: string; receivedAt: string } }) | null;
+    | (AccountUsage & {
+        from: string;
+        push: { collectedAt: string; receivedAt: string };
+        /** F4: the reading's machine has stopped reporting. */
+        asleep: boolean;
+      })
+    | null;
   machines: string[];
   drawers: AccountDrawer[];
   /** Live, non-stopped Claude seats on the machines whose cached profile names it (their login is not read). */
@@ -871,6 +877,7 @@ export function buildAccounts(machines: FleetMachine[]): {
         ...acct,
         from: fm.machine.label,
         push: { collectedAt: fm.snapshot.collectedAt, receivedAt: fm.lastSeen },
+        asleep: fm.liveness === 'asleep',
       };
     }
     if (fm.liveness === 'live') {

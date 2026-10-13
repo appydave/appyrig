@@ -240,6 +240,14 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     tokens: ['.pressure[data-kind=critical]', '.health-mark[data-kind=critical]'],
   },
   {
+    id: 'memory-stale',
+    look: 'Grey italic ○ "asleep" or "old reading" badge',
+    means:
+      'Not current: the machine stopped reporting, or its reading is over 90 s old. Hover says what the last reading was.',
+    screens: ['machines', 'wall', 'map', 'flow', 'accounts'],
+    tokens: ['.pressure[data-kind=stale]', '.health-mark[data-kind=stale]'],
+  },
+  {
     id: 'memory-unknown',
     look: '– dash in a DASHED-outline badge',
     means:
@@ -283,6 +291,22 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     means: 'Where the window is heading by reset at the current pace (a projection, not use).',
     screens: ['accounts'],
     tokens: ['.window-proj'],
+  },
+  {
+    id: 'rig-gone',
+    look: 'Amber "Rig gone" bar above the Map or Flow',
+    means:
+      'The rig you chose is no longer reported by its machine (removed or renamed). Nothing else is shown in its place.',
+    screens: ['map', 'flow'],
+    tokens: ['.rig-gone'],
+  },
+  {
+    id: 'account-stale',
+    look: 'A dimmed account card with grey verdicts',
+    means:
+      'The reading is not current: its machine stopped reporting, or it is over 15 minutes old. Its verdicts are as of then.',
+    screens: ['accounts'],
+    tokens: ['.account[data-stale=true]', '.verdict'],
   },
   {
     id: 'old-reading',

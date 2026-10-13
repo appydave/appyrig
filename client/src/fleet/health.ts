@@ -13,7 +13,7 @@ import {
  */
 export const HEALTH_STALE_MS = 90_000;
 
-export type PressureKind = 'normal' | 'warn' | 'critical' | 'unavailable' | 'no-data';
+export type PressureKind = 'normal' | 'warn' | 'critical' | 'unavailable' | 'no-data' | 'stale';
 
 export interface PressureView {
   kind: PressureKind;
@@ -24,6 +24,8 @@ export interface PressureView {
   reason: string | null;
   /** C2: what the verdict is based on, in plain words, with the numbers (for the badge's hover). */
   basis: string | null;
+  /** F4: on a stale pill, what the last reading said (normal / warn / critical); else absent. */
+  last?: 'normal' | 'warn' | 'critical';
 }
 
 /** C2: swap used ≥ this share of swap total makes a machine at least "tight". */
@@ -35,7 +37,39 @@ const RANK: Record<'normal' | 'warn' | 'critical', number> = { normal: 0, warn: 
 const WORD = { normal: 'normal', warn: 'tight', critical: 'under pressure' } as const;
 const GLYPH = { normal: '●', warn: '▲', critical: '■' } as const;
 
-export function pressureOf(fm: FleetMachine): PressureView {
+/**
+ * Fix-first F4 (resilience: worst dishonesty). The pill is tied to freshness and liveness: an
+ * asleep machine, or a reading older than HEALTH_STALE_MS, never shows a coloured verdict. It reads
+ * "○ asleep" or "○ old reading", greyed, and its hover keeps what the last reading said.
+ */
+export function pressureOf(fm: FleetMachine, now: number = Date.now()): PressureView {
+  const v = verdictOf(fm);
+  const h = fm.snapshot.health;
+  if (!h || (v.kind !== 'normal' && v.kind !== 'warn' && v.kind !== 'critical')) return v;
+  const asleep = fm.liveness === 'asleep';
+  const age = healthAge(fm, h, now).ageMs;
+  if (!asleep && age <= HEALTH_STALE_MS) return v;
+  const when = ago(age);
+  return {
+    kind: 'stale',
+    glyph: '○',
+    word: asleep ? 'asleep' : 'old reading',
+    reason: asleep
+      ? `${fm.machine.label} has stopped reporting; its last memory reading is ${when} old.`
+      : `The memory reading is ${when} old (readings come every 30 s).`,
+    basis: `Not current: the last reading, ${when} ago, said "${v.word}". ${v.basis ?? ''}`,
+    last: v.kind,
+  };
+}
+
+const ago = (ms: number) => {
+  const s = Math.round(ms / 1000);
+  if (s < 90) return `${s}s`;
+  const m = Math.round(s / 60);
+  return m < 90 ? `${m} min` : `${Math.round(m / 60)} h`;
+};
+
+function verdictOf(fm: FleetMachine): PressureView {
   const h = fm.snapshot.health;
   if (!h) {
     return {
