@@ -625,3 +625,17 @@ describe('F3 (truth #6): a rig reads as recent from its agents, not its terminal
     expect(last(withSeats(undefined))).toBe(TEN_MIN_AGO);
   });
 });
+
+describe('F4 (r1 LOW-1): most headroom never picks a reading that is not current', () => {
+  it('an asleep machine’s account, even with more room, loses to a current one', () => {
+    const asleep = {
+      ...withAccount(m2(), account({ email: 'x@e.com', fiveHourPct: 5, sevenDayPct: 5 })),
+      liveness: 'asleep' as const,
+    };
+    const live = withAccount(
+      roamy(),
+      account({ email: 'y@e.com', fiveHourPct: 40, sevenDayPct: 40 })
+    );
+    expect(mostHeadroom(buildAccounts([asleep, live]).accounts, NOW)?.email).toBe('y@e.com');
+  });
+});

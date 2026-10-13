@@ -6,7 +6,8 @@ import type {
   Seat,
   SeatHistoryEvent,
 } from '@appydave/shared';
-import { windowStory, type VerdictKind } from './accountWindow.js';
+import { sampleAge } from '@appydave/shared';
+import { STALE_READING_MS, windowStory, type VerdictKind } from './accountWindow.js';
 import {
   agentActivityOf,
   modelChip,
@@ -902,6 +903,7 @@ const WARNS: Partial<Record<VerdictKind, number>> = { spent: 2, 'runs-out': 2, c
  * The account with the most room among those with a reading; null if none can be compared.
  * D0 (usability T4-3): both windows count. An account whose 5-hour OR weekly verdict warns loses to
  * one where neither does; then the least-used window decides (the tighter of the two, not 5-hour only).
+ * F4: a current reading always beats a stale one.
  */
 export function mostHeadroom(
   accounts: AccountView[],
@@ -918,8 +920,16 @@ export function mostHeadroom(
       : 0;
   const tightest = (a: AccountView) =>
     Math.max(a.reading!.fiveHourPct!, a.reading!.sevenDayPct ?? 0);
+  // F4 (r1 LOW-1): a reading that is not current (its machine asleep, or past the old-reading
+  // cut-off; the card below is dimmed) ranks after every current one.
+  const stale = (a: AccountView) => {
+    const r = a.reading!;
+    if (r.asleep) return 1;
+    return r.sampledAt && sampleAge(r.sampledAt, r.push, now).ageMs > STALE_READING_MS ? 1 : 0;
+  };
   return read.sort(
     (a, b) =>
+      stale(a) - stale(b) ||
       warns(a) - warns(b) ||
       tightest(a) - tightest(b) ||
       a.reading!.fiveHourPct! - b.reading!.fiveHourPct!
