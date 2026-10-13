@@ -19,6 +19,8 @@ export interface TmuxPane {
   /** Foreground command of the session's active pane. */
   command: string | null;
   cwd: string | null;
+  /** F2 (r1 HIGH): the pane's width in columns; null when tmux did not report it (older output). */
+  width?: number | null;
 }
 
 export interface ViewerAgent {

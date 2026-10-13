@@ -37,8 +37,23 @@ describe('adapter: tmux', () => {
       '',
     ].join('\n');
     expect(parsePanes(out)).toEqual([
-      { session: 'a', paneId: '%3', command: 'claude', cwd: '/work' },
-      { session: 'b', paneId: '%4', command: 'node', cwd: '/y' },
+      { session: 'a', paneId: '%3', command: 'claude', cwd: '/work', width: null },
+      { session: 'b', paneId: '%4', command: 'node', cwd: '/y', width: null },
+    ]);
+  });
+
+  it('F2 (r1 HIGH): reads the pane width when tmux gives it (7th field); 6 fields = unknown', () => {
+    const row = (...f: string[]) => f.join(FIELD_SEP);
+    expect(LIST_PANES_ARGS.at(-1)).toMatch(/#\{pane_width\}$/);
+    expect(
+      parsePanes(
+        [row('a', '%3', '1', '1', 'claude', '/w', '80'), row('b', '%4', '1', '1', 'x', '/y')].join(
+          '\n'
+        )
+      )
+    ).toEqual([
+      { session: 'a', paneId: '%3', command: 'claude', cwd: '/w', width: 80 },
+      { session: 'b', paneId: '%4', command: 'x', cwd: '/y', width: null },
     ]);
   });
 

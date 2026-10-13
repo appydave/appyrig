@@ -235,7 +235,7 @@ export async function buildSnapshot(
     try {
       const raw = await sources.capture(pane.paneId);
       // F2 (QA HIGH-1): secrets a Claude pane hard-wrapped across rows, before the per-row redaction.
-      seat.tail = { lines: redactWrapped(tailLines(raw)), ansi: true, capturedAt };
+      seat.tail = { lines: redactWrapped(tailLines(raw), pane.width), ansi: true, capturedAt };
     } catch {
       captureFailures.push(seat.id);
     }

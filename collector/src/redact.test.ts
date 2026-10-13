@@ -280,6 +280,27 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
         });
   });
 
+  it('r1 HIGH (probe A): a row wider than the pane earlier in the tail (-J) does not switch the step off', () => {
+    // A rule drawn when the pane was 200 wide, re-joined by -J, then the token in an 80-col pane.
+    const rows = [
+      '─'.repeat(200),
+      '$ a pre-launch shell line '.repeat(5),
+      ...tuiWrap(FORMS.env!, 80),
+      '  Done.',
+    ];
+    // Without the pane width the widest row (200) says no 80-col row is full: the tail leaks.
+    expect(leak(redactWrapped(rows).map(redactString).join('\n'))).toBeGreaterThan(40);
+    // With it (#{pane_width}), nothing past chance.
+    const out = redactWrapped(rows, 80).map(redactString).join('\n');
+    expect(leak(out)).toBeLessThanOrEqual(2);
+    expect(out.endsWith('\n  Done.')).toBe(true);
+  });
+
+  it('a pane width wider than any row never makes a short row count as full', () => {
+    const rows = ['  short line ending in tokenish', '  continuationword here'];
+    expect(redactWrapped(rows, 200)).toEqual(rows);
+  });
+
   it('without the cross-row step the second row leaks (the bug)', () => {
     const rows = tuiWrap(FORMS.env!, 80);
     expect(leak(rows.map(redactString).join('\n'))).toBeGreaterThan(40);

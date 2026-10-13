@@ -136,12 +136,15 @@ export const WRAP_SLACK = 6;
  * each row then gets back its own part with the secret cut out. Rows touched lose their colours.
  * Runs that join into nothing secret are left exactly as they were.
  */
-export function redactWrapped(lines: string[]): string[] {
+export function redactWrapped(lines: string[], paneWidth?: number | null): string[] {
   const out = [...lines];
   const plain = lines.map((l) => (l.includes('\x1b') ? l.replace(ANSI, '') : l));
-  // Only a full row can have been wrapped: the widest row stands in for the pane's width (a
-  // Claude pane draws full-width rules), with a few columns of slack for its right margin.
-  const full = Math.max(0, ...plain.map((l) => l.trimEnd().length)) - WRAP_SLACK;
+  // Only a full row can have been wrapped. The pane's own width says what full is (r1 HIGH: with
+  // -J a tail holds rows wider than the pane, e.g. a rule drawn when it was wider, so the widest row
+  // overstated it and switched this step off). Without the width the widest row stands in, never
+  // above the pane. A few columns of slack cover the TUI's right margin.
+  const widest = Math.max(0, ...plain.map((l) => l.trimEnd().length));
+  const full = (paneWidth ? Math.min(paneWidth, widest) : widest) - WRAP_SLACK;
   let i = 0;
   while (i < lines.length) {
     // Rows i..end form one chain while each row ends in a run the next row continues.

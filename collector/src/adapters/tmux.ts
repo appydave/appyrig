@@ -23,6 +23,8 @@ export const LIST_PANES_ARGS = [
     '#{pane_active}',
     '#{pane_current_command}',
     '#{pane_current_path}',
+    // F2 (r1 HIGH): last, so recorded 6-field output still parses (width unknown).
+    '#{pane_width}',
   ].join(FIELD_SEP),
 ];
 
@@ -51,28 +53,30 @@ export function parsePanes(stdout: string): TmuxPane[] {
     if (!line.trim()) continue;
     lines++;
     const fields = line.split(FIELD_SEP);
-    if (fields.length !== 6) continue;
-    const [session, paneId, windowActive, paneActive, command, cwd] = fields as [
+    if (fields.length !== 6 && fields.length !== 7) continue;
+    const [session, paneId, windowActive, paneActive, command, cwd, w] = fields as [
       string,
       string,
       string,
       string,
       string,
       string,
+      string | undefined,
     ];
+    const width = w !== undefined && /^\d+$/.test(w) ? Number(w) : null;
     if (!session || !/^%\d+$/.test(paneId)) continue;
     const active = windowActive === '1' && paneActive === '1';
     const prev = bySession.get(session);
     if (!prev || (active && !prev.active)) {
       bySession.set(session, {
-        pane: { session, paneId, command: command || null, cwd: cwd || null },
+        pane: { session, paneId, command: command || null, cwd: cwd || null, width },
         active,
       });
     }
   }
   if (lines > 0 && bySession.size === 0) {
     throw new Error(
-      `unparseable list-panes output (${lines} line(s), none with 6 fields): ${stdout.trim().slice(0, 120)}`
+      `unparseable list-panes output (${lines} line(s), none with 6 or 7 fields): ${stdout.trim().slice(0, 120)}`
     );
   }
   return [...bySession.values()].map((v) => v.pane);
