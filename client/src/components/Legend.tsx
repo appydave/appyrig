@@ -80,6 +80,7 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   'tl-phase': () => <span className="legend-tl-phase" />,
   'tl-peak': () => <span className="legend-tl-peak" />,
   'tl-follow': () => <span className="legend-pill">Follow →</span>,
+  'run-card': () => <span className="legend-pill">MISSION · STATE</span>,
   'sch-tag': () => <span className="legend-pill">NOT NULL</span>,
   'sch-pk': () => <span className="legend-pill sch-pk">PK</span>,
   'sch-notnull': () => <span className="legend-pill">NOT NULL</span>,

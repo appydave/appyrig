@@ -102,7 +102,8 @@ export type Swatch =
   | 'tl-flags'
   | 'tl-phase'
   | 'tl-peak'
-  | 'tl-follow';
+  | 'tl-follow'
+  | 'run-card';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -731,6 +732,18 @@ const SCHEMA: LegendSection[] = [
 ];
 
 /** The rig files viewer (map, flow, seat panel): its marks, listed with the screens that open it. */
+const RUN_CARD: LegendSection = {
+  title: 'Run card · the top of Rig Map, Flow and Timeline',
+  entries: [
+    {
+      swatch: 'run-card',
+      mark: 'Mission · State · Live step / Ended with',
+      means:
+        "One glance at the chosen rig's run. Mission: the first heading of its MISSION.md (else its rig.yaml summary). State: ● working, ▲ waiting on David (its newest handoff is an open item to him), ○ idle, ■ ended (OpenRig says stopped), ◌ not reporting (machine asleep). Live step: its newest handoff. Ended with: REPORT.md's first line, else the last handoff. The grey text after each says where it came from, or why it is missing.",
+    },
+  ],
+};
+
 const TIMELINE: LegendSection[] = [
   {
     title: 'Run Timeline · lanes and marks',
@@ -854,11 +867,11 @@ function sectionsFor(screen: LegendScreen): LegendSection[] {
     case 'wall':
       return [...WALL, STATUS];
     case 'map':
-      return [...MAP, FILES, STATUS];
+      return [RUN_CARD, ...MAP, FILES, STATUS];
     case 'flow':
-      return [...FLOW, FILES, STATUS];
+      return [RUN_CARD, ...FLOW, FILES, STATUS];
     case 'timeline':
-      return [...TIMELINE, FILES, STATUS];
+      return [RUN_CARD, ...TIMELINE, FILES, STATUS];
     case 'focus':
       return [...FOCUS, STATUS];
     case 'accounts':

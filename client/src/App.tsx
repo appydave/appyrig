@@ -18,6 +18,7 @@ import Loadout from './components/Loadout.js';
 import FeedbackNotes from './components/FeedbackNotes.js';
 import RigMap from './components/RigMap.js';
 import RunTimeline from './components/RunTimeline.js';
+import RunCard from './components/RunCard.js';
 import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
@@ -754,6 +755,14 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             onSelect={chooseRig}
             onOpenFiles={(r) => openFiles(r.machineId, r.name)}
           />
+          {activeRig &&
+            !goneRig &&
+            (() => {
+              const fm = allMachines.find((m) => m.machine.id === activeRig.machineId);
+              return fm ? (
+                <RunCard machine={fm} rig={activeRig.name} now={now} socket={getSocket()} />
+              ) : null;
+            })()}
           {view === 'map' ? (
             <RigMap
               map={rigMap}
