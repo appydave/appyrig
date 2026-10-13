@@ -162,6 +162,25 @@ describe('V2 · followWork', () => {
     expect(a.ruleText).toMatch(/equally rare, so both count/);
   });
 
+  it('no chain is longer than a quarter of the run, merged ties included (r1 MEDIUM-3)', () => {
+    const limit = Math.max(12, Math.ceil(d10.snapshot.queue.length / 4));
+    for (const x of d10.snapshot.queue) {
+      const c = followWork(d10, 'ylo-d10', x.id)!;
+      expect(
+        c.steps.filter((s) => s.role === 'step').length,
+        x.summary ?? x.id
+      ).toBeLessThanOrEqual(limit);
+    }
+    const refocus = followWork(d10, 'ylo-d10', q('D10 change: refocus').id)!;
+    expect(refocus.key).toEqual(['change-01']);
+    expect(refocus.steps).toHaveLength(22);
+  });
+
+  it('a parent covering exactly the same items never replaces the specific tag (group-3)', () => {
+    const c = followWork(d10, 'ylo-d10', q('D10 change 02: group 3').id)!;
+    expect(c.key).not.toContain('group');
+  });
+
   it('never links by a tag the whole run carries (mission:d10-launch on 98 of 100)', () => {
     const chain = followWork(d10, 'ylo-d10', q('Ruling: transcript only').id)!;
     expect(chain.key).not.toContain('mission:d10-launch');

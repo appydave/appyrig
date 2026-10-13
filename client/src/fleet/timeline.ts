@@ -313,16 +313,20 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
     for (let t = tag; t.includes('-');) out.push((t = t.slice(0, t.lastIndexOf('-'))));
     return out;
   };
+  // A chain (and any one family) never takes more than a quarter of the run.
+  const limit = Math.max(12, Math.ceil(items.length / 4));
   const qualifying = [...new Set(me.tags.flatMap((t) => [t, ...parents(t)]))]
     .map((tag) => ({ tag, group: items.filter((q) => hasFamily(q, tag)) }))
+    .filter((c) => c.group.length >= 2 && c.group.length <= limit && replyLinks(c.group) > 0);
+  // A parent wins only when it adds steps (`pair-a` over `pair-a-alt`); when it covers exactly the
+  // same items, the more specific tag names the work (`group-3`, not a bare `group`).
+  const under = (c: { tag: string }, p: { tag: string }) => c.tag.startsWith(`${p.tag}-`);
+  const tagged = qualifying
     .filter(
       (c) =>
-        c.group.length >= 2 &&
-        c.group.length <= Math.max(12, Math.ceil(items.length / 4)) &&
-        replyLinks(c.group) > 0
-    );
-  const tagged = qualifying
-    .filter((c) => !qualifying.some((p) => c.tag.startsWith(`${p.tag}-`)))
+        !qualifying.some((p) => under(c, p) && p.group.length > c.group.length) &&
+        !qualifying.some((ch) => under(ch, c) && ch.group.length === c.group.length)
+    )
     .sort((a, b) => a.group.length - b.group.length || replyLinks(b.group) - replyLinks(a.group));
   if (tagged[0]) {
     // r1 LOW-1: families tied on size and reply links are both used, never settled by tag order.
@@ -330,6 +334,7 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
     const tied = tagged.filter(
       (c) => c.group.length === best.group.length && replyLinks(c.group) === replyLinks(best.group)
     );
+    const exact = [...tied];
     // ...and so are families no larger that share two or more steps with the chain, so a step
     // carrying only one of two tied tags still finds the same chain.
     const size = best.group.length;
@@ -341,9 +346,14 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
         if (fam.length <= size && shared >= 2 && replyLinks(fam) > 0)
           tied.push({ tag, group: fam });
       }
+    // r1 MEDIUM-3: the merged chain obeys the same quarter-of-the-run bound; past it, fall back to
+    // the exact ties, then to the single rarest family.
+    const union = (fams: { group: QueueItem[] }[]) =>
+      items.filter((q) => fams.some((c) => c.group.includes(q)));
+    const chosen = [tied, exact, [best]].find((fams) => union(fams).length <= limit) ?? [best];
     rule = 'tag';
-    key = tied.map((c) => c.tag).sort();
-    group = items.filter((q) => tied.some((c) => c.group.includes(q)));
+    key = chosen.map((c) => c.tag).sort();
+    group = union(chosen);
   } else {
     const phase = phaseOf(items, me);
     const df = new Map<string, number>();
