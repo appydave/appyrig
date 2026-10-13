@@ -6,6 +6,7 @@ import type {
   Seat,
   SeatHistoryEvent,
 } from '@appydave/shared';
+import { windowStory, type VerdictKind } from './accountWindow.js';
 import { modelChip, pipFor, seatKey, seatName, type ModelFamily, type PipKey } from './model.js';
 
 /**
@@ -150,7 +151,8 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
           seats.map((s) => pipFor(s, fm))
         ),
         seatCount: seats.length,
-        handoffs: items.length,
+        // F1: each item once, on the rig doing the work (a rig's outgoing items are not its total).
+        handoffs: items.filter((q) => ownerRig(fm, q) === rig.name).length,
         // The collector's recentAt is the same rule computed over the full queue; prefer it.
         lastActivity: rig.recentAt !== undefined ? rig.recentAt : last,
         displayName: rig.displayName,
@@ -171,11 +173,40 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
   );
 }
 
+const bare = (raw: string | null) => (raw ?? '').split('@')[0] ?? '';
 const suffix = (id: string | null) => (id ? id.slice(id.lastIndexOf('@') + 1) : '');
 
-/** Queue rows that start or end inside this rig. */
+const seatRigs = new WeakMap<FleetMachine['snapshot'], Map<string, string | null>>();
+
+/**
+ * Fix-first F1 (truth E1): the rig a queue endpoint belongs to. A seat the machine reports belongs
+ * to its own rig, the same rule as the collector's `recentAt`. `human@<rig>` is David's mailbox,
+ * not a seat, so it belongs to no rig (`human@kernel` is not the kernel rig). A name no seat list
+ * knows falls back to its `@rig` suffix.
+ */
+export function endpointRig(fm: FleetMachine, raw: string | null): string | null {
+  if (!raw || bare(raw) === 'human') return null;
+  let rigs = seatRigs.get(fm.snapshot);
+  if (!rigs) {
+    rigs = new Map(fm.snapshot.seats.map((s) => [s.id, s.rig]));
+    seatRigs.set(fm.snapshot, rigs);
+  }
+  return rigs.has(raw) ? (rigs.get(raw) ?? null) : suffix(raw) || null;
+}
+
+/**
+ * F1: the one rig an item counts towards: the rig of the seat that does the work (destination),
+ * else the sender's rig (a report to David's mailbox). Rig totals count each item once this way.
+ */
+export function ownerRig(fm: FleetMachine, q: QueueItem): string | null {
+  return endpointRig(fm, q.destination) ?? endpointRig(fm, q.source);
+}
+
+/** Queue rows that start or end inside this rig: its own work and what it sent to other rigs. */
 export function rigQueue(fm: FleetMachine, rig: string): QueueItem[] {
-  return fm.snapshot.queue.filter((q) => suffix(q.source) === rig || suffix(q.destination) === rig);
+  return fm.snapshot.queue.filter(
+    (q) => endpointRig(fm, q.source) === rig || endpointRig(fm, q.destination) === rig
+  );
 }
 
 // ---------------------------------------------------------------- Rig Map
@@ -225,7 +256,10 @@ export interface RigMap {
   rig: RigRef;
   lanes: MapLane[];
   edges: MapEdge[];
+  /** F1: items this rig does the work on (its total; see ownerRig). */
   handoffs: number;
+  /** F1: items it sent to another rig: drawn as lines, counted on the receiving rig. */
+  outgoing: number;
 }
 
 const POD_ORDER = ['orch', 'lead', 'dev', 'build', 'qa', 'review', 'research'];
@@ -371,7 +405,7 @@ export function buildRigMap(
     ...e,
     items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   }));
-  return { rig, lanes, edges, handoffs: items.length };
+  return { rig, lanes, edges, handoffs: rig.handoffs, outgoing: items.length - rig.handoffs };
 }
 
 // ---------------------------------------------------------------- Handoff Flow
@@ -474,8 +508,6 @@ export function flowRange(items: QueueItem[]): { start: number; end: number } | 
   return { start, end };
 }
 
-const bare = (raw: string | null) => (raw ?? '').split('@')[0] ?? '';
-
 /**
  * The flow at time `at`: everything handed off up to then, and what was still open then. An item
  * is in flight from createdAt until updatedAt if it is done (updatedAt is when it closed), or
@@ -486,7 +518,7 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   const range = flowRange(items);
   if (!range) return null;
   const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
-  const inRig = (raw: string | null) => suffix(raw) === rig;
+  const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
   const mode = flowModeOf([
     ...rigSeats.map(seatName),
     ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(bare)),
@@ -842,11 +874,35 @@ export function buildAccounts(machines: FleetMachine[]): {
   };
 }
 
-/** The account with the most 5-hour room among those with a reading; null if none can be compared. */
-export function mostHeadroom(accounts: AccountView[]): AccountView | null {
+/** D0: how badly a window's verdict warns: 2 = will run out or spent, 1 = be careful, 0 = otherwise. */
+const WARNS: Partial<Record<VerdictKind, number>> = { spent: 2, 'runs-out': 2, careful: 1 };
+
+/**
+ * The account with the most room among those with a reading; null if none can be compared.
+ * D0 (usability T4-3): both windows count. An account whose 5-hour OR weekly verdict warns loses to
+ * one where neither does; then the least-used window decides (the tighter of the two, not 5-hour only).
+ */
+export function mostHeadroom(
+  accounts: AccountView[],
+  now: number = Date.now()
+): AccountView | null {
   const read = accounts.filter((a) => a.reading?.fiveHourPct != null);
   if (!read.length) return null;
-  return read.sort((a, b) => a.reading!.fiveHourPct! - b.reading!.fiveHourPct!)[0]!;
+  const warns = (a: AccountView) =>
+    a.derived
+      ? Math.max(
+          WARNS[windowStory(a.derived.fiveHour, now).kind] ?? 0,
+          WARNS[windowStory(a.derived.sevenDay, now).kind] ?? 0
+        )
+      : 0;
+  const tightest = (a: AccountView) =>
+    Math.max(a.reading!.fiveHourPct!, a.reading!.sevenDayPct ?? 0);
+  return read.sort(
+    (a, b) =>
+      warns(a) - warns(b) ||
+      tightest(a) - tightest(b) ||
+      a.reading!.fiveHourPct! - b.reading!.fiveHourPct!
+  )[0]!;
 }
 
 /** "in 2h 10m" / "now" for a reset time. */

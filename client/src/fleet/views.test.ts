@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountUsage, FleetMachine, QueueItem } from '@appydave/shared';
+import type {
+  AccountDerived,
+  AccountUsage,
+  AccountWindow,
+  FleetMachine,
+  QueueItem,
+} from '@appydave/shared';
+import { windowStory } from './accountWindow.js';
 import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
 import {
   buildAccounts,
@@ -422,5 +429,171 @@ describe('r1 HIGH-1: a Map line lists its handoffs oldest first, so "latest" is 
       const newest = [...line.items].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]!;
       expect(line.items[line.items.length - 1]!.id).toBe(newest.id);
     }
+  });
+});
+
+describe('F1 · handoffs attach to the rig doing the work (truth E1)', () => {
+  // A hand-built M2/M4: the stopped kernel rig (its real seats), the v15 team, and two rigs on one
+  // machine handing work across (planner@ylo-desk → ylo-lead@ylo-thumbs). human@kernel is David's
+  // mailbox, not a kernel seat.
+  const base = m2();
+  const tmpl = base.snapshot.seats[0]!;
+  const seat = (id: string, rig: string, pod: string | null = null) => ({
+    ...tmpl,
+    id,
+    rig,
+    pod,
+    logicalId: id.split('@')[0]!,
+  });
+  const rigSum = (name: string, status = 'running') => ({
+    ...base.snapshot.rigs[0]!,
+    id: `id-${name}`,
+    name,
+    status,
+  });
+  const fm: FleetMachine = {
+    ...base,
+    snapshot: {
+      ...base.snapshot,
+      rigs: [
+        rigSum('kernel', 'stopped'),
+        rigSum('appyrig-v15-loadout'),
+        rigSum('ylo-desk'),
+        rigSum('ylo-thumbs'),
+      ],
+      seats: [
+        seat('advisor-lead@kernel', 'kernel'),
+        seat('queue-worker@kernel', 'kernel'),
+        seat('dev-build@appyrig-v15-loadout', 'appyrig-v15-loadout', 'dev'),
+        seat('dev-qa@appyrig-v15-loadout', 'appyrig-v15-loadout', 'dev'),
+        seat('planner@ylo-desk', 'ylo-desk'),
+        seat('ylo-lead@ylo-thumbs', 'ylo-thumbs', 'lead'),
+        seat('ylo-art@ylo-thumbs', 'ylo-thumbs', 'dev'),
+      ],
+      queue: [
+        q({ id: 'h1', source: 'human@kernel', destination: 'dev-build@appyrig-v15-loadout' }),
+        q({
+          id: 'h2',
+          source: 'dev-build@appyrig-v15-loadout',
+          destination: 'dev-qa@appyrig-v15-loadout',
+        }),
+        q({ id: 'h3', source: 'dev-qa@appyrig-v15-loadout', destination: 'human@kernel' }),
+        q({
+          id: 'x1',
+          source: 'planner@ylo-desk',
+          destination: 'ylo-lead@ylo-thumbs',
+          state: 'pending',
+          createdAt: new Date(NOW - 60_000).toISOString(),
+        }),
+        q({ id: 'x2', source: 'ylo-lead@ylo-thumbs', destination: 'ylo-art@ylo-thumbs' }),
+        q({ id: 'k1', source: 'queue-worker@kernel', destination: 'advisor-lead@kernel' }),
+      ],
+    },
+  };
+  const ids = (items: QueueItem[]) => items.map((i) => i.id).sort();
+  const rig = (name: string) => listRigs([fm]).find((r) => r.name === name)!;
+
+  it('human@kernel is a mailbox: the kernel rig keeps only its own seats’ items', () => {
+    expect(ids(rigQueue(fm, 'kernel'))).toEqual(['k1']);
+    expect(rig('kernel').handoffs).toBe(1);
+    expect(ids(rigQueue(fm, 'appyrig-v15-loadout'))).toEqual(['h1', 'h2', 'h3']);
+    expect(rig('appyrig-v15-loadout').handoffs).toBe(3);
+  });
+
+  it('rig totals add up to the distinct item count (no double count across rigs)', () => {
+    const total = listRigs([fm]).reduce((n, r) => n + r.handoffs, 0);
+    expect(total).toBe(fm.snapshot.queue.length);
+    // The cross-rig item counts on the rig doing the work, and shows on the sender's as outgoing.
+    expect(rig('ylo-thumbs').handoffs).toBe(2);
+    expect(rig('ylo-desk').handoffs).toBe(0);
+    expect(ids(rigQueue(fm, 'ylo-desk'))).toEqual(['x1']);
+  });
+
+  it('a cross-rig item lands on the destination rig, the source drawn as an outside box with a line in', () => {
+    const map = buildRigMap([fm], rig('ylo-thumbs').key, NOW)!;
+    expect(map.handoffs).toBe(2);
+    const outside = map.lanes.slice(1).flatMap((l) => l.pods.flatMap((p) => p.seats));
+    const planner = outside.find((s) => s.name === 'planner')!;
+    expect(planner).toBeDefined();
+    expect(map.lanes[0]!.pods.flatMap((p) => p.seats).map((s) => s.name)).not.toContain('planner');
+    const lead = map.lanes[0]!.pods.flatMap((p) => p.seats).find((s) => s.name === 'ylo-lead')!;
+    const line = map.edges.find((e) => e.from === planner.key && e.to === lead.key)!;
+    expect(line.items.map((i) => i.id)).toEqual(['x1']);
+    expect(lead.open).toBe(1);
+    // The Handoff Flow shows it too: planner as a node outside this rig.
+    const flow = buildFlow(fm, 'ylo-thumbs', NOW, NOW)!;
+    expect(flow.total).toBe(2);
+    // On the sender's map it is an outgoing line, not part of its total.
+    const desk = buildRigMap([fm], rig('ylo-desk').key, NOW)!;
+    expect(desk.handoffs).toBe(0);
+    expect(desk.outgoing).toBe(1);
+  });
+
+  it('the stopped kernel rig no longer takes the v15 team’s handoff times as its own', () => {
+    const map = buildRigMap([fm], rig('kernel').key, NOW)!;
+    expect(map.edges.flatMap((e) => e.items.map((i) => i.id))).toEqual(['k1']);
+  });
+});
+
+describe('D0 · most headroom weighs the weekly window (usability T4-3)', () => {
+  const win = (
+    usedPct: number,
+    elapsedPct: number,
+    windowMs: number,
+    resetsAt: string
+  ): AccountWindow => ({
+    status: 'reading',
+    usedPct,
+    resetsAt,
+    windowMs,
+    startsAt: new Date(Date.parse(resetsAt) - windowMs).toISOString(),
+    elapsedPct,
+    elapsedNowPct: elapsedPct,
+    paceDeltaPct: usedPct - elapsedPct,
+    projectedPct: Math.round((usedPct / elapsedPct) * 100),
+  });
+  const H5 = 5 * 3600_000;
+  const D7 = 7 * 86400_000;
+  const derived = (five: AccountWindow, seven: AccountWindow): AccountDerived => ({
+    tier: { label: 'Max $200', source: 'config' },
+    asOf: new Date(NOW).toISOString(),
+    readingFrom: 'm2',
+    sampleAgeMs: 60_000,
+    fiveHour: five,
+    sevenDay: seven,
+    monthly: { status: 'not-reported' },
+  });
+  const R5 = new Date(NOW + 0.68 * H5).toISOString();
+  const R7 = new Date(NOW + 0.19 * D7).toISOString();
+
+  it('T4-3: appydave (5-hour 5%, weekly "be careful") loses to ideasmen (weekly 40% left)', () => {
+    const appydave = withAccount(
+      roamy(),
+      account({
+        email: 'david@appydave.com',
+        fiveHourPct: 5,
+        sevenDayPct: 78,
+        derived: derived(win(5, 32, H5, R5), win(78, 81, D7, R7)),
+      })
+    );
+    const ideasmen = withAccount(
+      m2(),
+      account({
+        email: 'david@ideasmen.com.au',
+        fiveHourPct: 11,
+        sevenDayPct: 60,
+        derived: derived(win(11, 32, H5, R5), win(60, 81, D7, R7)),
+      })
+    );
+    const { accounts } = buildAccounts([appydave, ideasmen]);
+    const weekly = accounts.find((a) => a.email === 'david@appydave.com')!.derived!.sevenDay;
+    expect(windowStory(weekly, NOW).kind).toBe('careful');
+    expect(mostHeadroom(accounts, NOW)?.email).toBe('david@ideasmen.com.au');
+  });
+
+  it('with no warning on either side, the less-used tighter window wins', () => {
+    const x = withAccount(m2(), account({ email: 'x@e.com', fiveHourPct: 10, sevenDayPct: 70 }));
+    const y = withAccount(roamy(), account({ email: 'y@e.com', fiveHourPct: 30, sevenDayPct: 35 }));
+    expect(mostHeadroom(buildAccounts([x, y]).accounts, NOW)?.email).toBe('y@e.com');
   });
 });

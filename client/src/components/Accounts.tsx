@@ -157,7 +157,7 @@ export function profileAge(fetchedAt: string | null | undefined, now: number): s
 
 export default function Accounts({ machines, now }: Props) {
   const { accounts, unknown } = buildAccounts(machines);
-  const best = accounts.length > 1 ? mostHeadroom(accounts) : null;
+  const best = accounts.length > 1 ? mostHeadroom(accounts, now) : null;
 
   return (
     <section className="accounts" data-testid="accounts" aria-label="Claude accounts">
@@ -169,8 +169,11 @@ export default function Accounts({ machines, now }: Props) {
       {best && (
         <div className="headroom" data-testid="headroom" data-explain="headroom">
           <span className="label">Next team → most headroom</span>
-          <b>{best.email}</b> · {Math.round(best.reading!.fiveHourPct!)}% of its 5-hour window used.
-          <i> Suggestion only; AppyRig never moves work.</i>
+          <b>{best.email}</b> · {Math.round(best.reading!.fiveHourPct!)}% of its 5-hour window used
+          {best.reading!.sevenDayPct != null
+            ? `, ${Math.round(best.reading!.sevenDayPct)}% of its weekly`
+            : ''}
+          .<i> Suggestion only; AppyRig never moves work.</i>
         </div>
       )}
       <div className="account-grid">

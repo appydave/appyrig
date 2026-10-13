@@ -429,8 +429,8 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
     <section className="rigmap" data-testid="rig-map" aria-label={`Rig map of ${map.rig.name}`}>
       <p className="view-caption" data-explain="handoff">
         <b>{map.rig.name}</b> on {map.rig.machineLabel} · {map.handoffs} handoffs through the queue
-        · line width = how often one seat handed work to another · amber = still waiting · dashed =
-        left open over 2 h
+        {map.outgoing ? ` (+ ${map.outgoing} sent to other rigs)` : ''} · line width = how often one
+        seat handed work to another · amber = still waiting · dashed = left open over 2 h
       </p>
       <div className="rigmap-canvas" ref={box} style={{ ['--gutter' as string]: `${GUTTER}px` }}>
         <svg
