@@ -602,7 +602,8 @@ const ACCOUNTS: LegendSection[] = [
         swatch: 'headroom',
         term: 'headroom',
         mark: 'Next team → most headroom',
-        means: 'The account with the most 5-hour room left. A suggestion only.',
+        means:
+          'The account with the most room in both the 5-hour and weekly windows. A suggestion only.',
       },
       {
         swatch: 'unreported',

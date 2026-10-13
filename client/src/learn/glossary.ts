@@ -409,7 +409,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   headroom: {
     term: 'Most headroom',
-    what: 'The account with the lowest 5-hour use among those with a reading.',
+    what: 'The account with the most room in both windows: one whose 5-hour or weekly verdict says be careful or will run out never wins over one where neither does; then the less-used of its two windows decides.',
     why: 'Where the next team should run. A suggestion only; AppyRig never moves work.',
   },
   drawers: {
