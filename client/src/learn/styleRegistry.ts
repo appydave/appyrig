@@ -578,7 +578,7 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     id: 'run-waiting',
     look: 'Amber ▲ WAITING ON DAVID in the run card',
     means:
-      "Run card: the rig's newest handoff went to David's mailbox and is still open, and no seat is working.",
+      "Run card: a seat is blocked on a prompt (named, with its reason), or the rig's newest handoff went to David's mailbox and is still open.",
     screens: ['map', 'flow', 'timeline'],
     tokens: ['.run-word[data-word=waiting]'],
   },

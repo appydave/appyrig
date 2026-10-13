@@ -42,6 +42,26 @@ describe('R1 · runCard state in words, with its evidence', () => {
     expect(runCard(d10({ status: 'stopped' }), 'ylo-d10', NOW)!.state.word).toBe('ended');
   });
 
+  it('a seat blocked on a prompt is waiting on David, with the seat and its reason (r1 MEDIUM-2)', () => {
+    const fm = d10({ working: ['ylo-check@ylo-d10'] });
+    const seat = (
+      fm.snapshot.seats as unknown as { id: string; status: string; blockedReason?: string }[]
+    ).find((s) => s.id === 'ylo-lead@ylo-d10')!;
+    Object.assign(seat, { status: 'blocked', blockedReason: 'permission prompt' });
+    expect(runCard(fm, 'ylo-d10', NOW)!.state).toEqual({
+      word: 'waiting',
+      why: 'ylo-lead is blocked: permission prompt.',
+    });
+  });
+
+  it('only stopped or archived reads ended; another status is said as it is (r1 LOW-1)', () => {
+    expect(runCard(d10({ status: 'archived' }), 'ylo-d10', NOW)!.state.word).toBe('ended');
+    expect(runCard(d10({ status: 'starting' }), 'ylo-d10', NOW)!.state).toEqual({
+      word: 'stopping',
+      why: 'OpenRig says the rig is starting.',
+    });
+  });
+
   it('working names the seats mid-turn', () => {
     const c = runCard(d10({ working: ['ylo-check@ylo-d10'] }), 'ylo-d10', NOW)!;
     expect(c.state).toEqual({ word: 'working', why: 'ylo-check is mid-turn now.' });
@@ -106,5 +126,9 @@ describe('R1 · one line from a rig file', () => {
         '# flistudio-launch REPORT\n\n**Purpose**: what was built.\n\n**For Agents**: branch at\n/Users/x/launch), 9 commits on 1dab215, pushed, not merged. Calls made\nby the lead.\n\nWaves 1-3 landed on the branch:\nall gates PASS.\n'
       )
     ).toBe('Waves 1-3 landed on the branch: all gates PASS.');
+    // A fenced block is never the line shown (r1 MEDIUM-1).
+    expect(reportLine('# R\n\n```ts\nconst x = 1;\n```\n\nShipped at abc123.')).toBe(
+      'Shipped at abc123.'
+    );
   });
 });

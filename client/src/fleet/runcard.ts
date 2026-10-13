@@ -12,13 +12,14 @@ import { endpointRig, isOpen, rigQueue } from './views.js';
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] || '?';
 const byCreated = (a: QueueItem, b: QueueItem) => a.createdAt.localeCompare(b.createdAt);
 
-export type RunWord = 'working' | 'waiting' | 'idle' | 'ended' | 'asleep';
+export type RunWord = 'working' | 'waiting' | 'idle' | 'ended' | 'stopping' | 'asleep';
 
 export const RUN_WORD: Record<RunWord, { glyph: string; label: string }> = {
   working: { glyph: '●', label: 'working' },
   waiting: { glyph: '▲', label: 'waiting on David' },
   idle: { glyph: '○', label: 'idle' },
   ended: { glyph: '■', label: 'ended' },
+  stopping: { glyph: '■', label: 'not running' },
   asleep: { glyph: '◌', label: 'not reporting' },
 };
 
@@ -48,8 +49,10 @@ export const stepText = (q: QueueItem) =>
   `${bare(q.source)} → ${bare(q.destination)}: ${firstLine(q.summary) || q.tags.join(', ') || q.id}`;
 
 /**
- * R1: the state in words. Order: machine asleep (we cannot know now) > rig not running (ended) >
- * a seat working > the rig's newest handoff is an open item to David (waiting on him) > idle.
+ * R1: the state in words. Order: machine asleep (we cannot know now) > rig stopped or archived
+ * (ended; any other non-running status is said as "not running") > a seat blocked on a prompt
+ * (waiting on David, naming the seat and its reason) > a seat working > the rig's newest handoff
+ * is an open item to David (waiting on him) > idle.
  * "Waiting on David" needs that last condition, not just any open item to his mailbox: reports
  * to `human@…` are often never closed, so an old one says nothing about now.
  */
@@ -64,6 +67,7 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
     .reverse();
   const seats = fm.snapshot.seats.filter((s) => s.rig === rig);
   const working = seats.filter((s) => pipFor(s, fm) === 'working').map(seatName);
+  const blocked = seats.filter((s) => pipFor(s, fm) === 'blocked');
 
   let state: RunState;
   if (fm.liveness === 'asleep') {
@@ -71,8 +75,19 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
       word: 'asleep',
       why: `${fm.machine.label} is asleep (last report ${ago(now, Date.parse(fm.lastSeen))} ago), so its state now is unknown. At that report OpenRig said the rig was ${summary.status}.`,
     };
-  } else if (summary.status !== 'running') {
+  } else if (summary.status === 'stopped' || summary.status === 'archived') {
     state = { word: 'ended', why: `OpenRig says the rig is ${summary.status}.` };
+  } else if (summary.status !== 'running') {
+    // r1 LOW-1: a status that is neither running nor finished is said as it is, not "ended".
+    state = { word: 'stopping', why: `OpenRig says the rig is ${summary.status}.` };
+  } else if (blocked.length) {
+    // r1 MEDIUM-2: a seat on a permission prompt or asking for input waits on David right now.
+    state = {
+      word: 'waiting',
+      why: `${blocked
+        .map((s) => `${seatName(s)} is blocked${s.blockedReason ? `: ${s.blockedReason}` : ''}`)
+        .join('; ')}.`,
+    };
   } else if (working.length) {
     state = {
       word: 'working',

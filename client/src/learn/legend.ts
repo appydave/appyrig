@@ -739,7 +739,7 @@ const RUN_CARD: LegendSection = {
       swatch: 'run-card',
       mark: 'Mission · State · Live step / Ended with',
       means:
-        "One glance at the chosen rig's run. Mission: the first heading of its MISSION.md (else its rig.yaml summary). State: ● working, ▲ waiting on David (its newest handoff is an open item to him), ○ idle, ■ ended (OpenRig says stopped), ◌ not reporting (machine asleep). Live step: its newest handoff. Ended with: REPORT.md's first line, else the last handoff. The grey text after each says where it came from, or why it is missing.",
+        "One glance at the chosen rig's run. Mission: the first heading of its MISSION.md (else its rig.yaml summary). State: ● working, ▲ waiting on David (a seat is blocked on a prompt, or its newest handoff is an open item to him), ○ idle, ■ ended (OpenRig says stopped or archived; another status reads ■ not running), ◌ not reporting (machine asleep). Live step: its newest handoff. Ended with: REPORT.md's first line, else the last handoff. The grey text after each says where it came from, or why it is missing.",
     },
   ],
 };
