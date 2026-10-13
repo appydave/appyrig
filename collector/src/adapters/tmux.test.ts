@@ -22,7 +22,7 @@ describe('adapter: tmux stripAnsi', () => {
 describe('adapter: tmux', () => {
   it('capture is read-only and asks for ANSI text of one pane', () => {
     const args = capturePaneArgs('%3');
-    expect(args.slice(0, 3)).toEqual(['capture-pane', '-p', '-e']);
+    expect(args.slice(0, 4)).toEqual(['capture-pane', '-p', '-e', '-J']);
     expect(args).toContain('%3');
     expect(args.join(' ')).not.toMatch(/send-keys/);
   });
@@ -37,8 +37,23 @@ describe('adapter: tmux', () => {
       '',
     ].join('\n');
     expect(parsePanes(out)).toEqual([
-      { session: 'a', paneId: '%3', command: 'claude', cwd: '/work' },
-      { session: 'b', paneId: '%4', command: 'node', cwd: '/y' },
+      { session: 'a', paneId: '%3', command: 'claude', cwd: '/work', width: null },
+      { session: 'b', paneId: '%4', command: 'node', cwd: '/y', width: null },
+    ]);
+  });
+
+  it('F2 (r1 HIGH): reads the pane width when tmux gives it (7th field); 6 fields = unknown', () => {
+    const row = (...f: string[]) => f.join(FIELD_SEP);
+    expect(LIST_PANES_ARGS.at(-1)).toMatch(/#\{pane_width\}$/);
+    expect(
+      parsePanes(
+        [row('a', '%3', '1', '1', 'claude', '/w', '80'), row('b', '%4', '1', '1', 'x', '/y')].join(
+          '\n'
+        )
+      )
+    ).toEqual([
+      { session: 'a', paneId: '%3', command: 'claude', cwd: '/w', width: 80 },
+      { session: 'b', paneId: '%4', command: 'x', cwd: '/y', width: null },
     ]);
   });
 
@@ -78,6 +93,11 @@ describe('adapter: tmux', () => {
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.length).toBeLessThanOrEqual(TAIL_MAX_LINES);
     expect(lines.some((l) => l.includes('\u001b['))).toBe(true);
+  });
+
+  it('F2: drops the end-of-line padding a joined (-J) capture keeps, colours included', () => {
+    const raw = 'prompt >      \n\x1b[32mok\x1b[0m    \x1b[0m\n  indented stays';
+    expect(tailLines(raw)).toEqual(['prompt >', '\x1b[32mok\x1b[0m\x1b[0m', '  indented stays']);
   });
 
   it('guesses the runtime of a plain session from its command', () => {

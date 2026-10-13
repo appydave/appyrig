@@ -9,6 +9,7 @@ import {
   DB_HIDDEN_CELL,
   DB_ROWS_BYTES_MAX,
   DB_ROWS_MAX,
+  DB_SECRET_COLUMN,
   DbRowsPushSchema,
 } from '@appydave/shared';
 import { DbRowsReader, readAllTableRows } from './dbrows.js';
@@ -129,5 +130,39 @@ describe('B5 DbRowsReader', () => {
     expect(
       await new DbRowsReader('m2', '/nope/openrig.sqlite', () => new Date(60_000)).next()
     ).toBeNull();
+  });
+});
+
+describe('F2 (security #6): column names that look secret', () => {
+  it('hides auth, cookie, session id, bearer, oauth and env columns', () => {
+    for (const c of [
+      'auth',
+      'auth_header',
+      'authorization',
+      'session_cookie',
+      'bearer',
+      'oauth_state',
+      'env',
+      'env_json',
+      'environment',
+      'session_id',
+      'native_session_id_at_boot',
+      'resume_token',
+    ])
+      expect(DB_SECRET_COLUMN.test(c), c).toBe(true);
+  });
+
+  it('keeps the seat-name columns and ordinary words readable', () => {
+    for (const c of [
+      'source_session',
+      'destination_session',
+      'session_name',
+      'tmux_session',
+      'author',
+      'event',
+      'inventory',
+      'seat_session',
+    ])
+      expect(DB_SECRET_COLUMN.test(c), c).toBe(false);
   });
 });

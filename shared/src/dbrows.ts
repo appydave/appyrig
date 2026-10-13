@@ -28,8 +28,14 @@ export const DB_ROWS_BYTES_MAX = 600 * 1024;
 /**
  * Columns blanked whatever they hold (ruling, openrig-orch-m4): the redactor misses unprefixed
  * secrets, so a column whose NAME looks secret never leaves the collector.
+ *
+ * Fix-first F2 (security #6): also cookie, bearer, oauth, authorization anywhere in the name, and
+ * auth, env/environment and session id as a whole name part. Not "session" alone: OpenRig names its
+ * seats in 28 `*_session` columns (queue_items.source_session, …), which are the rows' whole point
+ * and not secrets; a session ID is a resume token, so it is hidden.
  */
-export const DB_SECRET_COLUMN = /token|key|password|secret|credential/i;
+export const DB_SECRET_COLUMN =
+  /token|key|password|secret|credential|cookie|bearer|oauth|authoriz|(?:^|[_-])(?:auth|env|environ|environment|session_?id)(?:[_-]|$)/i;
 export const DB_HIDDEN_CELL = '(hidden: column name looks secret)';
 /** Most rows one db.rows call returns. */
 export const DB_ROWS_PAGE_MAX = 100;

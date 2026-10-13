@@ -2,7 +2,7 @@ import { TAIL_MAX_LINES } from '@appydave/shared';
 import type { TmuxPane } from './types.js';
 
 /**
- * tmux adapter. Read-only: `list-panes` and `capture-pane -p -e`, never send-keys. Terminal text
+ * tmux adapter. Read-only: `list-panes` and `capture-pane -p -e -J`, never send-keys. Terminal text
  * comes from here and nowhere else (plan §0.1: never the transcript routes).
  */
 
@@ -23,11 +23,17 @@ export const LIST_PANES_ARGS = [
     '#{pane_active}',
     '#{pane_current_command}',
     '#{pane_current_path}',
+    // F2 (r1 HIGH): last, so recorded 6-field output still parses (width unknown).
+    '#{pane_width}',
   ].join(FIELD_SEP),
 ];
 
+/**
+ * `-J` (fix-first F2, security #4): joins lines the terminal wrapped, so a long secret reaches the
+ * redactor whole. Without it a 110-character token wrapped at 80 columns kept a 62-character tail.
+ */
 export function capturePaneArgs(paneId: string): string[] {
-  return ['capture-pane', '-p', '-e', '-t', paneId, '-S', `-${TAIL_MAX_LINES}`];
+  return ['capture-pane', '-p', '-e', '-J', '-t', paneId, '-S', `-${TAIL_MAX_LINES}`];
 }
 
 /** tmux prints this (exit 1) when no server is running: zero sessions, not a failure. */
@@ -47,28 +53,30 @@ export function parsePanes(stdout: string): TmuxPane[] {
     if (!line.trim()) continue;
     lines++;
     const fields = line.split(FIELD_SEP);
-    if (fields.length !== 6) continue;
-    const [session, paneId, windowActive, paneActive, command, cwd] = fields as [
+    if (fields.length !== 6 && fields.length !== 7) continue;
+    const [session, paneId, windowActive, paneActive, command, cwd, w] = fields as [
       string,
       string,
       string,
       string,
       string,
       string,
+      string | undefined,
     ];
+    const width = w !== undefined && /^\d+$/.test(w) ? Number(w) : null;
     if (!session || !/^%\d+$/.test(paneId)) continue;
     const active = windowActive === '1' && paneActive === '1';
     const prev = bySession.get(session);
     if (!prev || (active && !prev.active)) {
       bySession.set(session, {
-        pane: { session, paneId, command: command || null, cwd: cwd || null },
+        pane: { session, paneId, command: command || null, cwd: cwd || null, width },
         active,
       });
     }
   }
   if (lines > 0 && bySession.size === 0) {
     throw new Error(
-      `unparseable list-panes output (${lines} line(s), none with 6 fields): ${stdout.trim().slice(0, 120)}`
+      `unparseable list-panes output (${lines} line(s), none with 6 or 7 fields): ${stdout.trim().slice(0, 120)}`
     );
   }
   return [...bySession.values()].map((v) => v.pane);
@@ -88,8 +96,16 @@ export function stripAnsi(text: string): string {
 }
 
 /** Last TAIL_MAX_LINES lines, trailing blank lines dropped. */
+// Trailing spaces, also when only colour resets follow them.
+// eslint-disable-next-line no-control-regex
+const TRAILING_SPACES = / +((?:\x1b\[[0-9;]*m)*)$/;
+
 export function tailLines(raw: string): string[] {
-  const lines = raw.replace(/\r\n/g, '\n').split('\n');
+  // `-J` keeps the padding tmux holds at the end of each line; drop it, as a plain capture does.
+  const lines = raw
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.replace(TRAILING_SPACES, '$1'));
   const blank = (l: string) => stripAnsi(l).trim() === '';
   while (lines.length && blank(lines[lines.length - 1]!)) lines.pop();
   return lines.slice(-TAIL_MAX_LINES);

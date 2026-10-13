@@ -19,7 +19,7 @@ import type {
   TmuxPane,
   ViewerAgent,
 } from './adapters/index.js';
-import { redactDeep, redactString } from './redact.js';
+import { redactDeep, redactString, redactWrapped } from './redact.js';
 
 export interface BuilderConfig {
   machine: MachineIdentity;
@@ -234,7 +234,8 @@ export async function buildSnapshot(
     if (!pane) return;
     try {
       const raw = await sources.capture(pane.paneId);
-      seat.tail = { lines: tailLines(raw), ansi: true, capturedAt };
+      // F2 (QA HIGH-1): secrets a Claude pane hard-wrapped across rows, before the per-row redaction.
+      seat.tail = { lines: redactWrapped(tailLines(raw), pane.width), ansi: true, capturedAt };
     } catch {
       captureFailures.push(seat.id);
     }

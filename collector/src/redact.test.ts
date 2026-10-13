@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { REDACTED, redactDeep, redactString } from './redact.js';
+import { REDACTED, redactDeep, redactString, redactWrapped } from './redact.js';
 
 const SECRETS = {
   gho: 'gho_16C7e42F292c6912E7710c838347Ae178B4a',
@@ -147,5 +147,180 @@ describe('redaction of unprefixed secrets in message bodies', () => {
       'commit 3403b41 and ba75f89 accepted',
     ];
     for (const text of calm) expect(redactString(text), text).toBe(text);
+  });
+});
+
+describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', () => {
+  // Fake strings only, built so no real-looking secret sits in the source as one literal.
+  const tok110 = `sk-ant-oat01-${'Ab3dEf5hIj7lMn9pQr1tUv3xYz5'.repeat(4)}`.slice(0, 110);
+  const FIXTURES: Record<string, [string, string]> = {
+    google: ['maps api AIza' + 'SyB-x9Kq2Lm7Np3Rt_6Vw8Yz1Bc5Df0Gh2X', 'Rt_6Vw8'],
+    stripeRk: ['STRIPE=rk_' + 'live_51H8xYzAbCdEfGhIjKl', 'rk_live_51H8'],
+    stripeSk: ['use sk_' + 'live_4eC39HqLyjWDarjtT1zdp7dc now', 'sk_live_4eC3'],
+    stripeTest: ['sk_' + 'test_4eC39HqLyjWDarjtT1zdp7dc', 'sk_test_4eC3'],
+    npm: [
+      '//registry.npmjs.org/:_authToken npm_' + 'a1B2c3D4e5F6g7H8i9J0k1L2m3N4o5P6q7R8',
+      'npm_a1B2',
+    ],
+    slack: [
+      'curl -X POST https://hooks.slack.com/services/' +
+        'T0123ABCD/B0456EFGH/xYz123AbC456dEf789GhI0',
+      'xYz123AbC456',
+    ],
+    mysql: ['mysql -u root -p' + 'Sup3rS3cret! mydb', 'Sup3rS3cret'],
+    mysqldump: ['mysqldump -h db -u admin -p' + 'hunter2xyz shop > x.sql', 'hunter2xyz'],
+    urlNoUser: ['git clone https://:' + 'ghx9Secretpass@git.example.com/r.git', 'ghx9Secretpass'],
+  };
+
+  for (const [name, [text, leak]] of Object.entries(FIXTURES)) {
+    it(`redacts ${name}`, () => {
+      const out = redactString(text);
+      expect(out).toContain(REDACTED);
+      expect(out).not.toContain(leak);
+    });
+  }
+
+  it('a bare mysql -p (prompts for the password) and ordinary -p flags are left alone', () => {
+    expect(redactString('mysql -u root -p')).toBe('mysql -u root -p');
+    expect(redactString('mkdir -p build/out')).toBe('mkdir -p build/out');
+    expect(redactString('git log -p HEAD')).toBe('git log -p HEAD');
+  });
+
+  it('an ANSI colour code inside a token no longer hides it', () => {
+    const coloured = `export TOKEN_X=1 \x1b[33m${tok110.slice(0, 40)}\x1b[0m\x1b[1m${tok110.slice(40)}\x1b[0m`;
+    const out = redactString(coloured);
+    expect(out).toContain(REDACTED);
+    for (let i = 0; i + 12 <= tok110.length; i += 6)
+      expect(out).not.toContain(tok110.slice(i, i + 12));
+  });
+
+  it('a coloured line without a secret keeps its colours', () => {
+    const line = '\x1b[32m✓\x1b[0m 256 tests passed \x1b[2m(1.2s)\x1b[0m';
+    expect(redactString(line)).toBe(line);
+  });
+
+  it('the 110-char sk-ant token is caught whole once joined (capture-pane -J), and leaks 0 chars', () => {
+    const joined = `CLAUDE_CODE_OAUTH_TOKEN=${tok110}`;
+    const out = redactString(joined);
+    expect(out).toBe(`CLAUDE_CODE_OAUTH_TOKEN=${REDACTED}`);
+  });
+});
+
+describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', () => {
+  // A fake: 97 random characters (letters, digits, '-', '_'), made for this test only.
+  const body =
+    'riGp_58WAm-dX3a5IDnOdcdbWB2dC4_DSDC6Lc1mxLpQ2yMK_Ye9FZ1wUVl4nuYV-d8fNYvvDbzDZST6IaXqA2h9Uz0-T1SaQ';
+  const tok110 = `sk-ant-oat01-${body}`;
+  expect(tok110).toHaveLength(110);
+
+  /** Claude Code style: rows of `width`, each starting with a 2-space indent, hard newlines. */
+  const tuiWrap = (text: string, width: number): string[] => {
+    const rows: string[] = [];
+    for (let i = 0; i < text.length; i += width - 2) rows.push(`  ${text.slice(i, i + width - 2)}`);
+    return rows;
+  };
+  /** Longest run of the token's random body still on screen. */
+  const leak = (out: string) => {
+    let best = 0;
+    for (let i = 0; i < body.length; i++)
+      for (let j = body.length; j > i + best; j--)
+        if (out.includes(body.slice(i, j))) {
+          best = j - i;
+          break;
+        }
+    return best;
+  };
+  const FORMS: Record<string, string> = {
+    env: `export CLAUDE_CODE_OAUTH_TOKEN=${tok110}`,
+    json: `{"accessToken": "${tok110}", "expiresAt": 1791860924079}`,
+    bare: tok110,
+  };
+
+  for (const width of [80, 120])
+    for (const [form, text] of Object.entries(FORMS))
+      it(`${form} form at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
+        // A Claude pane draws full-width rules, so the widest row is the pane's width.
+        const rule = '─'.repeat(width);
+        const rows = [rule, '  Here is the file:', ...tuiWrap(text, width), '  That is all of it.'];
+        const out = redactWrapped(rows).map(redactString).join('\n');
+        expect(leak(out)).toBeLessThanOrEqual(2);
+        expect(out).toContain(REDACTED);
+        // Rows around the secret are untouched.
+        expect(out.startsWith(`${rule}\n  Here is the file:\n`)).toBe(true);
+        expect(out.endsWith('\n  That is all of it.')).toBe(true);
+      });
+
+  describe('QA F2 MEDIUM-1: long secrets wrap over many rows', () => {
+    // Fakes made for this test only: a 600-char JWT shape and a 300-char sk-ant key.
+    const jwt =
+      'eyJ-gXDxHxfhAqJ5qIaglUytpZPSyN0Pw9XJlokZDku._5Ipgj0_83JlmVphQuDe2Q3JWqnJlbfvmOiFac37Uo1EOjaMhzlYJEcz6GcUEFxvAiF859RgkrleHLNqU51K9hG6WD-SL7vsTAhzW1SXmJczlRvDu1nmyo2F9MtD96i-QbhH_BntefXEJYR0-c020bxMuuueD3IqlJV7T9KyXGV24b6uPQ9DgpeaCP22fv9_U3ySVprAcgJ16rN6-063K_YzOmAbYEaaawUjD_nM2cgFXFwLepA1XCSLFG4esiJ1McK697SZ5g9nlp3VRry5_Qmnkdv0XTn7Sb5DZ0_bQQYueUiNr447Aw9Dyr0SR5cj9-noXd0uSvSE8H_T5ePJp7-QccCqcptBJ6XRB8Dn9XfM7PSy3EShUK6pDHhDzxQJztecq_tOyQSmfCADUiDj9X2faSnBsV4lBkfHkpLUxZ5n2xtTBhi8M29BCr2lMb0uOfvWuINVLGGYNv16PbANjR.JvW7l1Ym1iZgCfgwmPEiVSAmKC_rPIiLKgs8oOgGis1lvc3RQo8M5j85RVPE9cLeFL_lgitf_rx0Apw3-Y6ZX';
+    const key =
+      'sk-ant-Q89r4RClQRPXdMtpqkor6qMNHQQrNQpGs6gP4Gow882VUYxj4x98JThHtqoagfsvAFugHkodWg_CsCSBob5WIUzfbkOdfo2W1mdqvpbgu-Xck7qKIdRPZUrfsm05J-IP6pn8C9ma5NHe7uxrv6dKcnPd9NzsOAAL_SaP1MxBinljO61ckBs2W6lgCrW73WWO-dzXTaQZGKoMO4r4b2yZ_iWhahn35faOGqBRMLZtkDafuFTjkduVrM7Vo3IkEHK17LXPdfHsjZkQszLKegYIwSl_lXWwkHARp61R2';
+    const longest = (secret: string, out: string) => {
+      let best = 0;
+      for (let i = 0; i < secret.length; i++)
+        for (let j = secret.length; j > i + best; j--)
+          if (out.includes(secret.slice(i, j))) {
+            best = j - i;
+            break;
+          }
+      return best;
+    };
+    for (const width of [80, 120])
+      for (const [name, text, secret] of [
+        ['600-char JWT', `token: ${jwt}`, jwt],
+        ['300-char key', `ANTHROPIC_API_KEY=${key}`, key],
+      ] as const)
+        it(`${name} at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
+          const rows = ['─'.repeat(width), ...tuiWrap(text, width), '  Next line of prose.'];
+          const out = redactWrapped(rows).map(redactString).join('\n');
+          expect(secret.length).toBeGreaterThanOrEqual(300);
+          expect(longest(secret, out)).toBeLessThanOrEqual(2);
+          expect(out.endsWith('\n  Next line of prose.')).toBe(true);
+        });
+  });
+
+  it('r1 HIGH (probe A): a row wider than the pane earlier in the tail (-J) does not switch the step off', () => {
+    // A rule drawn when the pane was 200 wide, re-joined by -J, then the token in an 80-col pane.
+    const rows = [
+      '─'.repeat(200),
+      '$ a pre-launch shell line '.repeat(5),
+      ...tuiWrap(FORMS.env!, 80),
+      '  Done.',
+    ];
+    // Without the pane width the widest row (200) says no 80-col row is full: the tail leaks.
+    expect(leak(redactWrapped(rows).map(redactString).join('\n'))).toBeGreaterThan(40);
+    // With it (#{pane_width}), nothing past chance.
+    const out = redactWrapped(rows, 80).map(redactString).join('\n');
+    expect(leak(out)).toBeLessThanOrEqual(2);
+    expect(out.endsWith('\n  Done.')).toBe(true);
+  });
+
+  it('a pane width wider than any row never makes a short row count as full', () => {
+    const rows = ['  short line ending in tokenish', '  continuationword here'];
+    expect(redactWrapped(rows, 200)).toEqual(rows);
+  });
+
+  it('without the cross-row step the second row leaks (the bug)', () => {
+    const rows = tuiWrap(FORMS.env!, 80);
+    expect(leak(rows.map(redactString).join('\n'))).toBeGreaterThan(40);
+  });
+
+  it('wrapped prose, paths and long words that join into nothing secret are left exactly as they were', () => {
+    const rows = [
+      '  The collector reads ~/.claude/projects/-Users-davidcruwys-dev-ad-apps-appyrig-worktrees',
+      '  /v15-loadout/40ad7aef.jsonl and pushes it to the hub every three seconds as before.',
+      '  ✓ 256 tests passed',
+      '  Supercalifragilisticexpialidocious',
+      '  wordsalad continues here',
+    ];
+    expect(redactWrapped(rows)).toEqual(rows);
+  });
+
+  it('a coloured wrapped token is caught too, and only the rows it touches lose colour', () => {
+    const rows = tuiWrap(FORMS.env!, 80).map((r) => `\x1b[33m${r}\x1b[0m`);
+    const out = redactWrapped([...rows, '\x1b[32m✓ done\x1b[0m']).map(redactString);
+    expect(leak(out.join('\n'))).toBeLessThanOrEqual(2);
+    expect(out.at(-1)).toBe('\x1b[32m✓ done\x1b[0m');
   });
 });

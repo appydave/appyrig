@@ -25,6 +25,14 @@ const PATTERNS: RegExp[] = [
   /\b[A-Za-z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD|PASSWD)[A-Za-z0-9_]*["']?\s*[:=]\s*["']?[^\s"'<>,;]{6,}/gi,
   // password: value
   /\bpass(?:word|wd)\s*[:=]\s*["']?[^\s"']{4,}/gi,
+  // Fix-first F2 (security #5): Google API keys, Stripe secret and restricted keys, npm tokens
+  /\bAIza[0-9A-Za-z_-]{20,}/g,
+  /\b[rs]k_(?:live|test)_[A-Za-z0-9]{10,}/g,
+  /\bnpm_[A-Za-z0-9]{20,}/g,
+  // Slack webhook URLs: the path after /services/ (or /workflows/, /triggers/) is the secret
+  /(?<=hooks\.slack\.com\/(?:services|workflows|triggers)\/)[A-Za-z0-9/_-]{8,}/g,
+  // mysql -pPASSWORD (the password glued to -p; a bare -p prompts and holds nothing)
+  /(?<=\bmysql(?:dump|admin|sh)?\b[^\n]*?\s-p)[^\s'"]+/g,
   // JWTs
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g,
   // any hex run of 40+ characters (hashes, long keys)
@@ -41,7 +49,8 @@ const PRIVATE_KEY_BLOCK =
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g;
 
 // user:password@ inside a URL; the user stays, the password goes
-const URL_CREDENTIALS = /(?<=:\/\/[^\s/:@]{1,64}:)[^\s/@]+(?=@)/g;
+// F2: the user may be empty (https://:pass@host).
+const URL_CREDENTIALS = /(?<=:\/\/[^\s/:@]{0,64}:)[^\s/@]+(?=@)/g;
 
 // HTTP Basic credentials
 // Only with an Authorization header, or when the value is credential-shaped (has a digit): the
@@ -74,7 +83,23 @@ const looksLikeBareSecret = (t: string): boolean =>
   (t.match(/\//g)?.length ?? 0) <= 6 &&
   entropy(t) >= 4.3;
 
+/** CSI and OSC escape sequences (colours, cursor moves, hyperlinks), as tmux `capture-pane -e` emits. */
+// eslint-disable-next-line no-control-regex
+const ANSI = /\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])/g;
+
+/**
+ * Fix-first F2 (security #5): a colour code inside a secret splits it, so matching runs on the text
+ * with escapes stripped. A line that held a secret goes out plain (it loses its colours); every other
+ * line keeps them.
+ */
 export function redactString(input: string): string {
+  if (!input.includes('\x1b')) return redactPlain(input);
+  const plain = input.replace(ANSI, '');
+  const out = redactPlain(plain);
+  return out === plain ? input : out;
+}
+
+function redactPlain(input: string): string {
   // The key block first: the line-level patterns below would otherwise chew its header and leave the body.
   let out = input.replace(PRIVATE_KEY_BLOCK, REDACTED);
   for (const re of PATTERNS) out = out.replace(re, REDACTED);
@@ -87,6 +112,94 @@ export function redactString(input: string): string {
     value === REDACTED || label.endsWith(REDACTED) ? _m : `${label}${REDACTED}`
   );
   out = out.replace(BARE_SECRET, (m) => (looksLikeBareSecret(m) ? REDACTED : m));
+  return out;
+}
+
+// A row ending in an unfinished token-shaped run, and a row starting (after its indent) with one.
+const RUN_CHAR = '[A-Za-z0-9_\\-+/=.~]';
+const ENDS_IN_RUN = new RegExp(`${RUN_CHAR}{6,}$`);
+const STARTS_WITH_RUN = new RegExp(`^${RUN_CHAR}{4,}`);
+/**
+ * Most rows one wrapped run is followed across. Only a backstop: a run continues only while each row
+ * is full width and carries on into the next, so prose stops it at once. QA F2 MEDIUM-1: 4 rows let
+ * a 600-char JWT leak its later rows; 40 rows covers ~3,000 chars at 80 columns.
+ */
+export const WRAP_MAX_ROWS = 40;
+/** Columns short of the widest row that still count as a full (wrapped) row. */
+export const WRAP_SLACK = 6;
+
+/**
+ * Fix-first F2 (QA HIGH-1, ruling 2026-10-13): Claude Code draws its own UI and breaks a long line
+ * into separate rows with hard newlines, so `capture-pane -J` has nothing to join and a token's
+ * second row (no prefix) slipped past the per-row patterns. Where a row ends in an unfinished
+ * token-shaped run and the next row, indent stripped, carries it on, the run is redacted joined;
+ * each row then gets back its own part with the secret cut out. Rows touched lose their colours.
+ * Runs that join into nothing secret are left exactly as they were.
+ */
+export function redactWrapped(lines: string[], paneWidth?: number | null): string[] {
+  const out = [...lines];
+  const plain = lines.map((l) => (l.includes('\x1b') ? l.replace(ANSI, '') : l));
+  // Only a full row can have been wrapped. The pane's own width says what full is (r1 HIGH: with
+  // -J a tail holds rows wider than the pane, e.g. a rule drawn when it was wider, so the widest row
+  // overstated it and switched this step off). Without the width the widest row stands in, never
+  // above the pane. A few columns of slack cover the TUI's right margin.
+  const widest = Math.max(0, ...plain.map((l) => l.trimEnd().length));
+  const full = (paneWidth ? Math.min(paneWidth, widest) : widest) - WRAP_SLACK;
+  let i = 0;
+  while (i < lines.length) {
+    // Rows i..end form one chain while each row ends in a run the next row continues.
+    let end = i;
+    while (
+      end + 1 < lines.length &&
+      end - i + 1 < WRAP_MAX_ROWS &&
+      plain[end]!.trimEnd().length >= full &&
+      ENDS_IN_RUN.test(plain[end]!.trimEnd()) &&
+      STARTS_WITH_RUN.test(plain[end + 1]!.trimStart())
+    )
+      end++;
+    if (end === i) {
+      i++;
+      continue;
+    }
+    // Join: the first row trimmed at its end, continuation rows at their start (their indent kept aside).
+    const parts: { indent: string; text: string; start: number }[] = [];
+    let joined = '';
+    for (let j = i; j <= end; j++) {
+      let row = plain[j]!.trimEnd();
+      let indent = '';
+      if (j > i) {
+        indent = row.slice(0, row.length - row.trimStart().length);
+        row = row.trimStart();
+      }
+      parts.push({ indent, text: row, start: joined.length });
+      joined += row;
+    }
+    const red = redactPlain(joined);
+    if (red !== joined) {
+      // The changed span: common prefix and suffix of before and after.
+      let a = 0;
+      while (a < joined.length && a < red.length && joined[a] === red[a]) a++;
+      let b = 0;
+      while (
+        b < joined.length - a &&
+        b < red.length - a &&
+        joined[joined.length - 1 - b] === red[red.length - 1 - b]
+      )
+        b++;
+      const spanEnd = joined.length - b;
+      const crosses = parts.some((p, k) => k > 0 && p.start > a && p.start < spanEnd);
+      if (crosses) {
+        parts.forEach((p, k) => {
+          const s = Math.max(a, p.start);
+          const e = Math.min(spanEnd, p.start + p.text.length);
+          if (s >= e) return; // this row is outside the secret: untouched
+          const local = p.text.slice(0, s - p.start) + REDACTED + p.text.slice(e - p.start);
+          out[i + k] = redactPlain(p.indent + local);
+        });
+      }
+    }
+    i = end + 1;
+  }
   return out;
 }
 
