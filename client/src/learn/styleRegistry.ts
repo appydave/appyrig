@@ -566,6 +566,38 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     screens: ['map', 'flow', 'timeline'],
     tokens: ['.follow-step[aria-current=true]'],
   },
+  // ── Run card R1 ──
+  {
+    id: 'run-working',
+    look: 'Green ● WORKING in the run card',
+    means: 'Run card: a seat of this rig is mid-turn now (the line after it names them).',
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.run-word[data-word=working]'],
+  },
+  {
+    id: 'run-waiting',
+    look: 'Amber ▲ WAITING ON DAVID in the run card',
+    means:
+      "Run card: a seat is blocked on a prompt (named, with its reason), or the rig's newest handoff went to David's mailbox and is still open.",
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.run-word[data-word=waiting]'],
+  },
+  {
+    id: 'run-ended',
+    look: 'Brown-grey ■ ENDED in the run card',
+    means:
+      'Run card: OpenRig says the rig is stopped. "Ended with" shows its REPORT.md first line, else its last handoff.',
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.run-word[data-word=ended]'],
+  },
+  {
+    id: 'run-asleep',
+    look: 'Grey ◌ NOT REPORTING in the run card',
+    means:
+      "Run card: the rig's machine is asleep, so its state now is unknown; the line says what it was at the last report.",
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.run-word[data-word=asleep]'],
+  },
 ];
 
 /**
