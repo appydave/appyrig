@@ -250,6 +250,36 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
         expect(out.endsWith('\n  That is all of it.')).toBe(true);
       });
 
+  describe('QA F2 MEDIUM-1: long secrets wrap over many rows', () => {
+    // Fakes made for this test only: a 600-char JWT shape and a 300-char sk-ant key.
+    const jwt =
+      'eyJ-gXDxHxfhAqJ5qIaglUytpZPSyN0Pw9XJlokZDku._5Ipgj0_83JlmVphQuDe2Q3JWqnJlbfvmOiFac37Uo1EOjaMhzlYJEcz6GcUEFxvAiF859RgkrleHLNqU51K9hG6WD-SL7vsTAhzW1SXmJczlRvDu1nmyo2F9MtD96i-QbhH_BntefXEJYR0-c020bxMuuueD3IqlJV7T9KyXGV24b6uPQ9DgpeaCP22fv9_U3ySVprAcgJ16rN6-063K_YzOmAbYEaaawUjD_nM2cgFXFwLepA1XCSLFG4esiJ1McK697SZ5g9nlp3VRry5_Qmnkdv0XTn7Sb5DZ0_bQQYueUiNr447Aw9Dyr0SR5cj9-noXd0uSvSE8H_T5ePJp7-QccCqcptBJ6XRB8Dn9XfM7PSy3EShUK6pDHhDzxQJztecq_tOyQSmfCADUiDj9X2faSnBsV4lBkfHkpLUxZ5n2xtTBhi8M29BCr2lMb0uOfvWuINVLGGYNv16PbANjR.JvW7l1Ym1iZgCfgwmPEiVSAmKC_rPIiLKgs8oOgGis1lvc3RQo8M5j85RVPE9cLeFL_lgitf_rx0Apw3-Y6ZX';
+    const key =
+      'sk-ant-Q89r4RClQRPXdMtpqkor6qMNHQQrNQpGs6gP4Gow882VUYxj4x98JThHtqoagfsvAFugHkodWg_CsCSBob5WIUzfbkOdfo2W1mdqvpbgu-Xck7qKIdRPZUrfsm05J-IP6pn8C9ma5NHe7uxrv6dKcnPd9NzsOAAL_SaP1MxBinljO61ckBs2W6lgCrW73WWO-dzXTaQZGKoMO4r4b2yZ_iWhahn35faOGqBRMLZtkDafuFTjkduVrM7Vo3IkEHK17LXPdfHsjZkQszLKegYIwSl_lXWwkHARp61R2';
+    const longest = (secret: string, out: string) => {
+      let best = 0;
+      for (let i = 0; i < secret.length; i++)
+        for (let j = secret.length; j > i + best; j--)
+          if (out.includes(secret.slice(i, j))) {
+            best = j - i;
+            break;
+          }
+      return best;
+    };
+    for (const width of [80, 120])
+      for (const [name, text, secret] of [
+        ['600-char JWT', `token: ${jwt}`, jwt],
+        ['300-char key', `ANTHROPIC_API_KEY=${key}`, key],
+      ] as const)
+        it(`${name} at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
+          const rows = ['─'.repeat(width), ...tuiWrap(text, width), '  Next line of prose.'];
+          const out = redactWrapped(rows).map(redactString).join('\n');
+          expect(secret.length).toBeGreaterThanOrEqual(300);
+          expect(longest(secret, out)).toBeLessThanOrEqual(2);
+          expect(out.endsWith('\n  Next line of prose.')).toBe(true);
+        });
+  });
+
   it('without the cross-row step the second row leaks (the bug)', () => {
     const rows = tuiWrap(FORMS.env!, 80);
     expect(leak(rows.map(redactString).join('\n'))).toBeGreaterThan(40);

@@ -119,8 +119,12 @@ function redactPlain(input: string): string {
 const RUN_CHAR = '[A-Za-z0-9_\\-+/=.~]';
 const ENDS_IN_RUN = new RegExp(`${RUN_CHAR}{6,}$`);
 const STARTS_WITH_RUN = new RegExp(`^${RUN_CHAR}{4,}`);
-/** Most rows one wrapped run is followed across (a 110-char token at 40 columns spans 3–4). */
-export const WRAP_MAX_ROWS = 4;
+/**
+ * Most rows one wrapped run is followed across. Only a backstop: a run continues only while each row
+ * is full width and carries on into the next, so prose stops it at once. QA F2 MEDIUM-1: 4 rows let
+ * a 600-char JWT leak its later rows; 40 rows covers ~3,000 chars at 80 columns.
+ */
+export const WRAP_MAX_ROWS = 40;
 /** Columns short of the widest row that still count as a full (wrapped) row. */
 export const WRAP_SLACK = 6;
 
