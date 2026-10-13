@@ -1,4 +1,4 @@
-import { ASLEEP_AFTER_MS, type CallAnswer } from '@appydave/shared';
+import { ASLEEP_AFTER_MS, type AppConfig, type CallAnswer } from '@appydave/shared';
 import { authorize } from './vendor/capability.js';
 import { CapabilityRefusal } from './vendor/failure-codes.js';
 import { VERB_REGISTRY } from './verbs.js';
@@ -31,6 +31,8 @@ export interface CoreOptions {
   asleepAfterMs?: number;
   /** Told about handler faults (answered as `internal`). */
   onFault?: (verb: string, err: unknown) => void;
+  /** AppyRig's own config, read per call (run card R2). */
+  config?: () => AppConfig;
 }
 
 const refuse = (failureMode: string, message: string, details?: unknown): CallAnswer => ({
@@ -81,6 +83,7 @@ export function createCore(opts: CoreOptions): Core {
           principal,
           verbCount: names.length,
           dryRun: callOpts.dryRun === true,
+          config: opts.config,
         });
         const out = verb.contract.output.safeParse(value);
         if (!out.success) {

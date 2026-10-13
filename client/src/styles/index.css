@@ -4143,3 +4143,36 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
 .run-word[data-word='asleep'] {
   color: var(--ar-asleep-ink);
 }
+.run-waiting ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.run-waiting li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.run-act code {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  background: var(--ar-surface);
+  border: 1px solid var(--ar-line-soft);
+  border-radius: 4px;
+  padding: 1px 6px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.copy-btn {
+  margin-left: 6px;
+  min-height: 24px;
+  padding: 1px 8px;
+}
+.copy-btn:focus-visible,
+.run-act a:focus-visible {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+}

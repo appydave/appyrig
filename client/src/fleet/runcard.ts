@@ -41,6 +41,8 @@ export interface RunCardModel {
   live: RunStep | null;
   /** Open items a seat of this rig addressed to David's mailbox (human@…), newest first. */
   toDavid: QueueItem[];
+  /** OpenRig's own stuck-sweep notices left out of the live step and toDavid (counted, not shown). */
+  sweeps: number;
 }
 
 const firstLine = (s: string | null) => (s ?? '').split('\n')[0]!.trim();
@@ -59,7 +61,12 @@ export const stepText = (q: QueueItem) =>
 export function runCard(fm: FleetMachine, rig: string, now: number): RunCardModel | null {
   const summary = fm.snapshot.rigs.find((r) => r.name === rig);
   if (!summary) return null;
-  const items = [...rigQueue(fm, rig)].sort(byCreated);
+  // OpenRig's stuck sweep files its own notices as queue items (tag stuck-sweep-finding); they are
+  // about the queue, not the run's work, so the live step and David's list leave them out.
+  const all = [...rigQueue(fm, rig)].sort(byCreated);
+  const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep'));
+  const items = all.filter((q) => !isSweep(q));
+  const sweeps = all.length - items.length;
   const newest = items[items.length - 1] ?? null;
   const fromRig = (q: QueueItem) => endpointRig(fm, q.source) === rig;
   const toDavid = items
@@ -104,7 +111,12 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
       why: 'Running, no seat mid-turn, and its newest handoff is not an open item to David.',
     };
   }
-  return { state, live: newest ? { item: newest, text: stepText(newest) } : null, toDavid };
+  return {
+    state,
+    live: newest ? { item: newest, text: stepText(newest) } : null,
+    toDavid,
+    sweeps,
+  };
 }
 
 function ago(now: number, then: number): string {

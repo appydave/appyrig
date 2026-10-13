@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { FleetMachine, RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
+import WaitingOnDavid from './WaitingOnDavid.js';
 import {
   RUN_WORD,
   clip,
@@ -164,6 +165,9 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
                   <span>{last.text}</span>{' '}
                   <span className="run-from">
                     {clock(last.item.createdAt)} · {last.item.state} · the newest handoff
+                    {model.sweeps > 0
+                      ? ` (OpenRig's ${model.sweeps} stuck-sweep notices left out)`
+                      : ''}
                   </span>
                 </>
               ) : (
@@ -172,6 +176,10 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
             </dd>
           </>
         )}
+        <dt>Waiting on David</dt>
+        <dd data-testid="run-waiting-row">
+          <WaitingOnDavid machine={machine} rig={rig} toDavid={model.toDavid} socket={socket} />
+        </dd>
       </dl>
     </section>
   );
