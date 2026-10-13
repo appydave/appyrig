@@ -4,6 +4,7 @@ import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import WaitingOnDavid from './WaitingOnDavid.js';
 import PlanStrip from './PlanStrip.js';
+import RunOutputs from './RunOutputs.js';
 import { changeOrders, planIn, type PlanSource } from '../fleet/plan.js';
 import { rigQueue } from '../fleet/views.js';
 import {
@@ -220,6 +221,10 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
         <dt>Waiting on David</dt>
         <dd data-testid="run-waiting-row">
           <WaitingOnDavid machine={machine} rig={rig} toDavid={model.toDavid} socket={socket} />
+        </dd>
+        <dt>Outputs</dt>
+        <dd data-testid="run-outputs-row">
+          <RunOutputs machineId={machineId} rig={rig} files={files} socket={socket} />
         </dd>
       </dl>
     </section>

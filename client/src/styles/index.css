@@ -4209,3 +4209,15 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
   font-size: 10px;
   text-transform: uppercase;
 }
+/* Run card R4: outputs */
+.run-outputs p {
+  margin: 0 0 2px;
+}
+.run-outputs code {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+}
+.run-outputs a:focus-visible {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+}

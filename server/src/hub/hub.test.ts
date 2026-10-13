@@ -993,3 +993,72 @@ describe('run card R2 — rig.waiting over the hub', () => {
     ).toMatchObject({ ok: true, value: { ssh: null, gates: [] } });
   });
 });
+
+describe('run card R4 — rig.outputs over the hub', () => {
+  it('names commits and FliStudio ids from the rig’s handoffs, never a qitem id; newest first', async () => {
+    const h = await start();
+    const snap = loadSnapshot('roamy');
+    const rig = snap.rigs[0]!.name;
+    const at = (m: number) => new Date(Date.UTC(2026, 9, 13, 5, m)).toISOString();
+    const item = (id: string, m: number, summary: string) => ({
+      id,
+      source: `build@${rig}`,
+      destination: `qa@${rig}`,
+      state: 'done',
+      priority: null,
+      tags: [],
+      summary,
+      createdAt: at(m),
+      updatedAt: at(m),
+    });
+    const queue = [
+      item('q1', 1, 'R1 at 1e48236 for QA; see qitem-20261011150245-a1b2c3d4e5'),
+      item('q2', 2, 'R1 fold 2f20b43 (was 1e48236), resource r_03fbe6e76e added'),
+      item('q3', 3, 'branch pushed at bdf1d05, gate g_8334a98162 open'),
+      item('q4', 4, 'words only: deadbeef is not a sha, nor 1234567, nor feedface'),
+      { ...item('q5', 5, 'other rig commit 9999abc'), source: 'x@else', destination: 'y@else' },
+    ];
+    const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(c, { ...snap, queue });
+    await new Promise<{ ok: boolean }>((resolve) =>
+      c.timeout(2_000).emit(
+        'collector:handoffs',
+        {
+          machineId: 'roamy',
+          collectedAt: at(6),
+          items: [
+            {
+              id: 'q3',
+              body: 'Gate: http://100.82.235.39:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162#social',
+              truncated: false,
+            },
+          ],
+        },
+        (err: unknown, ack: never) => resolve(err ? { ok: false } : ack)
+      )
+    );
+    const out = h.hub.core.call('cli', 'rig.outputs', { machine: 'roamy', rig }) as {
+      ok: boolean;
+      value: {
+        commits: { sha: string; itemId: string; mentions: number }[];
+        flistudio: { id: string; kind: string; link: string | null }[];
+        scanned: number;
+      };
+    };
+    expect(out.ok).toBe(true);
+    expect(out.value.commits.map((x) => [x.sha, x.itemId, x.mentions])).toEqual([
+      ['bdf1d05', 'q3', 1],
+      ['1e48236', 'q2', 2],
+      ['2f20b43', 'q2', 1],
+    ]);
+    expect(out.value.flistudio).toEqual([
+      expect.objectContaining({
+        id: 'g_8334a98162',
+        kind: 'gate',
+        link: 'http://100.82.235.39:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162#social',
+      }),
+      expect.objectContaining({ id: 'r_03fbe6e76e', kind: 'resource', link: null }),
+    ]);
+    expect(out.value.scanned).toBe(4);
+  });
+});

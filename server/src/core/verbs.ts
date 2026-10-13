@@ -25,6 +25,9 @@ import {
   RigEntryOutputSchema,
   RigWaitingInputSchema,
   RigWaitingOutputSchema,
+  RigOutputsInputSchema,
+  RigOutputsOutputSchema,
+  type RigOutputsOutput,
   type RigGate,
   type RigWaitingOutput,
   type AppConfig,
@@ -278,6 +281,93 @@ function rigWaiting(
     rig,
     ssh,
     gates,
+    scanned: items.length,
+    bodiesMissing,
+  };
+}
+
+/** The rig's handoffs (either end in the rig; David's mailbox is no rig), oldest first. */
+function rigItems(m: FleetMachine, rig: string) {
+  const seatRig = new Map(m.snapshot.seats.map((s) => [s.id, s.rig]));
+  const inRig = (raw: string | null) =>
+    !!raw && raw.split('@')[0] !== 'human' && (seatRig.get(raw) ?? raw.split('@')[1]) === rig;
+  return m.snapshot.queue
+    .filter((q) => inRig(q.source) || inRig(q.destination))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+const SHA = /(?<![\w/.-])([0-9a-f]{7,10})(?![\w-])/g;
+const FLI_ID = /(?<![\w-])([rg]_[0-9a-f]{10})(?![\w-])/g;
+
+/** Run card R4: commits and FliStudio ids named in the rig's handoffs (see 'rig.outputs'). */
+function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputsOutput {
+  const items = rigItems(m, rig);
+  type Named = {
+    itemId: string;
+    at: string;
+    from: string | null;
+    to: string | null;
+    context: string;
+    mentions: number;
+  };
+  const commits = new Map<string, Named>();
+  const fli = new Map<string, Named & { link: string | null }>();
+  let bodiesMissing = 0;
+  for (const q of items) {
+    const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
+    if (body === null) bodiesMissing += 1;
+    const text = `${q.summary ?? ''}\n${body ?? ''}`;
+    const near = (at: number) =>
+      text
+        .slice(Math.max(0, at - 50), at + 60)
+        .replace(/\s+/g, ' ')
+        .trim();
+    const seen = new Set<string>();
+    const note = (map: Map<string, Named>, key: string, at: number) => {
+      if (seen.has(key)) return;
+      seen.add(key);
+      const prev = map.get(key);
+      map.set(key, {
+        ...(prev ?? {}),
+        itemId: q.id,
+        at: q.createdAt,
+        from: q.source,
+        to: q.destination,
+        context: near(at),
+        mentions: (prev?.mentions ?? 0) + 1,
+      } as Named);
+    };
+    for (const hit of text.matchAll(SHA)) {
+      const sha = hit[1]!;
+      if (/\d/.test(sha) && /[a-f]/.test(sha)) note(commits, sha, hit.index ?? 0);
+    }
+    for (const hit of text.matchAll(FLI_ID)) {
+      const id = hit[1]!;
+      note(fli as Map<string, Named>, id, hit.index ?? 0);
+      const url = text.match(
+        new RegExp(`https?:\\/\\/[^\\s"'<>)\\]]*(?:gate|resource)=${id}[^\\s"'<>)\\]]*`, 'g')
+      );
+      const f = fli.get(id)!;
+      const pick = (url ?? []).find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? url?.[0];
+      if (pick) f.link = pick.replace(/\\n.*$/, '');
+      else f.link ??= null;
+    }
+  }
+  // Newest first; in one handoff, the most-named first.
+  const newest = <T extends { at: string; mentions: number }>(xs: T[]) =>
+    xs.sort((a, b) => b.at.localeCompare(a.at) || b.mentions - a.mentions);
+  return {
+    machine: m.machine.id,
+    rig,
+    commits: newest([...commits].map(([sha, n]) => ({ sha, ...n }))).slice(0, 20),
+    flistudio: newest(
+      [...fli].map(([id, n]) => ({
+        id,
+        kind: id.startsWith('g_') ? ('gate' as const) : ('resource' as const),
+        ...n,
+        link: n.link ?? null,
+      }))
+    ).slice(0, 40),
     scanned: items.length,
     bodiesMissing,
   };
@@ -775,6 +865,24 @@ const VERB_SET = {
         );
       }
       return rigWaiting(m!, input.rig, ctx.store, ctx.config?.() ?? {});
+    }
+  ),
+
+  'rig.outputs': query(
+    "Run card R4, read-only: what a run produced that its handoffs name. commits: commit ids (7-10 hex with a digit and a letter, never part of a longer token such as a qitem id) in the rig's handoff summaries and messages; flistudio: FliStudio resource (r_) and gate (g_) ids, with a link only when a handoff carried one. Each names the newest handoff that mentions it, the words around it, and how many handoffs do. The rig's files (REPORT, DEBRIEF, LEARNED) are listed by rig.files.",
+    RigOutputsInputSchema,
+    RigOutputsOutputSchema,
+    RIG_NOT_FOUND,
+    (input, ctx): RigOutputsOutput => {
+      const [m] = machinesOf(ctx, input.machine);
+      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          { machine: input.machine, rig: input.rig }
+        );
+      }
+      return rigOutputs(m!, input.rig, ctx.store);
     }
   ),
 

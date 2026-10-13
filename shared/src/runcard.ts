@@ -44,3 +44,47 @@ export const RigWaitingOutputSchema = z.strictObject({
   bodiesMissing: z.number().int().nonnegative(),
 });
 export type RigWaitingOutput = z.infer<typeof RigWaitingOutputSchema>;
+
+/**
+ * Run card R4: what a run produced that its handoffs name. The hub scans the rig's handoff
+ * messages it holds for commit ids (7–10 lower-case hex with a digit and a letter, not inside a
+ * longer token such as a qitem id) and FliStudio ids (r_ resources, g_ gates). Each says where it
+ * was named. Files (REPORT, DEBRIEF, LEARNED) come from rig.files, not from here.
+ */
+export const RigOutputsInputSchema = RigWaitingInputSchema;
+export type RigOutputsInput = z.infer<typeof RigOutputsInputSchema>;
+
+const NamedInSchema = z.strictObject({
+  /** The newest handoff that names it. */
+  itemId: z.string(),
+  at: isoDate,
+  from: z.string().nullable(),
+  to: z.string().nullable(),
+  /** The words around it in that handoff. */
+  context: z.string(),
+  /** How many of the rig's handoffs name it. */
+  mentions: z.number().int().positive(),
+});
+
+export const RigCommitSchema = NamedInSchema.extend({ sha: z.string().regex(/^[0-9a-f]{7,10}$/) });
+export type RigCommit = z.infer<typeof RigCommitSchema>;
+
+export const RigFliIdSchema = NamedInSchema.extend({
+  id: z.string().regex(/^[rg]_[0-9a-f]{10}$/),
+  kind: z.enum(['resource', 'gate']),
+  /** A FliStudio link a handoff carried for it; null: none did. */
+  link: z.string().nullable(),
+});
+export type RigFliId = z.infer<typeof RigFliIdSchema>;
+
+export const RigOutputsOutputSchema = z.strictObject({
+  machine: MachineIdentitySchema.shape.id,
+  rig: z.string(),
+  /** Newest first, at most 20. */
+  commits: z.array(RigCommitSchema),
+  /** Newest first, at most 40. */
+  flistudio: z.array(RigFliIdSchema),
+  scanned: z.number().int().nonnegative(),
+  bodiesMissing: z.number().int().nonnegative(),
+});
+export type RigOutputsOutput = z.infer<typeof RigOutputsOutputSchema>;
