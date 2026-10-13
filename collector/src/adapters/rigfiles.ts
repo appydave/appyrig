@@ -1,5 +1,5 @@
 import { lstat, open, readdir, realpath } from 'node:fs/promises';
-import { dirname, join, sep } from 'node:path';
+import { basename, dirname, join, sep } from 'node:path';
 import {
   RIG_FILES_CHUNK_BYTES,
   RIG_FILES_MAX,
@@ -8,7 +8,7 @@ import {
   type RigFilesPush,
 } from '@appydave/shared';
 import { redactString } from '../redact.js';
-import type { SpecInfo } from './specs.js';
+import { specVariant, type SpecInfo } from './specs.js';
 
 /**
  * v1.4 · S7: which of a rig's files the collector will ever read, and the reading of them.
@@ -35,6 +35,25 @@ const SPEC_NAMES = new Set([
 const MISSION_NAMES = new Set(['MISSION.md', 'CULTURE.md', 'brief.md', 'REPORT.md', 'DEBRIEF.md']);
 const LEARNED = /^LEARNED[A-Za-z0-9._-]*\.md$/;
 const EXT = /\.(?:yaml|yml|md)$/;
+/** Run card R3: a run's own mission or report (`MISSION-d10.md`, `MISSION-d10-change-01-x.md`). */
+const VARIANT_DOC = /^(?:MISSION|REPORT)-([A-Za-z0-9._-]+)\.md$/;
+/** Run card R3: a brief named for its batch (`views-brief.md`, `run-card-brief.md`). */
+const BRIEF = /^[A-Za-z0-9._-]+-brief\.md$/;
+/** Under the cap, the run card's sources are kept first; what drops is the least needed. */
+const keepRank = (name: string): number =>
+  /^rig(?:-.+)?\.ya?ml$/.test(name)
+    ? 0
+    : /^MISSION/.test(name)
+      ? 1
+      : /brief\.md$/.test(name)
+        ? 2
+        : /^REPORT/.test(name)
+          ? 3
+          : name === 'CULTURE.md'
+            ? 4
+            : name === 'DEBRIEF.md'
+              ? 5
+              : 6;
 
 export interface Candidate {
   id: string;
@@ -47,9 +66,30 @@ export interface Candidate {
 const isUnder = (child: string, parent: string): boolean =>
   child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 
-const allowedName = (scope: 'spec' | 'mission', name: string): boolean =>
-  EXT.test(name) &&
-  ((scope === 'spec' ? SPEC_NAMES : MISSION_NAMES).has(name) || LEARNED.test(name));
+/**
+ * Run card R3 adds, for a variant spec `rig-<v>.yaml`: that file itself (and not the base rig's
+ * rig.yaml beside it), and only its own `MISSION-<v>…` / `REPORT-<v>…`, never the base run's
+ * MISSION.md / REPORT.md. A base rig.yaml leaves out the docs of a sibling variant spec.
+ * `<batch>-brief.md` is allowed in both folders.
+ */
+function allowedName(
+  scope: 'spec' | 'mission',
+  name: string,
+  variant: string | null,
+  ownSpec: string,
+  siblings: string[]
+): boolean {
+  if (!EXT.test(name)) return false;
+  if (scope === 'spec' && /\.ya?ml$/.test(name)) return name === ownSpec;
+  const doc = VARIANT_DOC.exec(name)?.[1];
+  if (doc !== undefined) {
+    if (variant) return doc === variant || doc.startsWith(`${variant}-`);
+    return !siblings.some((v) => doc === v || doc.startsWith(`${v}-`));
+  }
+  if (variant && scope === 'spec' && /^(MISSION|REPORT)\.md$/.test(name)) return false;
+  if (BRIEF.test(name)) return true;
+  return (scope === 'spec' ? SPEC_NAMES : MISSION_NAMES).has(name) || LEARNED.test(name);
+}
 
 /**
  * The files of one rig that may be read. Real paths are used for every containment check, so a
@@ -68,8 +108,13 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   const folders: { scope: 'spec' | 'mission'; dir: string }[] = [{ scope: 'spec', dir: specDir }];
   const parent = dirname(specDir);
   // The mission folder is the spec folder's parent, and only when that is still inside the configured folder.
-  if (parent !== specDir && isUnder(parent, root)) folders.push({ scope: 'mission', dir: parent });
+  // QA R3 LOW-2: the configured folder itself (openrig/rigs/) is every rig's parent, not a
+  // mission folder: its MISSION-TEMPLATE.md belongs to no rig.
+  if (parent !== specDir && parent !== root && isUnder(parent, root))
+    folders.push({ scope: 'mission', dir: parent });
 
+  const ownSpec = basename(spec.path);
+  const variant = specVariant(ownSpec);
   const out: Candidate[] = [];
   for (const { scope, dir } of folders) {
     let names: string[];
@@ -78,8 +123,9 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
     } catch {
       continue;
     }
+    const siblings = names.map(specVariant).filter((v): v is string => v !== null);
     for (const name of names.sort()) {
-      if (!allowedName(scope, name)) continue;
+      if (!allowedName(scope, name, variant, ownSpec, siblings)) continue;
       let real: string;
       try {
         real = await realpath(join(dir, name));
@@ -91,7 +137,16 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
       out.push({ id: `${scope}:${name}`, name, scope, path: real });
     }
   }
-  return out.slice(0, RIG_FILES_MAX);
+  if (out.length <= RIG_FILES_MAX) return out;
+  // Over the cap: keep the run card's sources first, in their listed order.
+  const keep = new Set(
+    out
+      .map((c, i) => ({ c, i }))
+      .sort((a, b) => keepRank(a.c.name) - keepRank(b.c.name) || a.i - b.i)
+      .slice(0, RIG_FILES_MAX)
+      .map((x) => x.c)
+  );
+  return out.filter((c) => keep.has(c));
 }
 
 async function readCapped(

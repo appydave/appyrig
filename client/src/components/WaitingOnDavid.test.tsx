@@ -117,13 +117,46 @@ describe('Run card R2 · waiting on David', () => {
     render(<WaitingOnDavid machine={machine} rig="ylo-d10" toDavid={[]} socket={socket({})} />);
     await waitFor(() =>
       expect(screen.getByTestId('run-waiting-none')).toHaveTextContent(
-        'Nothing waiting on David: no open item from this rig to his mailbox, and no gate its handoffs still call open.'
+        'Nothing waiting on David: no open item from this rig to his mailbox, and no gate its seats announced to another rig is still called open.'
       )
     );
   });
 
-  it('attachLine never lets a quote out of the session name', () => {
-    expect(attachLine("a'b@c", null)).toBe("tmux attach -t 'ab@c'");
+  it('attachLine builds no line for a session name a shell would read (r1 R2 LOW-2)', () => {
+    expect(attachLine('dev-qa@appyrig-v15-loadout', null)).toBe(
+      "tmux attach -t 'dev-qa@appyrig-v15-loadout'"
+    );
+    for (const bad of ["a'b@c", 'x$(rm)@r', 'x`id`@r', 'x"y@r', 'x\\y@r', 'a b@r'])
+      expect(attachLine(bad, 'u@1.2.3.4')).toBeNull();
+  });
+
+  it('when the hub does not answer, the hint says so instead of blaming the config (r1 R2 LOW-4)', async () => {
+    const dead = {
+      emit: vi.fn(),
+      timeout: () => ({
+        emit: (_e: string, _r: unknown, ack: (e: null, a: unknown) => void) =>
+          queueMicrotask(() =>
+            ack(null, {
+              ok: false,
+              error: { failureMode: 'unknown-capability', message: 'no verb' },
+            })
+          ),
+      }),
+    } as unknown as FleetSocket;
+    render(
+      <WaitingOnDavid
+        machine={machine}
+        rig="appyrig-v15-loadout"
+        toDavid={[ask('q1', 'dev-qa@appyrig-v15-loadout')]}
+        socket={dead}
+      />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('run-to-david')).toHaveTextContent(
+        'the hub did not answer, so the remote line is not shown'
+      )
+    );
+    expect(screen.getByTestId('run-to-david')).not.toHaveTextContent('add machines.m2.ssh');
   });
 });
 

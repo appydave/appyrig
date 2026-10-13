@@ -3,6 +3,10 @@ import type { FleetMachine, RigFileOutput, RigFilesOutput } from '@appydave/shar
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import WaitingOnDavid from './WaitingOnDavid.js';
+import PlanStrip from './PlanStrip.js';
+import RunOutputs from './RunOutputs.js';
+import { changeOrders, planIn, type PlanSource } from '../fleet/plan.js';
+import { rigQueue } from '../fleet/views.js';
 import {
   RUN_WORD,
   clip,
@@ -28,6 +32,13 @@ interface Sourced {
 
 const MISSION_IDS = ['mission:MISSION.md', 'spec:MISSION.md', 'spec:brief.md', 'mission:brief.md'];
 const REPORT_IDS = ['spec:REPORT.md', 'mission:REPORT.md'];
+/** R3: a variant run's own mission or report (`spec:MISSION-d10.md`), never a change order. */
+const variantDoc = (have: Set<string>, kind: 'MISSION' | 'REPORT') =>
+  [...have].filter((id) => new RegExp(`^spec:${kind}-(?!.*-change-)[^:]+\\.md$`).test(id)).sort();
+/** R3: files that may hold the plan: missions and batch briefs (change orders are read by name). */
+const PLAN_FILE =
+  /^(?:spec|mission):(?:MISSION(?:-(?!.*-change-)[^:]+)?|[A-Za-z0-9._-]+-brief|brief)\.md$/;
+const MAX_PLAN_FILES = 8;
 
 const clock = (iso: string) =>
   new Date(iso).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
@@ -57,17 +68,21 @@ function missingWhy(files: RigFilesOutput | null, machineLabel: string, what: st
 export default function RunCard({ machine, rig, now, socket }: Props) {
   const minute = Math.floor(now / 60_000) * 60_000;
   const model = useMemo(() => runCard(machine, rig, minute), [machine, rig, minute]);
+  const items = useMemo(() => rigQueue(machine, rig), [machine, rig]);
   const summary = machine.snapshot.rigs.find((r) => r.name === rig)?.summary ?? null;
   const ended = model?.state.word === 'ended';
   const [files, setFiles] = useState<RigFilesOutput | null | 'loading'>('loading');
   const [mission, setMission] = useState<Sourced | null>(null);
   const [report, setReport] = useState<Sourced | null>(null);
+  /** R3: plan candidates read from the rig's files (null while reading). */
+  const [sources, setSources] = useState<PlanSource[] | null>(null);
   const machineId = machine.machine.id;
 
   useEffect(() => {
     setFiles('loading');
     setMission(null);
     setReport(null);
+    setSources(null);
     if (!socket) {
       setFiles(null);
       return;
@@ -89,14 +104,33 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
       const list = a.ok ? a.value : null;
       setFiles(list);
       const have = new Set(list?.status === 'ok' ? list.files.map((f) => f.id) : []);
-      const m = await read(MISSION_IDS, have);
+      const m = await read(
+        [...MISSION_IDS.slice(0, 2), ...variantDoc(have, 'MISSION'), ...MISSION_IDS.slice(2)],
+        have
+      );
       if (!live) return;
       const line = m ? missionLine(m.content) : null;
       setMission(line && m ? { text: line, from: `from ${fileWhere(m.id)}` } : null);
-      const r = await read(REPORT_IDS, have);
+      const r = await read([...REPORT_IDS, ...variantDoc(have, 'REPORT')], have);
       if (!live) return;
       const rl = r ? reportLine(r.content) : null;
       setReport(rl && r ? { text: rl, from: `from ${fileWhere(r.id)}` } : null);
+      // R3: every mission and brief may hold the plan; change orders count by their names.
+      const found: PlanSource[] = [];
+      for (const id of [...have]
+        .filter((x) => PLAN_FILE.test(x))
+        .sort()
+        .slice(0, MAX_PLAN_FILES)) {
+        const f = id === m?.id ? m : await read([id], have);
+        if (!live) return;
+        const p = f ? planIn(f.content, fileWhere(id)) : null;
+        if (p) found.push(p);
+      }
+      const orders = changeOrders(
+        [...have].filter((x) => x.startsWith('spec:')).map((x) => x.slice(5)),
+        line
+      );
+      setSources(orders ? [...found, orders] : found);
     })();
     return () => {
       live = false;
@@ -176,9 +210,21 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
             </dd>
           </>
         )}
+        <dt>Plan</dt>
+        <dd data-testid="run-plan-row">
+          <PlanStrip
+            sources={sources}
+            items={items}
+            why={files === 'loading' ? null : missingWhy(list, machine.machine.label, 'plan')}
+          />
+        </dd>
         <dt>Waiting on David</dt>
         <dd data-testid="run-waiting-row">
           <WaitingOnDavid machine={machine} rig={rig} toDavid={model.toDavid} socket={socket} />
+        </dd>
+        <dt>Outputs</dt>
+        <dd data-testid="run-outputs-row">
+          <RunOutputs machineId={machineId} rig={rig} files={files} socket={socket} />
         </dd>
       </dl>
     </section>

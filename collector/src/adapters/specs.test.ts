@@ -40,6 +40,20 @@ describe('parseSpec', () => {
 });
 
 describe('scanSpecs', () => {
+  it('run card R3: finds a variant rig-<v>.yaml by its name:, beside the base rig.yaml', async () => {
+    const a = tmp();
+    write(join(a, 'ylo-thumbs', 'rig.yaml'), 'name: ylo-thumbs\n');
+    write(join(a, 'ylo-thumbs', 'rig-d10.yaml'), 'name: ylo-d10\nsummary: D10 launch\n');
+    write(join(a, 'ylo-thumbs', 'rig-notes.txt'), 'name: nope\n');
+    write(join(a, 'ylo-thumbs', 'prig.yaml'), 'name: nope2\n');
+    const found = await scanSpecs([a]);
+    expect([...found.keys()].sort()).toEqual(['ylo-d10', 'ylo-thumbs']);
+    expect(found.get('ylo-d10')).toMatchObject({
+      path: join(a, 'ylo-thumbs', 'rig-d10.yaml'),
+      summary: 'D10 launch',
+    });
+  });
+
   it('matches on name: not on the folder name, searches subfolders, first folder wins a clash', async () => {
     const a = tmp();
     const b = tmp();
