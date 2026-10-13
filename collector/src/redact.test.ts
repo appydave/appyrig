@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { REDACTED, redactDeep, redactString } from './redact.js';
+import { REDACTED, redactDeep, redactString, redactWrapped } from './redact.js';
 
 const SECRETS = {
   gho: 'gho_16C7e42F292c6912E7710c838347Ae178B4a',
@@ -203,5 +203,73 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
     const joined = `CLAUDE_CODE_OAUTH_TOKEN=${tok110}`;
     const out = redactString(joined);
     expect(out).toBe(`CLAUDE_CODE_OAUTH_TOKEN=${REDACTED}`);
+  });
+});
+
+describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', () => {
+  // A fake: 97 random characters (letters, digits, '-', '_'), made for this test only.
+  const body =
+    'riGp_58WAm-dX3a5IDnOdcdbWB2dC4_DSDC6Lc1mxLpQ2yMK_Ye9FZ1wUVl4nuYV-d8fNYvvDbzDZST6IaXqA2h9Uz0-T1SaQ';
+  const tok110 = `sk-ant-oat01-${body}`;
+  expect(tok110).toHaveLength(110);
+
+  /** Claude Code style: rows of `width`, each starting with a 2-space indent, hard newlines. */
+  const tuiWrap = (text: string, width: number): string[] => {
+    const rows: string[] = [];
+    for (let i = 0; i < text.length; i += width - 2) rows.push(`  ${text.slice(i, i + width - 2)}`);
+    return rows;
+  };
+  /** Longest run of the token's random body still on screen. */
+  const leak = (out: string) => {
+    let best = 0;
+    for (let i = 0; i < body.length; i++)
+      for (let j = body.length; j > i + best; j--)
+        if (out.includes(body.slice(i, j))) {
+          best = j - i;
+          break;
+        }
+    return best;
+  };
+  const FORMS: Record<string, string> = {
+    env: `export CLAUDE_CODE_OAUTH_TOKEN=${tok110}`,
+    json: `{"accessToken": "${tok110}", "expiresAt": 1791860924079}`,
+    bare: tok110,
+  };
+
+  for (const width of [80, 120])
+    for (const [form, text] of Object.entries(FORMS))
+      it(`${form} form at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
+        // A Claude pane draws full-width rules, so the widest row is the pane's width.
+        const rule = '─'.repeat(width);
+        const rows = [rule, '  Here is the file:', ...tuiWrap(text, width), '  That is all of it.'];
+        const out = redactWrapped(rows).map(redactString).join('\n');
+        expect(leak(out)).toBeLessThanOrEqual(2);
+        expect(out).toContain(REDACTED);
+        // Rows around the secret are untouched.
+        expect(out.startsWith(`${rule}\n  Here is the file:\n`)).toBe(true);
+        expect(out.endsWith('\n  That is all of it.')).toBe(true);
+      });
+
+  it('without the cross-row step the second row leaks (the bug)', () => {
+    const rows = tuiWrap(FORMS.env!, 80);
+    expect(leak(rows.map(redactString).join('\n'))).toBeGreaterThan(40);
+  });
+
+  it('wrapped prose, paths and long words that join into nothing secret are left exactly as they were', () => {
+    const rows = [
+      '  The collector reads ~/.claude/projects/-Users-davidcruwys-dev-ad-apps-appyrig-worktrees',
+      '  /v15-loadout/40ad7aef.jsonl and pushes it to the hub every three seconds as before.',
+      '  ✓ 256 tests passed',
+      '  Supercalifragilisticexpialidocious',
+      '  wordsalad continues here',
+    ];
+    expect(redactWrapped(rows)).toEqual(rows);
+  });
+
+  it('a coloured wrapped token is caught too, and only the rows it touches lose colour', () => {
+    const rows = tuiWrap(FORMS.env!, 80).map((r) => `\x1b[33m${r}\x1b[0m`);
+    const out = redactWrapped([...rows, '\x1b[32m✓ done\x1b[0m']).map(redactString);
+    expect(leak(out.join('\n'))).toBeLessThanOrEqual(2);
+    expect(out.at(-1)).toBe('\x1b[32m✓ done\x1b[0m');
   });
 });

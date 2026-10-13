@@ -115,6 +115,87 @@ function redactPlain(input: string): string {
   return out;
 }
 
+// A row ending in an unfinished token-shaped run, and a row starting (after its indent) with one.
+const RUN_CHAR = '[A-Za-z0-9_\\-+/=.~]';
+const ENDS_IN_RUN = new RegExp(`${RUN_CHAR}{6,}$`);
+const STARTS_WITH_RUN = new RegExp(`^${RUN_CHAR}{4,}`);
+/** Most rows one wrapped run is followed across (a 110-char token at 40 columns spans 3–4). */
+export const WRAP_MAX_ROWS = 4;
+/** Columns short of the widest row that still count as a full (wrapped) row. */
+export const WRAP_SLACK = 6;
+
+/**
+ * Fix-first F2 (QA HIGH-1, ruling 2026-10-13): Claude Code draws its own UI and breaks a long line
+ * into separate rows with hard newlines, so `capture-pane -J` has nothing to join and a token's
+ * second row (no prefix) slipped past the per-row patterns. Where a row ends in an unfinished
+ * token-shaped run and the next row, indent stripped, carries it on, the run is redacted joined;
+ * each row then gets back its own part with the secret cut out. Rows touched lose their colours.
+ * Runs that join into nothing secret are left exactly as they were.
+ */
+export function redactWrapped(lines: string[]): string[] {
+  const out = [...lines];
+  const plain = lines.map((l) => (l.includes('\x1b') ? l.replace(ANSI, '') : l));
+  // Only a full row can have been wrapped: the widest row stands in for the pane's width (a
+  // Claude pane draws full-width rules), with a few columns of slack for its right margin.
+  const full = Math.max(0, ...plain.map((l) => l.trimEnd().length)) - WRAP_SLACK;
+  let i = 0;
+  while (i < lines.length) {
+    // Rows i..end form one chain while each row ends in a run the next row continues.
+    let end = i;
+    while (
+      end + 1 < lines.length &&
+      end - i + 1 < WRAP_MAX_ROWS &&
+      plain[end]!.trimEnd().length >= full &&
+      ENDS_IN_RUN.test(plain[end]!.trimEnd()) &&
+      STARTS_WITH_RUN.test(plain[end + 1]!.trimStart())
+    )
+      end++;
+    if (end === i) {
+      i++;
+      continue;
+    }
+    // Join: the first row trimmed at its end, continuation rows at their start (their indent kept aside).
+    const parts: { indent: string; text: string; start: number }[] = [];
+    let joined = '';
+    for (let j = i; j <= end; j++) {
+      let row = plain[j]!.trimEnd();
+      let indent = '';
+      if (j > i) {
+        indent = row.slice(0, row.length - row.trimStart().length);
+        row = row.trimStart();
+      }
+      parts.push({ indent, text: row, start: joined.length });
+      joined += row;
+    }
+    const red = redactPlain(joined);
+    if (red !== joined) {
+      // The changed span: common prefix and suffix of before and after.
+      let a = 0;
+      while (a < joined.length && a < red.length && joined[a] === red[a]) a++;
+      let b = 0;
+      while (
+        b < joined.length - a &&
+        b < red.length - a &&
+        joined[joined.length - 1 - b] === red[red.length - 1 - b]
+      )
+        b++;
+      const spanEnd = joined.length - b;
+      const crosses = parts.some((p, k) => k > 0 && p.start > a && p.start < spanEnd);
+      if (crosses) {
+        parts.forEach((p, k) => {
+          const s = Math.max(a, p.start);
+          const e = Math.min(spanEnd, p.start + p.text.length);
+          if (s >= e) return; // this row is outside the secret: untouched
+          const local = p.text.slice(0, s - p.start) + REDACTED + p.text.slice(e - p.start);
+          out[i + k] = redactPlain(p.indent + local);
+        });
+      }
+    }
+    i = end + 1;
+  }
+  return out;
+}
+
 /** Redacts every string leaf of a JSON-like value. Keys are left alone. */
 export function redactDeep<T>(value: T): T {
   if (typeof value === 'string') return redactString(value) as T;
