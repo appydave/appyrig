@@ -86,3 +86,24 @@ describe('F3: Machines and Accounts ages under clock skew', () => {
     expect(within(ahead).getByTestId('clock-ahead').textContent).toBe('clock ahead 15 min');
   });
 });
+
+describe('F4 (resilience 1, 3b): a stale account card is dimmed and says why', () => {
+  it('live and fresh: not stale', () => {
+    render(<Accounts machines={[skewed(0)]} now={NOW} />);
+    expect(screen.getByTestId('account-card')).not.toHaveAttribute('data-stale');
+  });
+
+  it('its machine asleep: card stale, "M2 asleep: not reporting", even inside 15 min', () => {
+    render(<Accounts machines={[{ ...skewed(0), liveness: 'asleep' }]} now={NOW} />);
+    const card = screen.getByTestId('account-card');
+    expect(card).toHaveAttribute('data-stale', 'true');
+    expect(within(card).getByTestId('machine-asleep').textContent).toBe('M2 asleep: not reporting');
+  });
+
+  it('a reading 20 min old: card stale with the old-reading mark', () => {
+    render(<Accounts machines={[skewed(0, 20 * MIN)]} now={NOW} />);
+    const card = screen.getByTestId('account-card');
+    expect(card).toHaveAttribute('data-stale', 'true');
+    expect(within(card).getByTestId('old-reading')).toBeInTheDocument();
+  });
+});

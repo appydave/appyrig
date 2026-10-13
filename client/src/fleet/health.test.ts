@@ -87,3 +87,53 @@ describe('F3 (resilience case 5): sample age survives a skewed collector clock',
     expect(clockAheadText(age(skewed(-300, 1_000)))).toBeNull();
   });
 });
+
+describe('F4 (resilience: worst dishonesty): stale never looks green', () => {
+  const NOW = Date.parse('2026-10-13T04:00:00.000Z');
+  // A push the hub got `seen` ms ago, with a reading taken `before` ms before it (no clock skew).
+  const at = (
+    level: 'normal' | 'warn' | 'critical',
+    swapGb: number,
+    seen: number,
+    before = 1_000
+  ) => {
+    const fm = machine(level, swapGb, 14);
+    const received = NOW - seen;
+    return {
+      ...fm,
+      lastSeen: new Date(received).toISOString(),
+      snapshot: {
+        ...fm.snapshot,
+        collectedAt: new Date(received).toISOString(),
+        health: { ...fm.snapshot.health!, sampledAt: new Date(received - before).toISOString() },
+      },
+    };
+  };
+
+  it('live and fresh: the real verdict, green when normal', () => {
+    expect(pressureOf(at('normal', 1, 2_000), NOW)).toMatchObject({
+      kind: 'normal',
+      word: 'normal',
+    });
+  });
+
+  it('c1, collector stopped (machine asleep): "○ asleep", the last verdict only on hover', () => {
+    const fm = { ...at('normal', 1, 45_000), liveness: 'asleep' as const };
+    const p = pressureOf(fm, NOW);
+    expect(p).toMatchObject({ kind: 'stale', glyph: '○', word: 'asleep', last: 'normal' });
+    expect(p.basis).toMatch(/Not current: the last reading, 46s ago, said "normal"/);
+  });
+
+  it('c3, a frozen feed (live pushes, reading 2 min old): "○ old reading", not green', () => {
+    const p = pressureOf(at('normal', 1, 2_000, 2 * 60_000), NOW);
+    expect(p).toMatchObject({ kind: 'stale', word: 'old reading', last: 'normal' });
+  });
+
+  it('Roamy at 92% swap is never "normal", and when stale it still says what it last was', () => {
+    expect(pressureOf(at('normal', 12.88, 2_000), NOW)).toMatchObject({ kind: 'critical' });
+    expect(pressureOf(at('normal', 12.88, 2_000, 10 * 60_000), NOW)).toMatchObject({
+      kind: 'stale',
+      last: 'critical',
+    });
+  });
+});

@@ -120,7 +120,7 @@ export default function FleetStrip({
             </span>
             {(() => {
               // S6: memory pressure, glyph + word; the reason or detail on hover; opens Machines.
-              const p = pressureOf(fm);
+              const p = pressureOf(fm, now);
               const short =
                 p.kind === 'no-data' ? 'no data' : p.kind === 'unavailable' ? 'n/a' : p.word;
               const title =

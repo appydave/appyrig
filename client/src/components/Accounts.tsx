@@ -190,12 +190,16 @@ export default function Accounts({ machines, now }: Props) {
           const sa = r?.sampledAt ? sampleAge(r.sampledAt, r.push, now) : null;
           const ageMs = sa?.ageMs ?? null;
           const ahead = sa ? clockAheadText(sa) : null;
+          // F4 (resilience 1, 3b): a reading whose machine stopped reporting, or one past the
+          // old-reading cut-off, dims the whole card and its verdicts; "plenty of room" stops being green.
+          const stale = !!r && (r.asleep || (ageMs ?? 0) > STALE_READING_MS);
           return (
             <article
               className="account"
               key={a.email}
               data-testid="account-card"
               data-email={a.email}
+              data-stale={stale ? 'true' : undefined}
             >
               <header data-explain="account" data-explain-ctx={`${a.email} · ${tierLine(a)}`}>
                 <b>{a.email}</b>
@@ -223,14 +227,14 @@ export default function Accounts({ machines, now }: Props) {
                     w={d.fiveHour}
                     now={now}
                     testId="window-5h"
-                    stale={(ageMs ?? 0) > STALE_READING_MS}
+                    stale={stale}
                   />
                   <Window
                     label="Weekly"
                     w={d.sevenDay}
                     now={now}
                     testId="window-7d"
-                    stale={(ageMs ?? 0) > STALE_READING_MS}
+                    stale={stale}
                   />
                   <p
                     className="account-monthly"
@@ -260,6 +264,18 @@ export default function Accounts({ machines, now }: Props) {
                 {r?.sampledAt ? (
                   <>
                     read on {r.from} · {ago(ageMs!)} ago
+                    {r.asleep && (
+                      <>
+                        {' '}
+                        <span
+                          className="old-reading"
+                          data-testid="machine-asleep"
+                          data-explain="old-reading"
+                        >
+                          {r.from} asleep: not reporting
+                        </span>
+                      </>
+                    )}
                     {ahead && (
                       <>
                         {' '}

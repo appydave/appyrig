@@ -1510,3 +1510,66 @@ describe('batch 2 · C1: the chosen rig holds; "Follow latest" is explicit and o
     localStorage.removeItem('appyrig.followLatest');
   });
 });
+
+describe('fix-first F4 (resilience case 4): a chosen rig that vanishes says "rig gone"', () => {
+  it('Map/Flow name the gone rig instead of switching to another; it comes back if the rig returns', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    const full = fleetMachine(snapshot('m2'));
+    const [a, b] = [full.snapshot.rigs[0]!.name, full.snapshot.rigs[1]!.name];
+    const without = {
+      ...full,
+      snapshot: { ...full.snapshot, rigs: full.snapshot.rigs.filter((r) => r.name !== b) },
+    };
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([full]));
+    fireEvent.click(screen.getByTestId('view-flow')); // shares the picker and selection with the Map
+    fireEvent.click(screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === `m2:${b}`)!);
+    expect(screen.queryByTestId('rig-gone')).toBeNull();
+    fake.fire(FLEET_EVENTS.UPDATE, update([without]));
+    const gone = screen.getByTestId('rig-gone');
+    expect(gone.textContent).toContain(`Rig gone: ${b} on M2`);
+    expect(screen.getByTestId('follow-status').textContent).toMatch(/The rig you chose is gone/);
+    expect(screen.queryByTestId('rig-info')).toBeNull(); // not silently another rig's view
+    expect(
+      screen.getAllByTestId('rig-chip').some((c) => c.getAttribute('aria-pressed') === 'true')
+    ).toBe(false);
+    fake.fire(FLEET_EVENTS.UPDATE, update([full]));
+    expect(screen.queryByTestId('rig-gone')).toBeNull();
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${b}`);
+    expect(a).not.toBe(b);
+  });
+
+  it('r1 MEDIUM: a rig on a machine the filter hides reads "Rig hidden", never "no longer reported"', () => {
+    localStorage.removeItem('appyrig.followLatest');
+    localStorage.removeItem('appyrig.hiddenMachines');
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([fleetMachine(snapshot('m2')), fleetMachine(snapshot('roamy'))])
+    );
+    fireEvent.click(screen.getByTestId('view-flow'));
+    const roamyRig = screen
+      .getAllByTestId('rig-chip')
+      .find((c) => c.dataset.rigKey?.startsWith('roamy:'))!;
+    const key = roamyRig.dataset.rigKey!;
+    fireEvent.click(roamyRig);
+    fireEvent.click(
+      screen.getAllByTestId('machine-filter').find((x) => x.dataset.machineId === 'roamy')!
+    );
+    const note = screen.getByTestId('rig-gone');
+    expect(note).toHaveAttribute('data-why', 'hidden');
+    expect(note.textContent).toContain(`Rig hidden: ${key.split(':')[1]} on Roamy`);
+    expect(note.textContent).toContain('hidden by your machine filter');
+    expect(note.textContent).not.toMatch(/no longer reported/);
+    expect(screen.getByTestId('follow-status').textContent).toMatch(/your filter hides/);
+    // Showing the machine again brings the chosen rig back.
+    fireEvent.click(
+      screen.getAllByTestId('machine-filter').find((x) => x.dataset.machineId === 'roamy')!
+    );
+    expect(screen.queryByTestId('rig-gone')).toBeNull();
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', key);
+    localStorage.removeItem('appyrig.hiddenMachines');
+  });
+});

@@ -211,9 +211,21 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   useEffect(() => {
     if (rigKey === null && rigs.length) setRigKey(rigs[0]!.key);
   }, [rigKey, rigs]);
+  // Fix-first F4 (resilience case 4): a chosen rig that stops being reported is said to be gone,
+  // not silently swapped for another under "Showing the rig you chose". The choice is kept, so the
+  // rig comes back by itself if it returns.
+  // r1 F4 MEDIUM: "gone" is judged against every machine, not the filtered list, so a rig on a
+  // machine the viewer hid with the machine filter reads "hidden by your machine filter" instead.
+  const allRigKeys = useMemo(() => new Set(listRigs(allMachines).map((r) => r.key)), [allMachines]);
+  const missing =
+    !followLatest && rigKey !== null && rigs.length > 0 && !rigs.some((r) => r.key === rigKey);
+  const goneRig = missing ? rigKey : null;
+  const goneWhy: 'gone' | 'hidden' = rigKey !== null && allRigKeys.has(rigKey) ? 'hidden' : 'gone';
   const activeRig = followLatest
     ? (rigs[0] ?? null)
-    : (rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null);
+    : goneRig
+      ? null
+      : (rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null);
   const chooseRig = useCallback((key: string) => {
     setRigKey(key);
     setFollowLatest(false);
@@ -685,9 +697,24 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             <span className="quiet" data-testid="follow-status">
               {followLatest
                 ? 'The view switches to the most recently active rig by itself. Click a rig to stop.'
-                : 'Showing the rig you chose. It changes only when you click another.'}
+                : goneRig
+                  ? goneWhy === 'hidden'
+                    ? 'The rig you chose is on a machine your filter hides. Show that machine, or pick another rig.'
+                    : 'The rig you chose is gone. Pick another, or it comes back here if it returns.'
+                  : 'Showing the rig you chose. It changes only when you click another.'}
             </span>
           </p>
+          {goneRig && (
+            <p className="rig-gone" role="status" data-testid="rig-gone" data-why={goneWhy}>
+              <b>{goneWhy === 'hidden' ? 'Rig hidden:' : 'Rig gone:'}</b>{' '}
+              {goneRig.split(':').slice(1).join(':')} on{' '}
+              {allMachines.find((m) => m.machine.id === goneRig.split(':')[0])?.machine.label ??
+                goneRig.split(':')[0]}{' '}
+              {goneWhy === 'hidden'
+                ? 'is hidden by your machine filter. Nothing else is shown in its place.'
+                : 'is no longer reported by its machine (removed, or renamed). Nothing else is shown in its place.'}
+            </p>
+          )}
           <RigPicker
             rigs={rigs}
             selected={activeRig?.key ?? null}
