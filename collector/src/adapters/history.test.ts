@@ -141,6 +141,8 @@ describe('F3 (truth #6): agent activity is the newest transcript event, not the 
     const reader = new HistoryReader('m2', dir);
     const seats = new Set(['dev-hub@appyrig-build', 'dev-qa@appyrig-build']);
     expect(reader.agentActivity()).toBeNull(); // before the first scan
+    await reader.changed(new Set()); // a scan before any seat is known (QA F3 MEDIUM)
+    expect(reader.agentActivity()).toBeNull();
     await reader.changed(seats);
     expect(reader.agentActivity()!.get('dev-hub@appyrig-build')).toBe(
       Date.parse('2026-10-09T13:50:09.000Z')

@@ -291,6 +291,9 @@ export class HistoryReader {
   }
 
   async changed(knownSeats: Set<string>): Promise<PendingHistory[]> {
+    // QA F3 MEDIUM: the first scan can run before the first snapshot has named any seats. Nothing
+    // was looked for, so agent activity stays "not read yet" (absent), never "no transcript" (null).
+    if (knownSeats.size === 0) return [];
     const bySeat = await this.index.scan(knownSeats);
     // F3: the newest event across a seat's transcripts; a seat whose files hold none is left out (null).
     this.latest = new Map();
