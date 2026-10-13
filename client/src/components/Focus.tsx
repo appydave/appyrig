@@ -205,7 +205,7 @@ export default function Focus({
     [
       'Agent last active',
       seat.agentActivityAt === undefined
-        ? 'not reported (older collector)'
+        ? 'reading… (not reported yet)'
         : seat.agentActivityAt
           ? `${ago(now - Date.parse(seat.agentActivityAt))} ago`
           : 'no transcript found',
