@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Accounts from './components/Accounts.js';
 import ExplainLayer from './components/ExplainLayer.js';
 import FleetStrip from './components/FleetStrip.js';
@@ -414,6 +414,22 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       setLayersOpen(null);
     }
   }, [focused]);
+
+  // QA views LOW-1/LOW-2: a first-visit hint hangs under its button, shifted just enough to stay
+  // inside the window (16 px margin) wherever the header wraps; under 1000 px CSS puts it in flow.
+  useLayoutEffect(() => {
+    const place = () => {
+      for (const h of document.querySelectorAll<HTMLElement>('.first-hint')) {
+        const a = h.parentElement?.getBoundingClientRect();
+        if (!a) continue;
+        const room = window.innerWidth - 16 - h.offsetWidth - a.left;
+        h.style.left = `${Math.max(16 - a.left, Math.min(0, room))}px`;
+      }
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  });
 
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.

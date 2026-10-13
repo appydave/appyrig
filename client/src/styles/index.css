@@ -1493,9 +1493,9 @@ a:hover {
 .first-hint {
   position: absolute;
   top: calc(100% + 8px);
-  /* QA views LOW-1: hang left from the button's right edge, so a button near the right of the
-     header never pushes the hint (and the page) past the window. */
-  right: 0;
+  /* QA views LOW-1/LOW-2: App.tsx (placeHints) shifts it so it stays inside the window wherever
+     the header puts its button; left: 0 is only the starting point. */
+  left: 0;
   z-index: 20;
   width: min(380px, calc(100vw - 32px));
   box-shadow: 0 4px 14px rgb(52 45 45 / 0.18);
