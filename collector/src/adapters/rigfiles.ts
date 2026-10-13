@@ -108,7 +108,10 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   const folders: { scope: 'spec' | 'mission'; dir: string }[] = [{ scope: 'spec', dir: specDir }];
   const parent = dirname(specDir);
   // The mission folder is the spec folder's parent, and only when that is still inside the configured folder.
-  if (parent !== specDir && isUnder(parent, root)) folders.push({ scope: 'mission', dir: parent });
+  // QA R3 LOW-2: the configured folder itself (openrig/rigs/) is every rig's parent, not a
+  // mission folder: its MISSION-TEMPLATE.md belongs to no rig.
+  if (parent !== specDir && parent !== root && isUnder(parent, root))
+    folders.push({ scope: 'mission', dir: parent });
 
   const ownSpec = basename(spec.path);
   const variant = specVariant(ownSpec);

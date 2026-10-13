@@ -36,7 +36,9 @@ export default function PlanStrip({ sources, items, why }: Props) {
         {plan.steps.map((s) => {
           const done = plan.done.has(s.id);
           const live = plan.live?.id === s.id;
-          const mark = done ? 'done' : live ? 'live' : 'todo';
+          // QA R3 MEDIUM-1: named by handoffs but never accepted is "worked on", not "not reached".
+          const worked = !done && !live && plan.named.has(s.id);
+          const mark = done ? 'done' : live ? 'live' : worked ? 'worked' : 'todo';
           return (
             <li
               key={s.id}
@@ -47,11 +49,17 @@ export default function PlanStrip({ sources, items, why }: Props) {
               data-live={live || undefined}
               title={`${s.id}: ${s.title}`}
             >
-              <span aria-hidden="true">{done ? '✓' : live ? '●' : '○'}</span> <b>{s.id}</b>{' '}
-              <span className="plan-title">{s.title}</span>
+              <span aria-hidden="true">{done ? '✓' : live ? '●' : worked ? '◐' : '○'}</span>{' '}
+              <b>{s.id}</b> <span className="plan-title">{s.title}</span>
               {live && <span className="plan-live"> · latest named</span>}
               <span className="sr-only">
-                {done ? ' (accepted)' : live ? ' (the newest handoff names it)' : ' (not reached)'}
+                {done
+                  ? ' (accepted)'
+                  : live
+                    ? ' (the newest handoff names it)'
+                    : worked
+                      ? ' (worked on, no acceptance found)'
+                      : ' (not reached: no handoff names it)'}
               </span>
             </li>
           );
@@ -62,7 +70,9 @@ export default function PlanStrip({ sources, items, why }: Props) {
         {plan.live
           ? ` · ● = the step the newest handoff names (${clock(plan.live.item.createdAt)})`
           : ' · no handoff names these steps yet'}
-        {' · ✓ = a handoff said PASS for merge, merged, deployed, done or REPORT for it'}
+        {
+          ' · ✓ = a handoff said PASS for merge, accepted, merged, deployed, done or REPORT for it · ◐ = named, no acceptance found · ○ = no handoff names it'
+        }
       </span>
     </div>
   );

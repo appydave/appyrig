@@ -30,6 +30,8 @@ export interface Plan extends PlanSource {
   done: Set<string>;
   /** How many of the rig's handoffs name one of these steps. */
   mentions: number;
+  /** Step ids some handoff names (worked on), accepted or not. */
+  named: Set<string>;
 }
 
 const SLICE_ID = /^(?:[A-Z][A-Za-z0-9]{0,3}(?:-[A-Z0-9][A-Za-z0-9.]{0,3})?|\d{1,2}[a-z]?)$/;
@@ -140,7 +142,8 @@ function inRange(text: string, id: string): boolean {
   return false;
 }
 
-const ACCEPTED = /\b(PASS for merge|r1 PASS|merged|deployed|accepted|done|REPORT)\b/i;
+// QA R3 MEDIUM-1: reviewers also write "r1 ACCEPT S7-data/S8-ui".
+const ACCEPTED = /\b(PASS for merge|r1 PASS|merged|deployed|accept(ed)?|done|REPORT)\b/i;
 const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep'));
 
 /**
@@ -180,5 +183,8 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
     live: liveStep && newest ? { id: liveStep.id, item: newest } : null,
     done,
     mentions: naming.length,
+    named: new Set(
+      s.steps.filter((st) => naming.some((q) => names(q, st, s.kind))).map((st) => st.id)
+    ),
   };
 }

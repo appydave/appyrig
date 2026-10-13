@@ -349,3 +349,17 @@ describe('run card R3: variant specs, batch briefs, and the cap', () => {
     expect(got.indexOf('spec:rig.yaml')).toBeLessThan(got.indexOf('mission:REPORT.md'));
   });
 });
+
+describe('QA R3 LOW-2: the configured folder is no mission folder', () => {
+  it('openrig/rigs/<rig>/rig.yaml does not get openrig/rigs/MISSION-TEMPLATE.md', async () => {
+    const root = tmp();
+    put(join(root, 'MISSION-TEMPLATE.md'));
+    put(join(root, 'README.md'));
+    put(join(root, 'flicut-ab', 'rig.yaml'), 'name: flicut-ab\n');
+    put(join(root, 'flicut-ab', 'MISSION.md'));
+    expect(await ids({ path: join(root, 'flicut-ab', 'rig.yaml'), root, summary: null })).toEqual([
+      'spec:MISSION.md',
+      'spec:rig.yaml',
+    ]);
+  });
+});

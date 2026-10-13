@@ -115,6 +115,19 @@ describe('R3 · choosing the plan and marking the live step', () => {
     expect(one.done.size).toBe(0);
   });
 
+  it('"r1 ACCEPT S7-data/S8-ui" ticks S7 and S8; a step only worked on is named, not done (QA R3 MEDIUM-1)', () => {
+    const src = planIn(
+      '| # | Slice |\n|---|---|\n| S7 | **Files** |\n| S8 | **DB** |\n| S9 | **Later** |\n',
+      'brief.md'
+    )!;
+    const plan = choosePlan(src ? [src] : [], [
+      q('a', 'S9 started: build notes', [], '2026-10-11T09:00:00.000Z'),
+      q('b', 'r1 ACCEPT S7-data/S7-ui/S8-data/S8-ui', [], '2026-10-11T08:00:00.000Z'),
+    ])!;
+    expect([...plan.done]).toEqual(['S7', 'S8']);
+    expect([...plan.named]).toEqual(['S7', 'S8', 'S9']);
+  });
+
   it('a range names every slice in it: "R1-R4 accepted" ticks R2 too', () => {
     const r = (id: string) => ({ id, title: '' });
     const done = q('x', 'flicut-reapply done: R1-R4 accepted, branch pushed');
