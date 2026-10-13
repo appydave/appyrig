@@ -636,6 +636,14 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
               onMode={() => {}}
               onClose={() => setPinned(null)}
               onFollow={chainOf ? setFollow : undefined}
+              keys={keys}
+              onLine={(dir) => {
+                // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
+                const order = placed.map((p) => edgeKey(p.edge));
+                if (!order.length) return;
+                const i = order.indexOf(pinned!.edge);
+                setPinned({ edge: order[(i + dir + order.length) % order.length]!, itemId: null });
+              }}
             />
           )}
         </div>

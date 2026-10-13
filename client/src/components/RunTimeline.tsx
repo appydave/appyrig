@@ -359,6 +359,15 @@ export default function RunTimeline({ machine, rig, now, socket, keys = true }: 
             onMode={() => undefined}
             onClose={() => setSel(null)}
             onFollow={setFollow}
+            keys={keys}
+            lineWord="lane"
+            onLine={(dir) => {
+              // Views K: on the timeline a "line" is a lane: ] / [ = next / previous lane, newest.
+              const order = tl.lanes.filter((l) => l.items.length);
+              const i = order.findIndex((l) => l.id === sel?.lane);
+              const next = order[(i + dir + order.length) % order.length];
+              if (next) setSel({ lane: next.id, itemId: next.items[next.items.length - 1]!.id });
+            }}
           />
         )}
       </div>

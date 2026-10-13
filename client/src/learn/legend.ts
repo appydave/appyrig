@@ -325,6 +325,13 @@ const MAP: LegendSection[] = [
           'Within a row, arcs over the boxes run left → right and arcs under run right → left, so a pair never overlaps.',
       },
       { swatch: 'self', mark: '↺ N to itself', means: 'The seat queued work for itself.' },
+      {
+        swatch: 'handoff-panel',
+        term: 'handoff',
+        mark: 'Line drawer · J/K · [ ]',
+        means:
+          'Click (or Tab + Enter) a line: its handoffs open in a drawer, newest first, with the full message. J / K: older / newer handoff; ] / [: next / previous line (its newest handoff). Follow this work → shows the whole chain. Esc closes.',
+      },
     ],
   },
   RIG_PICKER,
@@ -414,7 +421,7 @@ const FLOW: LegendSection[] = [
         term: 'handoff',
         mark: 'Handoff details (right) · Panel shows: On click | Follow pointer',
         means:
-          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box lists its handoffs in and out. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes.',
+          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box lists its handoffs in and out. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes. Keys: J / K older / newer handoff, ] / [ next / previous line.',
       },
     ],
   },

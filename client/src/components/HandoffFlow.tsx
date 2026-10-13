@@ -787,6 +787,14 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
               setPinned(true);
               setFollow(id);
             }}
+            keys={keys}
+            onLine={(dir) => {
+              // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
+              const order = flow.edges.map(edgeKey);
+              if (!order.length) return;
+              const i = selection?.edge ? order.indexOf(selection.edge) : dir === 1 ? -1 : 0;
+              pin(order[(i + dir + order.length) % order.length]!);
+            }}
           />
         )}
         {card && (
