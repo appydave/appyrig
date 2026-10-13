@@ -7,7 +7,15 @@ import type {
   SeatHistoryEvent,
 } from '@appydave/shared';
 import { windowStory, type VerdictKind } from './accountWindow.js';
-import { modelChip, pipFor, seatKey, seatName, type ModelFamily, type PipKey } from './model.js';
+import {
+  agentActivityOf,
+  modelChip,
+  pipFor,
+  seatKey,
+  seatName,
+  type ModelFamily,
+  type PipKey,
+} from './model.js';
 
 /**
  * Pure view-models for the v1.1 screens: Rig Map, Handoff Flow and Accounts. Like model.ts,
@@ -135,7 +143,7 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
       const items = rigQueue(fm, rig.name);
       const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
       // Most recent sign of life: a queue row moving, or any of its seats doing something.
-      const last = [...items.map((q) => q.updatedAt), ...seats.map((s) => s.lastActivityAt)].reduce<
+      const last = [...items.map((q) => q.updatedAt), ...seats.map(agentActivityOf)].reduce<
         string | null
       >((acc, at) => (at && (acc === null || at > acc) ? at : acc), null);
       out.push({
@@ -784,7 +792,9 @@ export interface AccountView {
   email: string;
   planLabel: string;
   /** The freshest reading across this account's machines, if any machine has a sampler. */
-  reading: (AccountUsage & { from: string }) | null;
+  /** `push`: the collectedAt and hub receive time of the push it came in, for its age (F3). */
+  reading:
+    (AccountUsage & { from: string; push: { collectedAt: string; receivedAt: string } }) | null;
   machines: string[];
   drawers: AccountDrawer[];
   /** Live, non-stopped Claude seats on the machines whose cached profile names it (their login is not read). */
@@ -857,7 +867,11 @@ export function buildAccounts(machines: FleetMachine[]): {
     v.machines.push(fm.machine.label);
     v.profiles.push({ machine: fm.machine.label, fetchedAt: acct.profileFetchedAt });
     if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
-      v.reading = { ...acct, from: fm.machine.label };
+      v.reading = {
+        ...acct,
+        from: fm.machine.label,
+        push: { collectedAt: fm.snapshot.collectedAt, receivedAt: fm.lastSeen },
+      };
     }
     if (fm.liveness === 'live') {
       const seats = fm.snapshot.seats.filter((s) => s.status !== 'stopped' && isClaudeSeat(s));

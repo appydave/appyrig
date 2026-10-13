@@ -109,6 +109,14 @@ export const SeatSchema = z.strictObject({
    * seat, or no listing yet); absent = this collector does not report it.
    */
   skillCount: z.number().int().nonnegative().nullable().optional(),
+  /**
+   * Fix-first F3 (truth #6). When the seat's AGENT last did something: the newest event timestamp in
+   * its Claude Code transcript(s) (not the file's mtime, which a rename or resume also moves). `lastActivityAt` is the terminal's (OpenRig's probe sweep touches an
+   * idle pane every few seconds), so it reads "10 min ago" for an agent idle for a day. Optional and
+   * additive (hub first): null = the collector looked and found no transcript (a Codex or plain
+   * terminal seat); absent = this collector does not report it.
+   */
+  agentActivityAt: isoDate.nullable().optional(),
 });
 export type Seat = z.infer<typeof SeatSchema>;
 
@@ -136,8 +144,10 @@ export const RigSummarySchema = z.strictObject({
   /** The rig.yaml `summary:` text, whitespace-folded and cut to RIG_SUMMARY_MAX. */
   summary: z.string().max(RIG_SUMMARY_MAX).nullable().optional(),
   /**
-   * Recency: the newest of any of the rig's seats' `lastActivityAt` and any queue item `updatedAt`
-   * sent from or to one of its seats. Null when neither exists. Collector-set.
+   * Recency: the newest of any of the rig's seats' agent activity and any queue item `updatedAt`
+   * sent from or to one of its seats. Null when neither exists. Collector-set. F3: a seat's agent
+   * activity is `agentActivityAt` when the collector reports it, else (older collector)
+   * `lastActivityAt`.
    */
   recentAt: isoDate.nullable().optional(),
   /** Hub-set from AppyRig's own config file (never from OpenRig); the UI falls back to `name`. */

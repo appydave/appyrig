@@ -597,3 +597,31 @@ describe('D0 · most headroom weighs the weekly window (usability T4-3)', () => 
     expect(mostHeadroom(buildAccounts([x, y]).accounts, NOW)?.email).toBe('y@e.com');
   });
 });
+
+describe('F3 (truth #6): a rig reads as recent from its agents, not its terminals', () => {
+  const TEN_MIN_AGO = new Date(NOW - 10 * 60_000).toISOString();
+  const DAY_AGO = new Date(NOW - 24 * 3600_000).toISOString();
+  const withSeats = (agentActivityAt: string | null | undefined): FleetMachine => {
+    const fm = m2();
+    const rig = { ...fm.snapshot.rigs[0]!, name: 'boss', recentAt: undefined };
+    const s = {
+      ...fm.snapshot.seats[0]!,
+      id: 'orch-boss@boss',
+      rig: 'boss',
+      lastActivityAt: TEN_MIN_AGO,
+      ...(agentActivityAt === undefined ? {} : { agentActivityAt }),
+    };
+    return { ...fm, snapshot: { ...fm.snapshot, rigs: [rig], seats: [s], queue: [] } };
+  };
+  const last = (fm: FleetMachine) => listRigs([fm]).find((r) => r.name === 'boss')!.lastActivity;
+
+  it("orch-boss: a day-old transcript no longer reads as '10 min ago'", () => {
+    expect(last(withSeats(DAY_AGO))).toBe(DAY_AGO);
+  });
+  it('no transcript (Codex, terminal): no agent activity, not the terminal stamp', () => {
+    expect(last(withSeats(null))).toBeNull();
+  });
+  it('an older collector (field absent) keeps the terminal stamp', () => {
+    expect(last(withSeats(undefined))).toBe(TEN_MIN_AGO);
+  });
+});

@@ -1,4 +1,10 @@
-import type { FleetMachine, MachineHealth, Reading } from '@appydave/shared';
+import {
+  sampleAge,
+  type FleetMachine,
+  type MachineHealth,
+  type Reading,
+  type SampleAge,
+} from '@appydave/shared';
 
 /**
  * v1.4 S6: machine health in words (mochaccino machine-health, B). The collector re-samples every
@@ -81,8 +87,12 @@ export function pressureOf(fm: FleetMachine): PressureView {
   };
 }
 
-export const healthAgeMs = (h: MachineHealth, now: number) =>
-  Math.max(0, now - Date.parse(h.sampledAt));
+/**
+ * F3 (resilience case 5): the readings' age on the collector's own clock, so a skewed clock neither
+ * ages a fresh reading nor passes an old one off as "0s"; `clockAhead` says when it runs ahead.
+ */
+export const healthAge = (fm: FleetMachine, h: MachineHealth, now: number): SampleAge =>
+  sampleAge(h.sampledAt, { collectedAt: fm.snapshot.collectedAt, receivedAt: fm.lastSeen }, now);
 
 export function gb(bytes: number): string {
   const g = bytes / 1024 ** 3;

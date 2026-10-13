@@ -43,7 +43,10 @@ function main() {
     token: settings.token,
     machineId: settings.machine.id,
     build: async () => {
-      const snap = await buildSnapshot(sources, config);
+      const snap = await buildSnapshot(
+        { ...sources, agentActivity: () => history.agentActivity() },
+        config
+      );
       const own = snap.seats.filter((s) => s.rig !== null);
       knownSeats = new Set(own.map((s) => s.id));
       openrigSeats = own.map((s) => ({ id: s.id, rig: s.rig, runtime: s.runtime, cwd: s.cwd }));

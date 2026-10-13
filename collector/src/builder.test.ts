@@ -379,3 +379,48 @@ describe('snapshot fixtures (test/fixtures/snapshots)', () => {
     }
   );
 });
+
+describe('F3 (truth #6): agent activity comes from the transcript, not the terminal', () => {
+  // orch-boss's case: a transcript last written a day ago, while the probe sweep keeps the pane's
+  // lastActivityAt minutes old.
+  const DAY_AGO = NOW.getTime() - 24 * 3600_000;
+  const build = (agentActivity?: () => Map<string, number> | null) =>
+    buildSnapshot(
+      {
+        ...fixtureSources({ machine: 'roamy' }),
+        specs: async () => new Map(),
+        ...(agentActivity ? { agentActivity } : {}),
+      },
+      ROAMY,
+      NOW
+    );
+
+  it('a seat with a transcript gets its last write; one without gets null; plain tmux nothing', async () => {
+    const snap = await build(() => new Map([['advisor-lead@kernel', DAY_AGO]]));
+    expect(seat(snap, 'advisor-lead@kernel').agentActivityAt).toBe(new Date(DAY_AGO).toISOString());
+    for (const s of snap.seats) {
+      if (s.id === 'advisor-lead@kernel') continue;
+      expect(s.agentActivityAt).toBe(s.rig === null ? undefined : null);
+    }
+  });
+
+  it("the rig's recentAt follows agent activity and queue moves, not the terminal sweep", async () => {
+    const snap = await build(() => new Map([['advisor-lead@kernel', DAY_AGO]]));
+    const kernel = snap.rigs.find((r) => r.name === 'kernel')!;
+    const mine = new Set(snap.seats.filter((s) => s.rig === 'kernel').map((s) => s.id));
+    const queueLatest = snap.queue
+      .filter((q) => mine.has(q.source ?? '') || mine.has(q.destination ?? ''))
+      .map((q) => Date.parse(q.updatedAt));
+    const expected = Math.max(DAY_AGO, ...queueLatest);
+    expect(Date.parse(kernel.recentAt!)).toBe(expected);
+    const terminal = Math.max(
+      ...snap.seats.filter((s) => mine.has(s.id)).map((s) => Date.parse(s.lastActivityAt ?? '0'))
+    );
+    expect(terminal).toBeGreaterThan(expected); // the old rule would have reported this one
+  });
+
+  it('before the first transcript scan (or an older path) the field is left out, not null', async () => {
+    const snap = await build(() => null);
+    expect(snap.seats.every((s) => s.agentActivityAt === undefined)).toBe(true);
+  });
+});

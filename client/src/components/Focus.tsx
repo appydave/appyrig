@@ -201,8 +201,17 @@ export default function Focus({
     ],
     ['Lifecycle', [seat.lifecycleState, seat.sessionStatus].filter(Boolean).join(' · ') || '—'],
     ['Context used', seat.contextUsedPct === null ? '—' : `${seat.contextUsedPct}%`],
+    // F3 (truth #6): the agent's last activity (its transcript), apart from the terminal's.
     [
-      'Last activity',
+      'Agent last active',
+      seat.agentActivityAt === undefined
+        ? 'not reported (older collector)'
+        : seat.agentActivityAt
+          ? `${ago(now - Date.parse(seat.agentActivityAt))} ago`
+          : 'no transcript found',
+    ],
+    [
+      'Terminal last changed',
       seat.lastActivityAt ? `${ago(now - Date.parse(seat.lastActivityAt))} ago` : '—',
     ],
     ['Queue', `${w.pending} waiting · ${w.inProgress} in progress · ${w.blocked} blocked`],

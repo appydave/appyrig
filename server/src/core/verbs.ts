@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import {
   type AccountListOutput,
+  sampleAge,
   FeedbackAddInputSchema,
   FeedbackAddOutputSchema,
   FeedbackGetInputSchema,
@@ -455,8 +456,13 @@ const VERB_SET = {
           reason: health
             ? null
             : 'no health data from this collector yet (it predates machine health)',
+          // F3: aged on the collector's own clock, so a skewed clock cannot fake it.
           sampleAgeMs: health
-            ? Math.max(0, ctx.now().getTime() - Date.parse(health.sampledAt))
+            ? sampleAge(
+                health.sampledAt,
+                { collectedAt: m.snapshot.collectedAt, receivedAt: m.lastSeen },
+                ctx.now().getTime()
+              ).ageMs
             : null,
           health,
         };

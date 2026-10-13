@@ -362,6 +362,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'The usage figures were read more than 15 minutes ago; the verdict is as of that reading.',
     why: 'Readings refresh when a Claude session on that machine gets a reply. An old one can make a busy account look calm.',
   },
+  'clock-ahead': {
+    term: 'Clock ahead',
+    what: 'That machine’s clock runs ahead of the hub’s by the amount shown, seen on its latest push. Ages are measured on the machine’s own clock, so they stay right anyway.',
+    why: 'Without it a clock 15 minutes ahead made an old reading look 0 seconds old. Fix the machine’s time (System Settings › Date & Time) to clear it.',
+  },
   monthly: {
     term: 'Monthly',
     what: 'Claude Code’s login and status line report a 5-hour and a weekly window only. No source reports a monthly one.',

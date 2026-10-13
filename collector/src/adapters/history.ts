@@ -159,10 +159,41 @@ async function seatOfFile(path: string): Promise<string | null> {
   }
 }
 
+/** How much of a transcript's end is read for its newest event (F3). */
+export const TAIL_EVENT_BYTES = 256 * 1024;
+
+/**
+ * F3 (truth #6): the newest event `timestamp` in a transcript's tail, in ms; null when it has none.
+ * Not the file's mtime: renaming a session or resuming it rewrites rows without the agent doing
+ * anything (seen on the M2: orch-boss's file touched 10-12 12:31, its last event 10-11 16:32).
+ */
+export function lastEventMs(tail: string): number | null {
+  let best: number | null = null;
+  for (const m of tail.matchAll(/"timestamp":"([^"]{10,40})"/g)) {
+    const t = Date.parse(m[1]!);
+    if (!Number.isNaN(t) && (best === null || t > best)) best = t;
+  }
+  return best;
+}
+
+async function lastEventOfFile(path: string, size: number): Promise<number | null> {
+  const fh = await open(path, 'r');
+  try {
+    const len = Math.min(size, TAIL_EVENT_BYTES);
+    const buf = Buffer.alloc(len);
+    const { bytesRead } = await fh.read(buf, 0, len, size - len);
+    return lastEventMs(buf.subarray(0, bytesRead).toString('utf8'));
+  } finally {
+    await fh.close();
+  }
+}
+
 interface FileInfo {
   seat: string | null;
   size: number;
   mtimeMs: number;
+  /** F3: newest event in it (ms), read when the file is new or changed; null without one. */
+  lastEventMs: number | null;
 }
 
 /** One seat transcript on disk, with the stat it was found with. */
@@ -170,6 +201,7 @@ export interface TranscriptFile {
   path: string;
   size: number;
   mtimeMs: number;
+  lastEventMs: number | null;
 }
 
 /**
@@ -208,11 +240,17 @@ export class TranscriptIndex {
             // A title never changes once found. A file without one is looked at again when it changes:
             // a new transcript can be seen before its title row is written.
             const seat = info?.seat ?? (await seatOfFile(path));
-            info = { seat, size: st.size, mtimeMs: st.mtimeMs };
+            const last = seat ? await lastEventOfFile(path, st.size) : null;
+            info = { seat, size: st.size, mtimeMs: st.mtimeMs, lastEventMs: last };
             this.files.set(path, info);
           }
           if (info.seat && knownSeats.has(info.seat)) {
-            const f = { path, size: info.size, mtimeMs: info.mtimeMs };
+            const f = {
+              path,
+              size: info.size,
+              mtimeMs: info.mtimeMs,
+              lastEventMs: info.lastEventMs,
+            };
             bySeat.set(info.seat, [...(bySeat.get(info.seat) ?? []), f]);
           }
         } catch {
@@ -237,6 +275,12 @@ export interface PendingHistory {
 export class HistoryReader {
   private readonly index: TranscriptIndex;
   private readonly sent = new Map<string, string>();
+  private latest: Map<string, number> | null = null;
+
+  /** F3: seat → its newest transcript event (ms), from the last scan; null before the first one. */
+  agentActivity(): Map<string, number> | null {
+    return this.latest;
+  }
 
   constructor(
     private readonly machineId: string,
@@ -248,6 +292,12 @@ export class HistoryReader {
 
   async changed(knownSeats: Set<string>): Promise<PendingHistory[]> {
     const bySeat = await this.index.scan(knownSeats);
+    // F3: the newest event across a seat's transcripts; a seat whose files hold none is left out (null).
+    this.latest = new Map();
+    for (const [seat, list] of bySeat) {
+      const times = list.map((f) => f.lastEventMs).filter((t): t is number => t !== null);
+      if (times.length) this.latest.set(seat, Math.max(...times));
+    }
 
     const out: PendingHistory[] = [];
     for (const [seat, list] of bySeat) {
