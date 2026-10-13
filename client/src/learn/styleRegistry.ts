@@ -25,6 +25,7 @@ const ALL: LegendScreen[] = [
   'wall',
   'map',
   'flow',
+  'timeline',
   'focus',
   'machines',
   'accounts',
@@ -33,6 +34,7 @@ const ALL: LegendScreen[] = [
 ];
 const SEATS: LegendScreen[] = ['wall', 'map', 'flow', 'focus'];
 const RIGS: LegendScreen[] = ['map', 'flow'];
+const RUN: LegendScreen[] = ['timeline'];
 
 export const STYLE_REGISTRY: StyleEntry[] = [
   // ── seat state (the pip) ──
@@ -489,6 +491,80 @@ export const STYLE_REGISTRY: StyleEntry[] = [
       '.atlas-status[data-status=ours-proposed]',
       '.explain-tag[data-tag=CLAIMED]',
     ],
+  },
+  // ── Views V1/V2: run timeline and follow this work ──
+  {
+    id: 'timeline-mark-done',
+    look: 'Grey-brown filled ● dot (and a grey-brown ● word)',
+    means: 'Run Timeline: a handoff that is done.',
+    screens: RUN,
+    tokens: ['.tl-mark[data-state=done]', '.tl-state[data-state=done]', '.tl-shape'],
+  },
+  {
+    id: 'timeline-mark-handed-on',
+    look: 'Amber-brown filled ◆ diamond',
+    means: 'Run Timeline: a handoff its seat passed on to another seat.',
+    screens: RUN,
+    tokens: ['.tl-mark[data-state=handed-on]', '.tl-state[data-state=handed-on]'],
+  },
+  {
+    id: 'timeline-mark-open',
+    look: 'Hollow ○ ring with an amber edge',
+    means: 'Run Timeline: a handoff still open (pending or in progress).',
+    screens: RUN,
+    tokens: ['.tl-mark[data-state=open]', '.tl-state[data-state=open]'],
+  },
+  {
+    id: 'timeline-mark-stopped',
+    look: 'Red filled ■ square',
+    means: 'Run Timeline: a handoff blocked, failed, denied or cancelled.',
+    screens: RUN,
+    tokens: ['.tl-mark[data-state=stopped]', '.tl-state[data-state=stopped]'],
+  },
+  {
+    id: 'timeline-outside-lane',
+    look: 'Dashed lane in italics: "you / other rigs", with ▼ and ▲ flags',
+    means:
+      'Work that came in from David or another rig (▼), and what this rig sent out to them (▲).',
+    screens: RUN,
+    tokens: ['.tl-lane[data-outside=true]', '.tl-label[data-outside=true]'],
+  },
+  {
+    id: 'timeline-phase',
+    look: 'Alternating light bands behind the lanes, each titled "Phase N"',
+    means:
+      'Stretches of the run with no pause over 20 minutes; a longer pause is squeezed to a ⋯ break.',
+    screens: RUN,
+    tokens: ['.tl-phase[data-odd=true]'],
+  },
+  {
+    id: 'timeline-peak',
+    look: 'Dashed amber upright line, "▲ Biggest queue 11:56"',
+    means:
+      "The moment the most fresh items waited at one place at once (the Flow's Biggest queue chapter).",
+    screens: RUN,
+    tokens: ['.legend-tl-peak'],
+  },
+  {
+    id: 'timeline-selected',
+    look: 'Dark solid ring round a mark',
+    means: 'The handoff shown in the panel (or the mark with keyboard focus).',
+    screens: RUN,
+    tokens: ['.tl-mark[data-selected=true]'],
+  },
+  {
+    id: 'timeline-chain',
+    look: 'Dark dotted ring round several marks',
+    means: 'The steps of the work you chose to follow (Follow this work).',
+    screens: RUN,
+    tokens: ['.tl-mark[data-chain=true]'],
+  },
+  {
+    id: 'follow-current',
+    look: 'Dark bar at the left of one step in Follow this work',
+    means: 'The handoff you started following from.',
+    screens: ['map', 'flow', 'timeline'],
+    tokens: ['.follow-step[aria-current=true]'],
   },
 ];
 

@@ -35,6 +35,8 @@ interface Props {
   onClose: () => void;
   /** C6a: false hides the On click / Follow pointer toggle (the Map's drawer opens on click only). */
   showMode?: boolean;
+  /** Views V2: shows "Follow this work" on the handoff in view. */
+  onFollow?: (itemId: string) => void;
 }
 
 const clock = (iso: string) =>
@@ -62,6 +64,7 @@ export default function HandoffPanel({
   onMode,
   onClose,
   showMode = true,
+  onFollow,
 }: Props) {
   const itemId = selection?.itemId ?? null;
   const [got, setGot] = useState<Got>({ state: 'loading' });
@@ -221,6 +224,16 @@ export default function HandoffPanel({
             {who(item.source)} → {who(item.destination)} · {clock(item.createdAt)} ·{' '}
             <span data-testid="handoff-state">{v?.state ?? item.state}</span>
           </span>
+          {onFollow && (
+            <button
+              type="button"
+              className="pill-btn follow-btn"
+              data-testid="handoff-follow"
+              onClick={() => onFollow(item.id)}
+            >
+              Follow this work →
+            </button>
+          )}
         </div>
       )}
       <div className="handoff-body" data-testid="handoff-body" data-status={bodyStatus(got)}>

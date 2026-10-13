@@ -30,6 +30,12 @@ export const SCREEN: Record<View, Row[]> = {
     ['Enter', 'On a line, dot or box: show it in the handoff details panel'],
     ['Esc', 'Close the handoff details (then, back to the previous screen)'],
   ],
+  timeline: [
+    ['Tab', 'Move between the handoff marks, oldest first, lane by lane'],
+    ['Enter', 'On a mark: show its handoff in the panel'],
+    ['O', "Open the chosen rig's files"],
+    ['Esc', 'Back from Follow this work, then close the handoff panel'],
+  ],
   accounts: [],
   machines: [],
   schema: [
@@ -63,6 +69,7 @@ const TITLE: Record<View, string> = {
   wall: 'The Wall',
   map: 'Rig Map',
   flow: 'Handoff Flow',
+  timeline: 'Run Timeline',
   accounts: 'Accounts',
   machines: 'Machines',
   schema: 'OpenRig DB',
@@ -113,7 +120,9 @@ export default function KeysHelp({ view, onClose }: Props) {
           </button>
         </header>
         {SCREEN[view].length > 0 && <ul data-testid="keys-screen">{rows(SCREEN[view])}</ul>}
-        {(view === 'map' || view === 'flow') && <ul data-testid="keys-files">{rows(FILES)}</ul>}
+        {(view === 'map' || view === 'flow' || view === 'timeline') && (
+          <ul data-testid="keys-files">{rows(FILES)}</ul>
+        )}
         <h3 className="label">In an open seat</h3>
         <ul data-testid="keys-seat">{rows(SEAT)}</ul>
         <h3 className="label">Anywhere</h3>

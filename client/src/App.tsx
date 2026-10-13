@@ -17,11 +17,13 @@ import RigFiles, { type PresetFile } from './components/RigFiles.js';
 import Loadout from './components/Loadout.js';
 import FeedbackNotes from './components/FeedbackNotes.js';
 import RigMap from './components/RigMap.js';
+import RunTimeline from './components/RunTimeline.js';
 import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
 import { findSeat, orderedMachines, seatName, type GroupBy } from './fleet/model.js';
 import { buildRigMap, listRigs } from './fleet/views.js';
+import { followWork } from './fleet/timeline.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
@@ -41,11 +43,15 @@ const HINT_KEY = 'appyrig.hint';
 const MAP_HINT_KEY = 'appyrig.mapLegendHint';
 const HIDDEN_KEY = 'appyrig.hiddenMachines';
 
-export type View = 'wall' | 'map' | 'flow' | 'accounts' | 'machines' | 'schema' | 'learn';
+export type View =
+  'wall' | 'map' | 'flow' | 'timeline' | 'accounts' | 'machines' | 'schema' | 'learn';
+/** Screens that show one chosen rig (the rig picker, Follow latest, O for files). */
+export const RIG_VIEWS: View[] = ['map', 'flow', 'timeline'];
 const VIEWS: { key: View; label: string }[] = [
   { key: 'wall', label: 'The Wall' },
   { key: 'map', label: 'Rig Map' },
   { key: 'flow', label: 'Handoff Flow' },
+  { key: 'timeline', label: 'Run Timeline' },
   { key: 'accounts', label: 'Accounts' },
   { key: 'machines', label: 'Machines' },
   { key: 'schema', label: 'OpenRig DB' },
@@ -269,7 +275,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     if (feedback) return;
     const viewLabel = VIEWS.find((v) => v.key === view)?.label ?? view;
     const seat = focusTile ? seatName(focusTile.seat) : null;
-    const rig = view === 'map' || view === 'flow' ? (activeRig?.key ?? null) : null;
+    const rig = RIG_VIEWS.includes(view) ? (activeRig?.key ?? null) : null;
     const region = regionOf(
       seat ? `seat:${seat}` : rig ? `${view}:${rig.split(':')[1] ?? rig}` : view
     );
@@ -456,15 +462,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
 
   // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
   useEffect(() => {
-    if (
-      help ||
-      feedback ||
-      filesFor ||
-      focused ||
-      !activeRig ||
-      (view !== 'map' && view !== 'flow')
-    )
-      return;
+    if (help || feedback || filesFor || focused || !activeRig || !RIG_VIEWS.includes(view)) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'o' || e.key === 'O') && !isShortcutBlocked(e)) {
         e.preventDefault();
@@ -645,7 +643,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         shown={machines}
         filter={
           allMachines.length > 1 &&
-          (view === 'wall' || view === 'map' || view === 'flow' || view === 'machines') ? (
+          (view === 'wall' || RIG_VIEWS.includes(view) || view === 'machines') ? (
             <div className="machine-filter" role="group" aria-label="Machines shown">
               <span className="label">Show</span>
               {allMachines.map((m) => (
@@ -681,7 +679,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onShow={toggleMachine}
         />
       )}
-      {(view === 'map' || view === 'flow') && (
+      {RIG_VIEWS.includes(view) && (
         <main className="view" data-testid={`view-body-${view}`}>
           <p className="follow-row">
             <button
@@ -728,9 +726,21 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               onOpenSkills={openSkills}
               socket={getSocket()}
               keys={!focusTile && !overlay}
+              chainOf={(id) => {
+                const fm = allMachines.find((m) => m.machine.id === activeRig?.machineId);
+                return fm && activeRig ? followWork(fm, activeRig.name, id) : null;
+              }}
+            />
+          ) : view === 'flow' ? (
+            <HandoffFlow
+              machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
+              rig={activeRig?.name ?? null}
+              now={now}
+              socket={getSocket()}
+              keys={!focusTile && !overlay}
             />
           ) : (
-            <HandoffFlow
+            <RunTimeline
               machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
               rig={activeRig?.name ?? null}
               now={now}

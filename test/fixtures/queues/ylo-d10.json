@@ -1,0 +1,1628 @@
+{
+ "note": "ylo-d10 queue rows from the hub saved M4 copy (collected 2026-10-13), body-free; seats reduced to id + rig. For timeline/follow-work tests.",
+ "seats": [
+  {
+   "id": "ylo-lead@ylo-d10",
+   "rig": "ylo-d10"
+  },
+  {
+   "id": "ylo-check@ylo-d10",
+   "rig": "ylo-d10"
+  },
+  {
+   "id": "ylo-copy@ylo-d10",
+   "rig": "ylo-d10"
+  },
+  {
+   "id": "ylo-drip@ylo-d10",
+   "rig": "ylo-d10"
+  },
+  {
+   "id": "openrig-orch-m4",
+   "rig": "ylo-desk"
+  },
+  {
+   "id": "d10-ai-powered-video-cuts",
+   "rig": "ylo-desk"
+  }
+ ],
+ "rigs": [
+  "ylo-d10",
+  "ylo-desk"
+ ],
+ "queue": [
+  {
+   "id": "qitem-20261013041422-fba62fba058748f8",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-0",
+    "mission-brief"
+   ],
+   "summary": "Start the D10 launch: read MISSION-d10.md and run it. David said go.",
+   "createdAt": "2026-10-13T04:14:22.977Z",
+   "updatedAt": "2026-10-13T05:05:25.307Z"
+  },
+  {
+   "id": "qitem-20261013041522-d992a59761f37430",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-1",
+    "first-move"
+   ],
+   "summary": "step 1: copy first move + stage (a) chapters + tags NOW",
+   "createdAt": "2026-10-13T04:15:22.465Z",
+   "updatedAt": "2026-10-13T04:21:47.884Z"
+  },
+  {
+   "id": "qitem-20261013041522-1dbc32814a69435f",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-1",
+    "first-move"
+   ],
+   "summary": "step 1: drip first move: preflight, then wait (nothing renders before the angles gate)",
+   "createdAt": "2026-10-13T04:15:22.708Z",
+   "updatedAt": "2026-10-13T04:15:58.365Z"
+  },
+  {
+   "id": "qitem-20261013041522-8dc896d8e66f8a38",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-1",
+    "first-move"
+   ],
+   "summary": "step 1: check first move: orient, build anchors, wait for items",
+   "createdAt": "2026-10-13T04:15:22.953Z",
+   "updatedAt": "2026-10-13T04:18:31.945Z"
+  },
+  {
+   "id": "qitem-20261013041558-92eabe65",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-1",
+    "preflight"
+   ],
+   "summary": "step 1: drip preflight DONE. Chrome answers (tab 375839051); chatgpt.com shows David logged in (Plus), fresh / with 'Ask ChatGPT' composer, nothing typed; ~/Dow",
+   "createdAt": "2026-10-13T04:15:58.365Z",
+   "updatedAt": "2026-10-13T04:16:38.652Z"
+  },
+  {
+   "id": "qitem-20261013041707-7a5e41a9ca5ca56d",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-2a",
+    "take-questions"
+   ],
+   "summary": "step 2a: take questions for David (D10, FliCut video). Five plain questions, each with my guess, so a \"yes\" is enough. Titles and angles are built only from his",
+   "createdAt": "2026-10-13T04:17:07.932Z",
+   "updatedAt": "2026-10-13T04:34:49.614Z"
+  },
+  {
+   "id": "qitem-20261013041830-d26b84aadf6afc60",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "copy",
+    "batch1",
+    "chapters",
+    "tags"
+   ],
+   "summary": "copy batch 1: chapters + tags",
+   "createdAt": "2026-10-13T04:18:30.375Z",
+   "updatedAt": "2026-10-13T04:21:12.447Z"
+  },
+  {
+   "id": "qitem-20261013041831-67b81376",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-1",
+    "check-done"
+   ],
+   "summary": "check step 1 done: anchors at checks/_anchors-d10.md, transcript-clean hygiene PASS, standing by for pair/text items",
+   "createdAt": "2026-10-13T04:18:31.945Z",
+   "updatedAt": "2026-10-13T04:18:40.218Z"
+  },
+  {
+   "id": "qitem-20261013041935-7b880f357c133ab6",
+   "source": "openrig-orch-m4",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "ruling"
+   ],
+   "summary": "Ruling: transcript only (via API); no video needed; headshots for faces",
+   "createdAt": "2026-10-13T04:19:35.351Z",
+   "updatedAt": "2026-10-13T04:19:46.195Z"
+  },
+  {
+   "id": "qitem-20261013042112-27e66245",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "copy",
+    "batch1",
+    "check-pass"
+   ],
+   "summary": "check: copy batch 1 (chapters + tags) PASS, no fixes, 6 record notes; ruling in checks/copy-batch1.md",
+   "createdAt": "2026-10-13T04:21:12.447Z",
+   "updatedAt": "2026-10-13T04:21:47.625Z"
+  },
+  {
+   "id": "qitem-20261013042147-39a74d85",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-1",
+    "copy",
+    "batch1",
+    "proposal-ready"
+   ],
+   "summary": "# copy → lead: D10 batch 1 proposal-ready (chapters + tags), 2026-10-13 11:21 (+07:00)",
+   "createdAt": "2026-10-13T04:21:47.884Z",
+   "updatedAt": "2026-10-13T04:22:35.586Z"
+  },
+  {
+   "id": "qitem-20261013043441-d0470f5d071805e3",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-2a",
+    "take-answers"
+   ],
+   "summary": "David's answers to the D10 take questions: build the three angles from them.",
+   "createdAt": "2026-10-13T04:34:41.073Z",
+   "updatedAt": "2026-10-13T04:35:58.647Z"
+  },
+  {
+   "id": "qitem-20261013043558-2e374677",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-5",
+    "angles-gate"
+   ],
+   "summary": "step 5: angles gate OPEN for D10 (g_d03e25b293). An angle = the story the thumbnail tells. Each one is built from David's answers.",
+   "createdAt": "2026-10-13T04:35:58.647Z",
+   "updatedAt": "2026-10-13T04:36:49.705Z"
+  },
+  {
+   "id": "qitem-20261013044312-227a30de20b5bec9",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "urgent",
+   "tags": [
+    "mission:d10-launch",
+    "step-5",
+    "angles-go"
+   ],
+   "summary": "David approved angles A, B and C in conversation: render all three now; FliStudio gates are for after the run.",
+   "createdAt": "2026-10-13T04:43:12.450Z",
+   "updatedAt": "2026-10-13T04:43:44.232Z"
+  },
+  {
+   "id": "qitem-20261013044343-6a59ded80df28406",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-6",
+    "pair-a",
+    "render"
+   ],
+   "summary": "pair A: render (D10). David's angles go: \"I'm okay with the angles.\" (04:45Z). One at a time, in order A, B, C.",
+   "createdAt": "2026-10-13T04:43:43.128Z",
+   "updatedAt": "2026-10-13T04:47:58.855Z"
+  },
+  {
+   "id": "qitem-20261013044343-bc0b80f371c520d4",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-6",
+    "pair-b",
+    "render"
+   ],
+   "summary": "pair B: render (D10). David's angles go: \"I'm okay with the angles.\" (04:45Z). One at a time, in order A, B, C.",
+   "createdAt": "2026-10-13T04:43:43.389Z",
+   "updatedAt": "2026-10-13T04:51:20.764Z"
+  },
+  {
+   "id": "qitem-20261013044343-1376ec467f084c38",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-6",
+    "pair-c",
+    "render"
+   ],
+   "summary": "pair C: render (D10). David's angles go: \"I'm okay with the angles.\" (04:45Z). One at a time, in order A, B, C.",
+   "createdAt": "2026-10-13T04:43:43.657Z",
+   "updatedAt": "2026-10-13T04:55:42.751Z"
+  },
+  {
+   "id": "qitem-20261013044343-0abe24c4beddc139",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-7",
+    "copy",
+    "stage-b"
+   ],
+   "summary": "stage (b): description + pinned comment + end screen — GO now (David's angles go, 04:45Z; FliStudio gates are his review AFTER the run, so nothing here waits on",
+   "createdAt": "2026-10-13T04:43:43.928Z",
+   "updatedAt": "2026-10-13T04:51:07.711Z"
+  },
+  {
+   "id": "qitem-20261013044625-4baa5b41af6e1667",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-7",
+    "copy",
+    "batch2",
+    "description",
+    "pinned",
+    "end-screen"
+   ],
+   "summary": "copy batch 2: description + pinned comment + end screen",
+   "createdAt": "2026-10-13T04:46:25.566Z",
+   "updatedAt": "2026-10-13T04:50:44.283Z"
+  },
+  {
+   "id": "qitem-20261013044758-f958897c",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-a",
+    "render"
+   ],
+   "summary": "Pair A render is done: one clean send, image downloaded, ready for composite and check.",
+   "createdAt": "2026-10-13T04:47:58.855Z",
+   "updatedAt": "2026-10-13T04:48:52.411Z"
+  },
+  {
+   "id": "qitem-20261013044851-d0e10141a1b1a801",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-a",
+    "check"
+   ],
+   "summary": "pair A: check (D10). Angle from A2 + A1. Rule PASS or a fix list in checks/pair-a.md.",
+   "createdAt": "2026-10-13T04:48:51.937Z",
+   "updatedAt": "2026-10-13T04:54:52.212Z"
+  },
+  {
+   "id": "qitem-20261013045044-4e386140",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "copy",
+    "batch2",
+    "check-pass"
+   ],
+   "summary": "check: copy batch 2 (description + pinned + end screen) PASS, no fixes, 8 record notes; ruling in checks/copy-batch2.md",
+   "createdAt": "2026-10-13T04:50:44.283Z",
+   "updatedAt": "2026-10-13T04:51:07.388Z"
+  },
+  {
+   "id": "qitem-20261013045107-61ee93ac",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-7",
+    "copy",
+    "batch2",
+    "proposal-ready"
+   ],
+   "summary": "copy batch 2 (description + pinned + end screen): check PASS, proposal-ready",
+   "createdAt": "2026-10-13T04:51:07.711Z",
+   "updatedAt": "2026-10-13T04:51:36.491Z"
+  },
+  {
+   "id": "qitem-20261013045120-e517c194",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-b",
+    "render"
+   ],
+   "summary": "Pair B render is done: one clean send, image downloaded, ready for composite and check.",
+   "createdAt": "2026-10-13T04:51:20.764Z",
+   "updatedAt": "2026-10-13T04:52:02.320Z"
+  },
+  {
+   "id": "qitem-20261013045128-b70323d21db3b32c",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-8",
+    "copy",
+    "batch3",
+    "social"
+   ],
+   "summary": "copy batch 3: social drafts (X, LinkedIn, Facebook)",
+   "createdAt": "2026-10-13T04:51:28.082Z",
+   "updatedAt": "2026-10-13T04:56:57.629Z"
+  },
+  {
+   "id": "qitem-20261013045201-e7a8e84d617f9f18",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-b",
+    "check"
+   ],
+   "summary": "pair B: check (D10). Angle from A3 (dictionary, David's approved \"incredible accuracy\") + A4 (Ecamm named). Rule PASS or a fix list in checks/pair-b.md.",
+   "createdAt": "2026-10-13T04:52:01.563Z",
+   "updatedAt": "2026-10-13T04:58:09.165Z"
+  },
+  {
+   "id": "qitem-20261013045452-550a33a3",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-a",
+    "check-fix"
+   ],
+   "summary": "check: pair A FIX LIST, 1 composite fix (complement: overlay restates title; swap to PLAYED AT 2.5× SPEED or CUT BY TRANSCRIPT), picture PASS; ruling in checks/",
+   "createdAt": "2026-10-13T04:54:52.212Z",
+   "updatedAt": "2026-10-13T04:55:26.043Z"
+  },
+  {
+   "id": "qitem-20261013045526-880b606f",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-a-alt",
+    "check"
+   ],
+   "summary": "pair A-alt: check (D10). Your pair-A fix, applied as an EXTRA version. A itself stays: its overlay was on the angles card David accepted at 04:45Z, so A = PASS ",
+   "createdAt": "2026-10-13T04:55:26.043Z",
+   "updatedAt": "2026-10-13T05:01:51.225Z"
+  },
+  {
+   "id": "qitem-20261013045542-89eba4a9",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-c",
+    "render"
+   ],
+   "summary": "Pair C render is done: one clean send, image downloaded. All three pairs (A, B, C) are now with you.",
+   "createdAt": "2026-10-13T04:55:42.751Z",
+   "updatedAt": "2026-10-13T04:56:10.435Z"
+  },
+  {
+   "id": "qitem-20261013045609-4a597f54f29dcfba",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-c",
+    "check"
+   ],
+   "summary": "pair C: check (D10). Angle from A5 (Part 2) + A1 (series followers) + A3 (automated cuts with word padding). Rule PASS or a fix list in checks/pair-c.md.",
+   "createdAt": "2026-10-13T04:56:09.607Z",
+   "updatedAt": "2026-10-13T05:01:51.460Z"
+  },
+  {
+   "id": "qitem-20261013045657-f02aa1e2",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "copy",
+    "batch3",
+    "check-pass"
+   ],
+   "summary": "check: copy batch 3 (social) PASS, no fixes, 3 record notes; ruling in checks/copy-batch3.md",
+   "createdAt": "2026-10-13T04:56:57.629Z",
+   "updatedAt": "2026-10-13T04:57:12.470Z"
+  },
+  {
+   "id": "qitem-20261013045712-ca26d118dcab64c4",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-8",
+    "copy",
+    "batch3",
+    "social",
+    "proposal-ready"
+   ],
+   "summary": "copy batch 3 (social X/LinkedIn/Facebook): check PASS, proposal-ready",
+   "createdAt": "2026-10-13T04:57:12.728Z",
+   "updatedAt": "2026-10-13T04:57:35.315Z"
+  },
+  {
+   "id": "qitem-20261013045809-6e1bf42f",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-b",
+    "check-pass"
+   ],
+   "summary": "check: pair B PASS, no fixes, 4 card notes; ruling in checks/pair-b.md",
+   "createdAt": "2026-10-13T04:58:09.165Z",
+   "updatedAt": "2026-10-13T04:58:22.703Z"
+  },
+  {
+   "id": "qitem-20261013050151-768d3fd1",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-a-alt",
+    "check-pass"
+   ],
+   "summary": "check: pair A-alt PASS (picture_family A = A-alt); A amended to PASS as David's choice; ruling in checks/pair-a-alt.md",
+   "createdAt": "2026-10-13T05:01:51.225Z",
+   "updatedAt": "2026-10-13T05:02:09.668Z"
+  },
+  {
+   "id": "qitem-20261013050151-63b6e2f5",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-11",
+    "pair-c",
+    "check-pass"
+   ],
+   "summary": "check: pair C PASS, 3 questions answered (hand attaches; PART 2 tag keep; distinct from A), 4 card notes; ruling in checks/pair-c.md",
+   "createdAt": "2026-10-13T05:01:51.460Z",
+   "updatedAt": "2026-10-13T05:02:10.123Z"
+  },
+  {
+   "id": "qitem-20261013050259-a72e536bd589dcc0",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-wrap",
+    "learned"
+   ],
+   "summary": "wrap: D10 is in FliStudio (4 pairs all check PASS, every text piece proposed). Please add a short \"D10 (2026-10-13)\" section to /Users/davidcruwys/dev/ad/brains",
+   "createdAt": "2026-10-13T05:02:59.088Z",
+   "updatedAt": "2026-10-13T05:03:43.534Z"
+  },
+  {
+   "id": "qitem-20261013050259-ff8522366b4c25e2",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-wrap",
+    "learned"
+   ],
+   "summary": "wrap: D10 is in FliStudio (4 pairs all check PASS, every text piece proposed). Please add a short \"D10 (2026-10-13)\" section to /Users/davidcruwys/dev/ad/brains",
+   "createdAt": "2026-10-13T05:02:59.359Z",
+   "updatedAt": "2026-10-13T05:04:59.149Z"
+  },
+  {
+   "id": "qitem-20261013050259-ae2a514c4081aa07",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-wrap",
+    "learned"
+   ],
+   "summary": "wrap: D10 is in FliStudio (4 pairs all check PASS, every text piece proposed). Please add a short \"D10 (2026-10-13)\" section to /Users/davidcruwys/dev/ad/brains",
+   "createdAt": "2026-10-13T05:02:59.652Z",
+   "updatedAt": "2026-10-13T05:03:58.796Z"
+  },
+  {
+   "id": "qitem-20261013050340-b48cce6144c4c0da",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-12",
+    "report"
+   ],
+   "summary": "step 12: D10 Launch REPORT. Everything is in FliStudio, waiting for David's review on the Launch page: http://100.82.235.39:7150/b/appydave/p/d10-ai-powered-vid",
+   "createdAt": "2026-10-13T05:03:40.678Z",
+   "updatedAt": "2026-10-13T05:03:52.774Z"
+  },
+  {
+   "id": "qitem-20261013050343-8ca57cc6",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "wrap"
+   ],
+   "summary": "Drip wrap done: LEARNED-drip D10 section and NOTES seat log written, not committed.",
+   "createdAt": "2026-10-13T05:03:43.534Z",
+   "updatedAt": "2026-10-13T05:04:00.640Z"
+  },
+  {
+   "id": "qitem-20261013050358-a1f53f43",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-wrap",
+    "learned",
+    "copy"
+   ],
+   "summary": "copy wrap: LEARNED-copy D10 section + NOTES times in place, uncommitted",
+   "createdAt": "2026-10-13T05:03:58.796Z",
+   "updatedAt": "2026-10-13T05:04:05.615Z"
+  },
+  {
+   "id": "qitem-20261013050459-df1d99e3",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "step-wrap",
+    "learned",
+    "check-done"
+   ],
+   "summary": "check wrap done: D10 section in LEARNED-check.md (10 lessons w/ evidence), seat times + handoffs in workspace NOTES.md; not committed",
+   "createdAt": "2026-10-13T05:04:59.149Z",
+   "updatedAt": "2026-10-13T05:05:04.019Z"
+  },
+  {
+   "id": "qitem-recovery-3094cc4ce57e8c58",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:dangling-closure:qitem-20261013041422-fba62fba058748f8",
+    "recovery-for:qitem-20261013041422-fba62fba058748f8"
+   ],
+   "summary": "Stuck sweep: successor-verification-required on qitem-20261013041422-fba62fba058748f8 (3 min)",
+   "createdAt": "2026-10-13T05:08:43.926Z",
+   "updatedAt": "2026-10-13T05:09:00.994Z"
+  },
+  {
+   "id": "qitem-20261013051204-8d49a4fb671fcaaf",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "openrig-focus"
+   ],
+   "summary": "D10 change: refocus the launch on OpenRig and the agent swarm; Ecamm stays subliminal; new angles, titles, thumbnails and text beside the existing ones.",
+   "createdAt": "2026-10-13T05:12:04.714Z",
+   "updatedAt": "2026-10-13T05:52:49.544Z"
+  },
+  {
+   "id": "qitem-20261013051237-819628328cd94463",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "copy",
+    "stage-a2"
+   ],
+   "summary": "change 01, stage (a2): chapters + tags, new versions — GO now (these don't wait on the new angles).",
+   "createdAt": "2026-10-13T05:12:37.699Z",
+   "updatedAt": "2026-10-13T05:15:38.210Z"
+  },
+  {
+   "id": "qitem-20261013051316-84b3c4210b75395c",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "angles-card"
+   ],
+   "summary": "change-01: new angles for David (D10, OpenRig + the swarm). An angle = the story the thumbnail tells. A, A-alt, B and C stay exactly as they are; these three si",
+   "createdAt": "2026-10-13T05:13:16.152Z",
+   "updatedAt": "2026-10-13T05:15:53.659Z"
+  },
+  {
+   "id": "qitem-20261013051336-c606e5a660807f28",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "stage-a2",
+    "copy",
+    "batch4",
+    "chapters",
+    "tags"
+   ],
+   "summary": "copy batch 4 (change 01): chapters v2 + tags v2",
+   "createdAt": "2026-10-13T05:13:36.115Z",
+   "updatedAt": "2026-10-13T05:15:16.564Z"
+  },
+  {
+   "id": "qitem-20261013051516-9cec9f02",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "copy",
+    "batch4",
+    "check-pass"
+   ],
+   "summary": "check: copy batch 4 (change 01 chapters v2 + tags v2) PASS, no fixes, 6 record notes; ruling in checks/copy-batch4.md",
+   "createdAt": "2026-10-13T05:15:16.564Z",
+   "updatedAt": "2026-10-13T05:15:37.948Z"
+  },
+  {
+   "id": "qitem-20261013051538-f87455c3",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "stage-a2",
+    "copy",
+    "batch4",
+    "proposal-ready"
+   ],
+   "summary": "copy batch 4 (change 01 chapters v2 + tags v2): check PASS, proposal-ready",
+   "createdAt": "2026-10-13T05:15:38.210Z",
+   "updatedAt": "2026-10-13T05:15:50.762Z"
+  },
+  {
+   "id": "qitem-20261013051553-c38644cf0f1de807",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "angles-go"
+   ],
+   "summary": "David's go on change-01 angles: render D, E, F; D in front; tighten E's title.",
+   "createdAt": "2026-10-13T05:15:53.403Z",
+   "updatedAt": "2026-10-13T05:16:15.724Z"
+  },
+  {
+   "id": "qitem-20261013051614-e85256131bb88ecc",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-d",
+    "render"
+   ],
+   "summary": "pair D: render (D10 change-01). David's go: \"Whatever the recommendations are, we go with. Otherwise, approval is granted\" (~05:20Z). One at a time, order D, E,",
+   "createdAt": "2026-10-13T05:16:14.469Z",
+   "updatedAt": "2026-10-13T05:20:12.520Z"
+  },
+  {
+   "id": "qitem-20261013051614-224c06b0715fdfce",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-e",
+    "render"
+   ],
+   "summary": "pair E: render (D10 change-01). David's go: \"Whatever the recommendations are, we go with. Otherwise, approval is granted\" (~05:20Z). One at a time, order D, E,",
+   "createdAt": "2026-10-13T05:16:14.759Z",
+   "updatedAt": "2026-10-13T05:24:07.075Z"
+  },
+  {
+   "id": "qitem-20261013051615-c8d04bbba8e33cf0",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-f",
+    "render"
+   ],
+   "summary": "pair F: render (D10 change-01). David's go: \"Whatever the recommendations are, we go with. Otherwise, approval is granted\" (~05:20Z). One at a time, order D, E,",
+   "createdAt": "2026-10-13T05:16:15.025Z",
+   "updatedAt": "2026-10-13T05:28:19.583Z"
+  },
+  {
+   "id": "qitem-20261013051615-dcfd04f6386606cb",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "copy",
+    "stage-b2"
+   ],
+   "summary": "change 01, stage (b2): description, pinned comment, end screen (if needed) and social v2 — GO now. David: \"Whatever the recommendations are, we go with. Otherwi",
+   "createdAt": "2026-10-13T05:16:15.424Z",
+   "updatedAt": "2026-10-13T05:20:28.936Z"
+  },
+  {
+   "id": "qitem-20261013051706-7cfb5b5ae2bb003b",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "stage-b2",
+    "copy",
+    "batch5",
+    "description",
+    "pinned",
+    "social"
+   ],
+   "summary": "copy batch 5 (change 01): description v2 + pinned v2 + social v2",
+   "createdAt": "2026-10-13T05:17:06.472Z",
+   "updatedAt": "2026-10-13T05:19:53.739Z"
+  },
+  {
+   "id": "qitem-20261013051953-1a3634fd",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "copy",
+    "batch5",
+    "check-fix"
+   ],
+   "summary": "check: copy batch 5 (change 01 description/pinned/social v2) FIX LIST, 3 wording fixes (S3 'see it at work' vs c125-128; keyword 'walkthrough of OpenRig'; chapt",
+   "createdAt": "2026-10-13T05:19:53.739Z",
+   "updatedAt": "2026-10-13T05:20:28.687Z"
+  },
+  {
+   "id": "qitem-20261013052012-1a6b27f0",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-d",
+    "render"
+   ],
+   "summary": "Pair D render is done: one clean send, image downloaded, ready for composite and check.",
+   "createdAt": "2026-10-13T05:20:12.520Z",
+   "updatedAt": "2026-10-13T05:20:41.733Z"
+  },
+  {
+   "id": "qitem-20261013052028-b7d2fc60",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "stage-b2",
+    "copy",
+    "batch5",
+    "proposal-ready"
+   ],
+   "summary": "copy batch 5 (change 01 description/pinned/social v2): fixes applied, proposal-ready",
+   "createdAt": "2026-10-13T05:20:28.936Z",
+   "updatedAt": "2026-10-13T05:20:50.627Z"
+  },
+  {
+   "id": "qitem-20261013052040-6a47955cc92a92c1",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-d",
+    "check"
+   ],
+   "summary": "pair D: check (D10 change-01, lead pair). Angle: new centre OpenRig swarm + A1 agent-team builders + A4 agents loud. Rule PASS or a fix list in checks/pair-d.md",
+   "createdAt": "2026-10-13T05:20:40.864Z",
+   "updatedAt": "2026-10-13T05:24:22.251Z"
+  },
+  {
+   "id": "qitem-20261013052407-79761ac7",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-e",
+    "render"
+   ],
+   "summary": "Pair E render is done: one clean send, image downloaded, ready for composite and check.",
+   "createdAt": "2026-10-13T05:24:07.075Z",
+   "updatedAt": "2026-10-13T05:24:41.051Z"
+  },
+  {
+   "id": "qitem-20261013052422-ed8ebc72",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-d",
+    "check-pass"
+   ],
+   "summary": "check: pair D PASS, 5 questions answered (none fail), 1 note for David (play-button plaque in background); ruling in checks/pair-d.md",
+   "createdAt": "2026-10-13T05:24:22.251Z",
+   "updatedAt": "2026-10-13T05:24:50.261Z"
+  },
+  {
+   "id": "qitem-20261013052440-caa5facbc1744e3c",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-e",
+    "check"
+   ],
+   "summary": "pair E: check (D10 change-01). Angle: A2 (10-minute takeaway) + the swarm. Rule PASS or a fix list in checks/pair-e.md.",
+   "createdAt": "2026-10-13T05:24:40.033Z",
+   "updatedAt": "2026-10-13T05:27:01.811Z"
+  },
+  {
+   "id": "qitem-20261013052701-e52c60e2",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-e",
+    "check-pass"
+   ],
+   "summary": "check: pair E PASS, 5 questions answered (none fail), hybrid-of-A-and-D note, plaque note again; ruling in checks/pair-e.md",
+   "createdAt": "2026-10-13T05:27:01.811Z",
+   "updatedAt": "2026-10-13T05:27:12.836Z"
+  },
+  {
+   "id": "qitem-20261013052819-b2761774",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-f",
+    "render"
+   ],
+   "summary": "Pair F render is done: one clean send, image downloaded. D, E and F are all with you.",
+   "createdAt": "2026-10-13T05:28:19.583Z",
+   "updatedAt": "2026-10-13T05:28:47.310Z"
+  },
+  {
+   "id": "qitem-20261013052846-4d48af8fe210f21e",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-f",
+    "check"
+   ],
+   "summary": "pair F: check (D10 change-01, the wildcard). Angle: A3 + the swarm + Ecamm subliminal + A5 (tease D11). Rule PASS or a fix list in checks/pair-f.md.",
+   "createdAt": "2026-10-13T05:28:46.615Z",
+   "updatedAt": "2026-10-13T05:31:29.816Z"
+  },
+  {
+   "id": "qitem-20261013052948-8d3a10b755497cfb",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3"
+   ],
+   "summary": "D10 change 02: group 3 thumbnails echoing OpenRig's launch video; images only, after group 2.",
+   "createdAt": "2026-10-13T05:29:48.169Z",
+   "updatedAt": "2026-10-13T05:52:49.764Z"
+  },
+  {
+   "id": "qitem-20261013053023-d63b87ce4ac37f20",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "angles-card",
+    "group-3"
+   ],
+   "summary": "change-02: group 3 angles (G, H, I), images only, echoing the @openrig \"They live here.\" thumbnail. Echo the grammar, not his words: a small kicker top-left, th",
+   "createdAt": "2026-10-13T05:30:23.664Z",
+   "updatedAt": "2026-10-13T05:30:38.826Z"
+  },
+  {
+   "id": "qitem-20261013053038-558878e966d8bf1b",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "angles-go"
+   ],
+   "summary": "Go on group 3: render G, H, I after group 2; G in front.",
+   "createdAt": "2026-10-13T05:30:38.361Z",
+   "updatedAt": "2026-10-13T05:30:51.466Z"
+  },
+  {
+   "id": "qitem-20261013053129-62f4bb86",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "pair-f",
+    "check-pass"
+   ],
+   "summary": "check: pair F PASS, 6 questions answered (none fail), picture_family F ⊃ B, rule-1 note for D/F; ruling in checks/pair-f.md",
+   "createdAt": "2026-10-13T05:31:29.816Z",
+   "updatedAt": "2026-10-13T05:31:54.123Z"
+  },
+  {
+   "id": "qitem-20261013053253-c27581bea09ba6a6",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-g",
+    "render"
+   ],
+   "summary": "pair G: render (D10 change-02, group 3). David's go: \"go, do group three\" (+ standing approval). One at a time, order G, H, I.",
+   "createdAt": "2026-10-13T05:32:53.851Z",
+   "updatedAt": "2026-10-13T05:36:52.912Z"
+  },
+  {
+   "id": "qitem-20261013053254-63f5d60ee1d8ca1d",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-h",
+    "render"
+   ],
+   "summary": "pair H: render (D10 change-02, group 3). David's go: \"go, do group three\" (+ standing approval). One at a time, order G, H, I.",
+   "createdAt": "2026-10-13T05:32:54.075Z",
+   "updatedAt": "2026-10-13T05:40:40.811Z"
+  },
+  {
+   "id": "qitem-20261013053254-c7c12d95a4c44413",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-drip@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-i",
+    "render"
+   ],
+   "summary": "pair I: render (D10 change-02, group 3). David's go: \"go, do group three\" (+ standing approval). One at a time, order G, H, I.",
+   "createdAt": "2026-10-13T05:32:54.300Z",
+   "updatedAt": "2026-10-13T05:44:22.862Z"
+  },
+  {
+   "id": "qitem-20261013053652-866e53ee",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-g",
+    "render"
+   ],
+   "summary": "Pair G render is done: one clean send, image downloaded, ready for composite and check.",
+   "createdAt": "2026-10-13T05:36:52.912Z",
+   "updatedAt": "2026-10-13T05:37:30.228Z"
+  },
+  {
+   "id": "qitem-20261013053729-50f89561fc09190a",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-g",
+    "check"
+   ],
+   "summary": "pair G: check (D10 change-02, group 3, images only). Brief: /Users/davidcruwys/dev/ad/brains/openrig/rigs/ylo-thumbs/MISSION-d10-change-02-group3-openrig-echo.m",
+   "createdAt": "2026-10-13T05:37:29.529Z",
+   "updatedAt": "2026-10-13T05:40:40.617Z"
+  },
+  {
+   "id": "qitem-20261013054040-27213d87",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-g",
+    "check-pass"
+   ],
+   "summary": "check: pair G (group 3) PASS, 6 questions answered (none fail), screen matches the real rig map, kicker ambiguity noted with optional swap; ruling in checks/pai",
+   "createdAt": "2026-10-13T05:40:40.617Z",
+   "updatedAt": "2026-10-13T05:40:53.584Z"
+  },
+  {
+   "id": "qitem-20261013054040-187e0772",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-h",
+    "render"
+   ],
+   "summary": "Pair H render is done: one clean send, image downloaded, ready for composite and check.",
+   "createdAt": "2026-10-13T05:40:40.811Z",
+   "updatedAt": "2026-10-13T05:41:16.319Z"
+  },
+  {
+   "id": "qitem-20261013054115-d512b101cb56cb9c",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-h",
+    "check"
+   ],
+   "summary": "pair H: check (D10 change-02, group 3). Rule PASS or a fix list in checks/pair-h.md. Same brief and reference as G.",
+   "createdAt": "2026-10-13T05:41:15.777Z",
+   "updatedAt": "2026-10-13T05:44:26.876Z"
+  },
+  {
+   "id": "qitem-20261013054422-6ee7aca3",
+   "source": "ylo-drip@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "pair-i",
+    "render"
+   ],
+   "summary": "Pair I render is done: one clean send, image downloaded. G, H and I are all with you.",
+   "createdAt": "2026-10-13T05:44:22.862Z",
+   "updatedAt": "2026-10-13T05:45:05.026Z"
+  },
+  {
+   "id": "qitem-20261013054426-162a74c1",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-h",
+    "check-fix"
+   ],
+   "summary": "check: pair H (group 3) FIX LIST, 1 composite fix (stack paraphrases title; rec MY / LAUNCH / TEAM.), picture PASS, 5 questions pass; ruling in checks/pair-h.md",
+   "createdAt": "2026-10-13T05:44:26.876Z",
+   "updatedAt": "2026-10-13T05:45:04.593Z"
+  },
+  {
+   "id": "qitem-20261013054503-a1d0d12474eb99cb",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-h-alt",
+    "check"
+   ],
+   "summary": "pair H-alt: check (group 3). Your pair-H fix applied as an EXTRA version. H stays: its stack was on the group-3 card David accepted (\"go, do group three\" + stan",
+   "createdAt": "2026-10-13T05:45:03.784Z",
+   "updatedAt": "2026-10-13T05:49:56.804Z"
+  },
+  {
+   "id": "qitem-20261013054504-bc8dbc4ab8df2c4f",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-i",
+    "check"
+   ],
+   "summary": "pair I: check (D10 change-02, group 3). Rule PASS or a fix list in checks/pair-i.md. Same brief and reference as G/H.",
+   "createdAt": "2026-10-13T05:45:04.142Z",
+   "updatedAt": "2026-10-13T05:49:57.027Z"
+  },
+  {
+   "id": "qitem-20261013054956-c5d24779",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-h-alt",
+    "check-pass"
+   ],
+   "summary": "check: pair H-alt PASS (lid gap 19 px, plant clear, complement resolved); H amended to PASS as David's choice; ruling in checks/pair-h-alt.md",
+   "createdAt": "2026-10-13T05:49:56.804Z",
+   "updatedAt": "2026-10-13T05:50:15.658Z"
+  },
+  {
+   "id": "qitem-20261013054957-c1558824",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-i",
+    "check-fix"
+   ],
+   "summary": "check: pair I (group 3) FIX LIST, 1 composite fix (stack restates title's 'take over'; rec ALL / FILLED / IN.) or David's choice; picture PASS, 4 of 5 questions",
+   "createdAt": "2026-10-13T05:49:57.027Z",
+   "updatedAt": "2026-10-13T05:50:16.096Z"
+  },
+  {
+   "id": "qitem-20261013055026-b091622ab2014168",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-i-alt",
+    "check"
+   ],
+   "summary": "pair I-alt: check (group 3). Your pair-I recommended fix applied as an EXTRA version. I stays: its stack was on the accepted group-3 card, so I = PASS (David's ",
+   "createdAt": "2026-10-13T05:50:26.308Z",
+   "updatedAt": "2026-10-13T05:51:21.593Z"
+  },
+  {
+   "id": "qitem-20261013055121-1e5ec635",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-02",
+    "group-3",
+    "pair-i-alt",
+    "check-pass"
+   ],
+   "summary": "check: pair I-alt PASS (complement 0 shared, c120-121, arrow clear ~160 px); I amended to PASS as David's choice; ruling in checks/pair-i-alt.md",
+   "createdAt": "2026-10-13T05:51:21.593Z",
+   "updatedAt": "2026-10-13T05:51:33.895Z"
+  },
+  {
+   "id": "qitem-20261013055212-07e42b56ead661f1",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-01",
+    "change-02",
+    "report"
+   ],
+   "summary": "change-01 + change-02: D10 REPORT. Everything is in FliStudio for David's review on the Launch page: http://100.82.235.39:7150/b/appydave/p/d10-ai-powered-video",
+   "createdAt": "2026-10-13T05:52:12.401Z",
+   "updatedAt": "2026-10-13T05:52:33.193Z"
+  },
+  {
+   "id": "qitem-20261013065143-c777a72e2f395f26",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "social"
+   ],
+   "summary": "change 03: rewrite social (X, LinkedIn, Facebook) as v3 for pair A's title 'I Edited a 10-Minute Video in 10 Minutes with FliCut'. No OpenRig. David's go quoted",
+   "createdAt": "2026-10-13T06:51:43.694Z",
+   "updatedAt": "2026-10-13T06:56:12.264Z"
+  },
+  {
+   "id": "qitem-20261013065204-759c787dd48a636e",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "social"
+   ],
+   "summary": "change 03: write social v3 for pair A's title, via check, back to lead",
+   "createdAt": "2026-10-13T06:52:04.800Z",
+   "updatedAt": "2026-10-13T06:55:10.303Z"
+  },
+  {
+   "id": "qitem-20261013065311-3c3e43e7733ee3f3",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "social",
+    "copy-batch6"
+   ],
+   "summary": "copy batch 6: social v3 (pair A, FliCut-led) for check",
+   "createdAt": "2026-10-13T06:53:11.981Z",
+   "updatedAt": "2026-10-13T06:54:57.698Z"
+  },
+  {
+   "id": "qitem-20261013065457-efd346f7",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "social",
+    "copy-batch6",
+    "check-pass"
+   ],
+   "summary": "check: copy batch 6 social v3 PASS (no fixes) -> copy, proposal-ready",
+   "createdAt": "2026-10-13T06:54:57.698Z",
+   "updatedAt": "2026-10-13T06:55:10.087Z"
+  },
+  {
+   "id": "qitem-20261013065510-916d04d2",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "social"
+   ],
+   "summary": "# Proposal-ready — change 03, social v3 (copy batch 6)",
+   "createdAt": "2026-10-13T06:55:10.303Z",
+   "updatedAt": "2026-10-13T06:56:12.485Z"
+  },
+  {
+   "id": "qitem-20261013065543-81ecc557147983a7",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "desk.planner@ylo-desk",
+   "state": "pending",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "report"
+   ],
+   "summary": "change 03 done: social v3 proposed, gate g_8334a98162 open, posts inline",
+   "createdAt": "2026-10-13T06:55:43.388Z",
+   "updatedAt": "2026-10-13T06:55:43.388Z"
+  },
+  {
+   "id": "qitem-20261013065551-ac55fb176978a3ef",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-03",
+    "report"
+   ],
+   "summary": "change 03 done: social v3 proposed, gate g_8334a98162 open, posts inline",
+   "createdAt": "2026-10-13T06:55:51.013Z",
+   "updatedAt": "2026-10-13T06:56:02.878Z"
+  },
+  {
+   "id": "qitem-recovery-2c685dc38a8d555d",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "desk.planner@ylo-desk",
+   "state": "pending",
+   "priority": "routine",
+   "tags": [
+    "stuck-sweep-finding",
+    "stuck-sweep:undelivered-wake:qitem-20261013065543-81ecc557147983a7",
+    "recovery-for:qitem-20261013065543-81ecc557147983a7"
+   ],
+   "summary": "Stuck sweep: undelivered-wake on qitem-20261013065543-81ecc557147983a7 (3 min)",
+   "createdAt": "2026-10-13T06:58:43.972Z",
+   "updatedAt": "2026-10-13T06:58:43.972Z"
+  },
+  {
+   "id": "qitem-20261013070228-d48fdcb8e4199b9e",
+   "source": "d10-ai-powered-video-cuts",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-04",
+    "description",
+    "pinned-comment"
+   ],
+   "summary": "change 04 URGENT: description + pinned comment v3 for pair A's title, no OpenRig. David is in FliStudio now.",
+   "createdAt": "2026-10-13T07:02:28.217Z",
+   "updatedAt": "2026-10-13T07:05:29.423Z"
+  },
+  {
+   "id": "qitem-20261013070242-5e3ae528c7b0f26f",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "handed-off",
+   "priority": "urgent",
+   "tags": [
+    "mission:d10-launch",
+    "change-04"
+   ],
+   "summary": "change 04 URGENT: description + pinned comment v3 for pair A's title, via check, back to lead",
+   "createdAt": "2026-10-13T07:02:42.349Z",
+   "updatedAt": "2026-10-13T07:05:10.528Z"
+  },
+  {
+   "id": "qitem-20261013070330-dec154a84cbbe332",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-check@ylo-d10",
+   "state": "handed-off",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-04",
+    "description",
+    "copy-batch7"
+   ],
+   "summary": "URGENT copy batch 7: description-v3 + pinned-comment-v3 (pair A) for check",
+   "createdAt": "2026-10-13T07:03:30.207Z",
+   "updatedAt": "2026-10-13T07:04:55.898Z"
+  },
+  {
+   "id": "qitem-20261013070455-28621f8d",
+   "source": "ylo-check@ylo-d10",
+   "destination": "ylo-copy@ylo-d10",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-04",
+    "description",
+    "copy-batch7",
+    "check-pass"
+   ],
+   "summary": "check: copy batch 7 description-v3 + pinned-v3 PASS (no fixes) -> copy, proposal-ready",
+   "createdAt": "2026-10-13T07:04:55.898Z",
+   "updatedAt": "2026-10-13T07:05:10.293Z"
+  },
+  {
+   "id": "qitem-20261013070510-ac070b9a",
+   "source": "ylo-copy@ylo-d10",
+   "destination": "ylo-lead@ylo-d10",
+   "state": "done",
+   "priority": "urgent",
+   "tags": [
+    "mission:d10-launch",
+    "change-04"
+   ],
+   "summary": "# Proposal-ready — change 04, description-v3 + pinned-comment-v3 (copy batch 7)",
+   "createdAt": "2026-10-13T07:05:10.528Z",
+   "updatedAt": "2026-10-13T07:05:30.088Z"
+  },
+  {
+   "id": "qitem-20261013070514-4cf4d391b8722980",
+   "source": "ylo-lead@ylo-d10",
+   "destination": "d10-ai-powered-video-cuts",
+   "state": "done",
+   "priority": "routine",
+   "tags": [
+    "mission:d10-launch",
+    "change-04",
+    "report"
+   ],
+   "summary": "change 04 done: description g_2ffa66960a, pinned g_8e4ceab4a5, chapters g_5d77cb9e3e open",
+   "createdAt": "2026-10-13T07:05:14.276Z",
+   "updatedAt": "2026-10-13T07:05:31.921Z"
+  }
+ ]
+}

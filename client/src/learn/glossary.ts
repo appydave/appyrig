@@ -46,6 +46,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'The same handoffs grouped by role: Lead → Builders → QA → Reviewer. Teams without QA or review get one box per seat.',
     why: 'It shows where work piles up and how often it gets sent back. Replay run plays the whole run back.',
   },
+  'view-timeline': {
+    term: 'Run Timeline',
+    what: "One rig's run on a time axis: a lane per seat, each handoff a mark on the lane of the seat that sent it, shaped by its state.",
+    why: 'It shows how a run went over time: its phases, its busiest moment, and who was waiting on whom. Click a mark for its message, then "Follow this work" for the whole chain.',
+  },
   'view-accounts': {
     term: 'Accounts',
     what: "Each Claude account the fleet runs on, its 5-hour and weekly use, and which machines' cached profiles name it.",
