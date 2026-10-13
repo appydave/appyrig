@@ -83,7 +83,13 @@ describe('R3 · choosing the plan and marking the live step', () => {
     expect(plan.kind).toBe('changes');
     expect(plan.live?.id).toBe('change 04');
     expect(plan.live?.item.createdAt).toBe('2026-10-13T07:05:14.276Z');
-    expect([...plan.done]).toEqual(['mission', 'change 01', 'change 02', 'change 03', 'change 04']);
+    expect([...plan.done.keys()]).toEqual([
+      'mission',
+      'change 01',
+      'change 02',
+      'change 03',
+      'change 04',
+    ]);
   });
 
   it('v15: of three briefs, the one the newest handoff names; accepted slices ticked', () => {
@@ -99,11 +105,11 @@ describe('R3 · choosing the plan and marking the live step', () => {
     const plan = choosePlan(sources, items)!;
     expect(plan.file).toBe('run-card-brief.md');
     expect(plan.live?.id).toBe('R2');
-    expect([...plan.done]).toEqual(['R1']);
+    expect([...plan.done.keys()]).toEqual(['R1']);
     // The views brief, chosen when it is the newest named: V1, V2 and K all deployed.
     const views = choosePlan(sources, items.slice(0, 2))!;
     expect(views.file).toBe('views-brief.md');
-    expect([...views.done]).toEqual(['V1', 'V2', 'K']);
+    expect([...views.done.keys()]).toEqual(['V1', 'V2', 'K']);
   });
 
   it('never guesses: several plans no handoff names → none; one → shown without a live step', () => {
@@ -124,8 +130,44 @@ describe('R3 · choosing the plan and marking the live step', () => {
       q('a', 'S9 started: build notes', [], '2026-10-11T09:00:00.000Z'),
       q('b', 'r1 ACCEPT S7-data/S7-ui/S8-data/S8-ui', [], '2026-10-11T08:00:00.000Z'),
     ])!;
-    expect([...plan.done]).toEqual(['S7', 'S8']);
+    expect([...plan.done.keys()]).toEqual(['S7', 'S8']);
     expect([...plan.named]).toEqual(['S7', 'S8', 'S9']);
+  });
+
+  it('r1 R3 MEDIUM-2: acceptance must be next to the id, not negated, not in brackets, not REPORT.md', () => {
+    const src = planIn(brief('run-card-brief.md'), 'run-card-brief.md')!;
+    const at = (m: number) => `2026-10-13T15:${String(m).padStart(2, '0')}:00.000Z`;
+    const plan = choosePlan(
+      [src],
+      [
+        q(
+          'a',
+          "Run card R3 10b827a: QA PASS (MEDIUM-1 accepted slices read 'not reached')",
+          [],
+          at(31)
+        ),
+        q('b', 'R4 75c8a30: QA PASS but NOT merged yet', [], at(30)),
+        q('c', 'R2: not done yet, folding', [], at(29)),
+        q('d', 'R1: REPORT.md first line read', [], at(28)),
+        q('g', 'R3 10b827a: r1 PASS with 2 MEDIUM to fold before merge', [], at(27)),
+      ]
+    )!;
+    expect([...plan.done.keys()]).toEqual([]);
+    const ok = choosePlan(
+      [src],
+      [
+        q('e', 'Run card R1 13d7b82: r1 PASS for merge', [], at(20)),
+        q('f', 'flicut-reapply done: R2-R4 accepted', [], at(21)),
+      ]
+    )!;
+    expect([...ok.done.keys()]).toEqual(['R1', 'R2', 'R3', 'R4']);
+    expect(ok.done.get('R1')!.phrase).toBe('R1 13d7b82: r1 PASS for merge');
+  });
+
+  it('r1 R3 LOW-2: a bare number needs "step N"; the reviewer tag r1 is not slice R1', () => {
+    expect(names(q('x', 'took 3 minutes'), { id: '3', title: '' }, 'slices')).toBe(false);
+    expect(names(q('x', 'slice 3 merged'), { id: '3', title: '' }, 'slices')).toBe(true);
+    expect(names(q('x', 'review notes', ['r1']), { id: 'R1', title: '' }, 'slices')).toBe(false);
   });
 
   it('a range names every slice in it: "R1-R4 accepted" ticks R2 too', () => {

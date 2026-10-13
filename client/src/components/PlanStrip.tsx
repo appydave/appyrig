@@ -34,7 +34,8 @@ export default function PlanStrip({ sources, items, why }: Props) {
     <div data-testid="run-plan" data-kind={plan.kind}>
       <ol className="plan-strip" aria-label="Plan steps">
         {plan.steps.map((s) => {
-          const done = plan.done.has(s.id);
+          const accepted = plan.done.get(s.id);
+          const done = !!accepted;
           const live = plan.live?.id === s.id;
           // QA R3 MEDIUM-1: named by handoffs but never accepted is "worked on", not "not reached".
           const worked = !done && !live && plan.named.has(s.id);
@@ -47,10 +48,16 @@ export default function PlanStrip({ sources, items, why }: Props) {
               data-id={s.id}
               data-mark={mark}
               data-live={live || undefined}
-              title={`${s.id}: ${s.title}`}
+              title={`${s.id}: ${s.title}${accepted ? `\n✓ “${accepted.phrase}” (${accepted.item.source?.split('@')[0] ?? '?'}, ${clock(accepted.item.createdAt)})` : ''}`}
             >
               <span aria-hidden="true">{done ? '✓' : live ? '●' : worked ? '◐' : '○'}</span>{' '}
               <b>{s.id}</b> <span className="plan-title">{s.title}</span>
+              {accepted && (
+                <span className="plan-why" data-testid="run-plan-why">
+                  {' '}
+                  · “{accepted.phrase}”, {clock(accepted.item.createdAt)}
+                </span>
+              )}
               {live && <span className="plan-live"> · latest named</span>}
               <span className="sr-only">
                 {done
@@ -71,7 +78,7 @@ export default function PlanStrip({ sources, items, why }: Props) {
           ? ` · ● = the step the newest handoff names (${clock(plan.live.item.createdAt)})`
           : ' · no handoff names these steps yet'}
         {
-          ' · ✓ = a handoff said PASS for merge, accepted, merged, deployed, done or REPORT for it · ◐ = named, no acceptance found · ○ = no handoff names it'
+          ' · ✓ = a handoff said PASS for merge, accepted, merged, deployed, done or REPORT right next to the step id (shown on the chip) · ◐ = named, no acceptance found · ○ = no handoff names it'
         }
       </span>
     </div>
