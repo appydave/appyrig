@@ -14,6 +14,8 @@ import {
 } from '../fleet/views.js';
 import ReplayConsoles from './ReplayConsoles.js';
 import HandoffPanel, { type PanelMode, type PanelSelection } from './HandoffPanel.js';
+import FollowWork from './FollowWork.js';
+import { followWork } from '../fleet/timeline.js';
 import { isShortcutBlocked, isSlider } from '../lib/keys.js';
 
 interface Props {
@@ -178,6 +180,12 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   const [pinned, setPinned] = useState(false);
   const [mode, setMode] = useState<PanelMode>(readPanelMode);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
+  // Views V2: the handoff whose work is being followed (the chain replaces the panel).
+  const [follow, setFollow] = useState<string | null>(null);
+  const chain = useMemo(
+    () => (machine && rig && follow ? followWork(machine, rig, follow) : null),
+    [machine, rig, follow]
+  );
   const [entry, setEntry] = useState<RigEntry | null>(null);
   // C1 (F9): the row is always there, so its answer arriving never pushes the diagram down.
   const [entryLoaded, setEntryLoaded] = useState(false);
@@ -227,6 +235,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     setEntryLoaded(false);
     setSel(null);
     setPinned(false);
+    setFollow(null);
     if (!socket || !machineId || !rig) return;
     let current = true;
     void callVerb<RigEntryOutput>(socket, 'rig.entry', { machine: machineId, rig }).then((a) => {
@@ -242,7 +251,8 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   // S4: Esc closes the panel first (capture, so the screen-level Esc never also goes back).
   useEffect(() => {
     // r1 S4: stand down while a seat panel (or the ? overlay) is on top, so one Esc closes one thing.
-    if (!sel || !keys) return;
+    // Views V2: while following work, Esc is FollowWork's (back to this panel).
+    if (!sel || chain || !keys) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
@@ -251,7 +261,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [sel, keys]);
+  }, [sel, chain, keys]);
 
   // A new rig starts at its end (the current state).
   useEffect(() => {
@@ -745,25 +755,49 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
             );
           })}
         </svg>
-        <HandoffPanel
-          machineId={machine.machine.id}
-          selection={selection}
-          mode={mode}
-          pinned={pinned}
-          socket={socket}
-          cache={bodies.current}
-          onPick={(id) =>
-            sel &&
-            setSel(
-              sel.stage ? { ...sel, itemId: id } : { edge: selection?.edge ?? null, itemId: id }
-            )
-          }
-          onMode={chooseMode}
-          onClose={() => {
-            setSel(null);
-            setPinned(false);
-          }}
-        />
+        {chain && follow ? (
+          <FollowWork
+            machineId={machine.machine.id}
+            chain={chain}
+            fromId={follow}
+            socket={socket}
+            cache={bodies.current}
+            onClose={() => setFollow(null)}
+            keys={keys}
+          />
+        ) : (
+          <HandoffPanel
+            machineId={machine.machine.id}
+            selection={selection}
+            mode={mode}
+            pinned={pinned}
+            socket={socket}
+            cache={bodies.current}
+            onPick={(id) =>
+              sel &&
+              setSel(
+                sel.stage ? { ...sel, itemId: id } : { edge: selection?.edge ?? null, itemId: id }
+              )
+            }
+            onMode={chooseMode}
+            onClose={() => {
+              setSel(null);
+              setPinned(false);
+            }}
+            onFollow={(id) => {
+              setPinned(true);
+              setFollow(id);
+            }}
+            keys={keys}
+            onLine={(dir) => {
+              // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
+              const order = flow.edges.map(edgeKey);
+              if (!order.length) return;
+              const i = selection?.edge ? order.indexOf(selection.edge) : dir === 1 ? -1 : 0;
+              pin(order[(i + dir + order.length) % order.length]!);
+            }}
+          />
+        )}
         {card && (
           <div
             className="hover-card"

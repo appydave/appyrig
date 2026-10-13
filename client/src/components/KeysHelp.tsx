@@ -8,6 +8,11 @@ interface Props {
 
 type Row = [keys: string, does: string];
 
+/** Views K: the handoff panel's own keys (map drawer, flow and timeline panels). */
+const PANEL_KEYS: Row[] = [
+  ['J  K', 'With a handoff panel open: older / newer handoff in its list (the message follows)'],
+];
+
 export const SCREEN: Record<View, Row[]> = {
   wall: [
     ['← ↑ → ↓', 'Move between tiles'],
@@ -19,6 +24,8 @@ export const SCREEN: Record<View, Row[]> = {
     ['Enter', 'Open the seat'],
     ['O', "Open the chosen rig's files"],
     ['Esc', 'From an open seat: back to the map'],
+    ...PANEL_KEYS,
+    [']  [', 'With a line open: next / previous line on the map (opens its newest handoff)'],
   ],
   flow: [
     ['← →', 'Previous / next handoff (replay)'],
@@ -29,6 +36,16 @@ export const SCREEN: Record<View, Row[]> = {
     ],
     ['Enter', 'On a line, dot or box: show it in the handoff details panel'],
     ['Esc', 'Close the handoff details (then, back to the previous screen)'],
+    ...PANEL_KEYS,
+    [']  [', 'With a handoff panel open: next / previous line (opens its newest handoff)'],
+  ],
+  timeline: [
+    ['Tab', 'Move between the handoff marks, oldest first, lane by lane'],
+    ['Enter', 'On a mark: show its handoff in the panel'],
+    ['O', "Open the chosen rig's files"],
+    ['Esc', 'Back from Follow this work, then close the handoff panel'],
+    ...PANEL_KEYS,
+    [']  [', 'With a handoff panel open: next / previous lane (opens its newest handoff)'],
   ],
   accounts: [],
   machines: [],
@@ -63,6 +80,7 @@ const TITLE: Record<View, string> = {
   wall: 'The Wall',
   map: 'Rig Map',
   flow: 'Handoff Flow',
+  timeline: 'Run Timeline',
   accounts: 'Accounts',
   machines: 'Machines',
   schema: 'OpenRig DB',
@@ -113,7 +131,9 @@ export default function KeysHelp({ view, onClose }: Props) {
           </button>
         </header>
         {SCREEN[view].length > 0 && <ul data-testid="keys-screen">{rows(SCREEN[view])}</ul>}
-        {(view === 'map' || view === 'flow') && <ul data-testid="keys-files">{rows(FILES)}</ul>}
+        {(view === 'map' || view === 'flow' || view === 'timeline') && (
+          <ul data-testid="keys-files">{rows(FILES)}</ul>
+        )}
         <h3 className="label">In an open seat</h3>
         <ul data-testid="keys-seat">{rows(SEAT)}</ul>
         <h3 className="label">Anywhere</h3>

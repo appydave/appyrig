@@ -60,6 +60,26 @@ const pip = (key: string, glyph: string) => (
 );
 
 const SWATCH: Record<Swatch, () => ReactNode> = {
+  'tl-marks': () => (
+    <span className="legend-mono">
+      <span className="tl-state" data-state="done">
+        ●
+      </span>{' '}
+      <span className="tl-state" data-state="handed-on">
+        ◆
+      </span>{' '}
+      <span className="tl-state" data-state="open">
+        ○
+      </span>{' '}
+      <span className="tl-state" data-state="stopped">
+        ■
+      </span>
+    </span>
+  ),
+  'tl-flags': () => <span className="legend-mono">▼ ▲</span>,
+  'tl-phase': () => <span className="legend-tl-phase" />,
+  'tl-peak': () => <span className="legend-tl-peak" />,
+  'tl-follow': () => <span className="legend-pill">Follow →</span>,
   'sch-tag': () => <span className="legend-pill">NOT NULL</span>,
   'sch-pk': () => <span className="legend-pill sch-pk">PK</span>,
   'sch-notnull': () => <span className="legend-pill">NOT NULL</span>,

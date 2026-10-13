@@ -97,7 +97,12 @@ export type Swatch =
   | 'counts'
   | 'apps'
   | 'missing'
-  | 'seat-chip';
+  | 'seat-chip'
+  | 'tl-marks'
+  | 'tl-flags'
+  | 'tl-phase'
+  | 'tl-peak'
+  | 'tl-follow';
 
 export interface LegendEntry {
   swatch: Swatch;
@@ -320,6 +325,13 @@ const MAP: LegendSection[] = [
           'Within a row, arcs over the boxes run left → right and arcs under run right → left, so a pair never overlaps.',
       },
       { swatch: 'self', mark: '↺ N to itself', means: 'The seat queued work for itself.' },
+      {
+        swatch: 'handoff-panel',
+        term: 'handoff',
+        mark: 'Line drawer · J/K · [ ]',
+        means:
+          'Click (or Tab + Enter) a line: its handoffs open in a drawer, newest first, with the full message. J / K: older / newer handoff; ] / [: next / previous line (its newest handoff). Follow this work → shows the whole chain. Esc closes.',
+      },
     ],
   },
   RIG_PICKER,
@@ -409,7 +421,7 @@ const FLOW: LegendSection[] = [
         term: 'handoff',
         mark: 'Handoff details (right) · Panel shows: On click | Follow pointer',
         means:
-          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box lists its handoffs in and out. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes.',
+          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box lists its handoffs in and out. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes. Keys: J / K older / newer handoff, ] / [ next / previous line.',
       },
     ],
   },
@@ -719,6 +731,44 @@ const SCHEMA: LegendSection[] = [
 ];
 
 /** The rig files viewer (map, flow, seat panel): its marks, listed with the screens that open it. */
+const TIMELINE: LegendSection[] = [
+  {
+    title: 'Run Timeline · lanes and marks',
+    entries: [
+      {
+        swatch: 'tl-marks',
+        mark: '● done · ◆ handed on · ○ still open · ■ blocked',
+        means:
+          'One mark per handoff, on the lane of the seat that sent it, at the time it was sent. The shape (and colour) is its state now. Click it, or Tab to it and press Enter, for its message.',
+      },
+      {
+        swatch: 'tl-flags',
+        mark: '▼ came in · ▲ went out',
+        means:
+          'The "you / other rigs" lane: work that came in from David or another rig, and what this rig sent out to them. A handoff sent out is also a mark on its sender\'s lane.',
+      },
+      {
+        swatch: 'tl-phase',
+        mark: 'Phase 1 · 11:14–12:52 · 86',
+        means:
+          'A stretch of the run with no pause over 20 minutes: its times and handoff count. A longer pause starts a new phase and is squeezed to a short break (⋯ 59 min) so the axis stays readable.',
+      },
+      {
+        swatch: 'tl-peak',
+        mark: '▲ Biggest queue 11:56',
+        means:
+          'The moment the most fresh items waited at one seat or stage at once: the same moment as the Handoff Flow\'s "Biggest queue" chapter.',
+      },
+      {
+        swatch: 'tl-follow',
+        mark: 'Follow this work →',
+        means:
+          "In the handoff panel: the chain this handoff belongs to, oldest first, with each step's time, who, state and first line. Marks in the chain get a dark ring. The panel says which rule linked the steps.",
+      },
+    ],
+  },
+];
+
 const FILES: LegendSection = {
   title: 'Rig files',
   entries: [
@@ -807,6 +857,8 @@ function sectionsFor(screen: LegendScreen): LegendSection[] {
       return [...MAP, FILES, STATUS];
     case 'flow':
       return [...FLOW, FILES, STATUS];
+    case 'timeline':
+      return [...TIMELINE, FILES, STATUS];
     case 'focus':
       return [...FOCUS, STATUS];
     case 'accounts':
@@ -824,6 +876,7 @@ export const VIEW_TITLE: Record<LegendScreen, string> = {
   wall: 'The Wall',
   map: 'Rig Map',
   flow: 'Handoff Flow',
+  timeline: 'Run Timeline',
   focus: 'Seat panel',
   accounts: 'Accounts',
   machines: 'Machines',

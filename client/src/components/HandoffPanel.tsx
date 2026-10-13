@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { HandoffGetOutput, QueueItem, Refusal } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
+import { isShortcutBlocked } from '../lib/keys.js';
 
 export type PanelMode = 'hover' | 'pinned';
 
@@ -35,6 +36,14 @@ interface Props {
   onClose: () => void;
   /** C6a: false hides the On click / Follow pointer toggle (the Map's drawer opens on click only). */
   showMode?: boolean;
+  /** Views V2: shows "Follow this work" on the handoff in view. */
+  onFollow?: (itemId: string) => void;
+  /** Views K: J/K (and [ ] with onLine) work while the panel shows a handoff. Off under overlays. */
+  keys?: boolean;
+  /** Views K: ] next / [ previous line (or lane), opening its newest handoff. */
+  onLine?: (dir: 1 | -1) => void;
+  /** What [ ] step through, in the hint: a map or flow "line", a timeline "lane". */
+  lineWord?: string;
 }
 
 const clock = (iso: string) =>
@@ -62,9 +71,42 @@ export default function HandoffPanel({
   onMode,
   onClose,
   showMode = true,
+  onFollow,
+  keys = false,
+  onLine,
+  lineWord = 'line',
 }: Props) {
   const itemId = selection?.itemId ?? null;
   const [got, setGot] = useState<Got>({ state: 'loading' });
+  const list = useRef<HTMLOListElement>(null);
+
+  // Views K: J = next (older) in the list, K = previous (newer); ] / [ = next / previous line.
+  // Only while a handoff is shown, never while typing (isShortcutBlocked), and the list row and
+  // the message move together because both follow selection.itemId.
+  const items = selection?.items;
+  useEffect(() => {
+    if (!keys || !items?.length || !itemId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || isShortcutBlocked(e)) return;
+      const k = e.key.toLowerCase();
+      if (k === 'j' || k === 'k') {
+        e.preventDefault();
+        const i = items.findIndex((q) => q.id === itemId);
+        const next = items[Math.max(0, Math.min(items.length - 1, i + (k === 'j' ? -1 : 1)))];
+        if (next && next.id !== itemId) onPick(next.id);
+      } else if ((e.key === ']' || e.key === '[') && onLine) {
+        e.preventDefault();
+        onLine(e.key === ']' ? 1 : -1);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [keys, items, itemId, onPick, onLine]);
+
+  // Keep the highlighted row in view as J/K walk the list.
+  useEffect(() => {
+    list.current?.querySelector('[aria-current="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [itemId]);
 
   useEffect(() => {
     if (!itemId) return;
@@ -214,6 +256,17 @@ export default function HandoffPanel({
         </button>
       </header>
       {status}
+      {keys && (
+        <p className="handoff-keys" data-testid="handoff-keys-hint">
+          <kbd>J</kbd>/<kbd>K</kbd> older / newer handoff
+          {onLine && (
+            <>
+              {' '}
+              · <kbd>[</kbd> <kbd>]</kbd> previous / next {lineWord}
+            </>
+          )}
+        </p>
+      )}
       {item && (
         <div className="handoff-head" data-testid="handoff-head">
           <b data-testid="handoff-title">{item.summary || item.tags.join(', ') || item.id}</b>
@@ -221,6 +274,16 @@ export default function HandoffPanel({
             {who(item.source)} → {who(item.destination)} · {clock(item.createdAt)} ·{' '}
             <span data-testid="handoff-state">{v?.state ?? item.state}</span>
           </span>
+          {onFollow && (
+            <button
+              type="button"
+              className="pill-btn follow-btn"
+              data-testid="handoff-follow"
+              onClick={() => onFollow(item.id)}
+            >
+              Follow this work →
+            </button>
+          )}
         </div>
       )}
       <div className="handoff-body" data-testid="handoff-body" data-status={bodyStatus(got)}>
@@ -249,7 +312,12 @@ export default function HandoffPanel({
         )}
       </div>
       {selection.items.length > 1 && (
-        <ol className="handoff-list" aria-label="Handoffs on this line" data-testid="handoff-list">
+        <ol
+          ref={list}
+          className="handoff-list"
+          aria-label="Handoffs on this line"
+          data-testid="handoff-list"
+        >
           {[...selection.items].reverse().map((q) => (
             <li key={q.id}>
               <button

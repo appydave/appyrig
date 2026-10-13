@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { HandoffGetOutput } from '@appydave/shared';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import HandoffPanel from './HandoffPanel.js';
+import FollowWork from './FollowWork.js';
+import type { WorkChain } from '../fleet/timeline.js';
 import { ago, PIP } from '../fleet/model.js';
 import type { MapEdge, RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
@@ -15,6 +17,8 @@ interface Props {
   socket?: FleetSocket;
   /** C6a: false while something sits on top (Esc is theirs). */
   keys?: boolean;
+  /** Views V2: the chain a handoff on this rig belongs to (Follow this work). */
+  chainOf?: (itemId: string) => WorkChain | null;
 }
 
 /** C6a: a floating card for what is under the pointer (never in the layout, never takes the pointer). */
@@ -267,7 +271,7 @@ export function routeLines(
  * Concept 3 · Rig Map: machines as lanes, pods as bands, seats as cards. The lines are real queue
  * traffic (who handed work to whom, and how often), drawn over the cards from measured positions.
  */
-export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true }: Props) {
+export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true, chainOf }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [placed, setPlaced] = useState<Placed[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -281,12 +285,20 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
   const [card, setCard] = useState<Card | null>(null);
   const [pinned, setPinned] = useState<{ edge: string; itemId: string | null } | null>(null);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
+  const [follow, setFollow] = useState<string | null>(null);
+  // r1 INFO-2: computed once per follow, not twice per render.
+  const chain = useMemo(() => (follow && chainOf ? chainOf(follow) : null), [follow, chainOf]);
   useEffect(() => {
     setPinned(null);
     setCard(null);
+    setFollow(null);
   }, [map?.rig.key]);
   useEffect(() => {
-    if (!pinned || !keys) return;
+    if (!pinned) setFollow(null);
+  }, [pinned]);
+  useEffect(() => {
+    // Views V2: while following work, Esc is FollowWork's (back to this drawer).
+    if (!pinned || chain || !keys) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
@@ -294,7 +306,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [pinned, keys]);
+  }, [pinned, chain, keys]);
 
   useLayoutEffect(() => {
     const el = box.current;
@@ -596,26 +608,47 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true 
       )}
       {pinnedEdge && (
         <div className="map-drawer" data-testid="map-drawer">
-          <HandoffPanel
-            machineId={map.rig.machineId}
-            selection={{
-              edge: pinned!.edge,
-              title: edgeTitle(pinnedEdge),
-              items: pinnedEdge.items,
-              itemId:
-                pinned!.itemId && pinnedEdge.items.some((q) => q.id === pinned!.itemId)
-                  ? pinned!.itemId
-                  : (pinnedEdge.items[pinnedEdge.items.length - 1]?.id ?? ''),
-            }}
-            mode="pinned"
-            pinned
-            socket={socket}
-            cache={bodies.current}
-            showMode={false}
-            onPick={(id) => setPinned({ edge: pinned!.edge, itemId: id })}
-            onMode={() => {}}
-            onClose={() => setPinned(null)}
-          />
+          {follow && chain ? (
+            <FollowWork
+              machineId={map.rig.machineId}
+              chain={chain}
+              fromId={follow}
+              socket={socket}
+              cache={bodies.current}
+              onClose={() => setFollow(null)}
+              keys={keys}
+            />
+          ) : (
+            <HandoffPanel
+              machineId={map.rig.machineId}
+              selection={{
+                edge: pinned!.edge,
+                title: edgeTitle(pinnedEdge),
+                items: pinnedEdge.items,
+                itemId:
+                  pinned!.itemId && pinnedEdge.items.some((q) => q.id === pinned!.itemId)
+                    ? pinned!.itemId
+                    : (pinnedEdge.items[pinnedEdge.items.length - 1]?.id ?? ''),
+              }}
+              mode="pinned"
+              pinned
+              socket={socket}
+              cache={bodies.current}
+              showMode={false}
+              onPick={(id) => setPinned({ edge: pinned!.edge, itemId: id })}
+              onMode={() => {}}
+              onClose={() => setPinned(null)}
+              onFollow={chainOf ? setFollow : undefined}
+              keys={keys}
+              onLine={(dir) => {
+                // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
+                const order = placed.map((p) => edgeKey(p.edge));
+                if (!order.length) return;
+                const i = order.indexOf(pinned!.edge);
+                setPinned({ edge: order[(i + dir + order.length) % order.length]!, itemId: null });
+              }}
+            />
+          )}
         </div>
       )}
     </section>
