@@ -103,6 +103,7 @@ export function createHub(opts: HubOptions): Hub {
     now,
     asleepAfterMs: opts.asleepAfterMs,
     onFault: opts.onFault,
+    config: () => config.current(),
   });
 
   const app = express();

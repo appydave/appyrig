@@ -89,6 +89,25 @@ describe('R1 · runCard state in words, with its evidence', () => {
     expect(idle.toDavid).toHaveLength(1);
   });
 
+  it("OpenRig's stuck-sweep notices are left out of the live step and David's list, and counted", () => {
+    const sweep: QueueItem = {
+      id: 'q-sweep',
+      source: 'ylo-lead@ylo-d10',
+      destination: 'human@kernel',
+      state: 'pending',
+      priority: null,
+      tags: ['stuck-sweep-finding', 'stuck-sweep:undelivered-wake'],
+      summary: 'Stuck sweep: undelivered-wake on qitem-x (3 min)',
+      createdAt: '2026-10-13T07:30:00.000Z',
+      updatedAt: '2026-10-13T07:30:00.000Z',
+    };
+    const c = runCard(d10({ queue: (q) => [...q, sweep] }), 'ylo-d10', NOW)!;
+    expect(c.live!.item.id).not.toBe('q-sweep');
+    expect(c.toDavid.map((q) => q.id)).not.toContain('q-sweep');
+    expect(c.sweeps).toBe(3); // two in the fixture, plus this one
+    expect(c.state.word).toBe('idle');
+  });
+
   it('the live step is the newest handoff, in words', () => {
     const c = runCard(d10(), 'ylo-d10', NOW)!;
     expect(c.live!.item.createdAt).toBe('2026-10-13T07:05:14.276Z');

@@ -888,3 +888,97 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     );
   });
 });
+
+describe('run card R2 — rig.waiting over the hub', () => {
+  const sendBodies = (s: Parameters<typeof push>[0], payload: unknown) =>
+    new Promise<{ ok: boolean }>((resolve) =>
+      s
+        .timeout(2_000)
+        .emit('collector:handoffs', payload, (err: unknown, ack: never) =>
+          resolve(err ? { ok: false } : ack)
+        )
+    );
+
+  it('lists gates the newest mention still calls open (with a carried link), and the ssh address', async () => {
+    const dir = tempDir();
+    const configPath = join(dir, 'config.json');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ machines: { roamy: { ssh: 'davidcruwys@100.89.32.35' } } })
+    );
+    const h = await start({ configPath });
+    const snap = loadSnapshot('roamy');
+    const rig = snap.rigs[0]!.name;
+    const at = (m: number) => new Date(Date.UTC(2026, 9, 13, 5, m)).toISOString();
+    const item = (id: string, m: number, summary: string) => ({
+      id,
+      source: `lead@${rig}`,
+      destination: 'human@kernel',
+      state: 'done',
+      priority: null,
+      tags: [],
+      summary,
+      createdAt: at(m),
+      updatedAt: at(m),
+    });
+    const queue = [
+      item('q1', 1, 'angles gate OPEN for D10 (g_d03e25b293)'),
+      item('q2', 2, 'social v3 proposed, gate g_8334a98162 open'),
+      item('q3', 3, 'David approved g_d03e25b293: closed'),
+      item('q4', 4, 'see g_aaaaaaaaaa for the record'),
+      // A later bare mention (a list of ids) does not close an open gate.
+      item('q6', 7, 'report lists social v3 gate g_8334a98162 (change 03)'),
+      {
+        ...item('q5', 5, 'other rig: gate g_bbbbbbbbbb open'),
+        source: 'x@other-rig',
+        destination: 'y@other-rig',
+      },
+    ];
+    const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+    await push(c, { ...snap, queue });
+    await sendBodies(c, {
+      machineId: 'roamy',
+      collectedAt: at(6),
+      items: [
+        {
+          id: 'q2',
+          body: 'Gate open: http://localhost:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162 and http://100.82.235.39:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162#social',
+          truncated: false,
+        },
+      ],
+    });
+    const out = h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig }) as {
+      ok: boolean;
+      value: {
+        ssh: string | null;
+        gates: { gate: string; itemId: string; link: string | null }[];
+        scanned: number;
+        bodiesMissing: number;
+      };
+    };
+    expect(out.ok).toBe(true);
+    expect(out.value.ssh).toBe('davidcruwys@100.89.32.35');
+    // g_d03e… was opened then closed; g_aaaa… was never called open; g_bbbb… is another rig's.
+    expect(out.value.gates.map((g) => [g.gate, g.itemId, g.link])).toEqual([
+      [
+        'g_8334a98162',
+        'q2',
+        'http://100.82.235.39:7150/b/appydave/p/d10?zone=launch&gate=g_8334a98162#social',
+      ],
+    ]);
+    expect(out.value).toMatchObject({ scanned: 5, bodiesMissing: 4 });
+    expect(h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'rig-not-found' },
+    });
+  });
+
+  it('ssh is null when AppyRig config names no address for the machine', async () => {
+    const h = await start();
+    const snap = loadSnapshot('roamy');
+    await push(h.collector({ token: TOKEN, machineId: 'roamy' }), snap);
+    expect(
+      h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig: snap.rigs[0]!.name })
+    ).toMatchObject({ ok: true, value: { ssh: null, gates: [] } });
+  });
+});

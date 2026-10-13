@@ -23,6 +23,11 @@ import {
   HandoffGetOutputSchema,
   RigEntryInputSchema,
   RigEntryOutputSchema,
+  RigWaitingInputSchema,
+  RigWaitingOutputSchema,
+  type RigGate,
+  type RigWaitingOutput,
+  type AppConfig,
   type HandoffGetOutput,
   AccountListOutputSchema,
   FleetGetOutputSchema,
@@ -136,6 +141,8 @@ export interface VerbContext {
   verbCount: number;
   /** True when the caller asked for a dry run: a write verb validates and writes nothing. */
   dryRun: boolean;
+  /** AppyRig's own config (run card R2 reads `machines`); absent in tests that don't need it. */
+  config?: () => AppConfig;
 }
 
 type Verb<I extends z.ZodType, O extends z.ZodType> = {
@@ -186,6 +193,89 @@ const query = <I extends z.ZodType, O extends z.ZodType>(
 });
 
 // ── lookups ────────────────────────────────────────────────────────────────────────────────────
+
+const GATE = /\bg_[0-9a-f]{10}\b/g;
+const SAYS_OPEN = /\bopen(ed)?\b|\bwaiting\b|\bawaits?\b/i;
+const SAYS_SHUT =
+  /\b(closed|approved|answered|passed|accepted|resolved|rejected|done with|shipped|cleared)\b/i;
+
+/**
+ * Run card R2: the gates a rig's handoffs last called open, and the machine's ssh address. A
+ * gate's newest mention that SAYS something decides: open words near it ("gate g_… open",
+ * "waiting at …") keep it, any closing word drops it; a bare mention (a list of ids, a link alone)
+ * changes nothing, and a gate never called open is not listed. Links are only ones a handoff
+ * carried, a Tailscale address before localhost.
+ */
+function rigWaiting(
+  m: FleetMachine,
+  rig: string,
+  store: FleetStore,
+  config: AppConfig
+): RigWaitingOutput {
+  const seatRig = new Map(m.snapshot.seats.map((s) => [s.id, s.rig]));
+  const inRig = (raw: string | null) =>
+    !!raw && raw.split('@')[0] !== 'human' && (seatRig.get(raw) ?? raw.split('@')[1]) === rig;
+  const items = m.snapshot.queue
+    .filter((q) => inRig(q.source) || inRig(q.destination))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const newest = new Map<string, { gate: RigGate; open: boolean }>();
+  const links = new Map<string, string[]>();
+  let bodiesMissing = 0;
+  for (const q of items) {
+    const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
+    if (body === null) bodiesMissing += 1;
+    const text = `${q.summary ?? ''}\n${body ?? ''}`;
+    for (const url of text.match(/https?:\/\/[^\s"'<>)\]]*gate=g_[0-9a-f]{10}[^\s"'<>)\]]*/g) ??
+      []) {
+      const id = /gate=(g_[0-9a-f]{10})/.exec(url)![1]!;
+      links.set(id, [...(links.get(id) ?? []), url.replace(/\\n.*$/, '')]);
+    }
+    // One handoff decides as a whole: open when some mention in it reads open and none reads
+    // closed (a gate is often named twice, once in words and once inside its link).
+    const here = new Map<string, { open: boolean; shut: boolean; context: string }>();
+    for (const hit of text.matchAll(GATE)) {
+      const at = hit.index ?? 0;
+      const near = text
+        .slice(Math.max(0, at - 60), at + 70)
+        .replace(/\s+/g, ' ')
+        .trim();
+      const h = here.get(hit[0]) ?? { open: false, shut: false, context: near };
+      if (SAYS_OPEN.test(near) && !h.open) Object.assign(h, { open: true, context: near });
+      if (SAYS_SHUT.test(near)) h.shut = true;
+      here.set(hit[0], h);
+    }
+    // A mention that says neither (a list of ids, a link alone) leaves the gate as it was.
+    for (const [gate, h] of here)
+      if (h.open || h.shut)
+        newest.set(gate, {
+          open: h.open && !h.shut,
+          gate: {
+            gate,
+            itemId: q.id,
+            at: q.createdAt,
+            from: q.source,
+            to: q.destination,
+            context: h.context,
+            link: null,
+          },
+        });
+  }
+  const pick = (urls: string[] = []) =>
+    urls.find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? urls[0] ?? null;
+  const gates = [...newest.values()]
+    .filter((g) => g.open)
+    .map((g) => ({ ...g.gate, link: pick(links.get(g.gate.gate)) }))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  const ssh = config.machines?.[m.machine.id]?.ssh ?? null;
+  return {
+    machine: m.machine.id,
+    rig,
+    ssh,
+    gates,
+    scanned: items.length,
+    bodiesMissing,
+  };
+}
 
 function machinesOf(ctx: VerbContext, id?: string): FleetMachine[] {
   if (id === undefined) return ctx.store.list();
@@ -661,6 +751,24 @@ const VERB_SET = {
           : null,
         folder: found.folder,
       };
+    }
+  ),
+
+  'rig.waiting': query(
+    "Run card R2, read-only: what a rig is waiting on David for that the queue list alone can't show. gates: FliStudio gate ids (g_ + 10 hex) in the rig's handoff messages whose newest mention still calls them open, each with the words around it and a link only when a handoff carried one. ssh: the machine's user@host from AppyRig config machines.<id>.ssh (null: not configured), for a copyable attach line. AppyRig never opens, answers or attaches to anything.",
+    RigWaitingInputSchema,
+    RigWaitingOutputSchema,
+    RIG_NOT_FOUND,
+    (input, ctx): RigWaitingOutput => {
+      const [m] = machinesOf(ctx, input.machine);
+      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          { machine: input.machine, rig: input.rig }
+        );
+      }
+      return rigWaiting(m!, input.rig, ctx.store, ctx.config?.() ?? {});
     }
   ),
 

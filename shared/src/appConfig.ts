@@ -8,6 +8,7 @@ import { z } from 'zod';
  *   hub        `rigs`           a display name and owner per rig, laid over what collectors send
  *   hub        `accounts`       a plan tier per account email, used when the login record does not report one
  *   collector  `specFolders`    where to look for rig.yaml files (matched on `name:`)
+ *   hub        `machines`       an ssh address per machine, shown in the run card's attach line
  *
  * Unknown keys are kept, not rejected, so later slices can add their part
  * without breaking a process that has not learned it yet.
@@ -31,6 +32,16 @@ export const AccountConfigSchema = z.looseObject({
 });
 export type AccountConfig = z.infer<typeof AccountConfigSchema>;
 
+/** Run card R2: what AppyRig shows about reaching a machine. Only ever displayed. */
+export const MachineConfigSchema = z.looseObject({
+  /** `user@tailscale-ip`, e.g. `davidcruwys@100.126.70.25`. */
+  ssh: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]+@[A-Za-z0-9.:-]+$/, 'user@host')
+    .optional(),
+});
+export type MachineConfig = z.infer<typeof MachineConfigSchema>;
+
 export const AppConfigSchema = z.looseObject({
   /** Account email (case-insensitive) → config. The tier here is used only when the login record does not report one. */
   accounts: z.record(z.string().min(1), AccountConfigSchema).optional(),
@@ -38,5 +49,7 @@ export const AppConfigSchema = z.looseObject({
   rigs: z.record(z.string().min(1), RigLabelSchema).optional(),
   /** Absolute folders searched (recursively, a few levels deep) for rig.yaml. */
   specFolders: z.array(z.string().min(1)).optional(),
+  /** Run card R2: machine id → how to reach it, for the copyable attach line (never used to connect). */
+  machines: z.record(z.string().min(1), MachineConfigSchema).optional(),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
