@@ -9,6 +9,8 @@ interface Props {
   onSelect: (key: string) => void;
   /** S7-ui: open a rig's files. */
   onOpenFiles?: (rig: RigRef) => void;
+  /** D09 W0: false when the run card shows the chosen rig's info box inside its Details instead. */
+  info?: boolean;
 }
 
 /**
@@ -25,7 +27,7 @@ interface Props {
  * every push (fb-0004): the order now holds while the pointer is over the chips and otherwise
  * re-sorts at most once a minute, or at once when a rig starts or stops.
  */
-export default function RigPicker({ rigs, selected, onSelect, onOpenFiles }: Props) {
+export default function RigPicker({ rigs, selected, onSelect, onOpenFiles, info = true }: Props) {
   const [over, setOver] = useState(false);
   const ordered = useStableOrder(
     rigs,
@@ -86,7 +88,7 @@ export default function RigPicker({ rigs, selected, onSelect, onOpenFiles }: Pro
           ))}
         </div>
       </div>
-      {shown && <RigInfo rig={shown} preview={false} onOpenFiles={onOpenFiles} />}
+      {info && shown && <RigInfo rig={shown} preview={false} onOpenFiles={onOpenFiles} />}
     </div>
   );
 }

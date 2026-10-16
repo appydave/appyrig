@@ -4123,6 +4123,36 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
   border-radius: 12px;
   padding: 10px 14px;
 }
+/* D09 W0: folded, the run card is one line; Details opens today's full card under it. */
+.run-card[data-open='false'] {
+  padding: 4px 6px 4px 12px;
+}
+.run-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+.run-line-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.run-details-toggle {
+  flex: 0 0 auto;
+}
+.run-details-toggle:focus-visible {
+  outline-color: var(--ar-ink);
+}
+.run-card[data-open='true'] .run-line {
+  margin-bottom: 8px;
+}
+.run-card-body > .rig-info {
+  margin-bottom: 8px;
+}
 .run-card dl {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);

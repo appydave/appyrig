@@ -19,6 +19,8 @@ import FeedbackNotes from './components/FeedbackNotes.js';
 import RigMap from './components/RigMap.js';
 import RunTimeline from './components/RunTimeline.js';
 import RunCard from './components/RunCard.js';
+import RigInfo from './components/RigInfo.js';
+import { runCard as runCardModel } from './fleet/runcard.js';
 import SchemaView from './components/SchemaView.js';
 import RigPicker from './components/RigPicker.js';
 import Wall from './components/Wall.js';
@@ -342,12 +344,14 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   const screen: LegendScreen = focused ? 'focus' : view;
   // Ruling (batch 2, QA C5): the Map's legend starts CLOSED for every viewer who hasn't chosen
   // (open, it is 697 px and pushes the map below the fold); a choice is remembered per viewer.
-  const legend = legendChoice[screen] ? legendChoice[screen] === 'on' : screen === 'flow';
+  // D09 W0: the Flow's legend starts closed too, so its stage diagram is the first thing below the
+  // strip (it used to open by default and fill the screen); the one-time hint points at the button.
+  const legend = legendChoice[screen] === 'on';
   const toggleLegend = useCallback(() => {
     const next: LegendChoice = { ...legendChoice, [screen]: legend ? 'off' : 'on' };
     setLegendChoice(next);
     remember(LEGEND_KEY, JSON.stringify(next));
-    if (screen === 'map') dismissMapHint();
+    if (screen === 'map' || screen === 'flow') dismissMapHint();
   }, [legendChoice, screen, legend, dismissMapHint]);
 
   const chooseGroup = (g: GroupBy) => {
@@ -557,7 +561,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           >
             ? Explain {explain ? 'on' : 'off'}
           </button>
-          {hint && !(view === 'map' && mapHint && !legend) && (
+          {hint && !((view === 'map' || view === 'flow') && mapHint && !legend) && (
             <span className="first-hint" role="note" data-testid="explain-hint">
               <span aria-hidden="true">↗</span> New here?{' '}
               {explain ? (
@@ -593,7 +597,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           >
             Legend · L
           </button>
-          {view === 'map' && mapHint && !legend && !focusTile && (
+          {(view === 'map' || view === 'flow') && mapHint && !legend && !focusTile && (
             <span className="first-hint" role="note" data-testid="legend-hint">
               <span aria-hidden="true">↗</span> New here? Press <b>L</b> or click <b>Legend</b> to
               see what the marks mean.
@@ -753,20 +757,44 @@ export default function App({ getSocket = getFleetSocket }: Props) {
                 : 'is no longer reported by its machine (removed, or renamed). Nothing else is shown in its place.'}
             </p>
           )}
-          <RigPicker
-            rigs={rigs}
-            selected={activeRig?.key ?? null}
-            onSelect={chooseRig}
-            onOpenFiles={(r) => openFiles(r.machineId, r.name)}
-          />
-          {activeRig &&
-            !goneRig &&
-            (() => {
-              const fm = allMachines.find((m) => m.machine.id === activeRig.machineId);
-              return fm ? (
-                <RunCard machine={fm} rig={activeRig.name} now={now} socket={getSocket()} />
-              ) : null;
-            })()}
+          {(() => {
+            // D09 W0: the run card folds to one line; the chosen rig's info box (summary, owner,
+            // spec path) folds into its Details, so the diagram is the first thing on screen.
+            const fm =
+              activeRig && !goneRig
+                ? allMachines.find((m) => m.machine.id === activeRig.machineId)
+                : undefined;
+            const card =
+              fm && activeRig
+                ? runCardModel(fm, activeRig.name, now) && (
+                    <RunCard
+                      machine={fm}
+                      rig={activeRig.name}
+                      now={now}
+                      socket={getSocket()}
+                      details={
+                        <RigInfo
+                          rig={activeRig}
+                          preview={false}
+                          onOpenFiles={(r) => openFiles(r.machineId, r.name)}
+                        />
+                      }
+                    />
+                  )
+                : null;
+            return (
+              <>
+                <RigPicker
+                  rigs={rigs}
+                  selected={activeRig?.key ?? null}
+                  onSelect={chooseRig}
+                  onOpenFiles={(r) => openFiles(r.machineId, r.name)}
+                  info={!card}
+                />
+                {card}
+              </>
+            );
+          })()}
           {view === 'map' ? (
             <RigMap
               map={rigMap}

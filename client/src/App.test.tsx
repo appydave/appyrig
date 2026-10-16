@@ -563,7 +563,7 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(screen.queryByTestId('explain-hint')).toBeNull();
   });
 
-  it('unchosen, the legend is closed on the Wall and the Map (ruling), open on the Flow; the Map shows a one-time hint', () => {
+  it('unchosen, the legend is closed on the Wall, the Map and (D09 W0) the Flow; Map and Flow show a one-time hint', () => {
     // jsdom has no ResizeObserver; the Rig Map only needs one to re-measure its lines.
     vi.stubGlobal(
       'ResizeObserver',
@@ -574,6 +574,10 @@ describe('App: S1 legend and Explain discoverability', () => {
     );
     connected();
     expect(screen.queryByTestId('legend')).toBeNull();
+    // D09 W0: the Flow no longer opens on its legend; the hint points at the button instead.
+    fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.getByTestId('legend-hint')).toHaveTextContent('Press L or click Legend');
     fireEvent.click(screen.getByTestId('view-map'));
     expect(screen.queryByTestId('legend')).toBeNull();
     expect(screen.getByTestId('legend-hint')).toHaveTextContent('Press L or click Legend');
@@ -584,6 +588,9 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(screen.queryByTestId('legend-hint')).toBeNull();
     expect(localStorage.getItem('appyrig.mapLegendHint')).toBe('seen');
     fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.queryByTestId('legend-hint')).toBeNull();
+    fireEvent.keyDown(window, { key: 'l' });
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'flow');
     expect(screen.getByTestId('legend')).toHaveTextContent('Amber arc below · N back');
     vi.unstubAllGlobals();

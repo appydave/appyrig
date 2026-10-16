@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import type { FleetMachine, RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../fleet/coreCall.js';
 import type { FleetSocket } from '../fleet/useFleet.js';
@@ -22,6 +22,18 @@ interface Props {
   rig: string;
   now: number;
   socket?: FleetSocket;
+  /** D09 W0: shown first inside Details (the chosen rig's info box). */
+  details?: ReactNode;
+}
+
+/** D09 W0: Details open or closed, remembered per viewer; closed until the viewer opens it. */
+const OPEN_KEY = 'appyrig.runCardOpen';
+function readOpen(): boolean {
+  try {
+    return localStorage.getItem(OPEN_KEY) === 'on';
+  } catch {
+    return false;
+  }
 }
 
 /** Where a line came from, said on screen. */
@@ -65,7 +77,18 @@ function missingWhy(files: RigFilesOutput | null, machineLabel: string, what: st
  * line, its state in words (with the evidence), the live step (the newest handoff) and, for an
  * ended rig, what it ended with. Each line names its source; a missing one is said in words.
  */
-export default function RunCard({ machine, rig, now, socket }: Props) {
+export default function RunCard({ machine, rig, now, socket, details }: Props) {
+  const [open, setOpen] = useState<boolean>(readOpen);
+  const bodyId = useId();
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try {
+      localStorage.setItem(OPEN_KEY, next ? 'on' : 'off');
+    } catch {
+      // per-viewer convenience only
+    }
+  };
   const minute = Math.floor(now / 60_000) * 60_000;
   const model = useMemo(() => runCard(machine, rig, minute), [machine, rig, minute]);
   const items = useMemo(() => rigQueue(machine, rig), [machine, rig]);
@@ -161,72 +184,104 @@ export default function RunCard({ machine, rig, now, socket }: Props) {
           }
         : { text: null, from: 'no REPORT.md and no handoffs to go by' }));
   const w = RUN_WORD[model.state.word];
+  // D09 W0: the folded card is one sentence: rig · state · the newest handoff in words · how many
+  // open items wait on David (a count only; Details lists them).
+  const waiting = model.toDavid.length;
+  const lastWords = last
+    ? `${ended ? 'ended with' : 'last'}: ${clip(last.text, 110)}, ${clock(last.item.createdAt)}`
+    : 'no handoffs yet';
 
   return (
     <section
       className="run-card"
       data-testid="run-card"
       data-state={model.state.word}
+      data-open={open}
       aria-label={`Run card of ${rig}`}
     >
-      <dl>
-        <dt>Mission</dt>
-        <dd data-testid="run-mission" data-found={!!missionShown.text}>
-          {missionShown.text && <span>{missionShown.text} </span>}
-          <span className="run-from">{missionShown.from}</span>
-        </dd>
-        <dt>State</dt>
-        <dd data-testid="run-state" data-word={model.state.word}>
+      <p className="run-line" data-testid="run-line">
+        <span className="run-line-text">
+          <b>{rig}</b> ·{' '}
           <b className="run-word" data-word={model.state.word}>
             {w.glyph} {w.label}
           </b>{' '}
-          <span className="run-from">{model.state.why}</span>
-        </dd>
-        {endedWith ? (
-          <>
-            <dt>Ended with</dt>
-            <dd data-testid="run-ended" data-from={report ? 'report' : 'handoff'}>
-              {endedWith.text && <span>{endedWith.text} </span>}
-              <span className="run-from">{endedWith.from}</span>
-            </dd>
-          </>
-        ) : (
-          <>
-            <dt>Live step</dt>
-            <dd data-testid="run-live">
-              {last ? (
-                <>
-                  <span>{last.text}</span>{' '}
-                  <span className="run-from">
-                    {clock(last.item.createdAt)} · {last.item.state} · the newest handoff
-                    {model.sweeps > 0
-                      ? ` (OpenRig's ${model.sweeps} stuck-sweep notices left out)`
-                      : ''}
-                  </span>
-                </>
-              ) : (
-                <span className="run-from">no handoffs through the queue yet</span>
-              )}
-            </dd>
-          </>
-        )}
-        <dt>Plan</dt>
-        <dd data-testid="run-plan-row">
-          <PlanStrip
-            sources={sources}
-            items={items}
-            why={files === 'loading' ? null : missingWhy(list, machine.machine.label, 'plan')}
-          />
-        </dd>
-        <dt>Waiting on David</dt>
-        <dd data-testid="run-waiting-row">
-          <WaitingOnDavid machine={machine} rig={rig} toDavid={model.toDavid} socket={socket} />
-        </dd>
-        <dt>Outputs</dt>
-        <dd data-testid="run-outputs-row">
-          <RunOutputs machineId={machineId} rig={rig} files={files} socket={socket} />
-        </dd>
-      </dl>
+          · <span data-testid="run-line-last">{lastWords}</span> ·{' '}
+          <span data-testid="run-line-waiting">
+            {waiting === 0 ? 'nothing waiting on you' : `${waiting} waiting on you`}
+          </span>
+        </span>
+        <button
+          type="button"
+          className="pill-btn run-details-toggle"
+          data-testid="run-details-toggle"
+          aria-expanded={open}
+          aria-controls={bodyId}
+          onClick={toggle}
+        >
+          Details {open ? '▾' : '▸'}
+        </button>
+      </p>
+      <div id={bodyId} className="run-card-body" hidden={!open}>
+        {details}
+        <dl>
+          <dt>Mission</dt>
+          <dd data-testid="run-mission" data-found={!!missionShown.text}>
+            {missionShown.text && <span>{missionShown.text} </span>}
+            <span className="run-from">{missionShown.from}</span>
+          </dd>
+          <dt>State</dt>
+          <dd data-testid="run-state" data-word={model.state.word}>
+            <b className="run-word" data-word={model.state.word}>
+              {w.glyph} {w.label}
+            </b>{' '}
+            <span className="run-from">{model.state.why}</span>
+          </dd>
+          {endedWith ? (
+            <>
+              <dt>Ended with</dt>
+              <dd data-testid="run-ended" data-from={report ? 'report' : 'handoff'}>
+                {endedWith.text && <span>{endedWith.text} </span>}
+                <span className="run-from">{endedWith.from}</span>
+              </dd>
+            </>
+          ) : (
+            <>
+              <dt>Live step</dt>
+              <dd data-testid="run-live">
+                {last ? (
+                  <>
+                    <span>{last.text}</span>{' '}
+                    <span className="run-from">
+                      {clock(last.item.createdAt)} · {last.item.state} · the newest handoff
+                      {model.sweeps > 0
+                        ? ` (OpenRig's ${model.sweeps} stuck-sweep notices left out)`
+                        : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span className="run-from">no handoffs through the queue yet</span>
+                )}
+              </dd>
+            </>
+          )}
+          <dt>Plan</dt>
+          <dd data-testid="run-plan-row">
+            <PlanStrip
+              sources={sources}
+              items={items}
+              why={files === 'loading' ? null : missingWhy(list, machine.machine.label, 'plan')}
+            />
+          </dd>
+          <dt>Waiting on David</dt>
+          <dd data-testid="run-waiting-row">
+            <WaitingOnDavid machine={machine} rig={rig} toDavid={model.toDavid} socket={socket} />
+          </dd>
+          <dt>Outputs</dt>
+          <dd data-testid="run-outputs-row">
+            <RunOutputs machineId={machineId} rig={rig} files={files} socket={socket} />
+          </dd>
+        </dl>
+      </div>
     </section>
   );
 }
