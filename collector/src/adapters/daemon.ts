@@ -1,12 +1,15 @@
 import type { z } from 'zod';
 import {
   QUEUE_MAX_ITEMS,
+  RIG_EDGES_MAX,
   type QueueItem,
+  type RigEdge,
   type RigSummary,
   type Seat,
   type SeatStatus,
 } from '@appydave/shared';
 import {
+  LenientGraph,
   LenientNode,
   LenientPsRow,
   LenientQueueItem,
@@ -162,4 +165,26 @@ export function parseQueueBodies(raw: unknown): Map<string, string> {
   for (const q of parseList(LenientQueueItem, raw, 'queue list'))
     if (typeof q.body === 'string' && q.body.length > 0) out.set(q.qitemId, q.body);
   return out;
+}
+
+/**
+ * D09 W2: the rig's planned edges from GET /api/rigs/:id/graph, seat to seat by session name.
+ * OpenRig's edges name graph node ids; a node with no session (a pod group) has no seat, so an edge
+ * touching one is left out rather than pinned on a guessed seat.
+ */
+export function parseGraphEdges(raw: unknown): RigEdge[] {
+  const g = LenientGraph.safeParse(raw);
+  if (!g.success) throw new Error(`/api/rigs/:id/graph: ${issueMessages(g.error).join('; ')}`);
+  const session = new Map<string, string>();
+  for (const n of g.data.nodes) {
+    const name = n.data?.canonicalSessionName;
+    if (typeof name === 'string' && name) session.set(n.id, name);
+  }
+  const out: RigEdge[] = [];
+  for (const e of g.data.edges) {
+    const from = session.get(e.source);
+    const to = session.get(e.target);
+    if (from && to && e.label) out.push({ from, to, kind: e.label.slice(0, 60) });
+  }
+  return out.slice(0, RIG_EDGES_MAX);
 }

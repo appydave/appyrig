@@ -5,7 +5,7 @@ import HandoffPanel from './HandoffPanel.js';
 import FollowWork from './FollowWork.js';
 import type { WorkChain } from '../fleet/timeline.js';
 import { ago, PIP } from '../fleet/model.js';
-import type { MapEdge, RigMap as RigMapView } from '../fleet/views.js';
+import { plannedWord, type MapEdge, type RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
 
 interface Props {
@@ -63,27 +63,32 @@ export interface Placed {
 
 const LABEL_W = 22;
 const LABEL_H = 18;
+/** D09 W2: a planned line's label is its kind in words, so it is as wide as its text. */
+const labelW = (edge?: MapEdge) =>
+  edge?.planned ? Math.round(plannedWord(edge.planned).length * 6.6 + 14) : LABEL_W;
 
 /**
  * C6a (F14 labels, B1-2): a count label that would sit on top of another is slid along its own
  * line to the first spot where it overlaps none, so every line's label can be pointed at.
  * Labels that find no free spot stay where they were (keyboard still reaches every line).
  */
-export function spreadLabels<T extends { lx: number; ly: number; c: Placed['c'] }>(
+export function spreadLabels<T extends { lx: number; ly: number; c: Placed['c']; edge?: MapEdge }>(
   items: T[]
 ): T[] {
-  const taken: { x: number; y: number }[] = [];
+  const taken: { x: number; y: number; w: number }[] = [];
+  let w = LABEL_W;
   const clear = (x: number, y: number) =>
-    taken.every((t) => Math.abs(t.x - x) >= LABEL_W + 2 || Math.abs(t.y - y) >= LABEL_H + 2);
+    taken.every((t) => Math.abs(t.x - x) >= (t.w + w) / 2 + 2 || Math.abs(t.y - y) >= LABEL_H + 2);
   return items.map((p) => {
-    let best = { x: p.lx, y: p.ly };
+    w = labelW(p.edge);
+    let best = { x: p.lx, y: p.ly, w };
     if (!clear(best.x, best.y)) {
       const [x0, y0, x1, y1, x2, y2, x3, y3] = p.c;
       for (const t of [0.5, 0.4, 0.6, 0.3, 0.7, 0.22, 0.78, 0.15, 0.85]) {
         const x = bez(t, x0, x1, x2, x3);
         const y = bez(t, y0, y1, y2, y3);
         if (clear(x, y)) {
-          best = { x, y };
+          best = { x, y, w };
           break;
         }
       }
@@ -350,7 +355,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
         placed: out,
         roomTop,
         roomBottom,
-      } = routeLines(map.edges, {
+      } = routeLines([...map.edges, ...(map.planned ?? [])], {
         card: rect,
         pod: podOf,
         lane: laneOf,
@@ -417,6 +422,12 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
       'Click to open the seat.',
     ]);
   };
+  const plannedTitle = (e: MapEdge) =>
+    `Planned: ${nameOf(e.from)} ${plannedWord(e.planned ?? '')} ${nameOf(e.to)} (rig spec ${e.planned}) · no handoff along it yet`;
+  const plannedCard = (e: MapEdge, ev: { clientX: number; clientY: number }) =>
+    cardAt(ev, plannedTitle(e), [
+      'From the rig spec in OpenRig. It turns into a solid line once a handoff goes this way.',
+    ]);
   const pinnedEdge = pinned ? map.edges.find((e) => edgeKey(e) === pinned.edge) : undefined;
   const edgeHandlers = (e: MapEdge) => ({
     tabIndex: 0,
@@ -443,6 +454,16 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
         <b>{map.rig.name}</b> on {map.rig.machineLabel} · {map.handoffs} handoffs through the queue
         {map.outgoing ? ` (+ ${map.outgoing} sent to other rigs)` : ''} · line width = how often one
         seat handed work to another · amber = still waiting · dashed = left open over 2 h
+        {map.planned?.length
+          ? ' · dotted with a word = planned in the rig spec, no handoff yet'
+          : ''}
+        {map.planned === null && map.edges.length === 0 ? (
+          <span data-testid="rig-map-no-plan">
+            {' '}
+            · no planned lines: {map.rig.machineLabel}&apos;s collector does not send the rig
+            spec&apos;s edges
+          </span>
+        ) : null}
       </p>
       <div className="rigmap-canvas" ref={box} style={{ ['--gutter' as string]: `${GUTTER}px` }}>
         <svg
@@ -467,46 +488,86 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
               <path d="M0,0 L10,5 L0,10 z" className="rigmap-arrowhead" />
             </marker>
           </defs>
-          {placed.map((p) => (
-            <g
-              key={`${p.edge.from}→${p.edge.to}`}
-              data-testid="rig-map-edge"
-              data-edge={edgeKey(p.edge)}
-              data-selected={pinned?.edge === edgeKey(p.edge) || undefined}
-              {...edgeHandlers(p.edge)}
-              data-open={p.edge.open > 0}
-              data-stale={p.edge.stale > 0}
-              data-explain={p.edge.open ? 'waiting' : p.edge.stale ? 'stale' : 'handoff'}
-              data-explain-ctx={`${nameOf(p.edge.from)} → ${nameOf(p.edge.to)} · ${p.edge.count} handoff${p.edge.count === 1 ? '' : 's'}${p.edge.open ? ` · ${p.edge.open} waiting` : ''}${p.edge.stale ? ` · ${p.edge.stale} left open` : ''}`}
-            >
-              <path
-                d={p.d}
-                className={`rigmap-edge ${p.edge.open ? 'open' : p.edge.stale ? 'stale' : ''}`}
-                strokeWidth={1.2 + (p.edge.count / max) * 5}
-                markerEnd="url(#rm-arrow)"
-              />
-              <path d={p.d} className="hit" />
-            </g>
-          ))}
+          {placed.map((p) =>
+            p.edge.planned ? (
+              <g
+                key={`planned:${edgeKey(p.edge)}`}
+                data-testid="rig-map-planned"
+                data-edge={edgeKey(p.edge)}
+                data-kind={p.edge.planned}
+                role="img"
+                aria-label={plannedTitle(p.edge)}
+                data-explain="planned"
+                data-explain-ctx={plannedTitle(p.edge)}
+                onPointerEnter={(ev) => plannedCard(p.edge, ev)}
+                onPointerMove={(ev) => plannedCard(p.edge, ev)}
+                onPointerLeave={() => setCard(null)}
+              >
+                <path d={p.d} className="rigmap-edge planned" markerEnd="url(#rm-arrow)" />
+                <path d={p.d} className="hit" />
+              </g>
+            ) : (
+              <g
+                key={`${p.edge.from}→${p.edge.to}`}
+                data-testid="rig-map-edge"
+                data-edge={edgeKey(p.edge)}
+                data-selected={pinned?.edge === edgeKey(p.edge) || undefined}
+                {...edgeHandlers(p.edge)}
+                data-open={p.edge.open > 0}
+                data-stale={p.edge.stale > 0}
+                data-explain={p.edge.open ? 'waiting' : p.edge.stale ? 'stale' : 'handoff'}
+                data-explain-ctx={`${nameOf(p.edge.from)} → ${nameOf(p.edge.to)} · ${p.edge.count} handoff${p.edge.count === 1 ? '' : 's'}${p.edge.open ? ` · ${p.edge.open} waiting` : ''}${p.edge.stale ? ` · ${p.edge.stale} left open` : ''}`}
+              >
+                <path
+                  d={p.d}
+                  className={`rigmap-edge ${p.edge.open ? 'open' : p.edge.stale ? 'stale' : ''}`}
+                  strokeWidth={1.2 + (p.edge.count / max) * 5}
+                  markerEnd="url(#rm-arrow)"
+                />
+                <path d={p.d} className="hit" />
+              </g>
+            )
+          )}
           {/* C6a (B1-2): the count labels sit above every line's hit area, so each line can be
               reached by its label even where other lines' wide hit areas cover its path. */}
-          {placed.map((p) => (
-            <g
-              key={`label:${edgeKey(p.edge)}`}
-              className="rigmap-label"
-              data-testid="rig-map-edge-label"
-              data-edge={edgeKey(p.edge)}
-              data-selected={pinned?.edge === edgeKey(p.edge) || undefined}
-              {...edgeHandlers(p.edge)}
-              tabIndex={-1}
-              aria-hidden="true"
-            >
-              <rect x={p.lx - 11} y={p.ly - 9} width={22} height={18} rx={4} />
-              <text x={p.lx} y={p.ly} className="rigmap-count">
-                {p.edge.count}
-              </text>
-            </g>
-          ))}
+          {placed.map((p) =>
+            p.edge.planned ? (
+              <g
+                key={`plabel:${edgeKey(p.edge)}`}
+                className="rigmap-label planned"
+                data-testid="rig-map-planned-label"
+                data-edge={edgeKey(p.edge)}
+                aria-hidden="true"
+              >
+                <rect
+                  x={p.lx - labelW(p.edge) / 2}
+                  y={p.ly - 9}
+                  width={labelW(p.edge)}
+                  height={18}
+                  rx={9}
+                />
+                <text x={p.lx} y={p.ly} className="rigmap-count">
+                  {plannedWord(p.edge.planned)}
+                </text>
+              </g>
+            ) : (
+              <g
+                key={`label:${edgeKey(p.edge)}`}
+                className="rigmap-label"
+                data-testid="rig-map-edge-label"
+                data-edge={edgeKey(p.edge)}
+                data-selected={pinned?.edge === edgeKey(p.edge) || undefined}
+                {...edgeHandlers(p.edge)}
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                <rect x={p.lx - 11} y={p.ly - 9} width={22} height={18} rx={4} />
+                <text x={p.lx} y={p.ly} className="rigmap-count">
+                  {p.edge.count}
+                </text>
+              </g>
+            )
+          )}
         </svg>
         {map.lanes.map((lane, i) => (
           <div

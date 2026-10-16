@@ -259,6 +259,18 @@ export interface MapEdge {
   self: boolean;
   /** C6a: the queue items on this line, oldest first (for the details drawer). */
   items: QueueItem[];
+  /**
+   * D09 W2: set on a planned line: the rig spec's edge kind (`delegates_to`, `can_observe`, …), drawn
+   * dashed until a real handoff on the same pair replaces it. A planned line has no items.
+   */
+  planned?: string;
+}
+
+/** D09 W2: a spec edge kind in words, for the line's label ("delegates", "observes"). */
+export function plannedWord(kind: string): string {
+  if (kind === 'delegates_to') return 'delegates';
+  if (kind === 'can_observe') return 'observes';
+  return kind.replace(/^can_/, '').replace(/_to$/, '').replace(/_/g, ' ');
 }
 
 export interface RigMap {
@@ -269,6 +281,11 @@ export interface RigMap {
   handoffs: number;
   /** F1: items it sent to another rig: drawn as lines, counted on the receiving rig. */
   outgoing: number;
+  /**
+   * D09 W2: the spec's edges no handoff has gone along yet, as planned lines (count 0). Null when
+   * the machine's collector does not send the rig's edges, so the screen can say so.
+   */
+  planned: MapEdge[] | null;
 }
 
 const POD_ORDER = ['orch', 'lead', 'dev', 'build', 'qa', 'review', 'research'];
@@ -414,7 +431,39 @@ export function buildRigMap(
     ...e,
     items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
   }));
-  return { rig, lanes, edges, handoffs: rig.handoffs, outgoing: items.length - rig.handoffs };
+  // D09 W2: a spec edge between two of the rig's seats is planned until a handoff goes that way.
+  const spec = home.snapshot.rigs.find((r) => r.name === rig.name)?.edges;
+  const mine = new Set(home.snapshot.seats.filter((s) => s.rig === rig.name).map((s) => s.id));
+  const planned =
+    spec === undefined
+      ? null
+      : spec
+          .filter((e) => e.from !== e.to && mine.has(e.from) && mine.has(e.to))
+          .map((e) => ({
+            from: seatKey(home.machine.id, e.from),
+            to: seatKey(home.machine.id, e.to),
+            kind: e.kind,
+          }))
+          .filter((e) => !edgeMap.has(`${e.from}→${e.to}`))
+          .filter((e, i, all) => all.findIndex((x) => x.from === e.from && x.to === e.to) === i)
+          .map((e): MapEdge => ({
+            from: e.from,
+            to: e.to,
+            count: 0,
+            open: 0,
+            stale: 0,
+            self: false,
+            items: [],
+            planned: e.kind,
+          }));
+  return {
+    rig,
+    lanes,
+    edges,
+    handoffs: rig.handoffs,
+    outgoing: items.length - rig.handoffs,
+    planned,
+  };
 }
 
 // ---------------------------------------------------------------- Handoff Flow

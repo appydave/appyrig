@@ -1109,6 +1109,22 @@ a:hover {
 }
 
 /* ---------- v1.2: stale items, generic flow, hover targets ---------- */
+/* D09 W2: planned in the rig spec, no handoff yet: dotted (stale is dashed), with its kind as a word. */
+.rigmap-edge.planned {
+  stroke: var(--ar-ink-muted);
+  stroke-opacity: 0.85;
+  stroke-width: 1.6px;
+  stroke-dasharray: 1 5;
+  stroke-linecap: round;
+}
+.rigmap-label.planned rect {
+  stroke-dasharray: 2 3;
+  cursor: default;
+}
+.rigmap-label.planned .rigmap-count {
+  font-size: 11px;
+  fill: var(--ar-ink-muted);
+}
 .rigmap-edge.stale {
   stroke: var(--ar-ink-muted);
   stroke-opacity: 0.7;

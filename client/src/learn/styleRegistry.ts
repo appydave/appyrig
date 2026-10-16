@@ -174,9 +174,17 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     id: 'box-stale',
     look: 'Box, badge or line with a DASHED outline (on the Map, "N left open · 3h")',
     means:
-      'Something has sat open there for more than 2 hours: left behind, not waiting live. Inside the Map or Flow diagram, a dashed box or line means only this; a pod is drawn solid.',
+      'Something has sat open there for more than 2 hours: left behind, not waiting live. Inside the Map or Flow diagram, a dashed box or line with a number means only this; a pod is drawn solid. (A dotted line with a word on it is a planned line.)',
     screens: RIGS,
     tokens: ['.flow-box.stale', '.rigmap-edge.stale', '.node-stale'],
+  },
+  {
+    id: 'map-planned',
+    look: 'Grey DOTTED line on the Rig Map with a word on it ("delegates", "observes") instead of a number',
+    means:
+      "Planned in the rig's spec, as OpenRig holds it: no handoff has gone that way yet. A real handoff on the same pair replaces it with a solid line.",
+    screens: ['map'],
+    tokens: ['.rigmap-edge.planned', '.rigmap-label.planned'],
   },
   {
     id: 'pod',

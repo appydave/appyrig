@@ -20,6 +20,7 @@ import {
   listRigs,
   median,
   mostHeadroom,
+  plannedWord,
   resetsIn,
   resolveEndpoint,
   replaySteps,
@@ -161,6 +162,63 @@ describe('Rig Map', () => {
 
   it('returns null for a rig nobody reports', () => {
     expect(buildRigMap([m2()], 'm2:no-such-rig')).toBeNull();
+  });
+});
+
+describe('D09 W2: planned lines from the rig spec', () => {
+  const withEdges = (
+    edges: { from: string; to: string; kind: string }[] | undefined,
+    queue?: QueueItem[]
+  ): FleetMachine => {
+    const fm = m2();
+    return {
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        rigs: fm.snapshot.rigs.map((r) => (r.name === 'fliedit-team' ? { ...r, edges } : r)),
+        ...(queue ? { queue } : {}),
+      },
+    };
+  };
+  const SPEC = [
+    { from: 'orch-lead@fliedit-team', to: 'dev-overlay@fliedit-team', kind: 'delegates_to' },
+    { from: 'dev-overlay@fliedit-team', to: 'dev-qa@fliedit-team', kind: 'delegates_to' },
+    { from: 'review-r1@fliedit-team', to: 'orch-lead@fliedit-team', kind: 'can_observe' },
+    { from: 'dev-viewer@fliedit-team', to: 'nobody@elsewhere', kind: 'delegates_to' },
+  ];
+
+  it('with no handoffs yet, every seat-to-seat spec edge is a planned line with its kind', () => {
+    const map = buildRigMap([withEdges(SPEC, [])], 'm2:fliedit-team')!;
+    expect(map.edges).toEqual([]);
+    expect(map.planned!.map((e) => [e.from, e.to, e.planned, e.count])).toEqual([
+      ['m2/orch-lead@fliedit-team', 'm2/dev-overlay@fliedit-team', 'delegates_to', 0],
+      ['m2/dev-overlay@fliedit-team', 'm2/dev-qa@fliedit-team', 'delegates_to', 0],
+      ['m2/review-r1@fliedit-team', 'm2/orch-lead@fliedit-team', 'can_observe', 0],
+    ]);
+  });
+
+  it('a real handoff on the same pair, same way, replaces the planned line', () => {
+    const map = buildRigMap([withEdges(SPEC)], 'm2:fliedit-team')!;
+    const real = new Set(map.edges.map((e) => `${e.from}→${e.to}`));
+    expect(real.has('m2/review-r1@fliedit-team→m2/orch-lead@fliedit-team')).toBe(true);
+    for (const p of map.planned!) expect(real.has(`${p.from}→${p.to}`)).toBe(false);
+    expect(map.planned!.length).toBe(
+      SPEC.slice(0, 3).filter((e) => !real.has(`m2/${e.from}→m2/${e.to}`)).length
+    );
+    // The handoff count is unchanged by planned lines.
+    expect(map.edges.reduce((n, e) => n + e.count, 0)).toBe(map.handoffs);
+  });
+
+  it('a collector that does not send edges gives null (said on screen), [] gives none', () => {
+    expect(buildRigMap([withEdges(undefined)], 'm2:fliedit-team')!.planned).toBeNull();
+    expect(buildRigMap([withEdges([])], 'm2:fliedit-team')!.planned).toEqual([]);
+  });
+
+  it('kinds read as words on the line', () => {
+    expect(plannedWord('delegates_to')).toBe('delegates');
+    expect(plannedWord('can_observe')).toBe('observes');
+    expect(plannedWord('reports_to')).toBe('reports');
+    expect(plannedWord('spawned_by')).toBe('spawned by');
   });
 });
 

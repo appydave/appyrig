@@ -123,6 +123,20 @@ export type Seat = z.infer<typeof SeatSchema>;
 /** Longest rig.yaml summary kept. */
 export const RIG_SUMMARY_MAX = 600;
 
+/** D09 W2: most planned edges kept per rig. */
+export const RIG_EDGES_MAX = 200;
+
+/**
+ * D09 W2: one edge of the rig's topology as OpenRig holds it (GET /api/rigs/:id/graph), between
+ * two seats by session name. `kind` is OpenRig's own word (`delegates_to`, `can_observe`, …).
+ */
+export const RigEdgeSchema = z.strictObject({
+  from: z.string().min(1),
+  to: z.string().min(1),
+  kind: z.string().min(1).max(60),
+});
+export type RigEdge = z.infer<typeof RigEdgeSchema>;
+
 export const RigSummarySchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -150,6 +164,12 @@ export const RigSummarySchema = z.strictObject({
    * `lastActivityAt`.
    */
   recentAt: isoDate.nullable().optional(),
+  /**
+   * D09 W2, collector-set: the rig's planned edges from OpenRig's graph, seat to seat (edges that
+   * touch a pod rather than a seat are left out). Absent = this collector does not send them;
+   * `[]` = OpenRig has none for this rig.
+   */
+  edges: z.array(RigEdgeSchema).max(RIG_EDGES_MAX).optional(),
   /** Hub-set from AppyRig's own config file (never from OpenRig); the UI falls back to `name`. */
   displayName: z.string().min(1).max(80).optional(),
   /** Hub-set, as displayName. */

@@ -2,9 +2,16 @@ import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
 import { createSpecIndex } from './specs.js';
 import { createHealthSampler } from './health.js';
-import { parseNodesWithRefs, parsePs, parseQueue, parseQueueBodies } from './daemon.js';
+import {
+  parseGraphEdges,
+  parseNodesWithRefs,
+  parsePs,
+  parseQueue,
+  parseQueueBodies,
+} from './daemon.js';
 import { capturePaneArgs, isNoServer, LIST_PANES_ARGS, parsePanes } from './tmux.js';
 import { AGENT_LIST_ARGS, parseAgentList } from './viewer.js';
+import type { RigEdge } from '@appydave/shared';
 import type { DaemonRead, Sources, TmuxPane, ViewerAgent } from './types.js';
 
 /**
@@ -34,6 +41,7 @@ interface ExecResult {
 }
 
 const MAX_BUFFER = 32 * 1024 * 1024;
+const GRAPH_TTL_MS = 60_000;
 
 export function assertLoopback(url: string): void {
   const host = new URL(url).hostname;
@@ -116,6 +124,23 @@ export function createSources(opts: SourceOptions = {}): Sources {
     return queueCache.value;
   };
 
+  /**
+   * D09 W2: each rig's planned edges, by rig id. They change only when a rig is relaunched (which
+   * gives a new id), so one read a minute is plenty. A failed read leaves `edges` out: "not said".
+   */
+  const graphCache = new Map<string, { at: number; edges: RigEdge[] }>();
+  const readEdges = async (rigId: string): Promise<RigEdge[] | undefined> => {
+    const hit = graphCache.get(rigId);
+    if (hit && Date.now() - hit.at < GRAPH_TTL_MS) return hit.edges;
+    try {
+      const edges = parseGraphEdges(await getJson(`/api/rigs/${encodeURIComponent(rigId)}/graph`));
+      graphCache.set(rigId, { at: Date.now(), edges });
+      return edges;
+    } catch {
+      return hit?.edges;
+    }
+  };
+
   /** v1.5 · L1: seat → agent spec folder, from the latest daemon read. */
   let agentDirs = new Map<string, string>();
 
@@ -147,7 +172,10 @@ export function createSources(opts: SourceOptions = {}): Sources {
         } catch (e) {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
+        const edges = await readEdges(rig.id);
+        if (edges) rig.edges = edges;
       }
+      for (const id of graphCache.keys()) if (!rigs.some((r) => r.id === id)) graphCache.delete(id);
       // Partial success: a rig or the queue that cannot be read is reported in `warnings` (the
       // builder turns them into sources.daemon.ok=false) while everything readable still shows.
       const warnings = failures.map((f) => `nodes unreadable for ${f}`);

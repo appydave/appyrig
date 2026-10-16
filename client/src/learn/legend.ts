@@ -79,6 +79,7 @@ export type Swatch =
   | 'order'
   | 'machine-filter'
   | 'map-arcs'
+  | 'line-planned'
   | 'idle-card'
   | 'entry-mark'
   | 'handoff-panel'
@@ -318,6 +319,13 @@ const MAP: LegendSection[] = [
         swatch: 'line-dashed',
         mark: 'Dashed line · N left open',
         means: 'An item left open for more than 2 hours.',
+      },
+      {
+        swatch: 'line-planned',
+        term: 'planned',
+        mark: 'Dotted line · delegates / observes',
+        means:
+          "Planned in the rig's spec (from OpenRig), no handoff along it yet. The word is the edge's kind. A real handoff on that pair replaces it with a solid line.",
       },
       {
         swatch: 'map-arcs',
