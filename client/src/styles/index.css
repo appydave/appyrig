@@ -2725,6 +2725,20 @@ g[data-testid='flow-edge'] {
 .handoff-list button:focus-visible {
   outline: 2px solid var(--ar-cta);
 }
+/* D09 W0: the Flow's reading notes, folded to one line above the diagram. */
+.flow-notes > summary {
+  font-size: 13px;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  width: fit-content;
+}
+.flow-notes > summary:focus-visible {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+}
+.flow-notes[open] > summary {
+  margin-bottom: 6px;
+}
 .flow-entry {
   margin: 0;
   font-size: 13px;
@@ -4122,6 +4136,46 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
   border-left: 4px solid var(--ar-ink);
   border-radius: 12px;
   padding: 10px 14px;
+}
+/* D09 W0: folded, the run card is one line; Details opens today's full card under it. */
+.run-card[data-open='false'] {
+  padding: 4px 6px 4px 12px;
+}
+.run-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+.run-line-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 0 6px;
+  white-space: nowrap;
+}
+.run-line-fixed {
+  flex: 0 0 auto;
+}
+.run-line-last {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.run-details-toggle {
+  flex: 0 0 auto;
+}
+.run-details-toggle:focus-visible {
+  outline-color: var(--ar-ink);
+}
+.run-card[data-open='true'] .run-line {
+  margin-bottom: 8px;
+}
+.run-card-body > .rig-info {
+  margin-bottom: 8px;
 }
 .run-card dl {
   display: grid;

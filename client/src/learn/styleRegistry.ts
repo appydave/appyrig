@@ -621,6 +621,9 @@ export const STYLE_REGISTRY: StyleEntry[] = [
  * with its reason. Anything not here and not in STYLE_REGISTRY fails the C7 test.
  */
 export const STYLE_IGNORED: Record<string, string> = {
+  '.run-card[data-open=false]':
+    'D09 W0: padding of the folded run card; the Details ▸ button says it is folded.',
+  '.run-card[data-open=true]': 'D09 W0: spacing under the one-line summary when Details is open.',
   '*[data-explain-on]':
     'Explain mode switched on: a cursor change, explained by the Explain button.',
   '*[data-explain]': 'Marks what Explain can describe; not a visible style.',

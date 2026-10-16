@@ -9,6 +9,11 @@ interface Props {
   /** Open items a seat of this rig addressed to David's mailbox, newest first (runCard.toDavid). */
   toDavid: QueueItem[];
   socket?: FleetSocket;
+  /**
+   * D09 W0 (QA MEDIUM-1): how many open gates this shows, so the run card's one line counts them
+   * too. 'loading' while asking; null when the hub did not answer (gates not checked).
+   */
+  onGates?: (n: number | null | 'loading') => void;
 }
 
 const SHOWN = 5;
@@ -114,7 +119,7 @@ function Copy({
  * a copyable attach line for the seat that asked, and FliStudio gates its handoffs still call open,
  * with the link a handoff carried. Nothing here acts: links open FliStudio, buttons only copy text.
  */
-export default function WaitingOnDavid({ machine, rig, toDavid, socket }: Props) {
+export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates }: Props) {
   const [w, setW] = useState<RigWaitingOutput | null | 'loading'>('loading');
   const machineId = machine.machine.id;
   useEffect(() => {
@@ -134,6 +139,10 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket }: Props)
 
   const got = w === 'loading' ? null : w;
   const gates = got?.gates ?? [];
+  const gateCount = w === 'loading' ? 'loading' : w === null ? null : gates.length;
+  useEffect(() => {
+    onGates?.(gateCount);
+  }, [onGates, gateCount]);
   const seats = new Set(machine.snapshot.seats.map((s) => s.id));
   const label = machine.machine.label;
 

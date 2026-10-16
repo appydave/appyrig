@@ -563,7 +563,7 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(screen.queryByTestId('explain-hint')).toBeNull();
   });
 
-  it('unchosen, the legend is closed on the Wall and the Map (ruling), open on the Flow; the Map shows a one-time hint', () => {
+  it('unchosen, the legend is closed on the Wall, the Map and (D09 W0) the Flow; Map and Flow show a one-time hint', () => {
     // jsdom has no ResizeObserver; the Rig Map only needs one to re-measure its lines.
     vi.stubGlobal(
       'ResizeObserver',
@@ -574,6 +574,10 @@ describe('App: S1 legend and Explain discoverability', () => {
     );
     connected();
     expect(screen.queryByTestId('legend')).toBeNull();
+    // D09 W0: the Flow no longer opens on its legend; the hint points at the button instead.
+    fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.getByTestId('legend-hint')).toHaveTextContent('Press L or click Legend');
     fireEvent.click(screen.getByTestId('view-map'));
     expect(screen.queryByTestId('legend')).toBeNull();
     expect(screen.getByTestId('legend-hint')).toHaveTextContent('Press L or click Legend');
@@ -584,6 +588,9 @@ describe('App: S1 legend and Explain discoverability', () => {
     expect(screen.queryByTestId('legend-hint')).toBeNull();
     expect(localStorage.getItem('appyrig.mapLegendHint')).toBe('seen');
     fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.queryByTestId('legend')).toBeNull();
+    expect(screen.queryByTestId('legend-hint')).toBeNull();
+    fireEvent.keyDown(window, { key: 'l' });
     expect(screen.getByTestId('legend')).toHaveAttribute('data-view', 'flow');
     expect(screen.getByTestId('legend')).toHaveTextContent('Amber arc below · N back');
     vi.unstubAllGlobals();
@@ -893,6 +900,26 @@ describe('App: S3 calmer Wall + machine filter', () => {
     expect(screen.getAllByTestId('machine-chip')).toHaveLength(2);
     fireEvent.click(screen.getByTestId('wall-show-machine'));
     expect(screen.queryByTestId('wall-hidden')).toBeNull();
+  });
+});
+
+describe('App: D09 W0 the picture comes first', () => {
+  it('Flow: the run card is one line, the rig info box sits in its Details, the reading notes are folded', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    const card = screen.getByTestId('run-card');
+    expect(screen.getByTestId('run-details-toggle')).toHaveAttribute('aria-expanded', 'false');
+    // the info box is inside the folded card, not under the picker
+    expect(screen.getAllByTestId('rig-info')).toHaveLength(1);
+    expect(card).toContainElement(screen.getByTestId('rig-info'));
+    expect(screen.getByTestId('rig-info')).not.toBeVisible();
+    const notes = screen.getByTestId('flow-notes');
+    expect(notes).not.toHaveAttribute('open');
+    expect(notes).toContainElement(screen.getByTestId('flow-entry'));
+    fireEvent.click(screen.getByTestId('run-details-toggle'));
+    expect(screen.getByTestId('rig-info')).toBeVisible();
   });
 });
 

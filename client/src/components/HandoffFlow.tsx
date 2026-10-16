@@ -511,11 +511,51 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
           </span>
         )}
       </div>
-      <p className="view-caption" data-explain={flow.mode === 'roles' ? 'stage' : 'seat-mode'}>
-        {flow.mode === 'roles'
-          ? 'Stages are read from seat names: qa → QA, review / r1 → Reviewer, lead / orch → Lead, the rest → Builders.'
-          : 'No QA or review seat in this rig, so each seat is its own box, in the order it first handed work on.'}
-      </p>
+      {/* D09 W0: how the stages are read and where work came in fold under one line, so the stage
+          diagram sits right under the numbers. Nothing is removed; open it to read them. */}
+      <details className="flow-notes" data-testid="flow-notes">
+        <summary>How stages are read · where work came in</summary>
+        <p className="view-caption" data-explain={flow.mode === 'roles' ? 'stage' : 'seat-mode'}>
+          {flow.mode === 'roles'
+            ? 'Stages are read from seat names: qa → QA, review / r1 → Reviewer, lead / orch → Lead, the rest → Builders.'
+            : 'No QA or review seat in this rig, so each seat is its own box, in the order it first handed work on.'}
+        </p>
+        {!entry && (
+          <p
+            className="flow-entry"
+            data-testid="flow-entry"
+            data-status={entryLoaded ? 'none' : 'loading'}
+          >
+            <b>Where work came in · </b>
+            {entryLoaded ? 'not known.' : 'checking…'}
+          </p>
+        )}
+        {entry && (
+          <p className="flow-entry" data-testid="flow-entry" data-status={entry.status}>
+            <b>Where work came in · </b>
+            {entry.entry && entryText ? (
+              <>
+                {entry.entry.seat.split('@')[0]}: {entryText} ({clock(Date.parse(entry.entry.at))})
+                {entry.entry.excerpt && (
+                  <q className="flow-entry-excerpt" data-testid="flow-entry-excerpt">
+                    {entry.entry.excerpt}
+                  </q>
+                )}
+              </>
+            ) : (
+              <>not known{entry.reason ? `: ${entry.reason}` : ''}</>
+            )}
+            {entry.seatsWithoutHistory.length > 0 && (
+              <span className="quiet">
+                {' '}
+                · {entry.seatsWithoutHistory.length} seat
+                {entry.seatsWithoutHistory.length === 1 ? ' has' : 's have'} no visible history, so
+                one of them may have acted first.
+              </span>
+            )}
+          </p>
+        )}
+      </details>
 
       {stepItem ? (
         <p className="flow-narration" data-testid="flow-narration" data-kind="step">
@@ -531,42 +571,6 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
             <b>{chapter.title}</b> {chapter.text}
           </p>
         )
-      )}
-
-      {!entry && (
-        <p
-          className="flow-entry"
-          data-testid="flow-entry"
-          data-status={entryLoaded ? 'none' : 'loading'}
-        >
-          <b>Where work came in · </b>
-          {entryLoaded ? 'not known.' : 'checking…'}
-        </p>
-      )}
-      {entry && (
-        <p className="flow-entry" data-testid="flow-entry" data-status={entry.status}>
-          <b>Where work came in · </b>
-          {entry.entry && entryText ? (
-            <>
-              {entry.entry.seat.split('@')[0]}: {entryText} ({clock(Date.parse(entry.entry.at))})
-              {entry.entry.excerpt && (
-                <q className="flow-entry-excerpt" data-testid="flow-entry-excerpt">
-                  {entry.entry.excerpt}
-                </q>
-              )}
-            </>
-          ) : (
-            <>not known{entry.reason ? `: ${entry.reason}` : ''}</>
-          )}
-          {entry.seatsWithoutHistory.length > 0 && (
-            <span className="quiet">
-              {' '}
-              · {entry.seatsWithoutHistory.length} seat
-              {entry.seatsWithoutHistory.length === 1 ? ' has' : 's have'} no visible history, so
-              one of them may have acted first.
-            </span>
-          )}
-        </p>
       )}
 
       <div className="flow-row">
