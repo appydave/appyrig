@@ -153,6 +153,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     remember(MAP_HINT_KEY, 'seen');
   }, []);
   const [rigKey, setRigKey] = useState<string | null>(null);
+  /** D09 W1 (QA LOW-3): the viewer clicked a rig; the first rig chosen by default is no pick. */
+  const [rigPicked, setRigPicked] = useState(false);
   /** Batch 2 · C1: off by default. On, Map and Flow show the most recently active rig, live. */
   const [followLatest, setFollowLatest] = useState<boolean>(readFollow);
   const [focused, setFocused] = useState<string | null>(null);
@@ -235,6 +237,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
       : (rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null);
   const chooseRig = useCallback((key: string) => {
     setRigKey(key);
+    setRigPicked(true);
     setFollowLatest(false);
     try {
       localStorage.setItem(FOLLOW_KEY, 'off');
@@ -713,7 +716,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           keys={!focusTile && !overlay}
           hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
           onShow={toggleMachine}
-          pickedRig={activeRig}
+          pickedRig={rigPicked && !followLatest ? activeRig : null}
         />
       )}
       {RIG_VIEWS.includes(view) && (

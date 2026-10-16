@@ -394,6 +394,10 @@ a:hover {
   text-transform: none;
   color: var(--ar-term-dim);
 }
+.wall-seat-filter .pill-btn:focus-visible {
+  /* QA MEDIUM-1: the dark ring (2026-10-12 a11y review); yellow on cream is 1.22:1. */
+  outline-color: var(--ar-ink);
+}
 .wall-seat-filter {
   display: flex;
   flex-wrap: wrap;

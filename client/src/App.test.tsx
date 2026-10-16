@@ -955,6 +955,8 @@ describe('App: D09 W1 hide stopped, name the rig', () => {
 
   it('"only this rig" narrows the Wall to the rig picked on the rig screens', () => {
     connected();
+    // QA LOW-3: the rig chosen by default is not a pick, so nothing is offered yet.
+    expect(screen.queryByTestId('wall-only-rig')).toBeNull();
     fireEvent.click(screen.getByTestId('view-flow'));
     fireEvent.click(
       screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === 'roamy:kernel')!

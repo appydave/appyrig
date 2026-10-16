@@ -68,7 +68,8 @@ export function wallSeats(
     const all = fm.snapshot.seats;
     const scoped = rig ? all.filter((s) => s.rig === rig.name) : all;
     inScope += scoped.length;
-    const kept = hideStopped ? scoped.filter((s) => s.status !== 'stopped') : scoped;
+    // QA LOW-2: by the pip, as the tiles are drawn: a seat on an asleep machine is "asleep".
+    const kept = hideStopped ? scoped.filter((s) => pipFor(s, fm) !== 'stopped') : scoped;
     stopped += scoped.length - kept.length;
     if (kept.length === all.length) out.push(fm);
     else if (kept.length > 0) out.push({ ...fm, snapshot: { ...fm.snapshot, seats: kept } });

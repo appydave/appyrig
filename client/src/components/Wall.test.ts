@@ -60,6 +60,13 @@ describe('wallSeats (D09 W1)', () => {
     expect(r.machines[1]).toBe(b);
   });
 
+  it("a seat stopped at an asleep machine's last report is drawn asleep: kept, not counted (QA LOW-2)", () => {
+    const asleep = { ...b, liveness: 'asleep' } as FleetMachine;
+    const r = wallSeats([a, asleep], true, null);
+    expect(r.stopped).toBe(2);
+    expect(r.machines[1]).toBe(asleep);
+  });
+
   it('only this rig keeps that rig on that machine', () => {
     const r = wallSeats([a, b], false, rig('m2', 'old'));
     expect(r.machines.flatMap((m) => m.snapshot.seats.map((s) => s.id))).toEqual([
