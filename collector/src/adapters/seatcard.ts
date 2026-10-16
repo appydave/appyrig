@@ -36,8 +36,8 @@ export function withSeatCards<T extends { id: string; rig: string | null }>(
 ): (T & { agentRole?: string | null; keySkills?: string[] })[] {
   return seats.map((s) => {
     if (s.rig === null) return s;
-    // LOW-3 (QA): path: and local: refs both end in the agent's folder (`…/development/qa`).
-    const ref = input.agentRefs.get(s.id)?.replace(/^(?:path|local):/, '');
+    // QA LOW-3, r1 LOW-1: any scheme (`path:`, `local:`, `builtin:terminal`) ends in the agent's name.
+    const ref = input.agentRefs.get(s.id)?.replace(/^[a-z][\w-]*:/i, '');
     const out: T & { agentRole?: string | null; keySkills?: string[] } = {
       ...s,
       agentRole: ref ? basename(ref.replace(/\/+$/, '')) || null : null,
@@ -51,7 +51,8 @@ export function withSeatCards<T extends { id: string; rig: string | null }>(
 
 /** The `seats` part of AppyRig's config, re-read when the file changes (no restart needed). */
 export function seatConfigReader(
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  onError: (message: string) => void = (m) => console.error(`${new Date().toISOString()} ${m}`)
 ): () => Record<string, SeatConfig> {
   const file = env.APPYRIG_CONFIG?.trim() || join(homedir(), '.config', 'appyrig', 'config.json');
   let mtime = -1;
@@ -69,8 +70,12 @@ export function seatConfigReader(
     if (m === 0) return value;
     try {
       value = AppConfigSchema.parse(JSON.parse(readFileSync(file, 'utf8'))).seats ?? {};
-    } catch {
-      // not a valid config: no allowlists, so cards show the count alone
+    } catch (e) {
+      // Not a valid config: no allowlists, so cards show the count alone. Said once per change,
+      // as the hub does (r1 W3 MEDIUM-1).
+      onError(
+        `${file} is not a valid AppyRig config; key skills off: ${(e as Error).message.slice(0, 200)}`
+      );
     }
     return value;
   };

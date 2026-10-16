@@ -45,7 +45,9 @@ export type MachineConfig = z.infer<typeof MachineConfigSchema>;
 
 /** D09 W3: what a seat's card names. Only skills the seat really has listed are shown. */
 export const SeatConfigSchema = z.looseObject({
-  keySkills: z.array(z.string().trim().min(1).max(120)).max(5).optional(),
+  // No length cap here (r1 W3 MEDIUM-1): the collector keeps at most KEY_SKILLS_MAX, and a cap would
+  // make one long list fail the whole file.
+  keySkills: z.array(z.string().trim().min(1).max(120)).optional(),
 });
 export type SeatConfig = z.infer<typeof SeatConfigSchema>;
 
@@ -59,6 +61,7 @@ export const AppConfigSchema = z.looseObject({
   /** Run card R2: machine id → how to reach it, for the copyable attach line (never used to connect). */
   machines: z.record(z.string().min(1), MachineConfigSchema).optional(),
   /** D09 W3: seat id (session name, e.g. `dev-build@d09-crew`) → its card's key skills. */
-  seats: z.record(z.string().min(1), SeatConfigSchema).optional(),
+  // A bad entry costs only that seat (it reads as no allowlist), never the rest of the config.
+  seats: z.record(z.string().min(1), SeatConfigSchema.catch({})).optional(),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;

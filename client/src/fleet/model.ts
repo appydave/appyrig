@@ -370,7 +370,11 @@ function inputBoxStart(lines: string[]): number {
   for (let i = lines.length - 1; i > 0; i -= 1) {
     if (!PROMPT_LINE.test(stripAnsi(lines[i]!))) continue;
     if (!RULE.test(stripAnsi(lines[i - 1]!))) continue;
-    if (lines.slice(i + 1).some((l) => RULE.test(stripAnsi(l)))) return i - 1;
+    const lower = lines.findIndex((l, k) => k > i && RULE.test(stripAnsi(l)));
+    if (lower === -1) continue;
+    // r1 W3 LOW-2: only the box when what follows its lower rule is footer chrome (or blank), so a
+    // plain pane with "> quoted" between two long rules keeps the output after it.
+    if (lines.slice(lower + 1).every(isChrome)) return i - 1;
   }
   return -1;
 }

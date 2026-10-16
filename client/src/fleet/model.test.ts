@@ -311,6 +311,16 @@ describe('contentTail: a draft of any shape is never activity (QA W3 MEDIUM-2)',
     const lines = box(['first line of my note', '  second line of my note']);
     expect(contentTail(lines, 3).map(stripAnsi)).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
   });
+  it('"> quoted" between two long rules in a plain pane is not a box: the output after it stays (r1 W3 LOW-2)', () => {
+    const rule = '─'.repeat(40);
+    // Before the fix this gave ['work line']: the box cut swallowed everything from the first rule.
+    expect(contentTail(['work line', rule, '> quoted', 'more', rule, 'after'], 3)).toEqual([
+      'more',
+      rule,
+      'after',
+    ]);
+  });
+
   it('no input box at all (a plain terminal): the tail is left as it was', () => {
     expect(contentTail(['$ ls', 'a b c', '> quoted, not a prompt box'], 2)).toEqual([
       '$ ls',
