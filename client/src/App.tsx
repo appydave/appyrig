@@ -713,6 +713,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           keys={!focusTile && !overlay}
           hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
           onShow={toggleMachine}
+          pickedRig={activeRig}
         />
       )}
       {RIG_VIEWS.includes(view) && (
