@@ -330,7 +330,10 @@ const CHROME = [
   /^\s*[└⎿│|]?\s*Tip: /,
   /Update installed|Restart to update|new task\? \/clear/,
   /paste again to expand|Press up to edit queued messages|queued messages?$/i,
-  /^\s*[❯›>] /, // a draft typed into the input box: the viewer's text, not the seat's work
+  // A draft typed into the input box, or Claude Code's dimmed suggestion (ghost text) there: the
+  // viewer's text or a guess, never the seat's work. D09 W3: Claude Code puts a NO-BREAK SPACE after
+  // the ❯, which a plain " " never matched, so "❯ rig capture …" was shown as the seat's activity.
+  /^\s*[❯›>]\s/,
 ];
 const TIP = /^\s*[└⎿│|]?\s*Tip: |^\s{2,}current work\s*$/;
 const isChrome = (line: string) => {
@@ -342,6 +345,19 @@ const isChrome = (line: string) => {
  * S3: the last n lines of what the seat is doing, for a Wall tile. Trailing input-box chrome is
  * dropped first, so a short tile still shows the work. Focus keeps the exact screen.
  */
+/** D09 W3: a seat's role in a word, from its agent_ref folder; another role is said as it is. */
+const ROLE_WORD: Record<string, string> = {
+  implementer: 'builder',
+  qa: 'QA',
+  'independent-reviewer': 'reviewer',
+  'product-designer': 'lead',
+  synthesizer: 'writer',
+};
+export function roleWord(agentRole: string | null | undefined): string | null {
+  if (!agentRole) return null;
+  return ROLE_WORD[agentRole] ?? agentRole;
+}
+
 export function contentTail(lines: string[], n: number): string[] {
   let end = lines.length;
   while (end > 0 && isChrome(lines[end - 1]!)) end -= 1;

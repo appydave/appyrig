@@ -232,6 +232,9 @@ export interface MapSeat {
   oldestStaleMs: number | null;
   /** v1.5 · L1: the seat's skillCount for the pill (null: none; undefined: not reported). */
   skills?: number | null;
+  /** D09 W3: the seat's agent_ref role and key skills, when its collector reports them. */
+  agentRole?: string | null;
+  keySkills?: string[];
 }
 
 export interface MapPod {
@@ -308,6 +311,8 @@ function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
     model: modelChip(seat),
     pip: pipFor(seat, fm),
     skills: seat.skillCount,
+    ...(seat.agentRole !== undefined ? { agentRole: seat.agentRole } : {}),
+    ...(seat.keySkills ? { keySkills: seat.keySkills } : {}),
     ...c,
   };
 }

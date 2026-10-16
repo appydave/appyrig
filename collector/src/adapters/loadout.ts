@@ -465,6 +465,8 @@ export class LoadoutReader {
   private lastScan = 0;
   /** seat → skillCount from the latest scan (null: Codex, or no listing). Kept for the snapshot's pill. */
   private counts = new Map<string, number | null>();
+  /** D09 W3: seat → the names it has listed, from the latest scan (for the card's key skills). */
+  private names = new Map<string, string[]>();
 
   constructor(
     private readonly machineId: string,
@@ -480,6 +482,11 @@ export class LoadoutReader {
   /** The latest skillCount per seat this reader has scanned (the pill); empty before the first scan. */
   skillCounts(): Map<string, number | null> {
     return this.counts;
+  }
+
+  /** D09 W3: the skill names each seat has listed (seats with no listing are absent). */
+  skillNames(): Map<string, string[]> {
+    return this.names;
   }
 
   /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
@@ -539,6 +546,7 @@ export class LoadoutReader {
     const out: SeatLoadout[] = [];
     const sigs = new Map<string, string>();
     const counts = new Map<string, number | null>();
+    const names = new Map<string, string[]>();
     for (const seat of seats) {
       const base = {
         machineId: this.machineId,
@@ -601,6 +609,11 @@ export class LoadoutReader {
         };
       }
       counts.set(seat.id, loadout.listing?.skillCount ?? null);
+      if (loadout.status === 'ok')
+        names.set(
+          seat.id,
+          loadout.skills.map((k) => k.name)
+        );
       const sig = createHash('sha1')
         .update(JSON.stringify({ ...loadout, collectedAt: '' }))
         .digest('hex');
@@ -609,6 +622,7 @@ export class LoadoutReader {
       sigs.set(seat.id, sig);
     }
     this.counts = counts;
+    this.names = names;
     if (out.length === 0) return null;
     return {
       loadouts: out,

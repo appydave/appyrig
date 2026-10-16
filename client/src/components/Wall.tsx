@@ -17,6 +17,7 @@ import {
   type GroupBy,
 } from '../fleet/model.js';
 import SkillPill from './SkillPill.js';
+import { KeySkills, RoleTag } from './SeatCardLines.js';
 import AnsiText from './AnsiText.js';
 import { rigTitle } from './RigInfo.js';
 import { isShortcutBlocked } from '../lib/keys.js';
@@ -237,12 +238,18 @@ const SeatTile = memo(function SeatTile({
           <span className="pip-glyph">{PIP[pip].glyph}</span>
           {PIP[pip].label}
         </span>
+        <RoleTag agentRole={seat.agentRole} />
         <span className="tile-where">{machine.machine.label}</span>
         <SkillPill
           count={seat.skillCount}
           onOpen={onOpenSkills ? () => onOpenSkills(tileKey) : undefined}
         />
       </span>
+      {seat.keySkills?.length ? (
+        <span className="tile-skills">
+          <KeySkills skills={seat.keySkills} />
+        </span>
+      ) : null}
       {lines.length > 0 && seat.tail ? (
         <AnsiText className="tile-term" testId="seat-tail" lines={lines} ansi={seat.tail.ansi} />
       ) : (
@@ -523,6 +530,7 @@ export default function Wall({
                         return (
                           <span key={t.key} data-pip={pip}>
                             <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}{' '}
+                            <RoleTag agentRole={t.seat.agentRole} />{' '}
                             <SkillPill
                               count={t.seat.skillCount}
                               onOpen={onOpenSkills ? () => onOpenSkills(t.key) : undefined}
@@ -628,6 +636,7 @@ export default function Wall({
                           {t.seat.rig ?? 'tmux'}{' '}
                         </span>
                       )}
+                      <RoleTag agentRole={t.seat.agentRole} />{' '}
                       <SkillPill
                         count={t.seat.skillCount}
                         onOpen={onOpenSkills ? () => onOpenSkills(t.key) : undefined}

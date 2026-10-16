@@ -3426,6 +3426,27 @@
                                     "type": "null"
                                   }
                                 ]
+                              },
+                              "agentRole": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 80
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "keySkills": {
+                                "maxItems": 5,
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 120
+                                }
                               }
                             },
                             "required": [
@@ -9769,6 +9790,27 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "agentRole": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "keySkills": {
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 120
+                    }
                   }
                 },
                 "required": [
@@ -10711,6 +10753,27 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "agentRole": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "keySkills": {
+                      "maxItems": 5,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      }
                     }
                   },
                   "required": [

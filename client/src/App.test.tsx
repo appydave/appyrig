@@ -1013,6 +1013,46 @@ describe('App: D09 W1 hide stopped, name the rig', () => {
   });
 });
 
+describe('App: D09 W3 honest seat cards', () => {
+  it('a tile names its role and key skills when reported; a seat without them shows neither', () => {
+    const fm = fleetMachine(snapshot('roamy--blocked'));
+    const seats = fm.snapshot.seats.map((x) =>
+      x.id === 'dev-build@starter'
+        ? {
+            ...x,
+            agentRole: 'implementer',
+            keySkills: ['appystack:appystack-conventions', 'dev-team:audit-test-quality', 'recipe'],
+          }
+        : x.id === 'advisor-lead@kernel'
+          ? { ...x, agentRole: 'orchestrator' }
+          : x
+    );
+    const { fire } = renderApp();
+    fire('connect');
+    fire(FLEET_EVENTS.UPDATE, update([{ ...fm, snapshot: { ...fm.snapshot, seats } }]));
+    openAllGroups();
+    const tile = (id: string) =>
+      screen.getAllByTestId('seat-tile').find((t) => t.dataset.seatId === id)!;
+    const build = tile('dev-build@starter');
+    expect(within(build).getByTestId('seat-role')).toHaveTextContent('builder');
+    expect(within(build).getByTestId('seat-key-skills')).toHaveTextContent(
+      'appystack-conventionsaudit-test-qualityrecipe'
+    );
+    expect(within(build).getByTestId('seat-key-skills')).toHaveAttribute(
+      'title',
+      expect.stringContaining('dev-team:audit-test-quality')
+    );
+    expect(within(tile('advisor-lead@kernel')).getByTestId('seat-role')).toHaveTextContent(
+      'orchestrator'
+    );
+    const other = screen
+      .getAllByTestId('seat-tile')
+      .find((t) => !['dev-build@starter', 'advisor-lead@kernel'].includes(t.dataset.seatId!))!;
+    expect(within(other).queryByTestId('seat-role')).toBeNull();
+    expect(within(other).queryByTestId('seat-key-skills')).toBeNull();
+  });
+});
+
 describe('App: S4 handoff details + where work came in', () => {
   type Req = { verb: string; input?: unknown };
   function flowWith(onCall: (r: Req) => Answer | undefined) {

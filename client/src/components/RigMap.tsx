@@ -7,6 +7,7 @@ import type { WorkChain } from '../fleet/timeline.js';
 import { ago, PIP } from '../fleet/model.js';
 import { plannedWord, type MapEdge, type RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
+import { KeySkills, RoleTag } from './SeatCardLines.js';
 
 interface Props {
   map: RigMapView | null;
@@ -619,6 +620,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                           {s.model.text}
                         </span>
                         <b>{s.name}</b>
+                        <RoleTag agentRole={s.agentRole} />
                         <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
                           <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
                         </span>
@@ -628,6 +630,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                             onOpen={onOpenSkills ? () => onOpenSkills(s.key) : undefined}
                           />
                         )}
+                        <KeySkills skills={s.keySkills} />
                         {s.open > 0 && (
                           <span className="node-wait" data-explain="waiting">
                             {s.open} waiting

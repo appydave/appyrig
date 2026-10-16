@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ASLEEP_AFTER_MS, type Seat } from '@appydave/shared';
 import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
@@ -11,6 +13,7 @@ import {
   findSeat,
   freshness,
   contentTail,
+  roleWord,
   groupSeats,
   groupState,
   collapsedByDefault,
@@ -255,6 +258,48 @@ describe('text helpers', () => {
   it('visibleTail drops trailing blank padding before taking the last n', () => {
     expect(visibleTail(['a', 'b', 'c', '', '\u001b[0m  ', ''], 2)).toEqual(['b', 'c']);
     expect(visibleTail(['', ''], 5)).toEqual([]);
+  });
+});
+
+describe('contentTail: no ghost text (D09 W3)', () => {
+  const ghost = (
+    JSON.parse(
+      readFileSync(
+        path.resolve(__dirname, '../../../test/fixtures/panes/d09-review-r1-ghost.json'),
+        'utf8'
+      )
+    ) as { lines: string[] }
+  ).lines;
+  const plain = (ls: string[]) => ls.map(stripAnsi);
+
+  it("a dimmed suggestion after the prompt (real review-r1 pane) yields the last turn, 'done <time>'", () => {
+    expect(plain(contentTail(ghost, 1))).toEqual(['✻ Crunched for 45s · done 9:39 AM']);
+    expect(plain(contentTail(ghost, 3)).join('\n')).not.toMatch(/rig capture/);
+  });
+
+  it('typed-but-unsent text is never activity either, after a no-break or a plain space', () => {
+    const typed = (sep: string) => [
+      '✻ Brewed for 1m 19s · done 9:39 AM',
+      '──────────────────────────── dev-qa@d09-crew ─',
+      `\u001b[39m❯${sep}fire slice 1`,
+      '────────────────────────────────────────────────',
+      '  ⏵⏵ auto mode on (shift+tab to cycle)',
+    ];
+    for (const sep of ['\u00a0', ' '])
+      expect(plain(contentTail(typed(sep), 2))).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
+  });
+});
+
+describe('roleWord (D09 W3)', () => {
+  it('names the role from agent_ref, else says it as it is', () => {
+    expect(roleWord('implementer')).toBe('builder');
+    expect(roleWord('qa')).toBe('QA');
+    expect(roleWord('independent-reviewer')).toBe('reviewer');
+    expect(roleWord('product-designer')).toBe('lead');
+    expect(roleWord('synthesizer')).toBe('writer');
+    expect(roleWord('orchestrator')).toBe('orchestrator');
+    expect(roleWord(null)).toBeNull();
+    expect(roleWord(undefined)).toBeNull();
   });
 });
 
