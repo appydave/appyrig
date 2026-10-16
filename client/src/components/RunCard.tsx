@@ -79,6 +79,7 @@ function missingWhy(files: RigFilesOutput | null, machineLabel: string, what: st
  */
 export default function RunCard({ machine, rig, now, socket, details }: Props) {
   const [open, setOpen] = useState<boolean>(readOpen);
+  const [gates, setGates] = useState<number | null | 'loading'>('loading');
   const bodyId = useId();
   const toggle = () => {
     const next = !open;
@@ -186,9 +187,13 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
   const w = RUN_WORD[model.state.word];
   // D09 W0: the folded card is one sentence: rig · state · the newest handoff in words · how many
   // open items wait on David (a count only; Details lists them).
-  const waiting = model.toDavid.length;
+  // QA MEDIUM-1: open items to David plus the FliStudio gates Details lists, so the two agree.
+  const waiting = model.toDavid.length + (typeof gates === 'number' ? gates : 0);
+  const waitingWords = `${waiting === 0 ? 'nothing' : waiting} waiting on you${
+    gates === 'loading' ? ' (checking gates…)' : gates === null ? ' (gates not checked)' : ''
+  }`;
   const lastWords = last
-    ? `${ended ? 'ended with' : 'last'}: ${clip(last.text, 110)}, ${clock(last.item.createdAt)}`
+    ? `${ended ? 'ended with' : 'last'}: ${clip(last.text, 110)}`
     : 'no handoffs yet';
 
   return (
@@ -200,14 +205,19 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
       aria-label={`Run card of ${rig}`}
     >
       <p className="run-line" data-testid="run-line">
+        {/* QA MEDIUM-2: only the step's words shrink (ellipsis, full text in the title); the
+            rig, state, time and count always show whole. */}
         <span className="run-line-text">
-          <b>{rig}</b> ·{' '}
-          <b className="run-word" data-word={model.state.word}>
+          <b className="run-line-fixed">{rig} ·</b>
+          <b className="run-word run-line-fixed" data-word={model.state.word}>
             {w.glyph} {w.label}
-          </b>{' '}
-          · <span data-testid="run-line-last">{lastWords}</span> ·{' '}
-          <span data-testid="run-line-waiting">
-            {waiting === 0 ? 'nothing waiting on you' : `${waiting} waiting on you`}
+          </b>
+          <span className="run-line-last" data-testid="run-line-last" title={lastWords}>
+            · {lastWords}
+          </span>
+          {last && <span className="run-line-fixed">, {clock(last.item.createdAt)}</span>}
+          <span className="run-line-fixed" data-testid="run-line-waiting">
+            · {waitingWords}
           </span>
         </span>
         <button
@@ -274,7 +284,13 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
           </dd>
           <dt>Waiting on David</dt>
           <dd data-testid="run-waiting-row">
-            <WaitingOnDavid machine={machine} rig={rig} toDavid={model.toDavid} socket={socket} />
+            <WaitingOnDavid
+              machine={machine}
+              rig={rig}
+              toDavid={model.toDavid}
+              socket={socket}
+              onGates={setGates}
+            />
           </dd>
           <dt>Outputs</dt>
           <dd data-testid="run-outputs-row">

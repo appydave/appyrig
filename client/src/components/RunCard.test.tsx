@@ -124,30 +124,60 @@ describe('Run card R1 on screen', () => {
 });
 
 describe('D09 W0: folded to one line by default', () => {
-  const noFiles = socketWith(() => ({
-    ok: true,
-    value: { machine: 'm4', rig: 'ylo-d10', status: 'no-data', reason: null, files: [] },
-  }));
+  const gate = (g: string) => ({
+    gate: g,
+    itemId: 'q',
+    at: '2026-10-13T06:55:51.000Z',
+    from: 'ylo-lead@ylo-d10',
+    to: 'd10-ai-powered-video-cuts',
+    context: `social gate ${g} OPEN for David's review`,
+    link: null,
+  });
+  const hub = (gates: ReturnType<typeof gate>[] | 'down') =>
+    socketWith((r) =>
+      r.verb === 'rig.waiting'
+        ? gates === 'down'
+          ? { ok: false, error: { failureMode: 'timeout', message: 'no answer' } }
+          : {
+              ok: true,
+              value: {
+                machine: 'm4',
+                rig: 'ylo-d10',
+                ssh: null,
+                gates,
+                scanned: 1,
+                bodiesMissing: 0,
+              },
+            }
+        : {
+            ok: true,
+            value: { machine: 'm4', rig: 'ylo-d10', status: 'no-data', reason: null, files: [] },
+          }
+    );
 
-  it('reads as one sentence; Details opens exactly the full card, with the rig info first; remembered', () => {
+  it('reads as one sentence; Details opens exactly the full card, with the rig info first; remembered', async () => {
     localStorage.removeItem('appyrig.runCardOpen');
     const { unmount } = render(
       <RunCard
         machine={machine('running')}
         rig="ylo-d10"
         now={NOW}
-        socket={noFiles}
+        socket={hub([])}
         details={<section data-testid="rig-info">info</section>}
       />
     );
     const line = screen.getByTestId('run-line');
-    const text = line.textContent ?? '';
-    expect(
-      text.startsWith(
-        'ylo-d10 · ○ idle · last: ylo-lead → d10-ai-powered-video-cuts: change 04 done'
-      )
-    ).toBe(true);
-    expect(text).toMatch(/ · (nothing|\d+) waiting on you\s*Details ▸$/);
+    expect(line.textContent).toMatch(
+      /^ylo-d10 ·○ idle· last: ylo-lead → d10-ai-powered-video-cuts: change 04 done/
+    );
+    // QA MEDIUM-2: the step's words are their own piece (the one that may be cut), with the full
+    // text in its title; time and count are separate pieces that always show whole.
+    const lastPart = screen.getByTestId('run-line-last');
+    expect(lastPart).toHaveAttribute('title', expect.stringMatching(/^last: ylo-lead → /));
+    await waitFor(() =>
+      expect(screen.getByTestId('run-line-waiting')).toHaveTextContent(/^· nothing waiting on you$/)
+    );
+    expect(lastPart.nextElementSibling).toHaveTextContent(/^, .+/);
     const toggle = screen.getByTestId('run-details-toggle');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveAccessibleName('Details ▸');
@@ -161,12 +191,12 @@ describe('D09 W0: folded to one line by default', () => {
     expect(body).toBeVisible();
     expect(localStorage.getItem('appyrig.runCardOpen')).toBe('on');
     unmount();
-    render(<RunCard machine={machine('running')} rig="ylo-d10" now={NOW} socket={noFiles} />);
+    render(<RunCard machine={machine('running')} rig="ylo-d10" now={NOW} socket={hub([])} />);
     expect(screen.getByTestId('run-details-toggle')).toHaveAttribute('aria-expanded', 'true');
     localStorage.removeItem('appyrig.runCardOpen');
   });
 
-  it('waiting on you is a count, never the list', () => {
+  it('waiting on you counts open items AND the open gates Details lists, never the list (QA MEDIUM-1)', async () => {
     const fm = machine('running');
     (fm.snapshot.queue as unknown as object[]).push(
       ...['a', 'b'].map((id) => ({
@@ -181,8 +211,29 @@ describe('D09 W0: folded to one line by default', () => {
         updatedAt: '2026-10-13T07:10:00.000Z',
       }))
     );
-    render(<RunCard machine={fm} rig="ylo-d10" now={NOW} socket={noFiles} />);
-    expect(screen.getByTestId('run-line-waiting')).toHaveTextContent(/^\d+ waiting on you$/);
+    const items = screen.queryAllByTestId('run-line-waiting').length;
+    expect(items).toBe(0);
+    render(
+      <RunCard
+        machine={fm}
+        rig="ylo-d10"
+        now={NOW}
+        socket={hub([gate('g_1'), gate('g_2'), gate('g_3')])}
+      />
+    );
+    const w = screen.getByTestId('run-line-waiting');
+    expect(w).toHaveTextContent('checking gates…');
+    await waitFor(() => expect(w).toHaveTextContent(/^· 5 waiting on you$/));
+    expect(screen.getAllByTestId('run-gate')).toHaveLength(3);
     expect(screen.getByTestId('run-line')).not.toHaveTextContent('Pick a');
+  });
+
+  it('when the hub does not answer for gates, the line says the gates were not checked', async () => {
+    render(<RunCard machine={machine('running')} rig="ylo-d10" now={NOW} socket={hub('down')} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('run-line-waiting')).toHaveTextContent(
+        '· nothing waiting on you (gates not checked)'
+      )
+    );
   });
 });
