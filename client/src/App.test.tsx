@@ -903,6 +903,26 @@ describe('App: S3 calmer Wall + machine filter', () => {
   });
 });
 
+describe('App: D09 W0 the picture comes first', () => {
+  it('Flow: the run card is one line, the rig info box sits in its Details, the reading notes are folded', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    fireEvent.click(screen.getByTestId('view-flow'));
+    const card = screen.getByTestId('run-card');
+    expect(screen.getByTestId('run-details-toggle')).toHaveAttribute('aria-expanded', 'false');
+    // the info box is inside the folded card, not under the picker
+    expect(screen.getAllByTestId('rig-info')).toHaveLength(1);
+    expect(card).toContainElement(screen.getByTestId('rig-info'));
+    expect(screen.getByTestId('rig-info')).not.toBeVisible();
+    const notes = screen.getByTestId('flow-notes');
+    expect(notes).not.toHaveAttribute('open');
+    expect(notes).toContainElement(screen.getByTestId('flow-entry'));
+    fireEvent.click(screen.getByTestId('run-details-toggle'));
+    expect(screen.getByTestId('rig-info')).toBeVisible();
+  });
+});
+
 describe('App: D09 W1 hide stopped, name the rig', () => {
   function connected() {
     const fake = renderApp();
