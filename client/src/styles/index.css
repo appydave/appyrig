@@ -442,6 +442,10 @@ a:hover {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* On the Map a node keeps its usual width: the key skills wrap under it instead of widening it. */
+.node .seat-key-skills {
+  max-width: 210px;
+}
 .tile .seat-key-skill {
   color: var(--ar-term-dim);
 }
