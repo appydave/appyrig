@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { AUTH_ERRORS, FLEET_EVENTS } from '@appydave/shared';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -99,8 +99,15 @@ function renderApp(onCall?: CallHandler) {
   return fake;
 }
 
+/** D09 W1: stopped seats are hidden by default; bring them back. */
+function showStopped() {
+  const t = screen.queryByTestId('wall-hide-stopped');
+  if (t?.getAttribute('aria-pressed') === 'true') fireEvent.click(t);
+}
+
 /** S3: stopped, asleep and idle groups start collapsed; open them all to inspect every tile. */
 function openAllGroups() {
+  showStopped();
   for (const card of screen.queryAllByTestId('idle-team')) fireEvent.click(card);
   for (const head of screen.queryAllByTestId('wall-group-head')) {
     if (head.getAttribute('aria-expanded') === 'false') fireEvent.click(head);
@@ -253,6 +260,7 @@ describe('App: Wall and Fleet Strip', () => {
       FLEET_EVENTS.UPDATE,
       update([fleetMachine(snapshot('roamy')), fleetMachine(snapshot('m2'))])
     );
+    showStopped();
     expect(screen.getAllByTestId('wall-group').length).toBeGreaterThan(2);
     fireEvent.click(screen.getByTestId('group-by-machine'));
     expect(
@@ -816,6 +824,7 @@ describe('App: S3 calmer Wall + machine filter', () => {
 
   it('stopped groups start collapsed and say what is in them; the choice is remembered', () => {
     connected();
+    showStopped();
     const stopped = screen
       .getAllByTestId('wall-group')
       .find((g) => g.getAttribute('data-state') === 'stopped')!;
@@ -884,6 +893,96 @@ describe('App: S3 calmer Wall + machine filter', () => {
     expect(screen.getAllByTestId('machine-chip')).toHaveLength(2);
     fireEvent.click(screen.getByTestId('wall-show-machine'));
     expect(screen.queryByTestId('wall-hidden')).toBeNull();
+  });
+});
+
+describe('App: D09 W1 hide stopped, name the rig', () => {
+  function connected() {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(
+      FLEET_EVENTS.UPDATE,
+      update([fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))])
+    );
+    return fake;
+  }
+  const allTiles = () => {
+    for (const card of screen.queryAllByTestId('idle-team')) fireEvent.click(card);
+    for (const head of screen.queryAllByTestId('wall-group-head'))
+      if (head.getAttribute('aria-expanded') === 'false') fireEvent.click(head);
+    for (const b of screen.queryAllByTestId('group-show-all')) fireEvent.click(b);
+    return screen.queryAllByTestId('seat-tile');
+  };
+
+  it('opens with stopped seats hidden and counted; off brings all back; the choice is remembered', () => {
+    connected();
+    const t = screen.getByTestId('wall-hide-stopped');
+    expect(t).toHaveAttribute('aria-pressed', 'true');
+    expect(t).toHaveAccessibleName('● Hide stopped');
+    // M2's 18 seats are all stopped: none drawn, the count says so.
+    expect(screen.getByTestId('wall-stopped-count')).toHaveTextContent('18 stopped hidden');
+    expect(allTiles().every((x) => x.dataset.status !== 'stopped')).toBe(true);
+    expect(allTiles()).toHaveLength(7);
+    expect(
+      screen.getAllByTestId('wall-group').every((g) => !g.dataset.groupKey!.startsWith('m2:'))
+    ).toBe(true);
+    fireEvent.click(t);
+    expect(t).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByTestId('wall-stopped-count')).toBeNull();
+    expect(allTiles()).toHaveLength(25);
+    expect(localStorage.getItem('appyrig.hideStopped')).toBe('off');
+    cleanup();
+    connected();
+    expect(screen.getByTestId('wall-hide-stopped')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('every tile names its rig, so same-named seats can be told apart (by rig and by machine)', () => {
+    connected();
+    showStopped();
+    const check = () => {
+      const tiles = allTiles();
+      expect(tiles.length).toBe(25);
+      for (const x of tiles) {
+        const rig = x.dataset.seatId!.split('@')[1];
+        const shown = within(x).getByTestId('seat-rig').textContent;
+        expect(shown).toBe(x.dataset.seatId!.includes('@') ? rig : 'tmux');
+      }
+    };
+    check();
+    fireEvent.click(screen.getByTestId('group-by-machine'));
+    check();
+  });
+
+  it('"only this rig" narrows the Wall to the rig picked on the rig screens', () => {
+    connected();
+    // QA LOW-3: the rig chosen by default is not a pick, so nothing is offered yet.
+    expect(screen.queryByTestId('wall-only-rig')).toBeNull();
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(
+      screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === 'roamy:kernel')!
+    );
+    fireEvent.click(screen.getByTestId('view-wall'));
+    showStopped(); // so M2's stopped kernel is in play and must be left out by machine
+    const only = screen.getByTestId('wall-only-rig');
+    expect(only).toHaveAttribute('aria-pressed', 'false');
+    expect(only).toHaveTextContent('Only kernel (Roamy)');
+    fireEvent.click(only);
+    const tiles = allTiles();
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(tiles.every((x) => x.dataset.seatId!.endsWith('@kernel'))).toBe(true);
+    expect(tiles.every((x) => x.dataset.machineId === 'roamy')).toBe(true);
+    fireEvent.click(only);
+    expect(allTiles().some((x) => !x.dataset.seatId!.endsWith('@kernel'))).toBe(true);
+  });
+
+  it('a rig whose seats are all stopped says so instead of an empty Wall', () => {
+    const fake = renderApp();
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    expect(screen.getByTestId('wall-all-stopped')).toHaveTextContent(
+      'All 18 seats are stopped and hidden. Turn off Hide stopped to see them.'
+    );
+    expect(screen.queryByText(/No seats yet/)).toBeNull();
   });
 });
 

@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
@@ -31,6 +31,51 @@ export interface Box {
 
 const OPEN_KEY = 'appyrig.groups';
 const FULL_KEY = 'appyrig.groupsFull';
+/** D09 W1: "Hide stopped" is on unless this viewer turned it off. */
+const STOPPED_KEY = 'appyrig.hideStopped';
+
+function readHideStopped(): boolean {
+  try {
+    return localStorage.getItem(STOPPED_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+/** The rig picked on the rig screens, which the Wall can narrow to ("this rig only"). */
+export interface PickedRig {
+  key: string;
+  machineId: string;
+  name: string;
+  machineLabel: string;
+}
+
+/**
+ * D09 W1: the seats the Wall draws. "Only this rig" keeps the picked rig's seats; "Hide stopped"
+ * drops seats whose session is stopped and counts them. A machine left with no seats is dropped,
+ * so grouping by machine shows no empty head (a machine that reported none stays, as before).
+ */
+export function wallSeats(
+  machines: FleetMachine[],
+  hideStopped: boolean,
+  rig: PickedRig | null
+): { machines: FleetMachine[]; stopped: number; inScope: number } {
+  let stopped = 0;
+  let inScope = 0;
+  const out: FleetMachine[] = [];
+  for (const fm of machines) {
+    if (rig && fm.machine.id !== rig.machineId) continue;
+    const all = fm.snapshot.seats;
+    const scoped = rig ? all.filter((s) => s.rig === rig.name) : all;
+    inScope += scoped.length;
+    // QA LOW-2: by the pip, as the tiles are drawn: a seat on an asleep machine is "asleep".
+    const kept = hideStopped ? scoped.filter((s) => pipFor(s, fm) !== 'stopped') : scoped;
+    stopped += scoped.length - kept.length;
+    if (kept.length === all.length) out.push(fm);
+    else if (kept.length > 0) out.push({ ...fm, snapshot: { ...fm.snapshot, seats: kept } });
+  }
+  return { machines: out, stopped, inScope };
+}
 
 /** S3-fit: the Wall is one grid of tile-width columns; a team spans as many as it shows tiles. */
 const COL_MIN = 232;
@@ -172,7 +217,12 @@ const SeatTile = memo(function SeatTile({
     >
       <span className="tile-bar" />
       <span className="tile-head">
-        <span className="tile-name">{name}</span>
+        <span className="tile-name">
+          {name}{' '}
+          <span className="tile-rig" data-testid="seat-rig">
+            {seat.rig ?? 'tmux'}
+          </span>
+        </span>
         <span className="chip" data-family={chip.family} data-explain="model">
           {chip.text}
         </span>
@@ -229,6 +279,8 @@ interface WallProps {
   /** S3: machines the viewer filtered out, named on the Wall so nothing vanishes silently. */
   hidden?: { id: string; label: string }[];
   onShow?: (machineId: string) => void;
+  /** D09 W1: the rig picked on the rig screens, offered as "only this rig". */
+  pickedRig?: PickedRig | null;
 }
 
 export default function Wall({
@@ -242,13 +294,31 @@ export default function Wall({
   keys = true,
   hidden = [],
   onShow,
+  pickedRig = null,
 }: WallProps) {
+  const [hideStopped, setHideStopped] = useState<boolean>(readHideStopped);
+  const [onlyRig, setOnlyRig] = useState(false);
+  const toggleStopped = () => {
+    const next = !hideStopped;
+    setHideStopped(next);
+    try {
+      localStorage.setItem(STOPPED_KEY, next ? 'on' : 'off');
+    } catch {
+      // per-viewer convenience only
+    }
+  };
+  const scope = onlyRig ? pickedRig : null;
+  const shownSeats = useMemo(
+    () => wallSeats(machines, hideStopped, scope),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the rig is compared by key
+    [machines, hideStopped, scope?.key]
+  );
   // B1 (fb-0004): teams in the same state used to swap places on every push by latest activity.
   // The order holds while the pointer is over the Wall, and otherwise re-sorts at most once a
   // minute, or at once when a team's state changes (blocked/working/idle/stopped is news).
   const [over, setOver] = useState(false);
   const groups = useStableOrder(
-    groupSeats(machines, groupBy),
+    groupSeats(shownSeats.machines, groupBy),
     (g) => g.key,
     (g) => String(groupRank(g)),
     over
@@ -342,14 +412,41 @@ export default function Wall({
       onPointerEnter={() => setOver(true)}
       onPointerLeave={() => setOver(false)}
     >
-      {received && groups.length === 0 && hidden.length === 0 && (
+      {received && groups.length === 0 && hidden.length === 0 && shownSeats.inScope === 0 && (
         <p className="empty">
           No seats yet. Machines appear here as soon as their collector reports.
         </p>
       )}
       {/* S3-fit: the order and what the filter hides share one line, to save a row above the fold. */}
-      {(hidden.length > 0 || groups.length > 0) && (
+      {(hidden.length > 0 || groups.length > 0 || shownSeats.inScope > 0) && (
         <div className="wall-top">
+          <p className="filter-note wall-seat-filter" role="group" aria-label="Seats shown">
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="wall-hide-stopped"
+              aria-pressed={hideStopped}
+              title="On: seats whose session is stopped are left off the Wall. Remembered for you."
+              onClick={toggleStopped}
+            >
+              {hideStopped ? '●' : '○'} Hide stopped
+            </button>
+            {hideStopped && shownSeats.stopped > 0 && (
+              <span data-testid="wall-stopped-count">{shownSeats.stopped} stopped hidden</span>
+            )}
+            {pickedRig && (
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="wall-only-rig"
+                aria-pressed={onlyRig}
+                title={`On: only the seats of ${pickedRig.name} on ${pickedRig.machineLabel}, the rig picked on the rig screens.`}
+                onClick={() => setOnlyRig(!onlyRig)}
+              >
+                {onlyRig ? '●' : '○'} Only {pickedRig.name} ({pickedRig.machineLabel})
+              </button>
+            )}
+          </p>
           {groups.length > 0 && (
             <p className="view-caption wall-order" data-testid="wall-order">
               {WALL_ORDER_TEXT}
@@ -372,6 +469,13 @@ export default function Wall({
             </p>
           )}
         </div>
+      )}
+      {received && groups.length === 0 && shownSeats.inScope > 0 && (
+        <p className="empty" data-testid="wall-all-stopped">
+          All {shownSeats.inScope} seat{shownSeats.inScope === 1 ? '' : 's'}
+          {scope ? ` of ${scope.name}` : ''} {shownSeats.inScope === 1 ? 'is' : 'are'} stopped and
+          hidden. Turn off Hide stopped to see them.
+        </p>
       )}
       {groups.map((g, i) => {
         // S3 variant C: idle-only teams the viewer has not opened sit as cards in one strip, drawn
@@ -515,10 +619,15 @@ export default function Wall({
                       data-seat-key={t.key}
                       data-pip={pip}
                       data-explain="seat"
-                      title={`${seatName(t.seat)} · ${PIP[pip].label}: open`}
+                      title={`${seatName(t.seat)} · ${t.seat.rig ?? 'tmux'} · ${PIP[pip].label}: open`}
                       onClick={() => onOpen(t.key)}
                     >
                       <span className="pip-glyph">{PIP[pip].glyph}</span> {seatName(t.seat)}{' '}
+                      {groupBy === 'machine' && (
+                        <span className="tile-rig" data-testid="seat-rig">
+                          {t.seat.rig ?? 'tmux'}{' '}
+                        </span>
+                      )}
                       <SkillPill
                         count={t.seat.skillCount}
                         onOpen={onOpenSkills ? () => onOpenSkills(t.key) : undefined}
