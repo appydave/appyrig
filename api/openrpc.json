@@ -3119,6 +3119,34 @@
                                   }
                                 ]
                               },
+                              "edges": {
+                                "maxItems": 200,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "from": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "to": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "kind": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 60
+                                    }
+                                  },
+                                  "required": [
+                                    "from",
+                                    "to",
+                                    "kind"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "displayName": {
                                 "type": "string",
                                 "minLength": 1,
@@ -8718,6 +8746,34 @@
                           "type": "null"
                         }
                       ]
+                    },
+                    "edges": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "to": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "kind": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 60
+                          }
+                        },
+                        "required": [
+                          "from",
+                          "to",
+                          "kind"
+                        ],
+                        "additionalProperties": false
+                      }
                     },
                     "displayName": {
                       "type": "string",

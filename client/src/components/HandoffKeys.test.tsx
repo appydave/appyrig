@@ -4,6 +4,9 @@ import { queueMachine } from '../test/queueFixtures.js';
 import HandoffPanel from './HandoffPanel.js';
 import RunTimeline from './RunTimeline.js';
 import HandoffFlow from './HandoffFlow.js';
+import RigMap from './RigMap.js';
+import { buildRigMap } from '../fleet/views.js';
+import type { FleetMachine } from '@appydave/shared';
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');
 const d10 = queueMachine('ylo-d10');
@@ -45,6 +48,52 @@ describe('Views K · J/K and [ ] with a handoff panel open', () => {
     const drip = d10.snapshot.queue.filter((q) => q.source === 'ylo-drip@ylo-d10');
     expect(screen.getByTestId('handoff-panel').getAttribute('aria-label')).toMatch(/ylo-drip/);
     expect(title()).toBe(drip[drip.length - 1]!.summary);
+  });
+
+  it('Map: ] and [ skip planned lines, so the drawer stays on a real line (r1 W2 MEDIUM-1)', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+    // One real line (the first lead → check handoff) and two planned spec edges with no handoff.
+    const seat = (n: string) => `${n}@ylo-d10`;
+    const one = d10.snapshot.queue.find(
+      (q) => q.source === seat('ylo-lead') && q.destination === seat('ylo-check')
+    )!;
+    const fm = {
+      ...d10,
+      snapshot: {
+        ...d10.snapshot,
+        queue: [one],
+        rigs: [
+          {
+            name: 'ylo-d10',
+            edges: [
+              { from: seat('ylo-lead'), to: seat('ylo-drip'), kind: 'delegates_to' },
+              { from: seat('ylo-lead'), to: seat('ylo-copy'), kind: 'delegates_to' },
+            ],
+          },
+        ],
+      },
+    } as unknown as FleetMachine;
+    const map = buildRigMap([fm], 'm4:ylo-d10', NOW)!;
+    expect(map.edges).toHaveLength(1);
+    expect(map.planned).toHaveLength(2);
+    render(<RigMap map={map} onOpen={() => {}} />);
+    expect(screen.getAllByTestId('rig-map-planned')).toHaveLength(2);
+    const real = screen.getByTestId('rig-map-edge');
+    fireEvent.keyDown(real, { key: 'Enter' });
+    expect(screen.getByTestId('handoff-panel')).toBeInTheDocument();
+    key(']');
+    // Without the fix ] lands on a planned line: no drawer, nothing selected.
+    expect(screen.getByTestId('handoff-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('rig-map-edge')).toHaveAttribute('data-selected', 'true');
+    key('[');
+    expect(screen.getByTestId('handoff-panel')).toBeInTheDocument();
+    vi.unstubAllGlobals();
   });
 
   it('Flow: ] and [ step through the lines, each opening its newest handoff', () => {

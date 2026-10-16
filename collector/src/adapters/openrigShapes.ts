@@ -327,3 +327,16 @@ export function nodeContractIssues(node: unknown): string[] {
   }
   return issues;
 }
+
+/** D09 W2: GET /api/rigs/:id/graph, only the parts AppyRig reads (node id → session, edges). */
+export const LenientGraph = z.looseObject({
+  nodes: z.array(
+    z.looseObject({
+      id: z.string(),
+      data: z.looseObject({ canonicalSessionName: z.string().nullish() }).nullish(),
+    })
+  ),
+  edges: z.array(
+    z.looseObject({ source: z.string(), target: z.string(), label: z.string().nullish() })
+  ),
+});

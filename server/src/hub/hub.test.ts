@@ -83,6 +83,30 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     expect(err.message).toBe(AUTH_ERRORS.collectorToken);
   });
 
+  it("D09 W2: a rig's planned edges reach the browser; a snapshot without them still loads", async () => {
+    const h = await start();
+    const browser = h.browser();
+    await nextUpdate(browser);
+    const snap = loadSnapshot('roamy');
+    const edges = [{ from: 'a@kernel', to: 'b@kernel', kind: 'delegates_to' }];
+    const withEdges = { ...snap, rigs: [{ ...snap.rigs[0]!, edges }, ...snap.rigs.slice(1)] };
+    const update = nextUpdate(browser);
+    expect(await push(h.collector({ token: TOKEN, machineId: 'roamy' }), withEdges)).toMatchObject({
+      ok: true,
+    });
+    expect((await update).machines[0]!.snapshot.rigs[0]!.edges).toEqual(edges);
+    expect(loadSnapshot('m2').rigs.every((r) => r.edges === undefined)).toBe(true);
+    expect(
+      await push(h.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'))
+    ).toMatchObject({ ok: true });
+    // A malformed edge is refused like any other bad field, not stored.
+    const bad = { ...snap, rigs: [{ ...snap.rigs[0]!, edges: [{ from: 'a' }] }] };
+    expect(await push(h.collector({ token: TOKEN, machineId: 'roamy' }), bad)).toMatchObject({
+      ok: false,
+      failureMode: 'invalid_snapshot',
+    });
+  });
+
   it('refuses an invalid snapshot and a machine mismatch as data, storing neither', async () => {
     const h = await start();
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });

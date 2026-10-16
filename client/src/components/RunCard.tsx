@@ -212,10 +212,14 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
           <b className="run-word run-line-fixed" data-word={model.state.word}>
             {w.glyph} {w.label}
           </b>
-          <span className="run-line-last" data-testid="run-line-last" title={lastWords}>
+          <span
+            className="run-line-last"
+            data-testid="run-line-last"
+            title={last ? `${ended ? 'ended with' : 'last'}: ${last.text}` : lastWords}
+          >
             · {lastWords}
           </span>
-          {last && <span className="run-line-fixed">, {clock(last.item.createdAt)}</span>}
+          {last && <span className="run-line-fixed">· {clock(last.item.createdAt)}</span>}
           <span className="run-line-fixed" data-testid="run-line-waiting">
             · {waitingWords}
           </span>

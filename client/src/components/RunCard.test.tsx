@@ -177,7 +177,9 @@ describe('D09 W0: folded to one line by default', () => {
     await waitFor(() =>
       expect(screen.getByTestId('run-line-waiting')).toHaveTextContent(/^· nothing waiting on you$/)
     );
-    expect(lastPart.nextElementSibling).toHaveTextContent(/^, .+/);
+    expect(lastPart.nextElementSibling).toHaveTextContent(/^· .+/);
+    // r1 W0 LOW-2: the title carries the step's full text, not the 110-character clip.
+    expect(lastPart.getAttribute('title')).not.toMatch(/…$/);
     const toggle = screen.getByTestId('run-details-toggle');
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveAccessibleName('Details ▸');

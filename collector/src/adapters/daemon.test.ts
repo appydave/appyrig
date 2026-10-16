@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseNodes, parsePs, parseQueue } from './daemon.js';
+import { parseGraphEdges, parseNodes, parsePs, parseQueue } from './daemon.js';
 import { readFixtureJson } from './fixtureSources.js';
 
 const KERNEL = 'roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json';
@@ -159,5 +159,34 @@ describe('adapter: daemon queue', () => {
     const raw = readFixtureJson('roamy--cli-queue-list.json') as Record<string, unknown>[];
     const many = Array.from({ length: 600 }, (_, i) => ({ ...raw[0]!, qitemId: `q-${i}` }));
     expect(parseQueue(many)).toHaveLength(500);
+  });
+});
+
+describe('parseGraphEdges (D09 W2)', () => {
+  it("d09-crew's real graph: three seat-to-seat edges by session name", () => {
+    expect(parseGraphEdges(readFixtureJson('m2--api-rig-d09-crew-graph.json'))).toEqual([
+      { from: 'dev-build@d09-crew', to: 'dev-qa@d09-crew', kind: 'delegates_to' },
+      { from: 'dev-build@d09-crew', to: 'review-r1@d09-crew', kind: 'delegates_to' },
+      { from: 'review-r1@d09-crew', to: 'dev-build@d09-crew', kind: 'can_observe' },
+    ]);
+  });
+
+  it('an edge touching a node with no session (a pod) is left out, not guessed', () => {
+    const raw = {
+      nodes: [
+        { id: 'pod-1', data: { canonicalSessionName: null } },
+        { id: 'a', data: { canonicalSessionName: 'a@r' } },
+      ],
+      edges: [
+        { id: 'e1', source: 'pod-1', target: 'a', label: 'delegates_to' },
+        { id: 'e2', source: 'a', target: 'a', label: 'can_observe' },
+        { id: 'e3', source: 'a', target: 'zz', label: 'delegates_to' },
+      ],
+    };
+    expect(parseGraphEdges(raw)).toEqual([{ from: 'a@r', to: 'a@r', kind: 'can_observe' }]);
+  });
+
+  it('a shape it cannot read throws (the caller then leaves edges out)', () => {
+    expect(() => parseGraphEdges({ nodes: 'x' })).toThrow(/graph/);
   });
 });

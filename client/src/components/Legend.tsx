@@ -148,6 +148,7 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
     ),
   'line-amber': () => line('rigmap-edge open', 2.5),
   'line-dashed': () => line('rigmap-edge stale', 2),
+  'line-planned': () => line('rigmap-edge planned', 2),
   self: () => <span className="legend-mono">↺</span>,
   'stage-box': () => box('flow-box', 'QA'),
   'outside-box': () => box('flow-box', 'a@b'),

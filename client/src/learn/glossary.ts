@@ -239,6 +239,11 @@ export const GLOSSARY: Record<string, Term> = {
     what: "A work item handed over less than 2 hours ago that the receiving seat hasn't closed yet.",
     why: 'Waiting work is a queue building up. Lots of it at one seat or stage is a bottleneck.',
   },
+  planned: {
+    term: 'Planned line',
+    what: "An edge in the rig's spec (who delegates to whom, who can observe whom), as OpenRig holds it. Drawn dotted with its kind in words until a handoff goes that way.",
+    why: 'It shows how the team is meant to work before anything has moved; a real handoff on the same pair replaces it with a solid line.',
+  },
   stale: {
     term: 'Left open',
     what: 'A work item still open more than 2 hours after it was handed over. Usually nobody will close it: the run ended or it was forgotten.',
