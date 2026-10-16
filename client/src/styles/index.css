@@ -398,6 +398,10 @@ a:hover {
   /* QA MEDIUM-1: the dark ring (2026-10-12 a11y review); yellow on cream is 1.22:1. */
   outline-color: var(--ar-ink);
 }
+/* r1 W1 LOW: on a light chip the rig label needs the muted ink, not the terminal grey (3.17:1). */
+.seat-chip .tile-rig {
+  color: var(--ar-ink-muted);
+}
 .wall-seat-filter {
   display: flex;
   flex-wrap: wrap;
