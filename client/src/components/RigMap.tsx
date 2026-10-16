@@ -458,11 +458,11 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
         {map.planned?.length
           ? ' · dotted with a word = planned in the rig spec, no handoff yet'
           : ''}
-        {map.planned === null && map.edges.length === 0 ? (
+        {map.planned === null ? (
           <span data-testid="rig-map-no-plan">
             {' '}
-            · no planned lines: {map.rig.machineLabel}&apos;s collector does not send the rig
-            spec&apos;s edges
+            · no planned lines: {map.rig.machineLabel}&apos;s collector did not send the rig
+            spec&apos;s edges (an older collector, or the graph could not be read)
           </span>
         ) : null}
       </p>

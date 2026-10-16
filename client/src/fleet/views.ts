@@ -271,6 +271,7 @@ export interface MapEdge {
 
 /** D09 W2: a spec edge kind in words, for the line's label ("delegates", "observes"). */
 export function plannedWord(kind: string): string {
+  if (kind.includes(',')) return kind.split(',').map(plannedWord).join(' · ');
   if (kind === 'delegates_to') return 'delegates';
   if (kind === 'can_observe') return 'observes';
   return kind.replace(/^can_/, '').replace(/_to$/, '').replace(/_/g, ' ');
@@ -450,7 +451,14 @@ export function buildRigMap(
             kind: e.kind,
           }))
           .filter((e) => !edgeMap.has(`${e.from}→${e.to}`))
-          .filter((e, i, all) => all.findIndex((x) => x.from === e.from && x.to === e.to) === i)
+          // QA W2 LOW-1: two kinds on one pair (kernel: collaborates_with + escalates_to) draw one
+          // line carrying both words, never just the first.
+          .reduce<{ from: string; to: string; kind: string }[]>((acc, e) => {
+            const same = acc.find((x) => x.from === e.from && x.to === e.to);
+            if (!same) acc.push({ ...e });
+            else if (!same.kind.split(',').includes(e.kind)) same.kind += `,${e.kind}`;
+            return acc;
+          }, [])
           .map((e): MapEdge => ({
             from: e.from,
             to: e.to,
