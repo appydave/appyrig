@@ -8,6 +8,8 @@ import {
   LoadoutReader,
   RigFilesReader,
   SchemaReader,
+  seatConfigReader,
+  withSeatCards,
   withSkillCounts,
   type LoadoutSeat,
 } from './adapters/index.js';
@@ -38,6 +40,7 @@ function main() {
   });
   const dbRows = new DbRowsReader(settings.machine.id);
   const loadouts = new LoadoutReader(settings.machine.id, { exec: sources.exec! });
+  const seatConfig = seatConfigReader();
   const pusher = startPusher({
     hubUrl: settings.hubUrl,
     token: settings.token,
@@ -52,7 +55,13 @@ function main() {
       openrigSeats = own.map((s) => ({ id: s.id, rig: s.rig, runtime: s.runtime, cwd: s.cwd }));
       queueOrder = snap.queue.map((q) => q.id);
       // v1.5 · L1: the skill-count pill, from the loadout reader's latest scan.
-      return { ...snap, seats: withSkillCounts(snap.seats, loadouts.skillCounts()) };
+      // D09 W3: each seat's role (agent_ref) and key skills (allowlist ∩ its own listing).
+      const seats = withSeatCards(withSkillCounts(snap.seats, loadouts.skillCounts()), {
+        agentRefs: sources.agentRefs?.() ?? new Map(),
+        names: loadouts.skillNames(),
+        config: seatConfig(),
+      });
+      return { ...snap, seats };
     },
     onConnect: () => {
       handoffs.reset();

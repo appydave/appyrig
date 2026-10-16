@@ -54,6 +54,8 @@ export interface Sources {
   exec?(bin: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }>;
   /** v1.5 · L1: seat id → its agent spec folder, from the latest daemon read. Optional: fixtures omit it. */
   agentDirs?(): Map<string, string>;
+  /** D09 W3: seat → raw OpenRig agentRef (`path:…` or `local:…`), for the seat card's role. */
+  agentRefs?(): Map<string, string>;
   /**
    * F3: seat id → the newest event (ms) in its Claude Code transcripts, from the latest transcript
    * scan; null before the first scan. Optional: fixtures omit it.

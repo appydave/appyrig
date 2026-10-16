@@ -126,23 +126,28 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
   /**
    * D09 W2: each rig's planned edges, by rig id. They change only when a rig is relaunched (which
-   * gives a new id), so one read a minute is plenty. A failed read leaves `edges` out: "not said".
+   * gives a new id), so one read a minute is plenty. A failed read leaves `edges` out ("not said")
+   * unless an earlier read is cached, and is reported in `warnings` like a nodes failure (r1 W2 LOW-2).
    */
   const graphCache = new Map<string, { at: number; edges: RigEdge[] }>();
-  const readEdges = async (rigId: string): Promise<RigEdge[] | undefined> => {
+  const readEdges = async (
+    rigId: string
+  ): Promise<{ edges: RigEdge[] | undefined; error?: string }> => {
     const hit = graphCache.get(rigId);
-    if (hit && Date.now() - hit.at < GRAPH_TTL_MS) return hit.edges;
+    if (hit && Date.now() - hit.at < GRAPH_TTL_MS) return { edges: hit.edges };
     try {
       const edges = parseGraphEdges(await getJson(`/api/rigs/${encodeURIComponent(rigId)}/graph`));
       graphCache.set(rigId, { at: Date.now(), edges });
-      return edges;
-    } catch {
-      return hit?.edges;
+      return { edges };
+    } catch (e) {
+      return { edges: hit?.edges, error: (e as Error).message };
     }
   };
 
   /** v1.5 · L1: seat → agent spec folder, from the latest daemon read. */
   let agentDirs = new Map<string, string>();
+  /** D09 W3: seat → raw agentRef, from the latest daemon read. */
+  let agentRefs = new Map<string, string>();
 
   let versionCache: string | null | undefined;
   const readVersion = async (): Promise<string | null> => {
@@ -162,6 +167,8 @@ export function createSources(opts: SourceOptions = {}): Sources {
       const seats: DaemonRead['seats'] = [];
       const failures: string[] = [];
       const dirs = new Map<string, string>();
+      const refs = new Map<string, string>();
+      const graphFailures: string[] = [];
       for (const rig of rigs) {
         try {
           const read = parseNodesWithRefs(
@@ -169,16 +176,21 @@ export function createSources(opts: SourceOptions = {}): Sources {
           );
           seats.push(...read.seats);
           read.agentDirs.forEach((dir, seat) => dirs.set(seat, dir));
+          read.agentRefs.forEach((ref, seat) => refs.set(seat, ref));
         } catch (e) {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
-        const edges = await readEdges(rig.id);
-        if (edges) rig.edges = edges;
+        const g = await readEdges(rig.id);
+        if (g.edges) rig.edges = g.edges;
+        if (g.error) graphFailures.push(`${rig.name}: ${g.error}`);
       }
       for (const id of graphCache.keys()) if (!rigs.some((r) => r.id === id)) graphCache.delete(id);
       // Partial success: a rig or the queue that cannot be read is reported in `warnings` (the
       // builder turns them into sources.daemon.ok=false) while everything readable still shows.
-      const warnings = failures.map((f) => `nodes unreadable for ${f}`);
+      const warnings = [
+        ...failures.map((f) => `nodes unreadable for ${f}`),
+        ...graphFailures.map((f) => `graph unreadable for ${f} (no planned lines)`),
+      ];
       let queue: DaemonRead['queue'] = [];
       try {
         queue = await readQueue();
@@ -186,6 +198,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
         warnings.push(`queue unreadable: ${(e as Error).message}`);
       }
       agentDirs = dirs;
+      agentRefs = refs;
       return { version: await readVersion(), rigs, seats, queue, warnings };
     },
 
@@ -209,6 +222,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     health: createHealthSampler(run),
     exec: run,
     agentDirs: () => agentDirs,
+    agentRefs: () => agentRefs,
     /** Bodies from the latest queue read (reads it if it is stale). */
     async queueBodies() {
       await readQueue();

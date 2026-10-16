@@ -32,3 +32,4 @@ export {
   type PendingLoadouts,
 } from './loadout.js';
 export { DbRowsReader, readAllTableRows, cellOf, type PendingDbRows } from './dbrows.js';
+export { keySkillsOf, seatConfigReader, withSeatCards } from './seatcard.js';

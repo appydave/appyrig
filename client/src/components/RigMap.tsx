@@ -7,6 +7,7 @@ import type { WorkChain } from '../fleet/timeline.js';
 import { ago, PIP } from '../fleet/model.js';
 import { plannedWord, type MapEdge, type RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
+import { RoleTag } from './SeatCardLines.js';
 
 interface Props {
   map: RigMapView | null;
@@ -457,11 +458,11 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
         {map.planned?.length
           ? ' · dotted with a word = planned in the rig spec, no handoff yet'
           : ''}
-        {map.planned === null && map.edges.length === 0 ? (
+        {map.planned === null ? (
           <span data-testid="rig-map-no-plan">
             {' '}
-            · no planned lines: {map.rig.machineLabel}&apos;s collector does not send the rig
-            spec&apos;s edges
+            · no planned lines: {map.rig.machineLabel}&apos;s collector did not send the rig
+            spec&apos;s edges (an older collector, or the graph could not be read)
           </span>
         ) : null}
       </p>
@@ -613,12 +614,18 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                             : `${s.name}: open in focus`
                         }
                         data-explain="seat"
+                        // QA W3 MEDIUM-1: key skill chips made a node twice as tall and pushed the
+                        // map below the fold (W0); the node shows the role, the skills sit in its title.
+                        title={
+                          s.keySkills?.length ? `Key skills: ${s.keySkills.join(', ')}` : undefined
+                        }
                         data-explain-ctx={`${s.name} · ${s.model.text} · ${PIP[s.pip].label}`}
                       >
                         <span className="chip" data-family={s.model.family} data-explain="model">
                           {s.model.text}
                         </span>
                         <b>{s.name}</b>
+                        <RoleTag agentRole={s.agentRole} />
                         <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
                           <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
                         </span>

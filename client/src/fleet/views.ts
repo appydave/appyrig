@@ -232,6 +232,9 @@ export interface MapSeat {
   oldestStaleMs: number | null;
   /** v1.5 · L1: the seat's skillCount for the pill (null: none; undefined: not reported). */
   skills?: number | null;
+  /** D09 W3: the seat's agent_ref role and key skills, when its collector reports them. */
+  agentRole?: string | null;
+  keySkills?: string[];
 }
 
 export interface MapPod {
@@ -268,6 +271,7 @@ export interface MapEdge {
 
 /** D09 W2: a spec edge kind in words, for the line's label ("delegates", "observes"). */
 export function plannedWord(kind: string): string {
+  if (kind.includes(',')) return kind.split(',').map(plannedWord).join(' · ');
   if (kind === 'delegates_to') return 'delegates';
   if (kind === 'can_observe') return 'observes';
   return kind.replace(/^can_/, '').replace(/_to$/, '').replace(/_/g, ' ');
@@ -308,6 +312,8 @@ function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
     model: modelChip(seat),
     pip: pipFor(seat, fm),
     skills: seat.skillCount,
+    ...(seat.agentRole !== undefined ? { agentRole: seat.agentRole } : {}),
+    ...(seat.keySkills ? { keySkills: seat.keySkills } : {}),
     ...c,
   };
 }
@@ -445,7 +451,14 @@ export function buildRigMap(
             kind: e.kind,
           }))
           .filter((e) => !edgeMap.has(`${e.from}→${e.to}`))
-          .filter((e, i, all) => all.findIndex((x) => x.from === e.from && x.to === e.to) === i)
+          // QA W2 LOW-1: two kinds on one pair (kernel: collaborates_with + escalates_to) draw one
+          // line carrying both words, never just the first.
+          .reduce<{ from: string; to: string; kind: string }[]>((acc, e) => {
+            const same = acc.find((x) => x.from === e.from && x.to === e.to);
+            if (!same) acc.push({ ...e });
+            else if (!same.kind.split(',').includes(e.kind)) same.kind += `,${e.kind}`;
+            return acc;
+          }, [])
           .map((e): MapEdge => ({
             from: e.from,
             to: e.to,

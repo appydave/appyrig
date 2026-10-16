@@ -73,6 +73,9 @@ export const SeatWorkSchema = z.strictObject({
 });
 export type SeatWork = z.infer<typeof SeatWorkSchema>;
 
+/** D09 W3: most key skills shown on a seat card. */
+export const KEY_SKILLS_MAX = 5;
+
 export const SeatSchema = z.strictObject({
   /** Stable id within the machine: the canonical session name (`dev-build@starter`) or the tmux session name. */
   id: z.string().min(1),
@@ -117,6 +120,17 @@ export const SeatSchema = z.strictObject({
    * terminal seat); absent = this collector does not report it.
    */
   agentActivityAt: isoDate.nullable().optional(),
+  /**
+   * D09 W3, collector-set: the last folder of the seat's OpenRig `agent_ref` (`implementer`, `qa`,
+   * `independent-reviewer`, …). null = an OpenRig seat with no path agent_ref; absent = not said.
+   */
+  agentRole: z.string().min(1).max(80).nullable().optional(),
+  /**
+   * D09 W3, collector-set: the seat's key skills, from the per-seat allowlist in AppyRig's own
+   * config, keeping only the ones the seat really has listed (its loadout). Absent = no allowlist
+   * for this seat (or no listing yet): the card shows the count alone.
+   */
+  keySkills: z.array(z.string().min(1).max(120)).max(KEY_SKILLS_MAX).optional(),
 });
 export type Seat = z.infer<typeof SeatSchema>;
 

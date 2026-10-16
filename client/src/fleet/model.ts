@@ -330,7 +330,10 @@ const CHROME = [
   /^\s*[└⎿│|]?\s*Tip: /,
   /Update installed|Restart to update|new task\? \/clear/,
   /paste again to expand|Press up to edit queued messages|queued messages?$/i,
-  /^\s*[❯›>] /, // a draft typed into the input box: the viewer's text, not the seat's work
+  // A draft typed into the input box, or Claude Code's dimmed suggestion (ghost text) there: the
+  // viewer's text or a guess, never the seat's work. D09 W3: Claude Code puts a NO-BREAK SPACE after
+  // the ❯, which a plain " " never matched, so "❯ rig capture …" was shown as the seat's activity.
+  /^\s*[❯›>]\s/,
 ];
 const TIP = /^\s*[└⎿│|]?\s*Tip: |^\s{2,}current work\s*$/;
 const isChrome = (line: string) => {
@@ -342,7 +345,43 @@ const isChrome = (line: string) => {
  * S3: the last n lines of what the seat is doing, for a Wall tile. Trailing input-box chrome is
  * dropped first, so a short tile still shows the work. Focus keeps the exact screen.
  */
-export function contentTail(lines: string[], n: number): string[] {
+/** D09 W3: a seat's role in a word, from its agent_ref folder; another role is said as it is. */
+const ROLE_WORD: Record<string, string> = {
+  implementer: 'builder',
+  qa: 'QA',
+  'independent-reviewer': 'reviewer',
+  'product-designer': 'lead',
+  synthesizer: 'writer',
+};
+export function roleWord(agentRole: string | null | undefined): string | null {
+  if (!agentRole) return null;
+  return ROLE_WORD[agentRole] ?? agentRole;
+}
+
+const RULE = /^[\s─━—-]{8,}[\w@.-]*[\s─━—-]*$/;
+const PROMPT_LINE = /^\s*[❯›>](\s|$)/;
+
+/**
+ * D09 W3 (QA MEDIUM-2): where Claude Code's input box starts: a rule, then the ❯ prompt line, with
+ * another rule below it. Everything from there down is the box (a draft of any length, wrapped or
+ * with shift+enter lines, a dimmed suggestion) and its footer, never the seat's work. -1 = none.
+ */
+function inputBoxStart(lines: string[]): number {
+  for (let i = lines.length - 1; i > 0; i -= 1) {
+    if (!PROMPT_LINE.test(stripAnsi(lines[i]!))) continue;
+    if (!RULE.test(stripAnsi(lines[i - 1]!))) continue;
+    const lower = lines.findIndex((l, k) => k > i && RULE.test(stripAnsi(l)));
+    if (lower === -1) continue;
+    // r1 W3 LOW-2: only the box when what follows its lower rule is footer chrome (or blank), so a
+    // plain pane with "> quoted" between two long rules keeps the output after it.
+    if (lines.slice(lower + 1).every(isChrome)) return i - 1;
+  }
+  return -1;
+}
+
+export function contentTail(all: string[], n: number): string[] {
+  const box = inputBoxStart(all);
+  const lines = box >= 0 ? all.slice(0, box) : all;
   let end = lines.length;
   while (end > 0 && isChrome(lines[end - 1]!)) end -= 1;
   if (end === 0) return visibleTail(lines, n);

@@ -107,6 +107,24 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     });
   });
 
+  it("D09 W3: a seat's agentRole and keySkills reach the browser; more than five is refused", async () => {
+    const h = await start();
+    const browser = h.browser();
+    await nextUpdate(browser);
+    const snap = loadSnapshot('roamy');
+    const card = { agentRole: 'implementer', keySkills: ['recipe', 'dev-team:audit-test-quality'] };
+    const seats = [{ ...snap.seats[0]!, ...card }, ...snap.seats.slice(1)];
+    const update = nextUpdate(browser);
+    expect(
+      await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, seats })
+    ).toMatchObject({ ok: true });
+    expect((await update).machines[0]!.snapshot.seats[0]).toMatchObject(card);
+    const six = [{ ...snap.seats[0]!, keySkills: ['a', 'b', 'c', 'd', 'e', 'f'] }];
+    expect(
+      await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, seats: six })
+    ).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
+  });
+
   it('refuses an invalid snapshot and a machine mismatch as data, storing neither', async () => {
     const h = await start();
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });

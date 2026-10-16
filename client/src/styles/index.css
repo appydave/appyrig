@@ -408,6 +408,43 @@ a:hover {
   align-items: center;
   gap: 4px 8px;
 }
+/* D09 W3: who the seat is: its role (from agent_ref) and its key skills (allowlist ∩ its listing). */
+.seat-role {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--ar-ink-muted);
+}
+.tile .seat-role {
+  color: var(--ar-term-meta);
+}
+.tile-skills {
+  display: block;
+  padding: 5px 10px 0;
+}
+.seat-key-skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 4px;
+  min-width: 0;
+}
+.seat-key-skill {
+  font-family: var(--ar-font-term);
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 0 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: var(--ar-ink-muted);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile .seat-key-skill {
+  color: var(--ar-term-dim);
+}
 .tile-where {
   font-family: var(--ar-font-label);
   font-size: 11px;

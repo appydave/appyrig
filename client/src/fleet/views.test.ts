@@ -214,6 +214,17 @@ describe('D09 W2: planned lines from the rig spec', () => {
     expect(buildRigMap([withEdges([])], 'm2:fliedit-team')!.planned).toEqual([]);
   });
 
+  it('two kinds on one pair make one line carrying both (QA W2 LOW-1)', () => {
+    const both = [
+      { from: 'orch-lead@fliedit-team', to: 'dev-qa@fliedit-team', kind: 'collaborates_with' },
+      { from: 'orch-lead@fliedit-team', to: 'dev-qa@fliedit-team', kind: 'escalates_to' },
+      { from: 'orch-lead@fliedit-team', to: 'dev-qa@fliedit-team', kind: 'escalates_to' },
+    ];
+    const map = buildRigMap([withEdges(both, [])], 'm2:fliedit-team')!;
+    expect(map.planned!.map((e) => e.planned)).toEqual(['collaborates_with,escalates_to']);
+    expect(plannedWord(map.planned![0]!.planned!)).toBe('collaborates with · escalates');
+  });
+
   it('kinds read as words on the line', () => {
     expect(plannedWord('delegates_to')).toBe('delegates');
     expect(plannedWord('can_observe')).toBe('observes');
