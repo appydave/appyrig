@@ -703,7 +703,8 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
               keys={keys}
               onLine={(dir) => {
                 // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
-                const order = placed.map((p) => edgeKey(p.edge));
+                // r1 W2 MEDIUM-1: planned lines have no handoffs (no drawer), so ] / [ skip them.
+                const order = placed.filter((p) => !p.edge.planned).map((p) => edgeKey(p.edge));
                 if (!order.length) return;
                 const i = order.indexOf(pinned!.edge);
                 setPinned({ edge: order[(i + dir + order.length) % order.length]!, itemId: null });
