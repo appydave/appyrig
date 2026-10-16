@@ -114,15 +114,19 @@ export function parseNodes(raw: unknown): Seat[] {
 export function parseNodesWithRefs(raw: unknown): {
   seats: Seat[];
   agentDirs: Map<string, string>;
+  /** D09 W3: seat id → the node's raw agentRef (`path:…` or `local:…`), for its role. */
+  agentRefs: Map<string, string>;
 } {
   const nodes = parseList(LenientNode, raw, '/api/rigs/:id/nodes');
   const agentDirs = new Map<string, string>();
+  const agentRefs = new Map<string, string>();
   for (const n of nodes) {
     const ref = n.agentRef;
     if (typeof ref === 'string' && ref.startsWith('path:') && ref.length > 5)
       agentDirs.set(n.canonicalSessionName, ref.slice(5));
+    if (typeof ref === 'string' && ref) agentRefs.set(n.canonicalSessionName, ref);
   }
-  return { seats: nodes.map(nodeToSeat), agentDirs };
+  return { seats: nodes.map(nodeToSeat), agentDirs, agentRefs };
 }
 
 const SUMMARY_MAX = 160;

@@ -146,6 +146,8 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
   /** v1.5 · L1: seat → agent spec folder, from the latest daemon read. */
   let agentDirs = new Map<string, string>();
+  /** D09 W3: seat → raw agentRef, from the latest daemon read. */
+  let agentRefs = new Map<string, string>();
 
   let versionCache: string | null | undefined;
   const readVersion = async (): Promise<string | null> => {
@@ -165,6 +167,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
       const seats: DaemonRead['seats'] = [];
       const failures: string[] = [];
       const dirs = new Map<string, string>();
+      const refs = new Map<string, string>();
       const graphFailures: string[] = [];
       for (const rig of rigs) {
         try {
@@ -173,6 +176,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
           );
           seats.push(...read.seats);
           read.agentDirs.forEach((dir, seat) => dirs.set(seat, dir));
+          read.agentRefs.forEach((ref, seat) => refs.set(seat, ref));
         } catch (e) {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
@@ -194,6 +198,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
         warnings.push(`queue unreadable: ${(e as Error).message}`);
       }
       agentDirs = dirs;
+      agentRefs = refs;
       return { version: await readVersion(), rigs, seats, queue, warnings };
     },
 
@@ -217,6 +222,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     health: createHealthSampler(run),
     exec: run,
     agentDirs: () => agentDirs,
+    agentRefs: () => agentRefs,
     /** Bodies from the latest queue read (reads it if it is stale). */
     async queueBodies() {
       await readQueue();

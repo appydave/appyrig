@@ -57,7 +57,7 @@ function main() {
       // v1.5 · L1: the skill-count pill, from the loadout reader's latest scan.
       // D09 W3: each seat's role (agent_ref) and key skills (allowlist ∩ its own listing).
       const seats = withSeatCards(withSkillCounts(snap.seats, loadouts.skillCounts()), {
-        agentDirs: sources.agentDirs?.() ?? new Map(),
+        agentRefs: sources.agentRefs?.() ?? new Map(),
         names: loadouts.skillNames(),
         config: seatConfig(),
       });

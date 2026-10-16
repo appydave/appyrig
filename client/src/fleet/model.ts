@@ -358,7 +358,26 @@ export function roleWord(agentRole: string | null | undefined): string | null {
   return ROLE_WORD[agentRole] ?? agentRole;
 }
 
-export function contentTail(lines: string[], n: number): string[] {
+const RULE = /^[\s─━—-]{8,}[\w@.-]*[\s─━—-]*$/;
+const PROMPT_LINE = /^\s*[❯›>](\s|$)/;
+
+/**
+ * D09 W3 (QA MEDIUM-2): where Claude Code's input box starts: a rule, then the ❯ prompt line, with
+ * another rule below it. Everything from there down is the box (a draft of any length, wrapped or
+ * with shift+enter lines, a dimmed suggestion) and its footer, never the seat's work. -1 = none.
+ */
+function inputBoxStart(lines: string[]): number {
+  for (let i = lines.length - 1; i > 0; i -= 1) {
+    if (!PROMPT_LINE.test(stripAnsi(lines[i]!))) continue;
+    if (!RULE.test(stripAnsi(lines[i - 1]!))) continue;
+    if (lines.slice(i + 1).some((l) => RULE.test(stripAnsi(l)))) return i - 1;
+  }
+  return -1;
+}
+
+export function contentTail(all: string[], n: number): string[] {
+  const box = inputBoxStart(all);
+  const lines = box >= 0 ? all.slice(0, box) : all;
   let end = lines.length;
   while (end > 0 && isChrome(lines[end - 1]!)) end -= 1;
   if (end === 0) return visibleTail(lines, n);

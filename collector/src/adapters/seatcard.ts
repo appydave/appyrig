@@ -28,17 +28,19 @@ export function keySkillsOf(allow: string[], listed: string[]): string[] {
 export function withSeatCards<T extends { id: string; rig: string | null }>(
   seats: T[],
   input: {
-    agentDirs: Map<string, string>;
+    /** seat → raw OpenRig agentRef (`path:/…/implementer`, `local:../agents/development/qa`). */
+    agentRefs: Map<string, string>;
     names: Map<string, string[]>;
     config: Record<string, SeatConfig>;
   }
 ): (T & { agentRole?: string | null; keySkills?: string[] })[] {
   return seats.map((s) => {
     if (s.rig === null) return s;
-    const dir = input.agentDirs.get(s.id);
+    // LOW-3 (QA): path: and local: refs both end in the agent's folder (`…/development/qa`).
+    const ref = input.agentRefs.get(s.id)?.replace(/^(?:path|local):/, '');
     const out: T & { agentRole?: string | null; keySkills?: string[] } = {
       ...s,
-      agentRole: dir ? basename(dir.replace(/\/+$/, '')) || null : null,
+      agentRole: ref ? basename(ref.replace(/\/+$/, '')) || null : null,
     };
     const allow = Object.hasOwn(input.config, s.id) ? input.config[s.id]?.keySkills : undefined;
     const listed = input.names.get(s.id);

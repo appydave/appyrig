@@ -7,7 +7,7 @@ import type { WorkChain } from '../fleet/timeline.js';
 import { ago, PIP } from '../fleet/model.js';
 import { plannedWord, type MapEdge, type RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
-import { KeySkills, RoleTag } from './SeatCardLines.js';
+import { RoleTag } from './SeatCardLines.js';
 
 interface Props {
   map: RigMapView | null;
@@ -614,6 +614,11 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                             : `${s.name}: open in focus`
                         }
                         data-explain="seat"
+                        // QA W3 MEDIUM-1: key skill chips made a node twice as tall and pushed the
+                        // map below the fold (W0); the node shows the role, the skills sit in its title.
+                        title={
+                          s.keySkills?.length ? `Key skills: ${s.keySkills.join(', ')}` : undefined
+                        }
                         data-explain-ctx={`${s.name} · ${s.model.text} · ${PIP[s.pip].label}`}
                       >
                         <span className="chip" data-family={s.model.family} data-explain="model">
@@ -630,7 +635,6 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                             onOpen={onOpenSkills ? () => onOpenSkills(s.key) : undefined}
                           />
                         )}
-                        <KeySkills skills={s.keySkills} />
                         {s.open > 0 && (
                           <span className="node-wait" data-explain="waiting">
                             {s.open} waiting

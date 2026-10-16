@@ -290,6 +290,35 @@ describe('contentTail: no ghost text (D09 W3)', () => {
   });
 });
 
+describe('contentTail: a draft of any shape is never activity (QA W3 MEDIUM-2)', () => {
+  const box = (draft: string[]) => [
+    '✻ Brewed for 1m 19s · done 9:39 AM',
+    '',
+    '──────────────────────────────────────── dev-qa@d09-crew ─',
+    `❯\u00a0${draft[0]}`,
+    ...draft.slice(1),
+    '────────────────────────────────────────────────────────────',
+    '  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents',
+  ];
+  it('a typed draft that wraps to two lines', () => {
+    const lines = box([
+      'please run the full suite and',
+      '  also check the hub logs before you merge',
+    ]);
+    expect(contentTail(lines, 3).map(stripAnsi)).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
+  });
+  it('a shift+enter draft with a second line', () => {
+    const lines = box(['first line of my note', '  second line of my note']);
+    expect(contentTail(lines, 3).map(stripAnsi)).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
+  });
+  it('no input box at all (a plain terminal): the tail is left as it was', () => {
+    expect(contentTail(['$ ls', 'a b c', '> quoted, not a prompt box'], 2)).toEqual([
+      '$ ls',
+      'a b c',
+    ]);
+  });
+});
+
 describe('roleWord (D09 W3)', () => {
   it('names the role from agent_ref, else says it as it is', () => {
     expect(roleWord('implementer')).toBe('builder');

@@ -12,9 +12,10 @@ describe('D09 W3 seat cards (collector)', () => {
     { id: 'dev-qa@d09-crew', rig: 'd09-crew' },
     { id: 'plain', rig: null },
   ];
-  const agentDirs = new Map([
-    ['dev-build@d09-crew', `${AGENTS}/development/implementer`],
-    ['dev-qa@d09-crew', `${AGENTS}/development/qa/`],
+  const agentRefs = new Map([
+    ['dev-build@d09-crew', `path:${AGENTS}/development/implementer`],
+    // QA W3 LOW-3: a local: ref (starter, kernel) names its role the same way.
+    ['dev-qa@d09-crew', 'local:../../../agents/development/qa/'],
   ]);
   const names = new Map([
     [
@@ -24,14 +25,14 @@ describe('D09 W3 seat cards (collector)', () => {
   ]);
 
   it('role is the last folder of agent_ref; a plain tmux session gets nothing', () => {
-    const out = withSeatCards(seats, { agentDirs, names, config: {} });
+    const out = withSeatCards(seats, { agentRefs, names, config: {} });
     expect(out.map((s) => s.agentRole)).toEqual(['implementer', 'qa', undefined]);
     expect(out.every((s) => !('keySkills' in s))).toBe(true);
   });
 
   it('key skills: only allowlisted names the seat really listed, in the allowlist order', () => {
     const out = withSeatCards(seats, {
-      agentDirs,
+      agentRefs,
       names,
       config: {
         'dev-build@d09-crew': {
