@@ -768,6 +768,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               fm && activeRig
                 ? runCardModel(fm, activeRig.name, now) && (
                     <RunCard
+                      key={activeRig.key}
                       machine={fm}
                       rig={activeRig.name}
                       now={now}
