@@ -119,10 +119,10 @@ function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
             {m.openrig ?? 'not reported'}
           </b>{' '}
           <span className="mc2-vstate" data-state={m.version} data-testid="mc2-vstate">
-            {m.version === 'behind' ? '▲ ' : m.version === 'current' ? '● ' : ''}
+            {m.version === 'current' ? '● ' : ''}
             {latestStale
               ? `latest release not rechecked since ${LATEST_OPENRIG.readOn}`
-              : behindWords(m.openrig, LATEST_OPENRIG.version)}
+              : `${behindWords(m.openrig, LATEST_OPENRIG.version)}${m.version === 'behind' ? ' the hand-read latest, sample' : ''}`}
           </span>
           {!m.openrigOk && <span className="quiet"> · daemon not answering</span>}
         </div>

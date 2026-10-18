@@ -21,3 +21,8 @@
 .db2-sample {
   margin-top: 12px;
 }
+
+/* The small mono line above already says "baseline"; the Current table browser repeats it in a grey banner. */
+.db2-page .schema-changes[data-status='baseline'] {
+  display: none;
+}
