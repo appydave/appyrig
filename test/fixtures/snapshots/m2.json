@@ -399,7 +399,6 @@
       "viewerStatus": null,
       "lastActivityAt": null,
       "contextUsedPct": null,
-      "contextTokens": null,
       "work": {
         "pending": 0,
         "inProgress": 0,

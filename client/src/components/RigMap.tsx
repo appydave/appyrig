@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { HandoffGetOutput } from '@appydave/shared';
 import type { FleetSocket } from '../fleet/useFleet.js';
 import HandoffPanel from './HandoffPanel.js';
@@ -18,6 +18,9 @@ import {
   tokensText,
 } from './SeatCardLines.js';
 import type { MapSeat } from '../fleet/views.js';
+import { attachLine } from './WaitingOnDavid.js';
+import { callVerb } from '../fleet/coreCall.js';
+import type { RigWaitingOutput } from '@appydave/shared';
 
 interface Props {
   map: RigMapView | null;
@@ -45,7 +48,13 @@ interface Detail {
   key: string;
   x: number;
   y: number;
+  /** Opens upward (its y is the node's top) when there is no room below inside the canvas. */
+  above: boolean;
 }
+
+/** The detail card's width, and the room it needs below a node before it opens upward instead. */
+const DETAIL_W = 290;
+const DETAIL_H = 230;
 
 /** C6-A: the lowest arc's height above (or below) the row, and the step between stacked arcs. */
 const ARC_BASE = 16;
@@ -323,18 +332,48 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     },
     []
   );
+  // Each machine's ssh target (AppyRig config, via rig.waiting) for the attach line; undefined = not asked yet.
+  const [sshOf, setSshOf] = useState<Record<string, string | null>>({});
+  const asked = useRef(new Set<string>());
+  const askSsh = (machineId: string) => {
+    if (!map || asked.current.has(machineId)) return;
+    asked.current.add(machineId);
+    if (!socket) {
+      setSshOf((o) => ({ ...o, [machineId]: null }));
+      return;
+    }
+    void callVerb<RigWaitingOutput>(socket, 'rig.waiting', {
+      machine: machineId,
+      rig: map.rig.name,
+    }).then((a) => setSshOf((o) => ({ ...o, [machineId]: a.ok ? a.value.ssh : null })));
+  };
   const showDetail = (key: string, node: HTMLElement) => {
     keepDetail();
     const c = box.current;
     if (!c || document.querySelector('[data-explain-on]')) return;
+    askSsh(key.slice(0, key.indexOf('/')));
     const a = c.getBoundingClientRect();
     const r = node.getBoundingClientRect();
+    const top = r.top - a.top + c.scrollTop;
+    const bottom = r.bottom - a.top + c.scrollTop;
+    // L4: never grow the scroll area: open upward when there is no room below inside the canvas.
+    const above = bottom + 6 + DETAIL_H > c.scrollHeight && top - 6 - DETAIL_H > 0;
     setDetail({
       key,
-      x: r.left - a.left + c.scrollLeft,
-      y: r.bottom - a.top + c.scrollTop + 6,
+      x: Math.max(0, Math.min(r.left - a.left + c.scrollLeft, c.scrollWidth - DETAIL_W - 6)),
+      y: above ? top - 6 : bottom + 6,
+      above,
     });
   };
+  useEffect(() => {
+    // M2: Esc closes the detail card (it does not claim the key, so the screen's own Esc still works).
+    if (!detail) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDetail(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detail]);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
   const [follow, setFollow] = useState<string | null>(null);
   // r1 INFO-2: computed once per follow, not twice per render.
@@ -462,10 +501,60 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     map.lanes.flatMap((l) => l.pods.flatMap((p) => p.seats.map((x) => [x.key, x] as const)))
   );
   const detailSeat = detail ? seatsByKey.get(detail.key) : undefined;
-  const edgesOf = (key: string) =>
-    [...map.edges, ...(map.planned ?? [])].filter(
-      (e) => !e.self && (e.from === key || e.to === key)
-    ).length;
+  const edgesOf = (key: string) => {
+    const touches = (e: MapEdge) => !e.self && (e.from === key || e.to === key);
+    return `${map.edges.filter(touches).length} handed · ${(map.planned ?? []).filter(touches).length} planned`;
+  };
+  const renderDetail = () => {
+    if (!detail || !detailSeat) return null;
+    const machineId = detail.key.slice(0, detail.key.indexOf('/'));
+    const ssh = sshOf[machineId];
+    // A seat on another machine gets an ssh-wrapped line or none: a bare `tmux attach` would run here.
+    const canAttach =
+      !detail.key.startsWith('?/') &&
+      ssh !== undefined &&
+      (ssh !== null || machineId === map.rig.machineId) &&
+      attachLine(detailSeat.address, ssh) !== null;
+    return (
+      <div
+        className="seat-detail"
+        data-testid="seat-detail"
+        style={{
+          left: detail.x,
+          top: detail.y,
+          transform: detail.above ? 'translateY(-100%)' : undefined,
+        }}
+        onPointerEnter={keepDetail}
+        onPointerLeave={hideDetail}
+        onFocus={keepDetail}
+        onBlur={hideDetail}
+      >
+        <div className="seat-detail-head">
+          <b>{detailSeat.name}</b>
+          {canAttach && <CopyAttach session={detailSeat.address} ssh={ssh ?? null} />}
+        </div>
+        <dl className="mono">
+          <dt>activity</dt>
+          <dd data-testid="detail-activity">{detailSeat.activity ?? PIP[detailSeat.pip].label}</dd>
+          <dt>session</dt>
+          <dd data-testid="detail-session">{detailSeat.address}</dd>
+          <dt>runtime</dt>
+          <dd data-testid="detail-runtime">
+            {harnessOf(detailSeat.runtime, detailSeat.modelRaw).label} ·{' '}
+            {detailSeat.modelRaw ?? '—'}
+          </dd>
+          <dt>spec / role</dt>
+          <dd data-testid="detail-role">{detailSeat.agentRole ?? '—'}</dd>
+          <dt>edges</dt>
+          <dd data-testid="detail-edges">{edgesOf(detailSeat.key)}</dd>
+          <dt>tokens</dt>
+          <dd data-testid="detail-tokens">
+            {tokensText(detailSeat.contextTokens)} · {pctText(detailSeat.contextPct)}
+          </dd>
+        </dl>
+      </div>
+    );
+  };
   const plannedTitle = (e: MapEdge) =>
     `Planned: ${nameOf(e.from)} ${plannedWord(e.planned ?? '')} ${nameOf(e.to)} (rig spec ${e.planned}) · no handoff along it yet`;
   const plannedCard = (e: MapEdge, ev: { clientX: number; clientY: number }) =>
@@ -640,66 +729,74 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                   </div>
                   <div className="pod-seats">
                     {pod.seats.map((s) => (
-                      <button
-                        type="button"
-                        key={s.key}
-                        className="node"
-                        data-node-key={s.key}
-                        data-testid="rig-map-node"
-                        data-pip={s.pip}
-                        onClick={() => !s.key.startsWith('?/') && onOpen(s.key)}
-                        onPointerEnter={(ev) => showDetail(s.key, ev.currentTarget)}
-                        onFocus={(ev) => showDetail(s.key, ev.currentTarget)}
-                        onPointerLeave={hideDetail}
-                        onBlur={hideDetail}
-                        aria-label={
-                          s.key.startsWith('?/')
-                            ? `${s.name}: not a seat any machine reports`
-                            : `${s.name}: open agent panel`
-                        }
-                        data-explain="seat"
-                        // QA W3 MEDIUM-1: key skill chips made a node twice as tall and pushed the
-                        // map below the fold (W0); the node shows the role, the skills sit in its title.
-                        title={
-                          s.keySkills?.length ? `Key skills: ${s.keySkills.join(', ')}` : undefined
-                        }
-                        data-explain-ctx={`${s.name} · ${s.model.text} · ${PIP[s.pip].label}`}
-                      >
-                        <span className="node-top">
-                          <HarnessMark runtime={s.runtime} model={s.modelRaw} />
-                          <span className="chip" data-family={s.model.family} data-explain="model">
-                            {s.model.text}
+                      <Fragment key={s.key}>
+                        <button
+                          type="button"
+                          className="node"
+                          data-node-key={s.key}
+                          data-testid="rig-map-node"
+                          data-pip={s.pip}
+                          onClick={() => !s.key.startsWith('?/') && onOpen(s.key)}
+                          onPointerEnter={(ev) => showDetail(s.key, ev.currentTarget)}
+                          onFocus={(ev) => showDetail(s.key, ev.currentTarget)}
+                          onPointerLeave={hideDetail}
+                          onBlur={hideDetail}
+                          aria-label={
+                            s.key.startsWith('?/')
+                              ? `${s.name}: not a seat any machine reports`
+                              : `${s.name}: open agent panel`
+                          }
+                          data-explain="seat"
+                          // QA W3 MEDIUM-1: key skill chips made a node twice as tall and pushed the
+                          // map below the fold (W0); the node shows the role, the skills sit in its title.
+                          title={
+                            s.keySkills?.length
+                              ? `Key skills: ${s.keySkills.join(', ')}`
+                              : undefined
+                          }
+                          data-explain-ctx={`${s.name} · ${s.model.text} · ${PIP[s.pip].label}`}
+                        >
+                          <span className="node-top">
+                            <HarnessMark runtime={s.runtime} model={s.modelRaw} />
+                            <span
+                              className="chip"
+                              data-family={s.model.family}
+                              data-explain="model"
+                            >
+                              {s.model.text}
+                            </span>
                           </span>
-                        </span>
-                        <b>{s.name}</b>
-                        {s.source === 'openrig' && <Address id={s.address} />}
-                        <RoleTag agentRole={s.agentRole} />
-                        <ContextLine pct={s.contextPct} tokens={s.contextTokens} />
-                        <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
-                          <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
-                        </span>
-                        {!s.key.startsWith('?/') && (
-                          <SkillPill
-                            count={s.skills}
-                            onOpen={onOpenSkills ? () => onOpenSkills(s.key) : undefined}
-                          />
-                        )}
-                        {s.open > 0 && (
-                          <span className="node-wait" data-explain="waiting">
-                            {s.open} waiting
+                          <b>{s.name}</b>
+                          {s.source === 'openrig' && <Address id={s.address} />}
+                          <RoleTag agentRole={s.agentRole} />
+                          <ContextLine pct={s.contextPct} tokens={s.contextTokens} />
+                          <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
+                            <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
                           </span>
-                        )}
-                        {s.stale > 0 && (
-                          <span className="node-stale" data-explain="stale">
-                            {s.stale} left open · {ago(s.oldestStaleMs ?? 0)}
-                          </span>
-                        )}
-                        {selfOf.get(s.key) ? (
-                          <span className="node-self" data-explain="self-handoff">
-                            ↺ {selfOf.get(s.key)} to itself
-                          </span>
-                        ) : null}
-                      </button>
+                          {!s.key.startsWith('?/') && (
+                            <SkillPill
+                              count={s.skills}
+                              onOpen={onOpenSkills ? () => onOpenSkills(s.key) : undefined}
+                            />
+                          )}
+                          {s.open > 0 && (
+                            <span className="node-wait" data-explain="waiting">
+                              {s.open} waiting
+                            </span>
+                          )}
+                          {s.stale > 0 && (
+                            <span className="node-stale" data-explain="stale">
+                              {s.stale} left open · {ago(s.oldestStaleMs ?? 0)}
+                            </span>
+                          )}
+                          {selfOf.get(s.key) ? (
+                            <span className="node-self" data-explain="self-handoff">
+                              ↺ {selfOf.get(s.key)} to itself
+                            </span>
+                          ) : null}
+                        </button>
+                        {detail?.key === s.key && renderDetail()}
+                      </Fragment>
                     ))}
                   </div>
                 </div>
@@ -707,39 +804,6 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
             </div>
           </div>
         ))}
-        {detail && detailSeat && (
-          <div
-            className="seat-detail"
-            data-testid="seat-detail"
-            style={{ left: detail.x, top: detail.y }}
-            onPointerEnter={keepDetail}
-            onPointerLeave={hideDetail}
-          >
-            <b>{detailSeat.name}</b>
-            <dl className="mono">
-              <dt>activity</dt>
-              <dd data-testid="detail-activity">
-                {detailSeat.activity ?? PIP[detailSeat.pip].label}
-              </dd>
-              <dt>session</dt>
-              <dd data-testid="detail-session">{detailSeat.address}</dd>
-              <dt>runtime</dt>
-              <dd data-testid="detail-runtime">
-                {harnessOf(detailSeat.runtime, detailSeat.modelRaw).label} ·{' '}
-                {detailSeat.modelRaw ?? '—'}
-              </dd>
-              <dt>spec / role</dt>
-              <dd data-testid="detail-role">{detailSeat.agentRole ?? '—'}</dd>
-              <dt>edges</dt>
-              <dd data-testid="detail-edges">{edgesOf(detailSeat.key)}</dd>
-              <dt>tokens</dt>
-              <dd data-testid="detail-tokens">
-                {tokensText(detailSeat.contextTokens)} · {pctText(detailSeat.contextPct)}
-              </dd>
-            </dl>
-            {!detailSeat.key.startsWith('?/') && <CopyAttach session={detailSeat.address} />}
-          </div>
-        )}
       </div>
       {card && (
         <div

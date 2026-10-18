@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseGraphEdges, parseNodes, parsePs, parseQueue } from './daemon.js';
 import { readFixtureJson } from './fixtureSources.js';
+import { SeatSchema } from '@appydave/shared';
 
 const KERNEL = 'roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json';
 const syn = (name: string) => `synthetic/roamy--api-rig-starter-nodes--${name}.json`;
@@ -107,6 +108,40 @@ describe('adapter: daemon nodes -> seats', () => {
         expect(s.blockedReason).toBeNull();
       }
     }
+  });
+
+  it('contextTokens: carried when the daemon has a number, omitted (not null) otherwise', () => {
+    const raw = readFixtureJson(KERNEL) as Record<string, unknown>[];
+    const withTokens = raw.map((n) => ({
+      ...n,
+      contextUsage: { usedPercentage: 7, totalInputTokens: 119_400 },
+    }));
+    expect(parseNodes(withTokens)[0]!.contextTokens).toBe(119_400);
+    const odd = raw.map((n) => ({
+      ...n,
+      contextUsage: { usedPercentage: 7, totalInputTokens: 'lots' },
+    }));
+    const seatsOdd = parseNodes(odd); // a bad field does not blank the rig
+    expect(seatsOdd.length).toBe(raw.length);
+    for (const s of seatsOdd) expect('contextTokens' in s).toBe(false);
+  });
+
+  it('a new collector seat still validates against an older hub (no contextTokens key)', () => {
+    const oldSeat = SeatSchema.omit({ contextTokens: true });
+    const noTokens = parseNodes(
+      (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => ({
+        ...n,
+        contextUsage: { usedPercentage: 7, totalInputTokens: null },
+      }))
+    );
+    for (const s of noTokens) expect(oldSeat.safeParse(s).success).toBe(true);
+    const withTokens = parseNodes(
+      (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => ({
+        ...n,
+        contextUsage: { usedPercentage: 7, totalInputTokens: 5 },
+      }))
+    );
+    expect(oldSeat.safeParse(withTokens[0]).success).toBe(false); // only a seat WITH the key is refused
   });
 
   it('a missing activityState key (not just null) does not crash', () => {

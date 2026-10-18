@@ -1,9 +1,8 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import RigMap from './RigMap.js';
 import {
   Address,
-  attachCommand,
   ContextLine,
   CopyAttach,
   harnessOf,
@@ -88,6 +87,8 @@ describe('v15 UI-A: figures', () => {
     expect(tokensText(119_400)).toBe('119k');
     expect(tokensText(1_250_000)).toBe('1.3M');
     expect(tokensText(850)).toBe('850');
+    expect(tokensText(999_600)).toBe('1M'); // never `1000k`
+    expect(tokensText(0)).toBe('0'); // a real zero stays a zero
     expect(tokensText(null)).toBe('—');
     expect(tokensText(undefined)).toBe('—');
     expect(pctText(12)).toBe('12%');
@@ -131,14 +132,57 @@ describe('v15 UI-A: harness', () => {
   });
 });
 
+const secure = (writeText: (t: string) => Promise<void>) => {
+  Object.defineProperty(window, 'isSecureContext', { value: true, configurable: true });
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+};
+
+/** A socket that answers every verb call with the given ssh target. */
+const socketWith = (ssh: string | null) =>
+  ({
+    timeout: () => ({
+      emit: (_ev: string, _req: unknown, cb: (e: null, a: unknown) => void) =>
+        cb(null, { ok: true, value: { gates: [], ssh } }),
+    }),
+  }) as never;
+
 describe('v15 UI-A: copy attach', () => {
-  it('builds the attach command, and copies exactly it without sending anything', () => {
-    expect(attachCommand('ylo-lead@ylo-d10')).toBe('tmux attach -t ylo-lead@ylo-d10');
+  it('copies the quoted local line and sends nothing', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    render(<CopyAttach session="ylo-lead@ylo-d10" />);
-    fireEvent.click(screen.getByTestId('copy-attach'));
-    expect(writeText).toHaveBeenCalledWith('tmux attach -t ylo-lead@ylo-d10');
+    secure(writeText);
+    render(<CopyAttach session="ylo-lead@ylo-d10" ssh={null} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-attach'));
+    });
+    expect(writeText).toHaveBeenCalledWith("tmux attach -t 'ylo-lead@ylo-d10'");
+  });
+
+  it('wraps the line in ssh for another machine', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    secure(writeText);
+    render(<CopyAttach session="ylo-lead@ylo-d10" ssh="david@m2" />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-attach'));
+    });
+    expect(writeText).toHaveBeenCalledWith('ssh -t david@m2 "tmux attach -t \'ylo-lead@ylo-d10\'"');
+  });
+
+  it('has no button for a session name a shell would read', () => {
+    render(<CopyAttach session="x; rm -rf ~" ssh={null} />);
+    expect(screen.queryByTestId('copy-attach')).toBeNull();
+  });
+
+  it('when the browser blocks copying (plain http) shows the line to select, never silent', async () => {
+    Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
+    document.execCommand = vi.fn().mockReturnValue(false);
+    render(<CopyAttach session="ylo-lead@ylo-d10" ssh={null} />);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('copy-attach'));
+    });
+    expect(screen.getByTestId('copy-attach-select').textContent).toMatch(/⌘C/);
+    expect(screen.getByTestId('copy-attach-line').textContent).toBe(
+      "tmux attach -t 'ylo-lead@ylo-d10'"
+    );
   });
 });
 
@@ -163,18 +207,61 @@ describe('v15 UI-A: Rig Map card and hover detail', () => {
     expect(screen.getByTestId('seat-context-tokens').textContent).toBe('—');
   });
 
-  it('hover opens a detail card with a copy-attach button', () => {
+  it('hover opens a detail card; a local seat copies the plain quoted line', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    render(<RigMap map={mapOf([seat()])} onOpen={() => {}} />);
+    secure(writeText);
+    render(<RigMap map={mapOf([seat()])} onOpen={() => {}} socket={socketWith(null)} />);
     fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
     expect(screen.getByTestId('detail-activity').textContent).toBe('working');
     expect(screen.getByTestId('detail-session').textContent).toBe('ylo-lead@ylo-d10');
     expect(screen.getByTestId('detail-runtime').textContent).toBe('Claude · claude-opus-5-5');
     expect(screen.getByTestId('detail-role').textContent).toBe('lead');
-    expect(screen.getByTestId('detail-edges').textContent).toBe('1');
+    expect(screen.getByTestId('detail-edges').textContent).toBe('0 handed · 1 planned');
     expect(screen.getByTestId('detail-tokens').textContent).toBe('119k · 12%');
-    fireEvent.click(screen.getByTestId('copy-attach'));
-    expect(writeText).toHaveBeenCalledWith('tmux attach -t ylo-lead@ylo-d10');
+    const btn = await screen.findByTestId('copy-attach');
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(writeText).toHaveBeenCalledWith("tmux attach -t 'ylo-lead@ylo-d10'");
+  });
+
+  it('a seat whose machine has an ssh target copies the ssh-wrapped line', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    secure(writeText);
+    render(<RigMap map={mapOf([seat()])} onOpen={() => {}} socket={socketWith('david@m4')} />);
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    const btn = await screen.findByTestId('copy-attach');
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(writeText).toHaveBeenCalledWith('ssh -t david@m4 "tmux attach -t \'ylo-lead@ylo-d10\'"');
+  });
+
+  it('a metacharacter session name gets no copy button in the detail card', async () => {
+    render(
+      <RigMap map={mapOf([seat({ address: 'a;b' })])} onOpen={() => {}} socket={socketWith(null)} />
+    );
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    expect(await screen.findByTestId('seat-detail')).not.toBeNull();
+    expect(screen.queryByTestId('copy-attach')).toBeNull();
+  });
+
+  it('the card sits right after its node (Tab reaches it) and Esc closes it', () => {
+    render(<RigMap map={mapOf([seat()])} onOpen={() => {}} socket={socketWith(null)} />);
+    const node = screen.getByTestId('rig-map-node');
+    fireEvent.focus(node);
+    expect(node.nextElementSibling?.getAttribute('data-testid')).toBe('seat-detail');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('seat-detail')).toBeNull();
+  });
+
+  it('moving onto another seat replaces the card at once', () => {
+    const b = seat({ key: 'm4/ylo-qa@ylo-d10', name: 'ylo-qa', address: 'ylo-qa@ylo-d10' });
+    render(<RigMap map={mapOf([seat(), b])} onOpen={() => {}} socket={socketWith(null)} />);
+    const [n1, n2] = screen.getAllByTestId('rig-map-node');
+    fireEvent.pointerEnter(n1!);
+    fireEvent.pointerEnter(n2!);
+    expect(screen.getAllByTestId('seat-detail')).toHaveLength(1);
+    expect(screen.getByTestId('detail-session').textContent).toBe('ylo-qa@ylo-d10');
   });
 });

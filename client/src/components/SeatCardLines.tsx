@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { attachLine, copyText } from './WaitingOnDavid.js';
 import { roleWord } from '../fleet/model.js';
 
 /**
@@ -46,18 +47,13 @@ export const DASH = '—';
 /** `119_000` → `119k`, `1_250_000` → `1.3M`, small numbers as they are; missing → `—`. */
 export function tokensText(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return DASH;
-  if (n >= 1_000_000) return `${(Math.round(n / 100_000) / 10).toString()}M`;
+  if (n >= 999_500) return `${(Math.round(n / 100_000) / 10).toString()}M`;
   if (n >= 1000) return `${Math.round(n / 1000)}k`;
   return String(Math.round(n));
 }
 
 export function pctText(p: number | null | undefined): string {
   return p === null || p === undefined || !Number.isFinite(p) ? DASH : `${Math.round(p)}%`;
-}
-
-/** The command the copy-attach button puts on the clipboard (read-only: it only attaches). */
-export function attachCommand(session: string): string {
-  return `tmux attach -t ${session}`;
 }
 
 export type Harness = 'claude' | 'codex' | 'other';
@@ -149,27 +145,51 @@ export function Address({ id }: { id: string }) {
   );
 }
 
-/** Copies `tmux attach -t <session>`; never runs it. */
-export function CopyAttach({ session }: { session: string }) {
-  const [done, setDone] = useState(false);
+/**
+ * Copies the attach line (WaitingOnDavid's `attachLine`: quoted, ssh-wrapped for another machine);
+ * never runs it. No line (an unsafe session name) means no button. When the browser blocks copying
+ * (plain http), the line is shown and selected so ⌘C works.
+ */
+export function CopyAttach({ session, ssh }: { session: string; ssh: string | null }) {
+  const [said, setSaid] = useState<'copied' | 'select' | null>(null);
+  const lineEl = useRef<HTMLElement>(null);
+  const line = attachLine(session, ssh);
+  if (!line) return null;
   return (
-    <button
-      type="button"
-      className="copy-attach"
-      data-testid="copy-attach"
-      onClick={(e) => {
-        e.stopPropagation();
-        void navigator.clipboard?.writeText(attachCommand(session)).then(
-          () => {
-            setDone(true);
-            setTimeout(() => setDone(false), 1500);
-          },
-          () => {}
-        );
-      }}
-      title={attachCommand(session)}
-    >
-      {done ? 'copied' : 'copy attach'}
-    </button>
+    <>
+      <button
+        type="button"
+        className="copy-attach"
+        data-testid="copy-attach"
+        onClick={(e) => {
+          e.stopPropagation();
+          void copyText(line).then((ok) => {
+            if (!ok) {
+              const el = lineEl.current;
+              const sel = window.getSelection();
+              if (el && sel) {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+            }
+            setSaid(ok ? 'copied' : 'select');
+            if (ok) setTimeout(() => setSaid(null), 1500);
+          });
+        }}
+        title={line}
+      >
+        {said === 'copied' ? 'copied' : 'copy attach'}
+      </button>
+      {said === 'select' && (
+        <span className="copy-select" role="status" data-testid="copy-attach-select">
+          select and ⌘C:{' '}
+          <code ref={lineEl} className="mono" data-testid="copy-attach-line">
+            {line}
+          </code>
+        </span>
+      )}
+    </>
   );
 }

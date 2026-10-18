@@ -92,10 +92,11 @@ export function nodeToSeat(node: LenientNodeT): Seat {
     viewerStatus: null,
     lastActivityAt: node.lastActivityAt ?? null,
     contextUsedPct: node.contextUsage?.usedPercentage ?? null,
-    contextTokens:
-      typeof node.contextUsage?.totalInputTokens === 'number'
-        ? Math.max(0, Math.round(node.contextUsage.totalInputTokens))
-        : null,
+    // Omitted (not null) when unknown, so a new collector still validates against an older hub.
+    ...(typeof node.contextUsage?.totalInputTokens === 'number' &&
+    Number.isFinite(node.contextUsage.totalInputTokens)
+      ? { contextTokens: Math.max(0, Math.round(node.contextUsage.totalInputTokens)) }
+      : {}),
     work: {
       pending: node.pendingWorkCount ?? 0,
       inProgress: node.inProgressWorkCount ?? 0,

@@ -4595,3 +4595,27 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
   display: inline-flex;
   align-items: center;
 }
+
+/* v15 UI-A fold: the detail card never takes the pointer from the cards under it; only its button does */
+.seat-detail {
+  pointer-events: none;
+}
+.seat-detail .copy-attach,
+.seat-detail .copy-select {
+  pointer-events: auto;
+}
+.seat-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.copy-select {
+  display: block;
+  margin-top: 6px;
+  user-select: text;
+  background: var(--ar-surface-raised);
+}
+.copy-select code {
+  overflow-wrap: anywhere;
+}

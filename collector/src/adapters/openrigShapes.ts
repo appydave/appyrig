@@ -223,7 +223,8 @@ export const LenientNode = z.looseObject({
   contextUsage: z
     .looseObject({
       usedPercentage: num.nullable().optional(),
-      totalInputTokens: num.nullable().optional(),
+      // lenient on purpose: one odd field here must not blank a whole rig (daemon.ts checks the type)
+      totalInputTokens: z.unknown().optional(),
     })
     .nullish(),
   activityState: z
