@@ -516,6 +516,12 @@ export const STALE_MS = 2 * 60 * 60 * 1000;
 
 export type Stage = 'lead' | 'build' | 'qa' | 'review';
 export const STAGES: Stage[] = ['lead', 'build', 'qa', 'review'];
+/**
+ * Roles mode only: senders and receivers that are not in this rig (openrig-orch, David / human, a
+ * seat of another rig) sit in their own box at the left edge, never inside the Lead stage.
+ */
+export const OUTSIDE = 'outside';
+export const OUTSIDE_LABEL = 'From outside the rig';
 export const STAGE_LABEL: Record<Stage, string> = {
   lead: 'Lead',
   build: 'Builders',
@@ -566,9 +572,14 @@ export interface FlowStageView {
   /** Node id: a Stage in roles mode, a seat name in seats mode. */
   stage: string;
   label: string;
-  seats: { name: string; family: ModelFamily; model: string }[];
-  /** True for a seats-mode box that is not in this rig (another rig or machine). */
+  seats: { name: string; key: string; family: ModelFamily; model: string }[];
+  /** True for a seats-mode box that is not in this rig (another rig or machine), and for the roles-mode "From outside the rig" box. */
   outside: boolean;
+  /**
+   * D15 · UI-B: roles mode, the Lead stage of a rig with no lead seat (and nothing in the rig
+   * acting as one). Drawn as a dashed "No lead — by design" outline, not as an empty stage.
+   */
+  noLead: boolean;
   /** Items waiting here at the replay time, handed over less than STALE_MS before it. */
   waiting: number;
   oldestWaitMs: number | null;
@@ -620,15 +631,27 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   if (!range) return null;
   const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
+  // An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name.
+  const nameOf = (raw: string | null): string => {
+    const seat = raw
+      ? rigSeats.find(
+          (x) =>
+            x.id === raw ||
+            x.logicalId === raw ||
+            (x.logicalId !== null && x.logicalId !== undefined && `${x.logicalId}@${rig}` === raw)
+        )
+      : undefined;
+    return seat ? seatName(seat) : bare(raw);
+  };
   const mode = flowModeOf([
     ...rigSeats.map(seatName),
-    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(bare)),
+    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(nameOf)),
   ]);
 
   // Seats mode: one node per endpoint, in the order each first handed work on; the overflow
   // shares an "others" node.
   const seatOrder: string[] = [];
-  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? bare(raw) : (raw ?? '?'));
+  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? nameOf(raw) : (raw ?? '?'));
   if (mode === 'seats') {
     const counts = new Map<string, number>();
     for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
@@ -650,12 +673,16 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
       seatOrder.push(...kept, 'others');
     }
   }
+  // Roles mode: anyone outside the rig gets their own box, at the left edge (only when there is one).
+  const hasOutside =
+    mode === 'roles' && items.some((q) => !inRig(q.source) || !inRig(q.destination));
   const nodeOf = (raw: string | null): string => {
-    if (mode === 'roles') return stageOf(bare(raw));
+    if (mode === 'roles') return inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE;
     const id = nodeOfRaw(raw);
     return seatOrder.includes(id) ? id : 'others';
   };
-  const order: string[] = mode === 'roles' ? STAGES : seatOrder;
+  const order: string[] =
+    mode === 'roles' ? (hasOutside ? [OUTSIDE, ...STAGES] : STAGES) : seatOrder;
 
   const edgeMap = new Map<string, FlowEdge>();
   const waiting = new Map<string, QueueItem[]>();
@@ -670,7 +697,11 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     total += 1;
     const from = nodeOf(q.source);
     const to = nodeOf(q.destination);
-    const back = mode === 'roles' && order.indexOf(to) < order.indexOf(from) && to !== 'lead';
+    const back =
+      mode === 'roles' &&
+      order.indexOf(to) < order.indexOf(from) &&
+      to !== 'lead' &&
+      to !== OUTSIDE;
     if (back) rework += 1;
     const k = `${from}→${to}`;
     const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], items: [], rework: back };
@@ -694,7 +725,12 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     const chip = modelChip(s);
     seatsBy.set(id, [
       ...(seatsBy.get(id) ?? []),
-      { name: seatName(s), family: chip.family, model: chip.text },
+      {
+        name: seatName(s),
+        key: seatKey(fm.machine.id, s.id),
+        family: chip.family,
+        model: chip.text,
+      },
     ]);
   }
 
@@ -704,14 +740,24 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
       return acc === null || age > acc ? age : acc;
     }, null);
 
+  // A lead exists when a seat of the rig, or an endpoint of the rig's queue, reads as one.
+  const hasLead =
+    rigSeats.some((s) => stageOf(seatName(s)) === 'lead') ||
+    items.some((q) =>
+      [q.source, q.destination].some((raw) => inRig(raw) && stageOf(nameOf(raw)) === 'lead')
+    );
   const stages: FlowStageView[] = order.map((id) => {
     const w = waiting.get(id) ?? [];
     const st = stale.get(id) ?? [];
     return {
       stage: id,
-      label: mode === 'roles' ? STAGE_LABEL[id as Stage] : id,
+      label: mode !== 'roles' ? id : id === OUTSIDE ? OUTSIDE_LABEL : STAGE_LABEL[id as Stage],
       seats: seatsBy.get(id) ?? [],
-      outside: mode === 'seats' && id !== 'others' && !rigSeats.some((s) => seatName(s) === id),
+      outside:
+        mode === 'roles'
+          ? id === OUTSIDE
+          : id !== 'others' && !rigSeats.some((s) => seatName(s) === id),
+      noLead: mode === 'roles' && id === 'lead' && !hasLead,
       waiting: w.length,
       oldestWaitMs: oldest(w),
       stale: st.length,

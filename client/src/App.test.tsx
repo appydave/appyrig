@@ -736,9 +736,11 @@ describe('App: S2 keyboard', () => {
     const node = screen.getAllByTestId('rig-map-node')[0]!;
     node.focus();
     fireEvent.click(node);
-    expect(screen.getByTestId('focus-view')).toBeInTheDocument();
-    fireEvent.keyDown(window, { key: 'Escape' });
+    // D15 · UI-B: a map node opens the one agent panel, not the full-screen terminal
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('focus-view')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
     expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
     expect(document.activeElement).toBe(node);
     vi.unstubAllGlobals();
@@ -1157,13 +1159,190 @@ describe('App: S4 handoff details + where work came in', () => {
     localStorage.removeItem('appyrig.handoffPanel');
   });
 
-  it('B1 (fb-0007): a seat box lists its handoffs in and out when clicked', async () => {
+  it('B1 (fb-0007): a box with several agents lists its handoffs in and out when clicked', async () => {
     flowWith((r) => (r.verb === 'handoff.get' ? handoff(r, 'hello') : undefined));
-    const box = screen.getAllByTestId('flow-stage')[0]!;
+    // D15 UI-B: a box with ONE agent opens the agent panel; Builders has two, so it keeps the list
+    const box = screen
+      .getAllByTestId('flow-stage')
+      .find((g) => g.getAttribute('data-stage') === 'build')!;
     fireEvent.click(box);
     expect(box).toHaveAttribute('data-selected', 'true');
     expect(screen.getByTestId('handoff-panel').getAttribute('aria-label')).toMatch(/ in · \d+ out/);
     expect(await screen.findByTestId('handoff-text')).toHaveTextContent('hello');
+  });
+
+  // D15 UI-B: ONE agent panel, opened from the Rig Map or the Handoff Flow, documents first.
+  const docAnswers = (r: Req): Answer | undefined => {
+    const at = '2026-10-11T00:00:00.000Z';
+    if (r.verb === 'seat.loadout')
+      return {
+        ok: true,
+        value: {
+          machine: 'm2',
+          seat: 'orch-lead@fliedit-team',
+          status: 'ok',
+          reason: null,
+          loadout: {
+            machineId: 'm2',
+            seat: 'orch-lead@fliedit-team',
+            collectedAt: at,
+            runtime: 'claude-code',
+            cwd: '/w',
+            status: 'ok',
+            listing: null,
+            cwdIsGitRepo: true,
+            cwdExists: true,
+            skills: [],
+            layers: [
+              {
+                id: 'role',
+                name: 'Role',
+                present: true,
+                path: null,
+                looked: [],
+                bytes: 10,
+                modifiedAt: at,
+                truncated: false,
+                content: '# The lead role\n',
+              },
+            ],
+          },
+        },
+      };
+    if (r.verb === 'rig.files')
+      return {
+        ok: true,
+        value: {
+          machine: 'm2',
+          rig: 'fliedit-team',
+          status: 'ok',
+          reason: null,
+          files: [
+            {
+              id: 'spec-1',
+              name: 'rig.yaml',
+              scope: 'spec',
+              bytes: 30,
+              modifiedAt: at,
+              truncated: false,
+            },
+          ],
+        },
+      };
+    return undefined;
+  };
+
+  it('D15 UI-B: a Flow box with one agent opens the agent panel, its documents already listed', async () => {
+    flowWith(docAnswers);
+    const lead = screen
+      .getAllByTestId('flow-stage')
+      .find((g) => g.getAttribute('data-stage') === 'lead')!;
+    fireEvent.click(lead);
+    const panel = screen.getByTestId('agent-panel');
+    expect(panel).toHaveAttribute('data-seat-id', 'orch-lead@fliedit-team');
+    expect(screen.queryByTestId('focus-view')).toBeNull();
+    // documents are visible with no tab click
+    expect(panel).toHaveAttribute('data-tab', 'documents');
+    await waitFor(() => expect(screen.getAllByTestId('agent-doc')).toHaveLength(2));
+    await waitFor(() =>
+      expect(screen.getByTestId('agent-doc-body')).toHaveTextContent('The lead role')
+    );
+  });
+
+  it('D15 UI-B: the Rig Map opens the very same panel for the same agent', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+    const fake = renderApp(docAnswers);
+    fake.fire('connect');
+    fake.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    const node = screen
+      .getAllByTestId('rig-map-node')
+      .find((n) => n.getAttribute('data-node-key') === 'm2/orch-lead@fliedit-team')!;
+    fireEvent.click(node);
+    const fromMap = screen.getByTestId('agent-panel');
+    expect(fromMap).toHaveAttribute('data-seat-id', 'orch-lead@fliedit-team');
+    expect(fromMap).toHaveAttribute('data-tab', 'documents');
+    await waitFor(() => expect(screen.getAllByTestId('agent-doc')).toHaveLength(2));
+    // the panel belongs to the agent, not the screen: it stays when the Map becomes the Flow ...
+    fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute(
+      'data-seat-id',
+      'orch-lead@fliedit-team'
+    );
+    // ... and, once closed, the Flow's box for that agent brings back the same one
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+    fireEvent.click(
+      screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'lead')!
+    );
+    const fromFlow = screen.getByTestId('agent-panel');
+    expect(fromFlow.getAttribute('data-seat-id')).toBe(fromMap.getAttribute('data-seat-id'));
+    expect(fromFlow.getAttribute('data-machine-id')).toBe(fromMap.getAttribute('data-machine-id'));
+    await waitFor(() => expect(screen.getAllByTestId('agent-doc')).toHaveLength(2));
+    vi.unstubAllGlobals();
+  });
+
+  it('D15 UI-B: a Builders box with two agents keeps its handoff list and offers each agent', async () => {
+    flowWith(docAnswers);
+    fireEvent.click(
+      screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'build')!
+    );
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+    const agents = screen.getAllByTestId('handoff-agent');
+    expect(agents.map((b) => b.textContent)).toEqual(['dev-overlay', 'dev-viewer']);
+    fireEvent.click(agents[1]!);
+    expect(screen.getByTestId('agent-panel')).toHaveAttribute(
+      'data-seat-id',
+      'dev-viewer@fliedit-team'
+    );
+  });
+
+  it('D15 UI-B: one Esc with Notes open over the panel closes only Notes', async () => {
+    flowWith(docAnswers);
+    fireEvent.click(
+      screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'lead')!
+    );
+    fireEvent.click(screen.getByTestId('notes-open'));
+    expect(screen.getByTestId('feedback-notes')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('feedback-notes')).toBeNull();
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+  });
+
+  it('D15 UI-B: the panel closes on the Timeline and when another rig is chosen', async () => {
+    flowWith(docAnswers);
+    const open = () =>
+      fireEvent.click(
+        screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'lead')!
+      );
+    open();
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('view-timeline'));
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+  });
+
+  it('D15 UI-B: Esc closes the agent panel and not the screen under it', async () => {
+    flowWith(docAnswers);
+    fireEvent.click(
+      screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'lead')!
+    );
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+    expect(screen.getByTestId('handoff-flow')).toBeInTheDocument();
   });
 
   it('marks where work came in, calmly, on the first seat to act', async () => {

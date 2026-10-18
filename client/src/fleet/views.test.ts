@@ -320,6 +320,113 @@ describe('Handoff Flow', () => {
     expect(flow.edges.every((e) => !e.rework)).toBe(true);
   });
 
+  it('D15 UI-B: a rig with no lead seat marks its Lead stage "no lead", it is not just empty', () => {
+    const fm = withAccount(m2(), undefined);
+    fm.snapshot.queue = [
+      q({ id: 'a', source: 'dev-build@x', destination: 'dev-qa@x' }),
+      q({
+        id: 'b',
+        source: 'dev-qa@x',
+        destination: 'dev-build@x',
+        createdAt: '2026-10-09T10:10:00.000Z',
+      }),
+    ];
+    const flow = buildFlow(fm, 'x', NOW, NOW)!;
+    expect(flow.mode).toBe('roles');
+    const lead = flow.stages.find((s) => s.stage === 'lead')!;
+    expect(lead.noLead).toBe(true);
+    expect(lead.label).toBe('Lead');
+    expect(flow.stages.filter((s) => s.noLead)).toHaveLength(1);
+    // no outside sender, so no outside box
+    expect(flow.stages.map((s) => s.stage)).toEqual(['lead', 'build', 'qa', 'review']);
+  });
+
+  it('D15 UI-B: a rig WITH a lead does not mark it', () => {
+    const fm = withAccount(m2(), undefined);
+    fm.snapshot.queue = [
+      q({ id: 'a', source: 'orch-lead@x', destination: 'dev-build@x' }),
+      q({
+        id: 'b',
+        source: 'dev-build@x',
+        destination: 'dev-qa@x',
+        createdAt: '2026-10-09T10:10:00.000Z',
+      }),
+    ];
+    const flow = buildFlow(fm, 'x', NOW, NOW)!;
+    expect(flow.stages.find((s) => s.stage === 'lead')!.noLead).toBe(false);
+  });
+
+  it('D15 UI-B: senders from outside the rig get their own box at the left edge, not the Lead', () => {
+    const fm = withAccount(m2(), undefined);
+    fm.snapshot.queue = [
+      q({ id: 'a', source: 'openrig-orch@kernel', destination: 'dev-build@x' }),
+      q({
+        id: 'b',
+        source: 'human@host',
+        destination: 'dev-build@x',
+        createdAt: '2026-10-09T10:05:00.000Z',
+      }),
+      q({
+        id: 'c',
+        source: 'dev-build@x',
+        destination: 'dev-qa@x',
+        createdAt: '2026-10-09T10:10:00.000Z',
+      }),
+      q({
+        id: 'd',
+        source: 'dev-qa@x',
+        destination: 'openrig-orch@kernel',
+        createdAt: '2026-10-09T10:20:00.000Z',
+      }),
+    ];
+    const flow = buildFlow(fm, 'x', NOW, NOW)!;
+    expect(flow.stages.map((s) => s.stage)).toEqual(['outside', 'lead', 'build', 'qa', 'review']);
+    const out = flow.stages[0]!;
+    expect(out.label).toBe('From outside the rig');
+    expect(out.outside).toBe(true);
+    expect(out.noLead).toBe(false);
+    // the lead stage received and sent nothing: both outside senders landed in the outside box
+    expect(flow.edges.some((e) => e.from === 'lead' || e.to === 'lead')).toBe(false);
+    const fromOutside = flow.edges.find((e) => e.from === 'outside' && e.to === 'build')!;
+    expect(fromOutside.count).toBe(2);
+    // a reply to the outside is not "sent back for rework"
+    const reply = flow.edges.find((e) => e.from === 'qa' && e.to === 'outside')!;
+    expect(reply.rework).toBe(false);
+    expect(flow.rework).toBe(0);
+    // the lead is still "by design": nothing in this rig acts as one
+    expect(flow.stages.find((s) => s.stage === 'lead')!.noLead).toBe(true);
+  });
+
+  it("MEDIUM-4: in-rig addresses given as logical ids land in their seat's stage (no build→build self-edge)", () => {
+    const fm = withAccount(m2(), undefined);
+    const r = 'fliedit-team';
+    fm.snapshot.queue = [
+      q({ id: 'a', source: `orch.lead@${r}`, destination: `dev.overlay@${r}` }),
+      q({
+        id: 'b',
+        source: `dev.overlay@${r}`,
+        destination: `dev.qa@${r}`,
+        createdAt: '2026-10-09T10:10:00.000Z',
+      }),
+      q({
+        id: 'c',
+        source: `dev.qa@${r}`,
+        destination: `review.r1@${r}`,
+        createdAt: '2026-10-09T10:20:00.000Z',
+      }),
+    ];
+    const flow = buildFlow(fm, r, NOW, NOW)!;
+    expect(flow.mode).toBe('roles');
+    expect(flow.edges.map((e) => `${e.from}→${e.to}`).sort()).toEqual([
+      'build→qa',
+      'lead→build',
+      'qa→review',
+    ]);
+    expect(flow.stages.find((s) => s.stage === 'qa')!.waiting + 0).toBeGreaterThanOrEqual(0);
+    expect(flow.stages.find((s) => s.stage === 'lead')!.noLead).toBe(false);
+    expect(flow.stages.some((s) => s.stage === 'outside')).toBe(false);
+  });
+
   it('no queue rows → no flow', () => {
     const fm = m2();
     fm.snapshot.queue = [];

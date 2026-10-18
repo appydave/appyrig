@@ -611,7 +611,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                         aria-label={
                           s.key.startsWith('?/')
                             ? `${s.name}: not a seat any machine reports`
-                            : `${s.name}: open in focus`
+                            : `${s.name}: open agent panel`
                         }
                         data-explain="seat"
                         // QA W3 MEDIUM-1: key skill chips made a node twice as tall and pushed the

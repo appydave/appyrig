@@ -153,6 +153,8 @@ const SWATCH: Record<Swatch, () => ReactNode> = {
   'stage-box': () => box('flow-box', 'QA'),
   'outside-box': () => box('flow-box', 'a@b'),
   'no-seat': () => box('flow-box', '—'),
+  'no-lead': () => box('flow-box none', 'no lead'),
+  'outside-sender': () => box('flow-box outside', 'outside'),
   'box-waiting': () => box('flow-box waiting'),
   'box-stale': () => box('flow-box stale'),
   'stage-chips': () => (

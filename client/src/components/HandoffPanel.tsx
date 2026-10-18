@@ -16,6 +16,8 @@ export interface PanelSelection {
   items: QueueItem[];
   /** The item whose message is shown; defaults to the latest on the line. */
   itemId: string;
+  /** A stage with several seats: the agents in it, each opening the one agent panel. */
+  agents?: { key: string; name: string }[];
 }
 
 type Got =
@@ -44,6 +46,8 @@ interface Props {
   onLine?: (dir: 1 | -1) => void;
   /** What [ ] step through, in the hint: a map or flow "line", a timeline "lane". */
   lineWord?: string;
+  /** D15 · UI-B: opens the one agent panel (documents, terminal, messages) for a seat. */
+  onOpenAgent?: (seatKey: string) => void;
 }
 
 const clock = (iso: string) =>
@@ -75,6 +79,7 @@ export default function HandoffPanel({
   keys = false,
   onLine,
   lineWord = 'line',
+  onOpenAgent,
 }: Props) {
   const itemId = selection?.itemId ?? null;
   const [got, setGot] = useState<Got>({ state: 'loading' });
@@ -221,6 +226,22 @@ export default function HandoffPanel({
           </button>
         </header>
         {status}
+        {onOpenAgent && selection.agents && selection.agents.length > 1 && (
+          <p className="handoff-agents" data-testid="handoff-agents">
+            <span className="label">Open agent</span>
+            {selection.agents.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                className="pill-btn"
+                data-testid="handoff-agent"
+                onClick={() => onOpenAgent(a.key)}
+              >
+                {a.name}
+              </button>
+            ))}
+          </p>
+        )}
         <p className="quiet" data-testid="handoff-none">
           No handoffs through the queue to or from this seat. It may still talk to others directly
           (typed messages), which the queue does not record.
@@ -256,6 +277,22 @@ export default function HandoffPanel({
         </button>
       </header>
       {status}
+      {onOpenAgent && selection.agents && selection.agents.length > 1 && (
+        <p className="handoff-agents" data-testid="handoff-agents">
+          <span className="label">Open agent</span>
+          {selection.agents.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              className="pill-btn"
+              data-testid="handoff-agent"
+              onClick={() => onOpenAgent(a.key)}
+            >
+              {a.name}
+            </button>
+          ))}
+        </p>
+      )}
       {keys && (
         <p className="handoff-keys" data-testid="handoff-keys-hint">
           <kbd>J</kbd>/<kbd>K</kbd> older / newer handoff
