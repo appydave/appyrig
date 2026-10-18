@@ -53,7 +53,13 @@ function Workflows({ ctx }: V2PageProps) {
   const live = src.kind === 'live' ? src.value : null;
   const specsRead = live?.machines.some((m) => m.status === 'ok' && m.specsRead) ?? false;
   const instancesRead = live?.machines.some((m) => m.status === 'ok' && m.instancesRead) ?? false;
-  const noRun = live?.machines.filter((m) => m.status === 'ok' && m.instancesRead) ?? [];
+  // Per machine: a machine whose list was not read is never described as having none.
+  const okMachines = live?.machines.filter((m) => m.status === 'ok') ?? [];
+  const specsUnread = okMachines.filter((m) => !m.specsRead);
+  const runsUnread = okMachines.filter((m) => !m.instancesRead);
+  const noRun = okMachines.filter(
+    (m) => m.instancesRead && !live!.instances.some((i) => i.machine === m.machine)
+  );
 
   return (
     <main className="view v2-workflows" data-testid="v2-workflows">
@@ -68,7 +74,15 @@ function Workflows({ ctx }: V2PageProps) {
 
       <h3>Specs</h3>
       {live && specsRead ? (
-        <SpecList specs={live.specs} label={label} />
+        <>
+          <SpecList specs={live.specs} label={label} />
+          {specsUnread.length > 0 && (
+            <p className="quiet" data-testid="wf-specs-unread">
+              Specs not read on {specsUnread.map((m) => label(m.machine)).join(', ')}: that is not
+              the same as having none.
+            </p>
+          )}
+        </>
       ) : src.kind === 'loading' ? null : (
         <SampleData
           title="Built-in workflow specs"
@@ -113,15 +127,16 @@ function Workflows({ ctx }: V2PageProps) {
           </tbody>
         </table>
       )}
-      {live && instancesRead && live.instances.length === 0 && (
+      {live && noRun.length > 0 && (
         <p data-testid="wf-no-runs">
-          No workflow has been run on {noRun.map((m) => label(m.machine)).join(', ')} (the run list
+          No workflow has been run on {noRun.map((m) => label(m.machine)).join(', ')} (its run list
           was read and is empty).
         </p>
       )}
-      {live && !instancesRead && (
+      {live && runsUnread.length > 0 && (
         <p className="quiet" data-testid="wf-unread">
-          The run list could not be read from any machine: that is not the same as no runs.
+          Run list not read on {runsUnread.map((m) => label(m.machine)).join(', ')}: that is not the
+          same as no runs.
         </p>
       )}
 

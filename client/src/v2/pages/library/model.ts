@@ -142,3 +142,41 @@ export const sampleFiles = (i: LibraryItem) =>
         { name: 'examples.md', size: 1200 },
       ]
     : [];
+
+/** Which kind chip each unread list affects: specs hold workflow, agent and rig. */
+const GROUP_FILTERS: Record<'specs' | 'skills' | 'contextPacks', LibFilter[]> = {
+  specs: ['workflow', 'agent', 'rig'],
+  skills: ['skill'],
+  contextPacks: ['context pack'],
+};
+
+/**
+ * Per chip, the machines (by label) whose list for that kind could not be read: a null count is
+ * "unread", never 0. `all` collects every unread list so the empty state can say so.
+ */
+export function unreadByFilter(
+  machines: {
+    machine: string;
+    status: string;
+    counts: { specs: number | null; skills: number | null; contextPacks: number | null };
+  }[],
+  label: (id: string) => string
+): Record<LibFilter, string[]> {
+  const out: Record<LibFilter, string[]> = {
+    all: [],
+    workflow: [],
+    agent: [],
+    rig: [],
+    'context pack': [],
+    skill: [],
+  };
+  for (const m of machines) {
+    if (m.status !== 'ok') continue;
+    for (const g of ['specs', 'skills', 'contextPacks'] as const) {
+      if (m.counts[g] !== null) continue;
+      for (const f of GROUP_FILTERS[g]) out[f].push(label(m.machine));
+      out.all.push(`${g === 'contextPacks' ? 'context packs' : g} on ${label(m.machine)}`);
+    }
+  }
+  return out;
+}

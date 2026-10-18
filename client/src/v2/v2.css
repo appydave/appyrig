@@ -431,3 +431,17 @@
 .wf-current {
   background: var(--ar-blocked-bg);
 }
+.hist-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.hist-main {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.hist-jump {
+  flex: none;
+}

@@ -273,7 +273,7 @@ describe('History', () => {
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('hist-open-agent')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('hist-open-agent'));
-    expect(ctx.onOpenAgent).toHaveBeenCalledWith(`m2/${seat}`);
+    expect(ctx.openAgentPage).toHaveBeenCalledWith(`m2/${seat}`);
   });
 
   it('model: search covers seat, rig, reason and text', () => {

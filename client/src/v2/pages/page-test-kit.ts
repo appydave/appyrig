@@ -61,6 +61,8 @@ export function pageCtx(machines: FleetMachine[], socket: FleetSocket, now: numb
     onOpenSeat: vi.fn(),
     onOpenSkills: vi.fn(),
     onOpenAgent: vi.fn(),
+    agentKey: null,
+    openAgentPage: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
   };

@@ -20,6 +20,7 @@ import {
   kindOf,
   sampleFiles,
   sampleLibrary,
+  unreadByFilter,
   type LibFilter,
 } from './model.js';
 
@@ -110,6 +111,7 @@ function Library({ ctx }: V2PageProps) {
   const live = src.kind === 'live';
   const items = src.kind === 'live' ? src.value.items : sample;
   const counts = countByKind(items);
+  const unread = unreadByFilter(src.kind === 'live' ? src.value.machines : [], label);
   const found = filterLibrary(items, filter, text);
   const shown = all ? found : found.slice(0, SHOWN);
 
@@ -159,7 +161,17 @@ function Library({ ctx }: V2PageProps) {
                   data-testid={`lib-filter-${f.key.replace(' ', '-')}`}
                   onClick={() => setFilter(f.key)}
                 >
-                  {f.label} <span className="ny-count">{counts[f.key]}</span>
+                  {f.label}{' '}
+                  {f.key !== 'all' && unread[f.key].length > 0 ? (
+                    <span
+                      className="ny-count"
+                      data-testid={`lib-unread-${f.key.replace(' ', '-')}`}
+                    >
+                      {counts[f.key]} (not read on {unread[f.key].join(', ')})
+                    </span>
+                  ) : (
+                    <span className="ny-count">{counts[f.key]}</span>
+                  )}
                 </button>
               ))}
             </span>
@@ -167,8 +179,10 @@ function Library({ ctx }: V2PageProps) {
           {found.length === 0 ? (
             <p className="quiet" data-testid="lib-empty">
               {text || filter !== 'all'
-                ? 'Nothing matches this search and filter.'
-                : 'The library holds nothing.'}
+                ? `Nothing matches this search and filter${unread[filter].length ? (filter === 'all' ? `, but some lists were not read: ${unread.all.join('; ')}` : `, but this kind was not read on ${unread[filter].join(', ')}`) : ''}.`
+                : unread.all.length
+                  ? `Nothing was read, and these lists could not be read: ${unread.all.join('; ')}. That is not the same as an empty library.`
+                  : 'The library holds nothing.'}
             </p>
           ) : (
             <ul className="lib-list" data-testid="lib-list">
