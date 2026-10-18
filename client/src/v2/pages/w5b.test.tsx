@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { FLEET_EVENTS, type FleetMachine } from '@appydave/shared';
 import App from '../../App.js';
 import { listRigs } from '../../fleet/views.js';
 import type { FleetSocket } from '../../fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '../../test/fleetFixtures.js';
 import type { V2Context } from '../types.js';
-import type { HealthData, HealthFindingsMachine, SettingsMachine } from '../data/daemondata.js';
+import type { HealthData } from '@appydave/shared';
+import type { HealthFindingsMachine } from './health/model.js';
+import type { SettingsMachine } from './settings/model.js';
 import { page as healthPage } from './health/index.js';
 import { contextRollup, daemonReach, verdictFor } from './health/model.js';
 import { page as settingsPage } from './settings/index.js';
@@ -141,8 +145,19 @@ describe('v2 Health: never "healthy"', () => {
       'has not sent health data'
     );
     expect(verdictFor(row({ status: 'unsupported', data: null }), null).reasons[0]).toContain(
-      'no health-findings route'
+      'has no health findings'
     );
+    // the hub's own reason is quoted when it gives one
+    expect(
+      verdictFor(
+        row({
+          status: 'unsupported',
+          data: null,
+          reason: "this machine's OpenRig has no health findings.",
+        }),
+        null
+      ).reasons[0]
+    ).toBe("Nothing to read: this machine's OpenRig has no health findings.");
     expect(
       verdictFor(row({ assessment: 'unknown', data: data({ findings: null }) }), null).kind
     ).toBe('cannot-tell');
@@ -281,12 +296,12 @@ describe('v2 Settings', () => {
     const g = groupSettings(
       [
         settingsRow('m2', [
-          ['queue.maxAttempts', 3, 'default', 3],
+          ['queue.wake_retry_cap', 3, 'default', 3],
           ['ui.theme', 'light', 'file', 'system'],
           ['daemon.port', 7433, 'default', 7433],
         ]),
         settingsRow('roamy', [
-          ['queue.maxAttempts', 5, 'file', 3],
+          ['queue.wake_retry_cap', 5, 'file', 3],
           ['daemon.port', 7433, 'default', 7433],
         ]),
       ],
@@ -306,6 +321,19 @@ describe('v2 Settings', () => {
     ).toBe(true);
   });
 
+  it('the sample settings use only keys on the collector allowlist (SETTINGS_ALLOW)', () => {
+    const src = readFileSync(
+      path.resolve(__dirname, '../../../../collector/src/adapters/daemondata.ts'),
+      'utf8'
+    );
+    const allow = src.slice(
+      src.indexOf('SETTINGS_ALLOW'),
+      src.indexOf('];', src.indexOf('SETTINGS_ALLOW'))
+    );
+    for (const s of sampleSettings([fleetMachine(snapshot('m2'))])[0]!.settings)
+      expect(allow).toContain(`'${s.key}'`);
+  });
+
   it('schedules are built from real names', () => {
     const rows = sampleSchedules([fleetMachine(snapshot('m2'))]);
     expect(rows[0]!.what).toMatch(/^Wake rig /);
@@ -320,7 +348,7 @@ describe('v2 Settings', () => {
         value: {
           machines: [
             settingsRow('roamy', [
-              ['queue.maxAttempts', 5, 'file', 3],
+              ['queue.wake_retry_cap', 5, 'file', 3],
               ['daemon.port', 7433, 'default', 7433],
             ]),
           ],
@@ -331,7 +359,9 @@ describe('v2 Settings', () => {
     render(<Page ctx={ctxFor([fleetMachine(snapshot('roamy'))], spy.socket)} />);
     await waitFor(() => expect(screen.getAllByTestId('st2-row')).toHaveLength(2));
     expect(screen.queryByTestId('sample-data')).toBeNull();
-    const q = screen.getAllByTestId('st2-row').find((r) => r.dataset.key === 'queue.maxAttempts')!;
+    const q = screen
+      .getAllByTestId('st2-row')
+      .find((r) => r.dataset.key === 'queue.wake_retry_cap')!;
     expect(q).toHaveAttribute('data-changed', 'true');
     fireEvent.click(screen.getByTestId('st2-changed-only'));
     expect(screen.getAllByTestId('st2-row')).toHaveLength(1);
@@ -342,7 +372,7 @@ describe('v2 Settings', () => {
     expect(within(q).getByTestId('st2-working')).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1000));
     expect(screen.getByTestId('st2-toast')).toHaveTextContent(
-      'queue.maxAttempts = 7 on Roamy (pretend)'
+      'queue.wake_retry_cap = 7 on Roamy (pretend)'
     );
     // schedules: Run now is a mock too
     fireEvent.click(screen.getAllByTestId('st2-run')[0]!);

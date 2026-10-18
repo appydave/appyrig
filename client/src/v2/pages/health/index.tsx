@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { FakeControl, SampleData } from '../../kit/index.js';
-import type { HealthFindingsMachine, HealthFindingsOutput } from '../../data/daemondata.js';
+import type { HealthFindingsOutput } from '@appydave/shared';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   CONTEXT_CRITICAL,
@@ -12,6 +12,7 @@ import {
   daemonReach,
   sampleFindings,
   verdictFor,
+  type HealthFindingsMachine,
 } from './model.js';
 import '../w5b.css';
 

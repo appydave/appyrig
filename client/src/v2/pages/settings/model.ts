@@ -1,9 +1,14 @@
-import type { FleetMachine } from '@appydave/shared';
-import type { SettingRow, SettingValue, SettingsMachine } from '../../data/daemondata.js';
+import type { FleetMachine, SettingsGetOutput } from '@appydave/shared';
 
-/** A settings group is the key's first part (`queue.maxAttempts` → queue); known groups first. */
+/** One machine's row of settings.get, one setting, one value (shared/src/daemondata.ts). */
+export type SettingsMachine = SettingsGetOutput['machines'][number];
+export type SettingRow = SettingsMachine['settings'][number];
+export type SettingValue = SettingRow['value'];
+
+/** A settings group is the key's first part (`queue.wake_retry_cap` → queue); known groups first. */
 const ORDER = [
   'daemon',
+  'host',
   'queue',
   'retention',
   'policies',
@@ -11,7 +16,9 @@ const ORDER = [
   'snapshots',
   'transcripts',
   'feed',
-  'workflow',
+  'runtime',
+  'launch',
+  'recovery',
   'ui',
 ];
 
@@ -78,20 +85,51 @@ export const show = (v: SettingValue | undefined): string =>
 
 /** Believable settings for machines that sent none: OpenRig-shaped keys, real machine ids. */
 export function sampleSettings(machines: FleetMachine[]): SettingsMachine[] {
+  // Real keys from the collector's allowlist (SETTINGS_ALLOW); the values and sources are made up.
   const base: Omit<SettingRow, 'changed'>[] = [
-    { key: 'daemon.port', value: 7433, source: 'default', defaultValue: 7433 },
     { key: 'daemon.host', value: '127.0.0.1', source: 'default', defaultValue: '127.0.0.1' },
-    { key: 'queue.maxAttempts', value: 3, source: 'default', defaultValue: 3 },
-    { key: 'queue.staleAfterMinutes', value: 120, source: 'file', defaultValue: 60 },
-    { key: 'retention.transitionsDays', value: 30, source: 'default', defaultValue: 30 },
-    { key: 'retention.transcriptsDays', value: 14, source: 'env', defaultValue: 7 },
-    { key: 'policies.autoApproveReads', value: true, source: 'default', defaultValue: true },
-    { key: 'policies.requireHumanForDestroy', value: true, source: 'default', defaultValue: true },
-    { key: 'health.diagnosisEnabled', value: false, source: 'default', defaultValue: false },
-    { key: 'health.contextWarnPct', value: 60, source: 'default', defaultValue: 60 },
-    { key: 'snapshots.everyMinutes', value: 30, source: 'default', defaultValue: 30 },
-    { key: 'ui.theme', value: 'light', source: 'file', defaultValue: 'system' },
+    { key: 'daemon.port', value: 7433, source: 'default', defaultValue: 7433 },
+    { key: 'queue.wake_retry_cap', value: 3, source: 'default', defaultValue: 3 },
+    { key: 'queue.pickup_stall_threshold_minutes', value: 30, source: 'file', defaultValue: 15 },
+    { key: 'queue.stuck_sweep_interval_seconds', value: 300, source: 'default', defaultValue: 300 },
+    { key: 'retention.enabled', value: true, source: 'default', defaultValue: true },
+    { key: 'retention.transitions_days', value: 60, source: 'env', defaultValue: 30 },
+    {
+      key: 'policies.claude_compaction.enabled',
+      value: true,
+      source: 'default',
+      defaultValue: true,
+    },
+    {
+      key: 'policies.claude_compaction.threshold_percent',
+      value: 75,
+      source: 'default',
+      defaultValue: 75,
+    },
+    {
+      key: 'health.context_pressure.warning_percent',
+      value: 60,
+      source: 'default',
+      defaultValue: 60,
+    },
+    {
+      key: 'health.context_pressure.critical_percent',
+      value: 80,
+      source: 'default',
+      defaultValue: 80,
+    },
+    { key: 'snapshots.periodic.enabled', value: true, source: 'default', defaultValue: true },
+    {
+      key: 'snapshots.periodic.interval_seconds',
+      value: 1800,
+      source: 'default',
+      defaultValue: 1800,
+    },
+    { key: 'transcripts.enabled', value: true, source: 'file', defaultValue: false },
+    { key: 'ui.timezone', value: 'Australia/Brisbane', source: 'file', defaultValue: 'UTC' },
+    { key: 'ui.terminal.max_live_terminals', value: 8, source: 'default', defaultValue: 8 },
   ];
+
   return machines.map((fm, i) => ({
     machine: fm.machine.id,
     status: 'ok',
@@ -101,8 +139,8 @@ export function sampleSettings(machines: FleetMachine[]): SettingsMachine[] {
     pathsHidden: 2,
     settings: base.map((s) => {
       // one machine set by hand differently, so "machines differ" shows
-      const value = i === 1 && s.key === 'queue.maxAttempts' ? 5 : s.value;
-      const source = i === 1 && s.key === 'queue.maxAttempts' ? 'file' : s.source;
+      const value = i === 1 && s.key === 'queue.wake_retry_cap' ? 5 : s.value;
+      const source = i === 1 && s.key === 'queue.wake_retry_cap' ? 'file' : s.source;
       return { ...s, value, source, changed: source !== 'default' };
     }),
   }));

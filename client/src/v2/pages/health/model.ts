@@ -1,6 +1,9 @@
-import type { FleetMachine } from '@appydave/shared';
+import type { FleetMachine, HealthData, HealthFindingsOutput } from '@appydave/shared';
 import { seatName } from '../../../fleet/model.js';
-import type { HealthData, HealthFindingsMachine } from '../../data/daemondata.js';
+
+/** One machine's row of health.findings (shared/src/daemondata.ts). */
+export type HealthFindingsMachine = HealthFindingsOutput['machines'][number];
+export type { HealthData };
 
 /**
  * v2 Health. The one rule: never read as "healthy". An empty findings list is only ever "no
@@ -34,11 +37,15 @@ export function verdictFor(
   if (!m) return cannot(['Asking the hub…']);
   if (m.status === 'pending')
     return cannot([
-      `This machine's collector has not sent health data yet${m.reason ? ` (${m.reason})` : ''} — an older collector, or not collected this round.`,
+      m.reason
+        ? `No health data yet: ${m.reason.replace(/\.+$/, '')}.`
+        : "This machine's collector has not sent health data yet (an older collector, or not collected this round).",
     ]);
-  if (m.status === 'unsupported')
+  if (m.status !== 'ok')
     return cannot([
-      `This OpenRig version has no health-findings route${m.reason ? ` (${m.reason})` : ''}, so there is nothing to read.`,
+      m.reason
+        ? `Nothing to read: ${m.reason.replace(/\.+$/, '')}.`
+        : "This machine's OpenRig has no health findings, so there is nothing to read.",
     ]);
   if (m.assessment === 'unknown')
     return cannot(m.caveats.length ? m.caveats : ['The findings could not be read.']);

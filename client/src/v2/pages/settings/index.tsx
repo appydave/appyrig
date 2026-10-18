@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { MockMark, SampleData, SampleLabel, useFakeAction } from '../../kit/index.js';
-import type { SettingValue, SettingsGetOutput, SettingsMachine } from '../../data/daemondata.js';
+import type { SettingsGetOutput } from '@appydave/shared';
 import type { V2PageDef, V2PageProps } from '../../types.js';
-import { groupSettings, sampleSchedules, sampleSettings, show, type SettingLine } from './model.js';
+import {
+  groupSettings,
+  sampleSchedules,
+  sampleSettings,
+  show,
+  type SettingLine,
+  type SettingValue,
+  type SettingsMachine,
+} from './model.js';
 import '../w5b.css';
 
 type Loaded =
