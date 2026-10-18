@@ -23,6 +23,19 @@ function localUrl(raw: string, port: number): boolean {
   }
 }
 
+/**
+ * The port the guard compares against: the one the dev server is really listening on (so `--port
+ * 7590` works without CLIENT_URL), else the one Vite resolved from config/CLI, else the .env one.
+ */
+export function guardPortFor(
+  listening: { port: number } | string | null | undefined,
+  resolved: number | undefined,
+  fromEnv: number
+): number {
+  if (listening && typeof listening === 'object' && listening.port > 0) return listening.port;
+  return resolved && resolved > 0 ? resolved : fromEnv;
+}
+
 /** True when the request comes from a page on this dev server (same machine, same port). */
 export function isLocalDevRequest(headers: Headers, port: number): boolean {
   const origin = first(headers.origin);

@@ -7,6 +7,8 @@ import { page as accountsPage } from './pages/accounts/index.js';
 import { page as machinesPage } from './pages/machines/index.js';
 import { page as schemaPage } from './pages/schema/index.js';
 import { page as learnPage } from './pages/learn/index.js';
+import { page as needsYouPage } from './pages/needs-you/index.js';
+import { page as missionsPage } from './pages/missions/index.js';
 
 /**
  * The v2 registry: every page that has a v2 version, keyed by page.
@@ -21,7 +23,17 @@ import { page as learnPage } from './pages/learn/index.js';
 export function v2Pages(): V2PageDef[] {
   // A function, not a constant: pages import helpers from here, so the list is read at call time
   // (no import-cycle ordering to get wrong).
-  return [wallPage, timelinePage, accountsPage, machinesPage, schemaPage, learnPage, aboutPage];
+  return [
+    wallPage,
+    needsYouPage,
+    missionsPage,
+    timelinePage,
+    accountsPage,
+    machinesPage,
+    schemaPage,
+    learnPage,
+    aboutPage,
+  ];
 }
 
 export const CURRENT_VIEWS: View[] = [

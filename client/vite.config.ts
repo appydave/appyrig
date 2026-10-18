@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { isLocalDevRequest } from './src/v2/devProxy';
+import { guardPortFor, isLocalDevRequest } from './src/v2/devProxy';
 
 /**
  * v2 W0 preview: APPYRIG_HUB_URL points this dev server's proxy at another hub (e.g. the M2's,
@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, '..'), '');
   const hub = env.APPYRIG_HUB_URL || `http://localhost:${env.PORT || 7191}`;
   const clientPort = Number(new URL(env.CLIENT_URL || 'http://localhost:7190').port);
+  // The guard compares against the port the server really listens on, set once it is up (a CLI
+  // `--port` needs no CLIENT_URL); until then, the resolved or .env port.
+  let guardPort = clientPort;
   const auth = remoteHubAuth(env.APPYRIG_HUB_URL, env.APPYRIG_HUB_TOKEN_FILE);
   if (env.APPYRIG_HUB_URL && !auth) {
     console.warn(
@@ -47,11 +50,11 @@ export default defineConfig(({ mode }) => {
       ? {
           configure: (proxy: HttpProxy.Server) => {
             proxy.on('proxyReq', (proxyReq, req) => {
-              if (isLocalDevRequest(req.headers, clientPort))
+              if (isLocalDevRequest(req.headers, guardPort))
                 proxyReq.setHeader('authorization', auth);
             });
             proxy.on('proxyReqWs', (proxyReq, req, socket) => {
-              if (isLocalDevRequest(req.headers, clientPort)) {
+              if (isLocalDevRequest(req.headers, guardPort)) {
                 proxyReq.setHeader('authorization', auth);
               } else {
                 proxyReq.destroy();
@@ -63,7 +66,23 @@ export default defineConfig(({ mode }) => {
       : {}),
   });
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'appyrig-guard-port',
+        configureServer(server) {
+          guardPort = guardPortFor(null, server.config.server.port, clientPort);
+          server.httpServer?.once('listening', () => {
+            guardPort = guardPortFor(
+              server.httpServer?.address(),
+              server.config.server.port,
+              clientPort
+            );
+          });
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, 'src'),

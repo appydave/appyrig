@@ -16,7 +16,7 @@ import {
   type FrozenFile,
 } from './frozen/frozenSocket.js';
 import { loadFrozen } from './frozen/load.js';
-import { isLocalDevRequest } from './devProxy.js';
+import { guardPortFor, isLocalDevRequest } from './devProxy.js';
 import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from './kit/index.js';
 import { CURRENT_VIEWS, navGroups, navLabel, plannedPages, v2PageFor } from './registry.js';
 import { MODE_KEY, modeFromSearch, readMode, searchWithMode } from './version.js';
@@ -404,15 +404,30 @@ describe('v2 kit', () => {
   });
 });
 
+describe('dev proxy guard port', () => {
+  it('uses the port the server really listens on, so --port needs no CLIENT_URL', () => {
+    expect(guardPortFor({ port: 7590 }, 7190, 7190)).toBe(7590);
+    expect(guardPortFor(null, 7590, 7190)).toBe(7590);
+    expect(guardPortFor('pipe', undefined, 7190)).toBe(7190);
+    const port = guardPortFor({ port: 7590 }, undefined, 7190);
+    expect(isLocalDevRequest({ origin: 'http://localhost:7590' }, port)).toBe(true);
+    expect(isLocalDevRequest({ origin: 'http://localhost:7190' }, port)).toBe(false);
+    expect(isLocalDevRequest({ origin: 'http://evil.example:7590' }, port)).toBe(false);
+  });
+});
+
 describe('v2 registry', () => {
   it('every v2 page is reachable from the grouped nav, and planned pages wait their turn', () => {
     const inNav = navGroups().flatMap((g) => g.pages);
     for (const v of CURRENT_VIEWS) expect(inNav).toContain(v);
     expect(inNav).toContain('about');
     expect(v2PageFor('wall')?.label).toBe('Wall');
-    expect(plannedPages()).toContain('needs-you');
+    expect(plannedPages()).toContain('history');
+    expect(plannedPages()).not.toContain('needs-you');
+    expect(inNav).toContain('needs-you');
+    expect(inNav).toContain('missions');
     expect(navLabel('needs-you')).toBe('Needs You');
     expect(navLabel('map')).toBe('Graph');
-    expect(inNav).not.toContain('needs-you');
+    expect(inNav).not.toContain('history');
   });
 });
