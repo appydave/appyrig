@@ -220,7 +220,12 @@ export const LenientNode = z.looseObject({
   agentRef: strN.optional(),
   lastActivityAt: strN.optional(),
   recoveryGuidance: z.looseObject({ summary: str.optional(), action: str.optional() }).nullish(),
-  contextUsage: z.looseObject({ usedPercentage: num.nullable().optional() }).nullish(),
+  contextUsage: z
+    .looseObject({
+      usedPercentage: num.nullable().optional(),
+      totalInputTokens: num.nullable().optional(),
+    })
+    .nullish(),
   activityState: z
     .looseObject({
       activity: str,

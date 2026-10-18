@@ -17,7 +17,7 @@ import {
   type GroupBy,
 } from '../fleet/model.js';
 import SkillPill from './SkillPill.js';
-import { KeySkills, RoleTag } from './SeatCardLines.js';
+import { Address, ContextLine, HarnessMark, KeySkills, RoleTag } from './SeatCardLines.js';
 import AnsiText from './AnsiText.js';
 import { rigTitle } from './RigInfo.js';
 import { isShortcutBlocked } from '../lib/keys.js';
@@ -224,10 +224,16 @@ const SeatTile = memo(function SeatTile({
             {seat.rig ?? 'tmux'}
           </span>
         </span>
+        <HarnessMark runtime={seat.runtime} model={seat.model} />
         <span className="chip" data-family={chip.family} data-explain="model">
           {chip.text}
         </span>
       </span>
+      {seat.source === 'openrig' && (
+        <span className="tile-address">
+          <Address id={seat.id} />
+        </span>
+      )}
       <span className="tile-meta">
         <span
           className="pip"
@@ -264,7 +270,8 @@ const SeatTile = memo(function SeatTile({
             ? `stopped · ${machine.machine.label} ${freshLabel}`
             : freshLabel}
         </span>
-        <span title="queue: pending / in progress / blocked">
+        <ContextLine pct={seat.contextUsedPct} tokens={seat.contextTokens} />
+        <span className="mono" title="queue: pending / in progress / blocked">
           q {w.pending}/{w.inProgress}/{w.blocked}
         </span>
       </span>

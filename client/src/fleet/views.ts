@@ -255,6 +255,14 @@ export interface MapSeat {
   /** D09 W3: the seat's agent_ref role and key skills, when its collector reports them. */
   agentRole?: string | null;
   keySkills?: string[];
+  /** v15 UI-A: the mailbox address (the session name), runtime, raw model, context and activity. */
+  address: string;
+  source: Seat['source'];
+  runtime: string | null;
+  modelRaw: string | null;
+  contextPct: number | null;
+  contextTokens: number | null;
+  activity: string | null;
 }
 
 export interface MapPod {
@@ -332,6 +340,13 @@ function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
     model: modelChip(seat),
     pip: pipFor(seat, fm),
     skills: seat.skillCount,
+    address: seat.id,
+    source: seat.source,
+    runtime: seat.runtime,
+    modelRaw: seat.model,
+    contextPct: seat.contextUsedPct,
+    contextTokens: seat.contextTokens ?? null,
+    activity: seat.activity?.display ?? null,
     ...(seat.agentRole !== undefined ? { agentRole: seat.agentRole } : {}),
     ...(seat.keySkills ? { keySkills: seat.keySkills } : {}),
     ...c,
@@ -452,6 +467,13 @@ export function buildRigMap(
             name: ep.raw,
             model: { text: 'unplaced', family: 'other' },
             pip: 'unknown',
+            address: ep.raw,
+            source: 'tmux' as const,
+            runtime: null,
+            modelRaw: null,
+            contextPct: null,
+            contextTokens: null,
+            activity: null,
             ...(openAt.get(ep.key) ?? NONE),
           }
     );

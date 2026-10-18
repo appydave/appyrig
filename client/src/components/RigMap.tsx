@@ -7,7 +7,17 @@ import type { WorkChain } from '../fleet/timeline.js';
 import { ago, PIP } from '../fleet/model.js';
 import { plannedWord, type MapEdge, type RigMap as RigMapView } from '../fleet/views.js';
 import SkillPill from './SkillPill.js';
-import { RoleTag } from './SeatCardLines.js';
+import {
+  Address,
+  ContextLine,
+  CopyAttach,
+  harnessOf,
+  HarnessMark,
+  pctText,
+  RoleTag,
+  tokensText,
+} from './SeatCardLines.js';
+import type { MapSeat } from '../fleet/views.js';
 
 interface Props {
   map: RigMapView | null;
@@ -30,6 +40,13 @@ interface Card {
   lines: string[];
 }
 
+/** v15 UI-A: a seat's detail card, anchored under its node in canvas coordinates. */
+interface Detail {
+  key: string;
+  x: number;
+  y: number;
+}
+
 /** C6-A: the lowest arc's height above (or below) the row, and the step between stacked arcs. */
 const ARC_BASE = 16;
 const ARC_STEP = 11;
@@ -40,7 +57,7 @@ const ARC_MIN = 24;
 /** C6-A: the gutter left of every lane that lines between lanes run down. */
 const GUTTER = 26;
 /** Each further outside lane steps right, so a line to the rig never runs through another card. */
-const LANE_STEP = 240;
+const LANE_STEP = 300;
 
 /** A point along the cubic bezier P0..P3 at t. */
 const bez = (t: number, p0: number, p1: number, p2: number, p3: number) =>
@@ -290,6 +307,34 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
   // C6a: lines and boxes answer hover (a floating card) and click (a details drawer for a line).
   const [card, setCard] = useState<Card | null>(null);
   const [pinned, setPinned] = useState<{ edge: string; itemId: string | null } | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keepDetail = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = null;
+  };
+  const hideDetail = () => {
+    keepDetail();
+    hideTimer.current = setTimeout(() => setDetail(null), 220);
+  };
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    []
+  );
+  const showDetail = (key: string, node: HTMLElement) => {
+    keepDetail();
+    const c = box.current;
+    if (!c || document.querySelector('[data-explain-on]')) return;
+    const a = c.getBoundingClientRect();
+    const r = node.getBoundingClientRect();
+    setDetail({
+      key,
+      x: r.left - a.left + c.scrollLeft,
+      y: r.bottom - a.top + c.scrollTop + 6,
+    });
+  };
   const bodies = useRef(new Map<string, HandoffGetOutput>());
   const [follow, setFollow] = useState<string | null>(null);
   // r1 INFO-2: computed once per follow, not twice per render.
@@ -297,6 +342,7 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
   useEffect(() => {
     setPinned(null);
     setCard(null);
+    setDetail(null);
     setFollow(null);
   }, [map?.rig.key]);
   useEffect(() => {
@@ -412,17 +458,14 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
       'Click (or Enter) for the handoffs.',
     ]);
   };
-  const seatCard = (key: string, ev: { clientX: number; clientY: number }) => {
-    const ins = map.edges.filter((e) => e.to === key && !e.self).reduce((n, e) => n + e.count, 0);
-    const outs = map.edges
-      .filter((e) => e.from === key && !e.self)
-      .reduce((n, e) => n + e.count, 0);
-    const waiting = map.edges.filter((e) => e.to === key).reduce((n, e) => n + e.open, 0);
-    cardAt(ev, nameOf(key), [
-      `${ins} handed in · ${outs} handed out${waiting ? ` · ${waiting} waiting` : ''}`,
-      'Click to open the seat.',
-    ]);
-  };
+  const seatsByKey = new Map<string, MapSeat>(
+    map.lanes.flatMap((l) => l.pods.flatMap((p) => p.seats.map((x) => [x.key, x] as const)))
+  );
+  const detailSeat = detail ? seatsByKey.get(detail.key) : undefined;
+  const edgesOf = (key: string) =>
+    [...map.edges, ...(map.planned ?? [])].filter(
+      (e) => !e.self && (e.from === key || e.to === key)
+    ).length;
   const plannedTitle = (e: MapEdge) =>
     `Planned: ${nameOf(e.from)} ${plannedWord(e.planned ?? '')} ${nameOf(e.to)} (rig spec ${e.planned}) · no handoff along it yet`;
   const plannedCard = (e: MapEdge, ev: { clientX: number; clientY: number }) =>
@@ -605,9 +648,10 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                         data-testid="rig-map-node"
                         data-pip={s.pip}
                         onClick={() => !s.key.startsWith('?/') && onOpen(s.key)}
-                        onPointerEnter={(ev) => seatCard(s.key, ev)}
-                        onPointerMove={(ev) => seatCard(s.key, ev)}
-                        onPointerLeave={() => setCard(null)}
+                        onPointerEnter={(ev) => showDetail(s.key, ev.currentTarget)}
+                        onFocus={(ev) => showDetail(s.key, ev.currentTarget)}
+                        onPointerLeave={hideDetail}
+                        onBlur={hideDetail}
                         aria-label={
                           s.key.startsWith('?/')
                             ? `${s.name}: not a seat any machine reports`
@@ -621,11 +665,16 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                         }
                         data-explain-ctx={`${s.name} · ${s.model.text} · ${PIP[s.pip].label}`}
                       >
-                        <span className="chip" data-family={s.model.family} data-explain="model">
-                          {s.model.text}
+                        <span className="node-top">
+                          <HarnessMark runtime={s.runtime} model={s.modelRaw} />
+                          <span className="chip" data-family={s.model.family} data-explain="model">
+                            {s.model.text}
+                          </span>
                         </span>
                         <b>{s.name}</b>
+                        {s.source === 'openrig' && <Address id={s.address} />}
                         <RoleTag agentRole={s.agentRole} />
+                        <ContextLine pct={s.contextPct} tokens={s.contextTokens} />
                         <span className="pip" data-pip={s.pip} data-explain={`status-${s.pip}`}>
                           <span className="pip-glyph">{PIP[s.pip].glyph}</span> {PIP[s.pip].label}
                         </span>
@@ -658,6 +707,39 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
             </div>
           </div>
         ))}
+        {detail && detailSeat && (
+          <div
+            className="seat-detail"
+            data-testid="seat-detail"
+            style={{ left: detail.x, top: detail.y }}
+            onPointerEnter={keepDetail}
+            onPointerLeave={hideDetail}
+          >
+            <b>{detailSeat.name}</b>
+            <dl className="mono">
+              <dt>activity</dt>
+              <dd data-testid="detail-activity">
+                {detailSeat.activity ?? PIP[detailSeat.pip].label}
+              </dd>
+              <dt>session</dt>
+              <dd data-testid="detail-session">{detailSeat.address}</dd>
+              <dt>runtime</dt>
+              <dd data-testid="detail-runtime">
+                {harnessOf(detailSeat.runtime, detailSeat.modelRaw).label} ·{' '}
+                {detailSeat.modelRaw ?? '—'}
+              </dd>
+              <dt>spec / role</dt>
+              <dd data-testid="detail-role">{detailSeat.agentRole ?? '—'}</dd>
+              <dt>edges</dt>
+              <dd data-testid="detail-edges">{edgesOf(detailSeat.key)}</dd>
+              <dt>tokens</dt>
+              <dd data-testid="detail-tokens">
+                {tokensText(detailSeat.contextTokens)} · {pctText(detailSeat.contextPct)}
+              </dd>
+            </dl>
+            {!detailSeat.key.startsWith('?/') && <CopyAttach session={detailSeat.address} />}
+          </div>
+        )}
       </div>
       {card && (
         <div

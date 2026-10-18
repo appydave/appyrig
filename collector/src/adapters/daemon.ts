@@ -92,6 +92,10 @@ export function nodeToSeat(node: LenientNodeT): Seat {
     viewerStatus: null,
     lastActivityAt: node.lastActivityAt ?? null,
     contextUsedPct: node.contextUsage?.usedPercentage ?? null,
+    contextTokens:
+      typeof node.contextUsage?.totalInputTokens === 'number'
+        ? Math.max(0, Math.round(node.contextUsage.totalInputTokens))
+        : null,
     work: {
       pending: node.pendingWorkCount ?? 0,
       inProgress: node.inProgressWorkCount ?? 0,
