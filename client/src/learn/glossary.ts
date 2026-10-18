@@ -427,6 +427,22 @@ export const GLOSSARY: Record<string, Term> = {
     what: 'The account with the most room in both windows: one whose 5-hour or weekly verdict says be careful or will run out never wins over one where neither does; then the less-used of its two windows decides.',
     why: 'Where the next team should run. A suggestion only; AppyRig never moves work.',
   },
+  // ---------------------------------------------------------------- v2 kit (client/src/v2/kit)
+  'v2-mock': {
+    term: 'Mock',
+    what: 'Not wired: this control is a mock and changes nothing.',
+    why: 'v2 shows how a control would feel before it is built. Pressing it never reaches the hub, OpenRig or any machine.',
+  },
+  'v2-sample': {
+    term: 'Sample data',
+    what: 'Believable data built from the real machine, rig and seat names, but not collected from them.',
+    why: 'It shows what a page would look like once AppyRig collects this. Do not act on its numbers.',
+  },
+  'v2-switch': {
+    term: 'Current / v2',
+    what: 'Which version of AppyRig you are looking at. V switches the whole app; B flips just this page between old and new.',
+    why: 'v2 is the redesign, built inside the real app on the same data, so the two can be compared side by side.',
+  },
   drawers: {
     term: 'Machines whose cached profile names this account',
     what: 'The machines whose cached Claude profile names this account, how old each cache is, and the Claude seats running on those machines.',

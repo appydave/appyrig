@@ -29,6 +29,8 @@ import { findSeat, orderedMachines, seatName, type GroupBy } from './fleet/model
 import { buildRigMap, listRigs } from './fleet/views.js';
 import { followWork } from './fleet/timeline.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
+import { useV2 } from './v2/useV2.js';
+import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
 const FOLLOW_KEY = 'appyrig.followLatest';
@@ -134,11 +136,13 @@ function readGroupBy(): GroupBy {
 interface Props {
   /** Test seam: inject a socket instead of connecting to the hub. */
   getSocket?: () => FleetSocket;
+  /** v2 W0: replaying a recorded snapshot (`?frozen=<name>`), shown in the header. */
+  frozen?: FrozenMeta;
 }
 
-export default function App({ getSocket = getFleetSocket }: Props) {
+export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const { state, link } = useFleet(getSocket);
-  const now = useNow();
+  const now = frozenNow(useNow(), frozen);
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
   const [view, setView] = useState<View>(readView);
   const [explain, setExplain] = useState<boolean>(readExplain);
@@ -496,6 +500,34 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     },
     [allMachines, activeRig]
   );
+  // v2 W0: the version switch, per-page flip and grouped nav; the state above is shared with v2.
+  const v2 = useV2({
+    view,
+    chooseView,
+    keys: !focused && !agentTile && !overlay,
+    frozen,
+    ctx: {
+      machines,
+      allMachines,
+      rigs,
+      activeRig,
+      chooseRig,
+      pickedRig: rigPicked && !followLatest ? activeRig : null,
+      groupBy,
+      now,
+      link,
+      hubConnected,
+      received: state.received,
+      getSocket,
+      keys: !focused && !agentTile && !overlay,
+      hidden: hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label })),
+      onShowMachine: toggleMachine,
+      onOpenSeat: open,
+      onOpenSkills: openSkills,
+      onOpenAgent: openAgent,
+      onOpenFiles: openFiles,
+    },
+  });
 
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
@@ -574,7 +606,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           <span className="wordmark-a">Appy</span>
           <span className="wordmark-b">Rig</span>
         </span>
-        <nav className="view-tabs" aria-label="Screens">
+        <nav className="view-tabs" aria-label="Screens" hidden={v2.groupedNav}>
           {VIEWS.map((v) => (
             <button
               key={v.key}
@@ -589,6 +621,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
             </button>
           ))}
         </nav>
+        {v2.nav}
+        {v2.controls}
         <span className="explain-anchor">
           <button
             type="button"
@@ -756,8 +790,10 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           ) : undefined
         }
       />
-      {legend && !focusTile && <Legend view={view} onClose={toggleLegend} />}
-      {view === 'wall' && (
+      {legend && !focusTile && !v2.newPage && <Legend view={view} onClose={toggleLegend} />}
+      {v2.banner}
+      {v2.body}
+      {!v2.body && view === 'wall' && (
         <Wall
           machines={machines}
           groupBy={groupBy}
@@ -772,7 +808,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           pickedRig={rigPicked && !followLatest ? activeRig : null}
         />
       )}
-      {RIG_VIEWS.includes(view) && (
+      {!v2.body && RIG_VIEWS.includes(view) && (
         <main className="view" data-testid={`view-body-${view}`}>
           <p className="follow-row">
             <button
@@ -874,17 +910,17 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           )}
         </main>
       )}
-      {view === 'machines' && (
+      {!v2.body && view === 'machines' && (
         <main className="view" data-testid="view-body-machines">
           <Machines machines={machines} hidden={hiddenShown.length} now={now} />
         </main>
       )}
-      {view === 'accounts' && (
+      {!v2.body && view === 'accounts' && (
         <main className="view" data-testid="view-body-accounts">
           <Accounts machines={allMachines} now={now} />
         </main>
       )}
-      {view === 'schema' && (
+      {!v2.body && view === 'schema' && (
         <main className="view" data-testid="view-body-schema">
           <SchemaView
             socket={getSocket()}
@@ -895,7 +931,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         </main>
       )}
       <ExplainLayer enabled={explain && !focusTile && !overlay} />
-      {view === 'learn' && (
+      {!v2.body && view === 'learn' && (
         <main className="view" data-testid="view-body-learn">
           <Learn machines={allMachines} now={now} onGoTo={chooseView} />
         </main>
