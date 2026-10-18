@@ -238,6 +238,43 @@ export const HealthDataSchema = z.strictObject({
 });
 export type HealthData = z.infer<typeof HealthDataSchema>;
 
+/**
+ * Every reason an empty findings list is NOT all-clear, from the health data alone. One function,
+ * used by the hub's `health.findings` (assess) and by the v2 Health page, so both say the same
+ * words. Empty means: diagnosis is on, detectors are listed and enabled, and every coverage source
+ * evaluated all it had.
+ */
+export function healthCaveats(d: HealthData): string[] {
+  const out: string[] = [];
+  const p = d.policy;
+  if (p === null)
+    out.push('the health policy could not be read: cannot tell whether detectors run');
+  else {
+    if (p.diagnosisEnabled === false)
+      out.push(
+        'diagnosis is off on this daemon: its scheduled detectors do not run, so an empty list proves nothing'
+      );
+    else if (p.diagnosisEnabled === null)
+      out.push('the policy did not say whether diagnosis is on');
+    if (p.detectors.length === 0)
+      out.push('the policy lists no detectors: nothing is known to have run');
+    else if (p.detectors.every((x) => p.disabledDetectors.includes(x)))
+      out.push('every detector the policy lists is disabled');
+  }
+  if (d.coverage.length === 0) out.push('no coverage was reported: cannot tell what was evaluated');
+  for (const c of d.coverage) {
+    const unit = c.unit ? ` ${c.unit}` : '';
+    if (c.partial === true) out.push(`coverage of ${c.source} was partial`);
+    if (c.evaluated === null || c.total === null)
+      out.push(`coverage of ${c.source} did not say how much was evaluated`);
+    else if (c.evaluated === 0) out.push(`${c.source} evaluated 0${unit}: nothing was examined`);
+    else if (c.evaluated < c.total && c.partial !== true)
+      out.push(`${c.source} evaluated ${c.evaluated} of ${c.total}${unit}`);
+  }
+  if (d.findingsTruncated === true) out.push('the findings list was cut short');
+  return out;
+}
+
 // ── settings ─────────────────────────────────────────────────────────────────
 
 const SettingValue = z.union([z.string().max(200), z.number(), z.boolean(), z.null()]);

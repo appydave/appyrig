@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  healthCaveats,
   type AccountListOutput,
   sampleAge,
   FeedbackAddInputSchema,
@@ -487,24 +488,8 @@ export function assess(data: DaemonDataFor<'health'> | null): {
       ],
     };
   if (data.findings.length > 0) return { assessment: 'findings', caveats: [] };
-  const caveats: string[] = [];
-  if (data.policy === null)
-    caveats.push('the health policy could not be read: cannot tell whether detectors run');
-  else if (data.policy.diagnosisEnabled === false)
-    caveats.push(
-      'diagnosis is off on this daemon: its scheduled detectors do not run, so an empty list proves nothing'
-    );
-  else if (data.policy.diagnosisEnabled === null)
-    caveats.push('the policy did not say whether diagnosis is on');
-  if (data.coverage.length === 0)
-    caveats.push('no coverage was reported: cannot tell what was evaluated');
-  for (const c of data.coverage) {
-    if (c.partial === true) caveats.push(`coverage of ${c.source} was partial`);
-    if (c.evaluated === 0)
-      caveats.push(`${c.source} evaluated 0${c.unit ? ` ${c.unit}` : ''}: nothing was examined`);
-  }
-  if (data.findingsTruncated === true) caveats.push('the findings list was cut short');
-  return { assessment: 'none-found', caveats };
+  // One list of reasons, shared with the v2 Health page (shared/src/daemondata.ts).
+  return { assessment: 'none-found', caveats: healthCaveats(data) };
 }
 
 type RowKey = Pick<HistoryTransitionRow, 'at' | 'machine' | 'id'>;

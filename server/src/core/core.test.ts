@@ -962,7 +962,12 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
         evaluatedAt: null,
       },
     ],
-    policy: { diagnosisEnabled: true, disabledDetectors: [], detectors: [], thresholds: {} },
+    policy: {
+      diagnosisEnabled: true,
+      disabledDetectors: [],
+      detectors: ['passive-ceremony'],
+      thresholds: {},
+    },
     contextSummary: null,
     restore: null,
     daemon: null,
@@ -1003,6 +1008,7 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
     expect(roamy.assessment).toBe('none-found');
     expect(roamy.caveats).toEqual([
       expect.stringMatching(/diagnosis is off/),
+      expect.stringMatching(/lists no detectors/),
       expect.stringMatching(/evaluated 0 handoff families/),
     ]);
     expect(v.machines.find((m) => m.machine === 'm2')).toMatchObject({
@@ -1039,6 +1045,41 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
     expect(
       value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]!.caveats
     ).toEqual(['coverage of s was partial']);
+    // W5b M2: every detector disabled; coverage with no numbers; fewer evaluated than total, partial unset
+    const cov = (evaluated: number | null, total: number | null, partial: boolean | null) => ({
+      source: 's',
+      unit: 'seats',
+      evaluated,
+      total,
+      omitted: null,
+      partial,
+      evaluatedAt: null,
+    });
+    const caveatsOf = () =>
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]!;
+    put(
+      'roamy',
+      health({
+        policy: {
+          diagnosisEnabled: true,
+          disabledDetectors: ['a', 'b'],
+          detectors: ['a', 'b'],
+          thresholds: {},
+        },
+      })
+    );
+    expect(caveatsOf()).toMatchObject({
+      assessment: 'none-found',
+      caveats: ['every detector the policy lists is disabled'],
+    });
+    put('roamy', health({ coverage: [cov(null, 9, false)] }));
+    expect(caveatsOf().caveats).toEqual(['coverage of s did not say how much was evaluated']);
+    put('roamy', health({ coverage: [cov(4, null, null)] }));
+    expect(caveatsOf().caveats).toEqual(['coverage of s did not say how much was evaluated']);
+    put('roamy', health({ coverage: [cov(4, 9, null)] }));
+    expect(caveatsOf().caveats).toEqual(['s evaluated 4 of 9 seats']);
+    put('roamy', health({ coverage: [cov(9, 9, null)] }));
+    expect(caveatsOf().caveats).toEqual([]);
     // findings present; unreadable findings
     put(
       'roamy',
