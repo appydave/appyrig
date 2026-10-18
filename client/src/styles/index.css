@@ -4351,3 +4351,138 @@ g[data-testid='rig-map-edge'][data-selected] .rigmap-edge {
   outline: 2px solid var(--ar-ink);
   outline-offset: 2px;
 }
+
+/* ---------- D15 · UI-B: the one agent panel (Rig Map and Handoff Flow share it) ---------- */
+.agent-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50; /* the seat panel's layer: under the feedback button (55), keys overlay (60), viewers (70) */
+  width: min(560px, 100vw);
+  box-sizing: border-box;
+  background: var(--ar-surface-raised);
+  border-left: 1px solid var(--ar-ink);
+  box-shadow: -8px 0 24px rgb(52 45 45 / 0.18);
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  animation: ar-arrive var(--ar-arrive) var(--ar-ease);
+}
+.agent-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.agent-head .pill-btn {
+  margin-left: auto;
+}
+.agent-title {
+  font-family: var(--ar-font-display);
+  font-size: 28px;
+  letter-spacing: 0.04em;
+}
+.agent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.agent-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--ar-line);
+}
+.agent-tab {
+  font-family: var(--ar-font-label);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+}
+.agent-tab[aria-selected='true'] {
+  background: var(--ar-canvas);
+  border-color: var(--ar-line);
+  color: var(--ar-ink);
+  box-shadow: inset 0 -3px 0 var(--ar-cta);
+}
+.agent-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.agent-doc-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.agent-doc {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  background: var(--ar-canvas);
+  color: var(--ar-ink);
+  cursor: pointer;
+}
+.agent-doc[aria-current='true'] {
+  border-color: var(--ar-ink);
+  box-shadow: inset 4px 0 0 var(--ar-cta);
+}
+.agent-doc-view {
+  border-top: 1px solid var(--ar-line);
+  padding-top: 8px;
+}
+.agent-doc-body {
+  max-height: 46vh;
+  overflow: auto;
+}
+.agent-terminal .focus-terminal {
+  height: 58vh;
+}
+.handoff-agents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.chip-btn {
+  cursor: pointer;
+  font: inherit;
+}
+/* Handoff Flow: a stage with no lead is an outline; senders from outside the rig sit apart. */
+.flow-box.none {
+  fill: transparent;
+  stroke-dasharray: 7 6;
+  stroke: var(--ar-ink-muted);
+}
+.flow-box.outside {
+  fill: var(--ar-surface);
+  stroke: var(--ar-ink-muted);
+  stroke-width: 1.5;
+}
+.flow-stage-name.small {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-panel {
+    animation: none;
+  }
+}

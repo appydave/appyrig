@@ -26,6 +26,11 @@ interface Props {
   socket?: FleetSocket;
   /** S2: ← → step through handoffs. Off while an overlay owns the keyboard. */
   keys?: boolean;
+  /**
+   * D15 · UI-B: open the one agent panel (App owns it; the Rig Map opens the same one). A box with
+   * exactly one seat opens it on click; the documents live there, never in this view.
+   */
+  onOpenAgent?: (seatKey: string) => void;
 }
 
 const W = 1000;
@@ -168,7 +173,14 @@ const clock = (t: number) =>
  * The scrubber replays a finished run.
  * A team with no QA or review seat is drawn one box per seat instead of being squashed into roles.
  */
-export default function HandoffFlow({ machine, rig, now, socket, keys = true }: Props) {
+export default function HandoffFlow({
+  machine,
+  rig,
+  now,
+  socket,
+  keys = true,
+  onOpenAgent,
+}: Props) {
   // S4: the handoff detail panel. `sel` names a line (edge key) and/or one item on it.
   // B1: `stage` names a box (a seat or role) instead of a line.
   const [sel, setSel] = useState<{
@@ -362,6 +374,12 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
     return {
       edge: `stage:${stage}`,
       title: `${labelOf(stage)} · ${inN} in · ${outN} out`,
+      agents: flow.stages
+        .find((x) => x.stage === stage)
+        ?.seats.map((x) => ({
+          key: x.key,
+          name: x.name,
+        })),
       items,
       // QA B1-1: a box with no handoffs still answers a click, saying so (never the idle text).
       itemId:
@@ -443,6 +461,14 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
   };
   const pinStage = (stage: string) => {
     setCard(null);
+    // One seat in the box: the box IS that agent, so it opens the agent panel (documents first).
+    const only = flow.stages.find((x) => x.stage === stage)?.seats;
+    if (onOpenAgent && only?.length === 1) {
+      setSel(null);
+      setPinned(false);
+      onOpenAgent(only[0]!.key);
+      return;
+    }
     setSel({ edge: null, itemId: null, stage });
     setPinned(true);
   };
@@ -685,7 +711,11 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
                 data-selected={sel?.stage === s.stage || undefined}
                 tabIndex={0}
                 role="button"
-                aria-label={`${s.label}: Enter lists its handoffs`}
+                aria-label={
+                  onOpenAgent && s.seats.length === 1
+                    ? `${s.label}: Enter opens this agent`
+                    : `${s.label}: Enter lists its handoffs`
+                }
                 onPointerEnter={(ev) => peekStage(s.stage, ev)}
                 onPointerMove={(ev) => mode !== 'hover' && peekStage(s.stage, ev)}
                 onPointerLeave={unpeek}
@@ -713,23 +743,40 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
                   width={L.boxW}
                   height={BOX_H}
                   rx={10}
-                  className={`flow-box ${state}`}
+                  className={`flow-box ${state}${s.noLead ? ' none' : ''}${flow.mode === 'roles' && s.outside ? ' outside' : ''}`}
+                  data-testid={
+                    s.noLead
+                      ? 'flow-no-lead'
+                      : s.outside && flow.mode === 'roles'
+                        ? 'flow-outside'
+                        : undefined
+                  }
                 />
                 <text
                   x={x}
                   y={ROW_Y - 14}
-                  className={flow.mode === 'roles' ? 'flow-stage-name' : 'flow-seat-name'}
+                  className={
+                    flow.mode !== 'roles'
+                      ? 'flow-seat-name'
+                      : s.noLead || s.outside
+                        ? 'flow-stage-name small'
+                        : 'flow-stage-name'
+                  }
                 >
-                  {s.label}
+                  {s.noLead ? 'No lead — by design' : s.label}
                 </text>
                 <text x={x} y={ROW_Y + 8} className="flow-seats">
                   {s.seats.length
                     ? s.seats.map((x) => x.model).join(' · ')
-                    : s.outside
-                      ? 'outside this rig'
-                      : s.stage === 'others'
-                        ? 'quieter seats'
-                        : 'no seat'}
+                    : s.noLead
+                      ? 'no lead seat in this rig'
+                      : s.outside
+                        ? flow.mode === 'roles'
+                          ? 'orchestrator, David or another rig'
+                          : 'outside this rig'
+                        : s.stage === 'others'
+                          ? 'quieter seats'
+                          : 'no seat'}
                 </text>
                 <text
                   x={x}
@@ -740,7 +787,9 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
                     ? `${s.waiting} waiting · oldest ${ago(s.oldestWaitMs ?? 0)}`
                     : s.stale
                       ? `${s.stale} left open · ${ago(s.oldestStaleMs ?? 0)}`
-                      : 'nothing waiting'}
+                      : s.noLead
+                        ? ''
+                        : 'nothing waiting'}
                 </text>
                 {entryNode === s.stage && (
                   <text
@@ -792,6 +841,7 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
               setPinned(true);
               setFollow(id);
             }}
+            onOpenAgent={onOpenAgent}
             keys={keys}
             onLine={(dir) => {
               // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
@@ -824,11 +874,26 @@ export default function HandoffFlow({ machine, rig, now, socket, keys = true }: 
           {flow.stages.map((s) => (
             <li key={s.stage}>
               <b>{s.label}</b>{' '}
-              {s.seats.map((x) => (
-                <span key={x.name} className="chip" data-family={x.family} data-explain="model">
-                  {x.name}
-                </span>
-              ))}
+              {s.seats.map((x) =>
+                onOpenAgent ? (
+                  <button
+                    key={x.name}
+                    type="button"
+                    className="chip chip-btn"
+                    data-family={x.family}
+                    data-explain="model"
+                    data-testid="flow-agent-chip"
+                    title="Open this agent: its documents, terminal and messages"
+                    onClick={() => onOpenAgent(x.key)}
+                  >
+                    {x.name}
+                  </button>
+                ) : (
+                  <span key={x.name} className="chip" data-family={x.family} data-explain="model">
+                    {x.name}
+                  </span>
+                )
+              )}
             </li>
           ))}
         </ul>

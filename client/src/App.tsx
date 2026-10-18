@@ -3,6 +3,7 @@ import Accounts from './components/Accounts.js';
 import ExplainLayer from './components/ExplainLayer.js';
 import FleetStrip from './components/FleetStrip.js';
 import Focus from './components/Focus.js';
+import AgentPanel from './components/AgentPanel.js';
 import HandoffFlow from './components/HandoffFlow.js';
 import Learn from './components/Learn.js';
 import Machines from './components/Machines.js';
@@ -160,6 +161,9 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   /** Batch 2 · C1: off by default. On, Map and Flow show the most recently active rig, live. */
   const [followLatest, setFollowLatest] = useState<boolean>(readFollow);
   const [focused, setFocused] = useState<string | null>(null);
+  /** D15 · UI-B: the ONE agent panel (Rig Map and Handoff Flow open the same one). */
+  const [agentKey, setAgentKey] = useState<string | null>(null);
+  const agentOpener = useRef<HTMLElement | null>(null);
   const lastFocused = useRef<string | null>(null);
   /** S2: the element that opened Focus (tile, map node, strip alert), so Esc lands back on it. */
   const opener = useRef<HTMLElement | null>(null);
@@ -210,6 +214,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   };
   const seatCount = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
   const focusTile = focused ? findSeat(state.machines, focused) : null;
+  const agentTile = agentKey ? findSeat(state.machines, agentKey) : null;
   const hubConnected = link === 'connected';
   const rigs = useMemo(() => listRigs(machines), [machines]);
   // Stale/fresh splits only need minute precision; a per-second value would re-lay the map every tick.
@@ -372,6 +377,26 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     setFocused(key);
   }, []);
   const close = useCallback(() => setFocused(null), []);
+  const openAgent = useCallback((key: string) => {
+    if (key.startsWith('?/')) return;
+    const active = document.activeElement;
+    agentOpener.current = active instanceof HTMLElement && active !== document.body ? active : null;
+    setHelp(false);
+    setAgentKey(key);
+  }, []);
+  const closeAgent = useCallback(() => {
+    setAgentKey(null);
+    const back = agentOpener.current;
+    if (back?.isConnected) back.focus();
+  }, []);
+  // The agent panel's Full screen button: the old Focus view, with the panel put away.
+  const openFocusFromAgent = useCallback(
+    (key: string) => {
+      setAgentKey(null);
+      open(key);
+    },
+    [open]
+  );
   const openFiles = useCallback((machineId: string, rig: string) => {
     const active = document.activeElement;
     filesOpener.current = active instanceof HTMLElement && active !== document.body ? active : null;
@@ -415,13 +440,17 @@ export default function App({ getSocket = getFleetSocket }: Props) {
     const back = layersOpener.current;
     if (back?.isConnected) back.focus();
   }, []);
+  // The agent panel belongs to the Map and the Flow: leaving them puts it away.
+  useEffect(() => {
+    if (!RIG_VIEWS.includes(view)) setAgentKey(null);
+  }, [view]);
   // The Debug view belongs to an open seat: closing the seat closes it.
   useEffect(() => {
-    if (!focused) {
+    if (!focused && !agentKey) {
       setDebugFor(null);
       setLayersOpen(null);
     }
-  }, [focused]);
+  }, [focused, agentKey]);
 
   // QA views LOW-1/LOW-2: a first-visit hint hangs under its button, shifted just enough to stay
   // inside the window (16 px margin) wherever the header wraps; under 1000 px CSS puts it in flow.
@@ -799,10 +828,10 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           {view === 'map' ? (
             <RigMap
               map={rigMap}
-              onOpen={open}
+              onOpen={openAgent}
               onOpenSkills={openSkills}
               socket={getSocket()}
-              keys={!focusTile && !overlay}
+              keys={!focusTile && !overlay && !agentTile}
               chainOf={chainOf}
             />
           ) : view === 'flow' ? (
@@ -811,7 +840,8 @@ export default function App({ getSocket = getFleetSocket }: Props) {
               rig={activeRig?.name ?? null}
               now={now}
               socket={getSocket()}
-              keys={!focusTile && !overlay}
+              keys={!focusTile && !overlay && !agentTile}
+              onOpenAgent={openAgent}
             />
           ) : (
             <RunTimeline
@@ -911,7 +941,20 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           legend={legend ? <Legend view="focus" onClose={toggleLegend} /> : null}
         />
       )}
-      {debugFor && focusTile && (
+      {agentTile && !focusTile && (
+        <AgentPanel
+          tile={agentTile}
+          socket={getSocket()}
+          now={now}
+          hubConnected={hubConnected}
+          onClose={closeAgent}
+          onOpenFocus={openFocusFromAgent}
+          onOpenDebug={openDebug}
+          onOpenRigFiles={openFiles}
+          keys={!feedback && !filesFor && !debugFor && !help}
+        />
+      )}
+      {debugFor && (focusTile || agentTile) && (
         <Loadout
           socket={getSocket()}
           machineId={debugFor.machineId}

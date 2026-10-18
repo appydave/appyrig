@@ -40,6 +40,8 @@ export type Swatch =
   | 'stage-box'
   | 'outside-box'
   | 'no-seat'
+  | 'no-lead'
+  | 'outside-sender'
   | 'box-waiting'
   | 'box-stale'
   | 'flow-forward'
@@ -354,19 +356,31 @@ const FLOW: LegendSection[] = [
         swatch: 'stage-box',
         mark: 'LEAD · BUILDERS · QA · REVIEWER',
         means:
-          'Stages guessed from seat names: qa / tester → QA, review / r1 → Reviewer, orch / lead / boss → Lead, the rest → Builders. Seats from other rigs count too, by their name.',
+          "Stages guessed from seat names: qa / tester → QA, review / r1 → Reviewer, orch / lead / boss → Lead, the rest → Builders. Click a box with one agent to open that agent's panel (documents first, then terminal and messages).",
+      },
+      {
+        swatch: 'no-lead',
+        mark: 'Dashed outline · No lead — by design',
+        means:
+          'This rig has no lead seat, on purpose. The Lead stage is drawn as an outline, not as an empty stage. Nobody in the rig acts as lead; work that comes from an orchestrator or from you arrives from the box at the left edge.',
+      },
+      {
+        swatch: 'outside-sender',
+        mark: 'From outside the rig',
+        means:
+          'Messages sent from outside the rig (openrig-orch, you, a seat of another rig) come from this separate box at the left edge. It appears only when the rig received or sent something outside itself. It is never drawn as if the lead sent them.',
       },
       {
         swatch: 'outside-box',
         mark: 'name@rig · name@machine',
         means:
-          'A seat outside this rig, by its full address. Rigs with no QA or review seat draw one box per seat instead of stages.',
+          'In a rig drawn one box per seat (no QA or review seat), a seat outside this rig, by its full address.',
       },
       {
         swatch: 'no-seat',
         mark: 'no seat',
         means:
-          'This rig has none of its own seats in that stage. Work can still land there from another rig (e.g. orch-boss@control as Lead), so it can show "1 waiting".',
+          'This rig has none of its own seats in that stage (a Builders, QA or Reviewer stage nobody sits in).',
       },
       {
         swatch: 'box-waiting',
@@ -411,7 +425,7 @@ const FLOW: LegendSection[] = [
         swatch: 'flow-report',
         mark: 'Dashed arc above',
         means:
-          'Going back to the Lead: reports, verdicts, questions (in the control rig, reports arriving from other rigs). In a rig drawn one box per seat: anything going back to an earlier box.',
+          'Going back to the Lead (or to the outside box): reports, verdicts, questions. In a rig drawn one box per seat: anything going back to an earlier box.',
       },
       {
         swatch: 'flow-rework',
@@ -832,6 +846,8 @@ export const TERM_FOR: Partial<Record<Swatch, string>> = {
   self: 'self-handoff',
   'stage-box': 'stage',
   'outside-box': 'seat-mode',
+  'no-lead': 'stage',
+  'outside-sender': 'stage',
   'box-waiting': 'waiting',
   'box-stale': 'stale',
   'flow-forward': 'flow-forward',

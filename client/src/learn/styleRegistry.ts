@@ -179,6 +179,22 @@ export const STYLE_REGISTRY: StyleEntry[] = [
     tokens: ['.flow-box.stale', '.rigmap-edge.stale', '.node-stale'],
   },
   {
+    id: 'flow-no-lead',
+    look: 'Handoff Flow: an OUTLINE box with a dashed grey border and no fill, named "No lead — by design"',
+    means:
+      'This rig has no lead seat, on purpose. It is not a stage that failed to load, and nothing is waiting there.',
+    screens: ['flow'],
+    tokens: ['.flow-box.none'],
+  },
+  {
+    id: 'flow-outside',
+    look: 'Handoff Flow: a pale grey box at the left edge, named "From outside the rig"',
+    means:
+      'Where messages from outside the rig come from (an orchestrator, you, another rig). It is not the lead.',
+    screens: ['flow'],
+    tokens: ['.flow-box.outside'],
+  },
+  {
     id: 'map-planned',
     look: 'Grey DOTTED line on the Rig Map with a word on it ("delegates", "observes") instead of a number',
     means:
@@ -639,6 +655,11 @@ export const STYLE_IGNORED: Record<string, string> = {
   'g[data-testid=rig-map-edge]':
     'Cursor and focus ring for a line; the line styles are registered.',
   '.legend-tile.mini': 'The legend’s own small sample tile.',
+  '.flow-stage-name.small': 'A smaller font for the two long box names; no meaning of its own.',
+  '.agent-tab[aria-selected=true]':
+    'The chosen tab of the agent panel (yellow underline); a tab state, not a status mark.',
+  '.agent-doc[aria-current=true]':
+    'The document open in the agent panel (yellow edge); a selection, not a status mark.',
   '.pill-btn.cta': 'The one call-to-action button style (yellow), not a status mark.',
   '.rig-info[data-preview=true]': 'Legacy preview border; previews were removed in B1.',
   'p[data-testid=rig-info-summary]': 'Text clamp for the rig summary; layout only.',

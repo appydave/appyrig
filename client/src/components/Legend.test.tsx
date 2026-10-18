@@ -46,7 +46,8 @@ describe('legend data (S1)', () => {
       'another rig',
       'N back',
       'Dashed arc above',
-      'from other rigs',
+      'No lead — by design',
+      'From outside the rig',
       'Yellow dot',
       'N waiting',
       'no seat',
@@ -69,7 +70,7 @@ describe('legend data (S1)', () => {
       'Dark chip = the rig shown', // C5: still says which chip is shown
       '▲ needs attention', // B2: the rig state on every chip, not a trailing "· running"
       'Panel shows: On click | Follow pointer', // B1: the panel says how it works
-      'orch-boss@control as Lead', // D5: "no seat" can still show waiting
+      'nobody sits in', // "no seat": a stage this rig has no seat for
       'name@rig · name@machine', // text fix: test-team@m2
     ]) {
       expect(all).toContain(want);
