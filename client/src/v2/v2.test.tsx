@@ -132,6 +132,7 @@ describe('v2 version switch', () => {
   it("v2 nav is grouped; the Fleet group's Graph page replaces the Rig Map", () => {
     history.replaceState(null, '', '/?v=2');
     renderLive();
+    // Agents holds Library and Workflows from W5 (the Agent page is W2).
     expect(screen.getAllByTestId(/^v2-group-/).map((b) => b.textContent)).toEqual([
       'Fleet',
       'Work',
@@ -431,12 +432,13 @@ describe('v2 registry', () => {
     for (const v of CURRENT_VIEWS) expect(inNav).toContain(v);
     expect(inNav).toContain('about');
     expect(v2PageFor('wall')?.label).toBe('Wall');
-    expect(plannedPages()).toContain('history');
+    expect(plannedPages()).toEqual([]);
     expect(plannedPages()).not.toContain('needs-you');
     expect(inNav).toContain('needs-you');
     expect(inNav).toContain('missions');
     expect(navLabel('needs-you')).toBe('Needs You');
     expect(navLabel('map')).toBe('Graph');
-    expect(inNav).not.toContain('history');
+    expect(inNav).toContain('history');
+    expect(inNav).toContain('health');
   });
 });
