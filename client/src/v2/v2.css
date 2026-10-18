@@ -336,3 +336,98 @@
   background: var(--ar-blocked-bg);
   color: var(--ar-blocked-ink);
 }
+
+/* ---- W5: Library, Workflows, History (light only) ---- */
+.lib-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.lib-search {
+  min-width: 260px;
+  padding: 4px 8px;
+  border: 1px solid var(--ar-line, #ddd3c0);
+  border-radius: 6px;
+  background: var(--ar-surface-raised);
+  font: inherit;
+}
+.lib-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.lib-list,
+.hist-list,
+.wf-specs,
+.wf-trail {
+  margin: 8px 0;
+  padding-left: 0;
+  list-style: none;
+}
+.lib-list > li,
+.hist-row,
+.wf-specs > li,
+.wf-trail > li {
+  border-bottom: 1px solid var(--ar-line, #ddd3c0);
+  padding: 6px 0;
+}
+.lib-row {
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.lib-kind {
+  font-family: var(--ar-font-label);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ar-line, #ddd3c0);
+}
+.lib-detail {
+  margin: 4px 0 8px 12px;
+}
+.lib-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 6px 0;
+}
+.lib-facts dt {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.lib-facts dd {
+  margin: 0;
+}
+.lib-fact {
+  display: contents;
+}
+.hist-at {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  display: inline-block;
+  min-width: 86px;
+}
+.wf-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 8px 0;
+}
+.wf-table th,
+.wf-table td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--ar-line, #ddd3c0);
+  vertical-align: top;
+}
+.wf-current {
+  background: var(--ar-blocked-bg);
+}
