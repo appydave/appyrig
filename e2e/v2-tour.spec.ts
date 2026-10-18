@@ -123,7 +123,11 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     await page.getByTestId('v2-page-map').click();
     await expect(page.getByTestId('v2-graph')).toBeVisible();
     const before = await sent(page);
-    const frame = page.getByTestId('g2-rig').first();
+    // a rig frame (not a machine's no-rig group); stopped rigs are hidden by default
+    const frame = page
+      .getByTestId('g2-rig')
+      .filter({ has: page.getByTestId('g2-rig-menu') })
+      .first();
     await frame.scrollIntoViewIfNeeded();
     await frame.getByTestId('g2-rig-menu').click();
     const restore = frame.getByTestId('g2-fake-restore');

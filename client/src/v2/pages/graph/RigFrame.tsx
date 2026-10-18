@@ -35,6 +35,10 @@ interface Props {
   onLineHover: (h: LineHover | null) => void;
   onLinePin: (edge: MapEdge, title: string) => void;
   nameOf: (seatKey: string) => string;
+  /** The colour of the hovered line that ends at this rig (or the ink colour when the rig itself is hovered). */
+  trace?: string;
+  /** Hover or focus on the header lights this rig's lines on the canvas and dims the rest. */
+  onTrace: (rigKey: string | null) => void;
 }
 
 export const podId = (rigKey: string, pod: string) => `${rigKey}/pod/${pod}`;
@@ -104,12 +108,18 @@ function RigFrame(p: Props) {
       data-picked={p.picked || undefined}
       data-highlight={p.focusKey === rig.key || undefined}
       data-menu-open={menuOpen || undefined}
+      data-trace={p.trace ? true : undefined}
+      style={p.trace ? ({ ['--g2-trace' as string]: p.trace } as React.CSSProperties) : undefined}
       aria-expanded={open}
     >
       <header
         className="g2-rig-head"
         data-testid="g2-rig-head"
         data-rig-match={rigLevel || undefined}
+        onPointerEnter={() => p.onTrace(rig.key)}
+        onPointerLeave={() => p.onTrace(null)}
+        onFocus={() => p.onTrace(rig.key)}
+        onBlur={() => p.onTrace(null)}
       >
         <button
           type="button"
@@ -313,8 +323,9 @@ function RigFrame(p: Props) {
 export default memo(RigFrame);
 
 /**
- * UX 3: the rig's Start / Restore / Launch behind one "⋯" button in the header. They are mocks, so
- * the mark stays visible beside the button whether the menu is open or not.
+ * UX 3: the rig's Start / Restore / Launch behind one "⋯" button in the header. They are mocks; the
+ * page says so once in its toolbar, and the badge shows beside the button only on hover or focus
+ * (and inside the open menu), not as a pill on every rig row.
  */
 function RigMenu({
   rig,
@@ -356,7 +367,7 @@ function RigMenu({
     };
   }, [open, trigger]);
   return (
-    <span className="g2-menu-wrap" ref={wrap}>
+    <span className="g2-menu-wrap" ref={wrap} data-open={open || undefined}>
       <button
         type="button"
         ref={trigger}

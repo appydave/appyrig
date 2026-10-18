@@ -19,12 +19,18 @@ test.describe('v2 Graph rig menu', () => {
     const gotIt = page.getByRole('button', { name: /got it/i });
     if (await gotIt.count()) await gotIt.first().click();
 
+    // stopped rigs are hidden by default; the fixture machines mostly have stopped ones
+    const showStopped = page.getByTestId('g2-show-stopped');
+    if ((await showStopped.getAttribute('aria-pressed')) !== 'true') await showStopped.click();
     // a column with at least two frames: the menu of the first falls on the second
     const column = page
       .getByTestId('g2-machine')
       .filter({ has: page.getByTestId('g2-rig').nth(1) })
       .first();
-    const frame = column.getByTestId('g2-rig').first();
+    const frame = column
+      .getByTestId('g2-rig')
+      .filter({ has: page.getByTestId('g2-rig-menu') })
+      .first();
     await frame.scrollIntoViewIfNeeded();
     await frame.getByTestId('g2-rig-menu').click();
     const items = frame.getByTestId('g2-rig-menu-items');

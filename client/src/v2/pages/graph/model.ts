@@ -497,27 +497,24 @@ export const FLAG_FILTERS: { key: FlagFilter; label: string; glyph: string; hint
   },
 ];
 
-/** A machine with more rigs than this starts its running rigs folded (UX ruling 2). */
-export const CROWDED_RIGS = 8;
-
 const flagged = (r: GraphRig) =>
   r.flags.needsMe > 0 || r.flags.stuck > 0 || r.flags.failing > 0 || r.state === 'attention';
 
-/**
- * Rigs open by default: running ones on a machine that is awake, and the picked one. On a crowded
- * machine (more than CROWDED_RIGS rigs) only the picked and the flagged ones, so the page stays
- * short enough to read.
- */
-export function openByDefault(rig: GraphRig, picked: string | null, crowded = false): boolean {
-  if (rig.key === picked) return true;
-  if (!rig.ref) return false;
-  if (crowded) return rig.ref.status === 'running' && rig.state !== 'asleep' && flagged(rig);
-  return rig.ref.status === 'running' && rig.state !== 'asleep';
-}
+/** A rig that is not running (stopped): hidden by default, like the Wall's stopped seats. */
+export const isStopped = (r: GraphRig): boolean => !!r.ref && r.ref.status !== 'running';
 
-/** True for a rig on a machine holding more than CROWDED_RIGS rigs. */
-export const isCrowded = (g: Graph, rig: GraphRig): boolean =>
-  (g.machines.find((m) => m.id === rig.machineId)?.rigs.length ?? 0) > CROWDED_RIGS;
+/**
+ * Rigs open by default, ONE rule for every machine column: a rig is open when it is running and
+ * has something going on (an agent working or blocked, or a flag: needs me, stuck, failing,
+ * OpenRig's attention), or when it is the picked rig. Every other rig is a one-line row, on every
+ * machine alike, so no column shows full detail while its neighbour shows rows, and the page opens
+ * short enough to read. Expand all opens the rest.
+ */
+export function openByDefault(rig: GraphRig, picked: string | null): boolean {
+  if (rig.key === picked) return true;
+  if (!rig.ref || rig.ref.status !== 'running' || rig.state === 'asleep') return false;
+  return rig.active > 0 || flagged(rig);
+}
 
 /** A rig shows under a flag filter when a seat in it carries the flag (or, for Needs me, OpenRig flags the rig). */
 export function rigMatches(r: GraphRig, f: FlagFilter | null): boolean {

@@ -3,7 +3,10 @@ import type { QueueItem, RigWaitingOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import type { MapEdge } from '../../../fleet/views.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
+import { MockNote } from '../../kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
+import LinesPanel from './LinesPanel.js';
+import { LINE_COLORS, lineColorIndex } from './lineColors.js';
 import GraphTree from './GraphTree.js';
 import RigFrame, { type LineHover } from './RigFrame.js';
 import { SeatDetail } from './SeatCard.js';
@@ -12,7 +15,7 @@ import {
   allGroups,
   buildGraph,
   FLAG_FILTERS,
-  isCrowded,
+  isStopped,
   openByDefault,
   rigMatches,
   type CrossEdge,
@@ -24,8 +27,8 @@ import {
 import './graph.css';
 
 /** Machine column width and the gap between columns (cross-rig lines run in the gaps). */
-const COL_W = 480;
-const COL_GAP = 110;
+const COL_W = 440;
+const COL_GAP = 104;
 const PAD = 16;
 /** Room right of the last column for its same-column arcs. */
 const PAD_RIGHT = 90;
@@ -109,6 +112,24 @@ interface SshState {
 const SSH_FAIL_TTL_MS = 30_000;
 const SSH_NONE_TTL_MS = 120_000;
 
+/** "Show stopped" is remembered (the Wall hides stopped seats the same way by default). */
+const SHOW_STOPPED_KEY = 'appyrig.v2.graph.showStopped';
+function readShowStopped(): boolean {
+  try {
+    return localStorage.getItem(SHOW_STOPPED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function writeShowStopped(on: boolean) {
+  try {
+    localStorage.setItem(SHOW_STOPPED_KEY, on ? '1' : '0');
+  } catch {
+    /* private window or blocked storage: it just is not remembered */
+  }
+}
+export { SHOW_STOPPED_KEY };
+
 interface Pinned {
   title: string;
   items: QueueItem[];
@@ -146,6 +167,14 @@ function GraphPage({ ctx }: V2PageProps) {
   const [filter, setFilter] = useState<FlagFilter | null>(null);
   const [teams, setTeams] = useState<string[] | null>(null);
   const [teamsOpen, setTeamsOpen] = useState(false);
+  const [showStopped, setShowStoppedState] = useState(readShowStopped);
+  const setShowStopped = (on: boolean) => {
+    setShowStoppedState(on);
+    writeShowStopped(on);
+  };
+  // which line (`from→to`) or rig the pointer or focus is on: its lines light up, the rest dim
+  const [hotLine, setHotLine] = useState<string | null>(null);
+  const [hotRig, setHotRig] = useState<string | null>(null);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [scrollTo, setScrollTo] = useState<{ key: string; n: number } | null>(null);
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
@@ -154,16 +183,35 @@ function GraphPage({ ctx }: V2PageProps) {
   const [pinned, setPinned] = useState<Pinned | null>(null);
 
   const isOpen = useCallback(
-    (r: GraphRig) => overrides[r.key] ?? openByDefault(r, picked, isCrowded(graph, r)),
-    [overrides, picked, graph]
+    (r: GraphRig) => overrides[r.key] ?? openByDefault(r, picked),
+    [overrides, picked]
   );
-  const shown = (r: GraphRig) => (!teams || teams.includes(r.key)) && rigMatches(r, filter);
+  // Stopped rigs are hidden unless asked for (or picked); a line to one is counted, not lost.
+  const hiddenStopped = (r: GraphRig) => isStopped(r) && !showStopped && r.key !== picked;
+  const shown = (r: GraphRig) =>
+    (!teams || teams.includes(r.key)) && !hiddenStopped(r) && rigMatches(r, filter);
   const columns = graph.machines.map((m) => ({
     machine: m,
     groups: [...m.rigs, ...(m.loose ? [m.loose] : [])].filter(shown),
   }));
   const visible = new Set(columns.flatMap((c) => c.groups.map((g) => g.key)));
   const cross = graph.cross.filter((e) => visible.has(e.from) && visible.has(e.to));
+  const stoppedHidden = new Set(groups.filter(hiddenStopped).map((g) => g.key));
+  // lines whose other end is on screen but one end is a hidden stopped rig
+  const toHidden = graph.cross.filter(
+    (e) =>
+      !(visible.has(e.from) && visible.has(e.to)) &&
+      (stoppedHidden.has(e.from) || stoppedHidden.has(e.to)) &&
+      (visible.has(e.from) || stoppedHidden.has(e.from)) &&
+      (visible.has(e.to) || stoppedHidden.has(e.to))
+  );
+  const hiddenLines = {
+    lines: toHidden.length,
+    handoffs: toHidden.reduce((n, e) => n + e.count, 0),
+  };
+  const stoppedCount = groups.filter((g) => isStopped(g)).length;
+  const colorIdx = lineColorIndex(cross.map((e) => crossKey(e)));
+  const colorOf = (e: { from: string; to: string }) => colorIdx.get(crossKey(e)) ?? 0;
 
   const names = useMemo(() => {
     const m = new Map<string, string>();
@@ -243,6 +291,20 @@ function GraphPage({ ctx }: V2PageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crossSig, layoutSig]);
   const maxCross = Math.max(1, ...cross.map((e) => e.count));
+  const anyHot = hotLine !== null || hotRig !== null;
+  const isHot = (e: CrossEdge) =>
+    hotLine !== null
+      ? crossKey(e) === hotLine
+      : hotRig !== null && (e.from === hotRig || e.to === hotRig);
+  const dimmed = (e: CrossEdge) => anyHot && !isHot(e);
+  // the frames at the ends of the lit line(s) wear its colour
+  const traceOf = (rigKey: string): string | undefined => {
+    if (hotLine !== null) {
+      const e = cross.find((x) => crossKey(x) === hotLine);
+      return e && (e.from === rigKey || e.to === rigKey) ? LINE_COLORS[colorOf(e)] : undefined;
+    }
+    return hotRig === rigKey ? 'var(--ar-ink)' : undefined;
+  };
   const drawnCross = cross.flatMap((edge) => {
     const g = geom.get(crossKey(edge));
     return g ? [{ edge, g }] : [];
@@ -471,6 +533,18 @@ function GraphPage({ ctx }: V2PageProps) {
             Collapse all
           </button>
         </span>
+        <span className="g2-tool-group">
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="g2-show-stopped"
+            aria-pressed={showStopped}
+            title="Stopped rigs are hidden by default, as on the Wall"
+            onClick={() => setShowStopped(!showStopped)}
+          >
+            Show stopped ({stoppedCount})
+          </button>
+        </span>
         <span className="g2-tool-group" role="group" aria-label="Filter by state">
           {FLAG_FILTERS.map((f) => (
             <button
@@ -587,12 +661,20 @@ function GraphPage({ ctx }: V2PageProps) {
             Fit
           </button>
         </span>
+        <span className="g2-mock-note" data-testid="g2-mock-note">
+          <MockNote>Rig and agent controls on this page are mocks — nothing is sent</MockNote>
+        </span>
       </div>
       <p className="view-caption g2-caption" data-testid="g2-caption">
         <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
         active · {graph.machines.length} machines · <b>{graph.cross.length} lines between rigs</b> (
-        {crossTotal} handoffs) · line width = how often · amber = still waiting · dotted = planned
-        in the rig spec
+        {crossTotal} handoffs)
+        {hiddenLines.lines > 0 && (
+          <span data-testid="g2-hidden-lines">
+            {' '}
+            · {hiddenLines.lines} to hidden stopped rig{hiddenLines.lines === 1 ? '' : 's'}
+          </span>
+        )}
         {graph.unplaced.count > 0 && (
           <span
             className="g2-unplaced"
@@ -606,8 +688,25 @@ function GraphPage({ ctx }: V2PageProps) {
           </span>
         )}
       </p>
+      <p className="g2-legend" data-testid="g2-legend">
+        <span className="g2-legend-line" aria-hidden="true" />
+        Each line is one pair of rigs, in its own colour · thicker = more handoffs · bold with a
+        gold edge = still waiting · dashed = left open over 2 h · dotted inside a rig = planned in
+        its spec · hover a line, a rig or a row under Lines to follow it
+      </p>
       <div className="g2-body">
-        <GraphTree machines={columns} selected={focusKey} onSelect={select} />
+        <div className="g2-rail">
+          <GraphTree machines={columns} selected={focusKey} onSelect={select} />
+          <LinesPanel
+            lines={cross}
+            colorOf={colorOf}
+            nameOf={nameOf}
+            hot={hotLine}
+            onHot={setHotLine}
+            onPin={pinCross}
+            hidden={hiddenLines}
+          />
+        </div>
         <div className="g2-scroll" ref={scroller} data-testid="g2-scroll">
           <div
             className="g2-canvas"
@@ -628,18 +727,21 @@ function GraphPage({ ctx }: V2PageProps) {
               data-testid="g2-cross-lines"
             >
               <defs>
-                <marker
-                  id="g2-cross-arrow"
-                  viewBox="0 0 10 10"
-                  refX="9"
-                  refY="5"
-                  markerWidth="10"
-                  markerHeight="10"
-                  markerUnits="userSpaceOnUse"
-                  orient="auto"
-                >
-                  <path d="M0,0 L10,5 L0,10 z" className="g2-cross-head" />
-                </marker>
+                {LINE_COLORS.map((c, i) => (
+                  <marker
+                    key={c}
+                    id={`g2-cross-arrow-${i}`}
+                    viewBox="0 0 10 10"
+                    refX="9"
+                    refY="5"
+                    markerWidth="10"
+                    markerHeight="10"
+                    markerUnits="userSpaceOnUse"
+                    orient="auto"
+                  >
+                    <path d="M0,0 L10,5 L0,10 z" fill={c} />
+                  </marker>
+                ))}
               </defs>
               {drawnCross.map(({ edge, g }) => (
                 <g
@@ -648,13 +750,23 @@ function GraphPage({ ctx }: V2PageProps) {
                   data-from={edge.from}
                   data-to={edge.to}
                   data-count={edge.count}
+                  data-dim={dimmed(edge) || undefined}
+                  data-hot={isHot(edge) || undefined}
                   className="g2-cross-line"
                   tabIndex={0}
                   role="button"
                   aria-label={`${crossTitle(edge)}. Enter shows them.`}
-                  onPointerEnter={(ev) => crossHover(edge, ev)}
+                  onPointerEnter={(ev) => {
+                    crossHover(edge, ev);
+                    setHotLine(crossKey(edge));
+                  }}
                   onPointerMove={(ev) => crossHover(edge, ev)}
-                  onPointerLeave={() => setLineHover(null)}
+                  onPointerLeave={() => {
+                    setLineHover(null);
+                    setHotLine(null);
+                  }}
+                  onFocus={() => setHotLine(crossKey(edge))}
+                  onBlur={() => setHotLine(null)}
                   onClick={() => pinCross(edge)}
                   onKeyDown={(ev) => {
                     if (ev.key === 'Enter' || ev.key === ' ') {
@@ -663,11 +775,19 @@ function GraphPage({ ctx }: V2PageProps) {
                     }
                   }}
                 >
+                  {edge.open > 0 && (
+                    <path
+                      d={g.d}
+                      className="g2-cross-glow"
+                      strokeWidth={4.5 + (edge.count / maxCross) * 5}
+                    />
+                  )}
                   <path
                     d={g.d}
                     className={`g2-cross-path ${edge.open ? 'open' : edge.stale ? 'stale' : ''}`}
-                    strokeWidth={1.5 + (edge.count / maxCross) * 5}
-                    markerEnd="url(#g2-cross-arrow)"
+                    stroke={LINE_COLORS[colorOf(edge)]}
+                    strokeWidth={1.8 + (edge.count / maxCross) * 4.5}
+                    markerEnd={`url(#g2-cross-arrow-${colorOf(edge)})`}
                   />
                   <path d={g.d} className="hit" />
                 </g>
@@ -722,6 +842,8 @@ function GraphPage({ ctx }: V2PageProps) {
                       onLineHover={setLineHover}
                       onLinePin={pinLine}
                       nameOf={nameOf}
+                      trace={traceOf(g.key)}
+                      onTrace={setHotRig}
                     />
                   ))}
                 </section>
@@ -732,12 +854,20 @@ function GraphPage({ ctx }: V2PageProps) {
                 <g
                   key={`l:${crossKey(edge)}`}
                   className="rigmap-label g2-cross-label"
+                  data-dim={dimmed(edge) || undefined}
                   data-testid="g2-cross-label"
                   onPointerEnter={(ev) => crossHover(edge, ev)}
                   onPointerLeave={() => setLineHover(null)}
                   onClick={() => pinCross(edge)}
                 >
-                  <rect x={g.lx - 13} y={g.ly - 9} width={26} height={18} rx={4} />
+                  <rect
+                    x={g.lx - 13}
+                    y={g.ly - 9}
+                    width={26}
+                    height={18}
+                    rx={4}
+                    style={{ stroke: LINE_COLORS[colorOf(edge)] }}
+                  />
                   <text x={g.lx} y={g.ly} className="rigmap-count">
                     {edge.count}
                   </text>

@@ -14,12 +14,11 @@ import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '../../../test/fleetFixtures.js';
 import type { FrozenFile } from '../../frozen/frozenSocket.js';
 import type { V2Context } from '../../types.js';
-import { page } from './index.js';
+import { page, SHOW_STOPPED_KEY } from './index.js';
 import {
   buildGraph,
   crossRigEdges,
   endpointGroup,
-  isCrowded,
   looseKey,
   openByDefault,
   rigMatches,
@@ -189,6 +188,8 @@ function busy(): { machines: FleetMachine[]; now: number } {
 beforeEach(() => {
   try {
     localStorage.clear();
+    // most tests look at stopped rigs: show them unless a test says otherwise
+    localStorage.setItem(SHOW_STOPPED_KEY, '1');
   } catch {
     /* ignore */
   }
@@ -272,36 +273,45 @@ describe('Graph model', () => {
     expect((RigFrame as unknown as { $$typeof: symbol }).$$typeof).toBe(Symbol.for('react.memo'));
   });
 
-  it('UX 2: on a machine with more than 8 rigs only the picked and the flagged ones start open', () => {
+  it('UX 2 / #3c: ONE rule on every machine: a running rig with something going on (or the picked one) is open, every other rig a one-line row', () => {
     const roamy = fleetMachine(snapshot('roamy'));
-    const extra = Array.from({ length: 9 }, (_, i) => ({
-      id: `x${i}`,
-      name: `extra-${i}`,
-      status: 'running',
-      lifecycleState: 'running',
+    const mk = (name: string, status: string, attentionCount = 0) => ({
+      id: name,
+      name,
+      status,
+      lifecycleState: status,
       nodeCount: 0,
       runningCount: 0,
-      attentionCount: i === 3 ? 2 : 0,
-    }));
+      attentionCount,
+    });
     const crowded: FleetMachine = {
       ...roamy,
       snapshot: {
         ...roamy.snapshot,
-        rigs: [...roamy.snapshot.rigs.map((r) => ({ ...r, attentionCount: 0 })), ...extra],
+        rigs: [
+          ...roamy.snapshot.rigs.map((r) => ({ ...r, attentionCount: 0 })),
+          ...Array.from({ length: 9 }, (_, i) => mk(`extra-${i}`, 'running', i === 3 ? 2 : 0)),
+          mk('parked', 'stopped'),
+        ],
         queue: [],
       },
     };
     const g = buildGraph([crowded], NOW);
     const rig = (name: string) => g.machines[0]!.rigs.find((r) => r.name === name)!;
-    expect(isCrowded(g, rig('extra-0'))).toBe(true);
-    expect(openByDefault(rig('extra-0'), null, true)).toBe(false);
-    expect(openByDefault(rig('extra-3'), null, true)).toBe(true); // OpenRig flags it
-    expect(openByDefault(rig('extra-0'), 'roamy:extra-0', true)).toBe(true); // picked
-    // and a machine with 8 or fewer still opens every running rig
-    expect(openByDefault(rig('extra-0'), null, false)).toBe(true);
+    expect(openByDefault(rig('extra-0'), null)).toBe(false); // running but quiet: a row
+    expect(openByDefault(rig('extra-3'), null)).toBe(true); // OpenRig flags it
+    expect(openByDefault(rig('extra-0'), 'roamy:extra-0')).toBe(true); // picked
+    expect(openByDefault(rig('parked'), null)).toBe(false); // stopped
     render(<Graph ctx={ctxFor([crowded])} />);
     expect(frame('roamy:extra-0')).toHaveAttribute('aria-expanded', 'false');
     expect(frame('roamy:extra-3')).toHaveAttribute('aria-expanded', 'true');
+    // the same rule on a second machine: no machine is special
+    const m2 = fleetMachine(snapshot('m2'));
+    const g2 = buildGraph([m2], NOW);
+    for (const r of g2.machines[0]!.rigs)
+      expect(openByDefault(r, null)).toBe(
+        r.ref!.status === 'running' && (r.active > 0 || r.state === 'attention')
+      );
   });
 
   it('builds every rig on every machine from the busy snapshot (23 rigs, 91 seats)', () => {
@@ -507,6 +517,147 @@ describe('Graph page', () => {
     expect(within(screen.getByTestId('g2-detail')).queryByTestId('copy-attach')).toBeNull();
     expect(screen.getByTestId('g2-no-attach')).toBeInTheDocument();
     expect(spy.sent).toContain('rig.waiting');
+  });
+});
+
+describe('Graph UX batch (usability walk #3 and #8)', () => {
+  const fresh = () => localStorage.removeItem(SHOW_STOPPED_KEY);
+
+  it('#3a: stopped rigs are hidden by default; Show stopped (N) brings them back and is remembered', () => {
+    fresh();
+    const { machines, now } = busy();
+    const total = buildGraph(machines, now).machines.flatMap((m) => m.rigs);
+    const stopped = total.filter((r) => r.ref!.status !== 'running').length;
+    expect(stopped).toBeGreaterThan(0);
+    const { unmount } = render(<Graph ctx={ctxFor(machines, { now })} />);
+    const rigs = () => rigKeys().filter((k) => !k!.endsWith('~loose'));
+    expect(rigs()).toHaveLength(total.length - stopped);
+    const btn = screen.getByTestId('g2-show-stopped');
+    expect(btn).toHaveTextContent(`Show stopped (${stopped})`);
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(btn);
+    expect(rigs()).toHaveLength(total.length);
+    expect(btn).toHaveAttribute('aria-pressed', 'true');
+    expect(localStorage.getItem(SHOW_STOPPED_KEY)).toBe('1');
+    unmount();
+    render(<Graph ctx={ctxFor(machines, { now })} />); // remembered
+    expect(rigKeys().filter((k) => !k!.endsWith('~loose'))).toHaveLength(total.length);
+    fireEvent.click(screen.getByTestId('g2-show-stopped'));
+    expect(localStorage.getItem(SHOW_STOPPED_KEY)).toBe('0');
+  });
+
+  it('#3a: a line to a hidden stopped rig is counted, not dropped, and the picked rig stays shown', () => {
+    fresh();
+    const machines = crossFleet();
+    const { unmount } = render(<Graph ctx={ctxFor(machines)} />);
+    // m2:control → m2:starter: both stopped on the M2, so the line is not drawn but it is said
+    expect(screen.getByTestId('g2-hidden-lines')).toHaveTextContent('to hidden stopped rig');
+    expect(screen.getByTestId('g2-lines-hidden')).toHaveTextContent('to hidden stopped rigs');
+    expect(screen.getAllByTestId('g2-cross').some((g) => g.dataset.from === 'm2:control')).toBe(
+      false
+    );
+    fireEvent.click(screen.getByTestId('g2-show-stopped'));
+    expect(screen.queryByTestId('g2-hidden-lines')).toBeNull();
+    expect(screen.getAllByTestId('g2-cross').some((g) => g.dataset.from === 'm2:control')).toBe(
+      true
+    );
+    unmount();
+    fresh();
+    render(
+      <Graph
+        ctx={ctxFor(machines, {
+          activeRig: listRigs(machines).find((r) => r.key === 'm2:kernel')!,
+        })}
+      />
+    );
+    expect(rigKeys()).toContain('m2:kernel');
+  });
+
+  it('#3b: the Lines list names every line; hovering a row lights that line and its two rigs, the rest dim', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const rows = screen.getAllByTestId('g2-lines-row');
+    expect(rows).toHaveLength(screen.getAllByTestId('g2-cross').length);
+    const row = rows.find(
+      (r) => r.dataset.from === 'roamy:starter' && r.dataset.to === 'roamy:kernel'
+    )!;
+    expect(row).toHaveTextContent('3');
+    fireEvent.pointerEnter(row);
+    const lines = screen.getAllByTestId('g2-cross');
+    const lit = lines.filter((g) => g.hasAttribute('data-hot'));
+    expect(lit).toHaveLength(1);
+    expect(lit[0]!.dataset.from).toBe('roamy:starter');
+    expect(lines.filter((g) => g.hasAttribute('data-dim'))).toHaveLength(lines.length - 1);
+    expect(frame('roamy:starter')).toHaveAttribute('data-trace');
+    expect(frame('roamy:kernel')).toHaveAttribute('data-trace');
+    expect(frame('roamy:~loose')).not.toHaveAttribute('data-trace');
+    fireEvent.pointerLeave(row);
+    expect(screen.getAllByTestId('g2-cross').some((g) => g.hasAttribute('data-dim'))).toBe(false);
+  });
+
+  it('#3b: hovering or focusing a rig header lights the lines that touch it and dims the rest; a line focus does too', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const head = within(frame('roamy:kernel')).getByTestId('g2-rig-head');
+    fireEvent.pointerEnter(head);
+    const lines = screen.getAllByTestId('g2-cross');
+    for (const g of lines) {
+      const touches = g.dataset.from === 'roamy:kernel' || g.dataset.to === 'roamy:kernel';
+      expect(g.hasAttribute('data-hot')).toBe(touches);
+      expect(g.hasAttribute('data-dim')).toBe(!touches);
+    }
+    fireEvent.pointerLeave(head);
+    const one = screen.getAllByTestId('g2-cross')[0]!;
+    fireEvent.focus(one);
+    expect(one).toHaveAttribute('data-hot');
+    fireEvent.blur(one);
+    expect(one).not.toHaveAttribute('data-hot');
+  });
+
+  it('#3b: every line has its own colour (up to the palette) and a legend explains them', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const colours = screen
+      .getAllByTestId('g2-cross')
+      .map((g) => g.querySelector('.g2-cross-path')!.getAttribute('stroke'));
+    expect(new Set(colours).size).toBe(colours.length);
+    expect(screen.getByTestId('g2-legend')).toHaveTextContent('own colour');
+    expect(screen.getByTestId('g2-unplaced')).toHaveTextContent('+1 not drawn');
+  });
+
+  it('#3b: lines that meet one frame side leave from different points along its header', () => {
+    const e = (from: string, to: string) => ({ from, to, count: 1, open: 0, stale: 0, items: [] });
+    const boxes: Record<string, { x: number; y: number; w: number; h: number; col: number }> = {
+      a: { x: 0, y: 0, w: 400, h: 40, col: 0 },
+      b: { x: 500, y: 0, w: 400, h: 40, col: 1 },
+      c: { x: 500, y: 100, w: 400, h: 40, col: 1 },
+      d: { x: 500, y: 200, w: 400, h: 40, col: 1 },
+    };
+    const out = routeCross([e('a', 'b'), e('a', 'c'), e('a', 'd')], (k) => boxes[k] ?? null, 100);
+    const startY = out.map((p) => Number(/^M[\d.]+,([\d.]+)/.exec(p.d)![1]));
+    expect(new Set(startY.map((y) => Math.round(y))).size).toBe(3);
+    for (const y of startY) {
+      expect(y).toBeGreaterThan(0);
+      expect(y).toBeLessThan(40); // inside the header, not on its corner
+    }
+    // and their labels do not sit on each other
+    for (let i = 0; i < out.length; i++)
+      for (let j = i + 1; j < out.length; j++)
+        expect(
+          Math.abs(out[i]!.lx - out[j]!.lx) >= 26 || Math.abs(out[i]!.ly - out[j]!.ly) >= 18
+        ).toBe(true);
+  });
+
+  it('#8: one mock note on the page; a rig’s own mock badge sits with its ⋯ button and is shown only on hover, focus or open', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    expect(screen.getByTestId('g2-mock-note')).toHaveTextContent('controls on this page are mocks');
+    const marks = screen.getAllByTestId('mock-mark');
+    // one badge per rig, all inside its ⋯ wrapper (hidden by css until hover/focus/open)
+    const inRigs = marks.filter((m) => m.closest('.g2-menu-wrap'));
+    expect(marks.length).toBe(inRigs.length); // the page note is the kit's MockNote, no badge
+    expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
+    const css = readFileSync(path.resolve(__dirname, 'graph.css'), 'utf8');
+    expect(css).toMatch(/\.g2-menu-wrap \.v2-mock-mark \{\s*display: none;/);
+    expect(css).toMatch(/\.g2-menu-wrap:hover \.v2-mock-mark/);
+    expect(css).toMatch(/\.g2-menu-wrap:focus-within \.v2-mock-mark/);
+    expect(css).toMatch(/\.g2-menu-wrap\[data-open\] \.v2-mock-mark/);
   });
 });
 
