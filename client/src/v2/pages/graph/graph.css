@@ -126,9 +126,6 @@
   border-top: 1px solid var(--ar-line);
 }
 .g2-tree {
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - 150px);
   overflow: auto;
   padding: 10px 8px 24px 12px;
   border-right: 1px solid var(--ar-line);
@@ -211,6 +208,17 @@
   align-items: flex-start;
   gap: var(--g2-gap);
 }
+/* The column layer sits over the cross-rig lines: only the frames take the pointer, so a line in
+   a gutter (or under a column's empty space) can be hovered and clicked. */
+.g2-cols,
+.g2-col {
+  pointer-events: none;
+}
+.g2-rig,
+.g2-col-head,
+.g2-col-empty {
+  pointer-events: auto;
+}
 .g2-col {
   width: var(--g2-col);
   display: flex;
@@ -263,26 +271,164 @@
 }
 .g2-cross-path {
   fill: none;
-  stroke: var(--ar-sequence);
-  stroke-opacity: 0.75;
+  stroke-opacity: 0.8;
+  transition: stroke-opacity 0.12s;
 }
 .g2-cross-path.open {
-  stroke: var(--ar-blocked);
-  stroke-opacity: 0.95;
+  stroke-opacity: 1;
 }
 .g2-cross-path.stale {
-  stroke-dasharray: 6 4;
+  stroke-dasharray: 7 5;
 }
-.g2-cross-line:hover .g2-cross-path,
+/* Still waiting: a gold halo under the line. */
+.g2-cross-glow {
+  fill: none;
+  stroke: var(--ar-sequence);
+  stroke-opacity: 0.45;
+  stroke-linecap: round;
+}
+/* Following one line (or one rig): the rest fade, the lit line is solid. */
+.g2-cross-line[data-dim] {
+  opacity: 0.12;
+}
+.g2-cross-label[data-dim] {
+  opacity: 0.15;
+}
+.g2-cross-line[data-hot] .g2-cross-path {
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 2px rgb(0 0 0 / 25%));
+}
+.g2-cross-line:focus-visible {
+  outline: none;
+}
 .g2-cross-line:focus-visible .g2-cross-path {
   stroke-opacity: 1;
-  stroke: var(--ar-ink);
-}
-.g2-cross-head {
-  fill: var(--ar-sequence);
 }
 .g2-cross-label rect {
-  stroke: var(--ar-sequence);
+  stroke-width: 2;
+}
+
+/* The rig at the end of a lit line wears its colour; a hovered rig wears the ink. */
+.g2-rig[data-trace] {
+  outline: 3px solid var(--g2-trace);
+  outline-offset: 1px;
+}
+
+/* Legend and the one mock note for the page. */
+.g2-legend {
+  margin: 0 16px 8px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.g2-legend-line {
+  display: inline-block;
+  width: 26px;
+  height: 0;
+  border-top: 3px solid #2b6cb0;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+.g2-mock-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+
+/* The left rail: the fleet tree, then the Lines list. */
+.g2-rail {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--ar-line);
+  background: var(--ar-surface);
+  min-height: 0;
+}
+.g2-rail .g2-tree {
+  position: static;
+  max-height: none;
+  flex: 1 1 55%;
+  min-height: 120px;
+  border-right: 0;
+}
+.g2-lines {
+  flex: 0 1 45%;
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--ar-line);
+  padding: 8px 8px 12px 12px;
+  font-size: 12px;
+}
+.g2-lines h3 {
+  margin: 0 0 6px;
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.g2-lines ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.g2-lines-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.g2-lines-row:hover,
+.g2-lines-row:focus-visible,
+.g2-lines-row[data-hot] {
+  background: var(--ar-surface-raised);
+  outline: 1px solid var(--ar-line);
+}
+.g2-swatch {
+  flex: 0 0 14px;
+  height: 6px;
+  border-radius: 3px;
+}
+.g2-lines-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.g2-lines-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.g2-lines-count i {
+  font-style: normal;
+  color: var(--ar-blocked-ink);
+}
+.g2-lines-hidden {
+  margin: 8px 0 0;
+}
+
+/* One mock note per page: a rig's own badge shows only on hover, focus or inside the open menu. */
+/* Out of the layout (absolute, left of the button) so showing it never moves the button under the
+   pointer: a badge that pushed the button aside swallowed the click in a real browser. */
+.g2-menu-wrap .v2-mock-mark {
+  display: none;
+  position: absolute;
+  right: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ar-surface-raised);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.g2-menu-wrap:hover .v2-mock-mark,
+.g2-menu-wrap:focus-within .v2-mock-mark,
+.g2-menu-wrap[data-open] .v2-mock-mark {
+  display: inline-block;
 }
 
 /* A rig frame (C42). */
