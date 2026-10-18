@@ -248,6 +248,11 @@ function GraphPage({ ctx }: V2PageProps) {
 
   // ---- tree selection: open the rig, scroll to the item, highlight it.
   const select = (key: string, rigKey: string | null) => {
+    // an agent in the tree opens its page, as a card does
+    if (seatIndex.has(key) && !key.startsWith('?/')) {
+      ctx.openAgentPage(key);
+      return;
+    }
     setFocusKey(key);
     if (rigKey) {
       const g = groups.find((x) => x.key === rigKey);
@@ -422,7 +427,8 @@ function GraphPage({ ctx }: V2PageProps) {
     ctx.chooseRig(k);
     setFocusKey(k);
   });
-  const openAgent = useStable((k: string) => ctx.onOpenAgent(k));
+  // W2: an agent click goes to the agent's page, not the side panel
+  const openAgent = useStable((k: string) => ctx.openAgentPage(k));
   const onHoverStable = useStable(onHover);
   const hideStable = useStable(hide);
   const onTabStable = useStable(onTab);

@@ -163,6 +163,8 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     onOpenSeat: vi.fn(),
     onOpenSkills: vi.fn(),
     onOpenAgent: vi.fn(),
+    agentKey: null,
+    openAgentPage: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
     ...over,
@@ -394,25 +396,26 @@ describe('Graph page', () => {
         .find((c) => c.dataset.key === k)!;
     fireEvent.click(caret('m2:kernel'));
     fireEvent.click(caret('m2:kernel/pod/operator'));
-    fireEvent.click(item('m2/operator-agent@kernel'));
+    fireEvent.click(item('m2:kernel/pod/operator'));
     expect(frame('m2:kernel')).toHaveAttribute('aria-expanded', 'true');
-    const card = within(frame('m2:kernel'))
-      .getAllByTestId('g2-card')
-      .find((c) => c.dataset.nodeKey === 'm2/operator-agent@kernel')!;
-    expect(card).toHaveAttribute('data-highlight', 'true');
-    expect(item('m2/operator-agent@kernel')).toHaveAttribute('aria-current', 'true');
+    expect(item('m2:kernel/pod/operator')).toHaveAttribute('aria-current', 'true');
     expect(ctx.chooseRig).toHaveBeenCalledWith('m2:kernel');
+    // an agent in the tree opens its page (W2), like a card; it does not just highlight
+    fireEvent.click(item('m2/operator-agent@kernel'));
+    expect(ctx.openAgentPage).toHaveBeenCalledWith('m2/operator-agent@kernel');
+    expect(ctx.onOpenAgent).not.toHaveBeenCalled();
     // a rig in the tree highlights its frame
     fireEvent.click(item('roamy:starter'));
     expect(frame('roamy:starter')).toHaveAttribute('data-highlight', 'true');
   });
 
-  it('clicking a card opens the shared agent panel', () => {
+  it('clicking a card opens the agent page, not the side panel', () => {
     const ctx = ctxFor(crossFleet());
     render(<Graph ctx={ctx} />);
     const card = within(frame('roamy:starter')).getAllByTestId('g2-card')[0]!;
     fireEvent.click(card);
-    expect(ctx.onOpenAgent).toHaveBeenCalledWith(card.dataset.nodeKey);
+    expect(ctx.openAgentPage).toHaveBeenCalledWith(card.dataset.nodeKey);
+    expect(ctx.onOpenAgent).not.toHaveBeenCalled();
   });
 
   it('Needs me / Failing filters keep only matching rigs and dim the other seats; Teams picks rigs', () => {
