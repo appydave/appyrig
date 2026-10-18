@@ -1,0 +1,14 @@
+/* v2 Machines, usability batch (walk #6): a small labelled version line, and "could be freed". */
+.mc2-watch {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ar-ink);
+}
+.mc2-free {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 2px 0 6px;
+  font-size: 13px;
+}

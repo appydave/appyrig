@@ -1,0 +1,33 @@
+/* v2 kit (usability walk #8): one mock marker per page; per-control badges on hover / focus only. */
+
+.v2-mock-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 16px;
+  padding: 4px 10px;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  border: 1px dashed var(--ar-sequence);
+  border-radius: 6px;
+  background: var(--ar-canvas);
+  color: var(--ar-ink-muted);
+  font-size: 12px;
+}
+.v2-mock-note-tag {
+  font-family: var(--ar-font-label);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ar-sequence);
+}
+
+/* An idle fake control keeps its badge out of sight until it is pointed at or focused; the
+   confirm step, the progress and the result always carry it. */
+.v2-fake[data-phase='idle'] > .v2-mock-mark {
+  display: none;
+}
+.v2-fake[data-phase='idle']:hover > .v2-mock-mark,
+.v2-fake[data-phase='idle']:focus-within > .v2-mock-mark {
+  display: inline-block;
+}
