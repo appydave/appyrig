@@ -467,6 +467,8 @@ export const WorkflowListOutputSchema = z.strictObject({
 export type WorkflowListOutput = z.infer<typeof WorkflowListOutputSchema>;
 
 // health.findings
+export const HealthFindingsInputSchema = MachineFilter;
+export type HealthFindingsInput = z.infer<typeof HealthFindingsInputSchema>;
 export const HealthAssessmentSchema = z.enum(['findings', 'none-found', 'unknown']);
 export const HealthFindingsOutputSchema = z.strictObject({
   machines: z.array(

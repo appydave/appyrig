@@ -4,7 +4,10 @@ import { join, relative, resolve } from 'node:path';
 import {
   SeatStatusSchema,
   type DaemonDataFor,
+  type HealthFindingsOutput,
   type HistoryTransitionsOutput,
+  type SettingsGetOutput,
+  type WorkflowListOutput,
   type LibraryListOutput,
   type TransitionRow,
   type LibraryRow,
@@ -42,6 +45,7 @@ describe('AC 9 — exactly one write verb', () => {
       'fleet.get',
       'handoff.get',
       'handoff.list',
+      'health.findings',
       'health.get',
       'history.list',
       'history.transitions',
@@ -61,7 +65,9 @@ describe('AC 9 — exactly one write verb', () => {
       'seat.list',
       'seat.loadout',
       'seat.tail',
+      'settings.get',
       'system.status',
+      'workflow.list',
     ]);
   });
 
@@ -358,7 +364,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 29 },
+      value: { app: 'AppyRig', version: real.version, verbs: 32 },
     });
   });
 
@@ -790,6 +796,273 @@ describe('v2 · history.transitions', () => {
     expect(core.call(AGENT, 'history.transitions', { machine: 'nope' })).toMatchObject({
       ok: false,
       error: { failureMode: 'machine-not-found' },
+    });
+  });
+});
+
+describe('v2 · workflow.list / health.findings / settings.get', () => {
+  const setup = () => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    store.put(loadSnapshot('m2'));
+    const core = createCore({ store, identity, now: clock.now });
+    const value = <T>(verb: string, input: object = {}) =>
+      (core.call(AGENT, verb, input) as { value: T }).value;
+    return { store, core, value };
+  };
+  const base = { machineId: 'roamy', key: '', collectedAt: '2026-10-18T12:00:00.000Z' } as const;
+
+  it('workflow.list: unread is not empty; an empty instance list says none have run', () => {
+    const { store, value } = setup();
+    store.daemonData.put({
+      ...base,
+      kind: 'workflows',
+      status: 'ok',
+      reason: null,
+      data: {
+        specs: [
+          {
+            name: 'basic-loop',
+            version: '1',
+            purpose: null,
+            targetRig: 'conveyor',
+            terminalTurnRule: 'hot_potato',
+            isBuiltIn: true,
+          },
+        ],
+        instances: [],
+      },
+    });
+    store.daemonData.put({
+      ...base,
+      machineId: 'm2',
+      kind: 'workflows',
+      status: 'ok',
+      reason: null,
+      data: {
+        specs: null,
+        instances: [
+          {
+            instanceId: 'wf-1',
+            workflowName: 'basic-loop',
+            workflowVersion: '1',
+            status: 'active',
+            currentStepId: 's1',
+            hopCount: 1,
+            createdAt: '2026-10-18T00:00:00Z',
+            completedAt: null,
+            deadlineState: 'healthy',
+          },
+          {
+            instanceId: 'wf-0',
+            workflowName: 'basic-loop',
+            workflowVersion: '1',
+            status: 'completed',
+            currentStepId: null,
+            hopCount: 4,
+            createdAt: '2026-10-17T00:00:00Z',
+            completedAt: '2026-10-17T01:00:00Z',
+            deadlineState: null,
+          },
+        ],
+      },
+    });
+    const all = value<WorkflowListOutput>('workflow.list');
+    expect(all.machines).toEqual([
+      expect.objectContaining({
+        machine: 'm2',
+        status: 'ok',
+        specsRead: false,
+        instancesRead: true,
+      }),
+      expect.objectContaining({
+        machine: 'roamy',
+        status: 'ok',
+        specsRead: true,
+        instancesRead: true,
+      }),
+    ]);
+    expect(all.specs).toHaveLength(1);
+    expect(all.instances.map((i) => i.instanceId)).toEqual(['wf-1', 'wf-0']);
+    expect(value<WorkflowListOutput>('workflow.list', { status: 'active' }).instances).toHaveLength(
+      1
+    );
+    const pending = setup().value<WorkflowListOutput>('workflow.list');
+    for (const m of pending.machines)
+      expect(m).toMatchObject({ status: 'pending', specsRead: false, instancesRead: false });
+  });
+
+  const health = (over: Partial<DaemonDataFor<'health'>> = {}): DaemonDataFor<'health'> => ({
+    findings: [],
+    findingsTotal: 0,
+    findingsTruncated: false,
+    coverage: [
+      {
+        source: 'passive-ceremony',
+        unit: 'handoff families',
+        evaluated: 12,
+        total: 12,
+        omitted: 0,
+        partial: false,
+        evaluatedAt: null,
+      },
+    ],
+    policy: { diagnosisEnabled: true, disabledDetectors: [], detectors: [], thresholds: {} },
+    contextSummary: null,
+    restore: null,
+    daemon: null,
+    ...over,
+  });
+
+  it('health.findings: empty is never "healthy"; every reason it may not be all-clear is named', () => {
+    const { store, value } = setup();
+    const put = (machineId: string, data: DaemonDataFor<'health'> | null) =>
+      store.daemonData.put({
+        ...base,
+        machineId,
+        kind: 'health',
+        status: data ? 'ok' : 'unsupported',
+        reason: data ? null : 'no routes',
+        data,
+      });
+    put(
+      'roamy',
+      health({
+        policy: { diagnosisEnabled: false, disabledDetectors: [], detectors: [], thresholds: {} },
+        coverage: [
+          {
+            source: 'passive-ceremony',
+            unit: 'handoff families',
+            evaluated: 0,
+            total: 0,
+            omitted: 0,
+            partial: false,
+            evaluatedAt: null,
+          },
+        ],
+      })
+    );
+    put('m2', null);
+    const v = value<HealthFindingsOutput>('health.findings');
+    const roamy = v.machines.find((m) => m.machine === 'roamy')!;
+    expect(roamy.assessment).toBe('none-found');
+    expect(roamy.caveats).toEqual([
+      expect.stringMatching(/diagnosis is off/),
+      expect.stringMatching(/evaluated 0 handoff families/),
+    ]);
+    expect(v.machines.find((m) => m.machine === 'm2')).toMatchObject({
+      status: 'unsupported',
+      assessment: 'unknown',
+      data: null,
+    });
+    // a clean, fully covered, diagnosis-on list has no caveats but is still only "none-found"
+    put('roamy', health());
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]
+    ).toMatchObject({ assessment: 'none-found', caveats: [] });
+    // partial coverage, no coverage, unreadable policy, a cut list: each is a caveat
+    put('roamy', health({ coverage: [], policy: null, findingsTruncated: true }));
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]!.caveats
+    ).toHaveLength(3);
+    put(
+      'roamy',
+      health({
+        coverage: [
+          {
+            source: 's',
+            unit: null,
+            evaluated: 3,
+            total: 9,
+            omitted: 6,
+            partial: true,
+            evaluatedAt: null,
+          },
+        ],
+      })
+    );
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]!.caveats
+    ).toEqual(['coverage of s was partial']);
+    // findings present; unreadable findings
+    put(
+      'roamy',
+      health({
+        findings: [
+          {
+            id: 'f1',
+            detector: 'context.pressure',
+            severity: 'warning',
+            summary: 'x',
+            evaluatedAt: null,
+          },
+        ],
+      })
+    );
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]
+    ).toMatchObject({ assessment: 'findings', caveats: [] });
+    put('roamy', health({ findings: null }));
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]
+    ).toMatchObject({ assessment: 'unknown' });
+    // nothing pushed yet
+    expect(setup().value<HealthFindingsOutput>('health.findings').machines[0]).toMatchObject({
+      status: 'pending',
+      assessment: 'unknown',
+    });
+  });
+
+  it('settings.get: filters by key or prefix, flags changed, and counts what was withheld', () => {
+    const { store, value } = setup();
+    for (const machineId of ['roamy', 'm2'])
+      store.daemonData.put({
+        ...base,
+        machineId,
+        kind: 'settings',
+        status: 'ok',
+        reason: null,
+        data: {
+          settings: {
+            'daemon.port': { value: 7433, source: 'env', defaultValue: 7433 },
+            'queue.stuck_sweep_enabled': {
+              value: machineId === 'm2',
+              source: machineId === 'm2' ? 'file' : 'default',
+              defaultValue: false,
+            },
+            'feed.subscriptions.mentions': {
+              value: '(path hidden)',
+              source: 'file',
+              defaultValue: null,
+            },
+          },
+          withheld: 4,
+          pathsHidden: 1,
+        },
+      });
+    const all = value<SettingsGetOutput>('settings.get', { machine: 'm2' });
+    expect(all.machines[0]).toMatchObject({ withheld: 4, pathsHidden: 1 });
+    expect(all.machines[0]!.settings.map((s) => [s.key, s.changed])).toEqual([
+      ['daemon.port', true],
+      ['feed.subscriptions.mentions', true],
+      ['queue.stuck_sweep_enabled', true],
+    ]);
+    expect(
+      value<SettingsGetOutput>('settings.get', { key: 'queue.' }).machines.map(
+        (m) => m.settings.length
+      )
+    ).toEqual([1, 1]);
+    expect(
+      value<SettingsGetOutput>('settings.get', { key: 'daemon.port' }).machines[0]!.settings
+    ).toHaveLength(1);
+    const changed = value<SettingsGetOutput>('settings.get', { changedOnly: true });
+    expect(changed.machines.find((m) => m.machine === 'roamy')!.settings.map((s) => s.key)).toEqual(
+      ['daemon.port', 'feed.subscriptions.mentions']
+    );
+    expect(setup().value<SettingsGetOutput>('settings.get').machines[0]).toMatchObject({
+      status: 'pending',
+      settings: [],
     });
   });
 });

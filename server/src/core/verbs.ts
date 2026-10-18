@@ -61,6 +61,15 @@ import {
   HistoryTransitionsOutputSchema,
   type HistoryTransitionRow,
   type HistoryTransitionsOutput,
+  WorkflowListInputSchema,
+  WorkflowListOutputSchema,
+  type WorkflowListOutput,
+  HealthFindingsInputSchema,
+  HealthFindingsOutputSchema,
+  type HealthFindingsOutput,
+  SettingsGetInputSchema,
+  SettingsGetOutputSchema,
+  type SettingsGetOutput,
   type DaemonDataFor,
   type DaemonKind,
   type DataMachine,
@@ -461,6 +470,43 @@ function dataOf<K extends DaemonKind>(ctx: VerbContext, machine: string, kind: K
   return { header, data: (p?.status === 'ok' ? p.data : null) as DaemonDataFor<K> | null };
 }
 
+/**
+ * What an empty findings list means. Never "healthy": the answer is `findings`, `none-found` with
+ * every reason it may not be all-clear, or `unknown`.
+ */
+export function assess(data: DaemonDataFor<'health'> | null): {
+  assessment: 'findings' | 'none-found' | 'unknown';
+  caveats: string[];
+} {
+  if (!data) return { assessment: 'unknown', caveats: [] };
+  if (data.findings === null)
+    return {
+      assessment: 'unknown',
+      caveats: [
+        "the daemon's findings list could not be read, so nothing can be said about health",
+      ],
+    };
+  if (data.findings.length > 0) return { assessment: 'findings', caveats: [] };
+  const caveats: string[] = [];
+  if (data.policy === null)
+    caveats.push('the health policy could not be read: cannot tell whether detectors run');
+  else if (data.policy.diagnosisEnabled === false)
+    caveats.push(
+      'diagnosis is off on this daemon: its scheduled detectors do not run, so an empty list proves nothing'
+    );
+  else if (data.policy.diagnosisEnabled === null)
+    caveats.push('the policy did not say whether diagnosis is on');
+  if (data.coverage.length === 0)
+    caveats.push('no coverage was reported: cannot tell what was evaluated');
+  for (const c of data.coverage) {
+    if (c.partial === true) caveats.push(`coverage of ${c.source} was partial`);
+    if (c.evaluated === 0)
+      caveats.push(`${c.source} evaluated 0${c.unit ? ` ${c.unit}` : ''}: nothing was examined`);
+  }
+  if (data.findingsTruncated === true) caveats.push('the findings list was cut short');
+  return { assessment: 'none-found', caveats };
+}
+
 const LIBRARY_GROUPS: Record<LibraryGroup, 'specs' | 'skills' | 'contextPacks'> = {
   spec: 'specs',
   skill: 'skills',
@@ -844,6 +890,77 @@ const VERB_SET = {
         nextCursor: end < all.length ? String(end) : null,
       };
     }
+  ),
+
+  'workflow.list': query(
+    "OpenRig workflows as each machine's collector read them (read-only): the workflow specs (name, version, purpose, target rig, terminal-turn rule, built-in) and the running or finished instances (id, workflow, status, current step, hops, times, deadline state). machines[] says per machine whether each list was read: specsRead / instancesRead true with an empty list means none exist (an instance list that is empty means no workflow has run); false means it could not be read, which is not the same. Instances can be filtered by status. Starting, routing or aborting a workflow is not available here.",
+    WorkflowListInputSchema,
+    WorkflowListOutputSchema,
+    NOT_FOUND,
+    (input, ctx): WorkflowListOutput => {
+      const out: WorkflowListOutput = { machines: [], specs: [], instances: [] };
+      for (const m of machinesOf(ctx, input.machine)) {
+        const { header, data } = dataOf(ctx, m.machine.id, 'workflows', 'workflows');
+        out.machines.push({
+          ...header,
+          specsRead: data?.specs != null,
+          instancesRead: data?.instances != null,
+        });
+        for (const s of data?.specs ?? []) out.specs.push({ ...s, machine: m.machine.id });
+        for (const i of data?.instances ?? [])
+          if (input.status === undefined || i.status === input.status)
+            out.instances.push({ ...i, machine: m.machine.id });
+      }
+      out.specs.sort((a, b) => a.machine.localeCompare(b.machine) || a.name.localeCompare(b.name));
+      out.instances.sort(
+        (a, b) =>
+          (b.createdAt ?? '').localeCompare(a.createdAt ?? '') ||
+          a.instanceId.localeCompare(b.instanceId)
+      );
+      return out;
+    }
+  ),
+
+  'health.findings': query(
+    "OpenRig's health findings (the detectors' pathologies, such as ceremony amplification or review carousels) per machine, with the coverage and policy that say what an empty list means. assessment is 'findings' (some exist), 'none-found' (the detectors that ran found none: read caveats before treating that as healthy) or 'unknown' (not readable). It is never 'healthy': caveats lists why an empty list may not be all-clear (diagnosis off so scheduled detectors do not run, partial or zero coverage, an unreadable policy). data also carries the context-pressure roll-up, the restore-readiness verdict and the daemon's version and event-loop lag. Not machine health (health.get) and not a place to change a detector.",
+    HealthFindingsInputSchema,
+    HealthFindingsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): HealthFindingsOutput => ({
+      machines: machinesOf(ctx, input.machine).map((m) => {
+        const { header, data } = dataOf(ctx, m.machine.id, 'health', 'health findings');
+        return { ...header, ...assess(data), data };
+      }),
+    })
+  ),
+
+  'settings.get': query(
+    "The OpenRig daemon's configuration values per machine (read-only), from an allowlist of keys (daemon port and host, host name, transcripts on/off and sizes, health thresholds, snapshots, policies, retention, queue and feed and workflow tuning). Each setting carries its value, its source (default, env, file) and its default; changed is true when the source is not the default, so machines can be compared on what was set by hand. Path-like values are replaced by '(path hidden)' and withheld counts the keys never forwarded (paths, roots, anything secret-looking). Filter by key (exact, or a prefix ending in a dot) or changedOnly. Editing a setting is not available here.",
+    SettingsGetInputSchema,
+    SettingsGetOutputSchema,
+    NOT_FOUND,
+    (input, ctx): SettingsGetOutput => ({
+      machines: machinesOf(ctx, input.machine).map((m) => {
+        const { header, data } = dataOf(ctx, m.machine.id, 'settings', 'settings');
+        const settings = Object.entries(data?.settings ?? {})
+          .filter(([k]) =>
+            input.key === undefined
+              ? true
+              : input.key.endsWith('.')
+                ? k.startsWith(input.key)
+                : k === input.key
+          )
+          .map(([key, s]) => ({ key, ...s, changed: s.source !== null && s.source !== 'default' }))
+          .filter((s) => !input.changedOnly || s.changed)
+          .sort((a, b) => a.key.localeCompare(b.key));
+        return {
+          ...header,
+          withheld: data?.withheld ?? 0,
+          pathsHidden: data?.pathsHidden ?? 0,
+          settings,
+        };
+      }),
+    })
   ),
 
   'queue.list': query(

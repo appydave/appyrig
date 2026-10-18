@@ -3,12 +3,16 @@ import {
   DaemonDataPushSchema,
   LIBRARY_FILES_MAX,
   LIBRARY_ROWS_MAX,
+  SETTING_PATH_HIDDEN,
   SeatDetailDataSchema,
   TRANSITIONS_MAX,
   type DaemonDataPush,
   type DaemonKind,
   type LibraryData,
+  type HealthData,
   type LibraryRow,
+  type SettingsData,
+  type WorkflowsData,
   type SeatDetailData,
   type TransitionRow,
   type TransitionsData,
@@ -339,6 +343,221 @@ export function parseTransitionsPage(raw: unknown): {
   };
 }
 
+// ── step 5: workflows, health findings, settings ───────────────────────────────────────────────
+
+export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['specs']> {
+  return rowsOf(raw, 'specs')
+    .flatMap((r) => {
+      if (!isRec(r)) return [];
+      const name = txt(r.name, 200);
+      if (!name) return [];
+      return [
+        {
+          name,
+          version: txt(r.version, 60) ?? (num(r.version) !== null ? String(r.version) : null),
+          purpose: txt(r.purpose, 400, true),
+          targetRig: txt(r.targetRig, 200),
+          terminalTurnRule:
+            txt(r.coordinationTerminalTurnRule, 100) ?? txt(r.terminalTurnRule, 100),
+          isBuiltIn: bool(r.isBuiltIn),
+        },
+      ];
+    })
+    .slice(0, 200);
+}
+
+export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData['instances']> {
+  return rowsOf(raw, 'instances')
+    .flatMap((r) => {
+      if (!isRec(r)) return [];
+      const instanceId = txt(r.instanceId, 200);
+      if (!instanceId) return [];
+      const hops = num(r.hopCount);
+      const deadline = isRec(r.deadline) ? r.deadline : {};
+      return [
+        {
+          instanceId,
+          workflowName: txt(r.workflowName, 200),
+          workflowVersion:
+            txt(r.workflowVersion, 60) ??
+            (num(r.workflowVersion) !== null ? String(r.workflowVersion) : null),
+          status: txt(r.status, 60),
+          currentStepId: txt(r.currentStepId, 200),
+          hopCount: hops !== null && hops >= 0 ? Math.round(hops) : null,
+          createdAt: txt(r.createdAt, 60),
+          completedAt: txt(r.completedAt, 60),
+          deadlineState: txt(deadline.state, 60),
+        },
+      ];
+    })
+    .slice(0, 300);
+}
+
+const countOrNull = (v: unknown): number | null => {
+  const n = num(v);
+  return n !== null && n >= 0 ? Math.round(n) : null;
+};
+
+/** GET /api/health: the findings list, its truncation, and per-source coverage. */
+export function parseHealthFindings(
+  raw: unknown
+): Pick<HealthData, 'findings' | 'findingsTotal' | 'findingsTruncated' | 'coverage'> {
+  if (!isRec(raw)) throw new Error('health: expected a JSON object');
+  return {
+    findings: list(raw.records)
+      .flatMap((r, i) => {
+        if (!isRec(r)) return [];
+        return [
+          {
+            id: txt(r.id, 200) ?? txt(r.findingId, 200) ?? `finding-${i}`,
+            detector: txt(r.detector, 120) ?? txt(r.detectorId, 120) ?? txt(r.kind, 120),
+            severity: txt(r.severity, 60),
+            summary:
+              txt(r.summary, 400, true) ?? txt(r.title, 400, true) ?? txt(r.message, 400, true),
+            evaluatedAt: txt(r.evaluatedAt, 60),
+          },
+        ];
+      })
+      .slice(0, 100),
+    findingsTotal: countOrNull(raw.total),
+    findingsTruncated: bool(raw.truncated),
+    coverage: list(raw.coverage)
+      .flatMap((c) => {
+        if (!isRec(c)) return [];
+        const source = txt(c.source, 120);
+        if (!source) return [];
+        return [
+          {
+            source,
+            unit: txt(c.unit, 120),
+            evaluated: countOrNull(c.evaluated),
+            total: countOrNull(c.total),
+            omitted: countOrNull(c.omitted),
+            partial: bool(c.partial),
+            evaluatedAt: txt(c.evaluatedAt, 60),
+          },
+        ];
+      })
+      .slice(0, 20),
+  };
+}
+
+export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
+  if (!isRec(raw) || !isRec(raw.policy)) throw new Error('health policy: expected {policy}');
+  const p = raw.policy;
+  const diagnosis = isRec(p.diagnosis) ? p.diagnosis : {};
+  const names = (v: unknown) =>
+    list(v)
+      .flatMap((x) => txt(x, 120) ?? [])
+      .slice(0, 40);
+  const thresholds: Record<string, number> = {};
+  if (isRec(p.thresholds))
+    for (const [k, v] of Object.entries(p.thresholds))
+      if (typeof v === 'number' && Number.isFinite(v)) thresholds[k.slice(0, 60)] = v;
+  return {
+    diagnosisEnabled: bool(diagnosis.enabled),
+    disabledDetectors: names(p.disabledDetectors),
+    detectors: names(diagnosis.detectors),
+    thresholds,
+  };
+}
+
+export function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
+  if (!isRec(raw)) throw new Error('health summary: expected a JSON object');
+  return {
+    total: countOrNull(raw.total),
+    critical: countOrNull(raw.critical),
+    warning: countOrNull(raw.warning),
+    stale: countOrNull(raw.stale),
+  };
+}
+
+export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
+  if (!isRec(raw)) throw new Error('restore check: expected a JSON object');
+  const c = isRec(raw.counts) ? raw.counts : {};
+  return {
+    verdict: txt(raw.verdict, 60),
+    red: countOrNull(c.red),
+    yellow: countOrNull(c.yellow),
+    green: countOrNull(c.green),
+  };
+}
+
+export function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
+  if (!isRec(raw)) throw new Error('healthz: expected a JSON object');
+  const loop = isRec(raw.eventLoop) ? raw.eventLoop : {};
+  const lag = num(loop.lagP99Ms);
+  return {
+    semver: txt(raw.semver, 60),
+    commit: txt(raw.commit, 60),
+    eventLoopLagP99Ms: lag !== null && lag >= 0 ? lag : null,
+  };
+}
+
+/**
+ * Settings the hub may carry. A prefix ending in a dot allows the whole family; anything else is one
+ * exact key. Everything else (database and transcript paths, workspace roots, the file allowlist,
+ * recovery env names) stays on the machine. A key whose name looks secret is withheld regardless.
+ */
+export const SETTINGS_ALLOW: readonly string[] = [
+  'daemon.port',
+  'daemon.host',
+  'host.name',
+  'host.selected',
+  'transcripts.enabled',
+  'transcripts.lines',
+  'transcripts.poll_interval_seconds',
+  'health.',
+  'snapshots.',
+  'policies.',
+  'retention.',
+  'queue.',
+  'feed.',
+  'workflow.',
+];
+const SECRET_KEY = /token|secret|key|password|credential|cookie|bearer|oauth|authoriz/i;
+/** A value that is a filesystem path (absolute, home-relative, Windows drive) or names a home folder. */
+const PATH_LIKE = /^(\/|~\/|[A-Za-z]:[\\/])|\/Users\/|\/home\//;
+
+const isAllowed = (key: string): boolean =>
+  SETTINGS_ALLOW.some((a) => (a.endsWith('.') ? key.startsWith(a) : key === a));
+
+/** GET /api/config: the allowlisted settings, with path-like values replaced and text redacted. */
+export function parseSettings(raw: unknown): SettingsData {
+  if (!isRec(raw) || !isRec(raw.settings)) throw new Error('config: expected {settings}');
+  const settings: SettingsData['settings'] = {};
+  let withheld = 0;
+  let pathsHidden = 0;
+  const value = (v: unknown): string | number | boolean | null | undefined => {
+    if (v === null) return null;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+    const text =
+      typeof v === 'string' ? v : Array.isArray(v) || isRec(v) ? JSON.stringify(v) : null;
+    if (text === null) return undefined;
+    if (PATH_LIKE.test(text)) {
+      pathsHidden += 1;
+      return SETTING_PATH_HIDDEN;
+    }
+    return redactString(text).slice(0, 200);
+  };
+  for (const [key, entry] of Object.entries(raw.settings)) {
+    if (!isRec(entry)) continue;
+    if (!isAllowed(key) || SECRET_KEY.test(key) || key.length > 120) {
+      withheld += 1;
+      continue;
+    }
+    const v = value(entry.value);
+    if (v === undefined) continue;
+    settings[key] = {
+      value: v,
+      source: txt(entry.source, 40),
+      defaultValue: value(entry.defaultValue) ?? null,
+    };
+  }
+  return { settings, withheld, pathsHidden };
+}
+
 // ── the reader ─────────────────────────────────────────────────────────────────────────────────
 
 export interface DaemonDataOptions {
@@ -397,6 +616,9 @@ export class DaemonDataReader {
       { kind: 'seatdetail', everyMs: this.every.seatdetail, run: () => this.seatDetail() },
       { kind: 'library', everyMs: this.every.library, run: () => this.library() },
       { kind: 'transitions', everyMs: this.every.transitions, run: () => this.transitions() },
+      { kind: 'workflows', everyMs: this.every.workflows, run: () => this.workflows() },
+      { kind: 'health', everyMs: this.every.health, run: () => this.health() },
+      { kind: 'settings', everyMs: this.every.settings, run: () => this.settingsRead() },
     ];
     this.jobs = jobs.filter((j) => !opts.kinds || opts.kinds.includes(j.kind));
   }
@@ -445,6 +667,105 @@ export class DaemonDataReader {
       );
     else this.failing.delete('seatdetail:seats');
     return out;
+  }
+
+  /**
+   * Several independent GETs behind one push: each part that cannot be read is null (kept apart
+   * from "read, empty") and logged once under `<label>:<part>`. The whole read is `unsupported` when
+   * every part is a 404, and throws (nothing is pushed, logged once by the caller) when every part
+   * failed and at least one was not a 404.
+   */
+  private async parts<T extends Record<string, unknown>>(
+    label: string,
+    reads: { [K in keyof T]: { path: string; parse: (raw: unknown) => T[K] } }
+  ): Promise<Outcome[]> {
+    const names = Object.keys(reads) as (keyof T & string)[];
+    const settled = await Promise.all(names.map((n) => settle(this.get, reads[n].path)));
+    if (settled.every((r) => !r.ok)) {
+      if (settled.every((r) => !r.ok && r.notFound))
+        return [
+          {
+            key: '',
+            status: 'unsupported',
+            reason: `this OpenRig has no ${label} routes`,
+            data: null,
+          },
+        ];
+      const bad = settled.find((r) => !r.ok && !r.notFound);
+      throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
+    }
+    const data = {} as T;
+    names.forEach((n, i) => {
+      const r = settled[i]!;
+      const key = `${label}:${n}`;
+      try {
+        if (!r.ok) throw new Error(r.error);
+        data[n] = reads[n].parse(r.value);
+        this.failing.delete(key);
+      } catch (e) {
+        this.fail(key, `${label} ${n} unreadable: ${(e as Error).message}`);
+        data[n] = null as T[typeof n];
+      }
+    });
+    return [{ key: '', status: 'ok', reason: null, data }];
+  }
+
+  private workflows(): Promise<Outcome[]> {
+    return this.parts<WorkflowsData>('workflows', {
+      specs: { path: '/api/workflow/specs', parse: parseWorkflowSpecs },
+      instances: { path: '/api/workflow/list', parse: parseWorkflowInstances },
+    });
+  }
+
+  private async health(): Promise<Outcome[]> {
+    type Rest = Pick<HealthData, 'policy' | 'contextSummary' | 'restore' | 'daemon'>;
+    const [findings, rest] = await Promise.all([
+      settle(this.get, '/api/health'),
+      this.parts<Rest>('health', {
+        policy: { path: '/api/health-diagnosis/policy', parse: parseHealthPolicy },
+        contextSummary: { path: '/api/health-summary/context', parse: parseHealthContext },
+        restore: { path: '/api/restore-check', parse: parseRestoreCheck },
+        daemon: { path: '/healthz', parse: parseDaemonHealth },
+      }),
+    ]);
+    const other = rest[0]!;
+    if (!findings.ok && findings.notFound && other.status === 'unsupported') return rest;
+    let parsed: ReturnType<typeof parseHealthFindings> | null = null;
+    try {
+      if (!findings.ok) throw new Error(findings.error);
+      parsed = parseHealthFindings(findings.value);
+      this.failing.delete('health:findings');
+    } catch (e) {
+      this.fail('health:findings', `health findings unreadable: ${(e as Error).message}`);
+    }
+    const data: HealthData = {
+      findings: parsed?.findings ?? null,
+      findingsTotal: parsed?.findingsTotal ?? null,
+      findingsTruncated: parsed?.findingsTruncated ?? null,
+      coverage: parsed?.coverage ?? [],
+      ...(other.status === 'ok'
+        ? (other.data as Rest)
+        : { policy: null, contextSummary: null, restore: null, daemon: null }),
+    };
+    return [{ key: '', status: 'ok', reason: null, data }];
+  }
+
+  private async settingsRead(): Promise<Outcome[]> {
+    try {
+      const data = parseSettings(await this.get('/api/config'));
+      return [{ key: '', status: 'ok', reason: null, data }];
+    } catch (e) {
+      if (isNotFound(e))
+        return [
+          {
+            key: '',
+            status: 'unsupported',
+            reason: 'this OpenRig has no config route',
+            data: null,
+          },
+        ];
+      throw e;
+    }
   }
 
   /**

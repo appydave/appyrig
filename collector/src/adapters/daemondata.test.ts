@@ -5,8 +5,12 @@ import {
   parseLibraryPacks,
   parseLibrarySkills,
   parseLibrarySpecs,
+  parseHealthFindings,
   parseSeatDetail,
+  parseSettings,
   parseTransitionRow,
+  parseWorkflowInstances,
+  parseWorkflowSpecs,
 } from './index.js';
 import { readFixtureJson } from './fixtureSources.js';
 import { parseNodes } from './daemon.js';
@@ -503,5 +507,256 @@ describe('v2 · queue transitions (step 4)', () => {
       kind: 'transitions',
       status: 'unsupported',
     });
+  });
+});
+
+// ── step 5: workflows, health findings, settings ────────────────────────────────────────────────
+
+describe('v2 · workflows (step 5)', () => {
+  it('parses specs and instances leniently', () => {
+    expect(
+      parseWorkflowSpecs({
+        specs: [
+          {
+            name: 'basic-loop',
+            version: 1,
+            purpose: 'Walk a packet',
+            targetRig: 'conveyor',
+            coordinationTerminalTurnRule: 'hot_potato',
+            isBuiltIn: true,
+          },
+          { name: 7 },
+          'junk',
+        ],
+      })
+    ).toEqual([
+      {
+        name: 'basic-loop',
+        version: '1',
+        purpose: 'Walk a packet',
+        targetRig: 'conveyor',
+        terminalTurnRule: 'hot_potato',
+        isBuiltIn: true,
+      },
+    ]);
+    expect(
+      parseWorkflowInstances([
+        {
+          instanceId: 'wf-1',
+          workflowName: 'basic-loop',
+          workflowVersion: 1,
+          status: 'active',
+          currentStepId: 's2',
+          hopCount: 3,
+          createdAt: '2026-10-18T00:00:00Z',
+          deadline: { state: 'healthy' },
+        },
+        { status: 'active' },
+        { instanceId: 'wf-2', hopCount: 'many' },
+      ])
+    ).toMatchObject([
+      { instanceId: 'wf-1', workflowVersion: '1', hopCount: 3, deadlineState: 'healthy' },
+      { instanceId: 'wf-2', hopCount: null },
+    ]);
+  });
+
+  it('an empty instance list is read-and-empty; an unreadable one is null', async () => {
+    const lines: string[] = [];
+    const r = new DaemonDataReader(
+      'm4',
+      async (p) => {
+        if (p === '/api/workflow/specs') return { specs: [{ name: 'basic-loop' }] };
+        throw new Error('HTTP 500');
+      },
+      { now: () => 1, log: (l) => lines.push(l), kinds: ['workflows'] }
+    );
+    const a = (await r.next([]))!.pushes[0] as { data: { specs: unknown[]; instances: unknown } };
+    expect(a.data.specs).toHaveLength(1);
+    expect(a.data.instances).toBeNull();
+    const b = new DaemonDataReader(
+      'm4',
+      async (p) => (p === '/api/workflow/specs' ? { specs: [] } : []),
+      { now: () => 1, kinds: ['workflows'] }
+    );
+    expect((await b.next([]))!.pushes[0]).toMatchObject({ data: { specs: [], instances: [] } });
+  });
+});
+
+describe('v2 · health findings (step 5)', () => {
+  const live = {
+    '/api/health': {
+      schema: 'openrig.health-list/v0alpha1',
+      total: 0,
+      truncated: false,
+      records: [],
+      coverage: [
+        {
+          source: 'passive-ceremony',
+          unit: 'handoff families',
+          total: 0,
+          evaluated: 0,
+          omitted: 0,
+          partial: false,
+          evaluatedAt: '2026-10-18T12:04:24.727Z',
+        },
+      ],
+    },
+    '/api/health-diagnosis/policy': {
+      policy: {
+        disabledDetectors: [],
+        thresholds: { ceremonyTransitions: 20, ceremonyRatio: 12 },
+        diagnosis: { enabled: false, detectors: ['process.ceremony-amplification'] },
+      },
+    },
+    '/api/health-summary/context': { total: 25, critical: 0, warning: 0, stale: 23 },
+    '/api/restore-check': {
+      verdict: 'not_restorable',
+      counts: { red: 13, yellow: 14, green: 141 },
+    },
+    '/healthz': { semver: '0.6.6', commit: 'abc', eventLoop: { lagP99Ms: 17.0 } },
+  } as Record<string, unknown>;
+
+  const healthReader = (routes: Record<string, unknown>, log: (l: string) => void = () => {}) =>
+    new DaemonDataReader(
+      'm4',
+      async (p) => {
+        const v = routes[p];
+        if (v instanceof Error) throw v;
+        if (v === undefined) throw new Error(`GET ${p} -> HTTP 404`);
+        return v;
+      },
+      { now: () => 1, log, kinds: ['health'] }
+    );
+
+  it('carries findings with coverage and policy, so empty is not read as healthy', async () => {
+    const push = (await healthReader(live).next([]))!.pushes[0]!;
+    expect(DaemonDataPushSchema.safeParse(push).success).toBe(true);
+    expect(push).toMatchObject({
+      kind: 'health',
+      status: 'ok',
+      data: {
+        findings: [],
+        findingsTotal: 0,
+        coverage: [{ source: 'passive-ceremony', evaluated: 0, partial: false }],
+        policy: { diagnosisEnabled: false, thresholds: { ceremonyTransitions: 20 } },
+        contextSummary: { total: 25, stale: 23 },
+        restore: { verdict: 'not_restorable', red: 13, green: 141 },
+        daemon: { semver: '0.6.6', eventLoopLagP99Ms: 17 },
+      },
+    });
+  });
+
+  it('a part that cannot be read is null (not empty) and logged once; the rest still goes', async () => {
+    const lines: string[] = [];
+    const push = (await healthReader(
+      { ...live, '/api/health': new Error('HTTP 500'), '/api/restore-check': { weird: 1 } },
+      (l) => lines.push(l)
+    ).next([]))!.pushes[0] as { data: Record<string, unknown> };
+    expect(push.data.findings).toBeNull();
+    expect(push.data.coverage).toEqual([]);
+    expect(push.data.restore).toMatchObject({ verdict: null, red: null });
+    expect(push.data.policy).not.toBeNull();
+    expect(lines).toEqual([expect.stringMatching(/health findings unreadable/)]);
+  });
+
+  it('every route 404 = unsupported', async () => {
+    expect((await healthReader({}).next([]))!.pushes[0]).toMatchObject({
+      kind: 'health',
+      status: 'unsupported',
+      data: null,
+    });
+  });
+
+  it('records are read leniently', () => {
+    const f = parseHealthFindings({
+      records: [
+        { id: 'f1', detector: 'context.pressure', severity: 'warning', summary: 'high' },
+        { findingId: 'f2', title: 'T' },
+        'junk',
+        {},
+      ],
+    });
+    expect(f.findings!.map((x) => [x.id, x.detector, x.summary])).toEqual([
+      ['f1', 'context.pressure', 'high'],
+      ['f2', null, 'T'],
+      ['finding-3', null, null],
+    ]);
+  });
+});
+
+describe('v2 · settings (step 5)', () => {
+  const config = {
+    settings: {
+      'daemon.port': { value: 7433, source: 'env', defaultValue: 7433 },
+      'db.path': {
+        value: '/Users/x/.openrig/openrig.sqlite',
+        source: 'env',
+        defaultValue: '/Users/x/.openrig/openrig.sqlite',
+      },
+      'workspace.root': {
+        value: '/Users/x/.openrig/workspace',
+        source: 'file',
+        defaultValue: '/Users/x/w',
+      },
+      'files.allowlist': { value: '/a,/b', source: 'file', defaultValue: '' },
+      'recovery.provider_auth_env_allowlist': {
+        value: ['ANTHROPIC_API_KEY'],
+        source: 'default',
+        defaultValue: [],
+      },
+      'health.context_pressure.warning_percent': { value: 95, source: 'default', defaultValue: 95 },
+      'queue.stuck_sweep_enabled': { value: true, source: 'file', defaultValue: false },
+      'queue.api_key_hint': { value: 'sk-secret', source: 'file', defaultValue: '' },
+      'feed.subscriptions.mentions': { value: ['/Users/x/feed'], source: 'file', defaultValue: [] },
+      'workflow.exception_routing': { value: '', source: 'default', defaultValue: '' },
+      'retention.transitions_days': { value: { a: 1 }, source: 'default', defaultValue: null },
+      'queue.odd': { value: undefined, source: 'default' },
+    },
+  };
+
+  it('forwards only the allowlist, hides path-like values, withholds secret-looking keys', () => {
+    const s = parseSettings(config);
+    expect(Object.keys(s.settings).sort()).toEqual([
+      'daemon.port',
+      'feed.subscriptions.mentions',
+      'health.context_pressure.warning_percent',
+      'queue.stuck_sweep_enabled',
+      'retention.transitions_days',
+      'workflow.exception_routing',
+    ]);
+    expect(s.settings['daemon.port']).toEqual({ value: 7433, source: 'env', defaultValue: 7433 });
+    expect(s.settings['feed.subscriptions.mentions']!.value).toBe('(path hidden)');
+    expect(s.settings['queue.stuck_sweep_enabled']).toEqual({
+      value: true,
+      source: 'file',
+      defaultValue: false,
+    });
+    // db.path, workspace.root, files.allowlist, recovery.*, and the secret-looking key never leave
+    expect(s.withheld).toBe(5);
+    expect(s.pathsHidden).toBe(1);
+    const wire = JSON.stringify(s);
+    for (const bad of ['/Users/x', 'sk-secret', 'ANTHROPIC_API_KEY', 'openrig.sqlite'])
+      expect(wire).not.toContain(bad);
+  });
+
+  it('is read, validated and 404-aware; an unreadable config pushes nothing', async () => {
+    const mk = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) =>
+      new DaemonDataReader('m4', get, { now: () => 1, log, kinds: ['settings'] });
+    const ok = (await mk(async () => config).next([]))!.pushes[0]!;
+    expect(DaemonDataPushSchema.safeParse(ok).success).toBe(true);
+    expect(ok).toMatchObject({ kind: 'settings', status: 'ok' });
+    expect(
+      (await mk(async () => {
+        throw new Error('GET -> HTTP 404');
+      }).next([]))!.pushes[0]
+    ).toMatchObject({ status: 'unsupported' });
+    const lines: string[] = [];
+    expect(
+      await mk(
+        async () => ({ nope: 1 }),
+        (l) => lines.push(l)
+      ).next([])
+    ).toBeNull();
+    expect(lines).toEqual([expect.stringMatching(/settings unreadable/)]);
   });
 });
