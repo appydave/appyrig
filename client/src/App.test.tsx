@@ -1840,12 +1840,15 @@ describe('batch 2 · C1: the chosen rig holds; "Follow latest" is explicit and o
     fake.fire('connect');
     fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [a]: '2026-10-12T10:00:00.000Z' })]));
     fireEvent.click(screen.getByTestId('view-flow')); // Map and Flow share the picker and selection
-    expect(selected()).toBe(`m2:${a}`);
+    // the first rig is the busiest one (most handoffs), chosen once
+    const first = selected()!;
+    expect(first).toBeTruthy();
     expect(screen.getByTestId('follow-latest')).toHaveAttribute('aria-pressed', 'false');
-    // the other rig becomes the most recent: the view stays where it is
-    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [b]: '2026-10-12T11:00:00.000Z' })]));
-    expect(selected()).toBe(`m2:${a}`);
-    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', `m2:${a}`);
+    // another rig becomes the most recent: the view stays where it is
+    const other = first === `m2:${a}` ? b : a;
+    fake.fire(FLEET_EVENTS.UPDATE, update([m2With({ [other]: '2026-10-12T11:00:00.000Z' })]));
+    expect(selected()).toBe(first);
+    expect(screen.getByTestId('rig-info')).toHaveAttribute('data-rig-key', first);
   });
 
   it('Follow latest tracks the most recent rig; clicking a rig turns it off and holds', () => {

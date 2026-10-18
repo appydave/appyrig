@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { View } from '../App.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 import type { FrozenMeta } from './frozen/frozenSocket.js';
@@ -106,6 +106,23 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     setNewPage('agent');
   }, []);
 
+  // Clicking a group opens a page of that group: the one last visited there, else its first.
+  const lastInGroup = useRef<Partial<Record<NavGroupKey, PageKey>>>({});
+  useEffect(() => {
+    const g = groupOf(page);
+    if (g) lastInGroup.current[g] = page;
+  }, [page]);
+  const openGroupPage = useCallback(
+    (g: NavGroupKey) => {
+      const pages = navGroups().find((x) => x.key === g)?.pages ?? [];
+      const last = lastInGroup.current[g];
+      const target = last && pages.includes(last) ? last : pages[0];
+      if (target && target !== page) goTo(target);
+      else setOpenGroup(g);
+    },
+    [goTo, page]
+  );
+
   const flipped = flippedFor === page;
   const wantV2 = (mode === 'v2') !== flipped;
   const def = v2PageFor(page);
@@ -212,7 +229,7 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
               data-testid={`v2-group-${g.key}`}
               aria-pressed={shownGroup === g.key}
               aria-current={groupOf(page) === g.key ? 'true' : undefined}
-              onClick={() => setOpenGroup(g.key)}
+              onClick={() => openGroupPage(g.key)}
             >
               {g.label}
             </button>

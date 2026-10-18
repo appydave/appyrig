@@ -445,3 +445,22 @@
 .hist-jump {
   flex: none;
 }
+
+/* UX nav: every group's header is the same size. The nav box is reserved, so a group with longer
+   page names never pushes the rest of the header onto a second row (1440 px). */
+.v2-nav {
+  width: 336px;
+  flex: none;
+}
+.v2-nav-groups .view-tab {
+  padding: 6px 10px;
+}
+.v2-nav-pages {
+  flex-wrap: nowrap;
+  gap: 2px 8px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.v2-nav-page {
+  font-size: 12px;
+}

@@ -30,6 +30,7 @@ import { buildRigMap, listRigs } from './fleet/views.js';
 import { followWork } from './fleet/timeline.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 import { useV2 } from './v2/useV2.js';
+import { busiestRig } from './v2/rigs.js';
 import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
@@ -229,7 +230,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   // or live when "Follow latest" is on. A chosen rig that stops being reported falls back for now
   // and comes back if it returns.
   useEffect(() => {
-    if (rigKey === null && rigs.length) setRigKey(rigs[0]!.key);
+    if (rigKey === null && rigs.length) setRigKey(busiestRig(rigs)!.key);
   }, [rigKey, rigs]);
   // Fix-first F4 (resilience case 4): a chosen rig that stops being reported is said to be gone,
   // not silently swapped for another under "Showing the rig you chose". The choice is kept, so the
@@ -245,7 +246,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     ? (rigs[0] ?? null)
     : goneRig
       ? null
-      : (rigs.find((r) => r.key === rigKey) ?? rigs[0] ?? null);
+      : (rigs.find((r) => r.key === rigKey) ?? busiestRig(rigs));
   const chooseRig = useCallback((key: string) => {
     setRigKey(key);
     setRigPicked(true);

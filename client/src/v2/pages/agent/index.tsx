@@ -719,12 +719,48 @@ function AgentBody({ ctx, tile }: { ctx: V2Context; tile: TileRef }) {
   );
 }
 
-/** The agent shown: the chosen one, else the first working or blocked seat of the chosen rig, else the first seat. */
+/**
+ * The agent shown when none is chosen: a Claude agent in a running rig with real data (an OpenRig
+ * seat that is up and has context in use), preferring the shared rig, then working or blocked over
+ * idle. Never a plain terminal or tmux seat while a real agent exists; the last resort is any seat.
+ */
 export function defaultAgent(machines: FleetMachine[], rigName: string | null): TileRef | null {
   const tiles = allTiles(machines);
-  const live = (t: TileRef) => ['working', 'blocked'].includes(pipFor(t.seat, t.machine));
+  const up = (t: TileRef) =>
+    pipFor(t.seat, t.machine) !== 'stopped' && pipFor(t.seat, t.machine) !== 'asleep';
+  const rigRunning = (t: TileRef) =>
+    t.seat.rig !== null &&
+    t.machine.snapshot.rigs.some((r) => r.name === t.seat.rig && r.status === 'running');
+  const claude = (t: TileRef) =>
+    t.seat.runtime === 'claude-code' || /^claude-/.test(t.seat.model ?? '');
+  const real = (t: TileRef) =>
+    t.seat.source === 'openrig' &&
+    claude(t) &&
+    up(t) &&
+    rigRunning(t) &&
+    (t.seat.contextUsedPct ?? 0) > 0;
+  const rank = (t: TileRef) => {
+    const pip = pipFor(t.seat, t.machine);
+    return (
+      (t.seat.rig === rigName ? 0 : 4) +
+      (pip === 'working' || pip === 'blocked' ? 0 : 2) +
+      (t.seat.status === 'idle' ? 0 : 1)
+    );
+  };
+  const best = (list: TileRef[]) =>
+    [...list].sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (b.seat.agentActivityAt ?? b.seat.lastActivityAt ?? '').localeCompare(
+          a.seat.agentActivityAt ?? a.seat.lastActivityAt ?? ''
+        )
+    )[0];
   return (
-    tiles.find((t) => t.seat.rig === rigName && live(t)) ?? tiles.find(live) ?? tiles[0] ?? null
+    best(tiles.filter(real)) ??
+    best(tiles.filter((t) => up(t) && claude(t))) ??
+    best(tiles.filter((t) => up(t) && t.seat.source === 'openrig')) ??
+    tiles[0] ??
+    null
   );
 }
 
@@ -765,9 +801,9 @@ function AgentV2({ ctx }: V2PageProps) {
       )}
       {tile && defaulted && (
         <p className="quiet" data-testid="v2a-default-note">
-          No agent was chosen, so this is the first working or blocked one ({tile.seat.id},{' '}
-          {PIP[pipFor(tile.seat, tile.machine)].label}). Pick another above, or click any agent on
-          the Wall.
+          No agent was chosen, so this is a Claude agent in a running rig with live data (
+          {tile.seat.id}, {PIP[pipFor(tile.seat, tile.machine)].label}). Pick another above, or
+          click any agent on the Wall.
         </p>
       )}
     </main>
