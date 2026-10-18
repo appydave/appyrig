@@ -77,7 +77,7 @@ describe('legend data (S1)', () => {
     const map = legendFor('map')
       .flatMap((s) => s.entries.map((e) => `${e.mark} ${e.means}`))
       .join(' | ');
-    expect(map).toContain('POD · SEATS only gathers the outside seats'); // text fix
+    expect(map).toContain('POD · SEATS appears only for a seat whose pod is not known'); // text fix
     expect(map).toContain('rig flicut-ab · stopped'); // D5
     expect(marks('wall').join(' ')).not.toContain('Black box'); // seat panel marks moved to Focus
   });
