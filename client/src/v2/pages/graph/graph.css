@@ -403,6 +403,11 @@
   border-radius: 8px;
   box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
 }
+/* Each frame is its own stacking context, so the frame whose menu is open sits above its
+   neighbours (and above the cross-rig labels), or the menu would draw under the next frame. */
+.g2-rig[data-menu-open] {
+  z-index: 40;
+}
 /* A rig shown because OpenRig itself flags it (Needs me, rig-level match). */
 .g2-rig-head[data-rig-match] {
   background: var(--ar-blocked-bg);

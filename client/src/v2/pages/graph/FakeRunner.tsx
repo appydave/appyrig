@@ -116,11 +116,14 @@ export function FakeButton({
   disabled,
   title,
   testId,
+  onAsk,
 }: {
   ask: FakeAsk;
   disabled?: boolean;
   title?: string;
   testId?: string;
+  /** Called after the ask is raised (a menu closes itself here, after the click, not during it). */
+  onAsk?: () => void;
 }) {
   const run = useFake();
   return (
@@ -134,6 +137,7 @@ export function FakeButton({
       onClick={(e) => {
         e.stopPropagation();
         run(ask);
+        onAsk?.();
       }}
     >
       {ask.label}

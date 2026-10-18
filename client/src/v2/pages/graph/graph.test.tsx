@@ -510,6 +510,65 @@ describe('Graph page', () => {
   });
 });
 
+describe('Graph review fold 2', () => {
+  it('the rig whose menu is open is raised above its neighbours', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const f = frame('roamy:starter');
+    expect(f).not.toHaveAttribute('data-menu-open');
+    fireEvent.click(within(f).getByTestId('g2-rig-menu'));
+    expect(f).toHaveAttribute('data-menu-open', 'true');
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(f).not.toHaveAttribute('data-menu-open');
+  });
+
+  it('Tab order: the tree is one stop with arrows inside; a rig header is one stop (name), ⋯ is reached by arrow', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const tree = screen.getByTestId('g2-tree');
+    const stops = within(tree)
+      .getAllByRole('button')
+      .filter((b) => b.getAttribute('tabindex') !== '-1');
+    expect(stops).toHaveLength(1);
+    const first = stops[0]!;
+    first.focus();
+    fireEvent.keyDown(first, { key: 'ArrowDown' });
+    expect(document.activeElement).not.toBe(first);
+    expect(document.activeElement).toHaveAttribute('data-testid', 'g2-tree-item');
+    // Right unfolds a folded row; Left folds it
+    const row = within(tree)
+      .getAllByTestId('g2-tree-item')
+      .find((b) => b.dataset.key === 'm2:kernel')!;
+    row.focus();
+    fireEvent.keyDown(row, { key: 'ArrowRight' });
+    expect(
+      within(tree)
+        .getAllByTestId('g2-tree-caret')
+        .find((c) => c.dataset.key === 'm2:kernel')
+    ).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(row, { key: 'ArrowLeft' });
+    expect(
+      within(tree)
+        .getAllByTestId('g2-tree-caret')
+        .find((c) => c.dataset.key === 'm2:kernel')
+    ).toHaveAttribute('aria-expanded', 'false');
+    // header: only the name is a tab stop
+    const head = within(frame('roamy:starter')).getByTestId('g2-rig-head');
+    const headStops = within(head)
+      .getAllByRole('button')
+      .filter((b) => b.getAttribute('tabindex') !== '-1');
+    expect(headStops.map((b) => b.dataset.testid)).toEqual(['g2-rig-name']);
+    const name = within(head).getByTestId('g2-rig-name');
+    name.focus();
+    fireEvent.keyDown(name, { key: 'ArrowRight' }); // open already: on to the ⋯ menu
+    expect(within(head).getByTestId('g2-rig-menu')).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(name).toHaveFocus();
+    fireEvent.keyDown(name, { key: 'ArrowLeft' }); // fold
+    expect(frame('roamy:starter')).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.keyDown(name, { key: 'ArrowRight' }); // unfold
+    expect(frame('roamy:starter')).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
 describe('Graph review fold', () => {
   it('MEDIUM-3: a line reads its state from the current fleet, so an item closing (same count) changes its class', () => {
     vi.useFakeTimers();
@@ -548,17 +607,22 @@ describe('Graph review fold', () => {
     expect(inRig().some((c) => c!.includes('open'))).toBe(true);
   });
 
-  it('the rebuild is throttled: a fleet that changes twice within 3 s is read once more, with the latest', () => {
+  it('the rebuild is throttled with a leading edge: the first update lands at once, later ones wait ~3 s', () => {
     vi.useFakeTimers();
     const a = crossFleet();
     const { rerender } = render(<Graph ctx={ctxFor(a)} />);
+    const caption = () => screen.getByTestId('g2-caption').textContent;
     const mk = (n: number) => [a[0]!, withQueue(a[1]!, a[1]!.snapshot.queue.slice(0, n))];
-    rerender(<Graph ctx={ctxFor(mk(9))} />);
+    const c0 = caption();
+    // the first change after mount is applied immediately, not after the window
     rerender(<Graph ctx={ctxFor(mk(4))} />);
-    // nothing yet
-    expect(screen.getByTestId('g2-caption')).toHaveTextContent('5 lines between rigs');
+    const c1 = caption();
+    expect(c1).not.toBe(c0);
+    // a second change within the window waits
+    rerender(<Graph ctx={ctxFor(mk(1))} />);
+    expect(caption()).toBe(c1);
     act(() => vi.advanceTimersByTime(3100));
-    expect(screen.getByTestId('g2-caption')).not.toHaveTextContent('5 lines between rigs');
+    expect(caption()).not.toBe(c1);
   });
 
   it('MEDIUM-2 on the page: the recovered lines are drawn between the columns', () => {

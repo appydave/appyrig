@@ -64,7 +64,9 @@ export const REBUILD_MS = 3000;
  */
 function useThrottled<T>(value: T, ms: number): T {
   const [out, setOut] = useState(value);
-  const last = useRef(Date.now());
+  // 0: nothing has been applied yet, so the first change after mount is applied at once (leading
+  // edge); only the ones after it wait out the window
+  const last = useRef(0);
   const latest = useRef(value);
   latest.current = value;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);

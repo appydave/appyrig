@@ -55,6 +55,9 @@ interface Geom {
  */
 function RigFrame(p: Props) {
   const { rig, open } = p;
+  const [menuOpen, setMenuOpen] = useState(false);
+  const nameBtn = useRef<HTMLButtonElement>(null);
+  const menuBtn = useRef<HTMLButtonElement>(null);
   const st = RIG_STATE[rig.state];
   const loose = !rig.ref;
   const running = rig.ref?.status === 'running';
@@ -100,6 +103,7 @@ function RigFrame(p: Props) {
       data-loose={loose || undefined}
       data-picked={p.picked || undefined}
       data-highlight={p.focusKey === rig.key || undefined}
+      data-menu-open={menuOpen || undefined}
       aria-expanded={open}
     >
       <header
@@ -111,6 +115,7 @@ function RigFrame(p: Props) {
           type="button"
           className="g2-caret"
           data-testid="g2-rig-toggle"
+          tabIndex={-1}
           aria-expanded={open}
           aria-label={`${open ? 'Collapse' : 'Expand'} ${rig.name}`}
           onClick={() => p.onToggle(rig.key, open)}
@@ -119,14 +124,27 @@ function RigFrame(p: Props) {
         </button>
         <button
           type="button"
+          ref={nameBtn}
           className="g2-rig-name mono"
           data-testid="g2-rig-name"
           title={
-            loose
+            (loose
               ? 'Sessions on this machine that belong to no rig'
-              : 'Pick this rig (the Current Rig Map shows it after a flip)'
+              : 'Pick this rig (the Current Rig Map shows it after a flip)') +
+            ' · Right arrow unfolds, then reaches ⋯; Left arrow folds'
           }
           onClick={() => (loose ? p.onToggle(rig.key, open) : p.onPick(rig.key))}
+          onKeyDown={(e) => {
+            // the header is one Tab stop: arrows unfold / fold, and reach the ⋯ menu
+            if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              if (!open) p.onToggle(rig.key, open);
+              else menuBtn.current?.focus();
+            } else if (e.key === 'ArrowLeft' && open) {
+              e.preventDefault();
+              p.onToggle(rig.key, open);
+            }
+          }}
         >
           {rig.name}
         </button>
@@ -156,7 +174,15 @@ function RigFrame(p: Props) {
             shown because OpenRig flags this rig: needs attention
           </span>
         )}
-        {!loose && <RigMenu rig={rig} running={!!running} />}
+        {!loose && (
+          <RigMenu
+            rig={rig}
+            running={!!running}
+            trigger={menuBtn}
+            back={nameBtn}
+            onOpenChange={setMenuOpen}
+          />
+        )}
       </header>
       {open && (
         <div className="g2-rig-body">
@@ -290,10 +316,26 @@ export default memo(RigFrame);
  * UX 3: the rig's Start / Restore / Launch behind one "⋯" button in the header. They are mocks, so
  * the mark stays visible beside the button whether the menu is open or not.
  */
-function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
+function RigMenu({
+  rig,
+  running,
+  trigger,
+  back,
+  onOpenChange,
+}: {
+  rig: GraphRig;
+  running: boolean;
+  trigger: React.RefObject<HTMLButtonElement | null>;
+  back: React.RefObject<HTMLButtonElement | null>;
+  /** The frame raises itself above its neighbours while its menu is open. */
+  onOpenChange: (open: boolean) => void;
+}) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => onOpenChange(open), [open, onOpenChange]);
+  // Closing during the click would unmount the button before React's bubble pass reaches it (the
+  // real-browser bug: the dialog never opened), so a button closes the menu after raising its ask.
+  const close = () => setOpen(false);
   useEffect(() => {
     if (!open) return;
     const away = (e: PointerEvent) => {
@@ -312,7 +354,7 @@ function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
       document.removeEventListener('pointerdown', away);
       document.removeEventListener('keydown', esc, true);
     };
-  }, [open]);
+  }, [open, trigger]);
   return (
     <span className="g2-menu-wrap" ref={wrap}>
       <button
@@ -320,6 +362,13 @@ function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
         ref={trigger}
         className="pill-btn g2-menu-btn"
         data-testid="g2-rig-menu"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            back.current?.focus();
+          }
+        }}
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={`Actions for ${rig.name} (mock)`}
@@ -335,10 +384,10 @@ function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
           role="group"
           aria-label={`${rig.name} actions (mock)`}
           data-testid="g2-rig-menu-items"
-          onClickCapture={() => setOpen(false)}
         >
           <FakeButton
             testId="g2-fake-start"
+            onAsk={close}
             disabled={running}
             title={running ? 'Already running' : undefined}
             ask={{
@@ -349,6 +398,7 @@ function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
           />
           <FakeButton
             testId="g2-fake-restore"
+            onAsk={close}
             ask={{
               label: 'Restore',
               question: `Restore ${rig.name} from its last snapshot on the ${rig.machineLabel}?`,
@@ -357,6 +407,7 @@ function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
           />
           <FakeButton
             testId="g2-fake-launch"
+            onAsk={close}
             ask={{
               label: 'Launch',
               question: `Launch a fresh ${rig.name} from its spec on the ${rig.machineLabel}?`,
