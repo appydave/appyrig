@@ -129,7 +129,7 @@ describe('v2 version switch', () => {
     expect(localStorage.getItem(MODE_KEY)).toBe('current');
   });
 
-  it('v2 nav is grouped and shows Current pages without a v2 as "no v2 yet"', () => {
+  it("v2 nav is grouped; the Fleet group's Graph page replaces the Rig Map", () => {
     history.replaceState(null, '', '/?v=2');
     renderLive();
     expect(screen.getAllByTestId(/^v2-group-/).map((b) => b.textContent)).toEqual([
@@ -147,8 +147,9 @@ describe('v2 version switch', () => {
       }
     );
     fireEvent.click(screen.getByTestId('v2-page-map'));
-    expect(screen.getByTestId('v2-no-v2')).toHaveTextContent('No v2 yet for Graph');
-    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    // every Current page has a v2 now (the Rig Map is the Graph), so no "no v2 yet" note shows
+    expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
+    expect(screen.queryByTestId('v2-no-v2')).toBeNull();
   });
 });
 
