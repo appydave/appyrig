@@ -11,6 +11,19 @@ export const LATEST_OPENRIG = {
   source: 'npm latest, read by hand',
 };
 
+/** How long a by-hand "latest release" is trusted. Older than this, nothing is called behind. */
+export const LATEST_MAX_AGE_MS = 7 * 24 * 3_600_000;
+
+export function latestIsStale(now: number): boolean {
+  const read = Date.parse(LATEST_OPENRIG.readOn);
+  return Number.isNaN(read) || now - read > LATEST_MAX_AGE_MS;
+}
+
+/** `0.6.11-rc.1`: a pre-release sorts before its release. */
+export function isPrerelease(v: string | null | undefined): boolean {
+  return /^v?\d+\.\d+\.\d+-[0-9A-Za-z]/.test((v ?? '').trim());
+}
+
 /** `0.6.6 (2620dea8)` → [0, 6, 6]; null when it does not start with a version. */
 export function parseVersion(v: string | null | undefined): number[] | null {
   const m = /^v?(\d+)\.(\d+)\.(\d+)/.exec((v ?? '').trim());
@@ -27,6 +40,10 @@ export function versionState(installed: string | null | undefined, latest: strin
     if (a[i]! < b[i]!) return 'behind';
     if (a[i]! > b[i]!) return 'ahead';
   }
+  const pa = isPrerelease(installed);
+  const pb = isPrerelease(latest);
+  if (pa && !pb) return 'behind';
+  if (!pa && pb) return 'ahead';
   return 'current';
 }
 
@@ -39,7 +56,10 @@ export function behindWords(installed: string | null | undefined, latest: string
   if (a[1] !== b[1])
     return `${Math.abs(b[1]! - a[1]!)} minor release${Math.abs(b[1]! - a[1]!) === 1 ? '' : 's'} ${a[1]! < b[1]! ? 'behind' : 'ahead'}`;
   const d = b[2]! - a[2]!;
-  if (d === 0) return 'up to date';
+  if (d === 0) {
+    if (isPrerelease(installed) && !isPrerelease(latest)) return 'a pre-release of the latest';
+    return 'up to date';
+  }
   return `${Math.abs(d)} patch release${Math.abs(d) === 1 ? '' : 's'} ${d > 0 ? 'behind' : 'ahead'}`;
 }
 
@@ -86,7 +106,8 @@ export function machineView(fm: FleetMachine, now: number): MachineView {
     openrig: daemon.version,
     openrigOk: daemon.ok,
     collector: fm.snapshot.collector.version,
-    version: versionState(daemon.version, LATEST_OPENRIG.version),
+    // An old by-hand "latest" cannot say anyone is behind: unknown until it is read again.
+    version: latestIsStale(now) ? 'unknown' : versionState(daemon.version, LATEST_OPENRIG.version),
     rigs: fm.snapshot.rigs.length,
     seats: fm.snapshot.seats.length,
   };

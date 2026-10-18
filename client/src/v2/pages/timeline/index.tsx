@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import RigPicker from '../../../components/RigPicker.js';
 import { DOT_STATE_LABEL, dotState, timeScale } from '../../../fleet/timeline.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
@@ -19,7 +19,21 @@ const LABEL_W = 150;
  * (when, how long, who did the work) and who waited on whom. Seat names open the agent panel.
  */
 function TimelineV2({ ctx }: V2PageProps) {
-  const rig = ctx.activeRig;
+  // The rig shown: the one the viewer picked here, else the one picked elsewhere, else the shared
+  // choice if it has a run, else the busiest rig (most handoffs, then latest): never an empty one first.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const busiest = useMemo(
+    () =>
+      [...ctx.rigs].sort(
+        (a, b) =>
+          b.handoffs - a.handoffs || (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '')
+      )[0] ?? null,
+    [ctx.rigs]
+  );
+  const rig =
+    ctx.rigs.find((r) => r.key === chosen) ??
+    ctx.pickedRig ??
+    (ctx.activeRig && ctx.activeRig.handoffs > 0 ? ctx.activeRig : busiest);
   const fm = rig ? ctx.allMachines.find((m) => m.machine.id === rig.machineId) : undefined;
   const tenMin = Math.floor(ctx.now / 600_000) * 600_000;
   const run = useMemo(() => (fm && rig ? buildRun(fm, rig.name, tenMin) : null), [fm, rig, tenMin]);
@@ -47,7 +61,10 @@ function TimelineV2({ ctx }: V2PageProps) {
       <RigPicker
         rigs={ctx.rigs}
         selected={rig?.key ?? null}
-        onSelect={ctx.chooseRig}
+        onSelect={(key) => {
+          setChosen(key);
+          ctx.chooseRig(key);
+        }}
         info={false}
       />
       {!rig && <p className="empty">Pick a rig.</p>}
@@ -129,8 +146,8 @@ function TimelineV2({ ctx }: V2PageProps) {
           <section className="w4-section">
             <h3 className="w4-h">Who waited on whom</h3>
             <p className="quiet">
-              Each row: one seat handed work to another and waited. Closed handoffs count from sent
-              to last update; open ones count until now.
+              Each row: one seat handed work to another and waited. The queue holds no closure time,
+              so a closed handoff counts from created to last update; open ones count until now.
             </p>
             {run.waits.length === 0 ? (
               <p className="empty">No handoffs between this rig&apos;s own seats.</p>
@@ -141,7 +158,7 @@ function TimelineV2({ ctx }: V2PageProps) {
                     <th>waited</th>
                     <th>on</th>
                     <th className="num">handoffs</th>
-                    <th className="num">median wait</th>
+                    <th className="num">median (created → last update)</th>
                     <th className="num">longest</th>
                     <th className="num">open now</th>
                   </tr>

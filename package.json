@@ -30,7 +30,8 @@
     "fake-collector": "node server/scripts/fake-collector.mjs",
     "api:gen": "tsx scripts/gen-api.ts",
     "test:root": "vitest run --config test/root/vitest.config.ts",
-    "atlas:sync": "node scripts/sync-atlas.mjs"
+    "atlas:sync": "node scripts/sync-atlas.mjs",
+    "rig-commands:sync": "node scripts/sync-rig-commands.mjs"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",

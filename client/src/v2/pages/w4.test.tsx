@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   FLEET_EVENTS,
@@ -20,7 +20,15 @@ import { buildRun, dur } from './timeline/model.js';
 import { page as accountsPage } from './accounts/index.js';
 import { burnPerHour, hoursToEmpty } from './accounts/model.js';
 import { page as machinesPage } from './machines/index.js';
-import { behindWords, LATEST_OPENRIG, machineView, versionState } from './machines/model.js';
+import {
+  behindWords,
+  isPrerelease,
+  latestIsStale,
+  LATEST_OPENRIG,
+  machineView,
+  parseVersion,
+  versionState,
+} from './machines/model.js';
 import { page as schemaPage } from './schema/index.js';
 import { sampleChanges } from './schema/model.js';
 import { CommandsPanel } from './learn/index.js';
@@ -503,4 +511,157 @@ describe('W4 pages in the app: registered, and B flips each to Current', () => {
     expect(screen.queryByTestId(v2Id)).toBeNull();
     expect(screen.getByTestId(currentId)).toBeInTheDocument();
   });
+});
+
+describe('W4 fold: accounts burn never contradicts the verdict (MEDIUM-1/3)', () => {
+  it('too early to tell, or under 3% of the window gone: no burn, no time to empty', () => {
+    const early = win({ projectedPct: null, elapsedPct: 1, usedPct: 4 });
+    expect(burnPerHour(early)).toBeNull();
+    expect(hoursToEmpty(early)).toBeNull();
+    // a projection but under 3% elapsed: still noise
+    const tiny = win({ projectedPct: 300, elapsedPct: 2.9, usedPct: 10 });
+    expect(burnPerHour(tiny)).toBeNull();
+    expect(burnPerHour(win({ elapsedPct: 3, usedPct: 6 }))).not.toBeNull();
+  });
+
+  it('0 use burns nothing and never empties', () => {
+    const zero = win({ usedPct: 0, projectedPct: 0 });
+    expect(burnPerHour(zero)).toBe(0);
+    expect(hoursToEmpty(zero)).toBeNull();
+  });
+
+  it('just reset (window ended, no reading) has no burn', () => {
+    const ended = win({ status: 'window-ended', usedPct: null, elapsedPct: null });
+    expect(burnPerHour(ended)).toBeNull();
+    expect(hoursToEmpty(ended)).toBeNull();
+  });
+
+  it('100% or more used is spent, not "empty in 0 min"', () => {
+    const spent = win({ usedPct: 104, projectedPct: 260 });
+    expect(burnPerHour(spent)).toBeGreaterThan(0);
+    expect(hoursToEmpty(spent)).toBeNull();
+  });
+
+  it('elapsed over 100% (a stale reading) gives no burn', () => {
+    expect(burnPerHour(win({ elapsedPct: 101 }))).toBeNull();
+  });
+
+  it('the page shows a dash for burn beside "too early to tell"', () => {
+    const w = win({ projectedPct: null, elapsedPct: 1, usedPct: 4 });
+    const fm = fleetMachine(snapshot('roamy'));
+    fm.snapshot.account = {
+      email: 'a@x.test',
+      plan: 'claude_max',
+      fiveHourPct: 4,
+      fiveHourResetsAt: w.resetsAt,
+      sevenDayPct: null,
+      sevenDayResetsAt: null,
+      sampledAt: new Date().toISOString(),
+      derived: {
+        tier: { label: 'Max $100', source: 'config' },
+        asOf: new Date().toISOString(),
+        readingFrom: 'roamy',
+        sampleAgeMs: 1000,
+        fiveHour: w,
+        sevenDay: win({ status: 'no-reading', usedPct: null }),
+        monthly: { status: 'not-reported' },
+      } as never,
+    };
+    const Page = accountsPage.component;
+    render(<Page ctx={ctxFor([fm])} />);
+    const first = screen.getAllByTestId('ac2-window')[0]!;
+    expect(first).toHaveAttribute('data-kind', 'early');
+    expect(within(first).getByTestId('ac2-burn')).toHaveTextContent('—');
+  });
+});
+
+describe('W4 fold: timeline (MEDIUM-2, LOW)', () => {
+  it('labels the wait column created → last update (the queue holds no closure time)', () => {
+    const fm = runMachine();
+    const ctx = ctxFor([fm], { activeRig: listRigs([fm]).find((r) => r.name === 'starter')! });
+    const Page = timelinePage.component;
+    render(<Page ctx={ctx} />);
+    expect(screen.getByTestId('tl2-waits')).toHaveTextContent('created → last update');
+  });
+
+  it('defaults to the busiest rig when the shared choice has no run', () => {
+    const fm = runMachine();
+    const empty = listRigs([fm]).find((r) => r.name !== 'starter' && r.handoffs === 0)!;
+    expect(empty).toBeTruthy();
+    const ctx = ctxFor([fm], { activeRig: empty, pickedRig: null });
+    const Page = timelinePage.component;
+    render(<Page ctx={ctx} />);
+    expect(screen.getByTestId('tl2-outcome')).toBeInTheDocument();
+    expect(screen.queryByTestId('tl2-empty')).toBeNull();
+  });
+});
+
+describe('W4 fold: machines version watch (MEDIUM-3, LOW)', () => {
+  it('parses a v prefix, a build suffix and a pre-release', () => {
+    expect(parseVersion('v0.6.11')).toEqual([0, 6, 11]);
+    expect(parseVersion('0.6.11-rc.1')).toEqual([0, 6, 11]);
+    expect(parseVersion('0.6.6 (2620dea8)')).toEqual([0, 6, 6]);
+    expect(parseVersion('latest')).toBeNull();
+    expect(isPrerelease('0.6.11-rc.1')).toBe(true);
+    expect(isPrerelease('0.6.11')).toBe(false);
+  });
+
+  it('a pre-release is behind its own release, and ahead of nothing', () => {
+    expect(versionState('v0.6.11', '0.6.11')).toBe('current');
+    expect(versionState('0.6.11-rc.1', '0.6.11')).toBe('behind');
+    expect(behindWords('0.6.11-rc.1', '0.6.11')).toBe('a pre-release of the latest');
+    expect(versionState('0.6.11', '0.6.11-rc.1')).toBe('ahead');
+  });
+
+  it('a major mismatch is said as a major, either way', () => {
+    expect(versionState('1.0.0', '0.6.11')).toBe('ahead');
+    expect(versionState('0.9.0', '1.0.0')).toBe('behind');
+    expect(behindWords('0.9.0', '1.0.0')).toBe('major 0 vs 1');
+  });
+
+  it('the by-hand latest is trusted for 7 days; after that nobody is behind', () => {
+    const read = Date.parse(LATEST_OPENRIG.readOn);
+    expect(latestIsStale(read + 6 * 86_400_000)).toBe(false);
+    expect(latestIsStale(read + 8 * 86_400_000)).toBe(true);
+    const fm = fleetMachine(snapshot('roamy'));
+    fm.snapshot.sources.daemon.version = '0.6.1';
+    expect(machineView(fm, read + 86_400_000).version).toBe('behind');
+    expect(machineView(fm, read + 9 * 86_400_000).version).toBe('unknown');
+  });
+
+  it('the page says "as of" and, when old, stops saying behind', () => {
+    const fm = fleetMachine(snapshot('roamy'));
+    fm.snapshot.sources.daemon.version = '0.6.1';
+    const Page = machinesPage.component;
+    const read = Date.parse(LATEST_OPENRIG.readOn);
+    const { unmount } = render(<Page ctx={ctxFor([fm], { now: read + 86_400_000 })} />);
+    expect(screen.getByTestId('mc2-watch')).toHaveTextContent(`as of ${LATEST_OPENRIG.readOn}`);
+    expect(screen.getByTestId('mc2-watch')).toHaveTextContent('1 of 1 behind');
+    unmount();
+    render(<Page ctx={ctxFor([fm], { now: read + 9 * 86_400_000 })} />);
+    expect(screen.getByTestId('mc2-watch')).toHaveTextContent('not rechecked');
+    expect(screen.getByTestId('mc2-watch')).not.toHaveTextContent('behind');
+    expect(screen.getByTestId('mc2-vstate')).toHaveTextContent('not rechecked');
+  });
+});
+
+describe('W4 fold: the Learn command list matches the brain copy', () => {
+  const brainPath = '/Users/davidcruwys/dev/ad/brains/openrig/rig-commands.json';
+  it.skipIf(!existsSync(brainPath))(
+    'version, count and curated count agree with the brain file',
+    () => {
+      const brain = JSON.parse(readFileSync(brainPath, 'utf8')) as {
+        openrig_version: string;
+        commands: { curated: boolean }[];
+      };
+      const copy = JSON.parse(
+        readFileSync(path.resolve(__dirname, 'learn/rig-commands.json'), 'utf8')
+      ) as RigCommands;
+      expect(copy.openrig_version).toBe(brain.openrig_version);
+      expect(copy.commands.length).toBe(brain.commands.length);
+      expect(copy.commands.filter((c) => c.curated).length).toBe(
+        brain.commands.filter((c) => c.curated).length
+      );
+    }
+  );
 });

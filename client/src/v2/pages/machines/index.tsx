@@ -1,7 +1,14 @@
 import { gb } from '../../../fleet/health.js';
 import { FakeControl, SampleLabel } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
-import { behindWords, LATEST_OPENRIG, machineView, sampleLoad, type MachineView } from './model.js';
+import {
+  behindWords,
+  latestIsStale,
+  LATEST_OPENRIG,
+  machineView,
+  sampleLoad,
+  type MachineView,
+} from './model.js';
 import '../w4.css';
 
 const pct = (a: number | null, b: number | null) =>
@@ -35,7 +42,7 @@ function Meter({
   );
 }
 
-function Card({ m }: { m: MachineView }) {
+function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
   const load = sampleLoad(m);
   return (
     <section
@@ -98,7 +105,9 @@ function Card({ m }: { m: MachineView }) {
           </b>{' '}
           <span className="mc2-vstate" data-state={m.version} data-testid="mc2-vstate">
             {m.version === 'behind' ? '▲ ' : m.version === 'current' ? '● ' : ''}
-            {behindWords(m.openrig, LATEST_OPENRIG.version)}
+            {latestStale
+              ? `latest release not rechecked since ${LATEST_OPENRIG.readOn}`
+              : behindWords(m.openrig, LATEST_OPENRIG.version)}
           </span>
           {!m.openrigOk && <span className="quiet"> · daemon not answering</span>}
         </div>
@@ -126,6 +135,7 @@ function MachinesV2({ ctx }: V2PageProps) {
   const views = ctx.machines.map((fm) => machineView(fm, ctx.now));
   const versions = [...new Set(views.map((v) => v.openrig).filter(Boolean))];
   const behind = views.filter((v) => v.version === 'behind').length;
+  const latestStale = latestIsStale(ctx.now);
   return (
     <main className="view w4-page" data-testid="v2-machines">
       <section
@@ -134,7 +144,11 @@ function MachinesV2({ ctx }: V2PageProps) {
         data-outcome={behind ? 'stalled' : 'running'}
       >
         <span className="w4-hero-big">
-          {behind ? `▲ ${behind} of ${views.length} behind` : '● all current'}
+          {latestStale
+            ? '○ latest release not rechecked'
+            : behind
+              ? `▲ ${behind} of ${views.length} behind`
+              : '● all current'}
         </span>
         <span className="w4-hero-why">
           OpenRig on the fleet: <b className="mono">{versions.join(', ') || 'not reported'}</b> ·
@@ -144,13 +158,14 @@ function MachinesV2({ ctx }: V2PageProps) {
           </b>{' '}
           <SampleLabel />{' '}
           <span className="quiet">
-            ({LATEST_OPENRIG.source}, {LATEST_OPENRIG.readOn}; AppyRig does not check npm yet)
+            ({LATEST_OPENRIG.source}, as of {LATEST_OPENRIG.readOn}; AppyRig does not check npm yet
+            {latestStale ? '; over 7 days old, so no machine is compared' : ''})
           </span>
         </span>
       </section>
       <div className="mc2-grid">
         {views.map((m) => (
-          <Card key={m.id} m={m} />
+          <Card key={m.id} m={m} latestStale={latestStale} />
         ))}
       </div>
       {ctx.hidden.length > 0 && (
