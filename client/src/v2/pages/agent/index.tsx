@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { FleetMachine, LoadoutLayer, QueueItem, Seat } from '@appydave/shared';
 import { loadoutCounts } from '@appydave/shared';
 import {
@@ -27,7 +27,7 @@ import { attachLine } from '../../../components/WaitingOnDavid.js';
 import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
 import { allTiles, findTile, seatAddresses } from '../../seats.js';
 import type { V2Context, V2PageDef, V2PageProps } from '../../types.js';
-import { sampleDetail, type SeatDetailView } from './detail.js';
+import { isOpenRigSeat, sampleDetail, type SeatDetailView } from './detail.js';
 import { useAgentData, useRigFile } from './useAgentData.js';
 
 const LAYER_ORDER: LoadoutLayer['id'][] = [
@@ -162,10 +162,13 @@ function Header({
   ctx,
   tile,
   ssh,
+  noRig,
 }: {
   ctx: V2Context;
   tile: TileRef;
   ssh: string | null | 'loading';
+  /** The seat is in no rig, so there is no ssh address to ask for. */
+  noRig: boolean;
 }) {
   const { seat, machine } = tile;
   const pip = pipFor(seat, machine);
@@ -234,7 +237,8 @@ function Header({
             <CopyAttach session={seat.id} ssh={ssh === 'loading' ? null : ssh} />
             {ssh === null && (
               <span className="quiet">
-                run it on {machine.machine.label} (no ssh address in AppyRig config)
+                run it on {machine.machine.label} (
+                {noRig ? 'no rig, so no ssh address' : 'no ssh address in AppyRig config'})
               </span>
             )}
           </>
@@ -333,13 +337,24 @@ function StartupFiles({
   view,
   sample,
   why,
+  notOpenRig,
 }: {
   view: SeatDetailView;
   sample: boolean;
   why: string;
+  notOpenRig: boolean;
 }) {
   const [at, setAt] = useState(0);
   const file = view.startupFiles[at] ?? view.startupFiles[0];
+  if (notOpenRig) {
+    return (
+      <Section id="startup" title="Startup files">
+        <p className="quiet" data-testid="v2a-not-openrig">
+          Not an OpenRig seat — no spec or startup files.
+        </p>
+      </Section>
+    );
+  }
   return (
     <Section id="startup" title="Startup files">
       <MaybeSample
@@ -377,8 +392,19 @@ function StartupFiles({
           (file.text !== null ? (
             <DocView key={file.path} name={file.path} content={file.text} />
           ) : (
-            <p className="quiet">The text of this file was not sent.</p>
+            <p className="quiet">The text of this file is not sent by the hub.</p>
           ))}
+        {view.startupActions.length > 0 && (
+          <ul data-testid="v2a-startup-actions">
+            {view.startupActions.map((a, i) => (
+              <li key={i} className="mono">
+                {a.type}
+                {a.phase ? ` · ${a.phase}` : ''}
+                {a.text ? `: ${a.text}` : ''}
+              </li>
+            ))}
+          </ul>
+        )}
       </MaybeSample>
     </Section>
   );
@@ -652,9 +678,14 @@ function AgentBody({ ctx, tile }: { ctx: V2Context; tile: TileRef }) {
   const socket = ctx.getSocket();
   const data = useAgentData(socket, machine.machine.id, seat.id, seat.rig);
   const mates = machine.snapshot.seats.filter((s) => s.rig === seat.rig).map((s) => s.id);
+  const notOpenRig = !isOpenRigSeat(seat) || data.detail.state === 'not-openrig';
   const sample = data.detail.state !== 'ok';
   const detail: SeatDetailView =
-    data.detail.state === 'ok' ? data.detail.view : sampleDetail(seat, mates);
+    data.detail.state === 'ok'
+      ? data.detail.view
+      : notOpenRig
+        ? { spec: null, startupFiles: [], startupActions: [], peers: [], recoveryNotes: [] }
+        : sampleDetail(seat, mates);
   const why =
     data.detail.state === 'sample'
       ? data.detail.why
@@ -670,17 +701,17 @@ function AgentBody({ ctx, tile }: { ctx: V2Context; tile: TileRef }) {
   const layers = data.loadout.state === 'ok' ? (data.loadout.value.loadout?.layers ?? []) : [];
   return (
     <>
-      <Header ctx={ctx} tile={tile} ssh={ssh} />
+      <Header ctx={ctx} tile={tile} ssh={ssh} noRig={data.waiting.state === 'na'} />
       <div className="v2a-grid">
         <div className="v2a-col">
           <Instructions layers={layers} status={data.loadout.state} />
-          <StartupFiles view={detail} sample={sample} why={why} />
+          <StartupFiles view={detail} sample={sample} why={why} notOpenRig={notOpenRig} />
           <Skills seat={seat} loadout={data.loadout} />
         </div>
         <div className="v2a-col">
           <ParentDocs ctx={ctx} tile={tile} files={data.files} />
           <Messages tile={tile} now={ctx.now} />
-          <Peers tile={tile} detail={detail} sample={sample} />
+          <Peers tile={tile} detail={detail} sample={sample && !notOpenRig} />
         </div>
       </div>
       <Terminal seat={seat} />
@@ -698,15 +729,33 @@ export function defaultAgent(machines: FleetMachine[], rigName: string | null): 
 }
 
 function AgentV2({ ctx }: V2PageProps) {
-  const tile =
-    findTile(ctx.allMachines, ctx.agentKey) ??
-    defaultAgent(ctx.allMachines, ctx.activeRig?.name ?? null);
+  const found = findTile(ctx.allMachines, ctx.agentKey);
+  const fallback = defaultAgent(ctx.allMachines, ctx.activeRig?.name ?? null);
+  // With no agent chosen, the first default is pinned once, so the page never jumps to another
+  // agent as states change underneath it.
+  const [auto, setAuto] = useState<string | null>(null);
+  const { agentKey, openAgentPage } = ctx;
+  useEffect(() => {
+    if (!agentKey && !auto && fallback) {
+      setAuto(fallback.key);
+      openAgentPage(fallback.key);
+    }
+  }, [agentKey, auto, fallback, openAgentPage]);
+  const missing = !!agentKey && !found;
+  const tile = found ?? findTile(ctx.allMachines, auto) ?? fallback;
+  const defaulted = !!tile && !!auto && tile.key === auto && !missing;
   return (
     <main className="view v2-agent" data-testid="v2-agent">
       <p className="quiet v2a-new" data-testid="v2a-new-note">
         New in v2: there is no old version of this page. <MockMark label="mock" /> marks controls
         that change nothing.
       </p>
+      {missing && (
+        <p className="quiet" role="status" data-testid="v2a-gone">
+          <b className="mono">{agentKey}</b> is no longer reported by its machine
+          {tile ? `; showing ${tile.seat.id} instead.` : '.'}
+        </p>
+      )}
       {!tile ? (
         <p className="empty" data-testid="v2a-empty">
           No agents reported yet. Machines appear here as soon as their collector reports.
@@ -714,10 +763,11 @@ function AgentV2({ ctx }: V2PageProps) {
       ) : (
         <AgentBody key={tile.key} ctx={ctx} tile={tile} />
       )}
-      {tile && !ctx.agentKey && (
-        <p className="quiet">
-          No agent chosen yet, so this is the first working one. Pick another above, or click any
-          agent on the Wall.
+      {tile && defaulted && (
+        <p className="quiet" data-testid="v2a-default-note">
+          No agent was chosen, so this is the first working or blocked one ({tile.seat.id},{' '}
+          {PIP[pipFor(tile.seat, tile.machine)].label}). Pick another above, or click any agent on
+          the Wall.
         </p>
       )}
     </main>

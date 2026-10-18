@@ -25,7 +25,8 @@ import type { V2PageDef, V2PageProps } from '../../types.js';
 import { seatFlags, teamsOf, wallView, type SeatFlags, type WallFilter } from './model.js';
 
 const TEAMS_KEY = 'appyrig.v2.wallHiddenTeams';
-const STOPPED_KEY = 'appyrig.hideStopped';
+// v2 keeps its own choice: switching it here never changes Current's Wall.
+const STOPPED_KEY = 'appyrig.v2.hideStopped';
 const OPEN_KEY = 'appyrig.v2.wallGroups';
 
 function readSet(key: string): Set<string> {
@@ -290,7 +291,7 @@ function WallV2({ ctx }: V2PageProps) {
             className="pill-btn"
             data-testid="v2-hide-stopped"
             aria-pressed={hideStopped}
-            title="On: seats whose session is stopped are left off. Remembered for you."
+            title="On: stopped seats are left off, except failing ones (down while their rig runs). Remembered for you."
             onClick={toggleStopped}
           >
             {hideStopped ? '●' : '○'} Hide stopped

@@ -143,15 +143,29 @@ describe('Wall v2: model', () => {
     expect(needs.counts).toEqual(all.counts);
     expect(all.counts.needs).toBe(1);
     expect(needs.machines[0]!.snapshot.seats.map((s) => s.id)).toEqual(['dev-build@starter']);
-    const none = wallView(
-      [m],
-      { hideStopped: false, hiddenTeams: new Set(), filter: 'failing' },
+    // a seat that is down while its rig runs is failing, and stays visible under Hide stopped
+    const down = structuredClone(m);
+    const victim = down.snapshot.seats.find((x) => x.rig === 'kernel')!;
+    victim.status = 'stopped';
+    const failing = wallView(
+      [down],
+      { hideStopped: true, hiddenTeams: new Set(), filter: 'failing' },
       NOW
     );
-    const failingIds = m.snapshot.seats
-      .filter((x) => seatFlags(x, m, NOW).failing)
-      .map((x) => x.id);
-    expect(none.machines.flatMap((x) => x.snapshot.seats.map((y) => y.id))).toEqual(failingIds);
+    expect(failing.counts.failing).toBeGreaterThan(0);
+    expect(failing.machines.flatMap((x) => x.snapshot.seats.map((y) => y.id))).toEqual([victim.id]);
+    const hidden = wallView(
+      [down],
+      { hideStopped: true, hiddenTeams: new Set(), filter: 'all' },
+      NOW
+    );
+    expect(hidden.machines.flatMap((x) => x.snapshot.seats.map((y) => y.id))).toContain(victim.id);
+    // a flagged-for-attention stopped seat is failing too
+    const flagged = structuredClone(m);
+    const f2 = flagged.snapshot.seats.find((x) => x.rig === null) ?? flagged.snapshot.seats[0]!;
+    f2.status = 'stopped';
+    f2.lifecycleState = 'attention_required';
+    expect(seatFlags(f2, flagged, NOW).failing).toBe(true);
     const m2 = fleetMachine(snapshot('m2'));
     expect(
       wallView([m2], { hideStopped: false, hiddenTeams: new Set(), filter: 'failing' }, NOW)
@@ -217,7 +231,7 @@ describe('Wall v2: page', () => {
   });
 
   it('groups by team or by machine', () => {
-    localStorage.setItem('appyrig.hideStopped', 'off');
+    localStorage.setItem('appyrig.v2.hideStopped', 'off');
     const { socket } = verbSocket();
     render(<Wall ctx={makeCtx(fleet(), socket)} />);
     const teams = screen.getAllByTestId('v2w-group').map((g) => g.dataset.groupKey);
@@ -255,16 +269,27 @@ describe('Agent page: seat.detail parsing and sample', () => {
   it('reads the verb defensively and refuses what it cannot read', () => {
     expect(parseSeatDetail(null)).toBeNull();
     expect(parseSeatDetail({ status: 'pending', reason: 'x', detail: null })).toBeNull();
-    expect(parseSeatDetail({ status: 'ok', detail: {} })).toBeNull();
+    expect(parseSeatDetail({ status: 'ok', detail: null })).toBeNull();
     const v = parseSeatDetail({
       status: 'ok',
       detail: {
-        spec: { name: 'implementer', version: '1.2.0', profile: 'default' },
-        startupFiles: [{ path: 'guidance/role.md', required: true, appliesOn: ['fresh_start'] }],
-        files: [{ id: 'f1', name: 'role.md', text: '# hi', truncated: false }],
+        spec: { name: 'implementer', version: '1.2.0', profile: 'default', hash: 'abc' },
+        startupFiles: [
+          {
+            path: 'guidance/role.md',
+            deliveryHint: 'send_text',
+            required: true,
+            appliesOn: ['fresh_start'],
+          },
+        ],
+        startupActions: [{ type: 'send_text', phase: 'after_ready', text: 'hello' }],
+        peers: [],
+        recoveryNotes: [],
+        installedResources: [],
       },
     });
-    expect(v?.startupFiles[0]).toMatchObject({ path: 'guidance/role.md', text: '# hi' });
+    expect(v?.startupFiles[0]).toMatchObject({ path: 'guidance/role.md', text: null });
+    expect(v?.startupActions[0]).toMatchObject({ type: 'send_text', text: 'hello' });
   });
 
   it('sample detail is built from the seat real names', () => {
@@ -410,16 +435,19 @@ describe('Agent page', () => {
         value: {
           status: 'ok',
           detail: {
-            spec: { name: 'implementer', version: '1.0.0', profile: 'default' },
-            startupFiles: [{ path: 'guidance/role.md', required: true, appliesOn: ['restore'] }],
-            files: [
+            spec: { name: 'implementer', version: '1.0.0', profile: 'default', hash: 'h' },
+            startupFiles: [
               {
-                id: 'guidance/role.md',
-                name: 'role.md',
-                text: 'Real startup text',
-                truncated: false,
+                path: 'guidance/role.md',
+                deliveryHint: 'send_text',
+                required: true,
+                appliesOn: ['restore'],
               },
             ],
+            startupActions: [{ type: 'send_text', phase: 'ready', text: 'Real startup text' }],
+            peers: [],
+            recoveryNotes: [],
+            installedResources: [],
           },
         },
       }))
@@ -430,7 +458,10 @@ describe('Agent page', () => {
     );
     const startup = screen.getByTestId('v2a-startup');
     expect(within(startup).queryByTestId('sample-label')).toBeNull();
-    expect(within(startup).getByTestId('v2a-doc-body')).toHaveTextContent('Real startup text');
+    expect(within(startup).getByTestId('v2a-startup-actions')).toHaveTextContent(
+      'Real startup text'
+    );
+    expect(within(startup).getByText(/not sent by the hub/)).toBeInTheDocument();
   });
 
   it('Copy attach is a real, safe button; an unsafe session name gets no button', async () => {
@@ -582,5 +613,85 @@ describe('Handoff Flow v2', () => {
     const build = stages.find((s) => s.dataset.stage === 'build')!;
     fireEvent.click(build);
     expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
+  });
+});
+
+describe('W2 fold: Agent page defaults, gone agents, no-rig seats', () => {
+  const Agent = agentPage.component;
+
+  it('pins the first default once, so the page never jumps agents', () => {
+    const { socket } = verbSocket(agentAnswers());
+    const ctx = makeCtx(fleet(), socket);
+    const { rerender } = render(<Agent ctx={ctx} />);
+    expect(ctx.openAgentPage).toHaveBeenCalledTimes(1);
+    expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
+    expect(screen.getByTestId('v2a-name')).toHaveTextContent('dev-build');
+    expect(screen.getByTestId('v2a-default-note')).toHaveTextContent(/dev-build@starter, blocked/);
+    // the fleet changes: another seat is now the "first working" one, the page stays put
+    const moved = fleet();
+    const bs = moved[0]!.snapshot.seats;
+    bs.find((s) => s.id === 'dev-build@starter')!.status = 'idle';
+    bs.find((s) => s.id === 'dev-review@starter')!.status = 'working';
+    rerender(<Agent ctx={makeCtx(moved, socket)} />);
+    expect(screen.getByTestId('v2a-name')).toHaveTextContent('dev-build');
+    expect(ctx.openAgentPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('an agent that is no longer reported is said so, then the default shows', () => {
+    const { socket } = verbSocket(agentAnswers());
+    render(<Agent ctx={makeCtx(fleet(), socket, { agentKey: 'm9/ghost@nowhere' })} />);
+    expect(screen.getByTestId('v2a-gone')).toHaveTextContent(
+      'm9/ghost@nowhere is no longer reported'
+    );
+    expect(screen.getByTestId('v2a-name')).toBeInTheDocument();
+  });
+
+  it('a seat with no rig: no invented spec or files, and the ssh note says why', () => {
+    const { socket } = verbSocket(agentAnswers());
+    render(<Agent ctx={makeCtx(fleet(), socket, { agentKey: 'roamy/openrig-orch' })} />);
+    expect(screen.getByTestId('v2a-not-openrig')).toHaveTextContent('Not an OpenRig seat');
+    const startup = screen.getByTestId('v2a-startup');
+    expect(within(startup).queryByTestId('sample-label')).toBeNull();
+    expect(within(startup).queryAllByTestId('v2a-startup-file')).toHaveLength(0);
+    expect(screen.getByTestId('v2a-header')).toHaveTextContent('no rig, so no ssh address');
+  });
+
+  it('a late answer for the agent you left never lands on the one you are on', async () => {
+    const pending: ((err: Error | null, a?: CallAnswer) => void)[] = [];
+    const reqs: { verb: string; input: Record<string, unknown> }[] = [];
+    const socket = {
+      connected: true,
+      on: () => socket,
+      off: () => socket,
+      emit: vi.fn(),
+      timeout: () => ({
+        emit: (
+          _e: string,
+          req: { verb: string; input: Record<string, unknown> },
+          cb: (err: Error | null, a?: CallAnswer) => void
+        ) => {
+          reqs.push(req);
+          pending.push(cb);
+        },
+      }),
+    } as unknown as FleetSocket;
+    const KEY = 'roamy/dev-build@starter';
+    const { rerender } = render(<Agent ctx={makeCtx(fleet(), socket, { agentKey: KEY })} />);
+    rerender(<Agent ctx={makeCtx(fleet(), socket, { agentKey: 'roamy/dev-review@starter' })} />);
+    const first = reqs.findIndex(
+      (r) => r.verb === 'seat.loadout' && r.input.seat === 'dev-build@starter'
+    );
+    const stale = agentAnswers()['seat.loadout']!({});
+    await act(async () => pending[first]!(null, stale as CallAnswer));
+    expect(screen.getByTestId('v2a-name')).toHaveTextContent('dev-review');
+    expect(screen.getByTestId('v2a-instructions')).not.toHaveTextContent('Build the slice.');
+  });
+});
+
+describe('W2 fold: structure lens places unknown endpoints in others', () => {
+  it('maps an endpoint with no box to `others` in seats mode', () => {
+    const edges = [{ from: 'quiet@r', to: 'dev-build@r', kind: 'delegates_to' }];
+    const seats = structureLines(edges, [], 'seats', ['dev-build', 'others']);
+    expect(seats.lines).toEqual([{ from: 'others', to: 'dev-build', kinds: ['delegates_to'] }]);
   });
 });

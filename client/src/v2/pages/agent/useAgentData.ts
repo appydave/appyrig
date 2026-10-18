@@ -4,6 +4,7 @@ import type {
   RigFileOutput,
   RigFilesOutput,
   RigWaitingOutput,
+  SeatDetailOutput,
   SeatLoadoutOutput,
 } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
@@ -11,7 +12,11 @@ import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { parseSeatDetail, type SeatDetailView } from './detail.js';
 
 export type Loaded<T> =
-  { state: 'loading' } | { state: 'ok'; value: T } | { state: 'refused'; error: Refusal };
+  | { state: 'loading' }
+  | { state: 'ok'; value: T }
+  | { state: 'refused'; error: Refusal }
+  /** Nothing to ask: the input does not apply (a seat with no rig has no rig files). */
+  | { state: 'na' };
 
 function useVerb<T>(
   socket: FleetSocket,
@@ -21,8 +26,11 @@ function useVerb<T>(
 ): Loaded<T> {
   const [got, setGot] = useState<Loaded<T>>({ state: 'loading' });
   useEffect(() => {
+    if (input === null) {
+      setGot({ state: 'na' });
+      return;
+    }
     setGot({ state: 'loading' });
-    if (input === null) return;
     let current = true;
     void callVerb<T>(socket, verb, input).then((a) => {
       if (current)
@@ -40,6 +48,8 @@ function useVerb<T>(
 export type DetailState =
   | { state: 'loading' }
   | { state: 'ok'; view: SeatDetailView }
+  /** The seat is not an OpenRig seat: no spec or startup files exist, and none are invented. */
+  | { state: 'not-openrig' }
   /** The verb is unknown, refused, timed out or sent nothing readable: the page shows sample data. */
   | { state: 'sample'; why: string };
 
@@ -69,10 +79,18 @@ export function useAgentData(
     rig ? { machine: machineId, rig } : null,
     `${machineId}/${rig}`
   );
-  const raw = useVerb<unknown>(socket, 'seat.detail', { machine: machineId, seat: seatId }, dep);
+  const raw = useVerb<SeatDetailOutput>(
+    socket,
+    'seat.detail',
+    { machine: machineId, seat: seatId },
+    dep
+  );
   let detail: DetailState;
   if (raw.state === 'loading') detail = { state: 'loading' };
-  else if (raw.state === 'refused') {
+  else if (raw.state === 'na') detail = { state: 'sample', why: 'no seat.detail' };
+  else if (raw.state === 'ok' && raw.value.status === 'not-openrig') {
+    detail = { state: 'not-openrig' };
+  } else if (raw.state === 'refused') {
     detail = { state: 'sample', why: `seat.detail refused: ${raw.error.failureMode}` };
   } else {
     const view = parseSeatDetail(raw.value);
@@ -101,7 +119,7 @@ export function useRigFile(
     rig && fileId ? { machine: machineId, rig, fileId } : null,
     `${machineId}/${rig}/${fileId}`
   );
-  if (!rig || !fileId) return null;
+  if (!rig || !fileId || loaded.state === 'na') return null;
   if (loaded.state === 'loading') return { state: 'loading' };
   if (loaded.state === 'refused') return { state: 'refused', error: loaded.error };
   const f = loaded.value.file;

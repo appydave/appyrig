@@ -98,6 +98,8 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     getSocket: () => spy.socket,
     keys: true,
     hidden: [],
+    agentKey: null,
+    openAgentPage: vi.fn(),
     onShowMachine: vi.fn(),
     onOpenSeat: vi.fn(),
     onOpenSkills: vi.fn(),

@@ -138,10 +138,17 @@ describe('v2 version switch', () => {
       'Agents',
       'Under the hood',
     ]);
-    fireEvent.click(screen.getByTestId('v2-group-work'));
-    fireEvent.click(screen.getByTestId('v2-page-timeline'));
-    expect(screen.getByTestId('v2-no-v2')).toHaveTextContent('No v2 yet for Run Timeline');
-    expect(screen.getByTestId('view-body-timeline')).toBeInTheDocument();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+    fireEvent.click(screen.getByTestId('v2-page-map'));
+    expect(screen.getByTestId('v2-no-v2')).toHaveTextContent('No v2 yet for Graph');
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
   });
 });
 

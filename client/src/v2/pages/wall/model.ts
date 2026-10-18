@@ -84,11 +84,12 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
     const kept: Seat[] = [];
     for (const seat of fm.snapshot.seats) {
       if (scope.hiddenTeams.has(teamKeyOf(fm, seat))) continue;
-      if (scope.hideStopped && pipFor(seat, fm) === 'stopped') {
+      const flags = seatFlags(seat, fm, now);
+      // Hide stopped never hides a failing seat: a seat that is down while its rig runs is the news.
+      if (scope.hideStopped && pipFor(seat, fm) === 'stopped' && !flags.failing) {
         stoppedHidden += 1;
         continue;
       }
-      const flags = seatFlags(seat, fm, now);
       counts.all += 1;
       if (flags.needs) counts.needs += 1;
       if (flags.stuck) counts.stuck += 1;

@@ -1,3 +1,4 @@
+// Forked from components/HandoffFlow.tsx @ 08025cf — mirror Current's fixes or 3-way diff on promote.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, HandoffGetOutput, RigEntry, RigEntryOutput } from '@appydave/shared';
 import { ago } from '../../../fleet/model.js';
@@ -131,9 +132,14 @@ export function structureLines(
   const ok = new Set(nodes);
   const byPair = new Map<string, StructureLine>();
   for (const e of edges ?? []) {
-    const from = idOf(e.from);
-    const to = idOf(e.to);
-    if (from === to || !ok.has(from) || !ok.has(to)) continue;
+    // Like Traffic: an endpoint with no box of its own (seats mode caps the boxes) joins `others`.
+    const place = (raw: string) => {
+      const id = idOf(raw);
+      return ok.has(id) ? id : mode === 'seats' && ok.has('others') ? 'others' : null;
+    };
+    const from = place(e.from);
+    const to = place(e.to);
+    if (!from || !to || from === to) continue;
     const key = `${from}→${to}`;
     const line = byPair.get(key) ?? { from, to, kinds: [] };
     if (!line.kinds.includes(e.kind)) line.kinds.push(e.kind);
