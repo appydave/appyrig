@@ -175,6 +175,7 @@ const STATUS: Record<string, number> = {
   'feedback-not-found': 404,
   'feedback-unavailable': 503,
   'feedback-full': 409,
+  'library-item-not-found': 404,
   internal: 500,
 };
 

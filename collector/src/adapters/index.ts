@@ -36,6 +36,9 @@ export { keySkillsOf, seatConfigReader, withSeatCards } from './seatcard.js';
 export {
   DaemonDataReader,
   parseSeatDetail,
+  parseLibrarySpecs,
+  parseLibrarySkills,
+  parseLibraryPacks,
   type DaemonGet,
   type SeatTarget,
   type PendingDaemonData,

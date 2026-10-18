@@ -1,9 +1,13 @@
 import { createHash } from 'node:crypto';
 import {
   DaemonDataPushSchema,
+  LIBRARY_FILES_MAX,
+  LIBRARY_ROWS_MAX,
   SeatDetailDataSchema,
   type DaemonDataPush,
   type DaemonKind,
+  type LibraryData,
+  type LibraryRow,
   type SeatDetailData,
 } from '@appydave/shared';
 import { redactString } from '../redact.js';
@@ -153,6 +157,137 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
   });
 }
 
+/** One GET that never throws: the value, or what went wrong (404 kept apart from the rest). */
+export type Settled<T = unknown> =
+  { ok: true; value: T } | { ok: false; notFound: boolean; error: string };
+
+export async function settle(get: DaemonGet, path: string): Promise<Settled> {
+  try {
+    return { ok: true, value: await get(path) };
+  } catch (e) {
+    return { ok: false, notFound: isNotFound(e), error: (e as Error).message };
+  }
+}
+
+// ── step 3: library ────────────────────────────────────────────────────────────────────────────
+
+const FACT_TEXT_MAX = 200;
+
+/** Primitive facts picked from a record; anything else is skipped, never guessed. */
+function pickFacts(r: Record<string, unknown>, keys: string[]): LibraryRow['facts'] {
+  const out: LibraryRow['facts'] = {};
+  for (const k of keys) {
+    const v = r[k];
+    if (typeof v === 'string') out[k] = v.slice(0, FACT_TEXT_MAX);
+    else if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === 'boolean') out[k] = v;
+  }
+  return out;
+}
+
+/** An array of rows, or a `{<wrapper>: [...]}` envelope: lenient about which. */
+function rowsOf(raw: unknown, wrapper: string): unknown[] {
+  if (Array.isArray(raw)) return raw;
+  if (isRec(raw) && Array.isArray(raw[wrapper])) return raw[wrapper] as unknown[];
+  throw new Error(`expected a JSON array (or {${wrapper}: [...]})`);
+}
+
+/** GET /api/specs/library: agent, rig and workflow specs. Rows without an id or a name are skipped. */
+export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
+  return rowsOf(raw, 'specs')
+    .flatMap((r): LibraryRow[] => {
+      if (!isRec(r)) return [];
+      const id = txt(r.id, 300);
+      const name = txt(r.name, 200);
+      if (!id || !name) return [];
+      return [
+        {
+          id,
+          kind: txt(r.kind, 60),
+          name,
+          version: txt(r.version, 60),
+          sourceType: txt(r.sourceType, 60),
+          summary: txt(r.summary, 400, true),
+          path: txt(r.sourcePath, 500),
+          updatedAt: txt(r.updatedAt, 60),
+          facts: pickFacts(r, [
+            'rolesCount',
+            'stepsCount',
+            'terminalTurnRule',
+            'targetRig',
+            'isBuiltIn',
+            'status',
+          ]),
+          files: [],
+        },
+      ];
+    })
+    .slice(0, LIBRARY_ROWS_MAX);
+}
+
+/** GET /api/skills/library. File text is NOT read: names and sizes only. */
+export function parseLibrarySkills(raw: unknown): LibraryRow[] {
+  return rowsOf(raw, 'skills')
+    .flatMap((r): LibraryRow[] => {
+      if (!isRec(r)) return [];
+      const id = txt(r.id, 300);
+      const name = txt(r.name, 200);
+      if (!id || !name) return [];
+      const files = list(r.files).flatMap((f) => {
+        if (!isRec(f)) return [];
+        const fname = txt(f.name, 200);
+        if (!fname) return [];
+        const size = num(f.size);
+        return [{ name: fname, size: size !== null && size >= 0 ? Math.round(size) : null }];
+      });
+      return [
+        {
+          id,
+          kind: 'skill',
+          name,
+          version: null,
+          sourceType: txt(r.source, 60),
+          summary: null,
+          path: txt(r.absolutePath, 500),
+          updatedAt: null,
+          facts: {
+            fileCount: files.length,
+            totalBytes: files.reduce((n, f) => n + (f.size ?? 0), 0),
+          },
+          files: files.slice(0, LIBRARY_FILES_MAX),
+        },
+      ];
+    })
+    .slice(0, LIBRARY_ROWS_MAX);
+}
+
+/** GET /api/context-packs/library. */
+export function parseLibraryPacks(raw: unknown): LibraryRow[] {
+  return rowsOf(raw, 'contextPacks')
+    .flatMap((r): LibraryRow[] => {
+      if (!isRec(r)) return [];
+      const id = txt(r.id, 300);
+      const name = txt(r.name, 200);
+      if (!id || !name) return [];
+      const tokens = num(r.manifestEstimatedTokens) ?? num(r.derivedEstimatedTokens);
+      return [
+        {
+          id,
+          kind: txt(r.kind, 60) ?? 'context-pack',
+          name,
+          version: txt(r.version, 60),
+          sourceType: txt(r.sourceType, 60),
+          summary: txt(r.purpose, 400, true),
+          path: txt(r.sourcePath, 500),
+          updatedAt: null,
+          facts: { ...pickFacts(r, ['taxonomy']), ...(tokens !== null ? { tokens } : {}) },
+          files: [],
+        },
+      ];
+    })
+    .slice(0, LIBRARY_ROWS_MAX);
+}
+
 // ── the reader ─────────────────────────────────────────────────────────────────────────────────
 
 export interface DaemonDataOptions {
@@ -161,6 +296,8 @@ export interface DaemonDataOptions {
   log?: (line: string) => void;
   /** Per-kind refresh interval overrides (ms), for tests. */
   everyMs?: Partial<Record<DaemonKind, number>>;
+  /** Run only these kinds (default: all). A switch to turn a channel off, and what tests use. */
+  kinds?: DaemonKind[];
 }
 
 export const DAEMON_DATA_EVERY_MS: Record<DaemonKind, number> = {
@@ -197,9 +334,11 @@ export class DaemonDataReader {
     this.now = opts.now ?? Date.now;
     this.log = opts.log ?? (() => {});
     this.every = { ...DAEMON_DATA_EVERY_MS, ...(opts.everyMs ?? {}) };
-    this.jobs = [
+    const jobs: Job[] = [
       { kind: 'seatdetail', everyMs: this.every.seatdetail, run: () => this.seatDetail() },
+      { kind: 'library', everyMs: this.every.library, run: () => this.library() },
     ];
+    this.jobs = jobs.filter((j) => !opts.kinds || opts.kinds.includes(j.kind));
   }
 
   /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
@@ -246,6 +385,55 @@ export class DaemonDataReader {
       );
     else this.failing.delete('seatdetail:seats');
     return out;
+  }
+
+  /**
+   * The library: three lists read independently. A list that cannot be read is null (kept apart from
+   * an empty one) and logged once; the read as a whole fails only when all three do.
+   */
+  private async library(): Promise<Outcome[]> {
+    const [specs, skills, packs, health] = await Promise.all([
+      settle(this.get, '/api/specs/library'),
+      settle(this.get, '/api/skills/library'),
+      settle(this.get, '/api/context-packs/library'),
+      settle(this.get, '/healthz'),
+    ]);
+    const lists = [specs, skills, packs];
+    if (lists.every((l) => !l.ok)) {
+      if (lists.every((l) => !l.ok && l.notFound))
+        return [
+          {
+            key: '',
+            status: 'unsupported',
+            reason: 'this OpenRig has no library routes',
+            data: null,
+          },
+        ];
+      const bad = lists.find((l) => !l.ok && !l.notFound);
+      throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
+    }
+    const one = (name: string, r: Settled, parse: (raw: unknown) => LibraryRow[]) => {
+      if (!r.ok) {
+        this.fail(`library:${name}`, `library ${name} unreadable: ${r.error}`);
+        return null;
+      }
+      try {
+        const rows = parse(r.value);
+        this.failing.delete(`library:${name}`);
+        return rows;
+      } catch (e) {
+        this.fail(`library:${name}`, `library ${name} unreadable: ${(e as Error).message}`);
+        return null;
+      }
+    };
+    const semver = health.ok && isRec(health.value) ? txt(health.value.semver, 60) : null;
+    const data: LibraryData = {
+      openrigVersion: semver,
+      specs: one('specs', specs, parseLibrarySpecs),
+      skills: one('skills', skills, parseLibrarySkills),
+      contextPacks: one('context packs', packs, parseLibraryPacks),
+    };
+    return [{ key: '', status: 'ok', reason: null, data }];
   }
 
   /**

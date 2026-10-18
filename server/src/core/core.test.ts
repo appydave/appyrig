@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { SeatStatusSchema, type SeatLoadout } from '@appydave/shared';
+import {
+  SeatStatusSchema,
+  type DaemonDataFor,
+  type LibraryListOutput,
+  type LibraryRow,
+  type SeatLoadout,
+} from '@appydave/shared';
 import { createCore } from './core.js';
 import { FAILURE_CODES, VERBS, VERB_REGISTRY, WRITE_VERBS, defineVerbs } from './verbs.js';
 import { FleetStore } from '../hub/fleetStore.js';
@@ -36,6 +42,8 @@ describe('AC 9 — exactly one write verb', () => {
       'handoff.list',
       'health.get',
       'history.list',
+      'library.get',
+      'library.list',
       'machine.list',
       'queue.list',
       'rig.entry',
@@ -318,6 +326,14 @@ describe('core.call — the one seam', () => {
         });
         continue;
       }
+      if (name === 'library.get') {
+        // nothing is stored on this fixture hub: a named refusal, not a crash
+        expect(core.call(AGENT, name, { machine: 'roamy', group: 'spec', id: 'x' })).toMatchObject({
+          ok: false,
+          error: { failureMode: 'library-item-not-found' },
+        });
+        continue;
+      }
       if (name === 'feedback.get') {
         // nothing is stored on this fixture hub: the answer is a named refusal, not a crash
         expect(core.call(AGENT, name, { id: 'fb-0001' })).toMatchObject({
@@ -339,7 +355,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 26 },
+      value: { app: 'AppyRig', version: real.version, verbs: 28 },
     });
   });
 
@@ -364,6 +380,7 @@ describe('B14 + refusal table', () => {
       'feedback-not-found': -32008,
       'feedback-unavailable': -32009,
       'feedback-full': -32010,
+      'library-item-not-found': -32011,
     });
   });
 });
@@ -535,6 +552,125 @@ describe('v2 · seat.detail', () => {
       ok: false,
       error: { failureMode: 'seat-not-found' },
     });
+  });
+});
+
+const libRow = (over: Partial<LibraryRow> = {}): LibraryRow => ({
+  id: 'workflow:basic-loop:1',
+  kind: 'workflow',
+  name: 'basic-loop',
+  version: '1',
+  sourceType: 'builtin',
+  summary: 'Walk one packet through the conveyor',
+  path: '/opt/openrig/basic-loop.yaml',
+  updatedAt: null,
+  facts: { stepsCount: 4 },
+  files: [],
+  ...over,
+});
+
+describe('v2 · library.list / library.get', () => {
+  const setup = () => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    store.put(loadSnapshot('m2'));
+    const core = createCore({ store, identity, now: clock.now });
+    return { store, core };
+  };
+  const put = (store: FleetStore, machineId: string, data: DaemonDataFor<'library'> | null) =>
+    store.daemonData.put({
+      kind: 'library',
+      machineId,
+      key: '',
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: data ? 'ok' : 'unsupported',
+      reason: data ? null : 'no routes',
+      data,
+    });
+
+  it('says pending / unsupported / ok per machine, and null counts for an unread list (never 0)', () => {
+    const { store, core } = setup();
+    put(store, 'roamy', {
+      openrigVersion: '0.6.6',
+      specs: [
+        libRow(),
+        libRow({ id: 'agent:x', kind: 'agent', name: 'x', summary: null, facts: {} }),
+      ],
+      skills: [
+        libRow({
+          id: 'sk:a',
+          kind: 'skill',
+          name: 'agent-browser',
+          summary: null,
+          files: [{ name: 'SKILL.md', size: 10 }],
+          facts: { fileCount: 1 },
+        }),
+      ],
+      contextPacks: null,
+    });
+    put(store, 'm2', null);
+    const a = core.call(AGENT, 'library.list', {});
+    expect(a).toMatchObject({ ok: true });
+    const v = (a as { value: LibraryListOutput }).value;
+    expect(v.machines).toEqual([
+      expect.objectContaining({
+        machine: 'm2',
+        status: 'unsupported',
+        counts: { specs: null, skills: null, contextPacks: null },
+      }),
+      expect.objectContaining({
+        machine: 'roamy',
+        status: 'ok',
+        openrigVersion: '0.6.6',
+        counts: { specs: 2, skills: 1, contextPacks: null },
+      }),
+    ]);
+    expect(v.total).toBe(3);
+    expect(v.items.map((i) => [i.machine, i.group, i.name])).toEqual([
+      ['roamy', 'skill', 'agent-browser'],
+      ['roamy', 'spec', 'basic-loop'],
+      ['roamy', 'spec', 'x'],
+    ]);
+    // the list carries no file names; library.get does
+    expect(JSON.stringify(v.items)).not.toContain('SKILL.md');
+    const filtered = core.call(AGENT, 'library.list', {
+      group: 'spec',
+      kind: 'workflow',
+      limit: 1,
+    });
+    expect((filtered as { value: LibraryListOutput }).value).toMatchObject({
+      total: 1,
+      truncated: false,
+    });
+    expect(
+      (core.call(AGENT, 'library.list', { text: 'CONVEYOR' }) as { value: LibraryListOutput }).value
+        .total
+    ).toBe(1);
+    expect(
+      core.call(AGENT, 'library.get', { machine: 'roamy', group: 'skill', id: 'sk:a' })
+    ).toMatchObject({
+      ok: true,
+      value: {
+        item: { name: 'agent-browser', group: 'skill', machine: 'roamy' },
+        files: [{ name: 'SKILL.md', size: 10 }],
+      },
+    });
+    expect(
+      core.call(AGENT, 'library.get', { machine: 'roamy', group: 'spec', id: 'sk:a' })
+    ).toMatchObject({ ok: false, error: { failureMode: 'library-item-not-found' } });
+    expect(core.call(AGENT, 'library.list', { machine: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'machine-not-found' },
+    });
+  });
+
+  it('before any push every machine is pending with a reason', () => {
+    const { core } = setup();
+    const v = (core.call(AGENT, 'library.list', {}) as { value: LibraryListOutput }).value;
+    expect(v.items).toEqual([]);
+    for (const m of v.machines)
+      expect(m).toMatchObject({ status: 'pending', reason: expect.any(String) });
   });
 });
 

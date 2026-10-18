@@ -289,6 +289,43 @@ describe('pusher', () => {
     expect(lines.filter((l) => l.includes('no ack for rig files'))).toHaveLength(1);
   }, 15_000);
 
+  it('v2 daemon data: a read that throws, or a hub with no listener for it, never stops the snapshot push', async () => {
+    hub = await startHub(); // like a pre-v2 hub: no listener for collector:daemondata
+    const lines: string[] = [];
+    let takes = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      ackTimeoutMs: 20,
+      log: (l) => lines.push(l),
+      daemonDataIntervalMs: 30,
+      daemonData: async () => {
+        takes++;
+        if (takes % 2 === 1) throw new Error('daemon exploded');
+        return {
+          pushes: [
+            {
+              kind: 'settings',
+              machineId: 'roamy',
+              collectedAt: new Date().toISOString(),
+              status: 'unsupported',
+              reason: null,
+              key: '',
+              data: null,
+            },
+          ],
+          markSent: () => {},
+        };
+      },
+    });
+    await until(() => takes >= 4 && hub!.received.length >= 8, 10_000);
+    expect(hub.received.every((s) => s.machine.id === 'roamy')).toBe(true);
+    expect(lines.filter((l) => l.includes('no ack for daemon data')).length).toBe(1);
+  }, 15_000);
+
   it('does not overlap ticks when a build is slow', async () => {
     hub = await startHub();
     let running = 0;

@@ -288,6 +288,10 @@ export const DaemonDataPushSchema = z.discriminatedUnion('kind', [
   push('settings', SettingsDataSchema),
 ]);
 export type DaemonDataPush = z.infer<typeof DaemonDataPushSchema>;
+/** The data of one kind (what `status: 'ok'` carries). */
+export type DaemonDataFor<K extends DaemonKind> = NonNullable<
+  Extract<DaemonDataPush, { kind: K }>['data']
+>;
 
 // ── verbs ──────────────────────────────────────────────────────────────────────────────────────
 

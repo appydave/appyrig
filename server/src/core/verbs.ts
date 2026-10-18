@@ -53,6 +53,17 @@ import {
   type DbRowsOutput,
   SeatLoadoutOutputSchema,
   SeatDetailInputSchema,
+  LibraryGetInputSchema,
+  LibraryGetOutputSchema,
+  LibraryListInputSchema,
+  LibraryListOutputSchema,
+  type DaemonDataFor,
+  type DaemonKind,
+  type DataMachine,
+  type LibraryGroup,
+  type LibraryItem,
+  type LibraryListOutput,
+  type LibraryRow,
   SeatDetailOutputSchema,
   type SeatDetailOutput,
   type SeatLoadoutOutput,
@@ -112,6 +123,7 @@ export const FAILURE_CODES = defineFailureCodes({
   'feedback-not-found': -32008,
   'feedback-unavailable': -32009,
   'feedback-full': -32010,
+  'library-item-not-found': -32011,
 });
 
 export const MachineNotFoundDetails = z.object({
@@ -415,9 +427,53 @@ const NOT_FOUND = ['machine-not-found'];
 const SEAT_NOT_FOUND = ['machine-not-found', 'seat-not-found'];
 const HANDOFF_NOT_FOUND = ['machine-not-found', 'handoff-not-found'];
 const RIG_NOT_FOUND = ['machine-not-found', 'rig-not-found'];
+const LIBRARY_NOT_FOUND = ['machine-not-found', 'library-item-not-found'];
 const FEEDBACK_NOT_FOUND = ['feedback-not-found'];
 const FEEDBACK_ADD = ['feedback-unavailable', 'feedback-full'];
 const FILE_NOT_FOUND = ['machine-not-found', 'rig-not-found', 'file-not-found'];
+
+/**
+ * v2 data channels: one machine's latest push of `kind`, plus the header every v2 verb returns so an
+ * empty list is never read as "none". `pending` = nothing from that collector; `unsupported` = its
+ * OpenRig lacks the route; `ok` = data (possibly with a null part the collector could not read).
+ */
+function dataOf<K extends DaemonKind>(ctx: VerbContext, machine: string, kind: K, label: string) {
+  const p = ctx.store.daemonData.get(machine, kind);
+  const header: DataMachine = !p
+    ? {
+        machine,
+        status: 'pending',
+        reason: `no ${label} from this machine's collector yet: it predates v2, has not sent one, or the daemon read failed`,
+        collectedAt: null,
+      }
+    : p.status === 'unsupported'
+      ? {
+          machine,
+          status: 'unsupported',
+          reason: p.reason ?? `this machine's OpenRig has no ${label}`,
+          collectedAt: p.collectedAt,
+        }
+      : { machine, status: 'ok', reason: null, collectedAt: p.collectedAt };
+  return { header, data: (p?.status === 'ok' ? p.data : null) as DaemonDataFor<K> | null };
+}
+
+const LIBRARY_GROUPS: Record<LibraryGroup, 'specs' | 'skills' | 'contextPacks'> = {
+  spec: 'specs',
+  skill: 'skills',
+  'context-pack': 'contextPacks',
+};
+
+function libraryRows(data: DaemonDataFor<'library'>): { row: LibraryRow; group: LibraryGroup }[] {
+  return (Object.keys(LIBRARY_GROUPS) as LibraryGroup[]).flatMap((group) =>
+    (data[LIBRARY_GROUPS[group]] ?? []).map((row) => ({ row, group }))
+  );
+}
+
+const toItem = (machine: string, group: LibraryGroup, row: LibraryRow): LibraryItem => {
+  const item: Partial<LibraryRow> = { ...row };
+  delete item.files;
+  return { ...(item as Omit<LibraryRow, 'files'>), machine, group };
+};
 
 // ── the verbs ──────────────────────────────────────────────────────────────────────────────────
 
@@ -624,6 +680,83 @@ const VERB_SET = {
         );
       if (p.status === 'unsupported') return out('unsupported', p.reason);
       return out('ok', null, { collectedAt: p.collectedAt, data: p.data });
+    }
+  ),
+
+  'library.list': query(
+    "OpenRig's library as each machine's collector read it (read-only): specs (agent, rig, workflow), skills and context packs, with name, version, source, summary, where it lives on that machine, and group facts (workflow steps and roles, skill file count and bytes, pack token estimate). The index only: no file text. machines[] says per machine whether the library was read (ok), is not there yet (pending) or that OpenRig lacks it (unsupported), and counts[] is null for a list that could not be read, so an empty list is never 'none'. Built-ins are the same on every machine; compare machines by name+version+source. Filters: group, kind, text; limit (default 200, max 500).",
+    LibraryListInputSchema,
+    LibraryListOutputSchema,
+    NOT_FOUND,
+    (input, ctx): LibraryListOutput => {
+      const machines: LibraryListOutput['machines'] = [];
+      const all: LibraryItem[] = [];
+      for (const m of machinesOf(ctx, input.machine)) {
+        const { header, data } = dataOf(ctx, m.machine.id, 'library', 'library');
+        const count = (k: 'specs' | 'skills' | 'contextPacks') => data?.[k]?.length ?? null;
+        machines.push({
+          ...header,
+          openrigVersion: data?.openrigVersion ?? null,
+          counts: {
+            specs: count('specs'),
+            skills: count('skills'),
+            contextPacks: count('contextPacks'),
+          },
+        });
+        if (data)
+          for (const { row, group } of libraryRows(data))
+            all.push(toItem(m.machine.id, group, row));
+      }
+      const text = input.text?.toLowerCase();
+      const items = all
+        .filter((i) => input.group === undefined || i.group === input.group)
+        .filter((i) => input.kind === undefined || i.kind === input.kind)
+        .filter(
+          (i) =>
+            text === undefined ||
+            i.name.toLowerCase().includes(text) ||
+            i.id.toLowerCase().includes(text) ||
+            (i.summary ?? '').toLowerCase().includes(text)
+        )
+        .sort(
+          (a, b) =>
+            a.machine.localeCompare(b.machine) ||
+            a.group.localeCompare(b.group) ||
+            a.name.localeCompare(b.name) ||
+            a.id.localeCompare(b.id)
+        );
+      const limit = input.limit ?? 200;
+      return {
+        machines,
+        items: items.slice(0, limit),
+        total: items.length,
+        truncated: items.length > limit,
+      };
+    }
+  ),
+
+  'library.get': query(
+    "One library item in full from the index: the row library.list returns plus, for a skill, its file names and sizes. File text is not carried (the collector sends the index only). Refuses library-item-not-found when that machine's library holds no such item (or has not been read yet).",
+    LibraryGetInputSchema,
+    LibraryGetOutputSchema,
+    LIBRARY_NOT_FOUND,
+    (input, ctx) => {
+      const [m] = machinesOf(ctx, input.machine);
+      const { header, data } = dataOf(ctx, m!.machine.id, 'library', 'library');
+      const hit = data
+        ? libraryRows(data).find((r) => r.group === input.group && r.row.id === input.id)
+        : undefined;
+      if (!hit)
+        throw new CapabilityRefusal(
+          'library-item-not-found',
+          `Machine "${input.machine}" has no ${input.group} "${input.id}" in its library (${header.status}).`,
+          { machine: input.machine, group: input.group, id: input.id, status: header.status }
+        );
+      return {
+        item: toItem(input.machine, hit.group, hit.row),
+        files: hit.row.files,
+        collectedAt: header.collectedAt,
+      };
     }
   ),
 
