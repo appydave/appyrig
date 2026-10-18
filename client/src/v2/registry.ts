@@ -11,6 +11,7 @@ import { page as needsYouPage } from './pages/needs-you/index.js';
 import { page as missionsPage } from './pages/missions/index.js';
 import { page as flowPage } from './pages/flow/index.js';
 import { page as agentPage } from './pages/agent/index.js';
+import { page as rigMapPage } from './pages/rig-map/index.js';
 import { page as graphPage } from './pages/graph/index.js';
 import { page as healthPage } from './pages/health/index.js';
 import { page as settingsPage } from './pages/settings/index.js';
@@ -34,6 +35,7 @@ export function v2Pages(): V2PageDef[] {
   return [
     wallPage,
     graphPage,
+    rigMapPage,
     flowPage,
     agentPage,
     needsYouPage,
@@ -92,10 +94,10 @@ export const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[]
   },
 ];
 
-/** v2 names for Current's views (the Rig Map becomes the Graph, C41). */
+/** v2 names for Current's views (the Rig Map keeps its name; the Graph is its own page). */
 const V2_LABEL: Record<View, string> = {
   wall: 'Wall',
-  map: 'Graph',
+  map: 'Rig Map',
   flow: 'Handoff Flow',
   timeline: 'Run Timeline',
   accounts: 'Accounts',

@@ -1,0 +1,56 @@
+/* v2 Rig Map: the original map's shape, wider and roomier. AppyDave light only. */
+.v2-rigmap {
+  padding: 8px 16px 32px;
+}
+.v2rm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 4px 0 8px;
+}
+.v2rm-bar .v2-mock-note {
+  margin: 0;
+}
+.v2rm-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+
+/* Pods are wide bands: the agents spread across the full width, so every arc has room and its
+   count can be read and traced from sender to receiver. */
+.v2-rigmap .lane-pods .pod {
+  flex: 1 1 100%;
+}
+.v2-rigmap .pod-seats {
+  justify-content: space-evenly;
+  column-gap: 40px;
+}
+
+/* Roomier cards: mono name and address, a bigger context line. */
+.v2-rigmap .node {
+  min-width: 250px;
+  padding: 16px 18px;
+  gap: 8px;
+  font-family: var(--ar-font-term);
+}
+.v2-rigmap .node b {
+  font-family: var(--ar-font-term);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+.v2-rigmap .node .seat-address {
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+.v2-rigmap .node .seat-context {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.v2-rigmap .node:focus-visible {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--ar-cta);
+}
