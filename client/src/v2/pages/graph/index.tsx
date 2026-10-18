@@ -37,18 +37,51 @@ export const FIT_MIN = 0.85;
 const DETAIL_W = 300;
 const DETAIL_H = 260;
 
-/** Scrolls the canvas (only the canvas, never the page) to an element: centred, or just into view. */
+/** Height of the sticky column heads at the top of the canvas (screen px), or 0. */
+const headRoom = (sc: HTMLElement) =>
+  sc.querySelector('.g2-col-head')?.getBoundingClientRect().height ?? 0;
+
+/**
+ * Scrolls the canvas (only the canvas, never the page) to an element: centred, or just into view.
+ * The column heads are sticky at the top, so "top" means just below them and nothing scrolls
+ * behind them.
+ */
 function scrollWithin(sc: HTMLElement | null, el: HTMLElement, center: boolean) {
   if (!sc?.scrollTo) return;
   const r = el.getBoundingClientRect();
   const s = sc.getBoundingClientRect();
-  const dy = center ? (s.height - Math.min(r.height, s.height)) / 2 : 16;
+  const head = headRoom(sc);
+  const room = s.height - head;
+  const dy = center ? head + (room - Math.min(r.height, room)) / 2 : head + 16;
   const dx = center ? (s.width - Math.min(r.width, s.width)) / 2 : 16;
   sc.scrollTo({
     top: sc.scrollTop + r.top - s.top - dy,
     left: sc.scrollLeft + r.left - s.left - dx,
     behavior: center ? 'smooth' : 'auto',
   });
+}
+
+/** True when the element is fully inside the canvas's visible area (below the sticky heads). */
+function inView(sc: HTMLElement, el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect();
+  const s = sc.getBoundingClientRect();
+  return (
+    r.top >= s.top + headRoom(sc) && r.bottom <= s.bottom && r.left >= s.left && r.right <= s.right
+  );
+}
+
+/** Where a rig's header is relative to the canvas's visible area. */
+type EndState = 'in view' | 'above' | 'below';
+function endState(sc: HTMLElement, canvas: HTMLElement | null, rigKey: string): EndState {
+  const el = canvas?.querySelector<HTMLElement>(
+    `[data-graph-rig="${CSS.escape(rigKey)}"] .g2-rig-head`
+  );
+  if (!el) return 'in view';
+  const r = el.getBoundingClientRect();
+  const s = sc.getBoundingClientRect();
+  if (r.bottom < s.top + headRoom(sc)) return 'above';
+  if (r.top > s.bottom) return 'below';
+  return 'in view';
 }
 
 /** A stable function that always calls the latest one: lets memo(RigFrame) skip frames whose rig has not changed. */
@@ -291,6 +324,27 @@ function GraphPage({ ctx }: V2PageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crossSig, layoutSig]);
   const maxCross = Math.max(1, ...cross.map((e) => e.count));
+  // where each end of the lit line is, so a line too tall for the screen still says both ends
+  const [ends, setEnds] = useState<{ from: EndState; to: EndState } | null>(null);
+  useEffect(() => {
+    const sc = scroller.current;
+    const e = hotLine === null ? undefined : cross.find((x) => crossKey(x) === hotLine);
+    if (!sc || !e) {
+      setEnds(null);
+      return;
+    }
+    const calc = () =>
+      setEnds({
+        from: endState(sc, canvas.current, e.from),
+        to: endState(sc, canvas.current, e.to),
+      });
+    calc();
+    sc.addEventListener('scroll', calc, { passive: true });
+    return () => sc.removeEventListener('scroll', calc);
+    // the line is identified by hotLine; `cross` is a new array every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotLine, crossSig]);
+  const hotEdge = hotLine === null ? undefined : cross.find((x) => crossKey(x) === hotLine);
   const anyHot = hotLine !== null || hotRig !== null;
   const isHot = (e: CrossEdge) =>
     hotLine !== null
@@ -341,7 +395,9 @@ function GraphPage({ ctx }: V2PageProps) {
   useEffect(() => {
     if (!picked) return;
     const el = canvas.current?.querySelector(`[data-graph-rig="${CSS.escape(picked)}"]`);
-    if (el) scrollWithin(scroller.current, el as HTMLElement, false);
+    // the canvas opens at its top; it scrolls only to bring an off-screen picked rig into view
+    if (el && scroller.current && !inView(scroller.current, el as HTMLElement))
+      scrollWithin(scroller.current, el as HTMLElement, false);
     // once, on arrival
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -478,6 +534,51 @@ function GraphPage({ ctx }: V2PageProps) {
       x: ev.clientX + 14,
       y: ev.clientY + 14,
     });
+  };
+  /**
+   * Bring a line's two ends on screen: both frame headers when they fit together (vertically, and
+   * sideways if the columns do), else the end that is farther from where the canvas is now.
+   */
+  const revealLine = (e: CrossEdge) => {
+    const sc = scroller.current;
+    const cv = canvas.current;
+    if (!sc?.scrollTo || !cv) return;
+    const head = (k: string) =>
+      cv.querySelector<HTMLElement>(`[data-graph-rig="${CSS.escape(k)}"] .g2-rig-head`);
+    const a = head(e.from);
+    const b = head(e.to);
+    if (!a || !b) return;
+    const s = sc.getBoundingClientRect();
+    const ra = a.getBoundingClientRect();
+    const rb = b.getBoundingClientRect();
+    const room = s.height - headRoom(sc) - 32;
+    const top = Math.min(ra.top, rb.top);
+    const bottom = Math.max(ra.bottom, rb.bottom);
+    if (bottom - top <= room) {
+      // both fit: put the pair in the middle of the visible area
+      const mid = (top + bottom) / 2;
+      const want = s.top + headRoom(sc) + (s.height - headRoom(sc)) / 2;
+      const left = Math.min(ra.left, rb.left);
+      const right = Math.max(ra.right, rb.right);
+      const sideways = right - left <= s.width - 32 ? left - s.left - 16 : 0;
+      sc.scrollTo({
+        top: sc.scrollTop + mid - want,
+        left: sideways ? sc.scrollLeft + sideways : sc.scrollLeft,
+        behavior: 'smooth',
+      });
+      return;
+    }
+    // they do not fit together: go to the end that is not on screen (the far one when both are not)
+    const mid = s.top + s.height / 2;
+    const far =
+      endState(sc, cv, e.from) === 'in view'
+        ? b
+        : endState(sc, cv, e.to) === 'in view'
+          ? a
+          : Math.abs(ra.top - mid) > Math.abs(rb.top - mid)
+            ? a
+            : b;
+    scrollWithin(sc, far, true);
   };
   const pinCross = (e: CrossEdge) => {
     setLineHover(null);
@@ -704,177 +805,199 @@ function GraphPage({ ctx }: V2PageProps) {
             hot={hotLine}
             onHot={setHotLine}
             onPin={pinCross}
+            onReveal={revealLine}
             hidden={hiddenLines}
           />
         </div>
-        <div className="g2-scroll" ref={scroller} data-testid="g2-scroll">
-          <div
-            className="g2-canvas"
-            ref={canvas}
-            style={{
-              zoom: z,
-              ['--g2-col' as string]: `${COL_W}px`,
-              ['--g2-gap' as string]: `${COL_GAP}px`,
-            }}
-            data-testid="g2-canvas"
-          >
-            <svg
-              className="g2-cross"
-              width={size.w}
-              height={size.h}
-              role="group"
-              aria-label="Handoff lines between rigs"
-              data-testid="g2-cross-lines"
+        <div className="g2-scroll-wrap">
+          <div className="g2-scroll" ref={scroller} data-testid="g2-scroll">
+            <div
+              className="g2-canvas"
+              ref={canvas}
+              style={{
+                zoom: z,
+                ['--g2-col' as string]: `${COL_W}px`,
+                ['--g2-gap' as string]: `${COL_GAP}px`,
+              }}
+              data-testid="g2-canvas"
             >
-              <defs>
-                {LINE_COLORS.map((c, i) => (
-                  <marker
-                    key={c}
-                    id={`g2-cross-arrow-${i}`}
-                    viewBox="0 0 10 10"
-                    refX="9"
-                    refY="5"
-                    markerWidth="10"
-                    markerHeight="10"
-                    markerUnits="userSpaceOnUse"
-                    orient="auto"
+              <svg
+                className="g2-cross"
+                width={size.w}
+                height={size.h}
+                role="group"
+                aria-label="Handoff lines between rigs"
+                data-testid="g2-cross-lines"
+              >
+                <defs>
+                  {LINE_COLORS.map((c, i) => (
+                    <marker
+                      key={c}
+                      id={`g2-cross-arrow-${i}`}
+                      viewBox="0 0 10 10"
+                      refX="9"
+                      refY="5"
+                      markerWidth="10"
+                      markerHeight="10"
+                      markerUnits="userSpaceOnUse"
+                      orient="auto"
+                    >
+                      <path d="M0,0 L10,5 L0,10 z" fill={c} />
+                    </marker>
+                  ))}
+                </defs>
+                {drawnCross.map(({ edge, g }) => (
+                  <g
+                    key={crossKey(edge)}
+                    data-testid="g2-cross"
+                    data-from={edge.from}
+                    data-to={edge.to}
+                    data-count={edge.count}
+                    data-dim={dimmed(edge) || undefined}
+                    data-hot={isHot(edge) || undefined}
+                    className="g2-cross-line"
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${crossTitle(edge)}. Enter shows them.`}
+                    onPointerEnter={(ev) => {
+                      crossHover(edge, ev);
+                      setHotLine(crossKey(edge));
+                    }}
+                    onPointerMove={(ev) => crossHover(edge, ev)}
+                    onPointerLeave={() => {
+                      setLineHover(null);
+                      setHotLine(null);
+                    }}
+                    onFocus={() => setHotLine(crossKey(edge))}
+                    onBlur={() => setHotLine(null)}
+                    onClick={() => pinCross(edge)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        pinCross(edge);
+                      }
+                    }}
                   >
-                    <path d="M0,0 L10,5 L0,10 z" fill={c} />
-                  </marker>
-                ))}
-              </defs>
-              {drawnCross.map(({ edge, g }) => (
-                <g
-                  key={crossKey(edge)}
-                  data-testid="g2-cross"
-                  data-from={edge.from}
-                  data-to={edge.to}
-                  data-count={edge.count}
-                  data-dim={dimmed(edge) || undefined}
-                  data-hot={isHot(edge) || undefined}
-                  className="g2-cross-line"
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`${crossTitle(edge)}. Enter shows them.`}
-                  onPointerEnter={(ev) => {
-                    crossHover(edge, ev);
-                    setHotLine(crossKey(edge));
-                  }}
-                  onPointerMove={(ev) => crossHover(edge, ev)}
-                  onPointerLeave={() => {
-                    setLineHover(null);
-                    setHotLine(null);
-                  }}
-                  onFocus={() => setHotLine(crossKey(edge))}
-                  onBlur={() => setHotLine(null)}
-                  onClick={() => pinCross(edge)}
-                  onKeyDown={(ev) => {
-                    if (ev.key === 'Enter' || ev.key === ' ') {
-                      ev.preventDefault();
-                      pinCross(edge);
-                    }
-                  }}
-                >
-                  {edge.open > 0 && (
+                    {edge.open > 0 && (
+                      <path
+                        d={g.d}
+                        className="g2-cross-glow"
+                        strokeWidth={4.5 + (edge.count / maxCross) * 5}
+                      />
+                    )}
                     <path
                       d={g.d}
-                      className="g2-cross-glow"
-                      strokeWidth={4.5 + (edge.count / maxCross) * 5}
+                      className={`g2-cross-path ${edge.open ? 'open' : edge.stale ? 'stale' : ''}`}
+                      stroke={LINE_COLORS[colorOf(edge)]}
+                      strokeWidth={1.8 + (edge.count / maxCross) * 4.5}
+                      markerEnd={`url(#g2-cross-arrow-${colorOf(edge)})`}
                     />
-                  )}
-                  <path
-                    d={g.d}
-                    className={`g2-cross-path ${edge.open ? 'open' : edge.stale ? 'stale' : ''}`}
-                    stroke={LINE_COLORS[colorOf(edge)]}
-                    strokeWidth={1.8 + (edge.count / maxCross) * 4.5}
-                    markerEnd={`url(#g2-cross-arrow-${colorOf(edge)})`}
-                  />
-                  <path d={g.d} className="hit" />
-                </g>
-              ))}
-            </svg>
-            <div className="g2-cols" style={{ paddingRight: PAD_RIGHT }}>
-              {columns.map(({ machine, groups: gs }, col) => (
-                <section
-                  key={machine.id}
-                  className="g2-col"
-                  data-col={col}
-                  data-machine-col={machine.id}
-                  data-liveness={machine.liveness}
-                  data-testid="g2-machine"
-                  data-highlight={focusKey === `machine:${machine.id}` || undefined}
-                  aria-label={`${machine.label}: ${gs.length} rigs`}
-                >
-                  <header className="g2-col-head">
-                    <b>{machine.label}</b>
-                    <i>
-                      {machine.liveness} · {machine.rigs.length} rig
-                      {machine.rigs.length === 1 ? '' : 's'} ·{' '}
-                      {[...machine.rigs, ...(machine.loose ? [machine.loose] : [])].reduce(
-                        (n, r) => n + r.agents,
-                        0
-                      )}{' '}
-                      agents
-                    </i>
-                  </header>
-                  {gs.length === 0 && (
-                    <p className="quiet g2-col-empty" data-testid="g2-col-empty">
-                      {filter
-                        ? 'Nothing here matches the filter.'
-                        : 'No teams shown on this machine.'}
-                    </p>
-                  )}
-                  {gs.map((g) => (
-                    <RigFrame
-                      key={g.key}
-                      rig={g}
-                      open={isOpen(g)}
-                      picked={g.key === picked}
-                      focusKey={focusKey}
-                      filter={filter}
-                      zoom={z}
-                      onToggle={toggleRig}
-                      onPick={pickRig}
-                      onOpen={openAgent}
-                      onHover={onHoverStable}
-                      onLeave={hideStable}
-                      onTab={onTabStable}
-                      onLineHover={setLineHover}
-                      onLinePin={pinLine}
-                      nameOf={nameOf}
-                      trace={traceOf(g.key)}
-                      onTrace={setHotRig}
+                    <path d={g.d} className="hit" />
+                  </g>
+                ))}
+              </svg>
+              <div className="g2-cols" style={{ paddingRight: PAD_RIGHT }}>
+                {columns.map(({ machine, groups: gs }, col) => (
+                  <section
+                    key={machine.id}
+                    className="g2-col"
+                    data-col={col}
+                    data-machine-col={machine.id}
+                    data-liveness={machine.liveness}
+                    data-testid="g2-machine"
+                    data-highlight={focusKey === `machine:${machine.id}` || undefined}
+                    aria-label={`${machine.label}: ${gs.length} rigs`}
+                  >
+                    <header className="g2-col-head">
+                      <b>{machine.label}</b>
+                      <i>
+                        {machine.liveness} · {machine.rigs.length} rig
+                        {machine.rigs.length === 1 ? '' : 's'} ·{' '}
+                        {[...machine.rigs, ...(machine.loose ? [machine.loose] : [])].reduce(
+                          (n, r) => n + r.agents,
+                          0
+                        )}{' '}
+                        agents
+                      </i>
+                    </header>
+                    {gs.length === 0 && (
+                      <p className="quiet g2-col-empty" data-testid="g2-col-empty">
+                        {filter
+                          ? 'Nothing here matches the filter.'
+                          : 'No teams shown on this machine.'}
+                      </p>
+                    )}
+                    {gs.map((g) => (
+                      <RigFrame
+                        key={g.key}
+                        rig={g}
+                        open={isOpen(g)}
+                        picked={g.key === picked}
+                        focusKey={focusKey}
+                        filter={filter}
+                        zoom={z}
+                        onToggle={toggleRig}
+                        onPick={pickRig}
+                        onOpen={openAgent}
+                        onHover={onHoverStable}
+                        onLeave={hideStable}
+                        onTab={onTabStable}
+                        onLineHover={setLineHover}
+                        onLinePin={pinLine}
+                        nameOf={nameOf}
+                        trace={traceOf(g.key)}
+                        onTrace={setHotRig}
+                      />
+                    ))}
+                  </section>
+                ))}
+              </div>
+              <svg className="g2-cross-labels" width={size.w} height={size.h} aria-hidden="true">
+                {drawnCross.map(({ edge, g }) => (
+                  <g
+                    key={`l:${crossKey(edge)}`}
+                    className="rigmap-label g2-cross-label"
+                    data-dim={dimmed(edge) || undefined}
+                    data-testid="g2-cross-label"
+                    onPointerEnter={(ev) => crossHover(edge, ev)}
+                    onPointerLeave={() => setLineHover(null)}
+                    onClick={() => pinCross(edge)}
+                  >
+                    <rect
+                      x={g.lx - 13}
+                      y={g.ly - 9}
+                      width={26}
+                      height={18}
+                      rx={4}
+                      style={{ stroke: LINE_COLORS[colorOf(edge)] }}
                     />
-                  ))}
-                </section>
-              ))}
+                    <text x={g.lx} y={g.ly} className="rigmap-count">
+                      {edge.count}
+                    </text>
+                  </g>
+                ))}
+              </svg>
             </div>
-            <svg className="g2-cross-labels" width={size.w} height={size.h} aria-hidden="true">
-              {drawnCross.map(({ edge, g }) => (
-                <g
-                  key={`l:${crossKey(edge)}`}
-                  className="rigmap-label g2-cross-label"
-                  data-dim={dimmed(edge) || undefined}
-                  data-testid="g2-cross-label"
-                  onPointerEnter={(ev) => crossHover(edge, ev)}
-                  onPointerLeave={() => setLineHover(null)}
-                  onClick={() => pinCross(edge)}
-                >
-                  <rect
-                    x={g.lx - 13}
-                    y={g.ly - 9}
-                    width={26}
-                    height={18}
-                    rx={4}
-                    style={{ stroke: LINE_COLORS[colorOf(edge)] }}
-                  />
-                  <text x={g.lx} y={g.ly} className="rigmap-count">
-                    {edge.count}
-                  </text>
-                </g>
-              ))}
-            </svg>
           </div>
+          {hotEdge && ends && (
+            <p className="g2-follow" data-testid="g2-follow" role="status">
+              <span
+                className="g2-swatch"
+                aria-hidden="true"
+                style={{ background: LINE_COLORS[colorOf(hotEdge)] }}
+              />
+              <b className="mono">{nameOf(hotEdge.from)}</b>
+              <i data-end={ends.from}>
+                {ends.from === 'in view' ? '' : ends.from === 'above' ? '▲ above' : '▼ below'}
+              </i>
+              {' → '}
+              <b className="mono">{nameOf(hotEdge.to)}</b>
+              <i data-end={ends.to}>
+                {ends.to === 'in view' ? '' : ends.to === 'above' ? '▲ above' : '▼ below'}
+              </i>
+              <span className="mono"> · {hotEdge.count}</span>
+            </p>
+          )}
         </div>
       </div>
       {lineHover && (

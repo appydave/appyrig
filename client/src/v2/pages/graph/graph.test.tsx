@@ -661,6 +661,61 @@ describe('Graph UX batch (usability walk #3 and #8)', () => {
   });
 });
 
+describe('Graph polish: opens at the top, and a tall line still shows both ends', () => {
+  const scrollSpy = () => {
+    const fn = vi.fn();
+    // jsdom has no scrollTo on elements
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: fn });
+    return fn;
+  };
+  afterEach(() => {
+    delete (HTMLElement.prototype as unknown as { scrollTo?: unknown }).scrollTo;
+  });
+
+  it('the canvas opens at its top: a picked rig that is already on screen does not scroll it', () => {
+    const fn = scrollSpy();
+    const machines = crossFleet();
+    const picked = listRigs(machines).find((r) => r.key === 'roamy:starter')!;
+    render(<Graph ctx={ctxFor(machines, { activeRig: picked })} />);
+    expect(fn).not.toHaveBeenCalled();
+    expect(screen.getByTestId('g2-scroll').scrollTop).toBe(0);
+  });
+
+  it('hovering a Lines row pins a "from → to" label with where each end is, and it goes on leave', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    expect(screen.queryByTestId('g2-follow')).toBeNull();
+    const row = screen
+      .getAllByTestId('g2-lines-row')
+      .find((r) => r.dataset.from === 'roamy:starter' && r.dataset.to === 'roamy:kernel')!;
+    fireEvent.pointerEnter(row);
+    const label = screen.getByTestId('g2-follow');
+    expect(label).toHaveTextContent('starter (Roamy)');
+    expect(label).toHaveTextContent('kernel (Roamy)');
+    expect(label).toHaveTextContent('3');
+    fireEvent.pointerLeave(row);
+    expect(screen.queryByTestId('g2-follow')).toBeNull();
+  });
+
+  it('clicking a Lines row scrolls the canvas to the line’s ends; its handoffs button opens the drawer', () => {
+    const fn = scrollSpy();
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const row = screen
+      .getAllByTestId('g2-lines-row')
+      .find((r) => r.dataset.from === 'roamy:starter' && r.dataset.to === 'roamy:kernel')!;
+    fireEvent.click(row);
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(fn.mock.calls[0]![0]).toMatchObject({ behavior: 'smooth' });
+    expect(screen.queryByTestId('g2-drawer')).toBeNull(); // the row only scrolls
+    fireEvent.click(row.parentElement!.querySelector('[data-testid="g2-lines-open"]')!);
+    expect(screen.getByTestId('g2-drawer')).toBeInTheDocument();
+  });
+
+  it('column heads are sticky so nothing scrolls behind them', () => {
+    const css = readFileSync(path.resolve(__dirname, 'graph.css'), 'utf8');
+    expect(css).toMatch(/\.g2-col-head \{\s*position: sticky;\s*top: 0;/);
+  });
+});
+
 describe('Graph review fold 2', () => {
   it('the rig whose menu is open is raised above its neighbours', () => {
     render(<Graph ctx={ctxFor(crossFleet())} />);
