@@ -57,6 +57,10 @@ import {
   LibraryGetOutputSchema,
   LibraryListInputSchema,
   LibraryListOutputSchema,
+  HistoryTransitionsInputSchema,
+  HistoryTransitionsOutputSchema,
+  type HistoryTransitionRow,
+  type HistoryTransitionsOutput,
   type DaemonDataFor,
   type DaemonKind,
   type DataMachine,
@@ -756,6 +760,88 @@ const VERB_SET = {
         item: toItem(input.machine, hit.group, hit.row),
         files: hit.row.files,
         collectedAt: header.collectedAt,
+      };
+    }
+  ),
+
+  'history.transitions': query(
+    "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor. Not the same as history.list, which is what API callers did.",
+    HistoryTransitionsInputSchema,
+    HistoryTransitionsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): HistoryTransitionsOutput => {
+      const machines: HistoryTransitionsOutput['machines'] = [];
+      const all: HistoryTransitionRow[] = [];
+      const text = input.text?.toLowerCase();
+      const inRig = (v: string | null) =>
+        v !== null && input.rig !== undefined && v.endsWith(`@${input.rig}`);
+      for (const m of machinesOf(ctx, input.machine)) {
+        const { header, data } = dataOf(ctx, m.machine.id, 'transitions', 'queue transitions');
+        const rows = data?.rows ?? [];
+        machines.push({
+          ...header,
+          held: rows.length,
+          retained: data?.retained ?? null,
+          truncated: data?.truncated ?? false,
+          earliestAt: rows.reduce<string | null>(
+            (e, r) => (e === null || r.at < e ? r.at : e),
+            null
+          ),
+        });
+        const queue = new Map(m.snapshot.queue.map((q) => [q.id, q]));
+        for (const r of rows) {
+          const q = queue.get(r.qitemId);
+          const row: HistoryTransitionRow = {
+            ...r,
+            machine: m.machine.id,
+            source: q?.source ?? null,
+            destination: q?.destination ?? null,
+            summary: q?.summary?.slice(0, 200) ?? null,
+          };
+          if (input.qitemId !== undefined && r.qitemId !== input.qitemId) continue;
+          if (input.state !== undefined && r.state !== input.state) continue;
+          if (input.closureReason !== undefined && r.closureReason !== input.closureReason)
+            continue;
+          if (
+            input.seat !== undefined &&
+            ![row.actor, row.source, row.destination].includes(input.seat)
+          )
+            continue;
+          if (input.rig !== undefined && ![row.actor, row.source, row.destination].some(inRig))
+            continue;
+          if (
+            text !== undefined &&
+            ![
+              r.qitemId,
+              r.actor,
+              r.closureReason,
+              r.closureTarget,
+              r.state,
+              row.summary,
+              ...(q?.tags ?? []),
+            ].some((v) => (v ?? '').toLowerCase().includes(text))
+          )
+            continue;
+          all.push(row);
+        }
+      }
+      // newest first; ids are per-daemon decimal strings, compared as numbers when both are
+      const num = (id: string) => (/^\d+$/.test(id) ? Number(id) : -1);
+      all.sort(
+        (a, b) =>
+          b.at.localeCompare(a.at) ||
+          a.machine.localeCompare(b.machine) ||
+          num(b.id) - num(a.id) ||
+          b.id.localeCompare(a.id)
+      );
+      const limit = input.limit ?? 50;
+      const start = input.before === undefined ? 0 : Number(input.before);
+      const end = start + limit;
+      return {
+        machines,
+        rows: all.slice(start, end),
+        total: all.length,
+        nextCursor: end < all.length ? String(end) : null,
       };
     }
   ),

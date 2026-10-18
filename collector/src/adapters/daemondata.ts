@@ -4,11 +4,14 @@ import {
   LIBRARY_FILES_MAX,
   LIBRARY_ROWS_MAX,
   SeatDetailDataSchema,
+  TRANSITIONS_MAX,
   type DaemonDataPush,
   type DaemonKind,
   type LibraryData,
   type LibraryRow,
   type SeatDetailData,
+  type TransitionRow,
+  type TransitionsData,
 } from '@appydave/shared';
 import { redactString } from '../redact.js';
 
@@ -288,6 +291,54 @@ export function parseLibraryPacks(raw: unknown): LibraryRow[] {
     .slice(0, LIBRARY_ROWS_MAX);
 }
 
+// ── step 4: queue transitions ──────────────────────────────────────────────────────────────────
+
+/** The daemon's page size cap for the telemetry streams is 128 (limit above it is a 400). */
+export const TRANSITIONS_PAGE = 128;
+/** Pages read per round, so the first read of a long history is spread over a few rounds. */
+const TRANSITIONS_PAGES_PER_ROUND = 12;
+
+export function parseTransitionRow(r: unknown): TransitionRow | null {
+  if (!isRec(r)) return null;
+  const rawId = r.transitionId;
+  const id =
+    typeof rawId === 'string' ? rawId.trim() : typeof rawId === 'number' ? String(rawId) : '';
+  const qitemId = txt(r.qitemId, 200);
+  const state = txt(r.state, 60);
+  const when = txt(r.originalTimestamp, 60) ?? txt(r.createdAt, 60);
+  const ms = when ? Date.parse(when) : NaN;
+  if (!id || id.length > 30 || !qitemId || !state || !Number.isFinite(ms)) return null;
+  return {
+    id,
+    qitemId,
+    at: new Date(ms).toISOString(),
+    state,
+    actor: txt(r.actorSession, 200),
+    closureReason: txt(r.closureReason, 200),
+    closureTarget: txt(r.closureTarget, 200),
+  };
+}
+
+/** What a page of GET /api/telemetry/v1/queue-transitions carries that the reader needs. */
+export function parseTransitionsPage(raw: unknown): {
+  rows: TransitionRow[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  hostId: string | null;
+  bootEpoch: string | null;
+} {
+  if (!isRec(raw) || !Array.isArray(raw.rows) || !isRec(raw.page))
+    throw new Error('queue-transitions: expected {rows, page}');
+  const source = isRec(raw.source) ? raw.source : {};
+  return {
+    rows: raw.rows.flatMap((r) => parseTransitionRow(r) ?? []),
+    nextCursor: txt(raw.page.nextCursor, 2000),
+    hasMore: raw.page.hasMore === true,
+    hostId: txt(source.hostId, 100),
+    bootEpoch: txt(source.bootEpoch, 100),
+  };
+}
+
 // ── the reader ─────────────────────────────────────────────────────────────────────────────────
 
 export interface DaemonDataOptions {
@@ -325,6 +376,14 @@ export class DaemonDataReader {
   private readonly failing = new Set<string>();
   private targets: SeatTarget[] = [];
   private readonly jobs: Job[];
+  /** Queue transitions: the cursor to continue from, and the newest rows read so far (oldest first). */
+  private tr: {
+    cursor: string | null;
+    rows: TransitionRow[];
+    read: number;
+    hostId: string | null;
+    bootEpoch: string | null;
+  } = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null };
 
   constructor(
     private readonly machineId: string,
@@ -337,6 +396,7 @@ export class DaemonDataReader {
     const jobs: Job[] = [
       { kind: 'seatdetail', everyMs: this.every.seatdetail, run: () => this.seatDetail() },
       { kind: 'library', everyMs: this.every.library, run: () => this.library() },
+      { kind: 'transitions', everyMs: this.every.transitions, run: () => this.transitions() },
     ];
     this.jobs = jobs.filter((j) => !opts.kinds || opts.kinds.includes(j.kind));
   }
@@ -385,6 +445,57 @@ export class DaemonDataReader {
       );
     else this.failing.delete('seatdetail:seats');
     return out;
+  }
+
+  /**
+   * Queue transitions, incrementally. The first read starts at the daemon's retained start
+   * (`start=retained`), every later one continues from the cursor it handed back (a cursor and
+   * `start` are mutually exclusive). The newest TRANSITIONS_MAX rows are kept. A rejected cursor
+   * (the daemon restarted with a new boot epoch, or its history was reset) throws away the rows and
+   * starts again from the retained start next round; the hub replaces, never appends.
+   */
+  private async transitions(): Promise<Outcome[]> {
+    const st = this.tr;
+    for (let page = 0; page < TRANSITIONS_PAGES_PER_ROUND; page++) {
+      const q = st.cursor ? `cursor=${encodeURIComponent(st.cursor)}` : 'start=retained';
+      let got: ReturnType<typeof parseTransitionsPage>;
+      try {
+        got = parseTransitionsPage(
+          await this.get(`/api/telemetry/v1/queue-transitions?limit=${TRANSITIONS_PAGE}&${q}`)
+        );
+      } catch (e) {
+        if (isNotFound(e))
+          return [
+            {
+              key: '',
+              status: 'unsupported',
+              reason: 'this OpenRig has no queue-transition telemetry',
+              data: null,
+            },
+          ];
+        this.tr = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null };
+        throw e;
+      }
+      if (st.bootEpoch && got.bootEpoch && st.bootEpoch !== got.bootEpoch) {
+        // the daemon's history is a different one now: what we hold no longer belongs to it
+        st.rows = [];
+        st.read = 0;
+      }
+      st.hostId = got.hostId ?? st.hostId;
+      st.bootEpoch = got.bootEpoch ?? st.bootEpoch;
+      st.read += got.rows.length;
+      st.rows = [...st.rows, ...got.rows].slice(-TRANSITIONS_MAX);
+      if (got.nextCursor) st.cursor = got.nextCursor;
+      if (!got.hasMore || got.rows.length === 0) break;
+    }
+    const data: TransitionsData = {
+      rows: st.rows,
+      retained: st.read,
+      truncated: st.read > st.rows.length,
+      hostId: st.hostId,
+      bootEpoch: st.bootEpoch,
+    };
+    return [{ key: '', status: 'ok', reason: null, data }];
   }
 
   /**

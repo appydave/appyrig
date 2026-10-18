@@ -6,6 +6,7 @@ import {
   parseLibrarySkills,
   parseLibrarySpecs,
   parseSeatDetail,
+  parseTransitionRow,
 } from './index.js';
 import { readFixtureJson } from './fixtureSources.js';
 import { parseNodes } from './daemon.js';
@@ -354,5 +355,153 @@ describe('v2 · library (step 3)', () => {
     );
     expect(await b.r.next([])).toBeNull();
     expect(lines).toEqual([expect.stringMatching(/library unreadable/)]);
+  });
+});
+
+// ── step 4: queue transitions ───────────────────────────────────────────────────────────────────
+
+/** A fake daemon holding `n` transitions (ids 1..n) that serves the telemetry envelope in pages. */
+function fakeTelemetry(opts: { n: number; boot?: string }) {
+  let n = opts.n;
+  let boot = opts.boot ?? 'boot-1';
+  const calls: string[] = [];
+  const cursorOf = (last: number) =>
+    Buffer.from(JSON.stringify({ boot, last })).toString('base64url');
+  const get = async (path: string) => {
+    calls.push(path);
+    const url = new URL(path, 'http://x');
+    const limit = Number(url.searchParams.get('limit'));
+    if (!(limit >= 1 && limit <= 128)) throw new Error('GET -> HTTP 400');
+    const start = url.searchParams.get('start');
+    const cursor = url.searchParams.get('cursor');
+    if (start && cursor) throw new Error('GET -> HTTP 400');
+    let after = 0;
+    if (cursor) {
+      const c = JSON.parse(Buffer.from(cursor, 'base64url').toString()) as {
+        boot: string;
+        last: number;
+      };
+      if (c.boot !== boot) throw new Error('GET -> HTTP 400');
+      after = c.last;
+    }
+    const ids = Array.from({ length: n }, (_, i) => i + 1)
+      .filter((i) => i > after)
+      .slice(0, limit);
+    const last = ids.length ? ids[ids.length - 1]! : after;
+    return {
+      schemaVersion: 1,
+      source: { hostId: 'host-1', bootEpoch: boot },
+      rows: ids.map((i) => ({
+        transitionId: String(i),
+        qitemId: `q-${Math.ceil(i / 2)}`,
+        originalTimestamp: new Date(Date.UTC(2026, 9, 11, 12, 0, i)).toISOString(),
+        state: i % 2 ? 'pending' : 'done',
+        actorSession: 'a@r',
+        closureReason: i % 2 ? null : 'no-follow-on',
+        closureTarget: null,
+      })),
+      page: { hasMore: last < n, nextCursor: cursorOf(last) },
+    };
+  };
+  return {
+    get,
+    calls,
+    grow: (k: number) => (n += k),
+    newBoot: (b: string) => ((boot = b), (n = 5)),
+  };
+}
+
+describe('v2 · queue transitions (step 4)', () => {
+  const trReader = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) => {
+    let t = 9_000_000;
+    return {
+      r: new DaemonDataReader('m4', get, { now: () => t, log, kinds: ['transitions'] }),
+      tick: (ms = 21_000) => (t += ms),
+    };
+  };
+  const data = (p: Awaited<ReturnType<DaemonDataReader['next']>>) =>
+    (p!.pushes[0] as { data: { rows: { id: string }[]; retained: number; truncated: boolean } })
+      .data;
+
+  it('parses a row leniently: ids may be numbers, bad rows are skipped', () => {
+    expect(
+      parseTransitionRow({
+        transitionId: 7,
+        qitemId: 'q',
+        createdAt: '2026-10-11T12:00:00Z',
+        state: 's',
+      })
+    ).toMatchObject({ id: '7', at: '2026-10-11T12:00:00.000Z' });
+    expect(parseTransitionRow({ transitionId: 7 })).toBeNull();
+    expect(parseTransitionRow('x')).toBeNull();
+    expect(
+      parseTransitionRow({
+        transitionId: 'x'.repeat(40),
+        qitemId: 'q',
+        createdAt: '2026-10-11T12:00:00Z',
+        state: 's',
+      })
+    ).toBeNull();
+  });
+
+  it('pages from start=retained, then continues from the cursor and reads only what is new', async () => {
+    const d = fakeTelemetry({ n: 300 });
+    const { r, tick } = trReader(d.get);
+    const first = await r.next([]);
+    expect(data(first).rows).toHaveLength(300);
+    expect(data(first).retained).toBe(300);
+    expect(DaemonDataPushSchema.safeParse(first!.pushes[0]).success).toBe(true);
+    expect(d.calls[0]).toContain('start=retained');
+    expect(d.calls.slice(1).every((c) => c.includes('cursor=') && !c.includes('start='))).toBe(
+      true
+    );
+    expect(d.calls.every((c) => c.includes('limit=128'))).toBe(true);
+    first!.markSent();
+    d.grow(3);
+    tick();
+    const second = await r.next([]);
+    expect(data(second).rows).toHaveLength(303);
+    expect(data(second).rows.at(-1)!.id).toBe('303');
+    expect(d.calls.at(-1)).not.toContain('start=');
+    second!.markSent();
+    tick();
+    expect(await r.next([])).toBeNull(); // nothing new since the hub accepted it
+  });
+
+  it('keeps only the newest 1000 rows and says it was cut', async () => {
+    const d = fakeTelemetry({ n: 1300 });
+    const { r } = trReader(d.get);
+    const p = await r.next([]); // 11 pages of 128 in one round
+    expect(data(p).rows).toHaveLength(1000);
+    expect(data(p).rows[0]!.id).toBe('301');
+    expect(data(p).rows.at(-1)!.id).toBe('1300');
+    expect(data(p).truncated).toBe(true);
+    expect(data(p).retained).toBe(1300);
+  });
+
+  it('a rejected cursor (daemon history reset) starts over from the retained start, logged once', async () => {
+    const d = fakeTelemetry({ n: 10 });
+    const lines: string[] = [];
+    const { r, tick } = trReader(d.get, (l) => lines.push(l));
+    (await r.next([]))!.markSent();
+    d.newBoot('boot-2');
+    tick();
+    expect(await r.next([])).toBeNull(); // the old cursor is refused: nothing sent, state dropped
+    expect(lines).toHaveLength(1);
+    tick();
+    const p = await r.next([]);
+    expect(data(p).rows).toHaveLength(5); // the new history only, not appended to the old
+    expect(d.calls.at(-1)).toContain('start=retained'); // the restart read
+    expect(lines).toHaveLength(1);
+  });
+
+  it('404 is unsupported, never none', async () => {
+    const { r } = trReader(async () => {
+      throw new Error('GET /api/telemetry/v1/queue-transitions -> HTTP 404');
+    });
+    expect((await r.next([]))!.pushes[0]).toMatchObject({
+      kind: 'transitions',
+      status: 'unsupported',
+    });
   });
 });

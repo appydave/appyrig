@@ -4,7 +4,9 @@ import { join, relative, resolve } from 'node:path';
 import {
   SeatStatusSchema,
   type DaemonDataFor,
+  type HistoryTransitionsOutput,
   type LibraryListOutput,
+  type TransitionRow,
   type LibraryRow,
   type SeatLoadout,
 } from '@appydave/shared';
@@ -42,6 +44,7 @@ describe('AC 9 — exactly one write verb', () => {
       'handoff.list',
       'health.get',
       'history.list',
+      'history.transitions',
       'library.get',
       'library.list',
       'machine.list',
@@ -355,7 +358,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 28 },
+      value: { app: 'AppyRig', version: real.version, verbs: 29 },
     });
   });
 
@@ -671,6 +674,123 @@ describe('v2 · library.list / library.get', () => {
     expect(v.items).toEqual([]);
     for (const m of v.machines)
       expect(m).toMatchObject({ status: 'pending', reason: expect.any(String) });
+  });
+});
+
+describe('v2 · history.transitions', () => {
+  const Q1 = 'qitem-20261008094356-aa3ddaa3'; // dev-review@starter -> dev-build@starter
+  const Q2 = 'qitem-20261008094321-21dd1fc8'; // dev-build@starter -> dev-review@starter
+  const row = (id: number, qitemId: string, over: Partial<TransitionRow> = {}): TransitionRow => ({
+    id: String(id),
+    qitemId,
+    at: new Date(Date.UTC(2026, 9, 8, 9, 40, id)).toISOString(),
+    state: 'pending',
+    actor: 'dev-review@starter',
+    closureReason: null,
+    closureTarget: null,
+    ...over,
+  });
+  const setup = (rows: TransitionRow[], truncated = false) => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    store.put(loadSnapshot('m2'));
+    store.daemonData.put({
+      kind: 'transitions',
+      machineId: 'roamy',
+      key: '',
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: 'ok',
+      reason: null,
+      data: {
+        rows,
+        retained: rows.length + (truncated ? 50 : 0),
+        truncated,
+        hostId: 'h',
+        bootEpoch: 'b',
+      },
+    });
+    const core = createCore({ store, identity, now: clock.now });
+    const call = (input: object) =>
+      (core.call(AGENT, 'history.transitions', input) as { value: HistoryTransitionsOutput }).value;
+    return { call, core };
+  };
+
+  it('serves newest first with the item joined in, pages with a cursor, and says what it holds', () => {
+    const rows = [
+      row(1, Q1),
+      row(2, Q1, { state: 'in-progress', actor: 'dev-build@starter' }),
+      row(3, Q1, { state: 'done', actor: 'dev-build@starter', closureReason: 'no-follow-on' }),
+      row(4, Q2),
+      row(5, Q2, {
+        state: 'done',
+        closureReason: 'handed_off_to',
+        closureTarget: 'dev-build@starter',
+      }),
+    ];
+    const { call } = setup(rows, true);
+    const all = call({ limit: 2 });
+    expect(all.rows.map((r) => r.id)).toEqual(['5', '4']);
+    expect(all.total).toBe(5);
+    expect(all.nextCursor).toBe('2');
+    expect(all.rows[0]).toMatchObject({
+      machine: 'roamy',
+      source: 'dev-build@starter',
+      destination: 'dev-review@starter',
+      closureReason: 'handed_off_to',
+    });
+    const next = call({ limit: 2, before: all.nextCursor! });
+    expect(next.rows.map((r) => r.id)).toEqual(['3', '2']);
+    expect(call({ limit: 2, before: '4' })).toMatchObject({
+      rows: [{ id: '1' }],
+      nextCursor: null,
+    });
+    const roamy = all.machines.find((m) => m.machine === 'roamy')!;
+    expect(roamy).toMatchObject({ status: 'ok', held: 5, retained: 55, truncated: true });
+    expect(roamy.earliestAt).toBe(rows[0]!.at);
+    // a machine that never sent any is pending, with no rows: never "no history"
+    expect(all.machines.find((m) => m.machine === 'm2')).toMatchObject({
+      status: 'pending',
+      held: 0,
+      earliestAt: null,
+    });
+  });
+
+  it('filters by item, seat, rig, state, closure reason and text', () => {
+    const { call } = setup([
+      row(1, Q1),
+      row(2, Q1, { state: 'done', actor: 'dev-build@starter', closureReason: 'no-follow-on' }),
+      row(3, Q2, { actor: 'human@kernel' }),
+      row(4, Q2, { state: 'done', closureReason: 'handed_off_to', closureTarget: 'x@y' }),
+    ]);
+    expect(call({ qitemId: Q1 }).rows.map((r) => r.id)).toEqual(['2', '1']);
+    expect(call({ seat: 'human@kernel' }).rows.map((r) => r.id)).toEqual(['3']);
+    // seat also matches the item's sender or owner, not only the actor
+    expect(call({ seat: 'dev-review@starter' }).total).toBe(4);
+    expect(call({ rig: 'starter' }).total).toBe(4);
+    expect(call({ rig: 'kernel' }).rows.map((r) => r.id)).toEqual(['3']);
+    expect(call({ rig: 'nope' }).total).toBe(0);
+    expect(call({ state: 'done' }).total).toBe(2);
+    expect(call({ closureReason: 'handed_off_to' }).rows.map((r) => r.id)).toEqual(['4']);
+    expect(call({ text: 'X@Y' }).rows.map((r) => r.id)).toEqual(['4']);
+    expect(call({ text: 'markdown-links' }).total).toBe(4); // the item's tags
+    expect(call({ machine: 'm2' }).rows).toEqual([]);
+  });
+
+  it('unsupported is reported, not hidden; invalid paging is refused', () => {
+    const { core } = setup([]);
+    expect(core.call(AGENT, 'history.transitions', { limit: 201 })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'invalid-input' },
+    });
+    expect(core.call(AGENT, 'history.transitions', { before: 'abc' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'invalid-input' },
+    });
+    expect(core.call(AGENT, 'history.transitions', { machine: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'machine-not-found' },
+    });
   });
 });
 

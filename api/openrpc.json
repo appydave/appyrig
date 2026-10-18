@@ -3,7 +3,7 @@
   "info": {
     "title": "AppyRig",
     "version": "0.1.0",
-    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n28 methods; 1 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
+    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n29 methods; 1 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
   },
   "servers": [
     {
@@ -6364,6 +6364,557 @@
       "x-confirmation-required": false,
       "x-expected-duration": "fast",
       "x-failure-modes": [],
+      "x-required": []
+    },
+    {
+      "name": "history.transitions",
+      "summary": "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor. Not the same as history.list, which is what API callers did.",
+      "tags": [
+        {
+          "name": "history"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": false,
+          "summary": "only this machine",
+          "schema": {
+            "description": "only this machine",
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$"
+          }
+        },
+        {
+          "name": "qitemId",
+          "required": false,
+          "summary": "only this queue item",
+          "schema": {
+            "description": "only this queue item",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "name": "seat",
+          "required": false,
+          "summary": "only transitions by this seat, or on items it sent or owns",
+          "schema": {
+            "description": "only transitions by this seat, or on items it sent or owns",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "name": "rig",
+          "required": false,
+          "summary": "only transitions of this rig (the part after @)",
+          "schema": {
+            "description": "only transitions of this rig (the part after @)",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "name": "state",
+          "required": false,
+          "summary": "only transitions into this state, e.g. done",
+          "schema": {
+            "description": "only transitions into this state, e.g. done",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "name": "closureReason",
+          "required": false,
+          "summary": "only this closure reason, e.g. handed_off_to",
+          "schema": {
+            "description": "only this closure reason, e.g. handed_off_to",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        {
+          "name": "text",
+          "required": false,
+          "summary": "substring of item id, actor, closure, or the item summary / tags",
+          "schema": {
+            "description": "substring of item id, actor, closure, or the item summary / tags",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        {
+          "name": "limit",
+          "required": false,
+          "summary": "page size, at most 200 (default 50)",
+          "schema": {
+            "description": "page size, at most 200 (default 50)",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          }
+        },
+        {
+          "name": "before",
+          "required": false,
+          "summary": "cursor: the nextCursor of the previous page (newest first)",
+          "schema": {
+            "description": "cursor: the nextCursor of the previous page (newest first)",
+            "type": "string",
+            "pattern": "^\\d+$"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "The call envelope: `ok: true` with the value, or `ok: false` with a named refusal.",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "value"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "value": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "const": false
+                },
+                "error": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "x-value": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "machines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "machine": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "pending",
+                        "unsupported"
+                      ]
+                    },
+                    "reason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 300
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "collectedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "held": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "retained": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    },
+                    "earliestAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "machine",
+                    "status",
+                    "reason",
+                    "collectedAt",
+                    "held",
+                    "retained",
+                    "truncated",
+                    "earliestAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "maxLength": 30
+                    },
+                    "qitemId": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "state": {
+                      "type": "string",
+                      "maxLength": 60
+                    },
+                    "actor": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "closureReason": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "closureTarget": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "machine": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]*$"
+                    },
+                    "source": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "destination": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "summary": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "maxLength": 200
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "qitemId",
+                    "at",
+                    "state",
+                    "actor",
+                    "closureReason",
+                    "closureTarget",
+                    "machine",
+                    "source",
+                    "destination",
+                    "summary"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "machines",
+              "rows",
+              "total",
+              "nextCursor"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32001,
+          "message": "forbidden",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "forbidden"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "principal": {
+                    "type": "string"
+                  },
+                  "allowed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "human",
+                        "agent",
+                        "cli"
+                      ]
+                    }
+                  },
+                  "humanOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capability",
+                  "principal",
+                  "allowed",
+                  "humanOnly"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32002,
+          "message": "machine-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "machine-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32601,
+          "message": "unknown-capability",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "unknown-capability"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32602,
+          "message": "invalid-input",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "invalid-input"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32603,
+          "message": "internal",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "internal"
+              },
+              "details": {}
+            }
+          }
+        }
+      ],
+      "x-kind": "query",
+      "x-family": "history",
+      "x-principals": [
+        "human",
+        "agent",
+        "cli"
+      ],
+      "x-human-only": false,
+      "x-side-effects": "read-only",
+      "x-idempotent": true,
+      "x-confirmation-required": false,
+      "x-expected-duration": "fast",
+      "x-failure-modes": [
+        "machine-not-found"
+      ],
       "x-required": []
     },
     {
