@@ -87,6 +87,12 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         await expect(root(page)).toBeVisible();
         const hasCurrent = currentKeys.includes(key);
 
+        // A Current page with no v2 yet shows Current's page and says so: nothing to flip between.
+        if (hasCurrent && (await page.getByTestId('v2-no-v2').count()) > 0) {
+          await expect(page.getByTestId('v2-no-v2')).toContainText('No v2 yet');
+          visited.push(`${g.replace('v2-group-', '')}/${key} (no v2 yet)`);
+          continue;
+        }
         // 3. B: the old page where there is one, a plain note where there is not
         await page.keyboard.press('b');
         if (hasCurrent) {
