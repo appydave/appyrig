@@ -6,7 +6,9 @@ import type { GraphMachine, GraphRig } from './model.js';
 
 /**
  * C45: machine → rig → pod → agent down the left. Each level folds; clicking an item selects it:
- * the page opens its rig, scrolls the canvas to it and highlights it.
+ * the page opens its rig, scrolls the canvas to it and highlights it. A plain nested list of
+ * buttons, not an ARIA tree (a tree promises roving focus and arrow keys; every button is reached
+ * with Tab, and each fold button says whether it is expanded).
  */
 export default function GraphTree({
   machines,
@@ -44,13 +46,7 @@ export default function GraphTree({
   }) => {
     const o = isOpen(k, dflt);
     return (
-      <li
-        key={k}
-        role="treeitem"
-        aria-level={level}
-        aria-expanded={foldable ? o : undefined}
-        aria-selected={selected === k}
-      >
+      <li key={k}>
         <span className="g2-tree-row" data-level={level}>
           {foldable ? (
             <button
@@ -58,6 +54,7 @@ export default function GraphTree({
               className="g2-tree-caret"
               aria-label={`${o ? 'Fold' : 'Unfold'} ${typeof label === 'string' ? label : k}`}
               data-testid="g2-tree-caret"
+              aria-expanded={o}
               data-key={k}
               onClick={() => toggle(k, dflt)}
             >
@@ -79,14 +76,14 @@ export default function GraphTree({
           </button>
           {meta && <span className="g2-tree-meta mono">{meta}</span>}
         </span>
-        {foldable && o && <ul role="group">{children}</ul>}
+        {foldable && o && <ul>{children}</ul>}
       </li>
     );
   };
 
   return (
     <nav className="g2-tree" aria-label="Fleet tree" data-testid="g2-tree">
-      <ul role="tree" aria-label="Machines, rigs, pods and agents">
+      <ul aria-label="Machines, rigs, pods and agents">
         {machines.map(({ machine, groups }) =>
           item({
             k: `machine:${machine.id}`,

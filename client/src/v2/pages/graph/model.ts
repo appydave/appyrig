@@ -106,9 +106,45 @@ const ms = (iso: string) => {
 const bare = (raw: string | null) => (raw ?? '').split('@')[0] ?? '';
 
 /**
+ * Per-machine work is cached on the machine's snapshot object (a WeakMap): the hub resends only the
+ * machines that changed, so an unchanged machine costs nothing on the next rebuild. A key carries
+ * whatever else the value depends on (the clock bucket, the machine's liveness).
+ */
+const memo = new WeakMap<object, Map<string, unknown>>();
+function cached<T>(snap: object, key: string, make: () => T): T {
+  let m = memo.get(snap);
+  if (!m) memo.set(snap, (m = new Map()));
+  if (m.has(key)) return m.get(key) as T;
+  const v = make();
+  if (m.size > 300) m.clear(); // clock buckets pile up on a snapshot that never changes
+  m.set(key, v);
+  return v;
+}
+
+/**
+ * Endpoint placement depends on every machine's seats (a name resolves on whichever machine has
+ * it), so its cache is valid only while the fleet's seat lists are the same. `fleetSeatsSig` is
+ * that fingerprint; a change drops every cached placement.
+ */
+let placementSig = '';
+let placements = new WeakMap<object, Map<string, GroupKey | null>>();
+const fleetSeatsSig = (all: FleetMachine[]) =>
+  all
+    .map(
+      (m) =>
+        `${m.machine.id}:${m.liveness}:` +
+        m.snapshot.seats.map((s) => `${s.id}|${s.rig ?? ''}|${s.logicalId ?? ''}`).join(',') +
+        ':' +
+        m.snapshot.rigs.map((r) => r.name).join(',')
+    )
+    .join(';');
+
+/**
  * The group a queue endpoint belongs to: the rig of the seat it names (on whichever machine it
  * resolves to), else that machine's loose group, else a `name@rig` suffix naming a rig on the
- * queue's own machine. David's mailbox (`human@…`) and names no machine reports give null.
+ * queue's own machine, else (MEDIUM-2) a `name@<machine id>` whose session is no longer a seat:
+ * that machine's no-rig group, so a line between the columns is still drawn. David's mailbox
+ * (`human@…`) and names no machine reports give null.
  */
 export function endpointGroup(
   raw: string | null,
@@ -116,6 +152,23 @@ export function endpointGroup(
   all: FleetMachine[]
 ): GroupKey | null {
   if (!raw || bare(raw) === 'human') return null;
+  const sig = fleetSeatsSig(all);
+  if (sig !== placementSig) {
+    placementSig = sig;
+    placements = new WeakMap();
+  }
+  let byRaw = placements.get(home.snapshot);
+  if (!byRaw) placements.set(home.snapshot, (byRaw = new Map()));
+  if (byRaw.has(raw)) return byRaw.get(raw) ?? null;
+  const g = placeEndpoint(raw, home, all);
+  byRaw.set(raw, g);
+  return g;
+}
+
+const hasLoose = (fm: FleetMachine): boolean =>
+  fm.snapshot.seats.some((s) => !s.rig || !fm.snapshot.rigs.some((r) => r.name === s.rig));
+
+function placeEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): GroupKey | null {
   const ep = resolveEndpoint(raw, home, all);
   if (ep.seat && ep.machineId) {
     const fm = all.find((m) => m.machine.id === ep.machineId);
@@ -125,6 +178,10 @@ export function endpointGroup(
   }
   const rig = endpointRig(home, raw);
   if (rig && home.snapshot.rigs.some((r) => r.name === rig)) return `${home.machine.id}:${rig}`;
+  // `openrig-orch@roamy` where that session is not a seat any more: its machine's no-rig group.
+  const where = raw.includes('@') ? raw.slice(raw.lastIndexOf('@') + 1) : '';
+  const there = where ? all.find((m) => m.machine.id === where) : undefined;
+  if (there && hasLoose(there)) return looseKey(where);
   return null;
 }
 
@@ -137,6 +194,7 @@ export function crossRigEdges(
   const map = new Map<string, CrossEdge>();
   let unplaced = 0;
   const names = new Map<string, number>();
+  const machineIds = new Set(machines.map((m) => m.machine.id));
   for (const home of machines) {
     for (const q of home.snapshot.queue) {
       if (seen.has(q.id)) continue;
@@ -181,7 +239,15 @@ export function crossRigEdges(
       count: unplaced,
       names: [...names.entries()]
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .map(([name, count]) => ({ name, count })),
+        .map(([name, count]) => ({
+          name,
+          count,
+          kind: (machineIds.has(name) ? 'machine' : 'rig') as 'machine' | 'rig',
+        })),
+      byKind: {
+        machine: [...names.entries()].reduce((n, [k, c]) => n + (machineIds.has(k) ? c : 0), 0),
+        rig: [...names.entries()].reduce((n, [k, c]) => n + (machineIds.has(k) ? 0 : c), 0),
+      },
     },
   };
 }
@@ -190,7 +256,9 @@ export function crossRigEdges(
 export interface Unplaced {
   count: number;
   /** The rig (or machine) part of the names we could not place, most rows first. */
-  names: { name: string; count: number }[];
+  names: { name: string; count: number; kind: 'machine' | 'rig' }[];
+  /** The same rows counted by what the unplaced name is: a machine we know, or a rig no machine reports. */
+  byKind: { machine: number; rig: number };
 }
 
 const POD_ORDER = ['orch', 'lead', 'dev', 'build', 'qa', 'review', 'research'];
@@ -200,7 +268,10 @@ const podRank = (p: string) => {
 };
 
 /** Open items each seat addressed to David's mailbox, still fresh. */
-function askedDavid(fm: FleetMachine, now: number): Map<string, number> {
+const askedDavid = (fm: FleetMachine, now: number): Map<string, number> =>
+  cached(fm.snapshot, `asked:${now}`, () => askedDavidOf(fm, now));
+
+function askedDavidOf(fm: FleetMachine, now: number): Map<string, number> {
   const out = new Map<string, number>();
   for (const q of fm.snapshot.queue) {
     if (bare(q.destination) !== 'human' || !q.source || !isOpen(q)) continue;
@@ -294,64 +365,105 @@ function looseGroup(fm: FleetMachine, asked: Map<string, number>): GraphRig | nu
   };
 }
 
+/** One rig's map from a view of its own machine only: a rig's in-rig lines never need the others. */
+function rigMapOf(fm: FleetMachine, ref: RigRef, now: number) {
+  return cached(fm.snapshot, `map:${ref.name}:${fm.liveness}:${now}`, () => {
+    // buildRigMap lists every rig of the machines it is given; handing it this rig alone keeps a
+    // 23-rig fleet from listing 23 rigs 23 times. The seats stay whole (name resolution needs them).
+    const slim: FleetMachine = cached(fm.snapshot, `slim:${ref.name}:${fm.liveness}`, () => ({
+      ...fm,
+      snapshot: {
+        ...fm.snapshot,
+        rigs: fm.snapshot.rigs.filter((r) => r.name === ref.name),
+      },
+    }));
+    return buildRigMap([slim], ref.key, now);
+  });
+}
+
 /** The whole fleet as a graph: machines, their rigs (pods, seats, in-rig lines) and cross-rig lines. */
 export function buildGraph(machines: FleetMachine[], now: number = Date.now()): Graph {
-  const refs = listRigs(machines);
+  // Each machine's rig list once; listRigs on one machine is the same rows, in the same order.
+  const refsOf = (fm: FleetMachine) =>
+    cached(fm.snapshot, `refs:${fm.liveness}`, () => listRigs([fm]));
   const { edges: cross, unplaced } = crossRigEdges(machines, now);
-  const out: GraphMachine[] = machines.map((fm) => {
+  const out: Map<string, number> = new Map();
+  const into: Map<string, number> = new Map();
+  for (const e of cross) {
+    out.set(e.from, (out.get(e.from) ?? 0) + e.count);
+    into.set(e.to, (into.get(e.to) ?? 0) + e.count);
+  }
+  let rigCount = 0;
+  const built: GraphMachine[] = machines.map((fm) => {
     const asked = askedDavid(fm, now);
-    const rigs: GraphRig[] = refs
-      .filter((r) => r.machineId === fm.machine.id)
-      .map((ref) => {
-        const map = buildRigMap(machines, ref.key, now);
-        const home = map?.lanes[0];
-        const running = ref.status === 'running';
-        const pods: GraphPod[] = sortPods(
-          (home?.pods ?? []).map((p) => ({
-            name: p.name,
-            seats: p.seats.map((s) => {
-              const seat = fm.snapshot.seats.find((x) => seatKey(fm.machine.id, x.id) === s.key)!;
-              return {
-                ...s,
-                pod: p.name,
-                flags: flagsOf(seat, s, running, asked.get(seat.id) ?? 0),
-              };
-            }),
-          }))
-        );
-        const mine = new Set(pods.flatMap((p) => p.seats.map((s) => s.key)));
-        const seats = pods.flatMap((p) => p.seats);
-        return {
-          key: ref.key,
-          machineId: fm.machine.id,
-          machineLabel: fm.machine.label,
-          name: ref.name,
-          ref,
-          state: ref.state,
-          pods,
-          agents: seats.length,
-          active: seats.filter(isActive).length,
-          edges: (map?.edges ?? []).filter((e) => mine.has(e.from) && mine.has(e.to)),
-          planned: map?.planned ?? null,
-          crossOut: cross.filter((e) => e.from === ref.key).reduce((n, e) => n + e.count, 0),
-          crossIn: cross.filter((e) => e.to === ref.key).reduce((n, e) => n + e.count, 0),
-          flags: countFlags(pods),
-        };
-      });
-    const loose = looseGroup(fm, asked);
-    if (loose) {
-      loose.crossOut = cross.filter((e) => e.from === loose.key).reduce((n, e) => n + e.count, 0);
-      loose.crossIn = cross.filter((e) => e.to === loose.key).reduce((n, e) => n + e.count, 0);
-    }
+    const refs = refsOf(fm);
+    rigCount += refs.length;
+    const rigs: GraphRig[] = refs.map((ref) => {
+      const crossOut = out.get(ref.key) ?? 0;
+      const crossIn = into.get(ref.key) ?? 0;
+      // The same object while nothing it is made of has changed, so memo(RigFrame) can skip it.
+      return cached(
+        fm.snapshot,
+        `rig:${ref.key}:${fm.liveness}:${now}:${crossOut}:${crossIn}:${ref.state}`,
+        () => {
+          const map = rigMapOf(fm, ref, now);
+          const home = map?.lanes[0];
+          const running = ref.status === 'running';
+          const pods: GraphPod[] = sortPods(
+            (home?.pods ?? []).map((p) => ({
+              name: p.name,
+              seats: p.seats.map((s) => {
+                const seat = fm.snapshot.seats.find((x) => seatKey(fm.machine.id, x.id) === s.key)!;
+                return {
+                  ...s,
+                  pod: p.name,
+                  flags: flagsOf(seat, s, running, asked.get(seat.id) ?? 0),
+                };
+              }),
+            }))
+          );
+          const mine = new Set(pods.flatMap((p) => p.seats.map((s) => s.key)));
+          const seats = pods.flatMap((p) => p.seats);
+          return {
+            key: ref.key,
+            machineId: fm.machine.id,
+            machineLabel: fm.machine.label,
+            name: ref.name,
+            ref,
+            state: ref.state,
+            pods,
+            agents: seats.length,
+            active: seats.filter(isActive).length,
+            edges: (map?.edges ?? []).filter((e) => mine.has(e.from) && mine.has(e.to)),
+            planned: map?.planned ?? null,
+            crossOut,
+            crossIn,
+            flags: countFlags(pods),
+          } satisfies GraphRig;
+        }
+      );
+    });
+    const loose = cached(
+      fm.snapshot,
+      `loose:${fm.liveness}:${now}:${out.get(looseKey(fm.machine.id)) ?? 0}:${into.get(looseKey(fm.machine.id)) ?? 0}`,
+      () => {
+        const l = looseGroup(fm, asked);
+        if (l) {
+          l.crossOut = out.get(l.key) ?? 0;
+          l.crossIn = into.get(l.key) ?? 0;
+        }
+        return l;
+      }
+    );
     return { id: fm.machine.id, label: fm.machine.label, liveness: fm.liveness, rigs, loose };
   });
-  const all = out.flatMap((m) => [...m.rigs, ...(m.loose ? [m.loose] : [])]);
+  const all = built.flatMap((m) => [...m.rigs, ...(m.loose ? [m.loose] : [])]);
   return {
-    machines: out,
+    machines: built,
     cross,
     unplaced,
     totals: {
-      rigs: refs.length,
+      rigs: rigCount,
       agents: all.reduce((n, r) => n + r.agents, 0),
       active: all.reduce((n, r) => n + r.active, 0),
     },
@@ -385,12 +497,27 @@ export const FLAG_FILTERS: { key: FlagFilter; label: string; glyph: string; hint
   },
 ];
 
-/** Rigs open by default: running ones on a machine that is awake, and the picked one. */
-export function openByDefault(rig: GraphRig, picked: string | null): boolean {
+/** A machine with more rigs than this starts its running rigs folded (UX ruling 2). */
+export const CROWDED_RIGS = 8;
+
+const flagged = (r: GraphRig) =>
+  r.flags.needsMe > 0 || r.flags.stuck > 0 || r.flags.failing > 0 || r.state === 'attention';
+
+/**
+ * Rigs open by default: running ones on a machine that is awake, and the picked one. On a crowded
+ * machine (more than CROWDED_RIGS rigs) only the picked and the flagged ones, so the page stays
+ * short enough to read.
+ */
+export function openByDefault(rig: GraphRig, picked: string | null, crowded = false): boolean {
   if (rig.key === picked) return true;
   if (!rig.ref) return false;
+  if (crowded) return rig.ref.status === 'running' && rig.state !== 'asleep' && flagged(rig);
   return rig.ref.status === 'running' && rig.state !== 'asleep';
 }
+
+/** True for a rig on a machine holding more than CROWDED_RIGS rigs. */
+export const isCrowded = (g: Graph, rig: GraphRig): boolean =>
+  (g.machines.find((m) => m.id === rig.machineId)?.rigs.length ?? 0) > CROWDED_RIGS;
 
 /** A rig shows under a flag filter when a seat in it carries the flag (or, for Needs me, OpenRig flags the rig). */
 export function rigMatches(r: GraphRig, f: FlagFilter | null): boolean {

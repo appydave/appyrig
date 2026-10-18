@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { RIG_STATE, plannedWord, type MapEdge } from '../../../fleet/views.js';
-import { routeLines, spreadLabels, type Placed } from '../../../components/RigMap.js';
+import { routeLines, spreadLabels } from '../../../components/RigMap.js';
 import { MockMark } from '../../kit/index.js';
 import { FakeButton } from './FakeRunner.js';
 import { SeatCard, seatMatches } from './SeatCard.js';
+import { avoidCards, plannedLabelW, type Rect } from './labels.js';
 import type { FlagFilter, GraphRig } from './model.js';
 
 /** Room a stacked arc needs above / below a row of cards, at least. */
@@ -24,11 +25,13 @@ interface Props {
   focusKey: string | null;
   filter: FlagFilter | null;
   zoom: number;
-  onToggle: (key: string) => void;
+  /** All callbacks are stable (the page wraps them), so memo(RigFrame) skips a frame whose rig is unchanged. */
+  onToggle: (key: string, wasOpen: boolean) => void;
   onPick: (key: string) => void;
   onOpen: (seatKey: string) => void;
   onHover: (seatKey: string, el: HTMLElement) => void;
   onLeave: () => void;
+  onTab: (e: React.KeyboardEvent) => void;
   onLineHover: (h: LineHover | null) => void;
   onLinePin: (edge: MapEdge, title: string) => void;
   nameOf: (seatKey: string) => string;
@@ -36,20 +39,30 @@ interface Props {
 
 export const podId = (rigKey: string, pod: string) => `${rigKey}/pod/${pod}`;
 
+const lineKey = (e: MapEdge) => `${e.planned ? 'p' : 'e'}:${e.from}→${e.to}`;
+
+/** Where a line goes, measured. Only geometry is kept: what the line says is read from the rig at render. */
+interface Geom {
+  d: string;
+  lx: number;
+  ly: number;
+}
+
 /**
  * One rig as a frame (C42). Collapsed: name, state, machine, agents and active counts, and its
  * traffic with other rigs. Expanded: the pods and agent cards, with the in-rig handoff lines
  * (counts from the queue) and the spec's planned lines (dotted), routed as the Rig Map does.
  */
-export default function RigFrame(p: Props) {
+function RigFrame(p: Props) {
   const { rig, open } = p;
   const st = RIG_STATE[rig.state];
   const loose = !rig.ref;
   const running = rig.ref?.status === 'running';
   const selfOf = new Map(rig.edges.filter((e) => e.self).map((e) => [e.from, e.count]));
-  const lines = [...rig.edges, ...(rig.planned ?? [])];
-  const { box, placed, size, room } = useInRigLines(open ? lines : [], p.zoom, open);
+  const lines = open ? [...rig.edges, ...(rig.planned ?? [])] : [];
+  const { box, geom, size, room } = useInRigLines(lines, p.zoom, open);
   const max = Math.max(1, ...rig.edges.map((e) => e.count));
+  const drawn = lines.filter((e) => !e.self && geom.has(lineKey(e)));
   const title = (e: MapEdge) =>
     e.planned
       ? `Planned: ${p.nameOf(e.from)} ${plannedWord(e.planned)} ${p.nameOf(e.to)} · no handoff yet`
@@ -71,6 +84,12 @@ export default function RigFrame(p: Props) {
     });
   };
 
+  // UX 5: under "Needs me", a rig OpenRig itself flags is a rig-level match: its seats are not
+  // dimmed (none of them is wrong) and the header says why it is shown.
+  const seatFlagged = rig.pods.some((pod) => pod.seats.some((s) => s.flags.needsMe));
+  const rigLevel = p.filter === 'needsMe' && !loose && rig.state === 'attention';
+  const sparing = rigLevel && !seatFlagged;
+
   return (
     <article
       className="g2-rig"
@@ -83,14 +102,18 @@ export default function RigFrame(p: Props) {
       data-highlight={p.focusKey === rig.key || undefined}
       aria-expanded={open}
     >
-      <header className="g2-rig-head" data-testid="g2-rig-head">
+      <header
+        className="g2-rig-head"
+        data-testid="g2-rig-head"
+        data-rig-match={rigLevel || undefined}
+      >
         <button
           type="button"
           className="g2-caret"
           data-testid="g2-rig-toggle"
           aria-expanded={open}
           aria-label={`${open ? 'Collapse' : 'Expand'} ${rig.name}`}
-          onClick={() => p.onToggle(rig.key)}
+          onClick={() => p.onToggle(rig.key, open)}
         >
           {open ? '▾' : '▸'}
         </button>
@@ -103,7 +126,7 @@ export default function RigFrame(p: Props) {
               ? 'Sessions on this machine that belong to no rig'
               : 'Pick this rig (the Current Rig Map shows it after a flip)'
           }
-          onClick={() => (loose ? p.onToggle(rig.key) : p.onPick(rig.key))}
+          onClick={() => (loose ? p.onToggle(rig.key, open) : p.onPick(rig.key))}
         >
           {rig.name}
         </button>
@@ -128,43 +151,20 @@ export default function RigFrame(p: Props) {
             ▲
           </span>
         )}
+        {rigLevel && (
+          <span className="g2-reason" data-testid="g2-rig-reason">
+            shown because OpenRig flags this rig: needs attention
+          </span>
+        )}
+        {!loose && <RigMenu rig={rig} running={!!running} />}
       </header>
       {open && (
         <div className="g2-rig-body">
-          {!loose && (
+          {!loose && rig.planned === null && (
             <div className="g2-rig-actions" data-testid="g2-rig-actions">
-              <FakeButton
-                testId="g2-fake-start"
-                disabled={running}
-                title={running ? 'Already running' : undefined}
-                ask={{
-                  label: 'Start',
-                  question: `Start ${rig.name} on the ${rig.machineLabel}?`,
-                  result: `${rig.name} started on the ${rig.machineLabel} (pretend)`,
-                }}
-              />
-              <FakeButton
-                testId="g2-fake-restore"
-                ask={{
-                  label: 'Restore',
-                  question: `Restore ${rig.name} from its last snapshot on the ${rig.machineLabel}?`,
-                  result: `${rig.name} restored (pretend)`,
-                }}
-              />
-              <FakeButton
-                testId="g2-fake-launch"
-                ask={{
-                  label: 'Launch',
-                  question: `Launch a fresh ${rig.name} from its spec on the ${rig.machineLabel}?`,
-                  result: `${rig.name} launched (pretend)`,
-                }}
-              />
-              <MockMark />
-              {rig.planned === null && (
-                <span className="quiet g2-no-plan">
-                  no planned lines: this collector does not send the rig spec&apos;s edges
-                </span>
-              )}
+              <span className="quiet g2-no-plan">
+                no planned lines: this collector does not send the rig spec&apos;s edges
+              </span>
             </div>
           )}
           <div className="g2-rig-canvas" ref={box}>
@@ -190,53 +190,55 @@ export default function RigFrame(p: Props) {
                   <path d="M0,0 L10,5 L0,10 z" className="rigmap-arrowhead" />
                 </marker>
               </defs>
-              {placed.map((pl) => (
-                <g
-                  key={`${pl.edge.planned ? 'p' : 'e'}:${pl.edge.from}→${pl.edge.to}`}
-                  data-testid={pl.edge.planned ? 'g2-planned' : 'g2-edge'}
-                  className="g2-line"
-                  tabIndex={pl.edge.planned ? undefined : 0}
-                  role={pl.edge.planned ? 'img' : 'button'}
-                  aria-label={title(pl.edge)}
-                  onPointerEnter={(ev) => hover(pl.edge, ev)}
-                  onPointerMove={(ev) => hover(pl.edge, ev)}
-                  onPointerLeave={() => p.onLineHover(null)}
-                  onClick={() => !pl.edge.planned && p.onLinePin(pl.edge, title(pl.edge))}
-                  onKeyDown={(ev) => {
-                    if (!pl.edge.planned && (ev.key === 'Enter' || ev.key === ' ')) {
-                      ev.preventDefault();
-                      p.onLinePin(pl.edge, title(pl.edge));
-                    }
-                  }}
-                >
-                  <path
-                    d={pl.d}
-                    className={`rigmap-edge ${pl.edge.planned ? 'planned' : pl.edge.open ? 'open' : pl.edge.stale ? 'stale' : ''}`}
-                    strokeWidth={pl.edge.planned ? undefined : 1.2 + (pl.edge.count / max) * 4}
-                    markerEnd={`url(#g2a-${rig.key})`}
-                  />
-                  <path d={pl.d} className="hit" />
-                </g>
-              ))}
-              {placed.map((pl) => {
-                const w = pl.edge.planned
-                  ? Math.round(plannedWord(pl.edge.planned).length * 6.6 + 14)
-                  : 22;
+              {drawn.map((e) => {
+                const g = geom.get(lineKey(e))!;
                 return (
                   <g
-                    key={`l:${pl.edge.planned ? 'p' : 'e'}:${pl.edge.from}→${pl.edge.to}`}
-                    className={`rigmap-label${pl.edge.planned ? ' planned' : ''}`}
+                    key={lineKey(e)}
+                    data-testid={e.planned ? 'g2-planned' : 'g2-edge'}
+                    className="g2-line"
+                    tabIndex={e.planned ? undefined : 0}
+                    role={e.planned ? 'img' : 'button'}
+                    aria-label={title(e)}
+                    onPointerEnter={(ev) => hover(e, ev)}
+                    onPointerMove={(ev) => hover(e, ev)}
+                    onPointerLeave={() => p.onLineHover(null)}
+                    onClick={() => !e.planned && p.onLinePin(e, title(e))}
+                    onKeyDown={(ev) => {
+                      if (!e.planned && (ev.key === 'Enter' || ev.key === ' ')) {
+                        ev.preventDefault();
+                        p.onLinePin(e, title(e));
+                      }
+                    }}
+                  >
+                    <path
+                      d={g.d}
+                      className={`rigmap-edge ${e.planned ? 'planned' : e.open ? 'open' : e.stale ? 'stale' : ''}`}
+                      strokeWidth={e.planned ? undefined : 1.2 + (e.count / max) * 4}
+                      markerEnd={`url(#g2a-${rig.key})`}
+                    />
+                    <path d={g.d} className="hit" />
+                  </g>
+                );
+              })}
+              {drawn.map((e) => {
+                const g = geom.get(lineKey(e))!;
+                const w = e.planned ? plannedLabelW(e) : 22;
+                return (
+                  <g
+                    key={`l:${lineKey(e)}`}
+                    className={`rigmap-label${e.planned ? ' planned' : ''}`}
                     aria-hidden="true"
                   >
                     <rect
-                      x={pl.lx - w / 2}
-                      y={pl.ly - 9}
+                      x={g.lx - w / 2}
+                      y={g.ly - 9}
                       width={w}
                       height={18}
-                      rx={pl.edge.planned ? 9 : 4}
+                      rx={e.planned ? 9 : 4}
                     />
-                    <text x={pl.lx} y={pl.ly} className="rigmap-count">
-                      {pl.edge.planned ? plannedWord(pl.edge.planned) : pl.edge.count}
+                    <text x={g.lx} y={g.ly} className="rigmap-count">
+                      {e.planned ? plannedWord(e.planned) : e.count}
                     </text>
                   </g>
                 );
@@ -263,11 +265,12 @@ export default function RigFrame(p: Props) {
                         key={s.key}
                         seat={s}
                         selfCount={selfOf.get(s.key) ?? 0}
-                        dim={!seatMatches(s, p.filter)}
+                        dim={!sparing && !seatMatches(s, p.filter)}
                         highlight={p.focusKey === s.key}
                         onOpen={p.onOpen}
                         onHover={p.onHover}
                         onLeave={p.onLeave}
+                        onTab={p.onTab}
                       />
                     ))}
                   </div>
@@ -281,20 +284,106 @@ export default function RigFrame(p: Props) {
   );
 }
 
+export default memo(RigFrame);
+
+/**
+ * UX 3: the rig's Start / Restore / Launch behind one "⋯" button in the header. They are mocks, so
+ * the mark stays visible beside the button whether the menu is open or not.
+ */
+function RigMenu({ rig, running }: { rig: GraphRig; running: boolean }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc, true);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc, true);
+    };
+  }, [open]);
+  return (
+    <span className="g2-menu-wrap" ref={wrap}>
+      <button
+        type="button"
+        ref={trigger}
+        className="pill-btn g2-menu-btn"
+        data-testid="g2-rig-menu"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={`Actions for ${rig.name} (mock)`}
+        title="Start, Restore, Launch (mocks: they change nothing)"
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⋯
+      </button>
+      <MockMark />
+      {open && (
+        <div
+          className="g2-menu"
+          role="group"
+          aria-label={`${rig.name} actions (mock)`}
+          data-testid="g2-rig-menu-items"
+          onClickCapture={() => setOpen(false)}
+        >
+          <FakeButton
+            testId="g2-fake-start"
+            disabled={running}
+            title={running ? 'Already running' : undefined}
+            ask={{
+              label: 'Start',
+              question: `Start ${rig.name} on the ${rig.machineLabel}?`,
+              result: `${rig.name} started on the ${rig.machineLabel} (pretend)`,
+            }}
+          />
+          <FakeButton
+            testId="g2-fake-restore"
+            ask={{
+              label: 'Restore',
+              question: `Restore ${rig.name} from its last snapshot on the ${rig.machineLabel}?`,
+              result: `${rig.name} restored (pretend)`,
+            }}
+          />
+          <FakeButton
+            testId="g2-fake-launch"
+            ask={{
+              label: 'Launch',
+              question: `Launch a fresh ${rig.name} from its spec on the ${rig.machineLabel}?`,
+              result: `${rig.name} launched (pretend)`,
+            }}
+          />
+        </div>
+      )}
+    </span>
+  );
+}
+
 /** Measures the open frame's cards and routes its lines (RigMap's router, read-only reuse). */
 function useInRigLines(edges: MapEdge[], zoom: number, open: boolean) {
   const box = useRef<HTMLDivElement>(null);
-  const [placed, setPlaced] = useState<Placed[]>([]);
+  const [geom, setGeom] = useState<Map<string, Geom>>(new Map());
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [roomKey, setRoomKey] = useState('0,0');
-  const sig = edges.map((e) => `${e.from}>${e.to}:${e.count}:${e.planned ?? ''}`).join('|');
+  // the geometry depends on which lines exist and where the cards are, not on what the lines say
+  const sig = edges.map((e) => `${lineKey(e)}`).join('|');
   useLayoutEffect(() => {
     const el = box.current;
     if (!el || !open) return;
     const measure = () => {
       const base = el.getBoundingClientRect();
       const z = zoom || 1;
-      const boxOf = (n: Element) => {
+      const boxOf = (n: Element): Rect => {
         const r = n.getBoundingClientRect();
         return {
           x: (r.left - base.left) / z,
@@ -323,9 +412,17 @@ function useInRigLines(edges: MapEdge[], zoom: number, open: boolean) {
           return pod ? [...pod.querySelectorAll('[data-node-key]')].map(boxOf) : [];
         },
       });
+      const cards = [...el.querySelectorAll('[data-node-key]')].map(boxOf);
       const next = `${roomTop.get('rig') ?? 0},${roomBottom.get('rig') ?? 0}`;
       setRoomKey((r) => (r === next ? r : next));
-      setPlaced(spreadLabels(out));
+      setGeom(
+        new Map(
+          avoidCards(spreadLabels(out), cards).map((pl) => [
+            lineKey(pl.edge),
+            { d: pl.d, lx: pl.lx, ly: pl.ly },
+          ])
+        )
+      );
       setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
     measure();
@@ -338,5 +435,5 @@ function useInRigLines(edges: MapEdge[], zoom: number, open: boolean) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig, zoom, open]);
   const [top, bottom] = roomKey.split(',').map(Number) as [number, number];
-  return { box, placed: open ? placed : [], size, room: { top, bottom } };
+  return { box, geom: open ? geom : new Map<string, Geom>(), size, room: { top, bottom } };
 }

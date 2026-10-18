@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { PIP, ago } from '../../../fleet/model.js';
 import {
   Address,
@@ -27,6 +28,7 @@ export function SeatCard({
   onOpen,
   onHover,
   onLeave,
+  onTab,
 }: {
   seat: GraphSeat;
   selfCount: number;
@@ -36,6 +38,8 @@ export function SeatCard({
   onOpen: (key: string) => void;
   onHover: (key: string, el: HTMLElement) => void;
   onLeave: () => void;
+  /** Tab from a card: lets the page move focus into the open hover card (its buttons). */
+  onTab: (e: React.KeyboardEvent) => void;
 }) {
   const unplaced = seat.key.startsWith('?/');
   return (
@@ -52,6 +56,9 @@ export function SeatCard({
       onFocus={(e) => onHover(seat.key, e.currentTarget)}
       onPointerLeave={onLeave}
       onBlur={onLeave}
+      onKeyDown={(e) => {
+        if (e.key === 'Tab' && !e.shiftKey) onTab(e);
+      }}
       aria-label={`${seat.name} (${PIP[seat.pip].label}): open agent panel`}
       data-explain="seat"
       data-explain-ctx={`${seat.name} · ${seat.model.text} · ${PIP[seat.pip].label}`}
@@ -103,28 +110,30 @@ export const seatMatches = (seat: GraphSeat, f: FlagFilter | null) => !f || seat
  * actions (copy attach, and the mock Restart / Stop). Fixed to the window, so the canvas zoom
  * never moves it. Copy attach only with an ssh address from AppyRig's config: never a guess.
  */
-export function SeatDetail({
-  seat,
-  machineLabel,
-  edges,
-  ssh,
-  at,
-  onKeep,
-  onLeave,
-}: {
+interface SeatDetailProps {
   seat: GraphSeat;
   machineLabel: string;
   edges: string;
   /** undefined: not known yet (or the lookup failed); null: no ssh address configured. */
   ssh: string | null | undefined;
+  /** Why there is no attach line when `ssh` is not a string, in words (L4). */
+  sshNote?: string;
   at: { x: number; y: number; above: boolean };
   onKeep: () => void;
   onLeave: () => void;
-}) {
+  onKeyDown?: React.KeyboardEventHandler;
+}
+
+export const SeatDetail = forwardRef<HTMLDivElement, SeatDetailProps>(function SeatDetail(
+  { seat, machineLabel, edges, ssh, sshNote, at, onKeep, onLeave, onKeyDown },
+  ref
+) {
   const canAttach = typeof ssh === 'string' && attachLine(seat.address, ssh) !== null;
   const h = harnessOf(seat.runtime, seat.modelRaw);
   return (
     <div
+      ref={ref}
+      onKeyDown={onKeyDown}
       className="seat-detail g2-detail"
       data-testid="g2-detail"
       role="dialog"
@@ -145,9 +154,10 @@ export function SeatDetail({
           <CopyAttach session={seat.address} ssh={ssh} />
         ) : (
           <span className="quiet g2-no-attach" data-testid="g2-no-attach">
-            {ssh === null
-              ? `no attach: ${machineLabel} has no ssh address in AppyRig's config`
-              : 'no attach line: the ssh address is not known (yet)'}
+            {sshNote ??
+              (ssh === null
+                ? `no attach: ${machineLabel} has no ssh address in AppyRig's config`
+                : 'no attach line: the ssh address is not known (yet)')}
           </span>
         )}
       </div>
@@ -190,4 +200,4 @@ export function SeatDetail({
       </div>
     </div>
   );
-}
+});

@@ -19,8 +19,13 @@ export interface CrossPlaced {
 /** How far a same-column arc bulges past the frames, and the step between stacked arcs. */
 const BULGE = 22;
 const BULGE_STEP = 12;
-/** Two directions on one pair sit this far apart, so both stay visible. */
-const PAIR_GAP = 6;
+/** A count label's height (as RigMap draws it). */
+export const LABEL_H = 18;
+/**
+ * Two directions on one pair sit this far apart (each shifted half of it), at least a label's
+ * height, so the two count labels never sit on top of each other.
+ */
+export const PAIR_GAP = LABEL_H + 2;
 
 const bez = (t: number, p0: number, p1: number, p2: number, p3: number) =>
   (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3;
@@ -49,7 +54,7 @@ export function routeCross(
   const levels = new Map<number, [number, number][][]>();
   for (const { edge, a, b } of same) {
     const shift = both.has(`${edge.to}→${edge.from}`)
-      ? (edge.from < edge.to ? -1 : 1) * PAIR_GAP
+      ? ((edge.from < edge.to ? -1 : 1) * PAIR_GAP) / 2
       : 0;
     const sy = a.y + a.h / 2 + shift;
     const ey = b.y + b.h / 2 + shift;
@@ -82,7 +87,7 @@ export function routeCross(
     if (!a || !b || a.col === b.col) continue;
     const right = b.col > a.col;
     const shift = both.has(`${edge.to}→${edge.from}`)
-      ? (edge.from < edge.to ? -1 : 1) * PAIR_GAP
+      ? ((edge.from < edge.to ? -1 : 1) * PAIR_GAP) / 2
       : 0;
     const sx = right ? a.x + a.w : a.x;
     const ex = right ? b.x : b.x + b.w;

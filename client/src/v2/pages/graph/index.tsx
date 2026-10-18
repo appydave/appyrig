@@ -12,10 +12,12 @@ import {
   allGroups,
   buildGraph,
   FLAG_FILTERS,
+  isCrowded,
   openByDefault,
   rigMatches,
   type CrossEdge,
   type FlagFilter,
+  type Graph,
   type GraphRig,
   type GraphSeat,
 } from './model.js';
@@ -27,6 +29,8 @@ const COL_GAP = 110;
 const PAD = 16;
 /** Room right of the last column for its same-column arcs. */
 const PAD_RIGHT = 90;
+/** The smallest zoom "Fit" picks (UX ruling 1). */
+export const FIT_MIN = 0.85;
 const DETAIL_W = 300;
 const DETAIL_H = 260;
 
@@ -44,15 +48,95 @@ function scrollWithin(sc: HTMLElement | null, el: HTMLElement, center: boolean) 
   });
 }
 
+/** A stable function that always calls the latest one: lets memo(RigFrame) skip frames whose rig has not changed. */
+function useStable<A extends unknown[], R>(fn: (...a: A) => R): (...a: A) => R {
+  const ref = useRef(fn);
+  ref.current = fn;
+  return useCallback((...a: A) => ref.current(...a), []);
+}
+
+/** How often the graph is rebuilt from the live fleet (the hub pushes about once a second). */
+export const REBUILD_MS = 3000;
+
+/**
+ * The value, refreshed at most once per `ms`: the first value at once, then the latest one at the
+ * end of each quiet-or-busy window. A rebuild of the whole graph costs real main-thread time.
+ */
+function useThrottled<T>(value: T, ms: number): T {
+  const [out, setOut] = useState(value);
+  const last = useRef(Date.now());
+  const latest = useRef(value);
+  latest.current = value;
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (Object.is(value, out)) return;
+    const wait = last.current + ms - Date.now();
+    if (wait <= 0) {
+      last.current = Date.now();
+      setOut(value);
+      return;
+    }
+    if (timer.current) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      last.current = Date.now();
+      setOut(latest.current);
+    }, wait);
+  }, [value, out, ms]);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
+  return out;
+}
+
+interface CrossGeom {
+  d: string;
+  lx: number;
+  ly: number;
+}
+const crossKey = (e: { from: string; to: string }) => `${e.from}→${e.to}`;
+
+/** value: a string (ssh address), null (none configured), undefined (not known: failed or no way to ask). */
+interface SshState {
+  value: string | null | undefined;
+  note?: string;
+}
+const SSH_FAIL_TTL_MS = 30_000;
+const SSH_NONE_TTL_MS = 120_000;
+
 interface Pinned {
   title: string;
   items: QueueItem[];
 }
 
+/** The breakdown behind "+N not drawn": by what the unplaced name is, then the commonest names. */
+export function unplacedText(u: Graph['unplaced']): string {
+  const top = (kind: 'machine' | 'rig') =>
+    u.names
+      .filter((n) => n.kind === kind)
+      .slice(0, 3)
+      .map((n) => `${n.name} ${n.count}`)
+      .join(', ');
+  return [
+    `${u.count} queue rows are not drawn.`,
+    u.byKind.rig > 0 ? `${u.byKind.rig} name a rig no machine reports (${top('rig')}).` : null,
+    u.byKind.machine > 0
+      ? `${u.byKind.machine} name a machine that has no sessions outside rigs (${top('machine')}).`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
 function GraphPage({ ctx }: V2PageProps) {
   // The graph is heavy (every rig's map); `now` only moves stale counts, so it re-reads every 30 s.
+  // The fleet arrives about once a second; the graph is rebuilt at most every REBUILD_MS (UX/perf).
   const bucket = Math.floor(ctx.now / 30_000);
-  const graph = useMemo(() => buildGraph(ctx.machines, bucket * 30_000), [ctx.machines, bucket]);
+  const machines = useThrottled(ctx.machines, REBUILD_MS);
+  const graph = useMemo(() => buildGraph(machines, bucket * 30_000), [machines, bucket]);
   const groups = useMemo(() => allGroups(graph), [graph]);
   const picked = ctx.activeRig?.key ?? null;
 
@@ -68,8 +152,8 @@ function GraphPage({ ctx }: V2PageProps) {
   const [pinned, setPinned] = useState<Pinned | null>(null);
 
   const isOpen = useCallback(
-    (r: GraphRig) => overrides[r.key] ?? openByDefault(r, picked),
-    [overrides, picked]
+    (r: GraphRig) => overrides[r.key] ?? openByDefault(r, picked, isCrowded(graph, r)),
+    [overrides, picked, graph]
   );
   const shown = (r: GraphRig) => (!teams || teams.includes(r.key)) && rigMatches(r, filter);
   const columns = graph.machines.map((m) => ({
@@ -87,7 +171,7 @@ function GraphPage({ ctx }: V2PageProps) {
     }
     return m;
   }, [groups]);
-  const nameOf = useCallback((k: string) => names.get(k) ?? k, [names]);
+  const nameOf = useStable((k: string) => names.get(k) ?? k);
   const seatIndex = useMemo(() => {
     const m = new Map<string, { seat: GraphSeat; rig: GraphRig }>();
     for (const g of groups)
@@ -103,7 +187,8 @@ function GraphPage({ ctx }: V2PageProps) {
     if (!el) return;
     const fit = () => {
       const w = el.clientWidth;
-      if (w > 0) setFitZoom(Math.max(0.5, Math.min(1, Math.floor((w / natural) * 100) / 100)));
+      // UX 1: Fit never goes below 85 %; a wider fleet scrolls sideways instead of shrinking the text
+      if (w > 0) setFitZoom(Math.max(FIT_MIN, Math.min(1, Math.floor((w / natural) * 100) / 100)));
     };
     fit();
     if (typeof ResizeObserver === 'undefined') return;
@@ -115,9 +200,10 @@ function GraphPage({ ctx }: V2PageProps) {
 
   // ---- cross-rig lines, from the frames' measured positions (layout px, unaffected by zoom).
   const canvas = useRef<HTMLDivElement>(null);
-  const [placed, setPlaced] = useState<CrossPlaced[]>([]);
+  // Geometry only, keyed by from→to. What a line says (open / stale / count) is read from `cross` at render.
+  const [geom, setGeom] = useState<Map<string, CrossGeom>>(new Map());
   const [size, setSize] = useState({ w: 0, h: 0 });
-  const crossSig = cross.map((e) => `${e.from}>${e.to}:${e.count}`).join('|');
+  const crossSig = cross.map((e) => crossKey(e)).join('|');
   const layoutSig = `${[...visible].join(',')}|${groups.map((g) => (isOpen(g) ? 1 : 0)).join('')}|${z}`;
   useLayoutEffect(() => {
     const el = canvas.current;
@@ -135,7 +221,14 @@ function GraphPage({ ctx }: V2PageProps) {
           col: Number(f.closest<HTMLElement>('[data-col]')?.dataset.col ?? 0),
         };
       };
-      setPlaced(routeCross(cross, box, COL_GAP));
+      setGeom(
+        new Map(
+          routeCross(cross, box, COL_GAP).map((pl: CrossPlaced) => [
+            crossKey(pl.edge),
+            { d: pl.d, lx: pl.lx, ly: pl.ly },
+          ])
+        )
+      );
       setSize({ w: el.scrollWidth, h: el.scrollHeight });
     };
     measure();
@@ -148,6 +241,10 @@ function GraphPage({ ctx }: V2PageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [crossSig, layoutSig]);
   const maxCross = Math.max(1, ...cross.map((e) => e.count));
+  const drawnCross = cross.flatMap((edge) => {
+    const g = geom.get(crossKey(edge));
+    return g ? [{ edge, g }] : [];
+  });
 
   // ---- tree selection: open the rig, scroll to the item, highlight it.
   const select = (key: string, rigKey: string | null) => {
@@ -197,23 +294,53 @@ function GraphPage({ ctx }: V2PageProps) {
     hideTimer.current = setTimeout(() => setDetail(null), 220);
   };
   useEffect(() => () => keep(), []);
-  const [sshOf, setSshOf] = useState<Record<string, string | null>>({});
+  // L4: a machine's ssh address comes from the hub through any of its rigs (rig.waiting). A failed
+  // or empty answer is remembered for a while, then asked again; a machine with only loose
+  // sessions has no rig to ask through, and says so instead of waiting for an answer.
+  const [sshOf, setSshOf] = useState<Record<string, SshState>>({});
+  const sshAt = useRef(new Map<string, number>());
   const asking = useRef(new Set<string>());
   const askSsh = (machineId: string) => {
-    if (asking.current.has(machineId) || machineId in sshOf) return;
+    if (asking.current.has(machineId)) return;
+    const at = sshAt.current.get(machineId);
+    const known = sshOf[machineId];
+    if (at !== undefined && known) {
+      const ttl =
+        typeof known.value === 'string'
+          ? Infinity
+          : known.value === null
+            ? SSH_NONE_TTL_MS
+            : SSH_FAIL_TTL_MS;
+      if (Date.now() - at < ttl) return;
+    }
     const rig = graph.machines.find((m) => m.id === machineId)?.rigs[0]?.name;
-    if (!rig) return;
+    const remember = (st: SshState) => {
+      sshAt.current.set(machineId, Date.now());
+      setSshOf((o) => ({ ...o, [machineId]: st }));
+    };
+    if (!rig) {
+      remember({
+        value: undefined,
+        note: 'no attach line: this machine runs no rig, and the hub gives a machine\u2019s ssh address only through a rig',
+      });
+      return;
+    }
     asking.current.add(machineId);
     void callVerb<RigWaitingOutput>(ctx.getSocket(), 'rig.waiting', {
       machine: machineId,
       rig,
     }).then((a) => {
       asking.current.delete(machineId);
-      if (a.ok) setSshOf((o) => ({ ...o, [machineId]: a.value.ssh }));
+      remember(a.ok ? { value: a.value.ssh } : { value: undefined });
     });
   };
+  const detailRef = useRef<HTMLDivElement>(null);
+  const detailFrom = useRef<HTMLElement | null>(null);
+  const quiet = useRef(false);
   const onHover = (key: string, el: HTMLElement) => {
     keep();
+    detailFrom.current = el;
+    if (quiet.current) return; // focus handed back by Escape must not reopen the card
     if (document.querySelector('[data-explain-on]')) return;
     const hit = seatIndex.get(key);
     if (!hit || key.startsWith('?/')) return;
@@ -232,13 +359,36 @@ function GraphPage({ ctx }: V2PageProps) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
       e.preventDefault();
-      if (detail) setDetail(null);
-      else setPinned(null);
+      if (detail) {
+        const inside = detailRef.current?.contains(document.activeElement);
+        setDetail(null);
+        if (inside) {
+          quiet.current = true;
+          detailFrom.current?.focus();
+          quiet.current = false;
+        }
+      } else setPinned(null);
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [detail, pinned]);
   const detailHit = detail ? seatIndex.get(detail.key) : undefined;
+  // L3: the card's buttons are reachable by keyboard. Tab from the card with its hover card open
+  // goes into the hover card; Shift+Tab out of its first button, and Escape, go back to the card.
+  const onTab = (e: React.KeyboardEvent) => {
+    const first = detailRef.current?.querySelector<HTMLElement>('button:not([disabled])');
+    if (!detail || !first) return;
+    e.preventDefault();
+    keep();
+    first.focus();
+  };
+  const onDetailKey = (e: React.KeyboardEvent) => {
+    const first = detailRef.current?.querySelector<HTMLElement>('button:not([disabled])');
+    if (e.key === 'Tab' && e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      detailFrom.current?.focus();
+    }
+  };
   const edgesOf = (key: string, rig: GraphRig) => {
     const touches = (e: MapEdge) => !e.self && (e.from === key || e.to === key);
     return `${rig.edges.filter(touches).length} handed · ${(rig.planned ?? []).filter(touches).length} planned`;
@@ -265,12 +415,28 @@ function GraphPage({ ctx }: V2PageProps) {
     setPinned({ title: crossTitle(e), items: e.items });
   };
 
+  const toggleRig = useStable((k: string, wasOpen: boolean) =>
+    setOverrides((o) => ({ ...o, [k]: !wasOpen }))
+  );
+  const pickRig = useStable((k: string) => {
+    ctx.chooseRig(k);
+    setFocusKey(k);
+  });
+  const openAgent = useStable((k: string) => ctx.onOpenAgent(k));
+  const onHoverStable = useStable(onHover);
+  const hideStable = useStable(hide);
+  const onTabStable = useStable(onTab);
+  const pinLine = useStable((e: MapEdge, title: string) => {
+    setLineHover(null);
+    setPinned({ title, items: e.items });
+  });
   const expandAll = (on: boolean) =>
     setOverrides(Object.fromEntries(groups.map((g) => [g.key, on])));
   const counts = Object.fromEntries(
     FLAG_FILTERS.map((f) => [f.key, groups.filter((g) => rigMatches(g, f.key)).length])
   ) as Record<FlagFilter, number>;
   const crossTotal = graph.cross.reduce((n, e) => n + e.count, 0);
+  const unplacedHint = unplacedText(graph.unplaced);
 
   return (
     <main
@@ -420,14 +586,15 @@ function GraphPage({ ctx }: V2PageProps) {
         {crossTotal} handoffs) · line width = how often · amber = still waiting · dotted = planned
         in the rig spec
         {graph.unplaced.count > 0 && (
-          <span data-testid="g2-unplaced">
+          <span
+            className="g2-unplaced"
+            data-testid="g2-unplaced"
+            tabIndex={0}
+            title={unplacedHint}
+            aria-label={unplacedHint}
+          >
             {' '}
-            · {graph.unplaced.count} queue rows name rigs no machine reports (
-            {graph.unplaced.names
-              .slice(0, 3)
-              .map((n) => `${n.name} ${n.count}`)
-              .join(', ')}
-            ), not drawn
+            · +{graph.unplaced.count} not drawn ⓘ
           </span>
         )}
       </p>
@@ -466,35 +633,35 @@ function GraphPage({ ctx }: V2PageProps) {
                   <path d="M0,0 L10,5 L0,10 z" className="g2-cross-head" />
                 </marker>
               </defs>
-              {placed.map((p) => (
+              {drawnCross.map(({ edge, g }) => (
                 <g
-                  key={`${p.edge.from}→${p.edge.to}`}
+                  key={crossKey(edge)}
                   data-testid="g2-cross"
-                  data-from={p.edge.from}
-                  data-to={p.edge.to}
-                  data-count={p.edge.count}
+                  data-from={edge.from}
+                  data-to={edge.to}
+                  data-count={edge.count}
                   className="g2-cross-line"
                   tabIndex={0}
                   role="button"
-                  aria-label={`${crossTitle(p.edge)}. Enter shows them.`}
-                  onPointerEnter={(ev) => crossHover(p.edge, ev)}
-                  onPointerMove={(ev) => crossHover(p.edge, ev)}
+                  aria-label={`${crossTitle(edge)}. Enter shows them.`}
+                  onPointerEnter={(ev) => crossHover(edge, ev)}
+                  onPointerMove={(ev) => crossHover(edge, ev)}
                   onPointerLeave={() => setLineHover(null)}
-                  onClick={() => pinCross(p.edge)}
+                  onClick={() => pinCross(edge)}
                   onKeyDown={(ev) => {
                     if (ev.key === 'Enter' || ev.key === ' ') {
                       ev.preventDefault();
-                      pinCross(p.edge);
+                      pinCross(edge);
                     }
                   }}
                 >
                   <path
-                    d={p.d}
-                    className={`g2-cross-path ${p.edge.open ? 'open' : p.edge.stale ? 'stale' : ''}`}
-                    strokeWidth={1.5 + (p.edge.count / maxCross) * 5}
+                    d={g.d}
+                    className={`g2-cross-path ${edge.open ? 'open' : edge.stale ? 'stale' : ''}`}
+                    strokeWidth={1.5 + (edge.count / maxCross) * 5}
                     markerEnd="url(#g2-cross-arrow)"
                   />
-                  <path d={p.d} className="hit" />
+                  <path d={g.d} className="hit" />
                 </g>
               ))}
             </svg>
@@ -538,19 +705,14 @@ function GraphPage({ ctx }: V2PageProps) {
                       focusKey={focusKey}
                       filter={filter}
                       zoom={z}
-                      onToggle={(k) => setOverrides((o) => ({ ...o, [k]: !isOpen(g) }))}
-                      onPick={(k) => {
-                        ctx.chooseRig(k);
-                        setFocusKey(k);
-                      }}
-                      onOpen={ctx.onOpenAgent}
-                      onHover={onHover}
-                      onLeave={hide}
+                      onToggle={toggleRig}
+                      onPick={pickRig}
+                      onOpen={openAgent}
+                      onHover={onHoverStable}
+                      onLeave={hideStable}
+                      onTab={onTabStable}
                       onLineHover={setLineHover}
-                      onLinePin={(e, title) => {
-                        setLineHover(null);
-                        setPinned({ title, items: e.items });
-                      }}
+                      onLinePin={pinLine}
                       nameOf={nameOf}
                     />
                   ))}
@@ -558,18 +720,18 @@ function GraphPage({ ctx }: V2PageProps) {
               ))}
             </div>
             <svg className="g2-cross-labels" width={size.w} height={size.h} aria-hidden="true">
-              {placed.map((p) => (
+              {drawnCross.map(({ edge, g }) => (
                 <g
-                  key={`l:${p.edge.from}→${p.edge.to}`}
+                  key={`l:${crossKey(edge)}`}
                   className="rigmap-label g2-cross-label"
                   data-testid="g2-cross-label"
-                  onPointerEnter={(ev) => crossHover(p.edge, ev)}
+                  onPointerEnter={(ev) => crossHover(edge, ev)}
                   onPointerLeave={() => setLineHover(null)}
-                  onClick={() => pinCross(p.edge)}
+                  onClick={() => pinCross(edge)}
                 >
-                  <rect x={p.lx - 13} y={p.ly - 9} width={26} height={18} rx={4} />
-                  <text x={p.lx} y={p.ly} className="rigmap-count">
-                    {p.edge.count}
+                  <rect x={g.lx - 13} y={g.ly - 9} width={26} height={18} rx={4} />
+                  <text x={g.lx} y={g.ly} className="rigmap-count">
+                    {edge.count}
                   </text>
                 </g>
               ))}
@@ -632,7 +794,10 @@ function GraphPage({ ctx }: V2PageProps) {
           seat={detailHit.seat}
           machineLabel={detailHit.rig.machineLabel}
           edges={edgesOf(detailHit.seat.key, detailHit.rig)}
-          ssh={sshOf[detailHit.rig.machineId]}
+          ssh={sshOf[detailHit.rig.machineId]?.value}
+          sshNote={sshOf[detailHit.rig.machineId]?.note}
+          ref={detailRef}
+          onKeyDown={onDetailKey}
           at={detail}
           onKeep={keep}
           onLeave={hide}

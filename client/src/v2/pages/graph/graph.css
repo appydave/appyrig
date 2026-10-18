@@ -376,6 +376,47 @@
   gap: 6px;
   padding: 8px 12px 0;
 }
+/* "⋯": the rig's mock Start / Restore / Launch. The mock mark stays beside it, menu open or not. */
+.g2-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.g2-menu-btn {
+  min-width: 30px;
+  padding: 0 8px;
+  font-weight: 700;
+}
+.g2-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--ar-surface);
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
+}
+/* A rig shown because OpenRig itself flags it (Needs me, rig-level match). */
+.g2-rig-head[data-rig-match] {
+  background: var(--ar-blocked-bg);
+  border-bottom: 1px solid var(--ar-blocked);
+}
+.g2-reason {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--ar-blocked-ink);
+}
+.g2-unplaced {
+  cursor: help;
+  text-decoration: underline dotted;
+}
 .g2-fake-btn {
   font-size: 12px;
   padding: 2px 10px;

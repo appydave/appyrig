@@ -9,14 +9,24 @@ import {
   type QueueItem,
 } from '@appydave/shared';
 import App from '../../../App.js';
-import { listRigs } from '../../../fleet/views.js';
+import { listRigs, plannedWord } from '../../../fleet/views.js';
 import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '../../../test/fleetFixtures.js';
 import type { FrozenFile } from '../../frozen/frozenSocket.js';
 import type { V2Context } from '../../types.js';
 import { page } from './index.js';
-import { buildGraph, crossRigEdges, endpointGroup, looseKey, rigMatches } from './model.js';
-import { routeCross } from './crossRoute.js';
+import {
+  buildGraph,
+  crossRigEdges,
+  endpointGroup,
+  isCrowded,
+  looseKey,
+  openByDefault,
+  rigMatches,
+} from './model.js';
+import { routeCross, PAIR_GAP } from './crossRoute.js';
+import { avoidCards } from './labels.js';
+import RigFrame from './RigFrame.js';
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -73,7 +83,8 @@ function crossFleet(): FleetMachine[] {
     q({ id: 'm2', source: 'orch-boss@control', destination: 'dev-build@starter' }),
   ]);
   const m2 = withQueue(fleetMachine(snapshot('m2')), [
-    q({ id: 'm1', source: 'orch-lead@factory-claude', destination: 'openrig-orch@roamy' }),
+    // `gone-orch` is no seat on Roamy (a session that ended): the line must still reach Roamy's column
+    q({ id: 'm1', source: 'orch-lead@factory-claude', destination: 'gone-orch@roamy' }),
     q({ id: 'm2', source: 'orch-boss@control', destination: 'dev-build@starter' }),
   ]);
   return [m2, roamy];
@@ -103,6 +114,33 @@ function spySocket() {
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
   return { socket: s as unknown as FleetSocket, fire, sent };
 }
+
+/** A socket whose verbs get an answer (the hub's), so a hover card's ssh lookup completes. */
+function answeringSocket(answer: (verb: string) => unknown) {
+  const sent: string[] = [];
+  const s = {
+    connected: true,
+    on() {
+      return s;
+    },
+    off() {
+      return s;
+    },
+    emit: vi.fn(),
+    timeout: vi.fn(() => ({
+      emit: (_ev: string, req: { verb: string }, cb: (e: Error | null, a?: unknown) => void) => {
+        sent.push(req.verb);
+        cb(null, answer(req.verb));
+      },
+    })),
+  };
+  return { socket: s as unknown as FleetSocket, sent };
+}
+const okSsh = (ssh: string | null) => ({
+  ok: true,
+  value: { machine: 'roamy', rig: 'starter', ssh, gates: [], scanned: 0, bodiesMissing: 0 },
+});
+const refused = { ok: false, error: { failureMode: 'internal', message: 'no' } };
 
 function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Context {
   const spy = spySocket();
@@ -176,7 +214,11 @@ describe('Graph model', () => {
     expect(byPair['roamy:starter→roamy:kernel']).toMatchObject({ count: 3, open: 1, stale: 0 });
     expect(byPair[`${looseKey('roamy')}→roamy:starter`]!.count).toBe(2);
     // a name no machine reports is counted, named, and not drawn
-    expect(unplaced).toEqual({ count: 1, names: [{ name: 'gone-rig', count: 1 }] });
+    expect(unplaced).toEqual({
+      count: 1,
+      names: [{ name: 'gone-rig', count: 1, kind: 'rig' }],
+      byKind: { machine: 0, rig: 1 },
+    });
   });
 
   it('places an endpoint on its rig, a machine’s loose sessions, or nowhere', () => {
@@ -184,8 +226,80 @@ describe('Graph model', () => {
     const all = [m2, roamy];
     expect(endpointGroup('dev-build@starter', roamy, all)).toBe('roamy:starter');
     expect(endpointGroup('openrig-orch@roamy', m2, all)).toBe(looseKey('roamy'));
+    // MEDIUM-2: a session that is no seat any more still belongs to its machine's no-rig group
+    expect(endpointGroup('gone-orch@roamy', m2, all)).toBe(looseKey('roamy'));
+    // ... but only where that group exists; a machine with every session in a rig has none
+    const allInRigs = {
+      ...m2,
+      snapshot: {
+        ...m2.snapshot,
+        seats: m2.snapshot.seats.map((x) => ({ ...x, rig: m2.snapshot.rigs[0]!.name })),
+      },
+    };
+    expect(endpointGroup('gone-orch@m2', roamy, [allInRigs, roamy])).toBeNull();
     expect(endpointGroup('human@kernel', roamy, all)).toBeNull();
     expect(endpointGroup('ghost@gone-rig', roamy, all)).toBeNull();
+  });
+
+  it('MEDIUM-2: on the busy snapshot, lines from sessions that are no seat on Roamy / the M4 reach the M2', () => {
+    const { machines, now } = busy();
+    const g = buildGraph(machines, now);
+    const pair = (a: string, b: string) => g.cross.find((e) => e.from === a && e.to === b);
+    expect(pair(looseKey('roamy'), 'm2:flicut-ab')?.count).toBe(3);
+    expect(pair(looseKey('roamy'), 'm2:appyrig-build')?.count).toBe(2);
+    expect(pair(looseKey('m4'), 'm2:d09-crew')?.count).toBe(4);
+    // what is still not drawn names a rig no machine reports, not a machine
+    expect(g.unplaced.byKind.machine).toBe(0);
+    expect(g.unplaced.names.some((n) => n.name === 'roamy' || n.name === 'm4')).toBe(false);
+    expect(g.unplaced.count).toBe(g.unplaced.byKind.rig + g.unplaced.byKind.machine);
+  });
+
+  it('perf: an unchanged machine is not rebuilt; only the machine that changed is', () => {
+    const [m2, roamy] = crossFleet() as [FleetMachine, FleetMachine];
+    const first = buildGraph([m2, roamy], NOW);
+    const roamy2 = { ...roamy, snapshot: { ...roamy.snapshot } }; // a new push from Roamy only
+    const second = buildGraph([m2, roamy2], NOW);
+    const rigsOf = (g: ReturnType<typeof buildGraph>, id: string) =>
+      g.machines.find((m) => m.id === id)!.rigs;
+    rigsOf(first, 'm2').forEach((r, i) => expect(rigsOf(second, 'm2')[i]).toBe(r));
+    rigsOf(first, 'roamy').forEach((r, i) => {
+      expect(rigsOf(second, 'roamy')[i]).not.toBe(r);
+      expect(rigsOf(second, 'roamy')[i]).toEqual(r);
+    });
+    // the rig frame skips a render when its rig object is the same
+    expect((RigFrame as unknown as { $$typeof: symbol }).$$typeof).toBe(Symbol.for('react.memo'));
+  });
+
+  it('UX 2: on a machine with more than 8 rigs only the picked and the flagged ones start open', () => {
+    const roamy = fleetMachine(snapshot('roamy'));
+    const extra = Array.from({ length: 9 }, (_, i) => ({
+      id: `x${i}`,
+      name: `extra-${i}`,
+      status: 'running',
+      lifecycleState: 'running',
+      nodeCount: 0,
+      runningCount: 0,
+      attentionCount: i === 3 ? 2 : 0,
+    }));
+    const crowded: FleetMachine = {
+      ...roamy,
+      snapshot: {
+        ...roamy.snapshot,
+        rigs: [...roamy.snapshot.rigs.map((r) => ({ ...r, attentionCount: 0 })), ...extra],
+        queue: [],
+      },
+    };
+    const g = buildGraph([crowded], NOW);
+    const rig = (name: string) => g.machines[0]!.rigs.find((r) => r.name === name)!;
+    expect(isCrowded(g, rig('extra-0'))).toBe(true);
+    expect(openByDefault(rig('extra-0'), null, true)).toBe(false);
+    expect(openByDefault(rig('extra-3'), null, true)).toBe(true); // OpenRig flags it
+    expect(openByDefault(rig('extra-0'), 'roamy:extra-0', true)).toBe(true); // picked
+    // and a machine with 8 or fewer still opens every running rig
+    expect(openByDefault(rig('extra-0'), null, false)).toBe(true);
+    render(<Graph ctx={ctxFor([crowded])} />);
+    expect(frame('roamy:extra-0')).toHaveAttribute('aria-expanded', 'false');
+    expect(frame('roamy:extra-3')).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('builds every rig on every machine from the busy snapshot (23 rigs, 91 seats)', () => {
@@ -256,7 +370,13 @@ describe('Graph page', () => {
     expect(within(frame('roamy:starter')).getByTestId('g2-rig-cross')).toHaveTextContent('↗3 ↙3');
     expect(within(frame('roamy:kernel')).getByTestId('g2-rig-cross')).toHaveTextContent('↗1 ↙3');
     expect(screen.getByTestId('g2-caption')).toHaveTextContent('5 lines between rigs');
-    expect(screen.getByTestId('g2-unplaced')).toHaveTextContent('gone-rig 1');
+    // shrunk to "+N not drawn ⓘ"; the breakdown by kind is in its tooltip
+    expect(screen.getByTestId('g2-unplaced')).toHaveTextContent('+1 not drawn');
+    expect(screen.getByTestId('g2-unplaced')).not.toHaveTextContent('gone-rig');
+    expect(screen.getByTestId('g2-unplaced')).toHaveAttribute(
+      'title',
+      expect.stringMatching(/1 name a rig no machine reports \(gone-rig 1\)/)
+    );
   });
 
   it('a tree click opens the rig, highlights the item and picks the rig', () => {
@@ -340,6 +460,12 @@ describe('Graph page', () => {
     const spy = spySocket();
     render(<Graph ctx={ctxFor(crossFleet(), { getSocket: () => spy.socket })} />);
     fireEvent.click(within(frame('m2:kernel')).getByTestId('g2-rig-toggle'));
+    // the rig's actions sit behind "⋯"; the mock mark is on the header whether it is open or not
+    expect(within(frame('m2:kernel')).queryByTestId('g2-fake-start')).toBeNull();
+    expect(
+      within(within(frame('m2:kernel')).getByTestId('g2-rig-head')).getByTestId('mock-mark')
+    ).toBeInTheDocument();
+    fireEvent.click(within(frame('m2:kernel')).getByTestId('g2-rig-menu'));
     fireEvent.click(within(frame('m2:kernel')).getByTestId('g2-fake-start'));
     expect(screen.getByTestId('g2-fake-dialog')).toHaveTextContent('Start kernel on the M2?');
     expect(
@@ -350,7 +476,10 @@ describe('Graph page', () => {
     act(() => vi.advanceTimersByTime(1300));
     expect(screen.getByTestId('g2-toast')).toHaveTextContent('kernel started on the M2 (pretend)');
     // Start is off on a running rig
+    fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-menu'));
     expect(within(frame('roamy:starter')).getByTestId('g2-fake-start')).toBeDisabled();
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(within(frame('roamy:starter')).queryByTestId('g2-fake-start')).toBeNull();
     // per agent: the hover card's Restart (cancel leaves nothing behind)
     const card = within(frame('roamy:starter')).getAllByTestId('g2-card')[0]!;
     fireEvent.pointerEnter(card);
@@ -375,6 +504,273 @@ describe('Graph page', () => {
     expect(within(screen.getByTestId('g2-detail')).queryByTestId('copy-attach')).toBeNull();
     expect(screen.getByTestId('g2-no-attach')).toBeInTheDocument();
     expect(spy.sent).toContain('rig.waiting');
+  });
+});
+
+describe('Graph review fold', () => {
+  it('MEDIUM-3: a line reads its state from the current fleet, so an item closing (same count) changes its class', () => {
+    vi.useFakeTimers();
+    const before = crossFleet();
+    const { rerender } = render(<Graph ctx={ctxFor(before)} />);
+    const lineClass = (from: string, to: string) =>
+      screen
+        .getAllByTestId('g2-cross')
+        .find((g) => g.dataset.from === from && g.dataset.to === to)!
+        .querySelector('.g2-cross-path')!
+        .getAttribute('class');
+    expect(lineClass('roamy:starter', 'roamy:kernel')).toContain('open'); // r3 is still pending
+    const inRig = () =>
+      within(frame('roamy:starter'))
+        .queryAllByTestId('g2-edge')
+        .map((g) => g.querySelector('.rigmap-edge')!.getAttribute('class'));
+    expect(inRig().every((c) => !c!.includes('open'))).toBe(true);
+    // r3 closes and r7 (inside the rig) opens: no count changes anywhere
+    const roamy = before[1]!;
+    const after: FleetMachine[] = [
+      before[0]!,
+      withQueue(
+        roamy,
+        roamy.snapshot.queue.map((x) =>
+          x.id === 'r3'
+            ? { ...x, state: 'done' }
+            : x.id === 'r7'
+              ? { ...x, state: 'pending', createdAt: '2026-10-10T07:55:00.000Z' }
+              : x
+        )
+      ),
+    ];
+    rerender(<Graph ctx={ctxFor(after)} />);
+    act(() => vi.advanceTimersByTime(3100)); // the rebuild is throttled to ~3 s
+    expect(lineClass('roamy:starter', 'roamy:kernel')).not.toContain('open');
+    expect(inRig().some((c) => c!.includes('open'))).toBe(true);
+  });
+
+  it('the rebuild is throttled: a fleet that changes twice within 3 s is read once more, with the latest', () => {
+    vi.useFakeTimers();
+    const a = crossFleet();
+    const { rerender } = render(<Graph ctx={ctxFor(a)} />);
+    const mk = (n: number) => [a[0]!, withQueue(a[1]!, a[1]!.snapshot.queue.slice(0, n))];
+    rerender(<Graph ctx={ctxFor(mk(9))} />);
+    rerender(<Graph ctx={ctxFor(mk(4))} />);
+    // nothing yet
+    expect(screen.getByTestId('g2-caption')).toHaveTextContent('5 lines between rigs');
+    act(() => vi.advanceTimersByTime(3100));
+    expect(screen.getByTestId('g2-caption')).not.toHaveTextContent('5 lines between rigs');
+  });
+
+  it('MEDIUM-2 on the page: the recovered lines are drawn between the columns', () => {
+    const { machines, now } = busy();
+    render(<Graph ctx={ctxFor(machines, { now })} />);
+    const drawn = screen.getAllByTestId('g2-cross');
+    const has = (a: string, b: string) =>
+      drawn.some((g) => g.dataset.from === a && g.dataset.to === b);
+    expect(has(looseKey('roamy'), 'm2:flicut-ab')).toBe(true);
+    expect(has(looseKey('m4'), 'm2:d09-crew')).toBe(true);
+    expect(screen.getByTestId('g2-unplaced')).toHaveTextContent('not drawn');
+  });
+
+  it('UX 1: Fit never goes below 85 % (a wide fleet scrolls sideways); a wide window still fits at 100 %', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      }
+    );
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get');
+    width.mockReturnValue(500);
+    const { machines, now } = busy();
+    const { unmount } = render(<Graph ctx={ctxFor(machines, { now })} />);
+    expect(screen.getByTestId('g2-zoom')).toHaveTextContent('85%');
+    unmount();
+    width.mockReturnValue(4000);
+    render(<Graph ctx={ctxFor(machines, { now })} />);
+    expect(screen.getByTestId('g2-zoom')).toHaveTextContent('100%');
+    width.mockRestore();
+  });
+
+  it('UX 3: the ⋯ menu holds Start / Restore / Launch, keeps the mock mark, and closes on Escape or a click away', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const head = within(frame('roamy:starter')).getByTestId('g2-rig-head');
+    expect(within(head).getByTestId('mock-mark')).toBeInTheDocument();
+    const menu = within(head).getByTestId('g2-rig-menu');
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(menu);
+    expect(menu).toHaveAttribute('aria-expanded', 'true');
+    const actions = within(frame('roamy:starter')).getByTestId('g2-rig-menu-items');
+    expect(
+      within(actions)
+        .getAllByRole('button')
+        .map((b) => b.textContent)
+    ).toEqual(['Start', 'Restore', 'Launch']);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(menu).toHaveAttribute('aria-expanded', 'false');
+    expect(menu).toHaveFocus();
+    fireEvent.click(menu);
+    fireEvent.pointerDown(document.body);
+    expect(within(frame('roamy:starter')).queryByTestId('g2-rig-menu-items')).toBeNull();
+  });
+
+  it('UX 5: under Needs me a rig OpenRig itself flags keeps its seats undimmed and says why it is shown', () => {
+    const roamy = fleetMachine(snapshot('roamy'));
+    const calm: FleetMachine = {
+      ...roamy,
+      snapshot: {
+        ...roamy.snapshot,
+        queue: [],
+        rigs: roamy.snapshot.rigs.map((r) => ({
+          ...r,
+          attentionCount: r.name === 'kernel' ? 2 : 0,
+        })),
+        seats: roamy.snapshot.seats.map((x) => ({
+          ...x,
+          status: 'idle' as const,
+          blockedReason: null,
+        })),
+      },
+    };
+    render(<Graph ctx={ctxFor([calm])} />);
+    fireEvent.click(screen.getByTestId('g2-filter-needsMe'));
+    expect(rigKeys()).toEqual(['roamy:kernel']);
+    const cards = within(frame('roamy:kernel')).getAllByTestId('g2-card');
+    expect(cards.length).toBeGreaterThan(0);
+    for (const c of cards) expect(c).not.toHaveAttribute('data-dim');
+    expect(within(frame('roamy:kernel')).getByTestId('g2-rig-reason')).toHaveTextContent(
+      'OpenRig flags this rig'
+    );
+    expect(within(frame('roamy:kernel')).getByTestId('g2-rig-head')).toHaveAttribute(
+      'data-rig-match',
+      'true'
+    );
+    // the inline ▲ stays
+    expect(
+      within(frame('roamy:kernel'))
+        .getByTestId('g2-rig-head')
+        .querySelector('[data-flag="needsMe"]')
+    ).not.toBeNull();
+  });
+
+  it('L3: the tree is plain folding buttons (no ARIA tree promising arrow keys), each fold says if it is expanded', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    expect(screen.queryByRole('tree')).toBeNull();
+    expect(screen.queryAllByRole('treeitem')).toHaveLength(0);
+    const caret = within(screen.getByTestId('g2-tree')).getAllByTestId('g2-tree-caret')[0]!;
+    expect(caret).toHaveAttribute('aria-expanded');
+  });
+
+  it('L3: Tab from a card goes into its hover card (Restart / Stop), Shift+Tab and Escape come back', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const card = within(frame('roamy:starter')).getAllByTestId('g2-card')[0]!;
+    card.focus();
+    fireEvent.focus(card);
+    const detail = screen.getByTestId('g2-detail');
+    fireEvent.keyDown(card, { key: 'Tab' });
+    expect(detail.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(within(detail).getByTestId('g2-fake-restart'));
+    fireEvent.keyDown(document.activeElement!, { key: 'Tab', shiftKey: true });
+    expect(card).toHaveFocus();
+    fireEvent.keyDown(card, { key: 'Tab' });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('g2-detail')).toBeNull();
+    expect(card).toHaveFocus();
+  });
+
+  it('L7: with an ssh address from the hub, the hover card offers copy attach', async () => {
+    const a = answeringSocket(() => okSsh('david@roamy.local'));
+    render(<Graph ctx={ctxFor(crossFleet(), { getSocket: () => a.socket })} />);
+    const card = within(frame('roamy:starter')).getAllByTestId('g2-card')[0]!;
+    fireEvent.pointerEnter(card);
+    expect(await screen.findByTestId('copy-attach')).toBeInTheDocument();
+    expect(screen.queryByTestId('g2-no-attach')).toBeNull();
+    expect(a.sent).toEqual(['rig.waiting']);
+  });
+
+  it('L4: a failed lookup is remembered for 30 s and then asked again; a found address is never asked twice', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    let answer: unknown = refused;
+    const a = answeringSocket(() => answer);
+    render(<Graph ctx={ctxFor(crossFleet(), { getSocket: () => a.socket })} />);
+    const cards = () => within(frame('roamy:starter')).getAllByTestId('g2-card');
+    const hover = async () => {
+      fireEvent.pointerEnter(cards()[0]!);
+      await act(async () => {});
+    };
+    await hover();
+    await hover();
+    expect(a.sent).toHaveLength(1); // the failure is remembered
+    act(() => vi.advanceTimersByTime(31_000));
+    answer = okSsh('david@roamy.local');
+    await hover();
+    expect(a.sent).toHaveLength(2);
+    act(() => vi.advanceTimersByTime(10 * 60_000));
+    await hover();
+    expect(a.sent).toHaveLength(2); // found: kept
+  });
+
+  it('L4: a machine with only loose sessions has no rig to ask through, and the card says so', () => {
+    const roamy = fleetMachine(snapshot('roamy'));
+    const looseOnly: FleetMachine = {
+      ...roamy,
+      snapshot: {
+        ...roamy.snapshot,
+        rigs: [],
+        seats: roamy.snapshot.seats.map((x) => ({ ...x, rig: null })),
+        queue: [],
+      },
+    };
+    const spy = spySocket();
+    render(<Graph ctx={ctxFor([looseOnly], { getSocket: () => spy.socket })} />);
+    const group = screen.getAllByTestId('g2-rig').find((r) => r.dataset.loose)!;
+    fireEvent.click(within(group).getByTestId('g2-rig-toggle')); // loose groups start folded
+    fireEvent.pointerEnter(within(group).getAllByTestId('g2-card')[0]!);
+    expect(screen.getByTestId('g2-no-attach')).toHaveTextContent('runs no rig');
+    expect(spy.sent).toEqual([]);
+  });
+
+  it('L5: two directions on one pair sit at least a label height apart, in a column and across columns', () => {
+    const e = (from: string, to: string) => ({ from, to, count: 1, open: 0, stale: 0, items: [] });
+    const boxes: Record<string, { x: number; y: number; w: number; h: number; col: number }> = {
+      a: { x: 0, y: 0, w: 400, h: 30, col: 0 },
+      b: { x: 0, y: 200, w: 400, h: 30, col: 0 },
+      c: { x: 500, y: 100, w: 400, h: 30, col: 1 },
+    };
+    expect(PAIR_GAP).toBeGreaterThanOrEqual(18);
+    for (const [x, y] of [
+      ['a', 'b'],
+      ['a', 'c'],
+    ] as const) {
+      const out = routeCross([e(x, y), e(y, x)], (k) => boxes[k] ?? null, 100);
+      const fwd = out.find((p) => p.edge.from === x)!;
+      const back = out.find((p) => p.edge.from === y)!;
+      expect(Math.abs(fwd.ly - back.ly)).toBeGreaterThanOrEqual(18);
+    }
+  });
+
+  it('L6: a planned line’s word label slides off an agent card it would cover; counts are left alone', () => {
+    const edge = (planned?: string) => ({
+      from: 'a',
+      to: 'b',
+      count: planned ? 0 : 2,
+      open: 0,
+      stale: 0,
+      self: false,
+      items: [],
+      ...(planned ? { planned } : {}),
+    });
+    const c: [number, number, number, number, number, number, number, number] = [
+      0, 50, 100, 50, 200, 50, 300, 50,
+    ];
+    const card = { x: 130, y: 20, w: 40, h: 60 }; // sits on the middle of the line
+    const planned = { edge: edge('delegates_to'), lx: 150, ly: 50, c, d: '' };
+    const counted = { edge: edge(), lx: 150, ly: 50, c, d: '' };
+    const [moved, kept] = avoidCards([planned, counted], [card]);
+    expect(moved!.lx).not.toBe(150);
+    const w = Math.round(plannedWord('delegates_to').length * 6.6 + 14);
+    const clear = moved!.lx + w / 2 < card.x - 2 || moved!.lx - w / 2 > card.x + card.w + 2;
+    expect(clear).toBe(true);
+    expect(kept).toBe(counted);
+    // nothing in the way: untouched
+    expect(avoidCards([planned], [{ x: 0, y: 200, w: 10, h: 10 }])[0]).toBe(planned);
   });
 });
 
