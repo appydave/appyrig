@@ -20,7 +20,9 @@ import { HarnessMark, RoleTag, pctText, tokensText } from '../../../components/S
 import SkillPill from '../../../components/SkillPill.js';
 import { useStableOrder } from '../../../lib/stableOrder.js';
 import { groupRank } from '../../../fleet/model.js';
-import { FakeControl } from '../../kit/index.js';
+import { FakeControl, MockNote } from '../../kit/index.js';
+import TeamPicker from './TeamPicker.js';
+import './wall.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import { seatFlags, teamsOf, wallView, type SeatFlags, type WallFilter } from './model.js';
 
@@ -113,6 +115,7 @@ const SeatCard = memo(function SeatCard({
   onOpen,
   onOpenSkills,
 }: CardProps) {
+  const [more, setMore] = useState(false);
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
@@ -143,6 +146,17 @@ const SeatCard = memo(function SeatCard({
         <span className="v2w-pip" data-pip={pip} data-testid="v2-card-pip">
           <span aria-hidden="true">{PIP[pip].glyph}</span> {PIP[pip].label}
         </span>
+        <button
+          type="button"
+          className="v2w-more"
+          data-testid="v2-card-more"
+          aria-expanded={more}
+          aria-label={`Actions for ${name} (mocks)`}
+          title="Restart / Stop (mocks: nothing is sent)"
+          onClick={() => setMore((m) => !m)}
+        >
+          ⋯
+        </button>
       </header>
       <p className="v2w-address" data-testid="v2-card-address" title="Full mailbox address">
         {seat.id}
@@ -191,18 +205,20 @@ const SeatCard = memo(function SeatCard({
           {seat.status === 'stopped' ? `stopped · ${fresh}` : fresh}
         </span>
       </footer>
-      <div className="v2w-actions">
-        <FakeControl
-          label="Restart"
-          question={`Restart ${name} on ${machine.machine.label}?`}
-          result={`${name} restarted (pretend)`}
-        />
-        <FakeControl
-          label="Stop"
-          question={`Stop ${name} on ${machine.machine.label}?`}
-          result={`${name} stopped (pretend)`}
-        />
-      </div>
+      {more && (
+        <div className="v2w-actions" data-testid="v2-card-actions">
+          <FakeControl
+            label="Restart"
+            question={`Restart ${name} on ${machine.machine.label}?`}
+            result={`${name} restarted (pretend)`}
+          />
+          <FakeControl
+            label="Stop"
+            question={`Stop ${name} on ${machine.machine.label}?`}
+            result={`${name} stopped (pretend)`}
+          />
+        </div>
+      )}
     </article>
   );
 });
@@ -239,9 +255,9 @@ function WallV2({ ctx }: V2PageProps) {
     setHiddenTeams(next);
     writeJson(TEAMS_KEY, [...next]);
   };
-  const showAllTeams = () => {
-    setHiddenTeams(new Set());
-    writeJson(TEAMS_KEY, []);
+  const setTeams = (keys: string[]) => {
+    setHiddenTeams(new Set(keys));
+    writeJson(TEAMS_KEY, keys);
   };
   const toggleStopped = () => {
     const next = !hideStopped;
@@ -269,6 +285,7 @@ function WallV2({ ctx }: V2PageProps) {
       onPointerEnter={() => setOver(true)}
       onPointerLeave={() => setOver(false)}
     >
+      <MockNote>Restart and Stop on the cards are mocks — nothing is sent</MockNote>
       <div className="v2w-bar" role="group" aria-label="Filters">
         <div className="v2w-row" role="group" aria-label="Status filter">
           {FILTERS.map((f) => (
@@ -311,41 +328,18 @@ function WallV2({ ctx }: V2PageProps) {
               {g === 'rig' ? 'team' : 'machine'}
             </button>
           ))}
+          {teams.length > 0 && (
+            <>
+              <span className="v2w-sep" aria-hidden="true" />
+              <TeamPicker
+                teams={teams}
+                hidden={hiddenTeams}
+                onToggle={toggleTeam}
+                onSet={setTeams}
+              />
+            </>
+          )}
         </div>
-        {teams.length > 0 && (
-          <div
-            className="v2w-row v2w-teams"
-            role="group"
-            aria-label="Teams shown"
-            data-testid="v2-team-picker"
-          >
-            <span className="label">Teams</span>
-            {teams.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                className="pill-btn"
-                data-testid="v2-team-chip"
-                data-team-key={t.key}
-                aria-pressed={!hiddenTeams.has(t.key)}
-                title={`${hiddenTeams.has(t.key) ? 'Show' : 'Hide'} ${t.name} on ${t.where}`}
-                onClick={() => toggleTeam(t.key)}
-              >
-                {hiddenTeams.has(t.key) ? '○' : '●'} {t.name} · {t.where}
-              </button>
-            ))}
-            {hiddenTeams.size > 0 && (
-              <button
-                type="button"
-                className="pill-btn"
-                data-testid="v2-teams-all"
-                onClick={showAllTeams}
-              >
-                show all teams
-              </button>
-            )}
-          </div>
-        )}
         {ctx.hidden.length > 0 && (
           <p className="filter-note" data-testid="v2-wall-hidden">
             Hidden by the machine filter:{' '}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { DbSchemaOutput, SchemaChanges, TableChange } from '@appydave/shared';
-import SchemaView, { changeSummary } from '../../../components/SchemaView.js';
+import SchemaView from '../../../components/SchemaView.js';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
-import { sampleChanges } from './model.js';
+import { sampleChanges, versionLine } from './model.js';
 import '../w4.css';
+import './schema.css';
 
 type Answer = { ok: true; out: DbSchemaOutput } | { ok: false; why: string } | null;
 
@@ -100,68 +101,45 @@ function SchemaV2({ ctx }: V2PageProps) {
   const version = outs.find((o) => o.openrigVersion)?.openrigVersion ?? '0.6.6';
 
   return (
-    <main className="view w4-page" data-testid="v2-schema">
-      <section className="w4-section">
-        <h3 className="w4-h">Version to version</h3>
-        <table className="w4-table" data-testid="db2-versions">
-          <thead>
-            <tr>
-              <th>machine</th>
-              <th>OpenRig version</th>
-              <th>compared with</th>
-              <th>what changed</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ctx.allMachines.map((fm) => {
-              const a = answers[fm.machine.id];
-              const o = a?.ok ? a.out : null;
-              return (
-                <tr
-                  key={fm.machine.id}
-                  data-testid="db2-machine"
-                  data-status={o?.changes?.status ?? (a ? 'none' : 'loading')}
-                >
-                  <td>
-                    <b>{fm.machine.label}</b>
-                  </td>
-                  <td className="mono">
-                    {o?.openrigVersion ?? (a ? (a.ok ? o?.status : 'refused') : 'asking…')}
-                  </td>
-                  <td className="mono">{o?.changes?.comparedTo ?? '—'}</td>
-                  <td>
-                    {!a
-                      ? 'asking…'
-                      : !a.ok
-                        ? `could not read: ${a.why}`
-                        : o?.status !== 'ok'
-                          ? (o?.reason ?? o?.status)
-                          : changeSummary(o.changes, o.openrigVersion)}
-                    {o?.changes?.status === 'changed' && <Changes c={o.changes} />}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {!anyChanged && outs.length > 0 && (
+    <main className="view w4-page db2-page" data-testid="v2-schema">
+      <ul className="db2-lines" data-testid="db2-versions" aria-label="OpenRig version per machine">
+        {ctx.allMachines.map((fm) => {
+          const a = answers[fm.machine.id];
+          const o = a?.ok ? a.out : null;
+          return (
+            <li
+              key={fm.machine.id}
+              data-testid="db2-machine"
+              data-status={o?.changes?.status ?? (a ? 'none' : 'loading')}
+            >
+              {versionLine(fm.machine.label, o, a && !a.ok ? a.why : null)}
+              {o?.changes?.status === 'changed' && (
+                <details className="db2-details" open>
+                  <summary>the change, table by table</summary>
+                  <Changes c={o.changes} />
+                </details>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <SchemaView
+        socket={ctx.getSocket()}
+        machines={ctx.allMachines.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
+        now={ctx.now}
+        keys={ctx.keys}
+      />
+      {!anyChanged && outs.length > 0 && (
+        <details className="db2-details db2-sample" data-testid="db2-sample-details">
+          <summary>What a change will look like (sample)</summary>
           <SampleData
             title="What a change will look like"
             what="No machine has seen a second OpenRig version yet, so there is nothing real to compare. This diff is made up, from this database's real table names."
           >
             <Changes c={sampleChanges(tableNames, version)} />
           </SampleData>
-        )}
-      </section>
-      <section className="w4-section">
-        <h3 className="w4-h">Tables</h3>
-        <SchemaView
-          socket={ctx.getSocket()}
-          machines={ctx.allMachines.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
-          now={ctx.now}
-          keys={ctx.keys}
-        />
-      </section>
+        </details>
+      )}
     </main>
   );
 }
@@ -172,5 +150,5 @@ export const page: V2PageDef = {
   group: 'hood',
   component: SchemaV2,
   blurb:
-    'OpenRig’s database per machine: version-to-version changes as a readable diff, then the tables.',
+    'OpenRig’s database per machine: the table browser, with one line per machine on what changed between versions.',
 };

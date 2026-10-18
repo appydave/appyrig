@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MockMark from './MockMark.js';
+import { useMockNote } from './MockNote.js';
 
 /**
  * v2 kit · FakeControl: a button that behaves like the real thing — confirm, then progress, then a
@@ -54,10 +55,18 @@ interface Props {
 
 export default function FakeControl({ label, question, result, workMs }: Props) {
   const a = useFakeAction(workMs);
+  const box = useRef<HTMLSpanElement>(null);
+  // walk #8: the page carries one "mocks" note; this control's own badge shows on hover / focus.
+  useMockNote(box);
   return (
-    <span className="v2-fake" data-testid="fake-control" data-phase={a.phase}>
+    <span ref={box} className="v2-fake" data-testid="fake-control" data-phase={a.phase}>
       {a.phase === 'idle' && (
-        <button type="button" className="pill-btn" onClick={a.ask}>
+        <button
+          type="button"
+          className="pill-btn"
+          title={`${label}: a mock, nothing is sent`}
+          onClick={a.ask}
+        >
           {label}
         </button>
       )}

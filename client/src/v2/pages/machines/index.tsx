@@ -1,5 +1,5 @@
 import { gb } from '../../../fleet/health.js';
-import { FakeControl, SampleLabel } from '../../kit/index.js';
+import { FakeControl, MockNote, SampleLabel } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   behindWords,
@@ -10,6 +10,7 @@ import {
   type MachineView,
 } from './model.js';
 import '../w4.css';
+import './machines.css';
 
 const pct = (a: number | null, b: number | null) =>
   a === null || !b ? null : Math.round((a / b) * 100);
@@ -64,6 +65,20 @@ function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
         </span>
       </header>
       <Meter label="memory" used={m.memUsed} total={m.memTotal} testId="mc2-mem" />
+      <p
+        className="mc2-free"
+        data-testid="mc2-free"
+        title="macOS's own estimate (the memory_pressure command): memory it could hand out right now, counting free pages plus pages it can reclaim (inactive, purgeable, file cache). It is not total minus used, so it can read high while memory used is high too."
+      >
+        <span className="mc2-meter-label">could be freed</span>{' '}
+        <b className="mono">{m.freePct === null ? '—' : `${Math.round(m.freePct)}%`}</b>{' '}
+        <span className="quiet">
+          macOS estimate
+          {m.freePct !== null && pct(m.memUsed, m.memTotal) !== null
+            ? `: ${pct(m.memUsed, m.memTotal)}% used, ${Math.round(m.freePct)}% could be freed`
+            : ''}
+        </span>
+      </p>
       <Meter label="swap" used={m.swapUsed} total={m.swapTotal} testId="mc2-swap" />
       <dl className="w4-stats mono">
         <div>
@@ -138,31 +153,23 @@ function MachinesV2({ ctx }: V2PageProps) {
   const latestStale = latestIsStale(ctx.now);
   return (
     <main className="view w4-page" data-testid="v2-machines">
-      <section
-        className="w4-hero mc2-watch"
-        data-testid="mc2-watch"
-        data-outcome={behind ? 'stalled' : 'running'}
-      >
-        <span className="w4-hero-big">
+      <p className="mc2-watch" data-testid="mc2-watch">
+        OpenRig on the fleet <b className="mono">{versions.join(', ') || 'not reported'}</b> ·
+        latest release{' '}
+        <b className="mono" data-testid="mc2-latest">
+          {LATEST_OPENRIG.version}
+        </b>
+        , {LATEST_OPENRIG.source}, as of {LATEST_OPENRIG.readOn} <SampleLabel />
+        <span className="quiet">
           {latestStale
-            ? '○ latest release not rechecked'
+            ? ' · not rechecked for over 7 days, so no machine is compared'
             : behind
-              ? `▲ ${behind} of ${views.length} behind`
-              : '● all current'}
+              ? ` · ${behind} of ${views.length} behind by that sample`
+              : ' · all current by that sample'}{' '}
+          (AppyRig does not check npm yet)
         </span>
-        <span className="w4-hero-why">
-          OpenRig on the fleet: <b className="mono">{versions.join(', ') || 'not reported'}</b> ·
-          latest release{' '}
-          <b className="mono" data-testid="mc2-latest">
-            {LATEST_OPENRIG.version}
-          </b>{' '}
-          <SampleLabel />{' '}
-          <span className="quiet">
-            ({LATEST_OPENRIG.source}, as of {LATEST_OPENRIG.readOn}; AppyRig does not check npm yet
-            {latestStale ? '; over 7 days old, so no machine is compared' : ''})
-          </span>
-        </span>
-      </section>
+      </p>
+      {behind > 0 && !latestStale && <MockNote />}
       <div className="mc2-grid">
         {views.map((m) => (
           <Card key={m.id} m={m} latestStale={latestStale} />

@@ -194,12 +194,15 @@ describe('Wall v2: page', () => {
     const { socket } = verbSocket();
     render(<Wall ctx={makeCtx(fleet(), socket)} />);
     const before = screen.getAllByTestId('v2-seat-card').length;
+    // walk #10: one compact "Teams" button opens the checkboxes
+    fireEvent.click(screen.getByTestId('v2-teams-button'));
     const chip = screen
       .getAllByTestId('v2-team-chip')
       .find((c) => c.dataset.teamKey === 'roamy:starter')!;
-    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    expect(chip).toBeChecked();
     fireEvent.click(chip);
-    expect(chip).toHaveAttribute('aria-pressed', 'false');
+    expect(chip).not.toBeChecked();
+    expect(screen.getByTestId('v2-teams-button')).toHaveTextContent('1 hidden');
     const after = screen.getAllByTestId('v2-seat-card');
     expect(after.length).toBe(before - 2);
     expect(
@@ -251,6 +254,9 @@ describe('Wall v2: page', () => {
     fireEvent.click(within(card).getByTestId('v2-card-open'));
     expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
     const emits = raw.emit.mock.calls.length;
+    // walk #8: the mocks sit behind the card's "⋯"
+    expect(within(card).queryByTestId('fake-control')).toBeNull();
+    fireEvent.click(within(card).getByTestId('v2-card-more'));
     const fakes = within(card).getAllByTestId('fake-control');
     expect(fakes).toHaveLength(2);
     expect(within(card).getAllByTestId('mock-mark')).toHaveLength(2);

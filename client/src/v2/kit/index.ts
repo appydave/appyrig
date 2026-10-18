@@ -4,6 +4,7 @@
  */
 export { default as MockMark, MOCK_TEXT } from './MockMark.js';
 export { default as FakeControl, useFakeAction, type FakePhase } from './FakeControl.js';
+export { default as MockNote, MOCK_NOTE_TEXT, useMockNote } from './MockNote.js';
 export {
   default as SampleData,
   SampleLabel,

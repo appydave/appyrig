@@ -46,6 +46,23 @@ export interface Team {
   where: string;
   machineId: string;
   seats: number;
+  running: boolean;
+}
+
+/** walk #10: what the compact team button says ("Teams: all", "Teams: 18 of 25 · 7 hidden"). */
+export function teamsLabel(teams: Team[], hidden: ReadonlySet<string>): string {
+  const off = teams.filter((t) => hidden.has(t.key)).length;
+  return off === 0
+    ? 'Teams: all'
+    : `Teams: ${teams.length - off} of ${teams.length} · ${off} hidden`;
+}
+
+/** The teams a search matches, by name or machine. */
+export function matchTeams(teams: Team[], q: string): Team[] {
+  const w = q.trim().toLowerCase();
+  return w
+    ? teams.filter((t) => t.name.toLowerCase().includes(w) || t.where.toLowerCase().includes(w))
+    : teams;
 }
 
 /** The teams (rigs, per machine) the picker offers, in the Wall's own order. */
@@ -56,6 +73,8 @@ export function teamsOf(machines: FleetMachine[]): Team[] {
     where: g.where,
     machineId: g.tiles[0]?.machine.machine.id ?? '',
     seats: g.tiles.length,
+    // A rig running; for plain tmux sessions (no rig), any session that is up.
+    running: g.rig ? g.rig.status === 'running' : g.tiles.some((t) => t.seat.status !== 'stopped'),
   }));
 }
 
