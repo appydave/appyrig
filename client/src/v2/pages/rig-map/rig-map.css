@@ -1,4 +1,4 @@
-/* v2 Rig Map: the original map's shape, wider and roomier. AppyDave light only. */
+/* v2 Rig Map: the original map's layout, with mono cards. AppyDave light only. */
 .v2-rigmap {
   padding: 8px 16px 32px;
 }
@@ -19,21 +19,14 @@
   margin: 0;
 }
 
-/* Pods are wide bands: the agents spread across the full width, so every arc has room and its
-   count can be read and traced from sender to receiver. */
-.v2-rigmap .lane-pods .pod {
-  flex: 1 1 100%;
-}
-.v2-rigmap .pod-seats {
-  justify-content: space-evenly;
-  column-gap: 40px;
-}
+/* Pods sit side by side in one row, each as wide as its agents, exactly like the old map (its
+   .lane-pods wraps only when the row truly does not fit). Nothing here stretches or stacks a pod. */
 
 /* Roomier cards: mono name and address, a bigger context line. */
 .v2-rigmap .node {
-  min-width: 250px;
-  padding: 16px 18px;
-  gap: 8px;
+  min-width: 230px;
+  padding: 14px 16px;
+  gap: 7px;
   font-family: var(--ar-font-term);
 }
 .v2-rigmap .node b {
