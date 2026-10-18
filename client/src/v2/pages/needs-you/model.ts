@@ -52,6 +52,10 @@ export interface NeedItem {
   rig: string | null;
   /** A seat key (machine/seat) the Agent page can open, when the asker is a seat the machine reports. */
   seatKey: string | null;
+  /** Who it was addressed to, when known (a gate says; a queue item to David is "human"). */
+  to?: string | null;
+  /** A FliStudio link a handoff carried, for a gate card. */
+  link?: string | null;
   /** When the wait began (ms). */
   since: number;
   waitedMs: number;
@@ -122,20 +126,36 @@ export function gateItems(
   gates: RigGate[],
   now: number
 ): NeedItem[] {
-  return gates.map((g) =>
-    item(fm, now, {
-      id: `${fm.machine.id}:g:${rig}:${g.gate}`,
+  // Gates named by the same handoff are one card (one ask, several gate ids).
+  const byItem = new Map<string, RigGate[]>();
+  for (const g of gates) byItem.set(g.itemId, [...(byItem.get(g.itemId) ?? []), g]);
+  return [...byItem.entries()].map(([itemId, group]) => {
+    const g = group[0]!;
+    const ids = group.map((x) => x.gate);
+    return item(fm, now, {
+      id: `${fm.machine.id}:g:${rig}:${itemId}`,
       kind: 'gate',
-      summary: `FliStudio gate ${g.gate}: ${g.context}`,
+      summary: `FliStudio ${ids.length === 1 ? 'gate' : 'gates'} ${ids.join(', ')}: ${g.context}`,
       from: bare(g.from),
+      to: g.to ? bare(g.to) : null,
+      link: group.find((x) => x.link)?.link ?? null,
       rig,
       seatKey:
         g.from && fm.snapshot.seats.some((s) => s.id === g.from)
           ? seatKey(fm.machine.id, g.from)
           : null,
-      since: Date.parse(g.at),
-    })
-  );
+      since: Math.min(...group.map((x) => Date.parse(x.at))),
+    });
+  });
+}
+
+/** OpenRig's own stuck-sweep notices addressed to David that the list leaves out (counted, not shown). */
+export function sweepCount(machines: FleetMachine[]): number {
+  let n = 0;
+  for (const fm of machines)
+    for (const q of fm.snapshot.queue)
+      if (isOpen(q) && bare(q.destination) === 'human' && isSweep(q)) n += 1;
+  return n;
 }
 
 export type GatesByRig = Record<string, RigGate[]>; // key: `${machineId}:${rig}`

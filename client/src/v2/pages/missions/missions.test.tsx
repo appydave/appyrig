@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { fleetMachine, snapshot } from '../../../test/fleetFixtures.js';
 import type { FleetSocket } from '../../../fleet/useFleet.js';
@@ -7,6 +7,7 @@ import type { V2Context } from '../../types.js';
 import { page as missions } from './index.js';
 import {
   deriveMissions,
+  deriveUnattributed,
   missionDocSummary,
   sampleMission,
   sliceOf,
@@ -53,13 +54,17 @@ function machines(): FleetMachine[] {
   return [m2, roamy];
 }
 
+const verbCalls: string[] = [];
+
 function ctxFor(ms: FleetMachine[]): V2Context {
   const socket = {
     connected: true,
     on: vi.fn(),
     off: vi.fn(),
     emit: vi.fn(),
-    timeout: vi.fn(() => ({ emit: vi.fn() })),
+    timeout: vi.fn(() => ({
+      emit: (_e: string, req: { verb: string }) => verbCalls.push(req.verb),
+    })),
   } as unknown as FleetSocket;
   return {
     machines: ms,
@@ -113,7 +118,11 @@ describe('Missions model', () => {
 
   it('counts slice tags with no mission tag', () => {
     expect(untaggedMissionCount(machines())).toBe(1);
-    expect(deriveMissions(machines()).some((m) => m.id === '(no mission tag)')).toBe(true);
+    // they are not a mission: a flat list per rig, no progress
+    expect(deriveMissions(machines()).some((m) => m.id.includes('no mission'))).toBe(false);
+    const flat = deriveUnattributed(machines());
+    expect(flat.flatMap((g) => g.jobs)).toHaveLength(1);
+    expect(flat[0]).toMatchObject({ machineId: 'm2' });
   });
 
   it('builds the sample tree from real seat names', () => {
@@ -140,13 +149,15 @@ describe('Missions page', () => {
     expect(screen.getByTestId('ms-real-note')).toHaveTextContent('not OpenRig');
     const cards = screen.getAllByTestId('ms-mission');
     expect(cards.map((c) => c.dataset.mission)).toEqual(expect.arrayContaining(['alpha', 'beta']));
-    expect(screen.getByTestId('ms-unresolved')).toHaveTextContent('1 items');
+    expect(screen.getByTestId('ms-unresolved')).toHaveTextContent('1 jobs carry a slice tag');
     // only the first mission is open; opening another shows its slices
     const betaToggle = within(cards.find((c) => c.dataset.mission === 'beta')!).getByTestId(
       'ms-toggle'
     );
     fireEvent.click(betaToggle);
-    expect(screen.getAllByTestId('ms-slice').some((s) => s.dataset.slice === 'slice-2')).toBe(true);
+    expect(
+      screen.getAllByTestId('ms-slice').some((s) => s.dataset.slice === 'slice-2 (starter)')
+    ).toBe(true);
   });
 
   it('labels the sample tree and its Assign is a pretend', () => {
@@ -165,5 +176,72 @@ describe('Missions page', () => {
     m.snapshot = { ...m.snapshot, queue: [] };
     render(<Page ctx={ctxFor([m])} />);
     expect(screen.getByTestId('ms-none')).toBeInTheDocument();
+  });
+});
+
+describe('Missions fold: loose slices, outcomes, doc reads', () => {
+  const Page = missions.component;
+
+  it("keys a loose slice-N by rig, so two rigs' slice-1 never merge", () => {
+    const m = fleetMachine(snapshot('m2'));
+    m.snapshot = {
+      ...m.snapshot,
+      queue: [
+        q('a', ['mission:alpha', 'slice-1'], 'done', 'dev-build@starter'),
+        q('b', ['mission:alpha', 'slice-1'], 'pending', 'dev-qa@fliedit-team'),
+      ],
+    };
+    const alpha = deriveMissions([m]).find((x) => x.id === 'alpha')!;
+    expect(alpha.slices.map((x) => x.id)).toEqual(['slice-1 (fliedit-team)', 'slice-1 (starter)']);
+  });
+
+  it('counts cancelled, rejected and expired as closed without being done', () => {
+    const m = fleetMachine(snapshot('m2'));
+    m.snapshot = {
+      ...m.snapshot,
+      queue: [
+        q('a', ['mission:alpha', 'slice:s1'], 'done'),
+        q('b', ['mission:alpha', 'slice:s1'], 'cancelled'),
+        q('c', ['mission:alpha', 'slice:s1'], 'rejected'),
+        q('d', ['mission:alpha', 'slice:s1'], 'expired'),
+        q('e', ['mission:alpha', 'slice:s1'], 'pending'),
+      ],
+    };
+    const s1 = deriveMissions([m])[0]!.slices[0]!;
+    expect(s1).toMatchObject({ done: 1, notDone: 3, open: 1 });
+    expect(s1.progress).toBeCloseTo(0.2);
+    render(<Page ctx={ctxFor([m])} />);
+    expect(screen.getAllByText(/3 closed without being done/, { selector: '.ms-num' }).length).toBe(
+      2
+    );
+    const outcomes = screen
+      .getAllByTestId('ms-job')
+      .map((j) => j.querySelector('.ms-state')?.getAttribute('data-outcome'));
+    expect(outcomes.filter((o) => o === 'closed-not-done')).toHaveLength(3);
+  });
+
+  it('lists unattributed jobs per rig with no progress bar', () => {
+    render(<Page ctx={ctxFor(machines())} />);
+    const block = screen.getByTestId('ms-unattributed');
+    expect(within(block).getAllByTestId('ms-unattr-rig').length).toBe(1);
+    expect(within(block).queryByRole('progressbar')).toBeNull();
+  });
+
+  it('a snapshot tick with the same rigs makes no new rig.files call', async () => {
+    verbCalls.length = 0;
+    const ms = machines();
+    const base = ctxFor(ms);
+    const { rerender } = render(<Page ctx={base} />);
+    await waitFor(() =>
+      expect(verbCalls.filter((v) => v === 'rig.files').length).toBeGreaterThan(0)
+    );
+    const before = verbCalls.length;
+    const tick = ms.map((m) => ({ ...m, snapshot: { ...m.snapshot } }));
+    rerender(<Page ctx={{ ...base, machines: tick, allMachines: tick }} />);
+    rerender(<Page ctx={{ ...base, machines: tick.map((m) => ({ ...m })), allMachines: tick }} />);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(verbCalls.length).toBe(before);
   });
 });

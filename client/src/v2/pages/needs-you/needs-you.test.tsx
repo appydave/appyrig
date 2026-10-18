@@ -1,11 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { fleetMachine, snapshot } from '../../../test/fleetFixtures.js';
+import type { CallAnswer } from '@appydave/shared';
 import type { FleetSocket } from '../../../fleet/useFleet.js';
 import type { V2Context } from '../../types.js';
 import { page as needsYou } from './index.js';
-import { buildNeeds, countsByFilter, matches, sampleNeeds, waited, STALE_MS } from './model.js';
+import {
+  buildNeeds,
+  countsByFilter,
+  matches,
+  sampleNeeds,
+  sweepCount,
+  waited,
+  STALE_MS,
+} from './model.js';
 
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
@@ -54,14 +63,40 @@ function twoMachines(): FleetMachine[] {
   return [m2, roamy];
 }
 
-function ctxFor(machines: FleetMachine[], sent: string[] = []): V2Context {
+type Answers = Record<string, unknown | ((input: unknown) => unknown)>;
+
+/** A socket that answers read verbs from `answers` (anything else is refused) and records every verb sent. */
+function ctxFor(
+  machines: FleetMachine[],
+  sent: string[] = [],
+  answers: Answers = {},
+  over: Partial<V2Context> = {}
+): V2Context {
   const socket = {
     connected: true,
     on: vi.fn(),
     off: vi.fn(),
     emit: vi.fn((ev: string) => sent.push(ev)),
     timeout: vi.fn(() => ({
-      emit: (_ev: string, req: { verb: string }) => sent.push(req.verb),
+      emit: (
+        _ev: string,
+        req: { verb: string; input?: unknown },
+        ack: (e: null, a: CallAnswer) => void
+      ) => {
+        sent.push(req.verb);
+        const raw = answers[req.verb];
+        const hit = typeof raw === 'function' ? (raw as (i: unknown) => unknown)(req.input) : raw;
+        setTimeout(
+          () =>
+            ack(
+              null,
+              hit === undefined
+                ? { ok: false, error: { failureMode: 'refused', message: `${req.verb}: refused` } }
+                : { ok: true, value: hit }
+            ),
+          0
+        );
+      },
     })),
   } as unknown as FleetSocket;
   return {
@@ -85,8 +120,28 @@ function ctxFor(machines: FleetMachine[], sent: string[] = []): V2Context {
     onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
+    ...over,
   };
 }
+
+const waitingFor = (gates: unknown[]) => ({
+  machine: 'm2',
+  rig: 'x',
+  ssh: null,
+  gates,
+  scanned: 1,
+  bodiesMissing: 0,
+});
+const gate = (n: string, itemId: string, over = {}) => ({
+  gate: `g_${n.padStart(10, '0')}`,
+  itemId,
+  at: ago(4 * H),
+  from: 'orch-lead@fliedit-team',
+  to: 'human@kernel',
+  context: 'ship it?',
+  link: null,
+  ...over,
+});
 
 describe('Needs You model', () => {
   it('aggregates human-addressed open items and blocked seats across two machines', () => {
@@ -200,9 +255,10 @@ describe('Needs You page', () => {
     ).toBe(true);
   });
 
-  it('fake actions and Clear stale make no socket call', () => {
+  it('fake actions and Clear stale make no socket call', async () => {
     const sent: string[] = [];
     render(<Page ctx={ctxFor(twoMachines(), sent)} />);
+    await waitFor(() => expect(sent).toContain('rig.waiting'));
     // the page may ask the hub to read gates (read-only rig.waiting); nothing else is allowed
     const before = sent.length;
     for (const name of ['approve', 'dismiss', 'snooze', 'reply']) {
@@ -212,6 +268,7 @@ describe('Needs You page', () => {
     fireEvent.click(screen.getByText(/Clear 1 stale/));
     fireEvent.click(screen.getByTestId('fake-confirm'));
     expect(sent.length).toBe(before);
+    expect(sent).toContain('rig.waiting');
     expect(sent.every((v) => v === 'rig.waiting')).toBe(true);
     expect(screen.getAllByTestId('mock-mark').length).toBeGreaterThan(0);
   });
@@ -221,5 +278,117 @@ describe('Needs You page', () => {
     render(<Page ctx={ctx} />);
     fireEvent.click(screen.getAllByTestId('ny-open-agent')[0]!);
     expect(ctx.onOpenAgent).toHaveBeenCalledOnce();
+  });
+});
+
+describe('Needs You: gates, unread rigs, hub link, hidden machines', () => {
+  const Page = needsYou.component;
+  const runningRigs = (ms: FleetMachine[]) =>
+    ms.flatMap((m) => m.snapshot.rigs.filter((r) => r.status === 'running').map((r) => r.name));
+
+  it('one card per handoff, showing from to to and the FliStudio link', async () => {
+    const ms = twoMachines();
+    const link = 'http://100.1.2.3:7777/gates/g_1';
+    const ctx = ctxFor(ms, [], {
+      'rig.waiting': waitingFor([
+        gate('1', 'item-a', { link }),
+        gate('2', 'item-a'),
+        gate('3', 'item-b', { to: 'dev-qa@fliedit-team' }),
+      ]),
+    });
+    render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getAllByText(/FliStudio gate/).length).toBeGreaterThan(0));
+    const gateCards = screen
+      .getAllByTestId('ny-card')
+      .filter((c) => (c as HTMLElement).dataset.kind === 'gate');
+    // every running rig answers the same three gates: two handoffs per rig, so 2 cards each
+    expect(gateCards.length).toBe(2 * runningRigs(ms).length);
+    const two = gateCards.find((c) => c.textContent?.includes('gates g_0000000001, g_0000000002'))!;
+    expect(two).toBeTruthy();
+    expect(two).toHaveTextContent('→ human');
+    expect(within(two as HTMLElement).getByTestId('ny-gate-link')).toHaveAttribute('href', link);
+  });
+
+  it('re-asks when a rig has new queue activity, and on an interval, but not on a same-rigs tick', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const ms = twoMachines();
+      const sent: string[] = [];
+      const base = ctxFor(ms, sent, { 'rig.waiting': waitingFor([]) });
+      const { rerender } = render(<Page ctx={base} />);
+      await waitFor(() => expect(sent.length).toBeGreaterThan(0));
+      const first = sent.length;
+      // a new snapshot object with the same rigs and the same activity asks nothing
+      const same = ms.map((m) => ({ ...m, snapshot: { ...m.snapshot } }));
+      rerender(<Page ctx={{ ...base, machines: same, allMachines: same }} />);
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(sent.length).toBe(first);
+      // queue activity on a rig: newer updatedAt on one of its items
+      const rigName = runningRigs(ms)[0]!;
+      const busy = ms.map((m) => ({
+        ...m,
+        snapshot: {
+          ...m.snapshot,
+          queue: [
+            ...m.snapshot.queue,
+            q('fresh', {
+              source: `x@${rigName}`,
+              destination: `y@${rigName}`,
+              updatedAt: new Date(NOW + 1000).toISOString(),
+            }),
+          ],
+        },
+      }));
+      rerender(<Page ctx={{ ...base, machines: busy, allMachines: busy }} />);
+      await waitFor(() => expect(sent.length).toBeGreaterThan(first));
+      const second = sent.length;
+      // and on the interval
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(61_000);
+      });
+      await waitFor(() => expect(sent.length).toBeGreaterThan(second));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says gates are unread for N rigs, and does not say nothing is waiting', async () => {
+    const ms = twoMachines();
+    const n = runningRigs(ms).length;
+    expect(n).toBeGreaterThan(0);
+    // rig.waiting refused for every rig; the filter hides all the human items
+    const empty = ms.map((m) => ({ ...m, snapshot: { ...m.snapshot, queue: [], seats: [] } }));
+    render(<Page ctx={ctxFor(empty, [], {})} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('ny-unread')).toHaveTextContent(`unread for ${n}`)
+    );
+    expect(screen.getByTestId('ny-empty')).not.toHaveTextContent('Nothing is waiting on David.');
+    expect(screen.getByTestId('ny-empty')).toHaveTextContent('not the same as nothing waiting');
+  });
+
+  it('warns when the hub link is down', () => {
+    render(<Page ctx={ctxFor(twoMachines(), [], {}, { hubConnected: false })} />);
+    expect(screen.getByTestId('ny-hub-down')).toHaveTextContent('link to the hub is down');
+  });
+
+  it('tells hidden machines apart from no machine reporting', () => {
+    const { unmount } = render(
+      <Page ctx={ctxFor([], [], {}, { hidden: [{ id: 'm2', label: 'M2' }] })} />
+    );
+    expect(screen.getByTestId('ny-empty')).toHaveTextContent('hidden by the Show filter (M2)');
+    unmount();
+    render(<Page ctx={ctxFor([], [], {}, { hidden: [] })} />);
+    expect(screen.getByTestId('ny-empty')).toHaveTextContent('No machine is reporting');
+  });
+
+  it('counts the stuck-sweep notices it leaves out', () => {
+    const ms = twoMachines();
+    expect(sweepCount(ms)).toBe(1);
+    render(<Page ctx={ctxFor(ms)} />);
+    expect(screen.getByTestId('ny-sweeps')).toHaveTextContent(
+      '1 OpenRig stuck-sweep notice is hidden'
+    );
   });
 });

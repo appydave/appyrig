@@ -331,3 +331,8 @@
   position: absolute;
   left: -9999px;
 }
+
+.ms-notdone {
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+}

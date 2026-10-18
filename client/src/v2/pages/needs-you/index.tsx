@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { RigWaitingOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
+import { rigQueue } from '../../../fleet/views.js';
 import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
@@ -12,6 +13,7 @@ import {
   countsByFilter,
   matches,
   sampleNeeds,
+  sweepCount,
   waited,
   type GatesByRig,
   type NeedFilter,
@@ -83,6 +85,12 @@ function Card({ item, ctx }: { item: NeedItem; ctx: V2PageProps['ctx'] }) {
       <p className="ny-summary">{item.summary}</p>
       <p className="ny-meta">
         asked by <b>{item.from}</b>
+        {item.to ? (
+          <>
+            {' '}
+            → <b>{item.to}</b>
+          </>
+        ) : null}
         {item.rig && (
           <>
             {' '}
@@ -90,6 +98,14 @@ function Card({ item, ctx }: { item: NeedItem; ctx: V2PageProps['ctx'] }) {
           </>
         )}{' '}
         on <b>{item.machineLabel}</b>
+        {item.link && (
+          <>
+            {' · '}
+            <a href={item.link} target="_blank" rel="noreferrer" data-testid="ny-gate-link">
+              Open the gate in FliStudio ↗
+            </a>
+          </>
+        )}
       </p>
       <div className="ny-row">
         <ItemActions item={item} />
@@ -123,9 +139,24 @@ function Card({ item, ctx }: { item: NeedItem; ctx: V2PageProps['ctx'] }) {
   );
 }
 
-/** Gates per rig, read through the read-only rig.waiting verb for every running rig on a live machine. */
-function useGates(ctx: V2PageProps['ctx']): GatesByRig {
-  const [gates, setGates] = useState<GatesByRig>({});
+export const GATES_REFRESH_MS = 60_000;
+
+interface GatesState {
+  byRig: GatesByRig;
+  /** Running rigs whose gates could not be read (refused or timed out): "unread", not "none". */
+  unread: number;
+  /** True once the first read has finished. */
+  loaded: boolean;
+}
+
+/**
+ * Gates per rig, read through the read-only rig.waiting verb for every running rig on a live
+ * machine. Re-asked every GATES_REFRESH_MS and whenever queue activity on a rig changes (its
+ * newest updatedAt is part of the signature), so a gate answered or raised shows up.
+ */
+function useGates(ctx: V2PageProps['ctx']): GatesState {
+  const [state, setState] = useState<GatesState>({ byRig: {}, unread: 0, loaded: false });
+  const [tick, setTick] = useState(0);
   const targets = useMemo(
     () =>
       ctx.machines
@@ -133,38 +164,51 @@ function useGates(ctx: V2PageProps['ctx']): GatesByRig {
         .flatMap((m) =>
           m.snapshot.rigs
             .filter((r) => r.status === 'running')
-            .map((r) => ({ machine: m.machine.id, rig: r.name }))
+            .map((r) => ({
+              machine: m.machine.id,
+              rig: r.name,
+              at: rigQueue(m, r.name).reduce((a, q) => (q.updatedAt > a ? q.updatedAt : a), ''),
+            }))
         ),
     [ctx.machines]
   );
-  const sig = targets.map((t) => `${t.machine}:${t.rig}`).join('|');
+  const sig = targets.map((t) => `${t.machine}:${t.rig}@${t.at}`).join('|');
   const { getSocket } = ctx;
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), GATES_REFRESH_MS);
+    return () => clearInterval(id);
+  }, []);
   useEffect(() => {
     let live = true;
     const socket = getSocket();
     void Promise.all(
       targets.map((t) =>
-        callVerb<RigWaitingOutput>(socket, 'rig.waiting', t).then((a) =>
-          a.ok ? ([`${t.machine}:${t.rig}`, a.value.gates] as const) : null
+        callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: t.machine, rig: t.rig }).then(
+          (a) => ({ key: `${t.machine}:${t.rig}`, gates: a.ok ? a.value.gates : null })
         )
       )
     ).then((rows) => {
       if (!live) return;
-      setGates(Object.fromEntries(rows.filter((r) => r !== null)));
+      setState({
+        byRig: Object.fromEntries(rows.filter((r) => r.gates).map((r) => [r.key, r.gates!])),
+        unread: rows.filter((r) => !r.gates).length,
+        loaded: true,
+      });
     });
     return () => {
       live = false;
     };
-    // `sig` stands for `targets`: re-ask only when the set of running rigs changes.
+    // `sig` stands for `targets` (a new snapshot with the same rigs and activity asks nothing).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sig, getSocket]);
-  return gates;
+  }, [sig, tick, getSocket]);
+  return state;
 }
 
 function NeedsYou({ ctx }: V2PageProps) {
   const [filter, setFilter] = useState<NeedFilter>('all');
   const [showStale, setShowStale] = useState(false);
-  const gates = useGates(ctx);
+  const { byRig: gates, unread, loaded } = useGates(ctx);
+  const sweeps = useMemo(() => sweepCount(ctx.machines), [ctx.machines]);
   const real = useMemo(
     () => buildNeeds(ctx.machines, gates, ctx.now),
     [ctx.machines, gates, ctx.now]
@@ -185,11 +229,31 @@ function NeedsYou({ ctx }: V2PageProps) {
         Everything waiting on David, on every machine, in one list. The longest wait is first;
         anything older than {STALE_DAYS} days is filed under Stale at the bottom.
       </p>
+      {!ctx.hubConnected && (
+        <p className="v2-note v2-note-warn" data-testid="ny-hub-down">
+          The link to the hub is down: what is shown is the last thing it sent, and may be out of
+          date.
+        </p>
+      )}
       <p className="ny-summary-line" data-testid="ny-total">
         <b>{real.length}</b> waiting ({fresh.length} fresh, {stale.length} stale in this view)
         across {ctx.machines.length} {ctx.machines.length === 1 ? 'machine' : 'machines'}.
         {asleep.length > 0 &&
           ` ${asleep.map((m) => m.machine.label).join(', ')} ${asleep.length === 1 ? 'is' : 'are'} asleep: its items are from its last report.`}
+        {!loaded && ' Reading gates…'}
+        {loaded && unread > 0 && (
+          <span data-testid="ny-unread">
+            {' '}
+            Gates unread for {unread} {unread === 1 ? 'rig' : 'rigs'}: any gate they hold is not
+            counted.
+          </span>
+        )}
+        {sweeps > 0 && (
+          <span data-testid="ny-sweeps">
+            {' '}
+            {sweeps} OpenRig stuck-sweep {sweeps === 1 ? 'notice is' : 'notices are'} hidden.
+          </span>
+        )}
       </p>
 
       <div className="ny-filters" role="tablist" aria-label="Filter" data-testid="ny-filters">
@@ -213,8 +277,12 @@ function NeedsYou({ ctx }: V2PageProps) {
           {filter === 'approval' || filter === 'shipped' || filter === 'progress'
             ? `Nothing real is collected for ${FILTERS.find((f) => f.key === filter)!.label.toLowerCase()} yet; the sample cards below show the shape.`
             : ctx.machines.length === 0
-              ? 'No machine is reporting, so this cannot say what is waiting (not the same as nothing waiting).'
-              : 'Nothing is waiting on David.'}
+              ? ctx.hidden.length > 0
+                ? `Every machine is hidden by the Show filter (${ctx.hidden.map((h) => h.label).join(', ')}), so nothing is listed: show one to see what it is waiting on.`
+                : 'No machine is reporting, so this cannot say what is waiting (not the same as nothing waiting).'
+              : unread > 0 || !loaded
+                ? 'Nothing found so far, but not every rig could be read for gates (see above): that is not the same as nothing waiting.'
+                : 'Nothing is waiting on David.'}
         </p>
       )}
       {fresh.length > 0 && (

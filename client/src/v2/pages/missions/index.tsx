@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   deriveMissions,
+  deriveUnattributed,
   missionDocSummary,
   pct,
   sampleMission,
@@ -37,11 +38,16 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'
     null
   );
   const { getSocket } = ctx;
+  // A stable key: every snapshot tick makes a new `rigs` array, but only a change in WHICH rigs
+  // the mission touches may re-read its files.
+  const rigsKey = mission.rigs.map((r) => `${r.machineId}:${r.rig}`).join('|');
+  const rigsRef = useRef(mission.rigs);
+  rigsRef.current = mission.rigs;
   useEffect(() => {
     let live = true;
     const socket = getSocket();
     void (async () => {
-      for (const r of mission.rigs) {
+      for (const r of rigsRef.current) {
         const files = await callVerb<RigFilesOutput>(socket, 'rig.files', {
           machine: r.machineId,
           rig: r.rig,
@@ -63,7 +69,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'
     return () => {
       live = false;
     };
-  }, [mission.id, mission.rigs, getSocket]);
+  }, [mission.id, rigsKey, getSocket]);
   if (doc === null) return <p className="quiet">Looking for a MISSION.md in its rigs…</p>;
   if (doc === 'none')
     return (
@@ -99,6 +105,7 @@ function SliceRow({ slice }: { slice: Slice }) {
         <Bar value={slice.progress} label={`${slice.id} progress`} />
         <span className="ms-num">
           {slice.done} of {slice.jobs.length} jobs done
+          {slice.notDone > 0 && `, ${slice.notDone} closed without being done`}
         </span>
         {slice.holders.length > 0 && (
           <span className="quiet">held by {slice.holders.join(', ')}</span>
@@ -107,12 +114,20 @@ function SliceRow({ slice }: { slice: Slice }) {
       <ul className="ms-jobs">
         {jobs.map((j) => (
           <li key={`${j.machineId}:${j.item.id}`} data-testid="ms-job" data-open={j.open}>
-            <span className={`ms-state ${j.open ? 'ms-open' : 'ms-done'}`}>
+            <span
+              className={`ms-state ${j.open ? 'ms-open' : j.outcome === 'done' ? 'ms-done' : 'ms-notdone'}`}
+              data-outcome={j.outcome}
+            >
               {j.open ? 'open' : j.item.state}
             </span>{' '}
             {firstLine(j.item.summary) || j.item.id}{' '}
             <span className="quiet">
-              {j.open ? `held by ${j.holder}` : 'closed'} · {j.machineLabel}
+              {j.open
+                ? `held by ${j.holder}`
+                : j.outcome === 'done'
+                  ? 'closed'
+                  : 'closed, not done'}{' '}
+              · {j.machineLabel}
             </span>
           </li>
         ))}
@@ -153,8 +168,9 @@ function MissionCard({
         </button>{' '}
         <Bar value={mission.progress} label={`${mission.id} progress`} />
         <span className="ms-num">
-          {mission.done} of {mission.done + mission.open} jobs done · {mission.slices.length}{' '}
-          {mission.slices.length === 1 ? 'slice' : 'slices'}
+          {mission.done} of {mission.done + mission.open + mission.notDone} jobs done
+          {mission.notDone > 0 && `, ${mission.notDone} closed without being done`} ·{' '}
+          {mission.slices.length} {mission.slices.length === 1 ? 'slice' : 'slices'}
         </span>
       </h3>
       <p className="quiet">on {mission.machines.join(', ')}</p>
@@ -196,6 +212,7 @@ function Assign({ job }: { job: string }) {
 function Missions({ ctx }: V2PageProps) {
   const missions = useMemo(() => deriveMissions(ctx.machines), [ctx.machines]);
   const unresolved = useMemo(() => untaggedMissionCount(ctx.machines), [ctx.machines]);
+  const loose = useMemo(() => deriveUnattributed(ctx.machines), [ctx.machines]);
   const sample = useMemo(() => sampleMission(ctx.allMachines), [ctx.allMachines]);
   const [openId, setOpenId] = useState<string | null>(null);
   const current = openId ?? missions[0]?.id ?? null;
@@ -225,8 +242,8 @@ function Missions({ ctx }: V2PageProps) {
       </p>
       {unresolved > 0 && (
         <p className="v2-note v2-note-warn" data-testid="ms-unresolved">
-          {unresolved} items carry a slice tag but no mission tag; they are grouped under &quot;(no
-          mission tag)&quot;.
+          {unresolved} jobs carry a slice tag but no mission tag, so they belong to no mission: they
+          are listed below as unattributed jobs, with no progress.
         </p>
       )}
       {missions.length === 0 ? (
@@ -243,6 +260,42 @@ function Missions({ ctx }: V2PageProps) {
             toggle={() => setOpenId(current === m.id ? '' : m.id)}
           />
         ))
+      )}
+
+      {loose.length > 0 && (
+        <section data-testid="ms-unattributed">
+          <h3>Unattributed jobs</h3>
+          <p className="quiet">
+            Tagged with a slice but not a mission, so there is nothing to measure progress against.
+          </p>
+          {loose.map((g) => (
+            <div key={`${g.machineId}:${g.rig}`} className="ms-mission" data-testid="ms-unattr-rig">
+              <b>{g.rig}</b>{' '}
+              <span className="quiet">
+                on {g.machineLabel} · {g.jobs.length} {g.jobs.length === 1 ? 'job' : 'jobs'}
+              </span>
+              <ul className="ms-jobs">
+                {g.jobs.slice(0, SHOWN_JOBS).map((j) => (
+                  <li key={j.item.id} data-testid="ms-job" data-open={j.open}>
+                    <span className="ms-state" data-outcome={j.outcome}>
+                      {j.open ? 'open' : j.item.state}
+                    </span>{' '}
+                    {firstLine(j.item.summary) || j.item.id}{' '}
+                    <span className="quiet">
+                      {(j.item.tags.find((t) => t.startsWith('slice')) ?? 'slice').replace(
+                        'slice:',
+                        'slice '
+                      )}
+                    </span>
+                  </li>
+                ))}
+                {g.jobs.length > SHOWN_JOBS && (
+                  <li className="quiet">and {g.jobs.length - SHOWN_JOBS} more</li>
+                )}
+              </ul>
+            </div>
+          ))}
+        </section>
       )}
 
       <SampleData
