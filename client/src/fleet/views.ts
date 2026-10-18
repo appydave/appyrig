@@ -45,13 +45,23 @@ export interface Endpoint {
 export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): Endpoint {
   const own = home.snapshot.seats.find((s) => s.id === raw);
   if (own) return endpointOf(raw, home, own);
-  // The same seat can be addressed by its OpenRig logical id (`desk.planner@ylo-desk`): home first,
-  // then any machine. It resolves to the same key as the session-name form, so edges merge.
-  const logicalHome = home.snapshot.seats.find((s) => s.logicalId === raw);
-  if (logicalHome) return endpointOf(raw, home, logicalHome);
-  for (const fm of all) {
-    const hit = fm.snapshot.seats.find((s) => s.logicalId === raw);
-    if (hit) return endpointOf(raw, fm, hit);
+  // The same seat can be addressed by its OpenRig logical id (`desk.planner@ylo-desk`). It resolves
+  // to the same key as the session-name form, so edges merge. A logical id is unique only per rig, so
+  // pick deterministically: home wins; else the single machine that has it; else the single live one;
+  // else several candidates mean we do not guess (unplaced). A full logical-id match beats the
+  // `name@machineId` reading below.
+  const hits: { fm: FleetMachine; seat: Seat }[] = [];
+  for (const fm of [home, ...all.filter((m) => m !== home)]) {
+    const seat = fm.snapshot.seats.find((x) => x.logicalId === raw);
+    if (seat) hits.push({ fm, seat });
+  }
+  const homeHit = hits.find((h) => h.fm === home);
+  if (homeHit) return endpointOf(raw, homeHit.fm, homeHit.seat);
+  const live = hits.filter((h) => h.fm.liveness === 'live');
+  const pick = hits.length === 1 ? hits : live;
+  if (pick.length === 1) return endpointOf(raw, pick[0]!.fm, pick[0]!.seat);
+  if (hits.length > 1) {
+    return { key: `?/${raw}`, raw, name: raw.split('@')[0] || raw, machineId: null, seat: null };
   }
   const at = raw.lastIndexOf('@');
   if (at > 0) {

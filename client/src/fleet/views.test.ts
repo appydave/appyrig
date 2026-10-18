@@ -755,12 +755,42 @@ describe('ui-c-placed: one seat addressed by session name and by logical id', ()
     expect(outside.flatMap((p) => p.seats)).toHaveLength(1);
   });
 
-  it('takes the rig from the seat for a logical id', () => {
-    const { fm } = setup();
-    expect(endpointRig(fm, 'desk.planner@ylo-desk')).toBe('ylo-desk');
+  it('takes the rig from the seat for a logical id, not from its @suffix', () => {
+    const { fm, other } = setup();
+    other.logicalId = 'desk.planner@x';
+    expect(endpointRig(fm, 'desk.planner@x')).toBe('ylo-desk');
   });
 
-  it('falls back to POD seats for a truly unknown name', () => {
+  it('two other machines carrying the same logical id: the live one wins, else unplaced', () => {
+    const { fm, other } = setup();
+    const a = roamy();
+    const b = m2();
+    b.machine = { ...b.machine, id: 'm2b' };
+    b.snapshot = { ...b.snapshot, seats: [{ ...other, id: 'twin' }] };
+    a.snapshot = { ...a.snapshot, seats: [{ ...other, id: 'twin2' }] };
+    const home = { ...fm, snapshot: { ...fm.snapshot, seats: [] } };
+    const both = resolveEndpoint('desk.planner@ylo-desk', home, [home, a, b]);
+    expect(both.key.startsWith('?/')).toBe(true);
+    b.liveness = 'asleep';
+    const one = resolveEndpoint('desk.planner@ylo-desk', home, [home, a, b]);
+    expect(one.machineId).toBe(a.machine.id);
+    a.liveness = 'asleep';
+    expect(resolveEndpoint('desk.planner@ylo-desk', home, [home, a, b]).seat).toBeNull();
+  });
+
+  it('a full logical-id match beats reading the string as name@machineId', () => {
+    const { fm, other } = setup();
+    const home = roamy();
+    home.snapshot = {
+      ...home.snapshot,
+      seats: [{ ...other, id: 'real-seat', logicalId: 'orch@m2' }],
+    };
+    const ep = resolveEndpoint('orch@m2', home, [home, fm]);
+    expect(ep.seat?.id).toBe('real-seat');
+    expect(ep.machineId).toBe(home.machine.id);
+  });
+
+  it('regression guard: a truly unknown name still falls back to POD seats', () => {
     const { fm, home } = setup();
     fm.snapshot.queue = [
       q({ id: 'g', source: home.id, destination: 'ghost', state: 'pending', createdAt: T }),
