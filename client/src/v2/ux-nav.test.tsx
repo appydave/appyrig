@@ -167,7 +167,7 @@ describe('UX nav #2: a group click opens a page of that group', () => {
 describe('UX nav #2: the top of the page is one height on every v2 page', () => {
   it('v2.css reserves the rows Current hides (measured in a browser: 17 pages, one height)', () => {
     const css = readFileSync(`${__dirname}/v2.css`, 'utf8');
-    expect(css).toMatch(/body:has\(\.v2-nav\) header\s*\{\s*min-height:\s*112px/);
+    expect(css).toMatch(/body:has\(\.v2-nav\) header\.app-header\s*\{\s*min-height:\s*112px/);
     expect(css).toMatch(/fleet-strip'\]\s*\{\s*min-height:\s*84px/);
   });
 });
