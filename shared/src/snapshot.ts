@@ -101,6 +101,12 @@ export const SeatSchema = z.strictObject({
   viewerStatus: ViewerStatusSchema.nullable(),
   lastActivityAt: isoDate.nullable(),
   contextUsedPct: z.number().min(0).max(100).nullable(),
+  /**
+   * v15 UI-A, collector-set: tokens in the seat's context (OpenRig's `totalInputTokens`). Optional and
+   * additive (hub first): null = OpenRig has no figure for this seat; absent = this collector does
+   * not report it. The UI shows both as an em dash, never 0.
+   */
+  contextTokens: z.number().int().nonnegative().nullable().optional(),
   work: SeatWorkSchema,
   cwd: z.string().nullable(),
   recoveryGuidance: z.string().nullable(),

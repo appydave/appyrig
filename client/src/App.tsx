@@ -683,6 +683,16 @@ export default function App({ getSocket = getFleetSocket }: Props) {
         >
           Notes
         </button>
+        <a
+          className="pill-btn compare-link"
+          href="https://claude.ai/artifact/GMbxJcd1rZE5khkXsdgP4S"
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid="compare-link"
+          title="OpenRig vs AppyRig: what each one does (opens in a new tab)"
+        >
+          OpenRig vs AppyRig
+        </a>
         <span className="label">
           {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
           {machines.length === 1 ? '' : 's'}

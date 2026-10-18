@@ -3332,6 +3332,18 @@
                                   }
                                 ]
                               },
+                              "contextTokens": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
                               "work": {
                                 "type": "object",
                                 "properties": {
@@ -9696,6 +9708,18 @@
                       }
                     ]
                   },
+                  "contextTokens": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
                   "work": {
                     "type": "object",
                     "properties": {
@@ -10686,6 +10710,18 @@
                           "type": "number",
                           "minimum": 0,
                           "maximum": 100
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "contextTokens": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
                         },
                         {
                           "type": "null"
