@@ -21,6 +21,7 @@ const seat = (over: Partial<MapSeat> = {}): MapSeat => ({
   stale: 0,
   oldestStaleMs: null,
   address: 'ylo-lead@ylo-d10',
+  rig: 'ylo-d10',
   source: 'openrig',
   runtime: 'claude-code',
   modelRaw: 'claude-opus-5-5',
@@ -137,12 +138,24 @@ const secure = (writeText: (t: string) => Promise<void>) => {
   Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 };
 
-/** A socket that answers every verb call with the given ssh target. */
-const socketWith = (ssh: string | null) =>
+/** A socket that answers every verb call with the given ssh target (or refuses when `refuse`). */
+const calls: { machine: string; rig: string }[] = [];
+const socketWith = (ssh: string | null, refuse = false) =>
   ({
     timeout: () => ({
-      emit: (_ev: string, _req: unknown, cb: (e: null, a: unknown) => void) =>
-        cb(null, { ok: true, value: { gates: [], ssh } }),
+      emit: (
+        _ev: string,
+        req: { input: { machine: string; rig: string } },
+        cb: (e: null, a: unknown) => void
+      ) => {
+        calls.push(req.input);
+        cb(
+          null,
+          refuse
+            ? { ok: false, error: { failureMode: 'timeout', message: 'no' } }
+            : { ok: true, value: { gates: [], ssh } }
+        );
+      },
     }),
   }) as never;
 
@@ -263,5 +276,81 @@ describe('v15 UI-A: Rig Map card and hover detail', () => {
     fireEvent.pointerEnter(n2!);
     expect(screen.getAllByTestId('seat-detail')).toHaveLength(1);
     expect(screen.getByTestId('detail-session').textContent).toBe('ylo-qa@ylo-d10');
+  });
+});
+
+describe('v15 UI-A fold: which machine an attach line is for', () => {
+  const m2 = seat({
+    key: 'm2/ylo-qa@ylo-m2',
+    name: 'ylo-qa',
+    address: 'ylo-qa@ylo-m2',
+    rig: 'ylo-m2',
+  });
+
+  it('a refused lookup is unknown, never "no ssh": no button, also after a rig switch', async () => {
+    secure(vi.fn().mockResolvedValue(undefined));
+    const { rerender } = render(
+      <RigMap map={mapOf([seat()])} onOpen={() => {}} socket={socketWith(null)} />
+    );
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    await screen.findByTestId('copy-attach'); // answered ok, no ssh: home machine, plain line
+    const other = mapOf([seat()]);
+    other.rig.key = 'm4/other';
+    rerender(<RigMap map={other} onOpen={() => {}} socket={socketWith(null, true)} />);
+    fireEvent.pointerLeave(screen.getByTestId('rig-map-node'));
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.getByTestId('seat-detail')).not.toBeNull();
+    expect(screen.queryByTestId('copy-attach')).toBeNull();
+  });
+
+  it('a seat on another machine with no ssh target gets no button', async () => {
+    render(<RigMap map={mapOf([m2])} onOpen={() => {}} socket={socketWith(null)} />);
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(screen.getByTestId('seat-detail')).not.toBeNull();
+    expect(screen.queryByTestId('copy-attach')).toBeNull();
+  });
+
+  it('an outside-lane seat on a machine with ssh gets the ssh-wrapped line, asked about its own rig', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    secure(writeText);
+    calls.length = 0;
+    render(<RigMap map={mapOf([m2])} onOpen={() => {}} socket={socketWith('david@m2')} />);
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    const btn = await screen.findByTestId('copy-attach');
+    await act(async () => {
+      fireEvent.click(btn);
+    });
+    expect(calls).toContainEqual({ machine: 'm2', rig: 'ylo-m2' });
+    expect(writeText).toHaveBeenCalledWith('ssh -t david@m2 "tmux attach -t \'ylo-qa@ylo-m2\'"');
+  });
+
+  it('an unplaced ?/ seat is never looked up and has no button', async () => {
+    calls.length = 0;
+    const ghost = seat({
+      key: '?/ghost',
+      name: 'ghost',
+      address: 'ghost',
+      rig: null,
+      source: 'tmux',
+    });
+    render(<RigMap map={mapOf([ghost])} onOpen={() => {}} socket={socketWith('david@m2')} />);
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    await new Promise((r) => setTimeout(r, 30));
+    expect(calls).toEqual([]);
+    expect(screen.queryByTestId('copy-attach')).toBeNull();
+  });
+
+  it('turning Explain on hides the card', async () => {
+    render(<RigMap map={mapOf([seat()])} onOpen={() => {}} socket={socketWith(null)} />);
+    fireEvent.pointerEnter(screen.getByTestId('rig-map-node'));
+    expect(screen.getByTestId('seat-detail')).not.toBeNull();
+    await act(async () => {
+      document.body.setAttribute('data-explain-on', 'true');
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    expect(screen.queryByTestId('seat-detail')).toBeNull();
+    document.body.removeAttribute('data-explain-on');
   });
 });

@@ -333,25 +333,29 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     []
   );
   // Each machine's ssh target (AppyRig config, via rig.waiting) for the attach line; undefined = not asked yet.
+  // Only answers the hub gave are kept: a refused or timed-out lookup is "unknown" (no button),
+  // never "no ssh". Cleared when the rig changes, and an answer for an older rig is dropped.
   const [sshOf, setSshOf] = useState<Record<string, string | null>>({});
-  const asked = useRef(new Set<string>());
-  const askSsh = (machineId: string) => {
-    if (!map || asked.current.has(machineId)) return;
-    asked.current.add(machineId);
-    if (!socket) {
-      setSshOf((o) => ({ ...o, [machineId]: null }));
-      return;
-    }
-    void callVerb<RigWaitingOutput>(socket, 'rig.waiting', {
-      machine: machineId,
-      rig: map.rig.name,
-    }).then((a) => setSshOf((o) => ({ ...o, [machineId]: a.ok ? a.value.ssh : null })));
+  const asking = useRef(new Set<string>());
+  const generation = useRef(0);
+  const askSsh = (machineId: string, rig: string | null) => {
+    // The machine is asked about a rig that exists ON it: the seat's own. No rig, no lookup.
+    if (!socket || !rig || asking.current.has(machineId)) return;
+    asking.current.add(machineId);
+    const gen = generation.current;
+    void callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: machineId, rig }).then(
+      (a) => {
+        if (gen !== generation.current) return;
+        asking.current.delete(machineId); // a refusal can be asked again on the next hover
+        if (a.ok) setSshOf((o) => ({ ...o, [machineId]: a.value.ssh }));
+      }
+    );
   };
-  const showDetail = (key: string, node: HTMLElement) => {
+  const showDetail = (key: string, node: HTMLElement, rig: string | null) => {
     keepDetail();
     const c = box.current;
     if (!c || document.querySelector('[data-explain-on]')) return;
-    askSsh(key.slice(0, key.indexOf('/')));
+    if (!key.startsWith('?/')) askSsh(key.slice(0, key.indexOf('/')), rig);
     const a = c.getBoundingClientRect();
     const r = node.getBoundingClientRect();
     const top = r.top - a.top + c.scrollTop;
@@ -366,13 +370,27 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     });
   };
   useEffect(() => {
-    // M2: Esc closes the detail card (it does not claim the key, so the screen's own Esc still works).
+    // Esc closes the card and is spent (capture + preventDefault, as the line drawer does), so the
+    // screen's own Esc does not also go back. Turning Explain on hides the card too.
     if (!detail) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDetail(null);
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      setDetail(null);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onKey, true);
+    const mo = new MutationObserver(() => {
+      if (document.querySelector('[data-explain-on]')) setDetail(null);
+    });
+    mo.observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-explain-on'],
+    });
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      mo.disconnect();
+    };
   }, [detail]);
   const bodies = useRef(new Map<string, HandoffGetOutput>());
   const [follow, setFollow] = useState<string | null>(null);
@@ -383,6 +401,9 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     setCard(null);
     setDetail(null);
     setFollow(null);
+    generation.current += 1;
+    asking.current.clear();
+    setSshOf({});
   }, [map?.rig.key]);
   useEffect(() => {
     if (!pinned) setFollow(null);
@@ -509,7 +530,9 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
     if (!detail || !detailSeat) return null;
     const machineId = detail.key.slice(0, detail.key.indexOf('/'));
     const ssh = sshOf[machineId];
-    // A seat on another machine gets an ssh-wrapped line or none: a bare `tmux attach` would run here.
+    // Unknown (not asked, refused, timed out) means no button. A bare local line only when this
+    // seat's machine is the rig's own AND its lookup succeeded with no ssh target; another
+    // machine needs its ssh target or gets nothing. If in doubt, no button.
     const canAttach =
       !detail.key.startsWith('?/') &&
       ssh !== undefined &&
@@ -737,8 +760,8 @@ export default function RigMap({ map, onOpen, onOpenSkills, socket, keys = true,
                           data-testid="rig-map-node"
                           data-pip={s.pip}
                           onClick={() => !s.key.startsWith('?/') && onOpen(s.key)}
-                          onPointerEnter={(ev) => showDetail(s.key, ev.currentTarget)}
-                          onFocus={(ev) => showDetail(s.key, ev.currentTarget)}
+                          onPointerEnter={(ev) => showDetail(s.key, ev.currentTarget, s.rig)}
+                          onFocus={(ev) => showDetail(s.key, ev.currentTarget, s.rig)}
                           onPointerLeave={hideDetail}
                           onBlur={hideDetail}
                           aria-label={

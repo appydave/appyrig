@@ -746,6 +746,24 @@ describe('App: S2 keyboard', () => {
     vi.unstubAllGlobals();
   });
 
+  it('Rig Map: one Esc closes the seat card and stays on the map', () => {
+    noResize();
+    localStorage.setItem('appyrig.explain', 'off'); // Explain (on by default) owns the hover card
+    connected('m2');
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    fireEvent.pointerEnter(screen.getAllByTestId('rig-map-node')[0]!);
+    expect(screen.getByTestId('seat-detail')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('seat-detail')).toBeNull();
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+    vi.unstubAllGlobals();
+  });
+
   it('Handoff Flow: → and ← step through handoffs', () => {
     connected('m2');
     fireEvent.click(screen.getByTestId('view-flow'));

@@ -257,6 +257,8 @@ export interface MapSeat {
   keySkills?: string[];
   /** v15 UI-A: the mailbox address (the session name), runtime, raw model, context and activity. */
   address: string;
+  /** The seat's own rig (a rig that exists on its machine), for asking that machine's ssh target. */
+  rig: string | null;
   source: Seat['source'];
   runtime: string | null;
   modelRaw: string | null;
@@ -341,6 +343,7 @@ function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
     pip: pipFor(seat, fm),
     skills: seat.skillCount,
     address: seat.id,
+    rig: seat.rig,
     source: seat.source,
     runtime: seat.runtime,
     modelRaw: seat.model,
@@ -468,6 +471,7 @@ export function buildRigMap(
             model: { text: 'unplaced', family: 'other' },
             pip: 'unknown',
             address: ep.raw,
+            rig: null,
             source: 'tmux' as const,
             runtime: null,
             modelRaw: null,
