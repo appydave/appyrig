@@ -288,7 +288,7 @@ const MAP: LegendSection[] = [
         swatch: 'pod-band',
         mark: 'Grey band · POD',
         means:
-          'A pod: a group of seats inside a rig. In "talks to this rig" panels, POD · SEATS only gathers the outside seats; it is not a real pod.',
+          'A pod: a group of seats inside a rig. In "talks to this rig" panels outside seats sit under their own pod; POD · SEATS appears only for a seat whose pod is not known.',
       },
       {
         swatch: 'seat-box',

@@ -12,6 +12,7 @@ import {
   buildAccounts,
   buildFlow,
   buildRigMap,
+  endpointRig,
   consoleLines,
   flowChapters,
   flowModeOf,
@@ -706,5 +707,66 @@ describe('F4 (r1 LOW-1): most headroom never picks a reading that is not current
       account({ email: 'y@e.com', fiveHourPct: 40, sevenDayPct: 40 })
     );
     expect(mostHeadroom(buildAccounts([asleep, live]).accounts, NOW)?.email).toBe('y@e.com');
+  });
+});
+
+describe('ui-c-placed: one seat addressed by session name and by logical id', () => {
+  const T = '2026-10-10T07:50:00.000Z';
+  const setup = () => {
+    const fm = m2();
+    const home = fm.snapshot.seats.find((s) => s.rig === 'fliedit-team')!;
+    const other = {
+      ...home,
+      id: 'd10-ai-powered-video-cuts',
+      rig: 'ylo-desk',
+      pod: 'desk',
+      logicalId: 'desk.planner@ylo-desk',
+    };
+    fm.snapshot.seats = [...fm.snapshot.seats, other];
+    const mk = (id: string, destination: string) =>
+      q({ id, source: home.id, destination, state: 'pending', createdAt: T });
+    fm.snapshot.queue = [
+      mk('by-name', other.id),
+      mk('by-logical', 'desk.planner@ylo-desk'),
+      mk('by-logical-2', 'desk.planner@ylo-desk'),
+    ];
+    return { fm, home, other };
+  };
+
+  it('resolves both address forms to one endpoint key', () => {
+    const { fm, other } = setup();
+    const a = resolveEndpoint(other.id, fm, [fm]);
+    const b = resolveEndpoint('desk.planner@ylo-desk', fm, [fm]);
+    expect(b.key).toBe(a.key);
+    expect(b.seat?.id).toBe(other.id);
+    const rm = roamy();
+    expect(resolveEndpoint('desk.planner@ylo-desk', rm, [rm, fm]).machineId).toBe('m2');
+  });
+
+  it('merges edges, draws one box under its real pod, and places it', () => {
+    const { fm, other } = setup();
+    const map = buildRigMap([fm], 'm2:fliedit-team', NOW)!;
+    const edges = map.edges.filter((e) => e.to.endsWith(other.id));
+    expect(edges).toHaveLength(1);
+    expect(edges[0]!.count).toBe(3);
+    expect(map.lanes.some((l) => l.label === 'Not placed')).toBe(false);
+    const outside = map.lanes.slice(1).flatMap((l) => l.pods);
+    expect(outside.map((p) => p.name)).toEqual(['desk']);
+    expect(outside.flatMap((p) => p.seats)).toHaveLength(1);
+  });
+
+  it('takes the rig from the seat for a logical id', () => {
+    const { fm } = setup();
+    expect(endpointRig(fm, 'desk.planner@ylo-desk')).toBe('ylo-desk');
+  });
+
+  it('falls back to POD seats for a truly unknown name', () => {
+    const { fm, home } = setup();
+    fm.snapshot.queue = [
+      q({ id: 'g', source: home.id, destination: 'ghost', state: 'pending', createdAt: T }),
+    ];
+    const map = buildRigMap([fm], 'm2:fliedit-team', NOW)!;
+    const np = map.lanes.find((l) => l.label === 'Not placed')!;
+    expect(np.pods.map((p) => p.name)).toEqual(['seats']);
   });
 });

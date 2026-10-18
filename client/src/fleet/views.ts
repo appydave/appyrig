@@ -45,6 +45,14 @@ export interface Endpoint {
 export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): Endpoint {
   const own = home.snapshot.seats.find((s) => s.id === raw);
   if (own) return endpointOf(raw, home, own);
+  // The same seat can be addressed by its OpenRig logical id (`desk.planner@ylo-desk`): home first,
+  // then any machine. It resolves to the same key as the session-name form, so edges merge.
+  const logicalHome = home.snapshot.seats.find((s) => s.logicalId === raw);
+  if (logicalHome) return endpointOf(raw, home, logicalHome);
+  for (const fm of all) {
+    const hit = fm.snapshot.seats.find((s) => s.logicalId === raw);
+    if (hit) return endpointOf(raw, fm, hit);
+  }
   const at = raw.lastIndexOf('@');
   if (at > 0) {
     const name = raw.slice(0, at);
@@ -197,7 +205,9 @@ export function endpointRig(fm: FleetMachine, raw: string | null): string | null
   if (!raw || bare(raw) === 'human') return null;
   let rigs = seatRigs.get(fm.snapshot);
   if (!rigs) {
-    rigs = new Map(fm.snapshot.seats.map((s) => [s.id, s.rig]));
+    rigs = new Map<string, string | null>();
+    for (const s of fm.snapshot.seats) if (s.logicalId) rigs.set(s.logicalId, s.rig);
+    for (const s of fm.snapshot.seats) rigs.set(s.id, s.rig);
     seatRigs.set(fm.snapshot, rigs);
   }
   return rigs.has(raw) ? (rigs.get(raw) ?? null) : suffix(raw) || null;
@@ -413,11 +423,18 @@ export function buildRigMap(
           : 'Not placed',
         liveness: fm?.liveness ?? 'asleep',
         subtitle: fm ? 'talks to this rig' : 'queue names with no seat we can see',
-        pods: [{ name: 'seats', seats: [] }],
+        pods: [],
       };
       byMachine.set(laneKey, lane);
     }
-    lane.pods[0]!.seats.push(
+    // Group by the seat's real pod; 'seats' is only the fallback when the pod is unknown.
+    const podName = ep.seat?.pod ?? 'seats';
+    let outPod = lane.pods.find((p) => p.name === podName);
+    if (!outPod) {
+      outPod = { name: podName, seats: [] };
+      lane.pods.push(outPod);
+    }
+    outPod.seats.push(
       fm && ep.seat
         ? mapSeat(fm, ep.seat, openAt.get(ep.key) ?? NONE)
         : {
@@ -428,6 +445,9 @@ export function buildRigMap(
             ...(openAt.get(ep.key) ?? NONE),
           }
     );
+  }
+  for (const lane of byMachine.values()) {
+    lane.pods.sort((a, b) => podRank(a.name) - podRank(b.name) || a.name.localeCompare(b.name));
   }
   lanes.push(...byMachine.values());
 
