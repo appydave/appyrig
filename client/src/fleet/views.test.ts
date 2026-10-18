@@ -817,6 +817,50 @@ describe('F4 (r1 LOW-1): most headroom never picks a reading that is not current
   });
 });
 
+describe('ui-d-logical: the collector reports logicalId WITHOUT the @rig suffix', () => {
+  // Real shape from the OpenRig daemon (/api/rigs/:id/nodes): logicalId `desk.planner`, rigName
+  // `ylo-desk`. The queue address adds the rig: `desk.planner@ylo-desk`.
+  const T = '2026-10-10T07:50:00.000Z';
+  const setup = () => {
+    const fm = m2();
+    const home = fm.snapshot.seats.find((s) => s.rig === 'fliedit-team')!;
+    const other = {
+      ...home,
+      id: 'd10-ai-powered-video-cuts',
+      rig: 'ylo-desk',
+      pod: 'desk',
+      logicalId: 'desk.planner',
+    };
+    fm.snapshot.seats = [...fm.snapshot.seats, other];
+    fm.snapshot.queue = [
+      q({
+        id: 'a',
+        source: home.id,
+        destination: 'desk.planner@ylo-desk',
+        state: 'pending',
+        createdAt: T,
+      }),
+      q({ id: 'b', source: home.id, destination: other.id, state: 'pending', createdAt: T }),
+    ];
+    return { fm, home, other };
+  };
+
+  it('resolves the full address and the session name to one endpoint key', () => {
+    const { fm, other } = setup();
+    const full = resolveEndpoint('desk.planner@ylo-desk', fm, [fm]);
+    expect(full.key).toBe(resolveEndpoint(other.id, fm, [fm]).key);
+    expect(full.seat?.id).toBe(other.id);
+    expect(endpointRig(fm, 'desk.planner@ylo-desk')).toBe('ylo-desk');
+  });
+
+  it('draws one edge and has no Not placed lane', () => {
+    const { fm, other } = setup();
+    const map = buildRigMap([fm], 'm2:fliedit-team', NOW)!;
+    expect(map.edges.filter((e) => e.to.endsWith(other.id))).toHaveLength(1);
+    expect(map.lanes.some((l) => l.label === 'Not placed')).toBe(false);
+  });
+});
+
 describe('ui-c-placed: one seat addressed by session name and by logical id', () => {
   const T = '2026-10-10T07:50:00.000Z';
   const setup = () => {

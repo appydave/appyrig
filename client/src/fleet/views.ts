@@ -39,6 +39,21 @@ export interface Endpoint {
 }
 
 /**
+ * The ways a queue address can name a seat: its session id, its OpenRig logical id (`desk.planner`,
+ * which the daemon reports without a rig), or logical id plus rig (`desk.planner@ylo-desk`).
+ * One helper for every caller so the forms cannot drift apart.
+ */
+export function seatAddresses(seat: Seat): string[] {
+  const out = [seat.id];
+  if (seat.logicalId) out.push(seat.logicalId, `${seat.logicalId}@${seat.rig}`);
+  return out;
+}
+
+export function seatAnswersTo(seat: Seat, raw: string): boolean {
+  return seatAddresses(seat).includes(raw);
+}
+
+/**
  * `dev-qa@fliedit-team` is a seat id on the machine whose queue holds it. `openrig-orch@roamy` names
  * another machine: the seat `openrig-orch` there (a plain tmux session). Anything else stays unplaced.
  */
@@ -52,7 +67,7 @@ export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachi
   // `name@machineId` reading below.
   const hits: { fm: FleetMachine; seat: Seat }[] = [];
   for (const fm of [home, ...all.filter((m) => m !== home)]) {
-    const seat = fm.snapshot.seats.find((x) => x.logicalId === raw);
+    const seat = fm.snapshot.seats.find((x) => seatAnswersTo(x, raw));
     if (seat) hits.push({ fm, seat });
   }
   const homeHit = hits.find((h) => h.fm === home);
@@ -217,6 +232,7 @@ export function endpointRig(fm: FleetMachine, raw: string | null): string | null
   if (!rigs) {
     rigs = new Map<string, string | null>();
     for (const s of fm.snapshot.seats) if (s.logicalId) rigs.set(s.logicalId, s.rig);
+    for (const s of fm.snapshot.seats) if (s.logicalId) rigs.set(`${s.logicalId}@${s.rig}`, s.rig);
     for (const s of fm.snapshot.seats) rigs.set(s.id, s.rig);
     seatRigs.set(fm.snapshot, rigs);
   }
@@ -659,14 +675,7 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
   // An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name.
   const nameOf = (raw: string | null): string => {
-    const seat = raw
-      ? rigSeats.find(
-          (x) =>
-            x.id === raw ||
-            x.logicalId === raw ||
-            (x.logicalId !== null && x.logicalId !== undefined && `${x.logicalId}@${rig}` === raw)
-        )
-      : undefined;
+    const seat = raw ? rigSeats.find((x) => seatAnswersTo(x, raw)) : undefined;
     return seat ? seatName(seat) : bare(raw);
   };
   const mode = flowModeOf([
