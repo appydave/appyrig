@@ -5,6 +5,7 @@ import type {
   AccountWindow,
   FleetMachine,
   QueueItem,
+  Seat,
 } from '@appydave/shared';
 import { windowStory } from './accountWindow.js';
 import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
