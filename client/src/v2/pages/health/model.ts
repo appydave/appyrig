@@ -1,17 +1,27 @@
-import type { FleetMachine, HealthData, HealthFindingsOutput } from '@appydave/shared';
-import { seatName } from '../../../fleet/model.js';
+import {
+  healthCaveats,
+  type FleetMachine,
+  type HealthData,
+  type HealthFindingsOutput,
+  type SettingsGetOutput,
+} from '@appydave/shared';
+import { freshness, seatName } from '../../../fleet/model.js';
 
 /** One machine's row of health.findings (shared/src/daemondata.ts). */
 export type HealthFindingsMachine = HealthFindingsOutput['machines'][number];
 export type { HealthData };
 
 /**
- * v2 Health. The one rule: never read as "healthy". An empty findings list is only ever "no
- * findings", and when diagnosis is off, coverage is partial or nothing was evaluated, the page says
- * exactly why that proves nothing. When it cannot get findings at all, it says "can't tell" and why.
+ * v2 Health. The one rule: never read as all-clear unless it is. An empty findings list is only ever
+ * "no findings", and when diagnosis is off, no detector runs, coverage is partial or unknown, or
+ * nothing was evaluated, the page says exactly why that proves nothing. When it cannot get findings
+ * at all, it says "can't tell" and why.
  */
 
-export type VerdictKind = 'findings' | 'none-found' | 'not-all-clear' | 'cannot-tell';
+/** How often the page asks the hub again (the collector re-reads the daemon on its own cadence). */
+export const HEALTH_REFRESH_MS = 60_000;
+
+export type VerdictKind = 'findings' | 'none-found' | 'not-all-clear' | 'cannot-tell' | 'asking';
 
 export interface Verdict {
   kind: VerdictKind;
@@ -21,10 +31,27 @@ export interface Verdict {
   reasons: string[];
 }
 
-/** What the page says for one machine, from its health.findings row (or the refusal instead). */
+export interface VerdictContext {
+  /** The hub refused the verb (unknown verb, timeout, frozen snapshot). */
+  refusal?: string | null;
+  /** The hub answered, and this machine was not in its answer. */
+  missing?: boolean;
+  /** Set when the machine is not reporting: "last reading, machine asleep". */
+  stale?: string | null;
+}
+
+const trim = (s: string) => s.replace(/\.+$/, '');
+
+/** Hub caveats first, then any the row's own data adds; each once. */
+export function caveatsOf(m: HealthFindingsMachine): string[] {
+  const own = m.data ? healthCaveats(m.data) : [];
+  return [...new Set([...m.caveats, ...own])];
+}
+
+/** What the page says for one machine, from its health.findings row. */
 export function verdictFor(
   m: HealthFindingsMachine | null | undefined,
-  refusal: string | null
+  c: VerdictContext = {}
 ): Verdict {
   const cannot = (why: string[]): Verdict => ({
     kind: 'cannot-tell',
@@ -32,44 +59,56 @@ export function verdictFor(
     headline: "Can't tell",
     reasons: why,
   });
-  if (refusal)
-    return cannot([`The hub did not answer health.findings: ${refusal.replace(/\.+$/, '')}.`]);
-  if (!m) return cannot(['Asking the hub…']);
-  if (m.status === 'pending')
-    return cannot([
-      m.reason
-        ? `No health data yet: ${m.reason.replace(/\.+$/, '')}.`
-        : "This machine's collector has not sent health data yet (an older collector, or not collected this round).",
-    ]);
-  if (m.status !== 'ok')
-    return cannot([
-      m.reason
-        ? `Nothing to read: ${m.reason.replace(/\.+$/, '')}.`
-        : "This machine's OpenRig has no health findings, so there is nothing to read.",
-    ]);
-  if (m.assessment === 'unknown')
-    return cannot(m.caveats.length ? m.caveats : ['The findings could not be read.']);
-  if (m.assessment === 'findings') {
-    const n = m.data?.findingsTotal ?? m.data?.findings?.length ?? 0;
+  const v = ((): Verdict => {
+    if (c.refusal) return cannot([`The hub did not answer health.findings: ${trim(c.refusal)}.`]);
+    if (!m && c.missing)
+      return cannot(['The hub answered, but its answer did not include this machine.']);
+    if (!m) return { kind: 'asking', glyph: '…', headline: 'Asking the hub', reasons: [] };
+    if (m.status === 'pending')
+      return cannot([
+        m.reason
+          ? `No health data yet: ${trim(m.reason)}.`
+          : "This machine's collector has not sent health data yet (an older collector, or not collected this round).",
+      ]);
+    if (m.status !== 'ok')
+      return cannot([
+        m.reason
+          ? `Nothing to read: ${trim(m.reason)}.`
+          : "This machine's OpenRig has no health findings, so there is nothing to read.",
+      ]);
+    if (m.assessment === 'unknown')
+      return cannot(m.caveats.length ? m.caveats : ['The findings could not be read.']);
+    if (m.assessment === 'findings') {
+      const n = m.data?.findingsTotal ?? m.data?.findings?.length ?? 0;
+      return {
+        kind: 'findings',
+        glyph: '▲',
+        headline: `${n} finding${n === 1 ? '' : 's'}`,
+        reasons: m.data?.findingsTruncated
+          ? ['The list was cut short: more exist than shown.']
+          : [],
+      };
+    }
+    const caveats = caveatsOf(m);
+    if (caveats.length)
+      return {
+        kind: 'not-all-clear',
+        glyph: '○',
+        headline: 'No findings — but that is not all-clear',
+        reasons: caveats,
+      };
     return {
-      kind: 'findings',
-      glyph: '▲',
-      headline: `${n} finding${n === 1 ? '' : 's'}`,
-      reasons: m.data?.findingsTruncated ? ['The list was cut short: more exist than shown.'] : [],
-    };
-  }
-  if (m.caveats.length)
-    return {
-      kind: 'not-all-clear',
+      kind: 'none-found',
       glyph: '○',
-      headline: 'No findings — but that is not all-clear',
-      reasons: m.caveats,
+      headline: 'No findings from the detectors that ran',
+      reasons: [coverageLine(m.data)],
     };
+  })();
+  if (!c.stale || v.kind === 'asking') return v;
   return {
-    kind: 'none-found',
-    glyph: '○',
-    headline: 'No findings from the detectors that ran',
-    reasons: [coverageLine(m.data)],
+    ...v,
+    headline: `${v.headline} · ${c.stale}`,
+    reasons: [`${c.stale}: not current.`, ...v.reasons],
   };
 }
 
@@ -83,27 +122,82 @@ export function coverageLine(d: HealthData | null): string {
     .join(' · ');
 }
 
-/** Context pressure, from the seats the machine reports (real): critical ≥ 80 %, warning ≥ 60 %. */
-export const CONTEXT_CRITICAL = 80;
-export const CONTEXT_WARNING = 60;
+/** "last reading, machine asleep" when the machine is not reporting live; null when it is. */
+export function staleWords(fm: FleetMachine, now: number, hubConnected: boolean): string | null {
+  const f = freshness(fm, now, hubConnected);
+  if (f.level === 'asleep') return 'last reading, machine asleep';
+  if (f.level === 'stale') return 'last reading, machine not reporting';
+  return null;
+}
+
+// ---------------------------------------------------------------- context pressure
+
+/** OpenRig's documented defaults, used only when neither the policy nor the settings say. */
+export const ASSUMED_CRITICAL = 80;
+export const ASSUMED_WARNING = 60;
+
+export interface Thresholds {
+  critical: number;
+  warning: number;
+  /** Where they came from: OpenRig's health policy, its settings, or assumed. */
+  source: 'policy' | 'settings' | 'assumed';
+}
+
+type SettingsRow = SettingsGetOutput['machines'][number];
+
+const fromRecord = (rec: Record<string, number>, word: RegExp): number | null => {
+  const keys = Object.keys(rec).filter((k) => word.test(k));
+  const pick = keys.find((k) => /context|pressure/i.test(k)) ?? keys[0];
+  return pick === undefined ? null : (rec[pick] ?? null);
+};
+
+/** The machine's own context-pressure thresholds: the health policy, else its settings, else 80/60 assumed. */
+export function thresholdsFor(d: HealthData | null, s: SettingsRow | undefined): Thresholds {
+  const t = d?.policy?.thresholds ?? {};
+  const pc = fromRecord(t, /crit/i);
+  const pw = fromRecord(t, /warn/i);
+  if (pc !== null && pw !== null) return { critical: pc, warning: pw, source: 'policy' };
+  const num = (key: string) => {
+    const v = s?.settings.find((x) => x.key === key)?.value;
+    return typeof v === 'number' ? v : null;
+  };
+  const sc = num('health.context_pressure.critical_percent');
+  const sw = num('health.context_pressure.warning_percent');
+  if (sc !== null && sw !== null) return { critical: sc, warning: sw, source: 'settings' };
+  return { critical: ASSUMED_CRITICAL, warning: ASSUMED_WARNING, source: 'assumed' };
+}
 
 export interface ContextRollup {
+  /** Seats not stopped. */
+  live: number;
   read: number;
   unread: number;
   critical: number;
   warning: number;
+  /** 'unmeasured' when no seat reports its context: never read as fine. */
+  level: 'critical' | 'warning' | 'ok' | 'unmeasured';
   top: { name: string; rig: string | null; pct: number; tokens: number | null }[];
 }
 
-export function contextRollup(fm: FleetMachine): ContextRollup {
+export function contextRollup(
+  fm: FleetMachine,
+  t: Pick<Thresholds, 'critical' | 'warning'> = {
+    critical: ASSUMED_CRITICAL,
+    warning: ASSUMED_WARNING,
+  }
+): ContextRollup {
   const live = fm.snapshot.seats.filter((s) => s.status !== 'stopped');
   const read = live.filter((s) => s.contextUsedPct !== null && s.contextUsedPct !== undefined);
   const pct = (s: (typeof read)[number]) => s.contextUsedPct ?? 0;
+  const critical = read.filter((s) => pct(s) >= t.critical).length;
+  const warning = read.filter((s) => pct(s) >= t.warning && pct(s) < t.critical).length;
   return {
+    live: live.length,
     read: read.length,
     unread: live.length - read.length,
-    critical: read.filter((s) => pct(s) >= CONTEXT_CRITICAL).length,
-    warning: read.filter((s) => pct(s) >= CONTEXT_WARNING && pct(s) < CONTEXT_CRITICAL).length,
+    critical,
+    warning,
+    level: read.length === 0 ? 'unmeasured' : critical ? 'critical' : warning ? 'warning' : 'ok',
     top: [...read]
       .sort((a, b) => pct(b) - pct(a))
       .slice(0, 3)
@@ -114,6 +208,18 @@ export function contextRollup(fm: FleetMachine): ContextRollup {
         tokens: s.contextTokens ?? null,
       })),
   };
+}
+
+/** OpenRig's own count beside AppyRig's, and whether they agree. */
+export function reconcile(
+  ours: ContextRollup,
+  theirs: HealthData['contextSummary'] | undefined
+): string | null {
+  if (!theirs) return null;
+  const same = theirs.critical === ours.critical && theirs.warning === ours.warning;
+  return `OpenRig counts ${theirs.critical ?? '?'} critical, ${theirs.warning ?? '?'} warning of ${theirs.total ?? '?'}${
+    theirs.stale ? ` (${theirs.stale} stale)` : ''
+  }${same ? ': the same as AppyRig' : `; AppyRig counts ${ours.critical} and ${ours.warning} of ${ours.read} (OpenRig reads its own seat list)`}`;
 }
 
 /** Is the OpenRig daemon answering the collector? Real, from the snapshot's sources. */

@@ -172,6 +172,18 @@
   color: var(--ar-error-ink);
   font-weight: 700;
 }
+[data-testid='hl2-context'] [data-level='unmeasured'] {
+  color: var(--ar-ink-muted);
+  font-style: italic;
+}
+.hl2-stale,
+.hl2-verdict[data-stale] {
+  color: var(--ar-asleep-ink);
+}
+.hl2-machine[data-verdict='asking'] {
+  border-left-style: dotted;
+  opacity: 0.8;
+}
 [data-testid='hl2-context'] [data-level='warning'] {
   color: var(--ar-blocked-ink);
   font-weight: 700;

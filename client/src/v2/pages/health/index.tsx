@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
-import type { FleetMachine } from '@appydave/shared';
+import type { FleetMachine, HealthFindingsOutput, SettingsGetOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { FakeControl, SampleData } from '../../kit/index.js';
-import type { HealthFindingsOutput } from '@appydave/shared';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
-  CONTEXT_CRITICAL,
-  CONTEXT_WARNING,
   contextRollup,
   coverageLine,
   daemonReach,
+  HEALTH_REFRESH_MS,
+  reconcile,
   sampleFindings,
+  staleWords,
+  thresholdsFor,
   verdictFor,
   type HealthFindingsMachine,
 } from './model.js';
@@ -21,27 +22,56 @@ type Loaded =
   | { state: 'ok'; out: HealthFindingsOutput }
   | { state: 'refused'; why: string };
 
+const when = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+
 function MachineHealth({
   fm,
   row,
   refusal,
+  missing,
+  stale,
+  settings,
 }: {
   fm: FleetMachine;
   row: HealthFindingsMachine | undefined;
   refusal: string | null;
+  missing: boolean;
+  stale: string | null;
+  settings: SettingsGetOutput['machines'][number] | undefined;
 }) {
-  const v = verdictFor(row, refusal);
-  const ctx = contextRollup(fm);
-  const reach = daemonReach(fm);
+  const v = verdictFor(row, { refusal, missing, stale });
   const d = row?.data ?? null;
+  const t = thresholdsFor(d, settings);
+  const ctx = contextRollup(fm, t);
+  const reach = daemonReach(fm);
+  const asOf = when(row?.collectedAt);
+  const theirs = reconcile(ctx, d?.contextSummary);
   const diagnosisOff = d?.policy?.diagnosisEnabled !== true;
   return (
     <section className="x2-card hl2-machine" data-testid="hl2-machine" data-verdict={v.kind}>
       <header className="hl2-head">
         <b className="hl2-name">{fm.machine.label}</b>
-        <span className="hl2-verdict" data-kind={v.kind} data-testid="hl2-verdict">
+        <span
+          className="hl2-verdict"
+          data-kind={v.kind}
+          data-stale={stale ? true : undefined}
+          data-testid="hl2-verdict"
+        >
           {v.glyph} {v.headline}
         </span>
+        {asOf && (
+          <span className="quiet mono" data-testid="hl2-asof">
+            as of {asOf}
+          </span>
+        )}
       </header>
       {v.reasons.length > 0 && (
         <ul className="hl2-reasons" data-testid="hl2-reasons">
@@ -139,14 +169,32 @@ function MachineHealth({
         </div>
         <div>
           <dt>context pressure</dt>
-          <dd data-testid="hl2-context">
-            <span data-level={ctx.critical ? 'critical' : ctx.warning ? 'warning' : 'ok'}>
-              {ctx.critical} at {CONTEXT_CRITICAL}%+ · {ctx.warning} at {CONTEXT_WARNING}–
-              {CONTEXT_CRITICAL}%
-            </span>{' '}
-            <span className="quiet">
-              of {ctx.read} seat{ctx.read === 1 ? '' : 's'} with a reading
-              {ctx.unread ? ` (${ctx.unread} not reported)` : ''}
+          <dd data-testid="hl2-context" data-level={ctx.level}>
+            {stale && <span className="hl2-stale">{stale}: </span>}
+            {ctx.level === 'unmeasured' ? (
+              <span data-level="unmeasured">
+                not measured:{' '}
+                {ctx.live
+                  ? `none of ${ctx.live} running seats reports its context`
+                  : 'no running seats'}
+              </span>
+            ) : (
+              <>
+                <span data-level={ctx.level}>
+                  {ctx.critical} at {t.critical}%+ · {ctx.warning} at {t.warning}–{t.critical}%
+                </span>{' '}
+                <span className="quiet">
+                  of {ctx.read} seat{ctx.read === 1 ? '' : 's'} with a reading
+                  {ctx.unread ? ` (${ctx.unread} of ${ctx.live} not reported)` : ''}
+                </span>
+              </>
+            )}
+            <span className="quiet" data-testid="hl2-thresholds">
+              {' '}
+              · thresholds{' '}
+              {t.source === 'assumed'
+                ? `assumed default ${t.critical}/${t.warning}`
+                : `${t.critical}/${t.warning} from ${t.source === 'policy' ? 'the health policy' : 'its settings'}`}
             </span>
             {ctx.top.length > 0 && (
               <span className="hl2-top">
@@ -161,11 +209,10 @@ function MachineHealth({
                 ))}
               </span>
             )}
-            {d?.contextSummary && (
-              <span className="quiet">
+            {theirs && (
+              <span className="quiet" data-testid="hl2-reconcile">
                 {' '}
-                · OpenRig says {d.contextSummary.critical ?? '?'} critical,{' '}
-                {d.contextSummary.warning ?? '?'} warning
+                · {theirs}
               </span>
             )}
           </dd>
@@ -177,21 +224,36 @@ function MachineHealth({
 
 /**
  * v2 Health (gap #2): per machine, OpenRig's health findings with the coverage and policy that say
- * what an empty list means. It never says "healthy". Next to it, what AppyRig reads itself: context
- * pressure from the seats, the restore check, and whether the daemon answers.
+ * what an empty list means; an empty list is never read as all-clear on its own. Next to it, what
+ * AppyRig reads itself: context pressure from the seats, the restore check, and whether the daemon
+ * answers. Asked again every minute.
  */
 function HealthV2({ ctx }: V2PageProps) {
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
+  const [settings, setSettings] = useState<SettingsGetOutput | null>(null);
   useEffect(() => {
     let live = true;
-    void callVerb<HealthFindingsOutput>(ctx.getSocket(), 'health.findings', {}).then((a) => {
-      if (!live) return;
-      setLoaded(a.ok ? { state: 'ok', out: a.value } : { state: 'refused', why: a.error.message });
-    });
+    const ask = () => {
+      void callVerb<HealthFindingsOutput>(ctx.getSocket(), 'health.findings', {}).then((a) => {
+        if (!live) return;
+        setLoaded(
+          a.ok ? { state: 'ok', out: a.value } : { state: 'refused', why: a.error.message }
+        );
+      });
+      // The machine's own context thresholds, for when its health policy does not carry them.
+      void callVerb<SettingsGetOutput>(ctx.getSocket(), 'settings.get', {
+        key: 'health.context_pressure.',
+      }).then((a) => {
+        if (live && a.ok) setSettings(a.value);
+      });
+    };
+    ask();
+    const t = setInterval(ask, HEALTH_REFRESH_MS);
     return () => {
       live = false;
+      clearInterval(t);
     };
-    // once per visit: the getter is stable for the page's life
+    // the getter is stable for the page's life
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const refusal = loaded.state === 'refused' ? loaded.why : null;
@@ -200,13 +262,22 @@ function HealthV2({ ctx }: V2PageProps) {
   return (
     <main className="view x2-page" data-testid="v2-health">
       <p className="view-caption">
-        <b>Health findings</b> come from OpenRig&apos;s detectors. An empty list is never
-        &quot;healthy&quot;: it is only as good as what was evaluated, so the reasons are shown
-        beside it. Context pressure and the daemon line are AppyRig&apos;s own readings.
+        <b>Health findings</b> come from OpenRig&apos;s detectors. An empty list is not all-clear on
+        its own: it is only as good as what was evaluated, so the reasons are shown beside it.
+        Context pressure and the daemon line are AppyRig&apos;s own readings. Asked again every
+        minute.
       </p>
       <div className="hl2-grid">
         {ctx.allMachines.map((fm) => (
-          <MachineHealth key={fm.machine.id} fm={fm} row={rowOf(fm.machine.id)} refusal={refusal} />
+          <MachineHealth
+            key={fm.machine.id}
+            fm={fm}
+            row={rowOf(fm.machine.id)}
+            refusal={refusal}
+            missing={loaded.state === 'ok' && !rowOf(fm.machine.id)}
+            stale={staleWords(fm, ctx.now, ctx.hubConnected)}
+            settings={settings?.machines.find((m) => m.machine === fm.machine.id)}
+          />
         ))}
       </div>
     </main>
@@ -219,5 +290,5 @@ export const page: V2PageDef = {
   group: 'hood',
   component: HealthV2,
   blurb:
-    'OpenRig health findings with coverage and policy (never "healthy"), context pressure, restore, daemon.',
+    'OpenRig health findings with coverage and policy (an empty list is never read as all-clear), context pressure, restore, daemon.',
 };

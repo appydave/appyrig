@@ -8,6 +8,7 @@ import {
   sampleSchedules,
   sampleSettings,
   show,
+  showSource,
   type SettingLine,
   type SettingValue,
   type SettingsMachine,
@@ -198,10 +199,13 @@ function SettingsV2({ ctx }: V2PageProps) {
                         key={id}
                         className="mono st2-val"
                         data-changed={v?.changed || undefined}
-                        title={v?.source ? `source: ${v.source}` : 'not reported'}
+                        data-testid="st2-cell"
+                        title={v ? `source: ${showSource(v.source) || 'not said'}` : 'not reported'}
                       >
-                        {valueText(v?.value)}
-                        {v?.changed && <span className="st2-src"> {v.source}</span>}
+                        {v ? valueText(v.value) : 'not reported'}
+                        {v?.source && v.source !== 'default' && (
+                          <span className="st2-src"> {showSource(v.source)}</span>
+                        )}
                       </td>
                     );
                   })}
@@ -227,8 +231,9 @@ function SettingsV2({ ctx }: V2PageProps) {
     <main className="view x2-page" data-testid="v2-settings">
       <p className="view-caption">
         <b>OpenRig settings</b>, read-only, per machine.{' '}
-        <span className="st2-key-changed">Highlighted</span> = set by hand (not the default).
-        Editing is a mock everywhere on this page.
+        <span className="st2-key-changed">Highlighted</span> = the value differs from its default;
+        where it was set (file, env) is shown beside any value not from the default. Editing is a
+        mock everywhere on this page.
       </p>
       {loaded.state === 'loading' && <p className="quiet">Asking the hub…</p>}
       {sample ? (

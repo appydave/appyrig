@@ -34,9 +34,9 @@ export interface SettingLine {
     string,
     { value: SettingValue; source: string | null; changed: boolean } | undefined
   >;
-  /** Changed from the default on at least one machine. */
+  /** The value differs from the default on at least one machine. */
   changed: boolean;
-  /** Machines disagree on the value. */
+  /** Machines disagree on the value, or some machine does not report the key. */
   differs: boolean;
 }
 
@@ -45,7 +45,14 @@ export interface SettingGroup {
   lines: SettingLine[];
 }
 
-/** One row per key across machines, grouped; `changedOnly` keeps keys changed anywhere. */
+const same = (a: SettingValue | undefined, b: SettingValue | undefined) =>
+  JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * One row per key across machines, grouped; `changedOnly` keeps keys changed anywhere. "Changed"
+ * means the value differs from the default (the source, file or env, is shown beside it): a value
+ * set by hand to the default is not a change.
+ */
 export function groupSettings(machines: SettingsMachine[], changedOnly: boolean): SettingGroup[] {
   const lines = new Map<string, SettingLine>();
   for (const m of machines) {
@@ -59,13 +66,15 @@ export function groupSettings(machines: SettingsMachine[], changedOnly: boolean)
           changed: false,
           differs: false,
         } as SettingLine);
-      l.byMachine[m.machine] = { value: s.value, source: s.source, changed: s.changed };
-      l.changed ||= s.changed;
+      const changed = !same(s.value, s.defaultValue);
+      l.byMachine[m.machine] = { value: s.value, source: s.source, changed };
+      l.changed ||= changed;
       lines.set(s.key, l);
     }
   }
   for (const l of lines.values()) {
-    const vals = Object.values(l.byMachine).map((v) => JSON.stringify(v?.value));
+    // a machine that lacks the key counts as a different value
+    const vals = machines.map((m) => JSON.stringify(l.byMachine[m.machine]?.value ?? '\u0000none'));
     l.differs = new Set(vals).size > 1;
   }
   const groups = new Map<string, SettingLine[]>();
@@ -80,8 +89,30 @@ export function groupSettings(machines: SettingsMachine[], changedOnly: boolean)
     .sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
 }
 
+/** What the collector puts in place of a path; the page uses the same words as its backstop. */
+export const PATH_HIDDEN = '(path hidden)';
+
+/**
+ * UI backstop (the collector already hides paths): a string that is, or contains, a path-like
+ * value — leading /, ~/, ./, a drive letter, a \\host share, file:// — anywhere, JSON included.
+ */
+const PATHISH = /(^|["'\s=:,[{(])(\/|~\/|\.\.?\/|[A-Za-z]:[\\/]|\\\\|file:\/\/)/i;
+export const looksLikePath = (s: string): boolean => PATHISH.test(s.trim());
+
 export const show = (v: SettingValue | undefined): string =>
-  v === undefined ? '—' : v === null ? 'null' : typeof v === 'string' ? v : String(v);
+  v === undefined
+    ? '—'
+    : v === null
+      ? 'null'
+      : typeof v === 'string'
+        ? looksLikePath(v)
+          ? PATH_HIDDEN
+          : v
+        : String(v);
+
+/** A setting's source (default / file / env), with the same backstop. */
+export const showSource = (s: string | null | undefined): string =>
+  !s ? '' : looksLikePath(s) ? PATH_HIDDEN : s;
 
 /** Believable settings for machines that sent none: OpenRig-shaped keys, real machine ids. */
 export function sampleSettings(machines: FleetMachine[]): SettingsMachine[] {
