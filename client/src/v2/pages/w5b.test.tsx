@@ -100,6 +100,8 @@ function ctxFor(machines: FleetMachine[], socket: FleetSocket): V2Context {
     onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
+    agentKey: null,
+    openAgentPage: vi.fn(),
   };
 }
 
