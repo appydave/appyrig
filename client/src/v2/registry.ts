@@ -12,6 +12,8 @@ import { page as missionsPage } from './pages/missions/index.js';
 import { page as flowPage } from './pages/flow/index.js';
 import { page as agentPage } from './pages/agent/index.js';
 import { page as graphPage } from './pages/graph/index.js';
+import { page as healthPage } from './pages/health/index.js';
+import { page as settingsPage } from './pages/settings/index.js';
 
 /**
  * The v2 registry: every page that has a v2 version, keyed by page.
@@ -38,6 +40,8 @@ export function v2Pages(): V2PageDef[] {
     machinesPage,
     schemaPage,
     learnPage,
+    healthPage,
+    settingsPage,
     aboutPage,
   ];
 }
