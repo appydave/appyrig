@@ -52,6 +52,10 @@ export interface V2Context {
   onOpenAgent: (key: string) => void;
   onOpenFiles: (machineId: string, rig: string) => void;
   goTo: (page: PageKey) => void;
+  /** The agent the v2 Agent page shows (a tile key, `machine/seat`), or null before one is chosen. */
+  agentKey: string | null;
+  /** Open the v2 Agent page for this agent. Every agent click in v2 goes here. */
+  openAgentPage: (key: string) => void;
 }
 
 export interface V2PageProps {

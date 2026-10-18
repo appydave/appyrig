@@ -98,6 +98,8 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     getSocket: () => spy.socket,
     keys: true,
     hidden: [],
+    agentKey: null,
+    openAgentPage: vi.fn(),
     onShowMachine: vi.fn(),
     onOpenSeat: vi.fn(),
     onOpenSkills: vi.fn(),
@@ -214,7 +216,7 @@ describe('v2 Run Timeline', () => {
     expect(screen.getAllByTestId('tl2-phase')).toHaveLength(2);
     expect(screen.getByTestId('tl2-strip')).toBeInTheDocument();
     fireEvent.click(within(screen.getByTestId('tl2-waits')).getAllByTestId('tl2-seat')[0]!);
-    expect(ctx.onOpenAgent).toHaveBeenCalledWith('roamy/dev-build@starter');
+    expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
   });
 
   it('says so when the chosen rig has no handoffs', () => {

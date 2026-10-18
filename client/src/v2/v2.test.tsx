@@ -109,7 +109,7 @@ describe('v2 version switch', () => {
       'Learn',
     ]);
     expect(screen.queryByTestId('v2-nav')).toBeNull();
-    expect(screen.queryByTestId('v2-wall-banner')).toBeNull();
+    expect(screen.queryByTestId('v2-wall')).toBeNull();
     expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -120,7 +120,7 @@ describe('v2 version switch', () => {
     expect(localStorage.getItem(MODE_KEY)).toBe('v2');
     expect(screen.getByTestId('v2-nav')).toBeInTheDocument();
     expect(document.querySelector('nav.view-tabs')).toHaveAttribute('hidden');
-    expect(screen.getByTestId('v2-wall-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
     // "reload": the address is cleared, the stored choice still says v2
     history.replaceState(null, '', '/');
     expect(readMode()).toBe('v2');
@@ -132,16 +132,23 @@ describe('v2 version switch', () => {
   it('v2 nav is grouped and shows Current pages without a v2 as "no v2 yet"', () => {
     history.replaceState(null, '', '/?v=2');
     renderLive();
-    // Agents has no registered page yet (W2 adds the Agent page), so its group waits.
     expect(screen.getAllByTestId(/^v2-group-/).map((b) => b.textContent)).toEqual([
       'Fleet',
       'Work',
+      'Agents',
       'Under the hood',
     ]);
-    fireEvent.click(screen.getByTestId('v2-group-work'));
-    fireEvent.click(screen.getByTestId('v2-page-flow'));
-    expect(screen.getByTestId('v2-no-v2')).toHaveTextContent('No v2 yet for Handoff Flow');
-    expect(screen.getByTestId('view-body-flow')).toBeInTheDocument();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+    fireEvent.click(screen.getByTestId('v2-page-map'));
+    expect(screen.getByTestId('v2-no-v2')).toHaveTextContent('No v2 yet for Graph');
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
   });
 });
 
@@ -155,11 +162,12 @@ describe('v2 per-page flip', () => {
     fireEvent.click(screen.getByTestId('view-wall'));
     expect(screen.getByTestId('wall-only-rig')).toHaveTextContent('Only kernel (Roamy)');
     press('b');
-    expect(screen.getByTestId('v2-wall-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
     expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'new');
-    expect(screen.getByTestId('wall-only-rig')).toHaveTextContent('Only kernel (Roamy)');
+    // v2's team picker replaces the single "Only <rig>" chip (C50)
+    expect(screen.queryByTestId('wall-only-rig')).toBeNull();
     press('b');
-    expect(screen.queryByTestId('v2-wall-banner')).toBeNull();
+    expect(screen.queryByTestId('v2-wall')).toBeNull();
     expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
     // the flip is per page: leaving the page forgets it
     press('b');
@@ -182,7 +190,7 @@ describe('v2 per-page flip', () => {
     expect(screen.getByTestId('v2-about')).toBeInTheDocument();
     press('Escape');
     await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
-    expect(screen.getByTestId('v2-wall-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
   });
 });
 
@@ -327,8 +335,8 @@ describe('W0 fold', () => {
     press('Escape');
     await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
     // goBack would have popped to the Wall; the Flow is still there
-    expect(screen.getByTestId('view-body-flow')).toBeInTheDocument();
-    expect(screen.queryByTestId('v2-wall-banner')).toBeNull();
+    expect(screen.getByTestId('v2-flow')).toBeInTheDocument();
+    expect(screen.queryByTestId('v2-wall')).toBeNull();
   });
 
   it('V and B are ignored while typing', () => {

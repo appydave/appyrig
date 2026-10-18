@@ -6,6 +6,7 @@ import { groupOf, isCurrentView, navGroups, navLabel, v2PageFor } from './regist
 import type { NavGroupKey, PageKey, V2Context, V2OnlyKey } from './types.js';
 import { readMode, writeMode, type Mode } from './version.js';
 import './v2.css';
+import './w2.css';
 
 /** The global version switch and the per-page flip. Not used by Current's own keys (? L F O D J K / [ ]). */
 export const VERSION_KEY = 'v';
@@ -18,7 +19,7 @@ export interface UseV2Args {
   /** Screen keys are live: nothing on top, no seat open. */
   keys: boolean;
   frozen?: FrozenMeta;
-  ctx: Omit<V2Context, 'goTo'>;
+  ctx: Omit<V2Context, 'goTo' | 'agentKey' | 'openAgentPage'>;
 }
 
 export interface V2Frame {
@@ -60,6 +61,8 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
   const [note, setNote] = useState<string | null>(null);
   const page: PageKey = newPage ?? view;
   const [openGroup, setOpenGroup] = useState<NavGroupKey | null>(null);
+  /** W2: the agent the Agent page shows; kept when the viewer leaves the page and comes back. */
+  const [agentKey, setAgentKey] = useState<string | null>(null);
 
   // A remembered v2 shows in the address too, so the link David copies opens the same version.
   useEffect(() => {
@@ -95,6 +98,13 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     },
     [chooseView]
   );
+
+  const openAgentPage = useCallback((key: string) => {
+    // A plain tmux session ("?/name") has no agent page; the same guard as Current's agent panel.
+    if (key.startsWith('?/')) return;
+    setAgentKey(key);
+    setNewPage('agent');
+  }, []);
 
   const flipped = flippedFor === page;
   const wantV2 = (mode === 'v2') !== flipped;
@@ -138,7 +148,7 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     return () => window.removeEventListener('keydown', onKey, true);
   }, [keys, newPage]);
 
-  const fullCtx: V2Context = { ...ctx, goTo };
+  const fullCtx: V2Context = { ...ctx, goTo, agentKey, openAgentPage };
   const Page = def?.component;
   const body = Page && (newPage || wantV2) ? <Page ctx={fullCtx} /> : null;
   const showingNew = !!newPage || (wantV2 && !!def);
