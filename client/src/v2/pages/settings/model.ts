@@ -96,7 +96,8 @@ export const PATH_HIDDEN = '(path hidden)';
  * UI backstop (the collector already hides paths): a string that is, or contains, a path-like
  * value — leading /, ~/, ./, a drive letter, a \\host share, file:// — anywhere, JSON included.
  */
-const PATHISH = /(^|["'\s=:,[{(])(\/|~\/|\.\.?\/|[A-Za-z]:[\\/]|\\\\|file:\/\/)/i;
+// The path must start the value or follow a quote or bracket, so "UTC / local" is not a path.
+const PATHISH = /(^|["'[{(])(\/|~\/|\.\.?\/|[A-Za-z]:[\\/]|\\\\|file:\/\/)/i;
 export const looksLikePath = (s: string): boolean => PATHISH.test(s.trim());
 
 export const show = (v: SettingValue | undefined): string =>

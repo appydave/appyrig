@@ -145,25 +145,42 @@ export interface Thresholds {
 
 type SettingsRow = SettingsGetOutput['machines'][number];
 
+/**
+ * A policy threshold only counts when its key is about context pressure (mentions context or
+ * pressure) and is not a count; any other key, however it is named, is ignored.
+ */
 const fromRecord = (rec: Record<string, number>, word: RegExp): number | null => {
-  const keys = Object.keys(rec).filter((k) => word.test(k));
-  const pick = keys.find((k) => /context|pressure/i.test(k)) ?? keys[0];
+  const pick = Object.keys(rec).find(
+    (k) => word.test(k) && /context|pressure/i.test(k) && !/count|seats|number/i.test(k)
+  );
   return pick === undefined ? null : (rec[pick] ?? null);
 };
+
+/** Percent thresholds that make sense: 0 < warning < critical <= 100, and not a 0–1 fraction. */
+export function validThresholds(critical: number | null, warning: number | null): boolean {
+  return (
+    critical !== null &&
+    warning !== null &&
+    critical > 1 &&
+    warning > 0 &&
+    warning < critical &&
+    critical <= 100
+  );
+}
 
 /** The machine's own context-pressure thresholds: the health policy, else its settings, else 80/60 assumed. */
 export function thresholdsFor(d: HealthData | null, s: SettingsRow | undefined): Thresholds {
   const t = d?.policy?.thresholds ?? {};
   const pc = fromRecord(t, /crit/i);
   const pw = fromRecord(t, /warn/i);
-  if (pc !== null && pw !== null) return { critical: pc, warning: pw, source: 'policy' };
+  if (validThresholds(pc, pw)) return { critical: pc!, warning: pw!, source: 'policy' };
   const num = (key: string) => {
     const v = s?.settings.find((x) => x.key === key)?.value;
     return typeof v === 'number' ? v : null;
   };
   const sc = num('health.context_pressure.critical_percent');
   const sw = num('health.context_pressure.warning_percent');
-  if (sc !== null && sw !== null) return { critical: sc, warning: sw, source: 'settings' };
+  if (validThresholds(sc, sw)) return { critical: sc!, warning: sw!, source: 'settings' };
   return { critical: ASSUMED_CRITICAL, warning: ASSUMED_WARNING, source: 'assumed' };
 }
 

@@ -313,6 +313,41 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         undefined
       )
     ).toEqual({ critical: 90, warning: 70, source: 'policy' });
+    const policy = (thresholds: Record<string, number>) =>
+      data({
+        policy: { diagnosisEnabled: true, disabledDetectors: [], detectors: ['x'], thresholds },
+      });
+    // a count, a key not about context, a 0–1 fraction, warning ≥ critical, over 100: all ignored
+    const ignored: Record<string, number>[] = [
+      { context_critical_count: 3, context_warning_count: 5 },
+      { critical: 90, warning: 70 },
+      { reviewCarouselCriticalPercent: 90, reviewCarouselWarningPercent: 70 },
+      { contextCriticalPercent: 0.9, contextWarningPercent: 0.7 },
+      { contextCriticalPercent: 70, contextWarningPercent: 90 },
+      { contextCriticalPercent: 120, contextWarningPercent: 70 },
+    ];
+    for (const th of ignored) expect(thresholdsFor(policy(th), undefined).source).toBe('assumed');
+    // a count beside valid context keys does not win
+    expect(
+      thresholdsFor(
+        policy({
+          context_critical_count: 3,
+          context_pressure_critical_percent: 88,
+          context_pressure_warning_percent: 66,
+        }),
+        undefined
+      )
+    ).toEqual({ critical: 88, warning: 66, source: 'policy' });
+    // an invalid policy falls through to settings
+    expect(
+      thresholdsFor(
+        policy({ contextCriticalPercent: 0.9, contextWarningPercent: 0.7 }),
+        settingsRow('roamy', [
+          ['health.context_pressure.critical_percent', 85, 'file', 80],
+          ['health.context_pressure.warning_percent', 65, 'file', 60],
+        ])
+      ).source
+    ).toBe('settings');
     const t = thresholdsFor(
       data(),
       settingsRow('roamy', [
@@ -546,7 +581,7 @@ describe('v2 Settings', () => {
       '["~/a"]',
     ])
       expect(show(v)).toBe('(path hidden)');
-    for (const v of ['127.0.0.1', 'Australia/Brisbane', 'light', 'UTC', '12:30'])
+    for (const v of ['127.0.0.1', 'Australia/Brisbane', 'light', 'UTC', '12:30', 'UTC / local'])
       expect(show(v)).toBe(v);
     expect(showSource('/etc/openrig.yaml')).toBe('(path hidden)');
     expect(showSource('file')).toBe('file');
