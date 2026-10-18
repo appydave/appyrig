@@ -115,7 +115,7 @@ function Card({ item, ctx }: { item: NeedItem; ctx: V2PageProps['ctx'] }) {
               type="button"
               className="pill-btn"
               data-testid="ny-open-agent"
-              onClick={() => ctx.onOpenAgent(item.seatKey!)}
+              onClick={() => ctx.openAgentPage(item.seatKey!)}
             >
               Open agent
             </button>

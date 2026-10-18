@@ -120,6 +120,8 @@ function ctxFor(
     onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
+    agentKey: null,
+    openAgentPage: vi.fn(),
     ...over,
   };
 }
@@ -277,7 +279,8 @@ describe('Needs You page', () => {
     const ctx = ctxFor(twoMachines());
     render(<Page ctx={ctx} />);
     fireEvent.click(screen.getAllByTestId('ny-open-agent')[0]!);
-    expect(ctx.onOpenAgent).toHaveBeenCalledOnce();
+    expect(ctx.openAgentPage).toHaveBeenCalledOnce();
+    expect(ctx.onOpenAgent).not.toHaveBeenCalled();
   });
 });
 

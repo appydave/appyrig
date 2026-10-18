@@ -46,8 +46,8 @@ function TimelineV2({ ctx }: V2PageProps) {
         className="w4-seat mono"
         data-testid="tl2-seat"
         data-seat-key={key}
-        onClick={() => ctx.onOpenAgent(key)}
-        title="Open the agent panel"
+        onClick={() => ctx.openAgentPage(key)}
+        title="Open the agent page"
       >
         {name}
       </button>

@@ -87,6 +87,8 @@ function ctxFor(ms: FleetMachine[]): V2Context {
     onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
+    agentKey: null,
+    openAgentPage: vi.fn(),
   };
 }
 
