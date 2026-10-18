@@ -3,7 +3,7 @@ import type { RigWaitingOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { rigQueue } from '../../../fleet/views.js';
 import '../../data/coverage.css';
-import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
+import { FakeControl, MockMark, MockNote, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   FILTERS,
@@ -47,7 +47,7 @@ function ItemActions({ item }: { item: NeedItem }) {
     );
   }
   return (
-    <span className="ny-actions">
+    <span className="ny-actions v2-fake" data-phase="idle">
       {ACTIONS.filter((a) => !a.kinds || a.kinds.includes(item.kind)).map((a) => (
         <button
           key={a.label}
@@ -225,6 +225,9 @@ function NeedsYou({ ctx }: V2PageProps) {
 
   return (
     <main className="view v2-needs" data-testid="v2-needs-you">
+      <MockNote>
+        Approve, Reply, Snooze, Dismiss and Clear stale are mocks — nothing is sent
+      </MockNote>
       <h2>Needs You</h2>
       <p className="quiet">
         Everything waiting on David, on every machine, in one list. The longest wait is first;

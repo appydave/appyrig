@@ -358,8 +358,9 @@
   border-top: 1px solid var(--ar-line-soft);
 }
 .mc2-vstate[data-state='behind'] {
-  color: var(--ar-blocked-ink);
-  font-weight: 700;
+  /* neutral and small: "behind" is measured against a hand-read sample, so it is not an alarm */
+  color: var(--ar-ink-muted);
+  font-size: 12px;
 }
 .mc2-vstate[data-state='current'] {
   color: var(--ar-working-ink);
