@@ -557,6 +557,28 @@ describe('v2 · seat.detail', () => {
       ok: true,
       value: { status: 'unsupported', reason: 'no route', detail: null },
     });
+    store.daemonData.put({
+      kind: 'seatdetail',
+      machineId: 'roamy',
+      key: seat,
+      collectedAt: '2026-10-18T12:02:00.000Z',
+      status: 'not-found',
+      reason: 'the daemon does not know this seat',
+      data: null,
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'seat-not-found', detail: null },
+    });
+    // L4: a seat that leaves the machine's snapshot loses its detail
+    const without = { ...snap, seats: snap.seats.filter((s) => s.id !== seat) };
+    store.put(without);
+    expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeUndefined();
+    store.put(snap);
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'pending' },
+    });
     expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat: 'nope@x' })).toMatchObject({
       ok: false,
       error: { failureMode: 'seat-not-found' },
@@ -719,7 +741,17 @@ describe('v2 · history.transitions', () => {
     const core = createCore({ store, identity, now: clock.now });
     const call = (input: object) =>
       (core.call(AGENT, 'history.transitions', input) as { value: HistoryTransitionsOutput }).value;
-    return { call, core };
+    const replaceRows = (more: TransitionRow[]) =>
+      store.daemonData.put({
+        kind: 'transitions',
+        machineId: 'roamy',
+        key: '',
+        collectedAt: '2026-10-18T12:05:00.000Z',
+        status: 'ok',
+        reason: null,
+        data: { rows: more, retained: more.length, truncated: false, hostId: 'h', bootEpoch: 'b' },
+      });
+    return { call, core, replaceRows };
   };
 
   it('serves newest first with the item joined in, pages with a cursor, and says what it holds', () => {
@@ -734,11 +766,11 @@ describe('v2 · history.transitions', () => {
         closureTarget: 'dev-build@starter',
       }),
     ];
-    const { call } = setup(rows, true);
+    const { call, replaceRows } = setup(rows, true);
     const all = call({ limit: 2 });
     expect(all.rows.map((r) => r.id)).toEqual(['5', '4']);
     expect(all.total).toBe(5);
-    expect(all.nextCursor).toBe('2');
+    expect(all.nextCursor).toEqual(expect.any(String));
     expect(all.rows[0]).toMatchObject({
       machine: 'roamy',
       source: 'dev-build@starter',
@@ -747,10 +779,22 @@ describe('v2 · history.transitions', () => {
     });
     const next = call({ limit: 2, before: all.nextCursor! });
     expect(next.rows.map((r) => r.id)).toEqual(['3', '2']);
-    expect(call({ limit: 2, before: '4' })).toMatchObject({
+    expect(call({ limit: 2, before: next.nextCursor! })).toMatchObject({
       rows: [{ id: '1' }],
       nextCursor: null,
     });
+    // M2: rows that arrive between two page loads (a newer one, an older one) neither shift nor
+    // repeat the next page: the cursor is the last row seen, not an offset
+    replaceRows([row(0, Q1), ...rows, row(6, Q2, { state: 'done' })]);
+    expect(call({ limit: 2 }).rows.map((r) => r.id)).toEqual(['6', '5']);
+    const resumed = call({ limit: 2, before: all.nextCursor! });
+    expect(resumed.rows.map((r) => r.id)).toEqual(['3', '2']); // an offset would give ['4', '3']
+    expect(call({ limit: 10, before: all.nextCursor! }).rows.map((r) => r.id)).toEqual([
+      '3',
+      '2',
+      '1',
+      '0',
+    ]);
     const roamy = all.machines.find((m) => m.machine === 'roamy')!;
     expect(roamy).toMatchObject({ status: 'ok', held: 5, retained: 55, truncated: true });
     expect(roamy.earliestAt).toBe(rows[0]!.at);
@@ -789,7 +833,7 @@ describe('v2 · history.transitions', () => {
       ok: false,
       error: { failureMode: 'invalid-input' },
     });
-    expect(core.call(AGENT, 'history.transitions', { before: 'abc' })).toMatchObject({
+    expect(core.call(AGENT, 'history.transitions', { before: 'abcdef' })).toMatchObject({
       ok: false,
       error: { failureMode: 'invalid-input' },
     });

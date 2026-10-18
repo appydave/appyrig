@@ -8,6 +8,7 @@ import {
   parseHealthFindings,
   parseSeatDetail,
   parseSettings,
+  SETTINGS_ALLOW,
   parseTransitionRow,
   parseWorkflowInstances,
   parseWorkflowSpecs,
@@ -130,7 +131,54 @@ describe('v2 · seat detail (step 2)', () => {
     expect(await r.next([T])).not.toBeNull();
   });
 
-  it('a 404 is pushed as unsupported (never as none)', async () => {
+  it('a 404 on ONE seat is not-found (the route exists); a 404 on the route itself is unsupported', async () => {
+    const { r } = reader(async (p) => {
+      if (p.endsWith('/nodes/dev.build')) throw new Error(`GET ${p} -> HTTP 404`);
+      return [];
+    });
+    const p = await r.next([T]);
+    expect(p!.pushes[0]).toMatchObject({ status: 'not-found', data: null, key: 'dev-build@r' });
+    expect(DaemonDataPushSchema.safeParse(p!.pushes[0]).success).toBe(true);
+  });
+
+  it('seats that left the target list are forgotten, so a returning seat is sent again', async () => {
+    const { r, tick } = reader(async () => node());
+    const p = await r.next([T]);
+    p!.markSent();
+    tick(61_000);
+    expect(await r.next([T])).toBeNull();
+    tick(61_000);
+    expect(await r.next([])).toBeNull(); // the seat is gone
+    tick(61_000);
+    expect(await r.next([T])).not.toBeNull(); // and back: sent again
+  });
+
+  it('only a seat-detail push has a key; every other kind must have the empty key', () => {
+    const settings = {
+      kind: 'settings',
+      machineId: 'm4',
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: 'ok',
+      reason: null,
+      key: '',
+      data: { settings: {}, withheld: 0, pathsHidden: 0 },
+    };
+    expect(DaemonDataPushSchema.safeParse(settings).success).toBe(true);
+    expect(DaemonDataPushSchema.safeParse({ ...settings, key: 'dev-build@r' }).success).toBe(false);
+    expect(
+      DaemonDataPushSchema.safeParse({
+        kind: 'seatdetail',
+        machineId: 'm4',
+        collectedAt: '2026-10-18T12:00:00.000Z',
+        status: 'not-found',
+        reason: null,
+        key: '',
+        data: null,
+      }).success
+    ).toBe(false);
+  });
+
+  it('a 404 on every seat AND the route probe is pushed as unsupported (never as none)', async () => {
     const { r } = reader(async () => {
       throw new Error('GET /api/rigs/RIG1/nodes/dev.build -> HTTP 404');
     });
@@ -180,8 +228,8 @@ describe('v2 · old hub compatibility', () => {
     const raw = readFixtureJson(
       'roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json'
     ) as Record<string, unknown>[];
-    const bare = raw.map((n) => ({ ...n, tmuxAttachCommand: null, resumeCommand: null }));
-    const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true, resumeCommand: true });
+    const bare = raw.map((n) => ({ ...n, tmuxAttachCommand: null }));
+    const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true });
     for (const s of parseNodes(bare)) expect(OldSeat.safeParse(s).success).toBe(true);
   });
 });
@@ -404,7 +452,11 @@ function fakeTelemetry(opts: { n: number; boot?: string }) {
         closureReason: i % 2 ? null : 'no-follow-on',
         closureTarget: null,
       })),
-      page: { hasMore: last < n, nextCursor: cursorOf(last) },
+      page: {
+        hasMore: last < n,
+        nextCursor: cursorOf(last),
+        retainedHighWatermark: String(n),
+      },
     };
   };
   return {
@@ -497,6 +549,69 @@ describe('v2 · queue transitions (step 4)', () => {
     expect(data(p).rows).toHaveLength(5); // the new history only, not appended to the old
     expect(d.calls.at(-1)).toContain('start=retained'); // the restart read
     expect(lines).toHaveLength(1);
+  });
+
+  it('L1: retained is the daemon high-water mark, not rows read', async () => {
+    const d = fakeTelemetry({ n: 300 });
+    const { r } = trReader(d.get);
+    const p = await r.next([]);
+    expect(data(p).retained).toBe(300);
+  });
+
+  it('L2: a row that arrives on two pages is held once', async () => {
+    const row = (i: number) => ({
+      transitionId: String(i),
+      qitemId: 'q',
+      originalTimestamp: `2026-10-11T12:00:0${i}.000Z`,
+      state: 's',
+    });
+    let n = 0;
+    const { r } = trReader(async () => {
+      n += 1;
+      return {
+        source: { hostId: 'h', bootEpoch: 'b' },
+        rows: n === 1 ? [row(1), row(2)] : [row(2), row(3)],
+        page: { hasMore: n === 1, nextCursor: 'c' + n },
+      };
+    });
+    const p = await r.next([]);
+    expect(data(p).rows.map((x) => x.id)).toEqual(['1', '2', '3']);
+  });
+
+  it('M3: a timeout or 5xx keeps the rows and cursor; only a rejected cursor starts over', async () => {
+    const d = fakeTelemetry({ n: 10 });
+    let down: string | null = null;
+    const lines: string[] = [];
+    const { r, tick } = trReader(
+      async (p) => {
+        if (down) throw new Error(down);
+        return d.get(p);
+      },
+      (l) => lines.push(l)
+    );
+    (await r.next([]))!.markSent();
+    d.grow(2);
+    for (const err of ['GET x -> HTTP 503', 'daemon timed out after 8000ms', 'GET x -> HTTP 500']) {
+      down = err;
+      tick();
+      expect(await r.next([])).toBeNull();
+    }
+    expect(lines).toHaveLength(1); // logged once
+    down = null;
+    tick();
+    const p = await r.next([]);
+    expect(data(p).rows).toHaveLength(12); // nothing was thrown away, and it continued from the cursor
+    expect(d.calls.at(-1)).toContain('cursor=');
+    expect(d.calls.filter((c) => c.includes('start=retained'))).toHaveLength(1);
+    // a 410 naming the cursor is a rejection: start over
+    down = 'GET x -> HTTP 410';
+    tick();
+    expect(await r.next([])).toBeNull();
+    down = null;
+    tick();
+    const again = await r.next([]);
+    expect(d.calls.at(-1)).toContain('start=retained');
+    expect(data(again).rows).toHaveLength(12);
   });
 
   it('404 is unsupported, never none', async () => {
@@ -705,38 +820,68 @@ describe('v2 · settings (step 5)', () => {
         defaultValue: [],
       },
       'health.context_pressure.warning_percent': { value: 95, source: 'default', defaultValue: 95 },
-      'queue.stuck_sweep_enabled': { value: true, source: 'file', defaultValue: false },
+      'queue.stuck_sweep_interval_seconds': { value: 600, source: 'file', defaultValue: 300 },
       'queue.api_key_hint': { value: 'sk-secret', source: 'file', defaultValue: '' },
-      'feed.subscriptions.mentions': { value: ['/Users/x/feed'], source: 'file', defaultValue: [] },
-      'workflow.exception_routing': { value: '', source: 'default', defaultValue: '' },
+      // a key a newer OpenRig adds is withheld until it is listed: no prefix allowlist
+      'queue.brand_new_thing': { value: 1, source: 'file', defaultValue: 0 },
+      'policies.claude_compaction.message_inline': {
+        value: 'Read the skill',
+        source: 'file',
+        defaultValue: '',
+      },
+      'feed.subscriptions.approvals': {
+        value: '/Users/x/feed',
+        source: 'file',
+        defaultValue: true,
+      },
       'retention.transitions_days': { value: { a: 1 }, source: 'default', defaultValue: null },
-      'queue.odd': { value: undefined, source: 'default' },
+      'ui.timezone': { value: 'America/Los_Angeles', source: 'default', defaultValue: 'UTC' },
+      'queue.wake_retry_cap': { value: undefined, source: 'default' },
     },
   };
 
-  it('forwards only the allowlist, hides path-like values, withholds secret-looking keys', () => {
+  it('forwards only exact allowlisted keys, hides path-like values, withholds the rest', () => {
     const s = parseSettings(config);
     expect(Object.keys(s.settings).sort()).toEqual([
       'daemon.port',
-      'feed.subscriptions.mentions',
+      'feed.subscriptions.approvals',
       'health.context_pressure.warning_percent',
-      'queue.stuck_sweep_enabled',
+      'queue.stuck_sweep_interval_seconds',
       'retention.transitions_days',
-      'workflow.exception_routing',
+      'ui.timezone',
     ]);
     expect(s.settings['daemon.port']).toEqual({ value: 7433, source: 'env', defaultValue: 7433 });
-    expect(s.settings['feed.subscriptions.mentions']!.value).toBe('(path hidden)');
-    expect(s.settings['queue.stuck_sweep_enabled']).toEqual({
-      value: true,
-      source: 'file',
-      defaultValue: false,
-    });
-    // db.path, workspace.root, files.allowlist, recovery.*, and the secret-looking key never leave
-    expect(s.withheld).toBe(5);
+    expect(s.settings['feed.subscriptions.approvals']!.value).toBe('(path hidden)');
+    // db.path, workspace.root, files.allowlist, recovery.*, api_key_hint, brand_new_thing, message_inline
+    expect(s.withheld).toBe(7);
     expect(s.pathsHidden).toBe(1);
     const wire = JSON.stringify(s);
-    for (const bad of ['/Users/x', 'sk-secret', 'ANTHROPIC_API_KEY', 'openrig.sqlite'])
+    for (const bad of [
+      '/Users/x',
+      'sk-secret',
+      'ANTHROPIC_API_KEY',
+      'openrig.sqlite',
+      'Read the skill',
+    ])
       expect(wire).not.toContain(bad);
+  });
+
+  it('every allowlisted key is forwarded, and none looks like a path, file, instruction, url or session', () => {
+    const all = {
+      settings: Object.fromEntries(
+        SETTINGS_ALLOW.map((k) => [k, { value: 1, source: 'default', defaultValue: 1 }])
+      ),
+    };
+    const s = parseSettings(all);
+    expect(Object.keys(s.settings).sort()).toEqual([...SETTINGS_ALLOW].sort());
+    expect(s.withheld).toBe(0);
+    for (const k of SETTINGS_ALLOW)
+      expect(k).not.toMatch(/path|root|file|dir|instruction|inline|url|webhook|session/i);
+    // and a key with such a name is withheld whatever its value, even on a list that included it
+    const risky = parseSettings({
+      settings: { 'agents.advisor_session': { value: 'x', source: 'default', defaultValue: 'x' } },
+    });
+    expect(risky.settings).toEqual({});
   });
 
   it('is read, validated and 404-aware; an unreadable config pushes nothing', async () => {

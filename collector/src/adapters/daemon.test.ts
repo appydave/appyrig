@@ -3,6 +3,7 @@ import { parseGraphEdges, parseNodes, parsePs, parseQueue } from './daemon.js';
 import { QueueItemSchema } from '@appydave/shared';
 import { readFixtureJson } from './fixtureSources.js';
 import { SeatSchema } from '@appydave/shared';
+import { redactDeep } from '../redact.js';
 
 const KERNEL = 'roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json';
 const syn = (name: string) => `synthetic/roamy--api-rig-starter-nodes--${name}.json`;
@@ -249,24 +250,26 @@ describe('v2 free fields (step 1)', () => {
     expect(OldRow.safeParse(q).success).toBe(true);
   });
 
-  it('seat: attach and resume commands carried as text, omitted otherwise, valid against the OLD seat', () => {
+  it('seat: the attach command is carried as text and survives redaction intact; the resume command never is', () => {
     const raw = readFixtureJson(KERNEL) as Record<string, unknown>[];
+    const attach = 'tmux attach -t dev-build@flistudio-launch';
     const withCmd = parseNodes(
       raw.map((n) => ({
         ...n,
-        tmuxAttachCommand: 'tmux attach -t x@y',
-        resumeCommand: "claude --resume 'abc'",
+        tmuxAttachCommand: attach,
+        resumeCommand: "claude --resume 'a0cf4780-db84-44cf-9ec1-97d959480d41'",
       }))
     );
-    expect(withCmd[0]).toMatchObject({
-      tmuxAttachCommand: 'tmux attach -t x@y',
-      resumeCommand: "claude --resume 'abc'",
-    });
-    const bad = parseNodes(raw.map((n) => ({ ...n, tmuxAttachCommand: 12, resumeCommand: null })));
+    expect(withCmd[0]).toMatchObject({ tmuxAttachCommand: attach });
+    for (const s of withCmd) expect('resumeCommand' in s).toBe(false);
+    expect(JSON.stringify(withCmd)).not.toContain('a0cf4780');
+    // the builder runs redactDeep over the whole snapshot: the line must come through unchanged
+    expect(redactDeep(withCmd[0]!).tmuxAttachCommand).toBe(attach);
+    const bad = parseNodes(raw.map((n) => ({ ...n, tmuxAttachCommand: 12 })));
     expect(bad.length).toBe(raw.length);
-    const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true, resumeCommand: true });
+    const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true });
     for (const s of bad) {
-      expect('tmuxAttachCommand' in s || 'resumeCommand' in s).toBe(false);
+      expect('tmuxAttachCommand' in s).toBe(false);
       expect(OldSeat.safeParse(s).success).toBe(true);
     }
   });

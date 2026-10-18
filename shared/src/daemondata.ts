@@ -265,8 +265,11 @@ export const SETTING_PATH_HIDDEN = '(path hidden)';
 const PushBase = {
   machineId: MachineId,
   collectedAt: isoDate,
-  /** `unsupported` = the daemon has no such route (HTTP 404); data is then null. */
-  status: z.enum(['ok', 'unsupported']),
+  /**
+   * `unsupported` = the daemon has no such route (a 404 on the route itself); `not-found` = the
+   * route exists but the daemon does not know this item (a 404 on one seat). data is null for both.
+   */
+  status: z.enum(['ok', 'unsupported', 'not-found']),
   reason: TextN(300),
 };
 
@@ -274,8 +277,8 @@ const push = <K extends DaemonKind, D extends z.ZodType>(kind: K, data: D) =>
   z.strictObject({
     kind: z.literal(kind),
     ...PushBase,
-    /** seatdetail: the seat id; every other kind: the empty string. */
-    key: Text(200),
+    /** seatdetail: the seat id; every other kind: exactly the empty string. */
+    key: kind === 'seatdetail' ? z.string().min(1).max(200) : z.literal(''),
     data: data.nullable(),
   });
 
@@ -317,7 +320,7 @@ export const SeatDetailInputSchema = SeatRefSchema;
 export const SeatDetailOutputSchema = z.strictObject({
   machine: MachineId,
   seat: z.string(),
-  status: DataStatusSchema.or(z.literal('not-openrig')),
+  status: DataStatusSchema.or(z.enum(['not-openrig', 'seat-not-found'])),
   reason: TextN(300),
   collectedAt: isoDate.nullable(),
   detail: SeatDetailDataSchema.nullable(),
@@ -413,9 +416,11 @@ export const HistoryTransitionsInputSchema = MachineFilter.extend({
     .describe(`page size, at most ${TRANSITIONS_PAGE_MAX} (default 50)`),
   before: z
     .string()
-    .regex(/^\d+$/)
+    .regex(/^[A-Za-z0-9_-]{1,400}$/)
     .optional()
-    .describe('cursor: the nextCursor of the previous page (newest first)'),
+    .describe(
+      'cursor: the nextCursor of the previous page. A keyset (the last row of that page), so rows added between pages never shift or repeat a page'
+    ),
 });
 export type HistoryTransitionsInput = z.infer<typeof HistoryTransitionsInputSchema>;
 

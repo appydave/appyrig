@@ -17,6 +17,14 @@ export class DaemonDataStore {
     this.byKey.set(this.key(push.machineId, push.kind, push.key), push);
   }
 
+  /** Forget seat details for seats the machine's newest snapshot no longer lists. */
+  pruneSeats(machine: string, live: Set<string>): void {
+    for (const k of [...this.byKey.keys()]) {
+      const [m, kind, key] = k.split('\u0000');
+      if (m === machine && kind === 'seatdetail' && !live.has(key ?? '')) this.byKey.delete(k);
+    }
+  }
+
   /** The latest push of `kind` (with `key`) from one machine, typed by its kind. */
   get<K extends DaemonKind>(
     machine: string,

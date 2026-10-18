@@ -150,8 +150,7 @@
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
       },
-      "tmuxAttachCommand": "tmux attach -t advisor-lead@kernel",
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tmuxAttachCommand": "tmux attach -t advisor-lead@kernel"
     },
     {
       "id": "operator-agent@kernel",
@@ -254,8 +253,7 @@
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
       },
-      "tmuxAttachCommand": "tmux attach -t operator-agent@kernel",
-      "resumeCommand": "codex -s workspace-write resume '<REDACTED>'"
+      "tmuxAttachCommand": "tmux attach -t operator-agent@kernel"
     },
     {
       "id": "operator-human@kernel",
@@ -404,8 +402,7 @@
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
       },
-      "tmuxAttachCommand": "tmux attach -t queue-worker@kernel",
-      "resumeCommand": "codex -s workspace-write resume '<REDACTED>'"
+      "tmuxAttachCommand": "tmux attach -t queue-worker@kernel"
     },
     {
       "id": "dev-build@starter",
@@ -512,8 +509,7 @@
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
       },
-      "tmuxAttachCommand": "tmux attach -t dev-build@starter",
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tmuxAttachCommand": "tmux attach -t dev-build@starter"
     },
     {
       "id": "dev-review@starter",
@@ -618,8 +614,7 @@
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
       },
-      "tmuxAttachCommand": "tmux attach -t dev-review@starter",
-      "resumeCommand": "codex -s workspace-write resume '<REDACTED>'"
+      "tmuxAttachCommand": "tmux attach -t dev-review@starter"
     },
     {
       "id": "openrig-orch",

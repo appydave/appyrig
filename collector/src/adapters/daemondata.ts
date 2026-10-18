@@ -60,7 +60,7 @@ interface Job {
 
 interface Outcome {
   key: string;
-  status: 'ok' | 'unsupported';
+  status: 'ok' | 'unsupported' | 'not-found';
   reason: string | null;
   data: unknown;
 }
@@ -92,7 +92,7 @@ export const isNotFound = (e: unknown): boolean => /HTTP 404\b/.test((e as Error
 /**
  * GET /api/rigs/:rigId/nodes/:logicalId, reduced to what the Agent page shows: the resolved spec,
  * startup files and actions, peers, recovery notes and installed resources. NOT forwarded: the
- * resume token and command (the snapshot carries `resumeCommand`), transcript path, recent events,
+ * resume token and command (they hold the Claude session id), transcript path, recent events,
  * identity evidence and every other field.
  */
 export function parseSeatDetail(raw: unknown): SeatDetailData {
@@ -328,6 +328,7 @@ export function parseTransitionsPage(raw: unknown): {
   rows: TransitionRow[];
   nextCursor: string | null;
   hasMore: boolean;
+  retainedHigh: number | null;
   hostId: string | null;
   bootEpoch: string | null;
 } {
@@ -338,6 +339,10 @@ export function parseTransitionsPage(raw: unknown): {
     rows: raw.rows.flatMap((r) => parseTransitionRow(r) ?? []),
     nextCursor: txt(raw.page.nextCursor, 2000),
     hasMore: raw.page.hasMore === true,
+    retainedHigh: (() => {
+      const h = Number(raw.page.retainedHighWatermark);
+      return Number.isFinite(h) && h >= 0 ? Math.round(h) : null;
+    })(),
     hostId: txt(source.hostId, 100),
     bootEpoch: txt(source.bootEpoch, 100),
   };
@@ -495,32 +500,70 @@ export function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
 }
 
 /**
- * Settings the hub may carry. A prefix ending in a dot allows the whole family; anything else is one
- * exact key. Everything else (database and transcript paths, workspace roots, the file allowlist,
- * recovery env names) stays on the machine. A key whose name looks secret is withheld regardless.
+ * The settings the hub may carry: an exact-key allowlist (never a prefix), chosen from OpenRig 0.6.6's
+ * `/api/config` as numbers, flags and short enums that say how the daemon behaves. A key a newer
+ * OpenRig adds is withheld until it is listed here.
  */
 export const SETTINGS_ALLOW: readonly string[] = [
-  'daemon.port',
+  'context.system_world',
   'daemon.host',
+  'daemon.port',
+  'feed.subscriptions.action_required',
+  'feed.subscriptions.approvals',
+  'feed.subscriptions.audit_log',
+  'feed.subscriptions.progress',
+  'feed.subscriptions.shipped',
+  'health.context_pressure.critical_percent',
+  'health.context_pressure.warning_percent',
   'host.name',
   'host.selected',
+  'launch.non_interruptive',
+  'onboarding.default_pack.enabled',
+  'policies.claude_compaction.enabled',
+  'policies.claude_compaction.threshold_percent',
+  'policies.idle_gate_qitem.active_wake_interval_seconds',
+  'policies.idle_gate_qitem.auto_register',
+  'policies.idle_gate_qitem.scan_interval_seconds',
+  'queue.pickup_stall_threshold_minutes',
+  'queue.stuck_sweep_interval_seconds',
+  'queue.stuck_sweep_unclaimed_age_minutes',
+  'queue.wake_retry_cap',
+  'queue.wake_retry_interval_seconds',
+  'queue.wake_swap_grace_seconds',
+  'queue.wake_unconfirmed_window_minutes',
+  'recovery.auto_drive_provider_prompts',
+  'retention.batch_size',
+  'retention.enabled',
+  'retention.transitions_days',
+  'retention.usage_samples_days',
+  'retention.watchdog_days',
+  'retention.watchdog_keep_per_job',
+  'runtime.codex.hooks_enabled',
+  'runtime.readiness_timeout_seconds',
+  'snapshots.periodic.enabled',
+  'snapshots.periodic.interval_seconds',
+  'snapshots.periodic.retention_keep',
+  'terminal.status_bar',
   'transcripts.enabled',
   'transcripts.lines',
   'transcripts.poll_interval_seconds',
-  'health.',
-  'snapshots.',
-  'policies.',
-  'retention.',
-  'queue.',
-  'feed.',
-  'workflow.',
+  'ui.enabled',
+  'ui.preview.default_lines',
+  'ui.preview.max_pins',
+  'ui.preview.refresh_interval_seconds',
+  'ui.terminal.max_live_terminals',
+  'ui.timezone',
 ];
-const SECRET_KEY = /token|secret|key|password|credential|cookie|bearer|oauth|authoriz/i;
+/**
+ * A key whose NAME suggests a path, a file, free instructions, a URL or a session is withheld whatever
+ * its value, even if it were ever added to the allowlist; so is anything secret-looking.
+ */
+const WITHHELD_KEY =
+  /path|root|file|dir|instruction|inline|url|webhook|session|token|secret|key|password|credential|cookie|bearer|oauth|authoriz/i;
 /** A value that is a filesystem path (absolute, home-relative, Windows drive) or names a home folder. */
 const PATH_LIKE = /^(\/|~\/|[A-Za-z]:[\\/])|\/Users\/|\/home\//;
 
-const isAllowed = (key: string): boolean =>
-  SETTINGS_ALLOW.some((a) => (a.endsWith('.') ? key.startsWith(a) : key === a));
+const isAllowed = (key: string): boolean => SETTINGS_ALLOW.includes(key);
 
 /** GET /api/config: the allowlisted settings, with path-like values replaced and text redacted. */
 export function parseSettings(raw: unknown): SettingsData {
@@ -543,7 +586,7 @@ export function parseSettings(raw: unknown): SettingsData {
   };
   for (const [key, entry] of Object.entries(raw.settings)) {
     if (!isRec(entry)) continue;
-    if (!isAllowed(key) || SECRET_KEY.test(key) || key.length > 120) {
+    if (!isAllowed(key) || WITHHELD_KEY.test(key) || key.length > 120) {
       withheld += 1;
       continue;
     }
@@ -602,7 +645,9 @@ export class DaemonDataReader {
     read: number;
     hostId: string | null;
     bootEpoch: string | null;
-  } = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null };
+    /** page.retainedHighWatermark: the newest retained transition id. */
+    high: number | null;
+  } = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null, high: null };
 
   constructor(
     private readonly machineId: string,
@@ -640,6 +685,16 @@ export class DaemonDataReader {
     const out: Outcome[] = [];
     let failed = 0;
     let firstError = '';
+    // A 404 on one seat is "the daemon does not know this seat" (or this rig), unless the rig's node
+    // list is missing too, which means the route itself is not there on this OpenRig.
+    const routeMissing = new Map<string, boolean>();
+    const probe = async (rigId: string): Promise<boolean | null> => {
+      if (routeMissing.has(rigId)) return routeMissing.get(rigId)!;
+      const r = await settle(this.get, `/api/rigs/${encodeURIComponent(rigId)}/nodes`);
+      if (!r.ok && !r.notFound) return null;
+      routeMissing.set(rigId, !r.ok);
+      return !r.ok;
+    };
     for (const t of this.targets) {
       try {
         const raw = await this.get(
@@ -647,11 +702,19 @@ export class DaemonDataReader {
         );
         out.push({ key: t.seat, status: 'ok', reason: null, data: parseSeatDetail(raw) });
       } catch (e) {
-        if (isNotFound(e)) {
+        const missing = isNotFound(e) ? await probe(t.rigId) : null;
+        if (missing === true) {
           out.push({
             key: t.seat,
             status: 'unsupported',
-            reason: 'this OpenRig has no node detail for this seat',
+            reason: 'this OpenRig has no node routes for this rig',
+            data: null,
+          });
+        } else if (missing === false) {
+          out.push({
+            key: t.seat,
+            status: 'not-found',
+            reason: 'the daemon does not know this seat',
             data: null,
           });
         } else {
@@ -660,6 +723,11 @@ export class DaemonDataReader {
         }
       }
     }
+    // L4: forget what was sent for seats that are gone, so a seat that returns is sent again.
+    const live = new Set(this.targets.map((t) => t.seat));
+    for (const k of [...this.sent.keys()])
+      if (k.startsWith('seatdetail\u0000') && !live.has(k.slice('seatdetail\u0000'.length)))
+        this.sent.delete(k);
     if (failed > 0)
       this.fail(
         'seatdetail:seats',
@@ -794,7 +862,11 @@ export class DaemonDataReader {
               data: null,
             },
           ];
-        this.tr = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null };
+        // Start over ONLY when the daemon rejected our cursor (400/410: its epoch or history
+        // changed). A timeout or 5xx says nothing about the cursor: keep what we hold, retry.
+        if (st.cursor && /HTTP (400|410)\b/.test((e as Error).message)) {
+          this.tr = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null, high: null };
+        }
         throw e;
       }
       if (st.bootEpoch && got.bootEpoch && st.bootEpoch !== got.bootEpoch) {
@@ -805,14 +877,18 @@ export class DaemonDataReader {
       st.hostId = got.hostId ?? st.hostId;
       st.bootEpoch = got.bootEpoch ?? st.bootEpoch;
       st.read += got.rows.length;
-      st.rows = [...st.rows, ...got.rows].slice(-TRANSITIONS_MAX);
+      st.high = got.retainedHigh ?? st.high;
+      // L2: a row is held once, whichever page it arrives on
+      const have = new Set(st.rows.map((r) => r.id));
+      st.rows = [...st.rows, ...got.rows.filter((r) => !have.has(r.id))].slice(-TRANSITIONS_MAX);
       if (got.nextCursor) st.cursor = got.nextCursor;
       if (!got.hasMore || got.rows.length === 0) break;
     }
     const data: TransitionsData = {
       rows: st.rows,
-      retained: st.read,
-      truncated: st.read > st.rows.length,
+      // L1: the daemon's own retained high-water mark (its newest transition id), else rows read
+      retained: st.high ?? st.read,
+      truncated: (st.high ?? st.read) > st.rows.length,
       hostId: st.hostId,
       bootEpoch: st.bootEpoch,
     };

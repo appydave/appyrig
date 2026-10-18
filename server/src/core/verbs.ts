@@ -459,7 +459,7 @@ function dataOf<K extends DaemonKind>(ctx: VerbContext, machine: string, kind: K
         reason: `no ${label} from this machine's collector yet: it predates v2, has not sent one, or the daemon read failed`,
         collectedAt: null,
       }
-    : p.status === 'unsupported'
+    : p.status === 'unsupported' || p.status === 'not-found'
       ? {
           machine,
           status: 'unsupported',
@@ -505,6 +505,33 @@ export function assess(data: DaemonDataFor<'health'> | null): {
   }
   if (data.findingsTruncated === true) caveats.push('the findings list was cut short');
   return { assessment: 'none-found', caveats };
+}
+
+type RowKey = Pick<HistoryTransitionRow, 'at' | 'machine' | 'id'>;
+const numId = (id: string) => (/^\d+$/.test(id) ? Number(id) : -1);
+/** Newest first; ties by machine, then id (numeric when both are). Total order, so a keyset is exact. */
+const compareRows = (a: RowKey, b: RowKey): number =>
+  b.at.localeCompare(a.at) ||
+  a.machine.localeCompare(b.machine) ||
+  numId(b.id) - numId(a.id) ||
+  b.id.localeCompare(a.id);
+const encodeCursor = (r: RowKey): string =>
+  Buffer.from(JSON.stringify([r.at, r.machine, r.id])).toString('base64url');
+function decodeCursor(c: string): RowKey {
+  try {
+    const v = JSON.parse(Buffer.from(c, 'base64url').toString('utf8')) as unknown;
+    if (
+      Array.isArray(v) &&
+      v.length === 3 &&
+      v.every((x) => typeof x === 'string' && x.length > 0 && x.length < 100)
+    )
+      return { at: v[0] as string, machine: v[1] as string, id: v[2] as string };
+  } catch {
+    // falls through to the refusal
+  }
+  throw new CapabilityRefusal('invalid-input', 'before is not a cursor this verb returned.', {
+    issues: [{ path: 'before', message: 'not a cursor from a previous page' }],
+  });
 }
 
 const LIBRARY_GROUPS: Record<LibraryGroup, 'specs' | 'skills' | 'contextPacks'> = {
@@ -702,7 +729,7 @@ const VERB_SET = {
   ),
 
   'seat.detail': query(
-    "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token, transcript path and event payloads are NOT carried (the seat's resumeCommand is on seat.get). status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node detail for the seat); 'not-openrig' (a plain tmux seat has none).",
+    "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token and command (they hold the Claude session id), transcript path and event payloads are NOT carried anywhere. status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node routes); 'seat-not-found' (the routes exist but the daemon does not know this seat); 'not-openrig' (a plain tmux seat has none).",
     SeatDetailInputSchema,
     SeatDetailOutputSchema,
     SEAT_NOT_FOUND,
@@ -729,6 +756,7 @@ const VERB_SET = {
           "no seat detail from this machine's collector for this seat yet: it predates v2, has not sent one (it re-reads every minute), or the daemon read failed"
         );
       if (p.status === 'unsupported') return out('unsupported', p.reason);
+      if (p.status === 'not-found') return out('seat-not-found', p.reason);
       return out('ok', null, { collectedAt: p.collectedAt, data: p.data });
     }
   ),
@@ -811,7 +839,7 @@ const VERB_SET = {
   ),
 
   'history.transitions': query(
-    "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor. Not the same as history.list, which is what API callers did.",
+    "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor (a keyset of the last row, so rows added between pages never shift a page). Not the same as history.list, which is what API callers did.",
     HistoryTransitionsInputSchema,
     HistoryTransitionsOutputSchema,
     NOT_FOUND,
@@ -872,22 +900,21 @@ const VERB_SET = {
         }
       }
       // newest first; ids are per-daemon decimal strings, compared as numbers when both are
-      const num = (id: string) => (/^\d+$/.test(id) ? Number(id) : -1);
-      all.sort(
-        (a, b) =>
-          b.at.localeCompare(a.at) ||
-          a.machine.localeCompare(b.machine) ||
-          num(b.id) - num(a.id) ||
-          b.id.localeCompare(a.id)
-      );
+      all.sort(compareRows);
       const limit = input.limit ?? 50;
-      const start = input.before === undefined ? 0 : Number(input.before);
-      const end = start + limit;
+      let from = 0;
+      if (input.before !== undefined) {
+        const key = decodeCursor(input.before);
+        // keyset: the first row strictly after the cursor's row in this order
+        from = all.findIndex((r) => compareRows(r, key) > 0);
+        if (from === -1) from = all.length;
+      }
+      const page = all.slice(from, from + limit);
       return {
         machines,
-        rows: all.slice(start, end),
+        rows: page,
         total: all.length,
-        nextCursor: end < all.length ? String(end) : null,
+        nextCursor: from + limit < all.length ? encodeCursor(page[page.length - 1]!) : null,
       };
     }
   ),

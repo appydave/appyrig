@@ -69,9 +69,12 @@ export interface CollectorAuth {
   machineId: string;
 }
 
-/** Ack for `collector:snapshot`. A refused snapshot is data, not a throw. */
+/**
+ * Ack for `collector:snapshot`. A refused snapshot is data, not a throw. `caps` (HUB_CAPS) is what
+ * this hub understands beyond v1.5; an older hub sends none.
+ */
 export type CollectorAck =
-  | { ok: true; receivedAt: string }
+  | { ok: true; receivedAt: string; caps?: string[] }
   | { ok: false; failureMode: 'invalid_snapshot' | 'machine_mismatch'; message: string };
 
 /** Events on the `/` namespace, hub → browser. The one definition; the scaffold's ServerToClientEvents extends it. */
@@ -117,3 +120,6 @@ export type CollectorServerToClientEvents = Record<string, never>;
 export interface AppyRigTestHooks {
   xtermCount: () => number;
 }
+
+/** socket.io maxHttpBufferSize on the hub (bytes). Collectors keep side-channel payloads under CHANNEL_PAYLOAD_MAX. */
+export const HUB_MAX_BUFFER = 1_048_576;

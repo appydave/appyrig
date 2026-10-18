@@ -107,8 +107,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/brains/openrig/rigs/control",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "orch-lead@factory-claude",
@@ -133,8 +132,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-build@factory-claude",
@@ -159,8 +157,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-qa@factory-claude",
@@ -185,8 +182,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "review-r1@factory-claude",
@@ -211,8 +207,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "orch-lead@fliedit-team",
@@ -237,8 +232,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-overlay@fliedit-team",
@@ -263,8 +257,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit-worktrees/overlay",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-viewer@fliedit-team",
@@ -289,8 +282,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit-worktrees/viewer",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-qa@fliedit-team",
@@ -315,8 +307,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "review-r1@fliedit-team",
@@ -341,8 +332,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/fliedit",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "advisor-lead@kernel",
@@ -367,8 +357,7 @@
       },
       "cwd": "/Users/davidcruwys/.openrig/workspace",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "operator-agent@kernel",
@@ -393,8 +382,7 @@
       },
       "cwd": "/Users/davidcruwys/.openrig/workspace",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "codex -s workspace-write resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "operator-human@kernel",
@@ -443,8 +431,7 @@
       },
       "cwd": "/Users/davidcruwys/.openrig/workspace",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "codex -s workspace-write resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "research-scout@skool-research",
@@ -469,8 +456,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/brains/skool",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "research-checker@skool-research",
@@ -495,8 +481,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/brains/skool",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-build@starter",
@@ -521,8 +506,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "claude --resume '<REDACTED>'"
+      "tail": null
     },
     {
       "id": "dev-review@starter",
@@ -547,8 +531,7 @@
       },
       "cwd": "/Users/davidcruwys/dev/ad/flivideo/flihub",
       "recoveryGuidance": null,
-      "tail": null,
-      "resumeCommand": "codex -s workspace-write resume '<REDACTED>'"
+      "tail": null
     }
   ],
   "queue": [

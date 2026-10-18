@@ -113,12 +113,11 @@ export function nodeToSeat(node: LenientNodeT): Seat {
     cwd: node.cwd ?? null,
     recoveryGuidance: g ? [g.summary, g.action].filter(Boolean).join(' — ') || null : null,
     tail: null,
-    // v2: omitted (not null) when the daemon did not say, so a new collector validates against an older hub.
+    // v2: omitted when the daemon did not say. The pusher further drops it for a hub that did not
+    // advertise HUB_CAPS.V2_FIELDS (a live daemon always has it, so omission alone cannot protect
+    // an older strict hub). The resume command is never carried: it holds the Claude session id.
     ...(optText(node.tmuxAttachCommand, 500)
       ? { tmuxAttachCommand: optText(node.tmuxAttachCommand, 500) }
-      : {}),
-    ...(optText(node.resumeCommand, 500)
-      ? { resumeCommand: optText(node.resumeCommand, 500) }
       : {}),
   };
 }

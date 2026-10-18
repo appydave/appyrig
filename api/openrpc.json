@@ -3464,11 +3464,6 @@
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": 500
-                              },
-                              "resumeCommand": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 500
                               }
                             },
                             "required": [
@@ -7127,7 +7122,7 @@
     },
     {
       "name": "history.transitions",
-      "summary": "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor. Not the same as history.list, which is what API callers did.",
+      "summary": "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor (a keyset of the last row, so rows added between pages never shift a page). Not the same as history.list, which is what API callers did.",
       "tags": [
         {
           "name": "history"
@@ -7220,11 +7215,11 @@
         {
           "name": "before",
           "required": false,
-          "summary": "cursor: the nextCursor of the previous page (newest first)",
+          "summary": "cursor: the nextCursor of the previous page. A keyset (the last row of that page), so rows added between pages never shift or repeat a page",
           "schema": {
-            "description": "cursor: the nextCursor of the previous page (newest first)",
+            "description": "cursor: the nextCursor of the previous page. A keyset (the last row of that page), so rows added between pages never shift or repeat a page",
             "type": "string",
-            "pattern": "^\\d+$"
+            "pattern": "^[A-Za-z0-9_-]{1,400}$"
           }
         }
       ],
@@ -11870,7 +11865,7 @@
     },
     {
       "name": "seat.detail",
-      "summary": "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token, transcript path and event payloads are NOT carried (the seat's resumeCommand is on seat.get). status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node detail for the seat); 'not-openrig' (a plain tmux seat has none).",
+      "summary": "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token and command (they hold the Claude session id), transcript path and event payloads are NOT carried anywhere. status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node routes); 'seat-not-found' (the routes exist but the daemon does not know this seat); 'not-openrig' (a plain tmux seat has none).",
       "tags": [
         {
           "name": "seat"
@@ -11956,7 +11951,10 @@
                   },
                   {
                     "type": "string",
-                    "const": "not-openrig"
+                    "enum": [
+                      "not-openrig",
+                      "seat-not-found"
+                    ]
                   }
                 ]
               },
@@ -12854,11 +12852,6 @@
                     }
                   },
                   "tmuxAttachCommand": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 500
-                  },
-                  "resumeCommand": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 500
@@ -13839,11 +13832,6 @@
                       }
                     },
                     "tmuxAttachCommand": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 500
-                    },
-                    "resumeCommand": {
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 500

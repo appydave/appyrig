@@ -2,6 +2,7 @@ import type { Namespace, Server } from 'socket.io';
 import {
   AUTH_ERRORS,
   FLEET_EVENTS,
+  HUB_CAPS,
   MachineSnapshotSchema,
   SeatHistorySchema,
   HandoffBodiesSchema,
@@ -76,7 +77,12 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
       }
       const entry = opts.store.put(parsed.data);
       opts.onSnapshot(entry);
-      reply({ ok: true, receivedAt: entry.lastSeen });
+      // caps: what this hub understands beyond v1.5; an older hub sends none (see HUB_CAPS)
+      reply({
+        ok: true,
+        receivedAt: entry.lastSeen,
+        caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA],
+      });
     });
 
     // v1.2: one seat's history (replay consoles). Same checks as a snapshot.

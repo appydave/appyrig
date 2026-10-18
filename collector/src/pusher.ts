@@ -1,6 +1,9 @@
 import { io as connect, type Socket } from 'socket.io-client';
 import {
   FLEET_EVENTS,
+  HUB_CAPS,
+  namesV2Key,
+  stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
   type CollectorAck,
@@ -54,6 +57,13 @@ export interface PusherOptions {
   onConnect?: () => void;
 }
 
+/**
+ * Largest serialized payload a side channel will send (bytes). The hub's socket.io limit is
+ * HUB_MAX_BUFFER (1 MiB); anything over this is skipped and logged, never sent, and never touches
+ * the snapshot push.
+ */
+export const CHANNEL_PAYLOAD_MAX = 800 * 1024;
+
 /** Seat history changes slowly and is large next to a snapshot, so it is checked once a minute. */
 export const HISTORY_INTERVAL_MS = 60_000;
 
@@ -79,6 +89,12 @@ export function startPusher(opts: PusherOptions): Pusher {
   });
 
   let stopped = false;
+  // What the connected hub advertised in its last snapshot ack (HUB_CAPS). Nothing until the first
+  // ack, and forgotten on every (re)connect: a restarted hub may be an older build. With no
+  // V2_FIELDS cap the snapshot goes out in exactly the v1.5 shape.
+  let hubCaps = new Set<string>();
+  // Belt and braces: a hub that refused a snapshot naming a v2 key is treated as v1.5 until reconnect.
+  let forceV15 = false;
   let timer: NodeJS.Timeout | undefined;
   let lastNote = '';
   const note = (line: string) => {
@@ -101,6 +117,8 @@ export function startPusher(opts: PusherOptions): Pusher {
   };
 
   socket.on('connect', () => {
+    hubCaps = new Set();
+    forceV15 = false;
     opts.onConnect?.();
     note(`connected to ${opts.hubUrl} as ${opts.machineId}`);
   });
@@ -121,7 +139,15 @@ export function startPusher(opts: PusherOptions): Pusher {
     if (stopped) return;
     try {
       if (socket.connected) {
-        const ack = await push(await opts.build());
+        const built = await opts.build();
+        const sendV2 = hubCaps.has(HUB_CAPS.V2_FIELDS) && !forceV15;
+        const ack = await push(sendV2 ? built : stripV2Fields(built));
+        if (!('timeout' in ack) && ack.ok) hubCaps = new Set(ack.caps ?? []);
+        if (!('timeout' in ack) && !ack.ok && sendV2 && namesV2Key(ack.message)) {
+          forceV15 = true;
+          hubCaps = new Set();
+          log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
+        }
         note(
           'timeout' in ack
             ? `no ack from hub within ${ackTimeout}ms`
@@ -213,17 +239,26 @@ export function startPusher(opts: PusherOptions): Pusher {
     everyMs: number,
     /** The hub version that first listens for this event, for the "no ack" warning. */
     since: string,
-    take: () => Promise<{ payloads: unknown[]; markSent(): void } | null>
+    take: () => Promise<{ payloads: unknown[]; markSent(): void } | null>,
+    /** A HUB_CAPS entry the hub must have advertised before anything is taken or sent. */
+    needs?: string
   ) => {
     let t: NodeJS.Timeout | undefined;
     const tick = async () => {
       if (stopped) return;
       try {
-        if (socket.connected) {
+        if (socket.connected && (!needs || hubCaps.has(needs))) {
           const pending = await take();
           if (pending) {
             let all = true;
             for (const p of pending.payloads) {
+              if (Buffer.byteLength(JSON.stringify(p)) > CHANNEL_PAYLOAD_MAX) {
+                warnSometimes(
+                  `${key}:size`,
+                  `${key}: a payload over ${CHANNEL_PAYLOAD_MAX / 1024} KB was not sent`
+                );
+                continue;
+              }
               const ack = await sendAcked(event, p);
               if ('timeout' in ack) {
                 warnSometimes(key, `no ack for ${key} (is the hub older than ${since}?)`);
@@ -293,7 +328,8 @@ export function startPusher(opts: PusherOptions): Pusher {
       async () => {
         const p = await take();
         return p && { payloads: p.pushes, markSent: p.markSent };
-      }
+      },
+      HUB_CAPS.DAEMONDATA
     );
   }
   if (opts.schema) {
