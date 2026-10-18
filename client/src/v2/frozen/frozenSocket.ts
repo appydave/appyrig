@@ -23,9 +23,22 @@ export interface FrozenFile {
 export interface FrozenMeta {
   name: string;
   recordedAt: string | null;
+  /** When the snapshot was loaded (ms). The frozen clock runs from recordedAt at this moment. */
+  loadedAt?: number;
   /** Set when the named snapshot could not be loaded; the fleet is then empty. */
   problem?: string;
   stripped?: string[];
+}
+
+/**
+ * The frozen clock: the moment the snapshot was recorded, moving on in real time from when it was
+ * loaded, so ages read as they did at record time ("live · 2s"), not "stale · 16m".
+ * Live (no meta, or no time recorded): the real clock.
+ */
+export function frozenNow(real: number, meta: FrozenMeta | undefined): number {
+  const at = meta?.recordedAt ? Date.parse(meta.recordedAt) : NaN;
+  if (Number.isNaN(at)) return real;
+  return at + Math.max(0, real - (meta!.loadedAt ?? real));
 }
 
 /** The lookup key: verb, then the input with its keys sorted (matches the recorder). */

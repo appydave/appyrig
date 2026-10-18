@@ -48,6 +48,7 @@ function formatRecorded(iso: string | null): string {
         month: 'short',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
       });
 }
 
@@ -177,11 +178,11 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
           className="v2-frozen"
           data-testid="frozen-badge"
           title={[
-            'Frozen data: a recorded snapshot, not the live fleet. Nothing here updates.',
+            `Frozen data: snapshot "${frozen.name}", recorded ${formatRecorded(frozen.recordedAt)}. Not the live fleet; the clock runs from the moment it was recorded.`,
             ...(frozen.stripped ?? []).map((s) => `· ${s}`),
           ].join('\n')}
         >
-          FROZEN: {frozen.name} · recorded {formatRecorded(frozen.recordedAt)}
+          FROZEN {frozen.name} · {formatRecorded(frozen.recordedAt)}
         </span>
       )}
     </span>

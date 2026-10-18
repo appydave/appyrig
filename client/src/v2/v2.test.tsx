@@ -12,9 +12,11 @@ import {
   callKey,
   createFrozenSocket,
   frozenAnswer,
+  frozenNow,
   type FrozenFile,
 } from './frozen/frozenSocket.js';
 import { loadFrozen } from './frozen/load.js';
+import { isLocalDevRequest } from './devProxy.js';
 import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from './kit/index.js';
 import { CURRENT_VIEWS, navGroups, navLabel, plannedPages, v2PageFor } from './registry.js';
 import { MODE_KEY, modeFromSearch, readMode, searchWithMode } from './version.js';
@@ -231,7 +233,7 @@ describe('frozen-data mode', () => {
         frozen={{ name: 'tiny', recordedAt: '2026-10-18T12:00:00.000Z' }}
       />
     );
-    expect(screen.getByTestId('frozen-badge')).toHaveTextContent(/FROZEN: tiny · recorded/);
+    expect(screen.getByTestId('frozen-badge')).toHaveTextContent(/FROZEN tiny ·/);
   });
 
   it('the shipped busy snapshot is a valid fleet update with answers for its running rigs', () => {
@@ -257,6 +259,102 @@ describe('frozen-data mode', () => {
     });
     expect(loadout.ok).toBe(true);
     expect(JSON.stringify(loadout)).not.toContain('$frozenRef');
+  });
+});
+
+describe('W0 fold', () => {
+  it('MEDIUM-1: the frozen clock runs from recordedAt, so ages read as they did when recorded', () => {
+    const meta = { name: 'x', recordedAt: '2026-10-18T12:00:00.000Z', loadedAt: 1_000 };
+    expect(frozenNow(4_000, meta)).toBe(Date.parse('2026-10-18T12:00:00.000Z') + 3_000);
+    expect(frozenNow(4_000, undefined)).toBe(4_000);
+    expect(frozenNow(4_000, { name: 'x', recordedAt: null })).toBe(4_000);
+  });
+
+  it('MEDIUM-1: a frozen machine seen 2 s before recording reads live, not stale', async () => {
+    const recordedAt = '2026-10-18T12:00:00.000Z';
+    const file = tinyFile();
+    file.update = update([
+      fleetMachine(snapshot('roamy'), { lastSeen: '2026-10-18T11:59:58.000Z' }),
+    ]);
+    const socket = createFrozenSocket(file);
+    render(
+      <App getSocket={() => socket} frozen={{ name: 'tiny', recordedAt, loadedAt: Date.now() }} />
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('machine-chip')).toHaveAttribute('data-level', 'live')
+    );
+    expect(screen.getByTestId('machine-chip')).toHaveTextContent('live · 2s');
+  });
+
+  it('MEDIUM-2: with the agent panel open, V and B do nothing and Esc closes only the panel', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      }
+    );
+    const spy = spySocket();
+    render(<App getSocket={() => spy.socket} />);
+    spy.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.click(
+      screen
+        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
+        .closest('button')!
+    );
+    fireEvent.click(screen.getAllByTestId('rig-map-node')[0]!);
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    press('v');
+    expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
+    expect(location.search).toBe('');
+    press('b');
+    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
+    expect(screen.queryByTestId('v2-no-v2')).toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
+  });
+
+  it("Esc on a v2-only page returns to the page underneath and App's goBack stands down", async () => {
+    renderLive();
+    fireEvent.click(screen.getByTestId('view-flow')); // history now holds the Wall
+    press('v');
+    fireEvent.click(screen.getByTestId('v2-group-hood'));
+    fireEvent.click(screen.getByTestId('v2-page-about'));
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    press('Escape');
+    await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
+    // goBack would have popped to the Wall; the Flow is still there
+    expect(screen.getByTestId('view-body-flow')).toBeInTheDocument();
+    expect(screen.queryByTestId('v2-wall-banner')).toBeNull();
+  });
+
+  it('V and B are ignored while typing', () => {
+    renderLive();
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: 'v' });
+    fireEvent.keyDown(input, { key: 'b' });
+    expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
+    input.remove();
+  });
+
+  it('MEDIUM-3: the dev proxy lends the hub token only to this dev server on this machine', () => {
+    expect(isLocalDevRequest({ origin: 'http://localhost:7190' }, 7190)).toBe(true);
+    expect(isLocalDevRequest({ origin: 'http://127.0.0.1:7190' }, 7190)).toBe(true);
+    expect(isLocalDevRequest({ host: 'localhost:7190' }, 7190)).toBe(true);
+    expect(isLocalDevRequest({ origin: 'http://evil.example' }, 7190)).toBe(false);
+    expect(isLocalDevRequest({ origin: 'http://localhost:8080' }, 7190)).toBe(false);
+    expect(isLocalDevRequest({ origin: 'null' }, 7190)).toBe(false);
+    // a cross-origin page cannot borrow it by sending a local Host: Origin wins
+    expect(isLocalDevRequest({ origin: 'http://evil.example', host: 'localhost:7190' }, 7190)).toBe(
+      false
+    );
+    expect(isLocalDevRequest({ host: '100.126.70.25:7190' }, 7190)).toBe(false);
+    expect(isLocalDevRequest({}, 7190)).toBe(false);
   });
 });
 

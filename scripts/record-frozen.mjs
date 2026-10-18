@@ -14,6 +14,9 @@
  *     [--hub http://100.126.70.25:7191] [--token-file ~/.config/appyrig/token] [--listen 6]
  *     [--handoffs 60] [--keep-tail 12]
  *
+ * Scrub: every string is scrubbed before writing (emails -> user@example, token-shaped strings and
+ * the hub token -> <redacted-token>). `--scrub <file>` re-scrubs an existing snapshot in place.
+ *
  * Size control (the file is committed): seat terminal tails are cut to the last --keep-tail lines,
  * `seat.get` / `seat.history` text is cut the same way, and `handoff.get` is recorded for the newest
  * --handoffs queue rows per machine. What was cut is written into the file's `stripped` field.
@@ -33,9 +36,64 @@ function arg(name, fallback) {
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
+// ── scrub: nothing personal or secret goes into a committed snapshot ────────────────────────────
+const SCRUBS = [
+  // email addresses (a seat id like dev-build@rig has no dot-TLD; file names like x@rig.md are kept)
+  [
+    /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.(?!(?:md|ts|tsx|js|mjs|json|ya?ml|txt)\b)[A-Za-z]{2,}\b/g,
+    'user@example',
+  ],
+  // token-shaped strings: Anthropic / OpenAI keys, GitHub tokens, Slack tokens, AWS key ids
+  [/\bsk-[A-Za-z0-9_-]{16,}/g, '<redacted-token>'],
+  [/\bgh[pousr]_[A-Za-z0-9]{20,}/g, '<redacted-token>'],
+  [/\bxox[abprs]-[A-Za-z0-9-]{10,}/g, '<redacted-token>'],
+  [/\bAKIA[0-9A-Z]{16}\b/g, '<redacted-token>'],
+  // bearer values, and long hex secrets (the hub token is 48 hex; 40-hex commit ids are kept)
+  [/(Bearer\s+)[A-Za-z0-9._~+/=-]{16,}/g, '$1<redacted-token>'],
+  [/\b[0-9a-f]{48,}\b/gi, '<redacted-token>'],
+];
+let scrubbed = 0;
+function scrubText(s, secrets = []) {
+  let out = s;
+  for (const secret of secrets)
+    if (secret && out.includes(secret)) out = out.split(secret).join('<redacted-token>');
+  for (const [re, to] of SCRUBS) out = out.replace(re, to);
+  if (out !== s) scrubbed += 1;
+  return out;
+}
+function scrubDeep(v, secrets) {
+  if (typeof v === 'string') return scrubText(v, secrets);
+  if (Array.isArray(v)) return v.map((x) => scrubDeep(x, secrets));
+  if (v && typeof v === 'object')
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scrubDeep(x, secrets)]));
+  return v;
+}
+
+// `--scrub <file>`: scrub an already-recorded snapshot in place (no hub, no re-record).
+const scrubPath = arg('scrub');
+if (scrubPath) {
+  let secrets = [];
+  try {
+    secrets = [
+      readFileSync(
+        arg('token-file', path.join(homedir(), '.config', 'appyrig', 'token')),
+        'utf8'
+      ).trim(),
+    ];
+  } catch {
+    // no token file: the patterns still run
+  }
+  const file = scrubDeep(JSON.parse(readFileSync(scrubPath, 'utf8')), secrets);
+  writeFileSync(scrubPath, `${JSON.stringify(file)}\n`);
+  console.log(`scrubbed ${scrubPath}: ${scrubbed} strings changed`);
+  process.exit(0);
+}
+
 const name = arg('name');
 if (!name || !/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-  console.error('usage: record-frozen.mjs --name <kebab-name> [--hub url] [--token-file path]');
+  console.error(
+    'usage: record-frozen.mjs --name <kebab-name> [--hub url] [--token-file path] | --scrub <file>'
+  );
   process.exit(2);
 }
 const hub = arg('hub', 'http://100.126.70.25:7191');
@@ -264,7 +322,7 @@ async function main() {
   };
   mkdirSync(OUT_DIR, { recursive: true });
   const out = path.join(OUT_DIR, `${name}.json`);
-  writeFileSync(out, `${JSON.stringify(file)}\n`);
+  writeFileSync(out, `${JSON.stringify(scrubDeep(file, [token]))}\n`);
   const kb = Math.round(Buffer.byteLength(JSON.stringify(file)) / 1024);
   console.log(
     `wrote ${path.relative(ROOT, out)} · ${kb} KB · ${machines.size} machines · ${Object.keys(file.calls).length} verb answers · ${updates} updates seen`

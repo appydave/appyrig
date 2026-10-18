@@ -30,7 +30,7 @@ import { buildRigMap, listRigs } from './fleet/views.js';
 import { followWork } from './fleet/timeline.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
 import { useV2 } from './v2/useV2.js';
-import type { FrozenMeta } from './v2/frozen/frozenSocket.js';
+import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
 
 const GROUP_KEY = 'appyrig.groupBy';
 const FOLLOW_KEY = 'appyrig.followLatest';
@@ -142,7 +142,7 @@ interface Props {
 
 export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const { state, link } = useFleet(getSocket);
-  const now = useNow();
+  const now = frozenNow(useNow(), frozen);
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
   const [view, setView] = useState<View>(readView);
   const [explain, setExplain] = useState<boolean>(readExplain);
@@ -504,7 +504,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const v2 = useV2({
     view,
     chooseView,
-    keys: !focusTile && !overlay,
+    keys: !focused && !agentTile && !overlay,
     frozen,
     ctx: {
       machines,
@@ -519,7 +519,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       hubConnected,
       received: state.received,
       getSocket,
-      keys: !focusTile && !overlay,
+      keys: !focused && !agentTile && !overlay,
       hidden: hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label })),
       onShowMachine: toggleMachine,
       onOpenSeat: open,

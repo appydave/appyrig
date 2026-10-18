@@ -60,6 +60,10 @@
   background: var(--ar-blocked-bg);
   color: var(--ar-blocked-ink);
   white-space: nowrap;
+  /* never wraps the header: long names are cut, the full text is in the title */
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Grouped nav (C6): four groups, then the pages of one group. */

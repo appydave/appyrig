@@ -7,9 +7,10 @@ export const FROZEN_PARAM = 'frozen';
  * The committed snapshots (`test/fixtures/frozen/*.json`), each its own lazy chunk: nothing is
  * fetched unless the address names one with `?frozen=<name>`.
  */
-const FILES = import.meta.glob<FrozenFile>('../../../../test/fixtures/frozen/*.json', {
-  import: 'default',
-});
+const FILES: Record<string, () => Promise<FrozenFile>> = import.meta.env.DEV
+  ? import.meta.glob<FrozenFile>('../../../../test/fixtures/frozen/*.json', { import: 'default' })
+  : // Dev only: a production build ships no snapshot. Preview frozen data with the dev client.
+    {};
 
 export function frozenNames(): string[] {
   return Object.keys(FILES)
@@ -73,6 +74,7 @@ export async function loadFrozen(
     meta: {
       name,
       recordedAt: file.recordedAt || null,
+      loadedAt: Date.now(),
       ...(problem ? { problem } : {}),
       ...(file.stripped ? { stripped: file.stripped } : {}),
     },
