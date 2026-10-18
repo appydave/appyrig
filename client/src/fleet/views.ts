@@ -44,9 +44,12 @@ export interface Endpoint {
  * One helper for every caller so the forms cannot drift apart.
  */
 export function seatAddresses(seat: Seat): string[] {
-  const out = [seat.id];
-  if (seat.logicalId) out.push(seat.logicalId, `${seat.logicalId}@${seat.rig}`);
-  return out;
+  return [seat.id, ...logicalAddresses(seat)];
+}
+
+/** Logical forms only (no session id): `desk.planner` and `desk.planner@ylo-desk`. */
+function logicalAddresses(seat: Seat): string[] {
+  return seat.logicalId ? [seat.logicalId, `${seat.logicalId}@${seat.rig}`] : [];
 }
 
 export function seatAnswersTo(seat: Seat, raw: string): boolean {
@@ -65,19 +68,28 @@ export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachi
   // pick deterministically: home wins; else the single machine that has it; else the single live one;
   // else several candidates mean we do not guess (unplaced). A full logical-id match beats the
   // `name@machineId` reading below.
+  // Session ids are matched on the home machine only (above): elsewhere `name@machineId` keeps its
+  // meaning. So the cross-machine loop matches logical forms only. Two seats on one machine that
+  // answer to the same bare logical id are ambiguous: we do not guess.
+  const unplaced = (): Endpoint => ({
+    key: `?/${raw}`,
+    raw,
+    name: raw.split('@')[0] || raw,
+    machineId: null,
+    seat: null,
+  });
   const hits: { fm: FleetMachine; seat: Seat }[] = [];
   for (const fm of [home, ...all.filter((m) => m !== home)]) {
-    const seat = fm.snapshot.seats.find((x) => seatAnswersTo(x, raw));
-    if (seat) hits.push({ fm, seat });
+    const found = fm.snapshot.seats.filter((x) => logicalAddresses(x).includes(raw));
+    if (found.length > 1 && fm === home) return unplaced();
+    for (const seat of found) hits.push({ fm, seat });
   }
   const homeHit = hits.find((h) => h.fm === home);
   if (homeHit) return endpointOf(raw, homeHit.fm, homeHit.seat);
   const live = hits.filter((h) => h.fm.liveness === 'live');
   const pick = hits.length === 1 ? hits : live;
   if (pick.length === 1) return endpointOf(raw, pick[0]!.fm, pick[0]!.seat);
-  if (hits.length > 1) {
-    return { key: `?/${raw}`, raw, name: raw.split('@')[0] || raw, machineId: null, seat: null };
-  }
+  if (hits.length > 1) return unplaced();
   const at = raw.lastIndexOf('@');
   if (at > 0) {
     const name = raw.slice(0, at);
@@ -231,8 +243,10 @@ export function endpointRig(fm: FleetMachine, raw: string | null): string | null
   let rigs = seatRigs.get(fm.snapshot);
   if (!rigs) {
     rigs = new Map<string, string | null>();
-    for (const s of fm.snapshot.seats) if (s.logicalId) rigs.set(s.logicalId, s.rig);
-    for (const s of fm.snapshot.seats) if (s.logicalId) rigs.set(`${s.logicalId}@${s.rig}`, s.rig);
+    // A logical form shared by seats in different rigs is ambiguous: null, same as resolveEndpoint.
+    for (const s of fm.snapshot.seats)
+      for (const a of logicalAddresses(s))
+        rigs.set(a, rigs.has(a) && rigs.get(a) !== s.rig ? null : s.rig);
     for (const s of fm.snapshot.seats) rigs.set(s.id, s.rig);
     seatRigs.set(fm.snapshot, rigs);
   }

@@ -861,6 +861,7 @@ describe('ui-d-logical: the collector reports logicalId WITHOUT the @rig suffix'
   });
 });
 
+// Legacy fixture shape (logicalId with @rig), kept as a regression.
 describe('ui-c-placed: one seat addressed by session name and by logical id', () => {
   const T = '2026-10-10T07:50:00.000Z';
   const setup = () => {
@@ -949,5 +950,48 @@ describe('ui-c-placed: one seat addressed by session name and by logical id', ()
     const map = buildRigMap([fm], 'm2:fliedit-team', NOW)!;
     const np = map.lanes.find((l) => l.label === 'Not placed')!;
     expect(np.pods.map((p) => p.name)).toEqual(['seats']);
+  });
+});
+
+describe('ui-d-logical: ambiguity and cross-machine forms', () => {
+  const mkSeat = (base: Seat, id: string, rig: string, logicalId = 'dev.qa'): Seat => ({
+    ...base,
+    id,
+    rig,
+    pod: 'dev',
+    logicalId,
+  });
+
+  it('two rigs on one machine with the same logicalId: @rig picks, bare is unplaced', () => {
+    const fm = m2();
+    const base = fm.snapshot.seats[0]!;
+    const a = mkSeat(base, 'qa-a', 'rigA');
+    const b = mkSeat(base, 'qa-b', 'rigB');
+    fm.snapshot.seats = [a, b];
+    expect(resolveEndpoint('dev.qa@rigA', fm, [fm]).seat?.id).toBe('qa-a');
+    expect(resolveEndpoint('dev.qa@rigB', fm, [fm]).seat?.id).toBe('qa-b');
+    expect(resolveEndpoint('dev.qa', fm, [fm]).seat).toBeNull();
+    expect(endpointRig(fm, 'dev.qa@rigA')).toBe('rigA');
+    expect(endpointRig(fm, 'dev.qa@rigB')).toBe('rigB');
+    expect(endpointRig(fm, 'dev.qa')).toBeNull();
+  });
+
+  it('a logicalId@rig address finds a seat on another machine (live shape)', () => {
+    const home = roamy();
+    const fm = m2();
+    fm.snapshot.seats = [mkSeat(fm.snapshot.seats[0]!, 'd10-cuts', 'ylo-desk', 'desk.planner')];
+    const ep = resolveEndpoint('desk.planner@ylo-desk', home, [home, fm]);
+    expect(ep.machineId).toBe(fm.machine.id);
+    expect(ep.seat?.id).toBe('d10-cuts');
+  });
+
+  it('a session id on another machine is NOT matched bare: name@machineId keeps its meaning', () => {
+    const home = roamy();
+    const fm = m2();
+    fm.snapshot.seats = [mkSeat(fm.snapshot.seats[0]!, 'remote-seat', 'r', 'x.y')];
+    expect(resolveEndpoint('remote-seat', home, [home, fm]).seat).toBeNull();
+    expect(resolveEndpoint(`remote-seat@${fm.machine.id}`, home, [home, fm]).seat?.id).toBe(
+      'remote-seat'
+    );
   });
 });
