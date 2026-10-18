@@ -1,0 +1,320 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { FLEET_EVENTS } from '@appydave/shared';
+import App from '../App.js';
+import { callVerb } from '../fleet/coreCall.js';
+import { applyFleetUpdate, initialFleetState } from '../fleet/store.js';
+import { useFleet, type FleetSocket } from '../fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
+import {
+  callKey,
+  createFrozenSocket,
+  frozenAnswer,
+  type FrozenFile,
+} from './frozen/frozenSocket.js';
+import { loadFrozen } from './frozen/load.js';
+import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from './kit/index.js';
+import { CURRENT_VIEWS, navGroups, navLabel, plannedPages, v2PageFor } from './registry.js';
+import { MODE_KEY, modeFromSearch, readMode, searchWithMode } from './version.js';
+
+vi.mock('@xterm/xterm', () => ({
+  Terminal: class {
+    attachCustomKeyEventHandler() {}
+    loadAddon() {}
+    open() {}
+    reset() {}
+    write() {}
+    dispose() {}
+  },
+}));
+vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
+
+type Handler = (...args: unknown[]) => void;
+
+/** A live-socket stand-in that records every emit, so a test can prove nothing was sent. */
+function spySocket() {
+  const handlers = new Map<string, Set<Handler>>();
+  const sent: string[] = [];
+  const s = {
+    connected: true,
+    on(ev: string, h: Handler) {
+      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      handlers.get(ev)!.add(h);
+      return s;
+    },
+    off(ev: string, h: Handler) {
+      handlers.get(ev)?.delete(h);
+      return s;
+    },
+    emit: vi.fn((ev: string) => sent.push(ev)),
+    timeout: vi.fn(() => ({
+      emit: (_ev: string, req: { verb: string }) => sent.push(req.verb),
+    })),
+  };
+  const fire = (ev: string, ...args: unknown[]) =>
+    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+  return { socket: s as unknown as FleetSocket, fire, sent, raw: s };
+}
+
+function renderLive() {
+  const spy = spySocket();
+  const getSocket = () => spy.socket;
+  render(<App getSocket={getSocket} />);
+  spy.fire(
+    FLEET_EVENTS.UPDATE,
+    update([fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))])
+  );
+  return spy;
+}
+
+const press = (key: string) => fireEvent.keyDown(document.body, { key });
+
+beforeEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    /* ignore */
+  }
+  history.replaceState(null, '', '/');
+});
+
+describe('v2 version switch', () => {
+  it('reads ?v=2 from the address before the remembered choice', () => {
+    expect(modeFromSearch('?v=2')).toBe('v2');
+    expect(modeFromSearch('?v=current')).toBe('current');
+    expect(modeFromSearch('?frozen=x')).toBeNull();
+    localStorage.setItem(MODE_KEY, 'v2');
+    expect(readMode('')).toBe('v2');
+    expect(readMode('?v=1')).toBe('current');
+    expect(searchWithMode('?frozen=a', 'v2')).toBe('?frozen=a&v=2');
+    expect(searchWithMode('?frozen=a&v=2', 'current')).toBe('?frozen=a');
+  });
+
+  it('Current renders exactly the old tab strip and no v2 nav', () => {
+    renderLive();
+    const tabs = screen.getByRole('navigation', { name: 'Screens' });
+    expect(tabs).not.toHaveAttribute('hidden');
+    expect([...tabs.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
+      'The Wall',
+      'Rig Map',
+      'Handoff Flow',
+      'Run Timeline',
+      'Accounts',
+      'Machines',
+      'OpenRig DB',
+      'Learn',
+    ]);
+    expect(screen.queryByTestId('v2-nav')).toBeNull();
+    expect(screen.queryByTestId('v2-wall-banner')).toBeNull();
+    expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('V switches to v2, writes ?v=2 and remembers it; a reload comes back in v2', () => {
+    renderLive();
+    press('v');
+    expect(location.search).toBe('?v=2');
+    expect(localStorage.getItem(MODE_KEY)).toBe('v2');
+    expect(screen.getByTestId('v2-nav')).toBeInTheDocument();
+    expect(document.querySelector('nav.view-tabs')).toHaveAttribute('hidden');
+    expect(screen.getByTestId('v2-wall-banner')).toBeInTheDocument();
+    // "reload": the address is cleared, the stored choice still says v2
+    history.replaceState(null, '', '/');
+    expect(readMode()).toBe('v2');
+    press('v');
+    expect(location.search).toBe('');
+    expect(localStorage.getItem(MODE_KEY)).toBe('current');
+  });
+
+  it('v2 nav is grouped and shows Current pages without a v2 as "no v2 yet"', () => {
+    history.replaceState(null, '', '/?v=2');
+    renderLive();
+    // Agents has no registered page yet (W2 adds the Agent page), so its group waits.
+    expect(screen.getAllByTestId(/^v2-group-/).map((b) => b.textContent)).toEqual([
+      'Fleet',
+      'Work',
+      'Under the hood',
+    ]);
+    fireEvent.click(screen.getByTestId('v2-group-work'));
+    fireEvent.click(screen.getByTestId('v2-page-flow'));
+    expect(screen.getByTestId('v2-no-v2')).toHaveTextContent('No v2 yet for Handoff Flow');
+    expect(screen.getByTestId('view-body-flow')).toBeInTheDocument();
+  });
+});
+
+describe('v2 per-page flip', () => {
+  it('B flips the Wall between old and new and keeps the picked rig', () => {
+    renderLive();
+    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(
+      screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === 'roamy:kernel')!
+    );
+    fireEvent.click(screen.getByTestId('view-wall'));
+    expect(screen.getByTestId('wall-only-rig')).toHaveTextContent('Only kernel (Roamy)');
+    press('b');
+    expect(screen.getByTestId('v2-wall-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'new');
+    expect(screen.getByTestId('wall-only-rig')).toHaveTextContent('Only kernel (Roamy)');
+    press('b');
+    expect(screen.queryByTestId('v2-wall-banner')).toBeNull();
+    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
+    // the flip is per page: leaving the page forgets it
+    press('b');
+    fireEvent.click(screen.getByTestId('view-flow'));
+    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
+    const chosen = screen
+      .getAllByTestId('rig-chip')
+      .find((c) => c.getAttribute('aria-pressed') === 'true');
+    expect(chosen?.dataset.rigKey).toBe('roamy:kernel');
+  });
+
+  it('on a v2-only page the flip says there is no old version and stays put; Esc goes back', async () => {
+    history.replaceState(null, '', '/?v=2');
+    renderLive();
+    fireEvent.click(screen.getByTestId('v2-group-hood'));
+    fireEvent.click(screen.getByTestId('v2-page-about'));
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    press('b');
+    expect(screen.getByTestId('v2-flip-note')).toHaveTextContent('no old version');
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    press('Escape');
+    await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
+    expect(screen.getByTestId('v2-wall-banner')).toBeInTheDocument();
+  });
+});
+
+const tinyFile = (): FrozenFile => ({
+  format: 'appyrig-frozen/1',
+  name: 'tiny',
+  recordedAt: '2026-10-18T12:00:00.000Z',
+  update: update([fleetMachine(snapshot('roamy'))]),
+  calls: {
+    [callKey('rig.files', { rig: 'kernel', machine: 'roamy' })]: { $frozenRef: 'r0' },
+  },
+  refs: { r0: { ok: true, value: { status: 'ok', files: [] } } },
+});
+
+describe('frozen-data mode', () => {
+  it('the frozen socket replays the recorded payload into useFleet', async () => {
+    const socket = createFrozenSocket(tinyFile());
+    const getSocket = () => socket;
+    const { result } = renderHook(() => useFleet(getSocket));
+    expect(result.current.link).toBe('connected');
+    await waitFor(() => expect(result.current.state.received).toBe(true));
+    expect(Object.keys(result.current.state.machines)).toEqual(['roamy']);
+  });
+
+  it('a frozen verb call resolves from the snapshot, or refuses at once (never hangs)', async () => {
+    const socket = createFrozenSocket(tinyFile());
+    const hit = await callVerb(socket, 'rig.files', { machine: 'roamy', rig: 'kernel' });
+    expect(hit).toEqual({ ok: true, value: { status: 'ok', files: [] } });
+    const t0 = Date.now();
+    const miss = await callVerb(socket, 'db.rows', { machine: 'roamy', table: 'x' });
+    expect(miss.ok).toBe(false);
+    if (!miss.ok) expect(miss.error.failureMode).toBe('not_in_snapshot');
+    expect(Date.now() - t0).toBeLessThan(1000);
+  });
+
+  it('a missing snapshot name still runs: empty fleet and the reason', async () => {
+    const run = await loadFrozen('nope', {});
+    expect(run.meta.problem).toContain('no snapshot named "nope"');
+    const a = await callVerb(run.getSocket(), 'seat.get', { machine: 'm2', seat: 'x' });
+    expect(a.ok).toBe(false);
+  });
+
+  it('the header names the snapshot and its time', () => {
+    const socket = createFrozenSocket(tinyFile());
+    render(
+      <App
+        getSocket={() => socket}
+        frozen={{ name: 'tiny', recordedAt: '2026-10-18T12:00:00.000Z' }}
+      />
+    );
+    expect(screen.getByTestId('frozen-badge')).toHaveTextContent(/FROZEN: tiny · recorded/);
+  });
+
+  it('the shipped busy snapshot is a valid fleet update with answers for its running rigs', () => {
+    const file = JSON.parse(
+      readFileSync(
+        path.resolve(__dirname, '../../../test/fixtures/frozen/busy-2026-10-18.json'),
+        'utf8'
+      )
+    ) as FrozenFile;
+    const state = applyFleetUpdate(initialFleetState, file.update);
+    expect(state.error).toBeNull();
+    expect(Object.keys(state.machines).sort()).toEqual(['m2', 'm4', 'roamy']);
+    const rig = state.machines.m4!.snapshot.rigs.find((r) => r.status === 'running')!;
+    const files = frozenAnswer(file, {
+      verb: 'rig.files',
+      input: { machine: 'm4', rig: rig.name },
+    });
+    expect(files.ok).toBe(true);
+    const seat = state.machines.m4!.snapshot.seats.find((s) => s.rig === rig.name)!;
+    const loadout = frozenAnswer(file, {
+      verb: 'seat.loadout',
+      input: { machine: 'm4', seat: seat.id },
+    });
+    expect(loadout.ok).toBe(true);
+    expect(JSON.stringify(loadout)).not.toContain('$frozenRef');
+  });
+});
+
+describe('v2 kit', () => {
+  it('FakeControl walks confirm → progress → result and never touches the socket', async () => {
+    history.replaceState(null, '', '/?v=2');
+    const spy = renderLive();
+    fireEvent.click(screen.getByTestId('v2-group-hood'));
+    fireEvent.click(screen.getByTestId('v2-page-about'));
+    const before = spy.sent.length;
+    const timeoutCalls = spy.raw.timeout.mock.calls.length;
+    const emitCalls = spy.raw.emit.mock.calls.length;
+    const fake = screen.getByTestId('fake-control');
+    expect(fake).toHaveAttribute('data-phase', 'idle');
+    fireEvent.click(fake.querySelector('button')!);
+    expect(fake).toHaveAttribute('data-phase', 'confirm');
+    fireEvent.click(screen.getByTestId('fake-confirm'));
+    expect(fake).toHaveAttribute('data-phase', 'working');
+    await waitFor(() => expect(screen.getByTestId('fake-result')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
+    expect(screen.getByTestId('fake-result')).toHaveTextContent('restored (pretend)');
+    expect(spy.sent.length).toBe(before);
+    expect(spy.raw.timeout.mock.calls.length).toBe(timeoutCalls);
+    expect(spy.raw.emit.mock.calls.length).toBe(emitCalls);
+    expect(fake.querySelector('[data-testid="mock-mark"]')).toHaveAttribute('title', MOCK_TEXT);
+  });
+
+  it('SampleData is labelled and builds from real names', () => {
+    const machines = [fleetMachine(snapshot('roamy'))];
+    const names = realNames(machines);
+    expect(names.machines[0]!.id).toBe('roamy');
+    expect(names.seats.length).toBeGreaterThan(0);
+    render(
+      <SampleData title="t" what="made up">
+        <MockMark />
+      </SampleData>
+    );
+    expect(screen.getByTestId('sample-label')).toHaveTextContent('sample data');
+  });
+
+  it('FakeControl can be cancelled', () => {
+    render(<FakeControl label="Launch" question="Launch?" result="Launched" />);
+    fireEvent.click(screen.getByText('Launch'));
+    fireEvent.click(screen.getByTestId('fake-cancel'));
+    expect(screen.getByTestId('fake-control')).toHaveAttribute('data-phase', 'idle');
+  });
+});
+
+describe('v2 registry', () => {
+  it('every v2 page is reachable from the grouped nav, and planned pages wait their turn', () => {
+    const inNav = navGroups().flatMap((g) => g.pages);
+    for (const v of CURRENT_VIEWS) expect(inNav).toContain(v);
+    expect(inNav).toContain('about');
+    expect(v2PageFor('wall')?.label).toBe('Wall');
+    expect(plannedPages()).toContain('needs-you');
+    expect(navLabel('needs-you')).toBe('Needs You');
+    expect(navLabel('map')).toBe('Graph');
+    expect(inNav).not.toContain('needs-you');
+  });
+});
