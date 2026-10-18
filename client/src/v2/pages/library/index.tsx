@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
-  DataNotes,
+  Coverage,
   Loading,
-  SampleWhy,
   pick,
   useMachineLabel,
   useVerb,
@@ -127,17 +126,14 @@ function Library({ ctx }: V2PageProps) {
         />
       </p>
       {src.kind === 'loading' && <Loading what="the library" />}
-      {src.kind === 'sample' && <SampleWhy why={src.why} />}
-      {src.kind === 'live' && (
-        <>
-          <DataNotes notes={src.notes} />
-          {src.value.truncated && (
-            <p className="quiet">
-              Showing {src.value.items.length} of {src.value.total} items.
-            </p>
-          )}
-        </>
-      )}
+      <Coverage
+        src={src}
+        tail={
+          src.kind === 'live' && src.value.truncated
+            ? `showing ${src.value.items.length} of ${src.value.total} items`
+            : undefined
+        }
+      />
       {src.kind !== 'loading' && (
         <SampleWrap sample={!live}>
           <div className="lib-controls">

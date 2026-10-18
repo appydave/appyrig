@@ -1,0 +1,46 @@
+/* The one-line data coverage pattern (v2 pages): a quiet line with the details behind a disclosure. */
+.cov {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--ar-ink-muted, #6b6258);
+}
+.cov-sample .cov-line {
+  color: var(--ar-blocked-ink);
+}
+.cov-details summary {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.cov-details {
+  flex-basis: 100%;
+}
+.cov-details > * {
+  margin: 4px 0 4px 12px;
+}
+.cov-details ul {
+  padding-left: 16px;
+}
+.hl2-summary {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 4px 0 8px;
+  padding: 0;
+  font-size: 13px;
+}
+
+.ms-doc-md {
+  max-height: 220px;
+  overflow: auto;
+  margin: 6px 0;
+  padding: 4px 12px;
+  border: 1px solid var(--ar-line, #ddd3c0);
+  border-radius: 6px;
+  background: var(--ar-surface-raised);
+  font-size: 13px;
+}

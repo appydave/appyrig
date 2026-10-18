@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
+import MarkdownView from '../../../components/MarkdownView.js';
+import '../../data/coverage.css';
 import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
@@ -77,7 +79,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'
         No MISSION.md found in its rigs&apos; folders (or no collector has sent one).
       </p>
     );
-  const { title, lead } = missionDocSummary(doc.text);
+  const { title } = missionDocSummary(doc.text);
   return (
     <div className="ms-doc" data-testid="ms-doc">
       <p>
@@ -90,7 +92,9 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'
           Open its files
         </button>
       </p>
-      <p className="quiet">{lead}</p>
+      <div className="ms-doc-md" data-testid="ms-doc-md">
+        <MarkdownView source={doc.text} />
+      </div>
     </div>
   );
 }
@@ -241,8 +245,8 @@ function Missions({ ctx }: V2PageProps) {
         open means a seat still holds it.
       </p>
       {unresolved > 0 && (
-        <p className="v2-note v2-note-warn" data-testid="ms-unresolved">
-          {unresolved} jobs carry a slice tag but no mission tag, so they belong to no mission: they
+        <p className="quiet" data-testid="ms-unresolved">
+          {unresolved} jobs carry a slice tag but no mission tag, so they belong to no mission. They
           are listed below as unattributed jobs, with no progress.
         </p>
       )}
