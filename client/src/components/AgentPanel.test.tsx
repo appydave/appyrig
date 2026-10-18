@@ -196,6 +196,47 @@ describe('D15 UI-B: the agent panel opens on its documents', () => {
     await waitFor(() => expect(screen.getAllByTestId('agent-doc').length).toBeGreaterThan(0));
   });
 
+  it('counts a row addressed by the logical id (pod.member@rig), as the Map does', () => {
+    const base = fleetMachine(snapshot('m2'));
+    const row = {
+      id: 'lg1',
+      source: 'orch.lead@fliedit-team',
+      destination: 'dev.qa@fliedit-team',
+      state: 'done',
+      priority: null,
+      tags: [],
+      summary: 'logical-id row',
+      createdAt: at,
+      updatedAt: at,
+    };
+    const fm = { ...base, snapshot: { ...base.snapshot, queue: [row] } };
+    const t = findSeat({ [fm.machine.id]: fm }, seatKey(fm.machine.id, seat.id))!;
+    const { socket } = socketWith(answers);
+    render(<AgentPanel tile={t} socket={socket} now={0} hubConnected onClose={vi.fn()} />);
+    expect(screen.getByTestId('agent-tab-messages')).toHaveTextContent('Messages · 1');
+    fireEvent.click(screen.getByTestId('agent-tab-messages'));
+    expect(screen.getByTestId('agent-message')).toHaveTextContent('→ dev.qa@fliedit-team');
+  });
+
+  it('a layer that is present but has no content is listed as not present', async () => {
+    const { socket } = socketWith((verb, input) => {
+      const a = answers(verb, input) as {
+        ok: true;
+        value: { loadout: { layers: LoadoutLayer[] } };
+      };
+      if (verb === 'seat.loadout')
+        a.value.loadout.layers.push(layer({ id: 'learned', name: 'LEARNED.md', content: null }));
+      return a;
+    });
+    render(<AgentPanel tile={tile} socket={socket} now={0} hubConnected onClose={vi.fn()} />);
+    await waitFor(() =>
+      expect(screen.getByTestId('agent-docs-absent')).toHaveTextContent('LEARNED.md')
+    );
+    expect(
+      screen.getAllByTestId('agent-doc').map((d) => d.querySelector('b')!.textContent)
+    ).not.toContain('LEARNED.md');
+  });
+
   it('a refused document list is said, not hidden', async () => {
     const { socket } = socketWith(() => ({
       ok: false,

@@ -230,7 +230,7 @@ export default function AgentPanel({
       bytes: l.bytes ?? 0,
       truncated: l.truncated,
     }));
-  const absentLayers = layers.filter((l) => !l.present);
+  const absentLayers = layers.filter((l) => !(l.present && l.content !== null));
   const fileDocs: Doc[] =
     files.state === 'ok'
       ? files.out.files.map((f) => ({
@@ -300,12 +300,21 @@ export default function AgentPanel({
     () => (tab === 'terminal' && seat.tail ? visibleTail(seat.tail.lines, Infinity) : []),
     [tab, seat.tail]
   );
+  // A row may address the seat by its session id or by its logical id (`dev.qa@rig`).
+  const mine = useMemo(() => {
+    const ids = new Set([seat.id]);
+    if (seat.logicalId) {
+      ids.add(seat.logicalId);
+      if (seat.rig) ids.add(`${seat.logicalId}@${seat.rig}`);
+    }
+    return ids;
+  }, [seat.id, seat.logicalId, seat.rig]);
   const messages: QueueItem[] = useMemo(
     () =>
       machine.snapshot.queue
-        .filter((q) => q.destination === seat.id || q.source === seat.id)
+        .filter((q) => mine.has(q.destination ?? '') || mine.has(q.source ?? ''))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    [machine.snapshot.queue, seat.id]
+    [machine.snapshot.queue, mine]
   );
 
   const docButton = (d: Doc) => (
@@ -513,7 +522,7 @@ export default function AgentPanel({
               <span>{q.summary || q.tags.join(', ') || q.id}</span>
               <span className="fresh">{q.state}</span>
               <span className="mono">
-                {q.source === seat.id ? `→ ${q.destination ?? '?'}` : `← ${q.source ?? '?'}`}
+                {mine.has(q.source ?? '') ? `→ ${q.destination ?? '?'}` : `← ${q.source ?? '?'}`}
               </span>
               <span className="mono">{ago(now - Date.parse(q.updatedAt))} ago</span>
             </div>

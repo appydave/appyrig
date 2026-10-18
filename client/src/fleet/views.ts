@@ -631,15 +631,27 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   if (!range) return null;
   const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
+  // An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name.
+  const nameOf = (raw: string | null): string => {
+    const seat = raw
+      ? rigSeats.find(
+          (x) =>
+            x.id === raw ||
+            x.logicalId === raw ||
+            (x.logicalId !== null && x.logicalId !== undefined && `${x.logicalId}@${rig}` === raw)
+        )
+      : undefined;
+    return seat ? seatName(seat) : bare(raw);
+  };
   const mode = flowModeOf([
     ...rigSeats.map(seatName),
-    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(bare)),
+    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(nameOf)),
   ]);
 
   // Seats mode: one node per endpoint, in the order each first handed work on; the overflow
   // shares an "others" node.
   const seatOrder: string[] = [];
-  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? bare(raw) : (raw ?? '?'));
+  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? nameOf(raw) : (raw ?? '?'));
   if (mode === 'seats') {
     const counts = new Map<string, number>();
     for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
@@ -665,7 +677,7 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   const hasOutside =
     mode === 'roles' && items.some((q) => !inRig(q.source) || !inRig(q.destination));
   const nodeOf = (raw: string | null): string => {
-    if (mode === 'roles') return inRig(raw) ? stageOf(bare(raw)) : OUTSIDE;
+    if (mode === 'roles') return inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE;
     const id = nodeOfRaw(raw);
     return seatOrder.includes(id) ? id : 'others';
   };
@@ -732,7 +744,7 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   const hasLead =
     rigSeats.some((s) => stageOf(seatName(s)) === 'lead') ||
     items.some((q) =>
-      [q.source, q.destination].some((raw) => inRig(raw) && stageOf(bare(raw)) === 'lead')
+      [q.source, q.destination].some((raw) => inRig(raw) && stageOf(nameOf(raw)) === 'lead')
     );
   const stages: FlowStageView[] = order.map((id) => {
     const w = waiting.get(id) ?? [];

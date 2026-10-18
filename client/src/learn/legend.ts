@@ -444,7 +444,7 @@ const FLOW: LegendSection[] = [
         term: 'handoff',
         mark: 'Handoff details (right) · Panel shows: On click | Follow pointer',
         means:
-          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box lists its handoffs in and out. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes. Keys: J / K older / newer handoff, ] / [ next / previous line.',
+          'Click (or Tab + Enter) a line, a dot or a box: who handed what to whom, when, its state, and the full message; a box with several agents lists its handoffs in and out with a button per agent, and a box with one agent opens the panel of that agent. Pointing only floats a small card. "Follow pointer" makes the panel follow the pointer instead. The panel keeps one size, so nothing moves. Esc closes. Keys: J / K older / newer handoff, ] / [ next / previous line.',
       },
     ],
   },

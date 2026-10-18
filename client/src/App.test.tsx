@@ -1308,6 +1308,32 @@ describe('App: S4 handoff details + where work came in', () => {
     );
   });
 
+  it('D15 UI-B: one Esc with Notes open over the panel closes only Notes', async () => {
+    flowWith(docAnswers);
+    fireEvent.click(
+      screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'lead')!
+    );
+    fireEvent.click(screen.getByTestId('notes-open'));
+    expect(screen.getByTestId('feedback-notes')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('feedback-notes')).toBeNull();
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+  });
+
+  it('D15 UI-B: the panel closes on the Timeline and when another rig is chosen', async () => {
+    flowWith(docAnswers);
+    const open = () =>
+      fireEvent.click(
+        screen.getAllByTestId('flow-stage').find((g) => g.getAttribute('data-stage') === 'lead')!
+      );
+    open();
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('view-timeline'));
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+  });
+
   it('D15 UI-B: Esc closes the agent panel and not the screen under it', async () => {
     flowWith(docAnswers);
     fireEvent.click(

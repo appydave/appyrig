@@ -397,6 +397,36 @@ describe('Handoff Flow', () => {
     expect(flow.stages.find((s) => s.stage === 'lead')!.noLead).toBe(true);
   });
 
+  it("MEDIUM-4: in-rig addresses given as logical ids land in their seat's stage (no build→build self-edge)", () => {
+    const fm = withAccount(m2(), undefined);
+    const r = 'fliedit-team';
+    fm.snapshot.queue = [
+      q({ id: 'a', source: `orch.lead@${r}`, destination: `dev.overlay@${r}` }),
+      q({
+        id: 'b',
+        source: `dev.overlay@${r}`,
+        destination: `dev.qa@${r}`,
+        createdAt: '2026-10-09T10:10:00.000Z',
+      }),
+      q({
+        id: 'c',
+        source: `dev.qa@${r}`,
+        destination: `review.r1@${r}`,
+        createdAt: '2026-10-09T10:20:00.000Z',
+      }),
+    ];
+    const flow = buildFlow(fm, r, NOW, NOW)!;
+    expect(flow.mode).toBe('roles');
+    expect(flow.edges.map((e) => `${e.from}→${e.to}`).sort()).toEqual([
+      'build→qa',
+      'lead→build',
+      'qa→review',
+    ]);
+    expect(flow.stages.find((s) => s.stage === 'qa')!.waiting + 0).toBeGreaterThanOrEqual(0);
+    expect(flow.stages.find((s) => s.stage === 'lead')!.noLead).toBe(false);
+    expect(flow.stages.some((s) => s.stage === 'outside')).toBe(false);
+  });
+
   it('no queue rows → no flow', () => {
     const fm = m2();
     fm.snapshot.queue = [];

@@ -442,8 +442,18 @@ export default function App({ getSocket = getFleetSocket }: Props) {
   }, []);
   // The agent panel belongs to the Map and the Flow: leaving them puts it away.
   useEffect(() => {
-    if (!RIG_VIEWS.includes(view)) setAgentKey(null);
+    if (view !== 'map' && view !== 'flow') setAgentKey(null);
   }, [view]);
+  // ... and to one rig: choosing another rig puts it away.
+  const activeRigKey = activeRig?.key ?? null;
+  useEffect(() => {
+    setAgentKey(null);
+  }, [activeRigKey]);
+  // An agent that leaves the snapshot closes its panel for good (no surprise reopen when it returns).
+  const agentGone = !!agentKey && !findSeat(state.machines, agentKey);
+  useEffect(() => {
+    if (agentGone) setAgentKey(null);
+  }, [agentGone]);
   // The Debug view belongs to an open seat: closing the seat closes it.
   useEffect(() => {
     if (!focused && !agentKey) {
@@ -951,7 +961,7 @@ export default function App({ getSocket = getFleetSocket }: Props) {
           onOpenFocus={openFocusFromAgent}
           onOpenDebug={openDebug}
           onOpenRigFiles={openFiles}
-          keys={!feedback && !filesFor && !debugFor && !help}
+          keys={!feedback && !filesFor && !debugFor && !help && !notesOpen}
         />
       )}
       {debugFor && (focusTile || agentTile) && (
