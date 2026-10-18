@@ -137,6 +137,15 @@ export const SeatSchema = z.strictObject({
    * for this seat (or no listing yet): the card shows the count alone.
    */
   keySkills: z.array(z.string().min(1).max(120)).max(KEY_SKILLS_MAX).optional(),
+  /**
+   * v2 data channels, collector-set from OpenRig's node record. Optional and additive (hub first):
+   * the collector OMITS a field it does not have, so an older hub still accepts a newer collector
+   * for any seat with no new data. The attach command is OpenRig's own plain `tmux attach -t …`
+   * (the ssh wrapper stays the client's job). The resume command carries the Claude session id:
+   * treat it as sensitive (browser session only, never logged).
+   */
+  tmuxAttachCommand: z.string().min(1).max(500).optional(),
+  resumeCommand: z.string().min(1).max(500).optional(),
 });
 export type Seat = z.infer<typeof SeatSchema>;
 
@@ -199,6 +208,8 @@ export type RigSummary = z.infer<typeof RigSummarySchema>;
 
 /** One queue row, body-free. The collector keeps the most recent QUEUE_MAX_ITEMS. */
 export const QUEUE_MAX_ITEMS = 500;
+/** Longest free-text queue field kept (closure, blocked-on, intent, tier). */
+export const QUEUE_NOTE_MAX = 200;
 export const QueueItemSchema = z.strictObject({
   id: z.string().min(1),
   source: z.string().nullable(),
@@ -209,6 +220,16 @@ export const QueueItemSchema = z.strictObject({
   summary: z.string().nullable(),
   createdAt: isoDate,
   updatedAt: isoDate,
+  /**
+   * v2 data channels, collector-set from `rig queue list --full`. Every field is optional and
+   * additive (hub first); the collector omits a field the daemon did not send or sent empty, so
+   * absent means "not said", never "none". Free text is cut to QUEUE_NOTE_MAX.
+   */
+  closureReason: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  closureTarget: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  blockedOn: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  humanIntent: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  tier: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
 });
 export type QueueItem = z.infer<typeof QueueItemSchema>;
 

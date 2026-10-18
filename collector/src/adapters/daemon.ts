@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import {
   QUEUE_MAX_ITEMS,
+  QUEUE_NOTE_MAX,
   RIG_EDGES_MAX,
   type QueueItem,
   type RigEdge,
@@ -62,6 +63,13 @@ export function deriveStatus(node: LenientNodeT): {
   return { status: 'unknown', blockedReason: null };
 }
 
+/** A non-empty string cut to `max`, else undefined: the collector omits what it cannot say. */
+export function optText(v: unknown, max: number): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const t = v.trim();
+  return t ? t.slice(0, max) : undefined;
+}
+
 export function nodeToSeat(node: LenientNodeT): Seat {
   const { status, blockedReason } = deriveStatus(node);
   const a = node.activityState;
@@ -105,6 +113,13 @@ export function nodeToSeat(node: LenientNodeT): Seat {
     cwd: node.cwd ?? null,
     recoveryGuidance: g ? [g.summary, g.action].filter(Boolean).join(' — ') || null : null,
     tail: null,
+    // v2: omitted (not null) when the daemon did not say, so a new collector validates against an older hub.
+    ...(optText(node.tmuxAttachCommand, 500)
+      ? { tmuxAttachCommand: optText(node.tmuxAttachCommand, 500) }
+      : {}),
+    ...(optText(node.resumeCommand, 500)
+      ? { resumeCommand: optText(node.resumeCommand, 500) }
+      : {}),
   };
 }
 
@@ -146,6 +161,15 @@ function summaryOf(item: z.infer<typeof LenientQueueItem>): string | null {
   return firstLine ? firstLine.slice(0, SUMMARY_MAX) : null;
 }
 
+function noteFields(q: z.infer<typeof LenientQueueItem>): Partial<QueueItem> {
+  const out: Partial<QueueItem> = {};
+  for (const k of ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'] as const) {
+    const v = optText(q[k], QUEUE_NOTE_MAX);
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 /** Body-free rows, newest first, capped at QUEUE_MAX_ITEMS. */
 export function parseQueue(raw: unknown): QueueItem[] {
   return parseList(LenientQueueItem, raw, 'queue list')
@@ -159,6 +183,8 @@ export function parseQueue(raw: unknown): QueueItem[] {
       summary: summaryOf(q),
       createdAt: q.tsCreated,
       updatedAt: q.tsUpdated,
+      // v2: each omitted when the daemon sent nothing (or only an empty string / a non-string).
+      ...noteFields(q),
     }))
     .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0))
     .slice(0, QUEUE_MAX_ITEMS);
