@@ -11,6 +11,7 @@ import { page as needsYouPage } from './pages/needs-you/index.js';
 import { page as missionsPage } from './pages/missions/index.js';
 import { page as flowPage } from './pages/flow/index.js';
 import { page as agentPage } from './pages/agent/index.js';
+import { page as graphPage } from './pages/graph/index.js';
 
 /**
  * The v2 registry: every page that has a v2 version, keyed by page.
@@ -27,6 +28,7 @@ export function v2Pages(): V2PageDef[] {
   // (no import-cycle ordering to get wrong).
   return [
     wallPage,
+    graphPage,
     flowPage,
     agentPage,
     needsYouPage,

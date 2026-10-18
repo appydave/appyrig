@@ -1,0 +1,579 @@
+/* v2 Graph. AppyDave light only: tokens from styles/tokens.css, no second palette. */
+
+.g2-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.g2-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 0 16px;
+}
+.g2-tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.g2-zoom {
+  min-width: 40px;
+  text-align: center;
+  font-size: 12px;
+}
+.mono,
+.g2-graph .mono {
+  font-family: var(--ar-font-term);
+  font-variant-numeric: tabular-nums;
+}
+
+/* C22: the filters wear AppyRig's own status colours. */
+.g2-filter {
+  border-left: 4px solid var(--g2-flag);
+}
+.g2-filter[data-flag='needsMe'],
+.g2-flag[data-flag='needsMe'] {
+  --g2-flag: var(--ar-blocked);
+  --g2-flag-bg: var(--ar-blocked-bg);
+  --g2-flag-ink: var(--ar-blocked-ink);
+}
+.g2-filter[data-flag='stuck'],
+.g2-flag[data-flag='stuck'] {
+  --g2-flag: var(--ar-sequence);
+  --g2-flag-bg: var(--ar-surface);
+  --g2-flag-ink: var(--ar-ink);
+}
+.g2-filter[data-flag='failing'],
+.g2-flag[data-flag='failing'] {
+  --g2-flag: var(--ar-error);
+  --g2-flag-bg: var(--ar-error-bg);
+  --g2-flag-ink: var(--ar-error-ink);
+}
+.g2-filter[aria-pressed='true'] {
+  background: var(--g2-flag-bg);
+  color: var(--g2-flag-ink);
+  border-color: var(--g2-flag);
+}
+.g2-flag {
+  display: inline-block;
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  background: var(--g2-flag-bg);
+  color: var(--g2-flag-ink);
+  border: 1px dashed var(--g2-flag);
+}
+.g2-flag[data-flag='needsMe'],
+.g2-flag[data-flag='failing'] {
+  border-style: solid;
+}
+
+.g2-teams-wrap {
+  position: relative;
+}
+.g2-teams {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(520px, 90vw);
+  max-height: 60vh;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--ar-line);
+  border-radius: 10px;
+  background: var(--ar-surface-raised);
+  box-shadow: 0 6px 20px rgb(52 45 45 / 0.18);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.g2-teams-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 6px;
+  margin: 0;
+}
+.g2-teams fieldset {
+  border: 1px solid var(--ar-line-soft);
+  border-radius: 8px;
+  padding: 4px 8px 8px;
+  margin: 0;
+}
+.g2-teams legend {
+  font-family: var(--ar-font-label);
+  letter-spacing: 0.08em;
+  font-size: 12px;
+}
+.g2-team {
+  display: block;
+  font-size: 12px;
+  padding: 2px 0;
+}
+
+.g2-caption {
+  margin: 0 16px;
+}
+
+/* Tree (C45) beside the canvas. */
+.g2-body {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  border-top: 1px solid var(--ar-line);
+}
+.g2-tree {
+  position: sticky;
+  top: 0;
+  max-height: calc(100vh - 150px);
+  overflow: auto;
+  padding: 10px 8px 24px 12px;
+  border-right: 1px solid var(--ar-line);
+  background: var(--ar-surface);
+  font-size: 13px;
+}
+.g2-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.g2-tree ul ul {
+  padding-left: 14px;
+}
+.g2-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 26px;
+}
+.g2-tree-caret {
+  width: 18px;
+  flex: 0 0 18px;
+  border: 0;
+  background: transparent;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+}
+.g2-tree-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 2px 6px;
+  color: var(--ar-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font: inherit;
+}
+.g2-tree-item[data-level='1'] {
+  font-family: var(--ar-font-label);
+  letter-spacing: 0.06em;
+  font-size: 14px;
+}
+.g2-tree-item:hover {
+  background: var(--ar-line-soft);
+}
+.g2-tree-item[aria-current='true'] {
+  background: var(--ar-cta);
+}
+.g2-tree-meta {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+  padding-right: 4px;
+}
+.g2-tree .pip-glyph {
+  color: var(--pip);
+}
+
+/* Canvas: one column per machine, the cross-rig lines in the gaps. */
+.g2-scroll {
+  overflow: auto;
+  max-height: calc(100vh - 150px);
+  min-width: 0;
+}
+.g2-canvas {
+  position: relative;
+  width: max-content;
+  padding: 16px;
+}
+.g2-cols {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--g2-gap);
+}
+.g2-col {
+  width: var(--g2-col);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.g2-col[data-liveness='asleep'] {
+  opacity: 0.65;
+}
+.g2-col[data-highlight] .g2-col-head {
+  box-shadow: inset 0 -3px 0 var(--ar-cta);
+}
+.g2-col-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 4px 6px;
+  border-bottom: 2px solid var(--ar-ink);
+}
+.g2-col-head b {
+  font-family: var(--ar-font-display);
+  font-size: 26px;
+  letter-spacing: 0.04em;
+}
+.g2-col-head i {
+  font-style: normal;
+  color: var(--ar-ink-muted);
+  font-size: 13px;
+}
+.g2-col-empty {
+  margin: 8px 4px;
+}
+
+/* Cross-rig lines sit under the frames; their count labels above. */
+.g2-cross,
+.g2-cross-labels {
+  position: absolute;
+  inset: 0 auto auto 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.g2-cross {
+  z-index: 0;
+}
+.g2-cross-labels {
+  z-index: 3;
+}
+.g2-cross-line {
+  cursor: pointer;
+}
+.g2-cross-path {
+  fill: none;
+  stroke: var(--ar-sequence);
+  stroke-opacity: 0.75;
+}
+.g2-cross-path.open {
+  stroke: var(--ar-blocked);
+  stroke-opacity: 0.95;
+}
+.g2-cross-path.stale {
+  stroke-dasharray: 6 4;
+}
+.g2-cross-line:hover .g2-cross-path,
+.g2-cross-line:focus-visible .g2-cross-path {
+  stroke-opacity: 1;
+  stroke: var(--ar-ink);
+}
+.g2-cross-head {
+  fill: var(--ar-sequence);
+}
+.g2-cross-label rect {
+  stroke: var(--ar-sequence);
+}
+
+/* A rig frame (C42). */
+.g2-rig {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--ar-line);
+  border-left: 5px solid var(--ar-idle);
+  border-radius: 10px;
+  background: var(--ar-surface-raised);
+}
+.g2-rig[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.g2-rig[data-state='attention'] {
+  border-left-color: var(--ar-blocked);
+}
+.g2-rig[data-state='stopped'] {
+  border-left-color: var(--ar-stopped);
+  border-left-style: dashed;
+  background: var(--ar-canvas);
+}
+.g2-rig[data-state='asleep'] {
+  border-left-color: var(--ar-asleep);
+  border-left-style: dotted;
+}
+.g2-rig[data-loose] {
+  border-style: dashed;
+  border-left-style: dashed;
+}
+.g2-rig[data-picked] {
+  box-shadow: 0 0 0 2px var(--ar-ink);
+}
+.g2-rig[data-highlight],
+.g2-pod[data-highlight],
+.g2-card[data-highlight] {
+  outline: 3px solid var(--ar-cta);
+  outline-offset: 2px;
+}
+.g2-rig-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 12px;
+}
+.g2-caret {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--ar-ink);
+}
+.g2-rig-name {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ar-ink);
+}
+.g2-rig-name:hover {
+  text-decoration: underline;
+}
+.g2-rig-machine {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ar-ink-muted);
+}
+.g2-rig-counts,
+.g2-rig-cross {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.g2-rig-cross {
+  color: var(--ar-sequence);
+  font-weight: 700;
+}
+.g2-rig-body {
+  border-top: 1px solid var(--ar-line-soft);
+}
+.g2-rig-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 0;
+}
+.g2-fake-btn {
+  font-size: 12px;
+  padding: 2px 10px;
+  min-height: 26px;
+}
+.g2-no-plan {
+  font-size: 11px;
+}
+.g2-rig-canvas {
+  position: relative;
+  padding: 6px 12px 12px 26px;
+}
+.g2-pods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.g2-pod {
+  position: relative;
+}
+.g2-pod-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 56px 32px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+/* C23 / C43: roomier cards, mono ids and numbers. */
+.g2-card {
+  position: relative;
+  z-index: 1;
+  width: 178px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--ar-line);
+  border-left: 4px solid var(--pip);
+  border-radius: 8px;
+  background: var(--ar-surface-raised);
+  color: var(--ar-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  --pip-text: var(--ar-ink-muted);
+}
+.g2-card[data-pip='working'] {
+  --pip-text: var(--ar-working-ink);
+}
+.g2-card[data-pip='blocked'] {
+  --pip-text: var(--ar-blocked-ink);
+}
+.g2-card[data-dim] {
+  opacity: 0.35;
+}
+.g2-card:hover {
+  border-color: var(--ar-ink-muted);
+}
+.g2-card:focus-visible {
+  outline: 3px solid var(--ar-ink);
+  outline-offset: 2px;
+}
+.g2-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.g2-card-top .pip {
+  margin-left: auto;
+}
+.g2-card-name {
+  font-family: var(--ar-font-term);
+  font-size: 13px;
+  font-weight: 700;
+  word-break: break-all;
+}
+.g2-card .seat-address {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+  word-break: break-all;
+}
+.g2-card .seat-context {
+  display: inline-flex;
+  gap: 10px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.g2-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.g2-card-badges:empty {
+  display: none;
+}
+
+/* Hover detail (C44): fixed to the window. */
+.seat-detail.g2-detail {
+  position: fixed;
+  z-index: 45;
+  width: 300px;
+}
+.g2-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+/* The card lets the pointer through to the cards under it (UI-A); its buttons take it. */
+.g2-detail-actions .pill-btn {
+  pointer-events: auto;
+}
+.g2-no-attach {
+  font-size: 11px;
+}
+
+/* Line drawer. */
+.g2-drawer {
+  position: fixed;
+  z-index: 35;
+  right: 16px;
+  bottom: 16px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: 50vh;
+  overflow: auto;
+  padding: 10px 14px;
+  border: 1px solid var(--ar-line);
+  border-radius: 10px;
+  background: var(--ar-surface-raised);
+  box-shadow: 0 8px 24px rgb(52 45 45 / 0.2);
+}
+.g2-drawer header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.g2-items {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.g2-items li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--ar-line-soft);
+}
+.g2-item-when {
+  color: var(--ar-ink-muted);
+}
+.g2-item-state {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.g2-items li[data-state='pending'] .g2-item-state,
+.g2-items li[data-state='in-progress'] .g2-item-state {
+  color: var(--ar-blocked-ink);
+}
+.g2-item-summary {
+  display: block;
+}
+
+/* Fakes: confirm, progress, toast (bottom left, clear of the line drawer). */
+.g2-fake-dock {
+  position: fixed;
+  z-index: 50;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(440px, calc(100vw - 32px));
+}
+.g2-fake-dialog,
+.g2-toast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ar-line);
+  background: var(--ar-surface-raised);
+  box-shadow: 0 6px 18px rgb(52 45 45 / 0.2);
+  font-size: 13px;
+}
+.g2-fake-btns {
+  display: inline-flex;
+  gap: 6px;
+}
+.g2-toast {
+  border-color: var(--ar-working);
+  color: var(--ar-working-ink);
+}
