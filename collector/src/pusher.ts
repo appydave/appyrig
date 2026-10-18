@@ -1,10 +1,14 @@
 import { io as connect, type Socket } from 'socket.io-client';
 import {
   FLEET_EVENTS,
+  HUB_CAPS,
+  namesV2Key,
+  stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
+  type DaemonDataPush,
   type MachineSnapshot,
   type SeatHistory,
 } from '@appydave/shared';
@@ -14,6 +18,7 @@ import type { PendingRigFiles } from './adapters/rigfiles.js';
 import type { PendingSchema } from './adapters/dbschema.js';
 import type { PendingLoadouts } from './adapters/loadout.js';
 import type { PendingDbRows } from './adapters/dbrows.js';
+import type { PendingDaemonData } from './adapters/daemondata.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -46,9 +51,21 @@ export interface PusherOptions {
   /** Batch 1 · B5: OpenRig database rows (one push per changed table); null = nothing to send. */
   dbRows?: () => Promise<PendingDbRows | null>;
   dbRowsIntervalMs?: number;
+  /** v2 data channels: OpenRig daemon reads (seat detail, library, …) that changed; null = nothing to send. */
+  daemonData?: () => Promise<PendingDaemonData | null>;
+  daemonDataIntervalMs?: number;
+  /** How long the first push waits for the hub's `hub:caps` (default 1000 ms; an older hub never sends it). */
+  capsWaitMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
   onConnect?: () => void;
 }
+
+/**
+ * Largest serialized payload a side channel will send (bytes). The hub's socket.io limit is
+ * HUB_MAX_BUFFER (1 MiB); anything over this is skipped and logged, never sent, and never touches
+ * the snapshot push.
+ */
+export const CHANNEL_PAYLOAD_MAX = 800 * 1024;
 
 /** Seat history changes slowly and is large next to a snapshot, so it is checked once a minute. */
 export const HISTORY_INTERVAL_MS = 60_000;
@@ -75,6 +92,37 @@ export function startPusher(opts: PusherOptions): Pusher {
   });
 
   let stopped = false;
+  // What the connected hub advertised in its last snapshot ack (HUB_CAPS). Nothing until the first
+  // ack, and forgotten on every (re)connect: a restarted hub may be an older build. With no
+  // V2_FIELDS cap the snapshot goes out in exactly the v1.5 shape.
+  let hubCaps = new Set<string>();
+  // Belt and braces: a hub that refused a snapshot naming a v2 key is treated as v1.5 until reconnect.
+  let forceV15 = false;
+  // The hub says what it understands as soon as we connect (`hub:caps`); the first push waits briefly
+  // for it so v2 fields do not vanish for one push after every reconnect. An older hub never says,
+  // so the wait ends after capsWaitMs and its first snapshot goes out as v1.5.
+  let capsSeen = false;
+  let capsWaiter: (() => void) | undefined;
+  const capsWaitMs = opts.capsWaitMs ?? 1000;
+  socket.on(FLEET_EVENTS.CAPS, (caps: unknown) => {
+    if (Array.isArray(caps))
+      hubCaps = new Set(caps.filter((c): c is string => typeof c === 'string'));
+    capsSeen = true;
+    capsWaiter?.();
+  });
+  const waitForCaps = () =>
+    capsSeen || capsWaitMs <= 0
+      ? Promise.resolve()
+      : new Promise<void>((resolve) => {
+          const t = setTimeout(resolve, capsWaitMs);
+          capsWaiter = () => {
+            clearTimeout(t);
+            resolve();
+          };
+        }).then(() => {
+          capsSeen = true; // waited once for this connection
+          capsWaiter = undefined;
+        });
   let timer: NodeJS.Timeout | undefined;
   let lastNote = '';
   const note = (line: string) => {
@@ -97,6 +145,9 @@ export function startPusher(opts: PusherOptions): Pusher {
   };
 
   socket.on('connect', () => {
+    hubCaps = new Set();
+    forceV15 = false;
+    capsSeen = false;
     opts.onConnect?.();
     note(`connected to ${opts.hubUrl} as ${opts.machineId}`);
   });
@@ -117,7 +168,16 @@ export function startPusher(opts: PusherOptions): Pusher {
     if (stopped) return;
     try {
       if (socket.connected) {
-        const ack = await push(await opts.build());
+        await waitForCaps();
+        const built = await opts.build();
+        const sendV2 = hubCaps.has(HUB_CAPS.V2_FIELDS) && !forceV15;
+        const ack = await push(sendV2 ? built : stripV2Fields(built));
+        if (!('timeout' in ack) && ack.ok) hubCaps = new Set(ack.caps ?? []);
+        if (!('timeout' in ack) && !ack.ok && sendV2 && namesV2Key(ack.message)) {
+          forceV15 = true;
+          hubCaps = new Set();
+          log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
+        }
         note(
           'timeout' in ack
             ? `no ack from hub within ${ackTimeout}ms`
@@ -209,17 +269,31 @@ export function startPusher(opts: PusherOptions): Pusher {
     everyMs: number,
     /** The hub version that first listens for this event, for the "no ack" warning. */
     since: string,
-    take: () => Promise<{ payloads: unknown[]; markSent(): void } | null>
+    take: () => Promise<{
+      payloads: unknown[];
+      markSent(): void;
+      markSkipped?(payload: unknown): void;
+    } | null>,
+    /** A HUB_CAPS entry the hub must have advertised before anything is taken or sent. */
+    needs?: string
   ) => {
     let t: NodeJS.Timeout | undefined;
     const tick = async () => {
       if (stopped) return;
       try {
-        if (socket.connected) {
+        if (socket.connected && (!needs || hubCaps.has(needs))) {
           const pending = await take();
           if (pending) {
             let all = true;
             for (const p of pending.payloads) {
+              if (Buffer.byteLength(JSON.stringify(p)) > CHANNEL_PAYLOAD_MAX) {
+                pending.markSkipped?.(p);
+                warnSometimes(
+                  `${key}:size`,
+                  `${key}: a payload over ${CHANNEL_PAYLOAD_MAX / 1024} KB was not sent`
+                );
+                continue;
+              }
               const ack = await sendAcked(event, p);
               if ('timeout' in ack) {
                 warnSometimes(key, `no ack for ${key} (is the hub older than ${since}?)`);
@@ -277,6 +351,26 @@ export function startPusher(opts: PusherOptions): Pusher {
         const p = await take();
         return p && { payloads: p.pushes, markSent: p.markSent };
       }
+    );
+  }
+  if (opts.daemonData) {
+    const take = opts.daemonData;
+    channel(
+      'daemon data',
+      FLEET_EVENTS.DAEMONDATA,
+      opts.daemonDataIntervalMs ?? 10_000,
+      'v2',
+      async () => {
+        const p = await take();
+        return (
+          p && {
+            payloads: p.pushes,
+            markSent: p.markSent,
+            markSkipped: (x: unknown) => p.markSkipped?.(x as DaemonDataPush),
+          }
+        );
+      },
+      HUB_CAPS.DAEMONDATA
     );
   }
   if (opts.schema) {

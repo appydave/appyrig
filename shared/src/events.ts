@@ -4,6 +4,7 @@ import type { RigFilesPush } from './rigfiles.js';
 import type { SchemaPush } from './dbschema.js';
 import type { SeatLoadout } from './loadout.js';
 import type { DbRowsPush } from './dbrows.js';
+import type { DaemonDataPush } from './daemondata.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -47,6 +48,10 @@ export const FLEET_EVENTS = {
   LOADOUT: 'collector:loadout',
   /** collector → hub. Payload: DbRowsPush (one table's newest rows, read-only). Acked with CollectorAck. Batch 1 · B5. */
   DBROWS: 'collector:dbrows',
+  /** collector → hub. Payload: DaemonDataPush (one kind of read-only OpenRig daemon data: seat detail, library, transitions, workflows, health, settings). Acked with CollectorAck. v2 data channels. */
+  DAEMONDATA: 'collector:daemondata',
+  /** hub → collector, once on connection: the HUB_CAPS this hub understands, so the first push is already right. */
+  CAPS: 'hub:caps',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -66,9 +71,12 @@ export interface CollectorAuth {
   machineId: string;
 }
 
-/** Ack for `collector:snapshot`. A refused snapshot is data, not a throw. */
+/**
+ * Ack for `collector:snapshot`. A refused snapshot is data, not a throw. `caps` (HUB_CAPS) is what
+ * this hub understands beyond v1.5; an older hub sends none.
+ */
 export type CollectorAck =
-  | { ok: true; receivedAt: string }
+  | { ok: true; receivedAt: string; caps?: string[] }
   | { ok: false; failureMode: 'invalid_snapshot' | 'machine_mismatch'; message: string };
 
 /** Events on the `/` namespace, hub → browser. The one definition; the scaffold's ServerToClientEvents extends it. */
@@ -96,10 +104,13 @@ export interface CollectorClientToServerEvents {
   'collector:schema': (push: SchemaPush, ack: (result: CollectorAck) => void) => void;
   'collector:loadout': (loadout: SeatLoadout, ack: (result: CollectorAck) => void) => void;
   'collector:dbrows': (push: DbRowsPush, ack: (result: CollectorAck) => void) => void;
+  'collector:daemondata': (push: DaemonDataPush, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */
-export type CollectorServerToClientEvents = Record<string, never>;
+export interface CollectorServerToClientEvents {
+  'hub:caps': (caps: string[]) => void;
+}
 
 /**
  * Test hook for the Playwright smoke tests (AC 11), installed by the client in every build mode:
@@ -113,3 +124,6 @@ export type CollectorServerToClientEvents = Record<string, never>;
 export interface AppyRigTestHooks {
   xtermCount: () => number;
 }
+
+/** socket.io maxHttpBufferSize on the hub (bytes). Collectors keep side-channel payloads under CHANNEL_PAYLOAD_MAX. */
+export const HUB_MAX_BUFFER = 1_048_576;

@@ -2,6 +2,7 @@ import type { Namespace, Server } from 'socket.io';
 import {
   AUTH_ERRORS,
   FLEET_EVENTS,
+  HUB_CAPS,
   MachineSnapshotSchema,
   SeatHistorySchema,
   HandoffBodiesSchema,
@@ -9,6 +10,7 @@ import {
   SchemaPushSchema,
   SeatLoadoutSchema,
   DbRowsPushSchema,
+  DaemonDataPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -49,6 +51,8 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
   });
 
   nsp.on('connection', (socket) => {
+    // Tell the collector what this hub understands before its first push (the ack repeats it).
+    socket.emit(FLEET_EVENTS.CAPS, [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA]);
     const machineId = (socket.handshake.auth as CollectorAuth).machineId;
     socket.on(FLEET_EVENTS.SNAPSHOT, (raw, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
@@ -75,7 +79,12 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
       }
       const entry = opts.store.put(parsed.data);
       opts.onSnapshot(entry);
-      reply({ ok: true, receivedAt: entry.lastSeen });
+      // caps: what this hub understands beyond v1.5; an older hub sends none (see HUB_CAPS)
+      reply({
+        ok: true,
+        receivedAt: entry.lastSeen,
+        caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA],
+      });
     });
 
     // v1.2: one seat's history (replay consoles). Same checks as a snapshot.
@@ -187,6 +196,11 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     socket.on(
       FLEET_EVENTS.DBROWS,
       guarded(DbRowsPushSchema, 'database rows', (d) => opts.store.dbRows.put(d))
+    );
+    // v2 data channels: one kind of read-only OpenRig daemon data. Same checks as the others.
+    socket.on(
+      FLEET_EVENTS.DAEMONDATA,
+      guarded(DaemonDataPushSchema, 'daemon data', (d) => opts.store.daemonData.put(d))
     );
   });
 }

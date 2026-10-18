@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { parseGraphEdges, parseNodes, parsePs, parseQueue } from './daemon.js';
+import { QueueItemSchema } from '@appydave/shared';
 import { readFixtureJson } from './fixtureSources.js';
 import { SeatSchema } from '@appydave/shared';
+import { redactDeep } from '../redact.js';
 
 const KERNEL = 'roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json';
 const syn = (name: string) => `synthetic/roamy--api-rig-starter-nodes--${name}.json`;
@@ -167,19 +169,24 @@ describe('adapter: daemon queue', () => {
   it('returns body-free rows, newest first', () => {
     const q = parseQueue(readFixtureJson('m2--cli-queue-list-all.json'));
     expect(q.length).toBe(113);
-    expect(Object.keys(q[0]!).sort()).toEqual(
-      [
-        'createdAt',
-        'destination',
-        'id',
-        'priority',
-        'source',
-        'state',
-        'summary',
-        'tags',
-        'updatedAt',
-      ].sort()
-    );
+    const base = [
+      'createdAt',
+      'destination',
+      'id',
+      'priority',
+      'source',
+      'state',
+      'summary',
+      'tags',
+      'updatedAt',
+    ];
+    // v2 note fields are optional: only these may appear beyond the original keys.
+    const extra = ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'];
+    for (const row of q) {
+      const keys = Object.keys(row);
+      for (const b of base) expect(keys).toContain(b);
+      for (const k of keys) expect([...base, ...extra]).toContain(k);
+    }
     for (let i = 1; i < q.length; i++) expect(q[i - 1]!.updatedAt >= q[i]!.updatedAt).toBe(true);
   });
 
@@ -194,6 +201,77 @@ describe('adapter: daemon queue', () => {
     const raw = readFixtureJson('roamy--cli-queue-list.json') as Record<string, unknown>[];
     const many = Array.from({ length: 600 }, (_, i) => ({ ...raw[0]!, qitemId: `q-${i}` }));
     expect(parseQueue(many)).toHaveLength(500);
+  });
+});
+
+describe('v2 free fields (step 1)', () => {
+  const rawQ = () => readFixtureJson('roamy--cli-queue-list.json') as Record<string, unknown>[];
+
+  it('queue: carries closure / blockedOn / humanIntent / tier when sent as text', () => {
+    const [q] = parseQueue([
+      {
+        ...rawQ()[0]!,
+        closureReason: 'no-follow-on',
+        closureTarget: 'review.r1@x',
+        blockedOn: 'human@kernel',
+        humanIntent: 'approve',
+        tier: 'fast',
+      },
+    ]);
+    expect(q).toMatchObject({
+      closureReason: 'no-follow-on',
+      closureTarget: 'review.r1@x',
+      blockedOn: 'human@kernel',
+      humanIntent: 'approve',
+      tier: 'fast',
+    });
+  });
+
+  it('queue: omits (not null) empty, null or non-text values; a bad field blanks nothing', () => {
+    const rows = parseQueue([
+      { ...rawQ()[0]!, closureReason: '', closureTarget: null, blockedOn: { x: 1 }, tier: 5 },
+    ]);
+    expect(rows).toHaveLength(1);
+    for (const k of ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'])
+      expect(k in rows[0]!).toBe(false);
+  });
+
+  it('queue: a new collector row still validates against the OLD row shape when nothing is new', () => {
+    const OldRow = QueueItemSchema.omit({
+      closureReason: true,
+      closureTarget: true,
+      blockedOn: true,
+      humanIntent: true,
+      tier: true,
+    });
+    const [q] = parseQueue([
+      { ...rawQ()[0]!, closureReason: '', closureTarget: null, blockedOn: null, tier: null },
+    ]);
+    expect(OldRow.safeParse(q).success).toBe(true);
+  });
+
+  it('seat: the attach command is carried as text and survives redaction intact; the resume command never is', () => {
+    const raw = readFixtureJson(KERNEL) as Record<string, unknown>[];
+    const attach = 'tmux attach -t dev-build@flistudio-launch';
+    const withCmd = parseNodes(
+      raw.map((n) => ({
+        ...n,
+        tmuxAttachCommand: attach,
+        resumeCommand: "claude --resume 'a0cf4780-db84-44cf-9ec1-97d959480d41'",
+      }))
+    );
+    expect(withCmd[0]).toMatchObject({ tmuxAttachCommand: attach });
+    for (const s of withCmd) expect('resumeCommand' in s).toBe(false);
+    expect(JSON.stringify(withCmd)).not.toContain('a0cf4780');
+    // the builder runs redactDeep over the whole snapshot: the line must come through unchanged
+    expect(redactDeep(withCmd[0]!).tmuxAttachCommand).toBe(attach);
+    const bad = parseNodes(raw.map((n) => ({ ...n, tmuxAttachCommand: 12 })));
+    expect(bad.length).toBe(raw.length);
+    const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true });
+    for (const s of bad) {
+      expect('tmuxAttachCommand' in s).toBe(false);
+      expect(OldSeat.safeParse(s).success).toBe(true);
+    }
   });
 });
 

@@ -2,11 +2,18 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createServer, type Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Server } from 'socket.io';
-import { MachineSnapshotSchema, type CollectorAck, type MachineSnapshot } from '@appydave/shared';
+import {
+  HUB_CAPS,
+  MachineSnapshotSchema,
+  V2_QUEUE_KEYS,
+  V2_SEAT_KEYS,
+  type CollectorAck,
+  type MachineSnapshot,
+} from '@appydave/shared';
 import { buildSnapshot } from './builder.js';
 import { fixtureSources } from './adapters/fixtureSources.js';
 import { loadSettings } from './config.js';
-import { startPusher, type Pusher } from './pusher.js';
+import { CHANNEL_PAYLOAD_MAX, startPusher, type Pusher } from './pusher.js';
 
 const TOKEN = 'test-token-0123456789';
 const cfg = { machine: { id: 'roamy', label: 'Roamy', hostname: null }, version: 't', pid: null };
@@ -19,7 +26,16 @@ interface Hub {
   close(): Promise<void>;
 }
 
-async function startHub(port = 0, modern = false): Promise<Hub> {
+interface HubOpts {
+  /** What the fake hub advertises in each snapshot ack (an old hub: nothing). */
+  caps?: string[];
+  /** Refuse any snapshot carrying a v2-only key, like a strict v1.5 hub ("Unrecognized key"). */
+  strictV15?: boolean;
+  /** Do not announce caps on connection (only in the ack), like the first v2 hub build. */
+  ackOnly?: boolean;
+}
+
+async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<Hub> {
   const http: HttpServer = createServer();
   const io = new Server(http);
   const received: MachineSnapshot[] = [];
@@ -31,18 +47,36 @@ async function startHub(port = 0, modern = false): Promise<Hub> {
         : next(new Error('collector token missing or invalid'))
     )
     .on('connection', (socket) => {
+      if (hopts.caps && !hopts.ackOnly) socket.emit('hub:caps', hopts.caps);
       if (modern)
-        for (const event of ['collector:rigfiles', 'collector:schema'])
+        for (const event of ['collector:rigfiles', 'collector:schema', 'collector:daemondata'])
           socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
             extra.push({ event, payload });
             ack({ ok: true, receivedAt: new Date().toISOString() });
           });
       socket.on('collector:snapshot', (raw, ack: (a: CollectorAck) => void) => {
+        if (hopts.strictV15) {
+          const bad = [...V2_SEAT_KEYS, ...V2_QUEUE_KEYS].find((k) =>
+            JSON.stringify(raw).includes(`"${k}"`)
+          );
+          if (bad) {
+            ack({
+              ok: false,
+              failureMode: 'invalid_snapshot',
+              message: `seats.0: Unrecognized key: "${bad}"`,
+            });
+            return;
+          }
+        }
         const r = MachineSnapshotSchema.safeParse(raw);
         if (r.success) received.push(r.data);
         ack(
           r.success
-            ? { ok: true, receivedAt: new Date().toISOString() }
+            ? {
+                ok: true,
+                receivedAt: new Date().toISOString(),
+                ...(hopts.caps ? { caps: hopts.caps } : {}),
+              }
             : { ok: false, failureMode: 'invalid_snapshot', message: 'bad' }
         );
       });
@@ -287,6 +321,192 @@ describe('pusher', () => {
     await until(() => takes >= 3, 10_000);
     expect(marked).toBe(0);
     expect(lines.filter((l) => l.includes('no ack for rig files'))).toHaveLength(1);
+  }, 15_000);
+
+  // The live daemon always sends the attach line and closure fields, so omit-when-unknown never
+  // protects an older strict hub: the pusher sends v2 keys only to a hub that advertised them.
+  const withV2 = async (): Promise<MachineSnapshot> => {
+    const snap = await build();
+    return {
+      ...snap,
+      seats: snap.seats.map((x) => ({ ...x, tmuxAttachCommand: 'tmux attach -t x' })),
+      queue: snap.queue.map((q) => ({ ...q, closureReason: 'no-follow-on', tier: 'fast' })),
+    };
+  };
+  const hasV2 = (s: MachineSnapshot) =>
+    s.seats.some((x) => 'tmuxAttachCommand' in x) || s.queue.some((q) => 'closureReason' in q);
+
+  it('H1: a new collector with v2 fields present is accepted by an OLD strict hub (no caps), and sends them bare', async () => {
+    hub = await startHub(0, false, { strictV15: true });
+    const lines: string[] = [];
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withV2,
+      intervalMs: 30,
+      log: (l) => lines.push(l),
+    });
+    await until(() => hub!.received.length >= 4);
+    expect(hub.received.some(hasV2)).toBe(false);
+    expect(lines.filter((l) => l.includes('refused'))).toEqual([]);
+  });
+
+  it('H1: caps learned only from the ack: the first snapshot is bare, v2 fields follow', async () => {
+    hub = await startHub(0, false, {
+      ackOnly: true,
+      caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA],
+    });
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withV2,
+      intervalMs: 30,
+      log: () => {},
+    });
+    await until(() => hub!.received.length >= 4);
+    // the first snapshot goes out before the hub has said what it understands: the safe shape
+    expect(hasV2(hub.received[0]!)).toBe(false);
+    expect(hub.received.slice(1).every(hasV2)).toBe(true);
+  });
+
+  it('flicker: a hub that announces its caps on connection gets v2 fields from the very first push, on every reconnect', async () => {
+    hub = await startHub(0, false, {
+      caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA],
+    });
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withV2,
+      intervalMs: 30,
+      log: () => {},
+    });
+    await until(() => hub!.received.length >= 2);
+    expect(hub.received.every(hasV2)).toBe(true);
+    // a reconnect: the caps are forgotten and announced again before the first push
+    pusher.socket.disconnect().connect();
+    const before = hub.received.length;
+    await until(() => hub!.received.length >= before + 3);
+    expect(hub.received.every(hasV2)).toBe(true);
+  });
+
+  it('flicker: an older hub never announces, so the first push waits only capsWaitMs and goes out as v1.5', async () => {
+    hub = await startHub(0, false, { strictV15: true });
+    const t0 = Date.now();
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withV2,
+      intervalMs: 30,
+      capsWaitMs: 250,
+      log: () => {},
+    });
+    await until(() => hub!.received.length >= 1);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(240);
+    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(hub.received.some(hasV2)).toBe(false);
+  });
+
+  it('H1: a hub that refuses a snapshot naming a v2 key is treated as v1.5 until it reconnects, logged once', async () => {
+    // advertises the cap but its schema does not know the key (a mis-advertising or mid-upgrade hub)
+    hub = await startHub(0, false, { strictV15: true, caps: [HUB_CAPS.V2_FIELDS] });
+    const lines: string[] = [];
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withV2,
+      intervalMs: 30,
+      log: (l) => lines.push(l),
+    });
+    await until(() => hub!.received.length >= 5);
+    expect(hub.received.some(hasV2)).toBe(false);
+    expect(lines.filter((l) => l.includes('sending the v1.5 shape'))).toHaveLength(1);
+  });
+
+  it('the daemon-data channel is not even read until the hub advertised it', async () => {
+    hub = await startHub(0, true); // listens, but advertises nothing
+    let takes = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      log: () => {},
+      daemonDataIntervalMs: 20,
+      daemonData: async () => {
+        takes++;
+        return null;
+      },
+    });
+    await until(() => hub!.received.length >= 5);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(takes).toBe(0);
+  });
+
+  const pushOf = (n: number) => ({
+    kind: 'settings' as const,
+    machineId: 'roamy',
+    collectedAt: new Date().toISOString(),
+    status: 'ok' as const,
+    reason: null,
+    key: '',
+    data: { settings: {}, withheld: n, pathsHidden: 0 },
+  });
+
+  it('a read that throws never stops the snapshot push, and an oversize payload is skipped and logged once', async () => {
+    hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA] });
+    const lines: string[] = [];
+    let takes = 0;
+    let marked = 0;
+    const skipped: string[] = [];
+    const huge = {
+      ...pushOf(0),
+      kind: 'workflows' as const,
+      data: {
+        specs: Array.from({ length: 200 }, (_, i) => ({
+          name: `w${i}`,
+          version: null,
+          purpose: 'x'.repeat(400),
+          targetRig: null,
+          terminalTurnRule: null,
+          isBuiltIn: null,
+        })),
+        instances: null,
+      },
+    };
+    // pad past the guard without breaking its own schema: the guard looks at bytes, not shape
+    (huge.data.specs[0] as { purpose: string }).purpose = 'y'.repeat(CHANNEL_PAYLOAD_MAX);
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      log: (l) => lines.push(l),
+      daemonDataIntervalMs: 20,
+      daemonData: async () => {
+        takes++;
+        if (takes % 2 === 1) throw new Error('daemon exploded');
+        return {
+          pushes: [huge, pushOf(1)],
+          markSent: () => void marked++,
+          markSkipped: (x: { kind: string }) => void skipped.push(x.kind),
+        };
+      },
+    });
+    await until(() => takes >= 6 && hub!.received.length >= 8 && marked >= 1, 10_000);
+    const sent = hub.extra.filter((e) => e.event === 'collector:daemondata');
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.every((e) => (e.payload as { kind: string }).kind === 'settings')).toBe(true);
+    expect(lines.filter((l) => l.includes('was not sent'))).toHaveLength(1);
+    // the oversize payload is reported as skipped (so it is not recorded as sent), the other is sent
+    expect(skipped.length).toBeGreaterThan(0);
+    expect(skipped.every((k) => k === 'workflows')).toBe(true);
   }, 15_000);
 
   it('does not overlap ticks when a build is slow', async () => {

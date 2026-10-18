@@ -50,6 +50,12 @@ export interface Sources {
   queueBodies?(): Promise<Map<string, string>>;
   /** Machine health (v1.4 · S6), without tmux sessions: the builder adds those. Optional: fixtures omit it. */
   health?(): Promise<HealthSample>;
+  /**
+   * v2 data channels: one GET against the OpenRig daemon on loopback, parsed JSON. Throws
+   * `GET <path> -> HTTP <status>` on a non-2xx reply (404 = the route does not exist). Optional:
+   * fixtures omit it, and then the v2 channels send nothing.
+   */
+  daemonGet?(path: string): Promise<unknown>;
   /** Runs one read-only command with the collector's timeout and environment (v1.4 · S7: `rig --version`). */
   exec?(bin: string, args: string[]): Promise<{ stdout: string; stderr: string; code: number }>;
   /** v1.5 · L1: seat id → its agent spec folder, from the latest daemon read. Optional: fixtures omit it. */

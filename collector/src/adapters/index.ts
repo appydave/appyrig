@@ -33,3 +33,24 @@ export {
 } from './loadout.js';
 export { DbRowsReader, readAllTableRows, cellOf, type PendingDbRows } from './dbrows.js';
 export { keySkillsOf, seatConfigReader, withSeatCards } from './seatcard.js';
+export {
+  DaemonDataReader,
+  parseSeatDetail,
+  parseWorkflowSpecs,
+  parseWorkflowInstances,
+  parseHealthFindings,
+  parseHealthPolicy,
+  parseHealthContext,
+  parseRestoreCheck,
+  parseDaemonHealth,
+  parseSettings,
+  SETTINGS_ALLOW,
+  parseTransitionRow,
+  parseTransitionsPage,
+  parseLibrarySpecs,
+  parseLibrarySkills,
+  parseLibraryPacks,
+  type DaemonGet,
+  type SeatTarget,
+  type PendingDaemonData,
+} from './daemondata.js';

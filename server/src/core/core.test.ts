@@ -1,7 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import { SeatStatusSchema, type SeatLoadout } from '@appydave/shared';
+import {
+  SeatStatusSchema,
+  type DaemonDataFor,
+  type HealthFindingsOutput,
+  type HistoryTransitionsOutput,
+  type SettingsGetOutput,
+  type WorkflowListOutput,
+  type LibraryListOutput,
+  type TransitionRow,
+  type LibraryRow,
+  type SeatLoadout,
+} from '@appydave/shared';
 import { createCore } from './core.js';
 import { FAILURE_CODES, VERBS, VERB_REGISTRY, WRITE_VERBS, defineVerbs } from './verbs.js';
 import { FleetStore } from '../hub/fleetStore.js';
@@ -34,8 +45,12 @@ describe('AC 9 — exactly one write verb', () => {
       'fleet.get',
       'handoff.get',
       'handoff.list',
+      'health.findings',
       'health.get',
       'history.list',
+      'history.transitions',
+      'library.get',
+      'library.list',
       'machine.list',
       'queue.list',
       'rig.entry',
@@ -44,12 +59,15 @@ describe('AC 9 — exactly one write verb', () => {
       'rig.outputs',
       'rig.topology',
       'rig.waiting',
+      'seat.detail',
       'seat.get',
       'seat.history',
       'seat.list',
       'seat.loadout',
       'seat.tail',
+      'settings.get',
       'system.status',
+      'workflow.list',
     ]);
   });
 
@@ -276,6 +294,7 @@ describe('core.call — the one seam', () => {
       'seat.tail': { machine: 'roamy', seat },
       'seat.history': { machine: 'roamy', seat },
       'seat.loadout': { machine: 'roamy', seat },
+      'seat.detail': { machine: 'roamy', seat },
       'handoff.get': { machine: 'roamy', id: store.get('roamy')!.snapshot.queue[0]!.id },
       'rig.entry': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
       'rig.files': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
@@ -316,6 +335,14 @@ describe('core.call — the one seam', () => {
         });
         continue;
       }
+      if (name === 'library.get') {
+        // nothing is stored on this fixture hub: a named refusal, not a crash
+        expect(core.call(AGENT, name, { machine: 'roamy', group: 'spec', id: 'x' })).toMatchObject({
+          ok: false,
+          error: { failureMode: 'library-item-not-found' },
+        });
+        continue;
+      }
       if (name === 'feedback.get') {
         // nothing is stored on this fixture hub: the answer is a named refusal, not a crash
         expect(core.call(AGENT, name, { id: 'fb-0001' })).toMatchObject({
@@ -337,7 +364,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 25 },
+      value: { app: 'AppyRig', version: real.version, verbs: 32 },
     });
   });
 
@@ -362,6 +389,7 @@ describe('B14 + refusal table', () => {
       'feedback-not-found': -32008,
       'feedback-unavailable': -32009,
       'feedback-full': -32010,
+      'library-item-not-found': -32011,
     });
   });
 });
@@ -464,6 +492,631 @@ describe('v1.5 · L1 — seat.loadout', () => {
     expect(core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'nope@x' })).toMatchObject({
       ok: false,
       error: { failureMode: 'seat-not-found' },
+    });
+  });
+});
+
+describe('v2 · seat.detail', () => {
+  const detail = {
+    spec: { name: 'implementer', version: '1.0', profile: 'default', hash: 'h' },
+    startupFiles: [
+      {
+        path: 'guidance/role.md',
+        deliveryHint: 'send_text',
+        required: true,
+        appliesOn: ['restore'],
+      },
+    ],
+    startupActions: [{ type: 'send_text', phase: null, text: 'hello' }],
+    peers: [{ logicalId: 'dev.qa', session: 'dev-qa@r', runtime: 'claude-code' }],
+    recoveryNotes: ['try resume'],
+    installedResources: [{ id: 'shared:core', category: 'plugin' }],
+  };
+
+  it('is pending until a collector pushes, then ok with the detail; tmux seats say not-openrig', () => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    const core = createCore({ store, identity, now: clock.now });
+    const snap = store.get('roamy')!.snapshot;
+    const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'pending', detail: null, collectedAt: null, reason: expect.any(String) },
+    });
+    store.daemonData.put({
+      kind: 'seatdetail',
+      machineId: 'roamy',
+      key: seat,
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: 'ok',
+      reason: null,
+      data: detail,
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toEqual({
+      ok: true,
+      value: {
+        machine: 'roamy',
+        seat,
+        status: 'ok',
+        reason: null,
+        collectedAt: '2026-10-18T12:00:00.000Z',
+        detail,
+      },
+    });
+    store.daemonData.put({
+      kind: 'seatdetail',
+      machineId: 'roamy',
+      key: seat,
+      collectedAt: '2026-10-18T12:01:00.000Z',
+      status: 'unsupported',
+      reason: 'no route',
+      data: null,
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'unsupported', reason: 'no route', detail: null },
+    });
+    store.daemonData.put({
+      kind: 'seatdetail',
+      machineId: 'roamy',
+      key: seat,
+      collectedAt: '2026-10-18T12:02:00.000Z',
+      status: 'not-found',
+      reason: 'the daemon does not know this seat',
+      data: null,
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'seat-not-found', detail: null },
+    });
+    // L4: a seat that leaves the machine's snapshot loses its detail, but only after 5 minutes
+    // absent: a partial daemon read can drop a rig from one snapshot and bring it back
+    const without = { ...snap, seats: snap.seats.filter((s) => s.id !== seat) };
+    store.put(without);
+    clock.advance(60_000);
+    store.put(snap); // back after one snapshot: the detail is still there
+    expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeDefined();
+    store.put(without);
+    clock.advance(4 * 60_000);
+    store.put(without); // 4 minutes absent: kept
+    expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeDefined();
+    clock.advance(61_000);
+    store.put(without); // over 5 minutes absent: gone
+    expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeUndefined();
+    store.put(snap);
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'pending' },
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat: 'nope@x' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'seat-not-found' },
+    });
+  });
+});
+
+const libRow = (over: Partial<LibraryRow> = {}): LibraryRow => ({
+  id: 'workflow:basic-loop:1',
+  kind: 'workflow',
+  name: 'basic-loop',
+  version: '1',
+  sourceType: 'builtin',
+  summary: 'Walk one packet through the conveyor',
+  path: '/opt/openrig/basic-loop.yaml',
+  updatedAt: null,
+  facts: { stepsCount: 4 },
+  files: [],
+  ...over,
+});
+
+describe('v2 · library.list / library.get', () => {
+  const setup = () => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    store.put(loadSnapshot('m2'));
+    const core = createCore({ store, identity, now: clock.now });
+    return { store, core };
+  };
+  const put = (store: FleetStore, machineId: string, data: DaemonDataFor<'library'> | null) =>
+    store.daemonData.put({
+      kind: 'library',
+      machineId,
+      key: '',
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: data ? 'ok' : 'unsupported',
+      reason: data ? null : 'no routes',
+      data,
+    });
+
+  it('says pending / unsupported / ok per machine, and null counts for an unread list (never 0)', () => {
+    const { store, core } = setup();
+    put(store, 'roamy', {
+      openrigVersion: '0.6.6',
+      specs: [
+        libRow(),
+        libRow({ id: 'agent:x', kind: 'agent', name: 'x', summary: null, facts: {} }),
+      ],
+      skills: [
+        libRow({
+          id: 'sk:a',
+          kind: 'skill',
+          name: 'agent-browser',
+          summary: null,
+          files: [{ name: 'SKILL.md', size: 10 }],
+          facts: { fileCount: 1 },
+        }),
+      ],
+      contextPacks: null,
+    });
+    put(store, 'm2', null);
+    const a = core.call(AGENT, 'library.list', {});
+    expect(a).toMatchObject({ ok: true });
+    const v = (a as { value: LibraryListOutput }).value;
+    expect(v.machines).toEqual([
+      expect.objectContaining({
+        machine: 'm2',
+        status: 'unsupported',
+        counts: { specs: null, skills: null, contextPacks: null },
+      }),
+      expect.objectContaining({
+        machine: 'roamy',
+        status: 'ok',
+        openrigVersion: '0.6.6',
+        counts: { specs: 2, skills: 1, contextPacks: null },
+      }),
+    ]);
+    expect(v.total).toBe(3);
+    expect(v.items.map((i) => [i.machine, i.group, i.name])).toEqual([
+      ['roamy', 'skill', 'agent-browser'],
+      ['roamy', 'spec', 'basic-loop'],
+      ['roamy', 'spec', 'x'],
+    ]);
+    // the list carries no file names; library.get does
+    expect(JSON.stringify(v.items)).not.toContain('SKILL.md');
+    const filtered = core.call(AGENT, 'library.list', {
+      group: 'spec',
+      kind: 'workflow',
+      limit: 1,
+    });
+    expect((filtered as { value: LibraryListOutput }).value).toMatchObject({
+      total: 1,
+      truncated: false,
+    });
+    expect(
+      (core.call(AGENT, 'library.list', { text: 'CONVEYOR' }) as { value: LibraryListOutput }).value
+        .total
+    ).toBe(1);
+    expect(
+      core.call(AGENT, 'library.get', { machine: 'roamy', group: 'skill', id: 'sk:a' })
+    ).toMatchObject({
+      ok: true,
+      value: {
+        item: { name: 'agent-browser', group: 'skill', machine: 'roamy' },
+        files: [{ name: 'SKILL.md', size: 10 }],
+      },
+    });
+    expect(
+      core.call(AGENT, 'library.get', { machine: 'roamy', group: 'spec', id: 'sk:a' })
+    ).toMatchObject({ ok: false, error: { failureMode: 'library-item-not-found' } });
+    expect(core.call(AGENT, 'library.list', { machine: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'machine-not-found' },
+    });
+  });
+
+  it('before any push every machine is pending with a reason', () => {
+    const { core } = setup();
+    const v = (core.call(AGENT, 'library.list', {}) as { value: LibraryListOutput }).value;
+    expect(v.items).toEqual([]);
+    for (const m of v.machines)
+      expect(m).toMatchObject({ status: 'pending', reason: expect.any(String) });
+  });
+});
+
+describe('v2 · history.transitions', () => {
+  const Q1 = 'qitem-20261008094356-aa3ddaa3'; // dev-review@starter -> dev-build@starter
+  const Q2 = 'qitem-20261008094321-21dd1fc8'; // dev-build@starter -> dev-review@starter
+  const row = (id: number, qitemId: string, over: Partial<TransitionRow> = {}): TransitionRow => ({
+    id: String(id),
+    qitemId,
+    at: new Date(Date.UTC(2026, 9, 8, 9, 40, id)).toISOString(),
+    state: 'pending',
+    actor: 'dev-review@starter',
+    closureReason: null,
+    closureTarget: null,
+    ...over,
+  });
+  const setup = (rows: TransitionRow[], truncated = false) => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    store.put(loadSnapshot('m2'));
+    store.daemonData.put({
+      kind: 'transitions',
+      machineId: 'roamy',
+      key: '',
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: 'ok',
+      reason: null,
+      data: {
+        rows,
+        retained: rows.length + (truncated ? 50 : 0),
+        truncated,
+        hostId: 'h',
+        bootEpoch: 'b',
+      },
+    });
+    const core = createCore({ store, identity, now: clock.now });
+    const call = (input: object) =>
+      (core.call(AGENT, 'history.transitions', input) as { value: HistoryTransitionsOutput }).value;
+    const replaceRows = (more: TransitionRow[]) =>
+      store.daemonData.put({
+        kind: 'transitions',
+        machineId: 'roamy',
+        key: '',
+        collectedAt: '2026-10-18T12:05:00.000Z',
+        status: 'ok',
+        reason: null,
+        data: { rows: more, retained: more.length, truncated: false, hostId: 'h', bootEpoch: 'b' },
+      });
+    return { call, core, replaceRows };
+  };
+
+  it('serves newest first with the item joined in, pages with a cursor, and says what it holds', () => {
+    const rows = [
+      row(1, Q1),
+      row(2, Q1, { state: 'in-progress', actor: 'dev-build@starter' }),
+      row(3, Q1, { state: 'done', actor: 'dev-build@starter', closureReason: 'no-follow-on' }),
+      row(4, Q2),
+      row(5, Q2, {
+        state: 'done',
+        closureReason: 'handed_off_to',
+        closureTarget: 'dev-build@starter',
+      }),
+    ];
+    const { call, replaceRows } = setup(rows, true);
+    const all = call({ limit: 2 });
+    expect(all.rows.map((r) => r.id)).toEqual(['5', '4']);
+    expect(all.total).toBe(5);
+    expect(all.nextCursor).toEqual(expect.any(String));
+    expect(all.rows[0]).toMatchObject({
+      machine: 'roamy',
+      source: 'dev-build@starter',
+      destination: 'dev-review@starter',
+      closureReason: 'handed_off_to',
+    });
+    const next = call({ limit: 2, before: all.nextCursor! });
+    expect(next.rows.map((r) => r.id)).toEqual(['3', '2']);
+    expect(call({ limit: 2, before: next.nextCursor! })).toMatchObject({
+      rows: [{ id: '1' }],
+      nextCursor: null,
+    });
+    // M2: rows that arrive between two page loads (a newer one, an older one) neither shift nor
+    // repeat the next page: the cursor is the last row seen, not an offset
+    replaceRows([row(0, Q1), ...rows, row(6, Q2, { state: 'done' })]);
+    expect(call({ limit: 2 }).rows.map((r) => r.id)).toEqual(['6', '5']);
+    const resumed = call({ limit: 2, before: all.nextCursor! });
+    expect(resumed.rows.map((r) => r.id)).toEqual(['3', '2']); // an offset would give ['4', '3']
+    expect(call({ limit: 10, before: all.nextCursor! }).rows.map((r) => r.id)).toEqual([
+      '3',
+      '2',
+      '1',
+      '0',
+    ]);
+    const roamy = all.machines.find((m) => m.machine === 'roamy')!;
+    expect(roamy).toMatchObject({ status: 'ok', held: 5, retained: 55, truncated: true });
+    expect(roamy.earliestAt).toBe(rows[0]!.at);
+    // a machine that never sent any is pending, with no rows: never "no history"
+    expect(all.machines.find((m) => m.machine === 'm2')).toMatchObject({
+      status: 'pending',
+      held: 0,
+      earliestAt: null,
+    });
+  });
+
+  it('filters by item, seat, rig, state, closure reason and text', () => {
+    const { call } = setup([
+      row(1, Q1),
+      row(2, Q1, { state: 'done', actor: 'dev-build@starter', closureReason: 'no-follow-on' }),
+      row(3, Q2, { actor: 'human@kernel' }),
+      row(4, Q2, { state: 'done', closureReason: 'handed_off_to', closureTarget: 'x@y' }),
+    ]);
+    expect(call({ qitemId: Q1 }).rows.map((r) => r.id)).toEqual(['2', '1']);
+    expect(call({ seat: 'human@kernel' }).rows.map((r) => r.id)).toEqual(['3']);
+    // seat also matches the item's sender or owner, not only the actor
+    expect(call({ seat: 'dev-review@starter' }).total).toBe(4);
+    expect(call({ rig: 'starter' }).total).toBe(4);
+    expect(call({ rig: 'kernel' }).rows.map((r) => r.id)).toEqual(['3']);
+    expect(call({ rig: 'nope' }).total).toBe(0);
+    expect(call({ state: 'done' }).total).toBe(2);
+    expect(call({ closureReason: 'handed_off_to' }).rows.map((r) => r.id)).toEqual(['4']);
+    expect(call({ text: 'X@Y' }).rows.map((r) => r.id)).toEqual(['4']);
+    expect(call({ text: 'markdown-links' }).total).toBe(4); // the item's tags
+    expect(call({ machine: 'm2' }).rows).toEqual([]);
+  });
+
+  it('unsupported is reported, not hidden; invalid paging is refused', () => {
+    const { core } = setup([]);
+    expect(core.call(AGENT, 'history.transitions', { limit: 201 })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'invalid-input' },
+    });
+    expect(core.call(AGENT, 'history.transitions', { before: 'abcdef' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'invalid-input' },
+    });
+    expect(core.call(AGENT, 'history.transitions', { machine: 'nope' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'machine-not-found' },
+    });
+  });
+});
+
+describe('v2 · workflow.list / health.findings / settings.get', () => {
+  const setup = () => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    store.put(loadSnapshot('m2'));
+    const core = createCore({ store, identity, now: clock.now });
+    const value = <T>(verb: string, input: object = {}) =>
+      (core.call(AGENT, verb, input) as { value: T }).value;
+    return { store, core, value };
+  };
+  const base = { machineId: 'roamy', key: '', collectedAt: '2026-10-18T12:00:00.000Z' } as const;
+
+  it('workflow.list: unread is not empty; an empty instance list says none have run', () => {
+    const { store, value } = setup();
+    store.daemonData.put({
+      ...base,
+      kind: 'workflows',
+      status: 'ok',
+      reason: null,
+      data: {
+        specs: [
+          {
+            name: 'basic-loop',
+            version: '1',
+            purpose: null,
+            targetRig: 'conveyor',
+            terminalTurnRule: 'hot_potato',
+            isBuiltIn: true,
+          },
+        ],
+        instances: [],
+      },
+    });
+    store.daemonData.put({
+      ...base,
+      machineId: 'm2',
+      kind: 'workflows',
+      status: 'ok',
+      reason: null,
+      data: {
+        specs: null,
+        instances: [
+          {
+            instanceId: 'wf-1',
+            workflowName: 'basic-loop',
+            workflowVersion: '1',
+            status: 'active',
+            currentStepId: 's1',
+            hopCount: 1,
+            createdAt: '2026-10-18T00:00:00Z',
+            completedAt: null,
+            deadlineState: 'healthy',
+          },
+          {
+            instanceId: 'wf-0',
+            workflowName: 'basic-loop',
+            workflowVersion: '1',
+            status: 'completed',
+            currentStepId: null,
+            hopCount: 4,
+            createdAt: '2026-10-17T00:00:00Z',
+            completedAt: '2026-10-17T01:00:00Z',
+            deadlineState: null,
+          },
+        ],
+      },
+    });
+    const all = value<WorkflowListOutput>('workflow.list');
+    expect(all.machines).toEqual([
+      expect.objectContaining({
+        machine: 'm2',
+        status: 'ok',
+        specsRead: false,
+        instancesRead: true,
+      }),
+      expect.objectContaining({
+        machine: 'roamy',
+        status: 'ok',
+        specsRead: true,
+        instancesRead: true,
+      }),
+    ]);
+    expect(all.specs).toHaveLength(1);
+    expect(all.instances.map((i) => i.instanceId)).toEqual(['wf-1', 'wf-0']);
+    expect(value<WorkflowListOutput>('workflow.list', { status: 'active' }).instances).toHaveLength(
+      1
+    );
+    const pending = setup().value<WorkflowListOutput>('workflow.list');
+    for (const m of pending.machines)
+      expect(m).toMatchObject({ status: 'pending', specsRead: false, instancesRead: false });
+  });
+
+  const health = (over: Partial<DaemonDataFor<'health'>> = {}): DaemonDataFor<'health'> => ({
+    findings: [],
+    findingsTotal: 0,
+    findingsTruncated: false,
+    coverage: [
+      {
+        source: 'passive-ceremony',
+        unit: 'handoff families',
+        evaluated: 12,
+        total: 12,
+        omitted: 0,
+        partial: false,
+        evaluatedAt: null,
+      },
+    ],
+    policy: { diagnosisEnabled: true, disabledDetectors: [], detectors: [], thresholds: {} },
+    contextSummary: null,
+    restore: null,
+    daemon: null,
+    ...over,
+  });
+
+  it('health.findings: empty is never "healthy"; every reason it may not be all-clear is named', () => {
+    const { store, value } = setup();
+    const put = (machineId: string, data: DaemonDataFor<'health'> | null) =>
+      store.daemonData.put({
+        ...base,
+        machineId,
+        kind: 'health',
+        status: data ? 'ok' : 'unsupported',
+        reason: data ? null : 'no routes',
+        data,
+      });
+    put(
+      'roamy',
+      health({
+        policy: { diagnosisEnabled: false, disabledDetectors: [], detectors: [], thresholds: {} },
+        coverage: [
+          {
+            source: 'passive-ceremony',
+            unit: 'handoff families',
+            evaluated: 0,
+            total: 0,
+            omitted: 0,
+            partial: false,
+            evaluatedAt: null,
+          },
+        ],
+      })
+    );
+    put('m2', null);
+    const v = value<HealthFindingsOutput>('health.findings');
+    const roamy = v.machines.find((m) => m.machine === 'roamy')!;
+    expect(roamy.assessment).toBe('none-found');
+    expect(roamy.caveats).toEqual([
+      expect.stringMatching(/diagnosis is off/),
+      expect.stringMatching(/evaluated 0 handoff families/),
+    ]);
+    expect(v.machines.find((m) => m.machine === 'm2')).toMatchObject({
+      status: 'unsupported',
+      assessment: 'unknown',
+      data: null,
+    });
+    // a clean, fully covered, diagnosis-on list has no caveats but is still only "none-found"
+    put('roamy', health());
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]
+    ).toMatchObject({ assessment: 'none-found', caveats: [] });
+    // partial coverage, no coverage, unreadable policy, a cut list: each is a caveat
+    put('roamy', health({ coverage: [], policy: null, findingsTruncated: true }));
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]!.caveats
+    ).toHaveLength(3);
+    put(
+      'roamy',
+      health({
+        coverage: [
+          {
+            source: 's',
+            unit: null,
+            evaluated: 3,
+            total: 9,
+            omitted: 6,
+            partial: true,
+            evaluatedAt: null,
+          },
+        ],
+      })
+    );
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]!.caveats
+    ).toEqual(['coverage of s was partial']);
+    // findings present; unreadable findings
+    put(
+      'roamy',
+      health({
+        findings: [
+          {
+            id: 'f1',
+            detector: 'context.pressure',
+            severity: 'warning',
+            summary: 'x',
+            evaluatedAt: null,
+          },
+        ],
+      })
+    );
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]
+    ).toMatchObject({ assessment: 'findings', caveats: [] });
+    put('roamy', health({ findings: null }));
+    expect(
+      value<HealthFindingsOutput>('health.findings', { machine: 'roamy' }).machines[0]
+    ).toMatchObject({ assessment: 'unknown' });
+    // nothing pushed yet
+    expect(setup().value<HealthFindingsOutput>('health.findings').machines[0]).toMatchObject({
+      status: 'pending',
+      assessment: 'unknown',
+    });
+  });
+
+  it('settings.get: filters by key or prefix, flags changed, and counts what was withheld', () => {
+    const { store, value } = setup();
+    for (const machineId of ['roamy', 'm2'])
+      store.daemonData.put({
+        ...base,
+        machineId,
+        kind: 'settings',
+        status: 'ok',
+        reason: null,
+        data: {
+          settings: {
+            'daemon.port': { value: 7433, source: 'env', defaultValue: 7433 },
+            'queue.stuck_sweep_enabled': {
+              value: machineId === 'm2',
+              source: machineId === 'm2' ? 'file' : 'default',
+              defaultValue: false,
+            },
+            'feed.subscriptions.mentions': {
+              value: '(path hidden)',
+              source: 'file',
+              defaultValue: null,
+            },
+          },
+          withheld: 4,
+          pathsHidden: 1,
+        },
+      });
+    const all = value<SettingsGetOutput>('settings.get', { machine: 'm2' });
+    expect(all.machines[0]).toMatchObject({ withheld: 4, pathsHidden: 1 });
+    expect(all.machines[0]!.settings.map((s) => [s.key, s.changed])).toEqual([
+      ['daemon.port', true],
+      ['feed.subscriptions.mentions', true],
+      ['queue.stuck_sweep_enabled', true],
+    ]);
+    expect(
+      value<SettingsGetOutput>('settings.get', { key: 'queue.' }).machines.map(
+        (m) => m.settings.length
+      )
+    ).toEqual([1, 1]);
+    expect(
+      value<SettingsGetOutput>('settings.get', { key: 'daemon.port' }).machines[0]!.settings
+    ).toHaveLength(1);
+    const changed = value<SettingsGetOutput>('settings.get', { changedOnly: true });
+    expect(changed.machines.find((m) => m.machine === 'roamy')!.settings.map((s) => s.key)).toEqual(
+      ['daemon.port', 'feed.subscriptions.mentions']
+    );
+    expect(setup().value<SettingsGetOutput>('settings.get').machines[0]).toMatchObject({
+      status: 'pending',
+      settings: [],
     });
   });
 });

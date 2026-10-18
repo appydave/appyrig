@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { FeedbackStore } from './feedbackStore.js';
 import { LoadoutStore } from './loadoutStore.js';
 import { DbRowsStore } from './dbRowsStore.js';
+import { DaemonDataStore } from './daemonDataStore.js';
 import { RigFileStore } from './rigFileStore.js';
 import { SchemaStore } from './schemaStore.js';
 import {
@@ -75,6 +76,8 @@ export class FleetStore {
   readonly loadouts = new LoadoutStore();
   /** Batch 1 · B5: OpenRig table rows (read-only, capped, redacted). Memory only. */
   readonly dbRows = new DbRowsStore();
+  /** v2 data channels: seat detail, library, transitions, workflows, health, settings. Memory only. */
+  readonly daemonData = new DaemonDataStore();
   /** v1.4 · S8: in-app feedback notes. The only thing AppyRig writes. */
   readonly feedback: FeedbackStore;
   private readonly machines = new Map<string, FleetMachine>();
@@ -147,6 +150,11 @@ export class FleetStore {
     const is = snapshot.account?.email?.toLowerCase();
     if (was && is && was !== is) this.emailChanged.set(entry.machine.id, this.now().getTime());
     this.machines.set(entry.machine.id, entry);
+    this.daemonData.pruneSeats(
+      entry.machine.id,
+      new Set(snapshot.seats.map((x) => x.id)),
+      this.now().getTime()
+    );
     this.persist(entry);
     if (before !== 'live') {
       this.onLiveness({

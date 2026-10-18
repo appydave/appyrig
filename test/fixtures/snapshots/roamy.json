@@ -149,7 +149,8 @@
         ],
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
-      }
+      },
+      "tmuxAttachCommand": "tmux attach -t advisor-lead@kernel"
     },
     {
       "id": "operator-agent@kernel",
@@ -251,7 +252,8 @@
         ],
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
-      }
+      },
+      "tmuxAttachCommand": "tmux attach -t operator-agent@kernel"
     },
     {
       "id": "operator-human@kernel",
@@ -354,7 +356,8 @@
         ],
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
-      }
+      },
+      "tmuxAttachCommand": "tmux attach -t operator-human@kernel"
     },
     {
       "id": "queue-worker@kernel",
@@ -398,7 +401,8 @@
         ],
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
-      }
+      },
+      "tmuxAttachCommand": "tmux attach -t queue-worker@kernel"
     },
     {
       "id": "dev-build@starter",
@@ -501,7 +505,8 @@
         ],
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
-      }
+      },
+      "tmuxAttachCommand": "tmux attach -t dev-build@starter"
     },
     {
       "id": "dev-review@starter",
@@ -605,7 +610,8 @@
         ],
         "ansi": true,
         "capturedAt": "2026-10-09T13:24:44.000Z"
-      }
+      },
+      "tmuxAttachCommand": "tmux attach -t dev-review@starter"
     },
     {
       "id": "openrig-orch",
@@ -683,7 +689,8 @@
       ],
       "summary": "QA accepted: 69d2fc9 contains root-absolute traversal within the scanned folder.",
       "createdAt": "2026-10-08T09:43:56.040Z",
-      "updatedAt": "2026-10-08T09:44:05.064Z"
+      "updatedAt": "2026-10-08T09:44:05.064Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261008094321-21dd1fc8",
@@ -699,7 +706,9 @@
       ],
       "summary": "Recheck linkcheck slice 4 at 69d2fc9: /../ escape fixed.",
       "createdAt": "2026-10-08T09:43:21.930Z",
-      "updatedAt": "2026-10-08T09:43:56.040Z"
+      "updatedAt": "2026-10-08T09:43:56.040Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261008094254-ea0cfc2b",
@@ -715,7 +724,9 @@
       ],
       "summary": "QA finding: root-absolute paths can escape the scanned folder via ../.",
       "createdAt": "2026-10-08T09:42:54.750Z",
-      "updatedAt": "2026-10-08T09:43:21.930Z"
+      "updatedAt": "2026-10-08T09:43:21.930Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     },
     {
       "id": "qitem-20261008094147-afa1bfe5",
@@ -726,7 +737,9 @@
       "tags": [],
       "summary": "Review request: linkcheck slice 4 (root-absolute /x.md links).",
       "createdAt": "2026-10-08T09:41:47.542Z",
-      "updatedAt": "2026-10-08T09:42:54.750Z"
+      "updatedAt": "2026-10-08T09:42:54.750Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261008094112-5d2a99105f41be60",
@@ -737,7 +750,9 @@
       "tags": [],
       "summary": "linkcheck slice 4: resolve root-absolute /x.md from the scanned folder",
       "createdAt": "2026-10-08T09:41:12.055Z",
-      "updatedAt": "2026-10-08T09:41:47.542Z"
+      "updatedAt": "2026-10-08T09:41:47.542Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     },
     {
       "id": "qitem-20261007134659-fb38a59d",
@@ -753,7 +768,8 @@
       ],
       "summary": "QA accepted: 61085bd meets the stated slice-3 report and exit-code contract.",
       "createdAt": "2026-10-07T13:46:59.963Z",
-      "updatedAt": "2026-10-07T13:47:08.030Z"
+      "updatedAt": "2026-10-07T13:47:08.030Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261007134609-76aea09e",
@@ -769,7 +785,9 @@
       ],
       "summary": "Review linkcheck slice 3 (OK/BROKEN report + exit code), commit 61085bd",
       "createdAt": "2026-10-07T13:46:09.143Z",
-      "updatedAt": "2026-10-07T13:46:59.963Z"
+      "updatedAt": "2026-10-07T13:46:59.963Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261007134543-bfbcb66af27e320c",
@@ -784,7 +802,9 @@
       ],
       "summary": "Implement linkcheck slice 3: OK/BROKEN report + non-zero exit",
       "createdAt": "2026-10-07T13:45:43.826Z",
-      "updatedAt": "2026-10-07T13:46:09.143Z"
+      "updatedAt": "2026-10-07T13:46:09.143Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     },
     {
       "id": "qitem-20261007134502-7b69432e",
@@ -800,7 +820,8 @@
       ],
       "summary": "QA accepted: 53b8b24 meets the stated slice-2 target-check contract.",
       "createdAt": "2026-10-07T13:45:02.350Z",
-      "updatedAt": "2026-10-07T13:45:09.723Z"
+      "updatedAt": "2026-10-07T13:45:09.723Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261007134353-e2570289",
@@ -816,7 +837,9 @@
       ],
       "summary": "Review linkcheck slice 2 (target existence check), commit 53b8b24",
       "createdAt": "2026-10-07T13:43:53.725Z",
-      "updatedAt": "2026-10-07T13:45:02.350Z"
+      "updatedAt": "2026-10-07T13:45:02.350Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261007134324-9b46dc6f075242ac",
@@ -831,7 +854,9 @@
       ],
       "summary": "Implement linkcheck slice 2: check link targets exist",
       "createdAt": "2026-10-07T13:43:24.880Z",
-      "updatedAt": "2026-10-07T13:43:53.725Z"
+      "updatedAt": "2026-10-07T13:43:53.725Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     },
     {
       "id": "qitem-20261007131126-b0c9aea9",
@@ -847,7 +872,8 @@
       ],
       "summary": "QA accepted: c81cda4 meets the stated slice-1 contract.",
       "createdAt": "2026-10-07T13:11:26.517Z",
-      "updatedAt": "2026-10-07T13:11:38.013Z"
+      "updatedAt": "2026-10-07T13:11:38.013Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261007131048-9cc27290",
@@ -863,7 +889,9 @@
       ],
       "summary": "Re-QA linkcheck slice 1: protocol-relative fix in c81cda4",
       "createdAt": "2026-10-07T13:10:48.256Z",
-      "updatedAt": "2026-10-07T13:11:26.517Z"
+      "updatedAt": "2026-10-07T13:11:26.517Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261007131033-ad64b22d",
@@ -879,7 +907,9 @@
       ],
       "summary": "QA finding: protocol-relative external URLs are treated as relative links.",
       "createdAt": "2026-10-07T13:10:33.864Z",
-      "updatedAt": "2026-10-07T13:10:48.256Z"
+      "updatedAt": "2026-10-07T13:10:48.256Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     },
     {
       "id": "qitem-20261007130917-fc196569",
@@ -895,7 +925,9 @@
       ],
       "summary": "Review linkcheck slice 1 (find relative markdown links), commit 9af0d90",
       "createdAt": "2026-10-07T13:09:17.075Z",
-      "updatedAt": "2026-10-07T13:10:33.864Z"
+      "updatedAt": "2026-10-07T13:10:33.864Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261007130613-1930a89795dcc8dd",
@@ -910,7 +942,9 @@
       ],
       "summary": "Implement link-checker slice 1",
       "createdAt": "2026-10-07T13:06:13.056Z",
-      "updatedAt": "2026-10-07T13:09:17.075Z"
+      "updatedAt": "2026-10-07T13:09:17.075Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     }
   ]
 }

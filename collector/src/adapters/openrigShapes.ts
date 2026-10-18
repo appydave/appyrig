@@ -218,6 +218,9 @@ export const LenientNode = z.looseObject({
   cwd: strN.optional(),
   /** v1.5 · L1: `path:<agent spec folder>`, where the seat's role.md lives. */
   agentRef: strN.optional(),
+  // v2: lenient on purpose (unknown + typeof in daemon.ts), one odd field must not blank a rig.
+  // resumeCommand is deliberately not read at all (it holds the Claude session id).
+  tmuxAttachCommand: z.unknown().optional(),
   lastActivityAt: strN.optional(),
   recoveryGuidance: z.looseObject({ summary: str.optional(), action: str.optional() }).nullish(),
   contextUsage: z
@@ -262,6 +265,12 @@ export const LenientQueueItem = z.looseObject({
   tags: z.array(str).nullish(),
   summary: strN.optional(),
   body: str.optional(),
+  // v2: lenient on purpose (unknown + typeof in daemon.ts).
+  closureReason: z.unknown().optional(),
+  closureTarget: z.unknown().optional(),
+  blockedOn: z.unknown().optional(),
+  humanIntent: z.unknown().optional(),
+  tier: z.unknown().optional(),
 });
 
 export const LenientHerdrAgent = z.looseObject({

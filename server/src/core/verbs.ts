@@ -52,6 +52,33 @@ import {
   DbRowsOutputSchema,
   type DbRowsOutput,
   SeatLoadoutOutputSchema,
+  SeatDetailInputSchema,
+  LibraryGetInputSchema,
+  LibraryGetOutputSchema,
+  LibraryListInputSchema,
+  LibraryListOutputSchema,
+  HistoryTransitionsInputSchema,
+  HistoryTransitionsOutputSchema,
+  type HistoryTransitionRow,
+  type HistoryTransitionsOutput,
+  WorkflowListInputSchema,
+  WorkflowListOutputSchema,
+  type WorkflowListOutput,
+  HealthFindingsInputSchema,
+  HealthFindingsOutputSchema,
+  type HealthFindingsOutput,
+  SettingsGetInputSchema,
+  SettingsGetOutputSchema,
+  type SettingsGetOutput,
+  type DaemonDataFor,
+  type DaemonKind,
+  type DataMachine,
+  type LibraryGroup,
+  type LibraryItem,
+  type LibraryListOutput,
+  type LibraryRow,
+  SeatDetailOutputSchema,
+  type SeatDetailOutput,
   type SeatLoadoutOutput,
   SeatHistoryOutputSchema,
   SeatGetOutputSchema,
@@ -109,6 +136,7 @@ export const FAILURE_CODES = defineFailureCodes({
   'feedback-not-found': -32008,
   'feedback-unavailable': -32009,
   'feedback-full': -32010,
+  'library-item-not-found': -32011,
 });
 
 export const MachineNotFoundDetails = z.object({
@@ -412,9 +440,117 @@ const NOT_FOUND = ['machine-not-found'];
 const SEAT_NOT_FOUND = ['machine-not-found', 'seat-not-found'];
 const HANDOFF_NOT_FOUND = ['machine-not-found', 'handoff-not-found'];
 const RIG_NOT_FOUND = ['machine-not-found', 'rig-not-found'];
+const LIBRARY_NOT_FOUND = ['machine-not-found', 'library-item-not-found'];
 const FEEDBACK_NOT_FOUND = ['feedback-not-found'];
 const FEEDBACK_ADD = ['feedback-unavailable', 'feedback-full'];
 const FILE_NOT_FOUND = ['machine-not-found', 'rig-not-found', 'file-not-found'];
+
+/**
+ * v2 data channels: one machine's latest push of `kind`, plus the header every v2 verb returns so an
+ * empty list is never read as "none". `pending` = nothing from that collector; `unsupported` = its
+ * OpenRig lacks the route; `ok` = data (possibly with a null part the collector could not read).
+ */
+function dataOf<K extends DaemonKind>(ctx: VerbContext, machine: string, kind: K, label: string) {
+  const p = ctx.store.daemonData.get(machine, kind);
+  const header: DataMachine = !p
+    ? {
+        machine,
+        status: 'pending',
+        reason: `no ${label} from this machine's collector yet: it predates v2, has not sent one, or the daemon read failed`,
+        collectedAt: null,
+      }
+    : p.status === 'unsupported' || p.status === 'not-found'
+      ? {
+          machine,
+          status: 'unsupported',
+          reason: p.reason ?? `this machine's OpenRig has no ${label}`,
+          collectedAt: p.collectedAt,
+        }
+      : { machine, status: 'ok', reason: null, collectedAt: p.collectedAt };
+  return { header, data: (p?.status === 'ok' ? p.data : null) as DaemonDataFor<K> | null };
+}
+
+/**
+ * What an empty findings list means. Never "healthy": the answer is `findings`, `none-found` with
+ * every reason it may not be all-clear, or `unknown`.
+ */
+export function assess(data: DaemonDataFor<'health'> | null): {
+  assessment: 'findings' | 'none-found' | 'unknown';
+  caveats: string[];
+} {
+  if (!data) return { assessment: 'unknown', caveats: [] };
+  if (data.findings === null)
+    return {
+      assessment: 'unknown',
+      caveats: [
+        "the daemon's findings list could not be read, so nothing can be said about health",
+      ],
+    };
+  if (data.findings.length > 0) return { assessment: 'findings', caveats: [] };
+  const caveats: string[] = [];
+  if (data.policy === null)
+    caveats.push('the health policy could not be read: cannot tell whether detectors run');
+  else if (data.policy.diagnosisEnabled === false)
+    caveats.push(
+      'diagnosis is off on this daemon: its scheduled detectors do not run, so an empty list proves nothing'
+    );
+  else if (data.policy.diagnosisEnabled === null)
+    caveats.push('the policy did not say whether diagnosis is on');
+  if (data.coverage.length === 0)
+    caveats.push('no coverage was reported: cannot tell what was evaluated');
+  for (const c of data.coverage) {
+    if (c.partial === true) caveats.push(`coverage of ${c.source} was partial`);
+    if (c.evaluated === 0)
+      caveats.push(`${c.source} evaluated 0${c.unit ? ` ${c.unit}` : ''}: nothing was examined`);
+  }
+  if (data.findingsTruncated === true) caveats.push('the findings list was cut short');
+  return { assessment: 'none-found', caveats };
+}
+
+type RowKey = Pick<HistoryTransitionRow, 'at' | 'machine' | 'id'>;
+const numId = (id: string) => (/^\d+$/.test(id) ? Number(id) : -1);
+/** Newest first; ties by machine, then id (numeric when both are). Total order, so a keyset is exact. */
+const compareRows = (a: RowKey, b: RowKey): number =>
+  b.at.localeCompare(a.at) ||
+  a.machine.localeCompare(b.machine) ||
+  numId(b.id) - numId(a.id) ||
+  b.id.localeCompare(a.id);
+const encodeCursor = (r: RowKey): string =>
+  Buffer.from(JSON.stringify([r.at, r.machine, r.id])).toString('base64url');
+function decodeCursor(c: string): RowKey {
+  try {
+    const v = JSON.parse(Buffer.from(c, 'base64url').toString('utf8')) as unknown;
+    if (
+      Array.isArray(v) &&
+      v.length === 3 &&
+      v.every((x) => typeof x === 'string' && x.length > 0 && x.length < 100)
+    )
+      return { at: v[0] as string, machine: v[1] as string, id: v[2] as string };
+  } catch {
+    // falls through to the refusal
+  }
+  throw new CapabilityRefusal('invalid-input', 'before is not a cursor this verb returned.', {
+    issues: [{ path: 'before', message: 'not a cursor from a previous page' }],
+  });
+}
+
+const LIBRARY_GROUPS: Record<LibraryGroup, 'specs' | 'skills' | 'contextPacks'> = {
+  spec: 'specs',
+  skill: 'skills',
+  'context-pack': 'contextPacks',
+};
+
+function libraryRows(data: DaemonDataFor<'library'>): { row: LibraryRow; group: LibraryGroup }[] {
+  return (Object.keys(LIBRARY_GROUPS) as LibraryGroup[]).flatMap((group) =>
+    (data[LIBRARY_GROUPS[group]] ?? []).map((row) => ({ row, group }))
+  );
+}
+
+const toItem = (machine: string, group: LibraryGroup, row: LibraryRow): LibraryItem => {
+  const item: Partial<LibraryRow> = { ...row };
+  delete item.files;
+  return { ...(item as Omit<LibraryRow, 'files'>), machine, group };
+};
 
 // ── the verbs ──────────────────────────────────────────────────────────────────────────────────
 
@@ -590,6 +726,268 @@ const VERB_SET = {
         return out('no-listing', 'no transcript with a skill listing was found for this seat');
       return out(loadout.status, null);
     }
+  ),
+
+  'seat.detail': query(
+    "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token and command (they hold the Claude session id), transcript path and event payloads are NOT carried anywhere. status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node routes); 'seat-not-found' (the routes exist but the daemon does not know this seat); 'not-openrig' (a plain tmux seat has none).",
+    SeatDetailInputSchema,
+    SeatDetailOutputSchema,
+    SEAT_NOT_FOUND,
+    (input, ctx): SeatDetailOutput => {
+      const { seat } = seatOf(ctx, input.machine, input.seat);
+      const out = (
+        status: SeatDetailOutput['status'],
+        reason: string | null,
+        p?: { collectedAt: string; data: SeatDetailOutput['detail'] }
+      ): SeatDetailOutput => ({
+        machine: input.machine,
+        seat: input.seat,
+        status,
+        reason,
+        collectedAt: p?.collectedAt ?? null,
+        detail: p?.data ?? null,
+      });
+      if (seat.source !== 'openrig')
+        return out('not-openrig', 'a plain terminal seat has no OpenRig node record');
+      const p = ctx.store.daemonData.get(input.machine, 'seatdetail', input.seat);
+      if (!p)
+        return out(
+          'pending',
+          "no seat detail from this machine's collector for this seat yet: it predates v2, has not sent one (it re-reads every minute), or the daemon read failed"
+        );
+      if (p.status === 'unsupported') return out('unsupported', p.reason);
+      if (p.status === 'not-found') return out('seat-not-found', p.reason);
+      return out('ok', null, { collectedAt: p.collectedAt, data: p.data });
+    }
+  ),
+
+  'library.list': query(
+    "OpenRig's library as each machine's collector read it (read-only): specs (agent, rig, workflow), skills and context packs, with name, version, source, summary, where it lives on that machine, and group facts (workflow steps and roles, skill file count and bytes, pack token estimate). The index only: no file text. machines[] says per machine whether the library was read (ok), is not there yet (pending) or that OpenRig lacks it (unsupported), and counts[] is null for a list that could not be read, so an empty list is never 'none'. Built-ins are the same on every machine; compare machines by name+version+source. Filters: group, kind, text; limit (default 200, max 500).",
+    LibraryListInputSchema,
+    LibraryListOutputSchema,
+    NOT_FOUND,
+    (input, ctx): LibraryListOutput => {
+      const machines: LibraryListOutput['machines'] = [];
+      const all: LibraryItem[] = [];
+      for (const m of machinesOf(ctx, input.machine)) {
+        const { header, data } = dataOf(ctx, m.machine.id, 'library', 'library');
+        const count = (k: 'specs' | 'skills' | 'contextPacks') => data?.[k]?.length ?? null;
+        machines.push({
+          ...header,
+          openrigVersion: data?.openrigVersion ?? null,
+          counts: {
+            specs: count('specs'),
+            skills: count('skills'),
+            contextPacks: count('contextPacks'),
+          },
+        });
+        if (data)
+          for (const { row, group } of libraryRows(data))
+            all.push(toItem(m.machine.id, group, row));
+      }
+      const text = input.text?.toLowerCase();
+      const items = all
+        .filter((i) => input.group === undefined || i.group === input.group)
+        .filter((i) => input.kind === undefined || i.kind === input.kind)
+        .filter(
+          (i) =>
+            text === undefined ||
+            i.name.toLowerCase().includes(text) ||
+            i.id.toLowerCase().includes(text) ||
+            (i.summary ?? '').toLowerCase().includes(text)
+        )
+        .sort(
+          (a, b) =>
+            a.machine.localeCompare(b.machine) ||
+            a.group.localeCompare(b.group) ||
+            a.name.localeCompare(b.name) ||
+            a.id.localeCompare(b.id)
+        );
+      const limit = input.limit ?? 200;
+      return {
+        machines,
+        items: items.slice(0, limit),
+        total: items.length,
+        truncated: items.length > limit,
+      };
+    }
+  ),
+
+  'library.get': query(
+    "One library item in full from the index: the row library.list returns plus, for a skill, its file names and sizes. File text is not carried (the collector sends the index only). Refuses library-item-not-found when that machine's library holds no such item (or has not been read yet).",
+    LibraryGetInputSchema,
+    LibraryGetOutputSchema,
+    LIBRARY_NOT_FOUND,
+    (input, ctx) => {
+      const [m] = machinesOf(ctx, input.machine);
+      const { header, data } = dataOf(ctx, m!.machine.id, 'library', 'library');
+      const hit = data
+        ? libraryRows(data).find((r) => r.group === input.group && r.row.id === input.id)
+        : undefined;
+      if (!hit)
+        throw new CapabilityRefusal(
+          'library-item-not-found',
+          `Machine "${input.machine}" has no ${input.group} "${input.id}" in its library (${header.status}).`,
+          { machine: input.machine, group: input.group, id: input.id, status: header.status }
+        );
+      return {
+        item: toItem(input.machine, hit.group, hit.row),
+        files: hit.row.files,
+        collectedAt: header.collectedAt,
+      };
+    }
+  ),
+
+  'history.transitions': query(
+    "Queue transitions: every state change of every queue item, as each machine's OpenRig daemon retained it (who moved it, when, into which state, and the closure reason and target), newest first, in pages. Each collector holds the newest 1000 and the hub serves what it holds: machines[] says how many (held), how many the daemon had when read (retained), whether it was cut (truncated) and the earliest time held, so say 'from <date>', never 'all history'. Rows also carry the item's source, destination and summary when it is still in that machine's last queue snapshot. Filters: machine, qitemId, seat (the actor, or the item's sender or owner), rig (the part after @), state, closureReason, text (substring of id, actor, closure, state, summary, tags). Page with limit (max 200) and before = the previous nextCursor (a keyset of the last row, so rows added between pages never shift a page). Not the same as history.list, which is what API callers did.",
+    HistoryTransitionsInputSchema,
+    HistoryTransitionsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): HistoryTransitionsOutput => {
+      const machines: HistoryTransitionsOutput['machines'] = [];
+      const all: HistoryTransitionRow[] = [];
+      const text = input.text?.toLowerCase();
+      const inRig = (v: string | null) =>
+        v !== null && input.rig !== undefined && v.endsWith(`@${input.rig}`);
+      for (const m of machinesOf(ctx, input.machine)) {
+        const { header, data } = dataOf(ctx, m.machine.id, 'transitions', 'queue transitions');
+        const rows = data?.rows ?? [];
+        machines.push({
+          ...header,
+          held: rows.length,
+          retained: data?.retained ?? null,
+          truncated: data?.truncated ?? false,
+          earliestAt: rows.reduce<string | null>(
+            (e, r) => (e === null || r.at < e ? r.at : e),
+            null
+          ),
+        });
+        const queue = new Map(m.snapshot.queue.map((q) => [q.id, q]));
+        for (const r of rows) {
+          const q = queue.get(r.qitemId);
+          const row: HistoryTransitionRow = {
+            ...r,
+            machine: m.machine.id,
+            source: q?.source ?? null,
+            destination: q?.destination ?? null,
+            summary: q?.summary?.slice(0, 200) ?? null,
+          };
+          if (input.qitemId !== undefined && r.qitemId !== input.qitemId) continue;
+          if (input.state !== undefined && r.state !== input.state) continue;
+          if (input.closureReason !== undefined && r.closureReason !== input.closureReason)
+            continue;
+          if (
+            input.seat !== undefined &&
+            ![row.actor, row.source, row.destination].includes(input.seat)
+          )
+            continue;
+          if (input.rig !== undefined && ![row.actor, row.source, row.destination].some(inRig))
+            continue;
+          if (
+            text !== undefined &&
+            ![
+              r.qitemId,
+              r.actor,
+              r.closureReason,
+              r.closureTarget,
+              r.state,
+              row.summary,
+              ...(q?.tags ?? []),
+            ].some((v) => (v ?? '').toLowerCase().includes(text))
+          )
+            continue;
+          all.push(row);
+        }
+      }
+      // newest first; ids are per-daemon decimal strings, compared as numbers when both are
+      all.sort(compareRows);
+      const limit = input.limit ?? 50;
+      let from = 0;
+      if (input.before !== undefined) {
+        const key = decodeCursor(input.before);
+        // keyset: the first row strictly after the cursor's row in this order
+        from = all.findIndex((r) => compareRows(r, key) > 0);
+        if (from === -1) from = all.length;
+      }
+      const page = all.slice(from, from + limit);
+      return {
+        machines,
+        rows: page,
+        total: all.length,
+        nextCursor: from + limit < all.length ? encodeCursor(page[page.length - 1]!) : null,
+      };
+    }
+  ),
+
+  'workflow.list': query(
+    "OpenRig workflows as each machine's collector read them (read-only): the workflow specs (name, version, purpose, target rig, terminal-turn rule, built-in) and the running or finished instances (id, workflow, status, current step, hops, times, deadline state). machines[] says per machine whether each list was read: specsRead / instancesRead true with an empty list means none exist (an instance list that is empty means no workflow has run); false means it could not be read, which is not the same. Instances can be filtered by status. Starting, routing or aborting a workflow is not available here.",
+    WorkflowListInputSchema,
+    WorkflowListOutputSchema,
+    NOT_FOUND,
+    (input, ctx): WorkflowListOutput => {
+      const out: WorkflowListOutput = { machines: [], specs: [], instances: [] };
+      for (const m of machinesOf(ctx, input.machine)) {
+        const { header, data } = dataOf(ctx, m.machine.id, 'workflows', 'workflows');
+        out.machines.push({
+          ...header,
+          specsRead: data?.specs != null,
+          instancesRead: data?.instances != null,
+        });
+        for (const s of data?.specs ?? []) out.specs.push({ ...s, machine: m.machine.id });
+        for (const i of data?.instances ?? [])
+          if (input.status === undefined || i.status === input.status)
+            out.instances.push({ ...i, machine: m.machine.id });
+      }
+      out.specs.sort((a, b) => a.machine.localeCompare(b.machine) || a.name.localeCompare(b.name));
+      out.instances.sort(
+        (a, b) =>
+          (b.createdAt ?? '').localeCompare(a.createdAt ?? '') ||
+          a.instanceId.localeCompare(b.instanceId)
+      );
+      return out;
+    }
+  ),
+
+  'health.findings': query(
+    "OpenRig's health findings (the detectors' pathologies, such as ceremony amplification or review carousels) per machine, with the coverage and policy that say what an empty list means. assessment is 'findings' (some exist), 'none-found' (the detectors that ran found none: read caveats before treating that as healthy) or 'unknown' (not readable). It is never 'healthy': caveats lists why an empty list may not be all-clear (diagnosis off so scheduled detectors do not run, partial or zero coverage, an unreadable policy). data also carries the context-pressure roll-up, the restore-readiness verdict and the daemon's version and event-loop lag. Not machine health (health.get) and not a place to change a detector.",
+    HealthFindingsInputSchema,
+    HealthFindingsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): HealthFindingsOutput => ({
+      machines: machinesOf(ctx, input.machine).map((m) => {
+        const { header, data } = dataOf(ctx, m.machine.id, 'health', 'health findings');
+        return { ...header, ...assess(data), data };
+      }),
+    })
+  ),
+
+  'settings.get': query(
+    "The OpenRig daemon's configuration values per machine (read-only), from an allowlist of keys (daemon port and host, host name, transcripts on/off and sizes, health thresholds, snapshots, policies, retention, queue and feed and workflow tuning). Each setting carries its value, its source (default, env, file) and its default; changed is true when the source is not the default, so machines can be compared on what was set by hand. Path-like values are replaced by '(path hidden)' and withheld counts the keys never forwarded (paths, roots, anything secret-looking). Filter by key (exact, or a prefix ending in a dot) or changedOnly. Editing a setting is not available here.",
+    SettingsGetInputSchema,
+    SettingsGetOutputSchema,
+    NOT_FOUND,
+    (input, ctx): SettingsGetOutput => ({
+      machines: machinesOf(ctx, input.machine).map((m) => {
+        const { header, data } = dataOf(ctx, m.machine.id, 'settings', 'settings');
+        const settings = Object.entries(data?.settings ?? {})
+          .filter(([k]) =>
+            input.key === undefined
+              ? true
+              : input.key.endsWith('.')
+                ? k.startsWith(input.key)
+                : k === input.key
+          )
+          .map(([key, s]) => ({ key, ...s, changed: s.source !== null && s.source !== 'default' }))
+          .filter((s) => !input.changedOnly || s.changed)
+          .sort((a, b) => a.key.localeCompare(b.key));
+        return {
+          ...header,
+          withheld: data?.withheld ?? 0,
+          pathsHidden: data?.pathsHidden ?? 0,
+          settings,
+        };
+      }),
+    })
   ),
 
   'queue.list': query(

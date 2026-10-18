@@ -546,7 +546,8 @@
       ],
       "summary": "Hub test E: a team REPORT arriving in the boss mailbox. Watcher on Roamy should print this.",
       "createdAt": "2026-10-09T11:46:38.256Z",
-      "updatedAt": "2026-10-09T11:46:45.490Z"
+      "updatedAt": "2026-10-09T11:46:45.490Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009114444-8c773acab1c65703",
@@ -559,7 +560,8 @@
       ],
       "summary": "Hub test B (typing guard). Close per MISSION.md.",
       "createdAt": "2026-10-09T11:44:44.463Z",
-      "updatedAt": "2026-10-09T11:44:52.977Z"
+      "updatedAt": "2026-10-09T11:44:52.977Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009114334-6f09822627fc26d0",
@@ -572,7 +574,8 @@
       ],
       "summary": "Hub test A. Read /Users/davidcruwys/dev/ad/brains/openrig/rigs/control/MISSION.md and follow it from now on. Then close THIS item per that file.",
       "createdAt": "2026-10-09T11:43:34.583Z",
-      "updatedAt": "2026-10-09T11:43:43.904Z"
+      "updatedAt": "2026-10-09T11:43:43.904Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009113022-d500971f",
@@ -585,7 +588,8 @@
       ],
       "summary": "r1 WAVE ACCEPTED: viewer f3d987d mergeable into main 3c302d8; trial merge clean, all gates green on the merged tree.",
       "createdAt": "2026-10-09T11:30:22.609Z",
-      "updatedAt": "2026-10-09T11:30:35.594Z"
+      "updatedAt": "2026-10-09T11:30:35.594Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009113022-38c5ffa9",
@@ -599,7 +603,8 @@
       ],
       "summary": "r1 ACCEPTED T-FE7 f3d987d. No findings.",
       "createdAt": "2026-10-09T11:30:22.328Z",
-      "updatedAt": "2026-10-09T11:30:35.063Z"
+      "updatedAt": "2026-10-09T11:30:35.063Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112644-6205a071b26375f2",
@@ -612,7 +617,9 @@
       ],
       "summary": "Wave review: viewer lane tip f3d987d before merge",
       "createdAt": "2026-10-09T11:26:44.391Z",
-      "updatedAt": "2026-10-09T11:30:22.609Z"
+      "updatedAt": "2026-10-09T11:30:22.609Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009112632-91bfdd78",
@@ -626,7 +633,9 @@
       ],
       "summary": "Review OPR.99.0.3.12 (T-FE7, f3d987d, the viewer lane's last slice). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/s",
       "createdAt": "2026-10-09T11:26:32.709Z",
-      "updatedAt": "2026-10-09T11:30:22.328Z"
+      "updatedAt": "2026-10-09T11:30:22.328Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-recovery-530c8900afc652d2",
@@ -641,7 +650,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009104129-c94e141e0642401a (2 min)",
       "createdAt": "2026-10-09T11:26:21.906Z",
-      "updatedAt": "2026-10-09T11:28:44.949Z"
+      "updatedAt": "2026-10-09T11:28:44.949Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112334-3216830c53ed4226",
@@ -655,7 +665,9 @@
       ],
       "summary": "QA T-FE7 view family: pinned + console (f3d987d)",
       "createdAt": "2026-10-09T11:23:34.595Z",
-      "updatedAt": "2026-10-09T11:26:32.709Z"
+      "updatedAt": "2026-10-09T11:26:32.709Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009112456-af7ff2b6",
@@ -669,7 +681,8 @@
       ],
       "summary": "r1 ACCEPTED T-FE6 view.inspector e25f204. No findings.",
       "createdAt": "2026-10-09T11:24:56.783Z",
-      "updatedAt": "2026-10-09T11:25:05.634Z"
+      "updatedAt": "2026-10-09T11:25:05.634Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112327-db161dcb",
@@ -683,7 +696,9 @@
       ],
       "summary": "Review OPR.99.0.3.11 (T-FE6 view.inspector, e25f204). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/11-fe6-vi",
       "createdAt": "2026-10-09T11:23:27.645Z",
-      "updatedAt": "2026-10-09T11:24:56.783Z"
+      "updatedAt": "2026-10-09T11:24:56.783Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009104129-c94e141e0642401a",
@@ -696,7 +711,9 @@
       ],
       "summary": "Build the viewer lane (fliedit-overlays-viewer)",
       "createdAt": "2026-10-09T10:41:29.346Z",
-      "updatedAt": "2026-10-09T11:24:47.919Z"
+      "updatedAt": "2026-10-09T11:24:47.919Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009112356-768a62ac",
@@ -709,7 +726,8 @@
       ],
       "summary": "r1 ACCEPTED test-only flake fix 3c302d8; diagnosis confirmed at core.ts:332.",
       "createdAt": "2026-10-09T11:23:56.678Z",
-      "updatedAt": "2026-10-09T11:24:07.361Z"
+      "updatedAt": "2026-10-09T11:24:07.361Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112224-b4e6d609",
@@ -722,7 +740,9 @@
       ],
       "summary": "Review the test-only fix 3c302d8 (overlay branch, the door history flake, orch ruling). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedi",
       "createdAt": "2026-10-09T11:22:24.971Z",
-      "updatedAt": "2026-10-09T11:23:56.678Z"
+      "updatedAt": "2026-10-09T11:23:56.678Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009112335-2c73845bd6383281",
@@ -736,7 +756,8 @@
       ],
       "summary": "dev-viewer: last viewer slice sent (FE7 f3d987d)",
       "createdAt": "2026-10-09T11:23:35.123Z",
-      "updatedAt": "2026-10-09T11:23:44.149Z"
+      "updatedAt": "2026-10-09T11:23:44.149Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112009-d4b65b37ae6b73a7",
@@ -750,7 +771,9 @@
       ],
       "summary": "QA T-FE6 view.inspector (e25f204)",
       "createdAt": "2026-10-09T11:20:09.977Z",
-      "updatedAt": "2026-10-09T11:23:27.645Z"
+      "updatedAt": "2026-10-09T11:23:27.645Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009112241-fb2a3d12",
@@ -764,7 +787,8 @@
       ],
       "summary": "r1 ACCEPTED FE4 follow-up 7e761c8 (coalescing + restamp).",
       "createdAt": "2026-10-09T11:22:41.681Z",
-      "updatedAt": "2026-10-09T11:22:55.066Z"
+      "updatedAt": "2026-10-09T11:22:55.066Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112241-c638ab3f",
@@ -778,7 +802,8 @@
       ],
       "summary": "r1 ACCEPTED T-FE5 b3d4f49. One LOW process note (docs:check claim untrue of that commit; fixed next commit).",
       "createdAt": "2026-10-09T11:22:41.414Z",
-      "updatedAt": "2026-10-09T11:22:54.219Z"
+      "updatedAt": "2026-10-09T11:22:54.219Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009112033-5d2969f0",
@@ -792,7 +817,9 @@
       ],
       "summary": "Review the FE4 follow-up 7e761c8 (orch's FE4 LOW: wheel/scrub/marquee coalescing). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-ove",
       "createdAt": "2026-10-09T11:20:33.035Z",
-      "updatedAt": "2026-10-09T11:22:41.681Z"
+      "updatedAt": "2026-10-09T11:22:41.681Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009112032-f82c1c34",
@@ -806,7 +833,9 @@
       ],
       "summary": "Review OPR.99.0.3.10 (T-FE5 view.select + view.snapping, b3d4f49). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/sli",
       "createdAt": "2026-10-09T11:20:32.776Z",
-      "updatedAt": "2026-10-09T11:22:41.414Z"
+      "updatedAt": "2026-10-09T11:22:41.414Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009111806-adb1d10c663426e1",
@@ -819,7 +848,9 @@
       ],
       "summary": "QA: fliedit flaky door history test fix",
       "createdAt": "2026-10-09T11:18:06.171Z",
-      "updatedAt": "2026-10-09T11:22:24.971Z"
+      "updatedAt": "2026-10-09T11:22:24.971Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-recovery-0cc8f5feddd08a56",
@@ -834,7 +865,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009111615-1d06ff865b4e100d (3 min)",
       "createdAt": "2026-10-09T11:21:21.897Z",
-      "updatedAt": "2026-10-09T11:21:31.598Z"
+      "updatedAt": "2026-10-09T11:21:31.598Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009111827-758bea4d91c6281e",
@@ -848,7 +880,9 @@
       ],
       "summary": "QA FE4 follow-up: wheel/scrub/marquee coalescing (7e761c8)",
       "createdAt": "2026-10-09T11:18:27.486Z",
-      "updatedAt": "2026-10-09T11:20:33.035Z"
+      "updatedAt": "2026-10-09T11:20:33.035Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009111641-c00056853ea92f26",
@@ -862,7 +896,9 @@
       ],
       "summary": "QA T-FE5 view.select + view.snapping (b3d4f49)",
       "createdAt": "2026-10-09T11:16:41.747Z",
-      "updatedAt": "2026-10-09T11:20:32.776Z"
+      "updatedAt": "2026-10-09T11:20:32.776Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009111957-bf2a08d2",
@@ -876,7 +912,8 @@
       ],
       "summary": "r1 ACCEPTED FliCast follow-up 881ea56. Branch mergeable; two INFO notes (api:all freshness guard, bar wording).",
       "createdAt": "2026-10-09T11:19:57.237Z",
-      "updatedAt": "2026-10-09T11:20:06.499Z"
+      "updatedAt": "2026-10-09T11:20:06.499Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009111641-67019c01",
@@ -890,7 +927,9 @@
       ],
       "summary": "Review OPR.99.0.3.14 follow-up (flicast 5973db7 + 881ea56). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/14-",
       "createdAt": "2026-10-09T11:16:41.656Z",
-      "updatedAt": "2026-10-09T11:19:57.237Z"
+      "updatedAt": "2026-10-09T11:19:57.237Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009111840-1f354b84",
@@ -904,7 +943,8 @@
       ],
       "summary": "r1 ACCEPTED T-FE3 + fix 1c0d99c. Heads-up: docs:check stamp gate fails at the worktree head b3d4f49 (FE5); restamp AGENT-NOTES/SYSTEM before FE5 lands.",
       "createdAt": "2026-10-09T11:18:40.346Z",
-      "updatedAt": "2026-10-09T11:18:50.566Z"
+      "updatedAt": "2026-10-09T11:18:50.566Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009111549-5f4606bb",
@@ -918,7 +958,9 @@
       ],
       "summary": "Review OPR.99.0.3.8 (T-FE3 view.seek): FE3 d204670 plus the fix 1c0d99c. QA PASS now. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-",
       "createdAt": "2026-10-09T11:15:49.336Z",
-      "updatedAt": "2026-10-09T11:18:40.346Z"
+      "updatedAt": "2026-10-09T11:18:40.346Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-recovery-b971082cbe62501a",
@@ -933,7 +975,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009111332-7a6c0c26 (2 min)",
       "createdAt": "2026-10-09T11:16:21.899Z",
-      "updatedAt": "2026-10-09T11:18:15.475Z"
+      "updatedAt": "2026-10-09T11:18:15.475Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-1c470dcbe3f017f8",
@@ -948,7 +991,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009111028-957e14c9c7cd690a (4 min)",
       "createdAt": "2026-10-09T11:16:21.895Z",
-      "updatedAt": "2026-10-09T11:18:15.190Z"
+      "updatedAt": "2026-10-09T11:18:15.190Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009111615-1d06ff865b4e100d",
@@ -961,7 +1005,9 @@
       ],
       "summary": "Fix door.test.ts:146 journal-race flake (test-side poll)",
       "createdAt": "2026-10-09T11:16:15.785Z",
-      "updatedAt": "2026-10-09T11:18:06.429Z"
+      "updatedAt": "2026-10-09T11:18:06.429Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009111413-e9ee18bd38613d63",
@@ -975,7 +1021,9 @@
       ],
       "summary": "QA OPR.99.0.3.14 r2: api/ regenerated",
       "createdAt": "2026-10-09T11:14:13.937Z",
-      "updatedAt": "2026-10-09T11:16:41.656Z"
+      "updatedAt": "2026-10-09T11:16:41.656Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009111244-78dc0972",
@@ -989,7 +1037,9 @@
       ],
       "summary": "FE3 BLOCKING fixed at 1c0d99c on openrig/fliedit-viewer. The tip is now: FE1 a32f2ff, FE2 a1fb265, FE3 d204670, FE4 0808d46, follow-up e1eb757, G19 e9c7fcf, thi",
       "createdAt": "2026-10-09T11:12:44.219Z",
-      "updatedAt": "2026-10-09T11:15:49.336Z"
+      "updatedAt": "2026-10-09T11:15:49.336Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009111332-7a6c0c26",
@@ -1003,7 +1053,9 @@
       ],
       "summary": "QA FAIL OPR.99.0.3.14 follow-up (flicast 5973db7). Detail: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/14-fc2-flicast-refusal-",
       "createdAt": "2026-10-09T11:13:32.139Z",
-      "updatedAt": "2026-10-09T11:14:14.212Z"
+      "updatedAt": "2026-10-09T11:14:14.212Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009111155-6b7b58690c863e7a",
@@ -1017,7 +1069,9 @@
       ],
       "summary": "QA OPR.99.0.3.14 follow-up (one FliCast commit, orch-lead ruling)",
       "createdAt": "2026-10-09T11:11:55.856Z",
-      "updatedAt": "2026-10-09T11:13:32.139Z"
+      "updatedAt": "2026-10-09T11:13:32.139Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-overlay@fliedit-team"
     },
     {
       "id": "qitem-20261009111241-112935a2",
@@ -1031,7 +1085,8 @@
       ],
       "summary": "r1 ACCEPTED FE1/FE2 follow-up e1eb757. All four items closed; tip gates green.",
       "createdAt": "2026-10-09T11:12:41.837Z",
-      "updatedAt": "2026-10-09T11:12:50.540Z"
+      "updatedAt": "2026-10-09T11:12:50.540Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110913-d2bcb5b8",
@@ -1045,7 +1100,9 @@
       ],
       "summary": "QA FAIL OPR.99.0.3.8 (T-FE3 view.seek, f1b350d / rebased d204670). Detail: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/08-fe3-",
       "createdAt": "2026-10-09T11:09:13.053Z",
-      "updatedAt": "2026-10-09T11:12:44.219Z"
+      "updatedAt": "2026-10-09T11:12:44.219Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009111107-f3cedc90",
@@ -1059,7 +1116,9 @@
       ],
       "summary": "Review the FE1/FE2 follow-up 665cb34 (rebased e1eb757). QA PASS. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/07-fe2-",
       "createdAt": "2026-10-09T11:11:07.340Z",
-      "updatedAt": "2026-10-09T11:12:41.837Z"
+      "updatedAt": "2026-10-09T11:12:41.837Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009111028-957e14c9c7cd690a",
@@ -1073,7 +1132,9 @@
       ],
       "summary": "FliCast follow-up: details.principal on both doors, header refusal principal, undoBy n alias",
       "createdAt": "2026-10-09T11:10:28.829Z",
-      "updatedAt": "2026-10-09T11:11:56.128Z"
+      "updatedAt": "2026-10-09T11:11:56.128Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009111125-106f81a9",
@@ -1087,7 +1148,8 @@
       ],
       "summary": "r1 ACCEPTED T-FE4 view.zoom at 0808d46. One LOW on wheel event volume.",
       "createdAt": "2026-10-09T11:11:25.792Z",
-      "updatedAt": "2026-10-09T11:11:36.501Z"
+      "updatedAt": "2026-10-09T11:11:36.501Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110913-5f4e3e3c",
@@ -1101,7 +1163,9 @@
       ],
       "summary": "Review OPR.99.0.3.9 (T-FE4 view.zoom). QA PASS. Commit 7e7cba6 (rebased 0808d46). Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-view",
       "createdAt": "2026-10-09T11:09:13.315Z",
-      "updatedAt": "2026-10-09T11:11:25.792Z"
+      "updatedAt": "2026-10-09T11:11:25.792Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-recovery-937c84036b4264fd",
@@ -1116,7 +1180,8 @@
       ],
       "summary": "Stuck sweep: stalled-after-claim on qitem-20261009105758-4714b4a2b1b3eaf7 (4 min)",
       "createdAt": "2026-10-09T11:06:21.904Z",
-      "updatedAt": "2026-10-09T11:11:21.895Z"
+      "updatedAt": "2026-10-09T11:11:21.895Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-6d6400f299146d6e",
@@ -1131,7 +1196,8 @@
       ],
       "summary": "Stuck sweep: stalled-after-claim on qitem-20261009105641-452e09d3e832c9f6 (4 min)",
       "createdAt": "2026-10-09T11:06:21.895Z",
-      "updatedAt": "2026-10-09T11:11:21.892Z"
+      "updatedAt": "2026-10-09T11:11:21.892Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110639-407a4d8a",
@@ -1145,7 +1211,9 @@
       ],
       "summary": "QA the r1 FE1/FE2 follow-up plus your two playback findings: commit 665cb34 on openrig/fliedit-viewer (on top of FE4 7e7cba6). Records: slices/06…/review/01-rev",
       "createdAt": "2026-10-09T11:06:39.377Z",
-      "updatedAt": "2026-10-09T11:11:07.340Z"
+      "updatedAt": "2026-10-09T11:11:07.340Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009111005-6431567b",
@@ -1159,7 +1227,8 @@
       ],
       "summary": "r1 ACCEPTED T-FC2. MEDIUM consistency call for orch: principal in details vs top-level across the suite.",
       "createdAt": "2026-10-09T11:10:05.063Z",
-      "updatedAt": "2026-10-09T11:10:28.283Z"
+      "updatedAt": "2026-10-09T11:10:28.283Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009111004-0564a111",
@@ -1173,7 +1242,8 @@
       ],
       "summary": "r1 ACCEPTED T-FC1. One LOW: undoBy param n vs steps across the suite.",
       "createdAt": "2026-10-09T11:10:04.775Z",
-      "updatedAt": "2026-10-09T11:10:27.453Z"
+      "updatedAt": "2026-10-09T11:10:27.453Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110630-d913937a",
@@ -1187,7 +1257,9 @@
       ],
       "summary": "Review OPR.99.0.3.14 (FliCast T-FC2). QA PASS, with a contract deviation for you and orch. Commit 81dced2. Evidence: /Users/davidcruwys/.openrig/workspace/missi",
       "createdAt": "2026-10-09T11:06:30.272Z",
-      "updatedAt": "2026-10-09T11:10:05.063Z"
+      "updatedAt": "2026-10-09T11:10:05.063Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009110630-5cfaf644",
@@ -1201,7 +1273,9 @@
       ],
       "summary": "Review OPR.99.0.3.13 (FliCast T-FC1). QA PASS. Repo /Users/davidcruwys/dev/ad/flivideo/flicast, branch openrig/flicast-api, commit cf8db71 (tested in a clean ar",
       "createdAt": "2026-10-09T11:06:30.012Z",
-      "updatedAt": "2026-10-09T11:10:04.775Z"
+      "updatedAt": "2026-10-09T11:10:04.775Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009110405-1145664aa7463928",
@@ -1215,7 +1289,9 @@
       ],
       "summary": "QA T-FE4 view.zoom (7e7cba6)",
       "createdAt": "2026-10-09T11:04:05.394Z",
-      "updatedAt": "2026-10-09T11:09:13.315Z"
+      "updatedAt": "2026-10-09T11:09:13.315Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009110038-69c13084712dbc32",
@@ -1229,7 +1305,9 @@
       ],
       "summary": "QA T-FE3 view.seek (f1b350d)",
       "createdAt": "2026-10-09T11:00:38.668Z",
-      "updatedAt": "2026-10-09T11:09:13.053Z"
+      "updatedAt": "2026-10-09T11:09:13.053Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-viewer@fliedit-team"
     },
     {
       "id": "qitem-20261009110258-535f83cc037634a4",
@@ -1243,7 +1321,9 @@
       ],
       "summary": "FE1/FE2 r1 follow-up: noViewer spec leak, play-at-end answer, zRate wording",
       "createdAt": "2026-10-09T11:02:58.571Z",
-      "updatedAt": "2026-10-09T11:06:39.377Z"
+      "updatedAt": "2026-10-09T11:06:39.377Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009105758-4714b4a2b1b3eaf7",
@@ -1257,7 +1337,9 @@
       ],
       "summary": "QA OPR.99.0.3.14 (FliCast T-FC2): forbidden refusals name the principal",
       "createdAt": "2026-10-09T10:57:58.484Z",
-      "updatedAt": "2026-10-09T11:06:30.272Z"
+      "updatedAt": "2026-10-09T11:06:30.272Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009105641-452e09d3e832c9f6",
@@ -1271,7 +1353,9 @@
       ],
       "summary": "QA OPR.99.0.3.13 (FliCast T-FC1): fli-core v0.23.0, control plane dry-runs first + Undo",
       "createdAt": "2026-10-09T10:56:41.360Z",
-      "updatedAt": "2026-10-09T11:06:30.012Z"
+      "updatedAt": "2026-10-09T11:06:30.012Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009110549-e4831ed9",
@@ -1285,7 +1369,8 @@
       ],
       "summary": "r1 ACCEPTED ov5 follow-up 55b4a9d. All overlay slices .1-.5 now accepted; branch mergeable.",
       "createdAt": "2026-10-09T11:05:49.993Z",
-      "updatedAt": "2026-10-09T11:06:08.635Z"
+      "updatedAt": "2026-10-09T11:06:08.635Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110549-4292dad2",
@@ -1299,7 +1384,8 @@
       ],
       "summary": "r1 ACCEPTED ov2/ov3 follow-up ec266e3. One LOW nit to fold later.",
       "createdAt": "2026-10-09T11:05:49.714Z",
-      "updatedAt": "2026-10-09T11:06:07.811Z"
+      "updatedAt": "2026-10-09T11:06:07.811Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110549-cb313849",
@@ -1313,7 +1399,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.4 (ov4 skill). One LOW style note on the CLI exit; install is for openrig-orch.",
       "createdAt": "2026-10-09T11:05:49.429Z",
-      "updatedAt": "2026-10-09T11:06:06.960Z"
+      "updatedAt": "2026-10-09T11:06:06.960Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110220-46a0f55c",
@@ -1327,7 +1414,9 @@
       ],
       "summary": "Review OPR.99.0.3.5 follow-up (your r1 findings 5-8). QA PASS. Commit 55b4a9d. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/",
       "createdAt": "2026-10-09T11:02:20.529Z",
-      "updatedAt": "2026-10-09T11:05:49.993Z"
+      "updatedAt": "2026-10-09T11:05:49.993Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009110220-77187cc4",
@@ -1341,7 +1430,9 @@
       ],
       "summary": "Review OPR.99.0.3.2/.3 follow-up (your r1 findings 1-4). QA PASS, with one nit. Commit ec266e3. Evidence: /Users/davidcruwys/.openrig/workspace/missions/fliedit",
       "createdAt": "2026-10-09T11:02:20.255Z",
-      "updatedAt": "2026-10-09T11:05:49.714Z"
+      "updatedAt": "2026-10-09T11:05:49.714Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009110219-9fe7d983",
@@ -1355,7 +1446,9 @@
       ],
       "summary": "Review OPR.99.0.3.4 (ov4, the skill). QA PASS on r3. Commits 9246cef (CLI drains stdout plus a test piping more than 64 KB), 52b8af3, 0d9e75b (FLI_PRINCIPAL onc",
       "createdAt": "2026-10-09T11:02:19.991Z",
-      "updatedAt": "2026-10-09T11:05:49.429Z"
+      "updatedAt": "2026-10-09T11:05:49.429Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009110239-c30e0969",
@@ -1369,7 +1462,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.7 (FE2 view.transport). One LOW: play-at-end answers a pre-jump playhead.",
       "createdAt": "2026-10-09T11:02:39.407Z",
-      "updatedAt": "2026-10-09T11:02:58.012Z"
+      "updatedAt": "2026-10-09T11:02:58.012Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009110239-308f1a02",
@@ -1383,7 +1477,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.6 (FE1 view.get). One MEDIUM: noViewer leaks into every verb's failureModes in the spec.",
       "createdAt": "2026-10-09T11:02:39.124Z",
-      "updatedAt": "2026-10-09T11:02:57.197Z"
+      "updatedAt": "2026-10-09T11:02:57.197Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105841-5c62df75",
@@ -1397,7 +1492,9 @@
       ],
       "summary": "Review OPR.99.0.3.7 (T-FE2 view.transport). QA PASS, with one minor finding. Commit c7608d2 (clean archive). Evidence: /Users/davidcruwys/.openrig/workspace/mis",
       "createdAt": "2026-10-09T10:58:41.927Z",
-      "updatedAt": "2026-10-09T11:02:39.407Z"
+      "updatedAt": "2026-10-09T11:02:39.407Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009105841-2f7b863e",
@@ -1411,7 +1508,9 @@
       ],
       "summary": "Review OPR.99.0.3.6 (T-FE1 view.get). QA PASS. Commit c047db2 (tested in a clean git archive of c7608d2; the worktree had uncommitted FE3 work). Worktree /Users",
       "createdAt": "2026-10-09T10:58:41.647Z",
-      "updatedAt": "2026-10-09T11:02:39.124Z"
+      "updatedAt": "2026-10-09T11:02:39.124Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009105837-3a0e5e34e1f4715c",
@@ -1425,7 +1524,9 @@
       ],
       "summary": "QA OPR.99.0.3.5 follow-up (r1 findings 5-8)",
       "createdAt": "2026-10-09T10:58:37.763Z",
-      "updatedAt": "2026-10-09T11:02:20.529Z"
+      "updatedAt": "2026-10-09T11:02:20.529Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009105622-afde0d5bf2a30834",
@@ -1439,7 +1540,9 @@
       ],
       "summary": "QA OPR.99.0.3.3 follow-up (orch row, r1 findings on .2/.3)",
       "createdAt": "2026-10-09T10:56:22.602Z",
-      "updatedAt": "2026-10-09T11:02:20.255Z"
+      "updatedAt": "2026-10-09T11:02:20.255Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009105622-45a88a65c6861ee0",
@@ -1453,7 +1556,9 @@
       ],
       "summary": "QA OPR.99.0.3.4 r3: $A removed, FLI_PRINCIPAL once",
       "createdAt": "2026-10-09T10:56:22.323Z",
-      "updatedAt": "2026-10-09T11:02:19.991Z"
+      "updatedAt": "2026-10-09T11:02:19.991Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-recovery-d066692a5a21c5eb",
@@ -1468,7 +1573,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009105721-6ccba1003cc1d3ff (3 min)",
       "createdAt": "2026-10-09T11:01:21.897Z",
-      "updatedAt": "2026-10-09T11:01:45.294Z"
+      "updatedAt": "2026-10-09T11:01:45.294Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-59c6d87ae98991c5",
@@ -1483,7 +1589,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009105505-493bf3a45af26654 (5 min)",
       "createdAt": "2026-10-09T11:01:21.894Z",
-      "updatedAt": "2026-10-09T11:01:45.016Z"
+      "updatedAt": "2026-10-09T11:01:45.016Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-c9dc84a7032edde6",
@@ -1498,7 +1605,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009105455-3df8a46d (5 min)",
       "createdAt": "2026-10-09T11:01:21.890Z",
-      "updatedAt": "2026-10-09T11:01:44.747Z"
+      "updatedAt": "2026-10-09T11:01:44.747Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-40fb699d445b14c1",
@@ -1513,7 +1621,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009104058-4d156deaf579d9cb (1 min)",
       "createdAt": "2026-10-09T11:01:21.887Z",
-      "updatedAt": "2026-10-09T11:01:44.495Z"
+      "updatedAt": "2026-10-09T11:01:44.495Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009104058-4d156deaf579d9cb",
@@ -1526,7 +1635,9 @@
       ],
       "summary": "Build the overlay lane (fliedit-overlays-viewer)",
       "createdAt": "2026-10-09T10:40:58.843Z",
-      "updatedAt": "2026-10-09T11:00:46.174Z"
+      "updatedAt": "2026-10-09T11:00:46.174Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009105847-0b66f4333b02c795",
@@ -1539,7 +1650,8 @@
       ],
       "summary": "dev-overlay: all 7 slices sent to dev-qa",
       "createdAt": "2026-10-09T10:58:47.443Z",
-      "updatedAt": "2026-10-09T10:58:59.250Z"
+      "updatedAt": "2026-10-09T10:58:59.250Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105421-7300bf7eead811da",
@@ -1553,7 +1665,9 @@
       ],
       "summary": "QA T-FE2 view.transport (c7608d2)",
       "createdAt": "2026-10-09T10:54:21.185Z",
-      "updatedAt": "2026-10-09T10:58:41.927Z"
+      "updatedAt": "2026-10-09T10:58:41.927Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009104959-c6762279b12d0179",
@@ -1567,7 +1681,9 @@
       ],
       "summary": "QA T-FE1 view.get (c047db2)",
       "createdAt": "2026-10-09T10:49:59.023Z",
-      "updatedAt": "2026-10-09T10:58:41.647Z"
+      "updatedAt": "2026-10-09T10:58:41.647Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009105721-6ccba1003cc1d3ff",
@@ -1581,7 +1697,9 @@
       ],
       "summary": "ov5 r1 findings: fold into the ov2/ov3 follow-up commit",
       "createdAt": "2026-10-09T10:57:21.026Z",
-      "updatedAt": "2026-10-09T10:58:38.034Z"
+      "updatedAt": "2026-10-09T10:58:38.034Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009105706-c9e57d71",
@@ -1595,7 +1713,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.5 (ov5). One MEDIUM refusal-data gap + 3 LOW, non-blocking; batch with ov3 fixes.",
       "createdAt": "2026-10-09T10:57:06.962Z",
-      "updatedAt": "2026-10-09T10:57:20.454Z"
+      "updatedAt": "2026-10-09T10:57:20.454Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105413-4116cbbe",
@@ -1609,7 +1728,9 @@
       ],
       "summary": "Review OPR.99.0.3.5 (ov5): cutaway.apply. QA PASS, with one minor finding. Commit 0cce0ab, worktree /Users/davidcruwys/dev/ad/flivideo/fliedit-worktrees/overlay",
       "createdAt": "2026-10-09T10:54:13.813Z",
-      "updatedAt": "2026-10-09T10:57:06.962Z"
+      "updatedAt": "2026-10-09T10:57:06.962Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-recovery-cc857fbecd2bbac6",
@@ -1624,7 +1745,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009105215-cb4dff37 (3 min)",
       "createdAt": "2026-10-09T10:56:21.884Z",
-      "updatedAt": "2026-10-09T10:56:32.880Z"
+      "updatedAt": "2026-10-09T10:56:32.880Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105505-493bf3a45af26654",
@@ -1638,7 +1760,9 @@
       ],
       "summary": "ov2/ov3 small follow-ups from r1 (warning text, audioOnly, gif/bmp/tiff)",
       "createdAt": "2026-10-09T10:55:05.799Z",
-      "updatedAt": "2026-10-09T10:56:23.165Z"
+      "updatedAt": "2026-10-09T10:56:23.165Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009105455-3df8a46d",
@@ -1652,7 +1776,9 @@
       ],
       "summary": "QA FAIL r2 OPR.99.0.3.4 (52b8af3). Detail: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/04-ov4-fliedit-skill/proof/qa-ov4-r2-BL",
       "createdAt": "2026-10-09T10:54:55.345Z",
-      "updatedAt": "2026-10-09T10:56:22.880Z"
+      "updatedAt": "2026-10-09T10:56:22.880Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-recovery-9bec382cfdf5719f",
@@ -1667,7 +1793,8 @@
       ],
       "summary": "Stuck sweep: undelivered-wake on qitem-20261009104931-21aef70a (2 min)",
       "createdAt": "2026-10-09T10:51:21.891Z",
-      "updatedAt": "2026-10-09T10:56:21.892Z"
+      "updatedAt": "2026-10-09T10:56:21.892Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-38c749cb91f1a829",
@@ -1682,7 +1809,8 @@
       ],
       "summary": "Stuck sweep: undelivered-wake on qitem-20261009104931-958172f7 (2 min)",
       "createdAt": "2026-10-09T10:51:21.888Z",
-      "updatedAt": "2026-10-09T10:56:21.890Z"
+      "updatedAt": "2026-10-09T10:56:21.890Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-ef552405bb9170fd",
@@ -1697,7 +1825,8 @@
       ],
       "summary": "Stuck sweep: stalled-after-claim on qitem-20261009104700-d5c217e4 (4 min)",
       "createdAt": "2026-10-09T10:51:21.884Z",
-      "updatedAt": "2026-10-09T10:56:21.888Z"
+      "updatedAt": "2026-10-09T10:56:21.888Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105444-4b7a254d",
@@ -1711,7 +1840,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.3 (ov3). Three LOW warning-text findings for the builder, non-blocking.",
       "createdAt": "2026-10-09T10:54:44.771Z",
-      "updatedAt": "2026-10-09T10:55:05.279Z"
+      "updatedAt": "2026-10-09T10:55:05.279Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105444-418ea021",
@@ -1725,7 +1855,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.2 (ov2). One INFO note, nothing blocking.",
       "createdAt": "2026-10-09T10:54:44.491Z",
-      "updatedAt": "2026-10-09T10:55:04.431Z"
+      "updatedAt": "2026-10-09T10:55:04.431Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009105332-bd94a7a28f6daf1a",
@@ -1739,7 +1870,9 @@
       ],
       "summary": "QA OPR.99.0.3.4 re-test: fixes for your 3 findings",
       "createdAt": "2026-10-09T10:53:32.918Z",
-      "updatedAt": "2026-10-09T10:54:55.345Z"
+      "updatedAt": "2026-10-09T10:54:55.345Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-overlay@fliedit-team"
     },
     {
       "id": "qitem-20261009104931-21aef70a",
@@ -1753,7 +1886,9 @@
       ],
       "summary": "Review OPR.99.0.3.3 (ov3): a picture aimed at A1 lands on V1 (D20). QA PASS, with one minor finding. Commit a1d535d. Evidence: /Users/davidcruwys/.openrig/works",
       "createdAt": "2026-10-09T10:49:31.710Z",
-      "updatedAt": "2026-10-09T10:54:44.771Z"
+      "updatedAt": "2026-10-09T10:54:44.771Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009104931-958172f7",
@@ -1767,7 +1902,9 @@
       ],
       "summary": "Review OPR.99.0.3.2 (ov2): assets.list scans resources/. QA PASS. Worktree /Users/davidcruwys/dev/ad/flivideo/fliedit-worktrees/overlay, commit 25648fa (tested ",
       "createdAt": "2026-10-09T10:49:31.438Z",
-      "updatedAt": "2026-10-09T10:54:44.491Z"
+      "updatedAt": "2026-10-09T10:54:44.491Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009105050-101bca7b210076e9",
@@ -1781,7 +1918,9 @@
       ],
       "summary": "QA OPR.99.0.3.5: cutaway.apply (new pinned verb)",
       "createdAt": "2026-10-09T10:50:50.097Z",
-      "updatedAt": "2026-10-09T10:54:13.813Z"
+      "updatedAt": "2026-10-09T10:54:13.813Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009105215-cb4dff37",
@@ -1795,7 +1934,9 @@
       ],
       "summary": "QA FAIL OPR.99.0.3.4 (ov4, skill, 4a45a67). Full detail: /Users/davidcruwys/.openrig/workspace/missions/fliedit-overlays-viewer/slices/04-ov4-fliedit-skill/proo",
       "createdAt": "2026-10-09T10:52:15.450Z",
-      "updatedAt": "2026-10-09T10:53:37.638Z"
+      "updatedAt": "2026-10-09T10:53:37.638Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@fliedit-team"
     },
     {
       "id": "qitem-20261009104807-98727acc08998c51",
@@ -1809,7 +1950,9 @@
       ],
       "summary": "QA OPR.99.0.3.4: flivideo:fliedit skill (docs only)",
       "createdAt": "2026-10-09T10:48:07.265Z",
-      "updatedAt": "2026-10-09T10:52:15.450Z"
+      "updatedAt": "2026-10-09T10:52:15.450Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-overlay@fliedit-team"
     },
     {
       "id": "qitem-20261009105130-ae171677",
@@ -1823,7 +1966,8 @@
       ],
       "summary": "r1 ACCEPTED OPR.99.0.3.1 (ov1). Two LOW test-robustness notes, nothing blocking.",
       "createdAt": "2026-10-09T10:51:30.690Z",
-      "updatedAt": "2026-10-09T10:51:46.784Z"
+      "updatedAt": "2026-10-09T10:51:46.784Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-recovery-26790b71f791c68e",
@@ -1838,7 +1982,8 @@
       ],
       "summary": "Stuck sweep: successor-verification-required on qitem-20261009104459-047a289b4c6ca054 (2 min)",
       "createdAt": "2026-10-09T10:51:21.895Z",
-      "updatedAt": "2026-10-09T10:51:35.495Z"
+      "updatedAt": "2026-10-09T10:51:35.495Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261009104700-d5c217e4",
@@ -1852,7 +1997,9 @@
       ],
       "summary": "Review OPR.99.0.3.1 (ov1): an image overlay with fades. QA PASS.",
       "createdAt": "2026-10-09T10:47:00.997Z",
-      "updatedAt": "2026-10-09T10:51:30.690Z"
+      "updatedAt": "2026-10-09T10:51:30.690Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@fliedit-team"
     },
     {
       "id": "qitem-20261009104459-047a289b4c6ca054",
@@ -1866,7 +2013,10 @@
       ],
       "summary": "Check the skool-research draft, claim by claim (MISSION step 2).",
       "createdAt": "2026-10-09T10:44:59.944Z",
-      "updatedAt": "2026-10-09T10:49:48.229Z"
+      "updatedAt": "2026-10-09T10:49:48.229Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "research-scout@skool-research",
+      "tier": "deep"
     },
     {
       "id": "qitem-20261009104708-96b787ddb8e68f6c",
@@ -1880,7 +2030,9 @@
       ],
       "summary": "QA OPR.99.0.3.3: video aimed at A1 lands on V1 (D20)",
       "createdAt": "2026-10-09T10:47:08.448Z",
-      "updatedAt": "2026-10-09T10:49:31.710Z"
+      "updatedAt": "2026-10-09T10:49:31.710Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009104551-44be5f1aea7f4381",
@@ -1894,7 +2046,9 @@
       ],
       "summary": "QA OPR.99.0.3.2: assets.list scans resources/",
       "createdAt": "2026-10-09T10:45:51.758Z",
-      "updatedAt": "2026-10-09T10:49:31.438Z"
+      "updatedAt": "2026-10-09T10:49:31.438Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261009104448-36a30459236cb7d5",
@@ -1908,7 +2062,9 @@
       ],
       "summary": "QA OPR.99.0.3.1: image overlay with fades exports and matches preview",
       "createdAt": "2026-10-09T10:44:48.847Z",
-      "updatedAt": "2026-10-09T10:47:00.997Z"
+      "updatedAt": "2026-10-09T10:47:00.997Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@fliedit-team"
     },
     {
       "id": "qitem-20261008151956-f7f6f31a",
@@ -1923,7 +2079,8 @@
       ],
       "summary": "CT-0091 review: ACCEPT commit bfa1a07; .gitignore scope addition ruled KEEP. Mission end-state e6e23e2..bfa1a07 = 8 files, 3 slices only. Flake pinned to trashV",
       "createdAt": "2026-10-08T15:19:56.484Z",
-      "updatedAt": "2026-10-08T15:20:35.219Z"
+      "updatedAt": "2026-10-08T15:20:35.219Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261008151815-7f714330",
@@ -1937,7 +2094,9 @@
       ],
       "summary": "# CT-0091 review: QA PASS. Commit bfa1a07 on openrig/phase-b-hygiene (on d8a50d5, not pushed)",
       "createdAt": "2026-10-08T15:18:15.255Z",
-      "updatedAt": "2026-10-08T15:19:56.484Z"
+      "updatedAt": "2026-10-08T15:19:56.484Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@factory-claude"
     },
     {
       "id": "qitem-20261008151742-05195128",
@@ -1951,7 +2110,9 @@
       ],
       "summary": "# CT-0091 QA — commit bfa1a07 on openrig/phase-b-hygiene (on d8a50d5, not pushed)",
       "createdAt": "2026-10-08T15:17:42.066Z",
-      "updatedAt": "2026-10-08T15:18:15.255Z"
+      "updatedAt": "2026-10-08T15:18:15.255Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@factory-claude"
     },
     {
       "id": "qitem-20261008151708-1d8e4e9985f90ed4",
@@ -1965,7 +2126,9 @@
       ],
       "summary": "CT-0091 build: untrack stale pnpm-lock.yaml",
       "createdAt": "2026-10-08T15:17:08.651Z",
-      "updatedAt": "2026-10-08T15:17:42.066Z"
+      "updatedAt": "2026-10-08T15:17:42.066Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@factory-claude"
     },
     {
       "id": "qitem-20261008151639-73688080",
@@ -1980,7 +2143,8 @@
       ],
       "summary": "CT-0080 review: ACCEPT commit d8a50d5. Thresholds proven dead before / live now in all 3 workspaces; 0 blocking findings, 3 pre-existing observations (coverage ",
       "createdAt": "2026-10-08T15:16:39.884Z",
-      "updatedAt": "2026-10-08T15:16:50.903Z"
+      "updatedAt": "2026-10-08T15:16:50.903Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261008151502-19332688",
@@ -1994,7 +2158,9 @@
       ],
       "summary": "# CT-0080 review: QA PASS. Commit d8a50d5 on openrig/phase-b-hygiene (on 1542a31, not pushed)",
       "createdAt": "2026-10-08T15:15:02.088Z",
-      "updatedAt": "2026-10-08T15:16:39.884Z"
+      "updatedAt": "2026-10-08T15:16:39.884Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@factory-claude"
     },
     {
       "id": "qitem-20261008151350-2acc6ecd",
@@ -2008,7 +2174,9 @@
       ],
       "summary": "# CT-0080 QA — commit d8a50d5 on openrig/phase-b-hygiene (on top of 1542a31, not pushed)",
       "createdAt": "2026-10-08T15:13:50.589Z",
-      "updatedAt": "2026-10-08T15:15:02.088Z"
+      "updatedAt": "2026-10-08T15:15:02.088Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@factory-claude"
     },
     {
       "id": "qitem-20261008151207-b70befe7219d6753",
@@ -2022,7 +2190,9 @@
       ],
       "summary": "CT-0080 build: nest coverage under test in 3 vitest configs",
       "createdAt": "2026-10-08T15:12:07.430Z",
-      "updatedAt": "2026-10-08T15:13:50.589Z"
+      "updatedAt": "2026-10-08T15:13:50.589Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@factory-claude"
     },
     {
       "id": "qitem-20261008151139-a2215b89",
@@ -2037,7 +2207,8 @@
       ],
       "summary": "CT-0081 review: ACCEPT commit 1542a31. 0 blocking findings; 1 pre-existing server-suite flake (~1/10 runs) noted for a separate ticket.",
       "createdAt": "2026-10-08T15:11:39.101Z",
-      "updatedAt": "2026-10-08T15:12:06.971Z"
+      "updatedAt": "2026-10-08T15:12:06.971Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261008150924-e31fa585",
@@ -2051,7 +2222,9 @@
       ],
       "summary": "# CT-0081 review: QA PASS. Commit 1542a31 on openrig/phase-b-hygiene (not pushed)",
       "createdAt": "2026-10-08T15:09:24.595Z",
-      "updatedAt": "2026-10-08T15:11:39.101Z"
+      "updatedAt": "2026-10-08T15:11:39.101Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "orch-lead@factory-claude"
     },
     {
       "id": "qitem-20261008150820-84014b74",
@@ -2065,7 +2238,9 @@
       ],
       "summary": "# CT-0081 QA — commit 1542a31 on openrig/phase-b-hygiene (not pushed)",
       "createdAt": "2026-10-08T15:08:20.759Z",
-      "updatedAt": "2026-10-08T15:09:24.595Z"
+      "updatedAt": "2026-10-08T15:09:24.595Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "review-r1@factory-claude"
     },
     {
       "id": "qitem-20261008150644-1535245391740073",
@@ -2079,7 +2254,9 @@
       ],
       "summary": "CT-0081 build: server vitest include src/**",
       "createdAt": "2026-10-08T15:06:44.782Z",
-      "updatedAt": "2026-10-08T15:08:20.759Z"
+      "updatedAt": "2026-10-08T15:08:20.759Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-qa@factory-claude"
     },
     {
       "id": "qitem-20261008145128-76a1503d",
@@ -2094,7 +2271,8 @@
       ],
       "summary": "QA accepted CT-0079: the workspace test commands now exit after a single run, with watch aliases retained.",
       "createdAt": "2026-10-08T14:51:28.445Z",
-      "updatedAt": "2026-10-08T14:51:40.621Z"
+      "updatedAt": "2026-10-08T14:51:40.621Z",
+      "closureReason": "no-follow-on"
     },
     {
       "id": "qitem-20261008145021-63ed1854",
@@ -2108,7 +2286,9 @@
       ],
       "summary": "Review CT-0079 candidate. Repo: /Users/davidcruwys/dev/ad/flivideo/flihub, branch openrig/ct-0079, commit e6e23e2 (git show e6e23e2). Ticket: /Users/davidcruwys",
       "createdAt": "2026-10-08T14:50:21.044Z",
-      "updatedAt": "2026-10-08T14:51:28.445Z"
+      "updatedAt": "2026-10-08T14:51:28.445Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-build@starter"
     },
     {
       "id": "qitem-20261008145007-107b9f56e1f3d1c6",
@@ -2122,7 +2302,9 @@
       ],
       "summary": "CT-0079: make client/server npm test one-shot",
       "createdAt": "2026-10-08T14:50:07.635Z",
-      "updatedAt": "2026-10-08T14:50:21.044Z"
+      "updatedAt": "2026-10-08T14:50:21.044Z",
+      "closureReason": "handed_off_to",
+      "closureTarget": "dev-review@starter"
     }
   ]
 }

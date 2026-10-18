@@ -5,6 +5,7 @@ import {
   createSources,
   HandoffReader,
   DbRowsReader,
+  DaemonDataReader,
   LoadoutReader,
   RigFilesReader,
   SchemaReader,
@@ -12,6 +13,7 @@ import {
   withSeatCards,
   withSkillCounts,
   type LoadoutSeat,
+  type SeatTarget,
 } from './adapters/index.js';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
@@ -40,6 +42,10 @@ function main() {
   });
   const dbRows = new DbRowsReader(settings.machine.id);
   const loadouts = new LoadoutReader(settings.machine.id, { exec: sources.exec! });
+  let daemonTargets: SeatTarget[] = [];
+  const daemonData = new DaemonDataReader(settings.machine.id, sources.daemonGet!, {
+    log: (line) => console.log(`${new Date().toISOString()} ${line}`),
+  });
   const seatConfig = seatConfigReader();
   const pusher = startPusher({
     hubUrl: settings.hubUrl,
@@ -54,6 +60,15 @@ function main() {
       knownSeats = new Set(own.map((s) => s.id));
       openrigSeats = own.map((s) => ({ id: s.id, rig: s.rig, runtime: s.runtime, cwd: s.cwd }));
       queueOrder = snap.queue.map((q) => q.id);
+      // v2 data channels: one node-detail read per OpenRig seat (rig name to rig id, from the snapshot).
+      const rigIds = new Map(snap.rigs.map((r) => [r.name, r.id]));
+      daemonData.forgetSeatsNotIn(new Set(own.map((s) => s.id)));
+      daemonTargets = own.flatMap((s) => {
+        const rigId = s.rig ? rigIds.get(s.rig) : undefined;
+        return s.source === 'openrig' && s.logicalId && rigId
+          ? [{ seat: s.id, rigId, logicalId: s.logicalId }]
+          : [];
+      });
       // v1.5 · L1: the skill-count pill, from the loadout reader's latest scan.
       // D09 W3: each seat's role (agent_ref) and key skills (allowlist ∩ its own listing).
       const seats = withSeatCards(withSkillCounts(snap.seats, loadouts.skillCounts()), {
@@ -69,7 +84,9 @@ function main() {
       schema.reset();
       loadouts.reset();
       dbRows.reset();
+      daemonData.reset();
     },
+    daemonData: () => daemonData.next(daemonTargets),
     rigFiles: async () => (sources.specs ? rigFiles.next(await sources.specs()) : null),
     schema: () => schema.next(),
     dbRows: () => dbRows.next(),

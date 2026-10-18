@@ -803,6 +803,52 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     ).toMatchObject({ failureMode: 'invalid_snapshot' });
   });
 
+  // v2 data channels: hub first. An old collector (snapshot only) still pushes; the daemon-data
+  // event is validated, machine-checked, stored, and served by seat.detail.
+  it('daemon data: validated, machine-checked, stored and served; an old collector is unaffected', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const announced: string[][] = [];
+    c.on('hub:caps', (x: string[]) => announced.push(x));
+    const snap = loadSnapshot('m2');
+    // the ack tells the collector what this hub understands; an older hub sends no caps
+    expect(await push(c, snap)).toMatchObject({ ok: true, caps: ['v2-fields', 'daemondata'] });
+    // and announced on connection, before any push
+    expect(announced).toEqual([['v2-fields', 'daemondata']]);
+    const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
+    expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
+      status: 'pending',
+      detail: null,
+    });
+    const body = {
+      kind: 'seatdetail',
+      machineId: 'm2',
+      key: seat,
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: 'ok',
+      reason: null,
+      data: {
+        spec: null,
+        startupFiles: [],
+        startupActions: [],
+        peers: [],
+        recoveryNotes: [],
+        installedResources: [],
+      },
+    };
+    expect(await emit(c, 'collector:daemondata', body)).toMatchObject({ ok: true });
+    expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({ status: 'ok' });
+    expect(await emit(c, 'collector:daemondata', { ...body, machineId: 'roamy' })).toMatchObject({
+      failureMode: 'machine_mismatch',
+    });
+    expect(await emit(c, 'collector:daemondata', { ...body, kind: 'nope' })).toMatchObject({
+      failureMode: 'invalid_snapshot',
+    });
+    expect(
+      await emit(c, 'collector:daemondata', { ...body, data: { ...body.data, extra: 1 } })
+    ).toMatchObject({ failureMode: 'invalid_snapshot' });
+  });
+
   const col = (name: string, type = 'TEXT') => ({
     name,
     type,

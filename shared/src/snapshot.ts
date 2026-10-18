@@ -137,6 +137,14 @@ export const SeatSchema = z.strictObject({
    * for this seat (or no listing yet): the card shows the count alone.
    */
   keySkills: z.array(z.string().min(1).max(120)).max(KEY_SKILLS_MAX).optional(),
+  /**
+   * v2 data channels, collector-set from OpenRig's node record: the plain `tmux attach -t …` line
+   * (the ssh wrapper stays the client's job). Optional, and the hub is strict, so a collector sends
+   * it ONLY to a hub that advertised HUB_CAPS.V2_FIELDS (see stripV2Fields): a live daemon always has
+   * this field, so omitting-when-unknown does not protect an older hub. The resume command is
+   * deliberately NOT carried anywhere: it holds the Claude session id.
+   */
+  tmuxAttachCommand: z.string().min(1).max(500).optional(),
 });
 export type Seat = z.infer<typeof SeatSchema>;
 
@@ -199,6 +207,8 @@ export type RigSummary = z.infer<typeof RigSummarySchema>;
 
 /** One queue row, body-free. The collector keeps the most recent QUEUE_MAX_ITEMS. */
 export const QUEUE_MAX_ITEMS = 500;
+/** Longest free-text queue field kept (closure, blocked-on, intent, tier). */
+export const QUEUE_NOTE_MAX = 200;
 export const QueueItemSchema = z.strictObject({
   id: z.string().min(1),
   source: z.string().nullable(),
@@ -209,6 +219,16 @@ export const QueueItemSchema = z.strictObject({
   summary: z.string().nullable(),
   createdAt: isoDate,
   updatedAt: isoDate,
+  /**
+   * v2 data channels, collector-set from `rig queue list --full`. Every field is optional;
+   * absent means "not said", never "none". Free text is cut to QUEUE_NOTE_MAX. Sent ONLY to a hub
+   * that advertised HUB_CAPS.V2_FIELDS (an older strict hub rejects unknown keys; see stripV2Fields).
+   */
+  closureReason: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  closureTarget: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  blockedOn: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  humanIntent: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
+  tier: z.string().min(1).max(QUEUE_NOTE_MAX).optional(),
 });
 export type QueueItem = z.infer<typeof QueueItemSchema>;
 
@@ -308,3 +328,40 @@ export const FleetUpdateSchema = z.strictObject({
   machines: z.array(FleetMachineSchema),
 });
 export type FleetUpdate = z.infer<typeof FleetUpdateSchema>;
+
+/**
+ * Capabilities a hub advertises in the ack of every accepted snapshot (`CollectorAck.caps`). A
+ * collector sends a v2-only key or event ONLY to a hub that listed it. An older hub lists nothing, and
+ * the collector then sends exactly the v1.5 shape.
+ */
+export const HUB_CAPS = {
+  /** The snapshot may carry V2_SEAT_KEYS and V2_QUEUE_KEYS. */
+  V2_FIELDS: 'v2-fields',
+  /** The hub listens for `collector:daemondata`. */
+  DAEMONDATA: 'daemondata',
+} as const;
+
+export const V2_SEAT_KEYS = ['tmuxAttachCommand'] as const;
+export const V2_QUEUE_KEYS = [
+  'closureReason',
+  'closureTarget',
+  'blockedOn',
+  'humanIntent',
+  'tier',
+] as const;
+
+/** The snapshot as a hub without HUB_CAPS.V2_FIELDS accepts it: every v2-only key removed. */
+export function stripV2Fields(snapshot: MachineSnapshot): MachineSnapshot {
+  const drop = (row: object, keys: readonly string[]) =>
+    Object.fromEntries(Object.entries(row).filter(([k]) => !keys.includes(k)));
+  return {
+    ...snapshot,
+    seats: snapshot.seats.map((s) => drop(s, V2_SEAT_KEYS) as Seat),
+    queue: snapshot.queue.map((q) => drop(q, V2_QUEUE_KEYS) as QueueItem),
+  };
+}
+
+/** True when a hub refusal message names a v2-only key (an older strict hub: "Unrecognized key"). */
+export function namesV2Key(message: string): boolean {
+  return [...V2_SEAT_KEYS, ...V2_QUEUE_KEYS].some((k) => message.includes(k));
+}
