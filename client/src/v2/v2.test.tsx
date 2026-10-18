@@ -16,7 +16,7 @@ import {
   type FrozenFile,
 } from './frozen/frozenSocket.js';
 import { loadFrozen } from './frozen/load.js';
-import { isLocalDevRequest } from './devProxy.js';
+import { guardPortFor, isLocalDevRequest } from './devProxy.js';
 import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from './kit/index.js';
 import { CURRENT_VIEWS, navGroups, navLabel, plannedPages, v2PageFor } from './registry.js';
 import { MODE_KEY, modeFromSearch, readMode, searchWithMode } from './version.js';
@@ -401,6 +401,18 @@ describe('v2 kit', () => {
     fireEvent.click(screen.getByText('Launch'));
     fireEvent.click(screen.getByTestId('fake-cancel'));
     expect(screen.getByTestId('fake-control')).toHaveAttribute('data-phase', 'idle');
+  });
+});
+
+describe('dev proxy guard port', () => {
+  it('uses the port the server really listens on, so --port needs no CLIENT_URL', () => {
+    expect(guardPortFor({ port: 7590 }, 7190, 7190)).toBe(7590);
+    expect(guardPortFor(null, 7590, 7190)).toBe(7590);
+    expect(guardPortFor('pipe', undefined, 7190)).toBe(7190);
+    const port = guardPortFor({ port: 7590 }, undefined, 7190);
+    expect(isLocalDevRequest({ origin: 'http://localhost:7590' }, port)).toBe(true);
+    expect(isLocalDevRequest({ origin: 'http://localhost:7190' }, port)).toBe(false);
+    expect(isLocalDevRequest({ origin: 'http://evil.example:7590' }, port)).toBe(false);
   });
 });
 
