@@ -649,9 +649,10 @@ describe('Graph UX batch (usability walk #3 and #8)', () => {
     render(<Graph ctx={ctxFor(crossFleet())} />);
     expect(screen.getByTestId('g2-mock-note')).toHaveTextContent('controls on this page are mocks');
     const marks = screen.getAllByTestId('mock-mark');
-    // the page note, plus one per rig that lives inside its ⋯ wrapper (hidden by css until hover/focus/open)
+    // one badge per rig, all inside its ⋯ wrapper (hidden by css until hover/focus/open)
     const inRigs = marks.filter((m) => m.closest('.g2-menu-wrap'));
-    expect(marks.length).toBe(inRigs.length + 1);
+    expect(marks.length).toBe(inRigs.length); // the page note is the kit's MockNote, no badge
+    expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
     const css = readFileSync(path.resolve(__dirname, 'graph.css'), 'utf8');
     expect(css).toMatch(/\.g2-menu-wrap \.v2-mock-mark \{\s*display: none;/);
     expect(css).toMatch(/\.g2-menu-wrap:hover \.v2-mock-mark/);

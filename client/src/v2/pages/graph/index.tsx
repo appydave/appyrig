@@ -3,7 +3,7 @@ import type { QueueItem, RigWaitingOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import type { MapEdge } from '../../../fleet/views.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
-import { MockMark } from '../../kit/index.js';
+import { MockNote } from '../../kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
 import LinesPanel from './LinesPanel.js';
 import { LINE_COLORS, lineColorIndex } from './lineColors.js';
@@ -662,7 +662,7 @@ function GraphPage({ ctx }: V2PageProps) {
           </button>
         </span>
         <span className="g2-mock-note" data-testid="g2-mock-note">
-          <MockMark /> Rig and agent controls on this page are mocks
+          <MockNote>Rig and agent controls on this page are mocks — nothing is sent</MockNote>
         </span>
       </div>
       <p className="view-caption g2-caption" data-testid="g2-caption">

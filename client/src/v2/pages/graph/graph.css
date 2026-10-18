@@ -703,7 +703,7 @@
   background: var(--ar-surface-raised);
   box-shadow: 0 8px 24px rgb(52 45 45 / 0.2);
 }
-.g2-drawer header {
+:root .g2-drawer header {
   display: flex;
   justify-content: space-between;
   gap: 10px;
@@ -768,4 +768,12 @@
 .g2-toast {
   border-color: var(--ar-working);
   color: var(--ar-working-ink);
+}
+
+/* v2.css reserves a 112 px height for every <header> under the v2 nav (the app header). Frames,
+   column heads and the drawer use <header> too; they size to their content. */
+.g2-graph .g2-col-head,
+.g2-graph .g2-rig-head,
+:root .g2-drawer header {
+  min-height: 0;
 }
