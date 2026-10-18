@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
 import {
-  DataNotes,
+  Coverage,
   Loading,
-  SampleWhy,
   agoFrom,
   pick,
   useMachineLabel,
@@ -69,8 +68,7 @@ function Workflows({ ctx }: V2PageProps) {
         AppyRig does not start or steer a workflow.
       </p>
       {src.kind === 'loading' && <Loading what="the workflows" />}
-      {src.kind === 'sample' && <SampleWhy why={src.why} />}
-      {live && <DataNotes notes={src.kind === 'live' ? src.notes : []} />}
+      <Coverage src={src} />
 
       <h3>Specs</h3>
       {live && specsRead ? (

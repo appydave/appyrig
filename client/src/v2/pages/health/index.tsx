@@ -16,6 +16,7 @@ import {
   type HealthFindingsMachine,
 } from './model.js';
 import '../w5b.css';
+import '../../data/coverage.css';
 
 type Loaded =
   | { state: 'loading' }
@@ -261,12 +262,29 @@ function HealthV2({ ctx }: V2PageProps) {
     loaded.state === 'ok' ? loaded.out.machines.find((m) => m.machine === id) : undefined;
   return (
     <main className="view x2-page" data-testid="v2-health">
-      <p className="view-caption">
-        <b>Health findings</b> come from OpenRig&apos;s detectors. An empty list is not all-clear on
-        its own: it is only as good as what was evaluated, so the reasons are shown beside it.
-        Context pressure and the daemon line are AppyRig&apos;s own readings. Asked again every
-        minute.
-      </p>
+      <div className="view-caption">
+        <b>Health findings</b> from OpenRig&apos;s detectors. An empty list is not all-clear.{' '}
+        <details className="cov-details" style={{ display: 'inline' }}>
+          <summary>more</summary>
+          It is only as good as what was evaluated, so the reasons are shown beside it. Context
+          pressure and the daemon line are AppyRig&apos;s own readings. Asked again every minute.
+        </details>
+      </div>
+      <ul className="hl2-summary" data-testid="hl2-summary">
+        {ctx.allMachines.map((fm) => {
+          const row = rowOf(fm.machine.id);
+          const v = verdictFor(row, {
+            refusal,
+            missing: loaded.state === 'ok' && !row,
+            stale: staleWords(fm, ctx.now, ctx.hubConnected),
+          });
+          return (
+            <li key={fm.machine.id} data-kind={v.kind}>
+              <b>{fm.machine.label}</b> {v.glyph} {v.headline}
+            </li>
+          );
+        })}
+      </ul>
       <div className="hl2-grid">
         {ctx.allMachines.map((fm) => (
           <MachineHealth

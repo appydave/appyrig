@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { MockMark, SampleData, SampleLabel, useFakeAction } from '../../kit/index.js';
 import type { SettingsGetOutput } from '@appydave/shared';
+import '../../data/coverage.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   groupSettings,
@@ -229,12 +230,15 @@ function SettingsV2({ ctx }: V2PageProps) {
 
   return (
     <main className="view x2-page" data-testid="v2-settings">
-      <p className="view-caption">
+      <div className="view-caption">
         <b>OpenRig settings</b>, read-only, per machine.{' '}
-        <span className="st2-key-changed">Highlighted</span> = the value differs from its default;
-        where it was set (file, env) is shown beside any value not from the default. Editing is a
-        mock everywhere on this page.
-      </p>
+        <span className="st2-key-changed">Highlighted</span> = differs from its default.{' '}
+        <details className="cov-details" style={{ display: 'inline' }}>
+          <summary>more</summary>
+          Where a value was set (file, env) is shown beside any value not from the default. Editing
+          is a mock everywhere on this page.
+        </details>
+      </div>
       {loaded.state === 'loading' && <p className="quiet">Asking the hub…</p>}
       {sample ? (
         <SampleData
@@ -247,9 +251,15 @@ function SettingsV2({ ctx }: V2PageProps) {
         loaded.state === 'ok' && (
           <>
             {missing.length > 0 && (
-              <p className="quiet" data-testid="st2-missing">
-                Not shown: {missing.join('; ')}.
-              </p>
+              <div className="cov" data-testid="st2-missing">
+                <span className="cov-line">
+                  Real data · Not shown: {missing.map((m) => m.split(' ')[0]).join(', ')}
+                </span>
+                <details className="cov-details">
+                  <summary>details</summary>
+                  <p>{missing.join('; ')}.</p>
+                </details>
+              </div>
             )}
             {table}
           </>

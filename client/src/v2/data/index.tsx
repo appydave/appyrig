@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { callVerb } from '../../fleet/coreCall.js';
 import type { FleetSocket } from '../../fleet/useFleet.js';
+import './coverage.css';
 
 /**
  * v2 data layer for the W5 pages: calls the read-only data verbs of
@@ -60,7 +61,7 @@ export function useVerb<T>(
 /** What to show for one verb: real data, or sample data and the reason why. */
 export type Source<T> =
   | { kind: 'loading' }
-  | { kind: 'live'; value: T; notes: string[] }
+  | { kind: 'live'; value: T; notes: string[]; real: string[]; other: string[] }
   | { kind: 'sample'; why: string };
 
 const STATUS_WORD: Record<DataStatus, string> = {
@@ -97,7 +98,13 @@ export function pick<T>(
         : 'the hub reported no machines.',
     };
   }
-  return { kind: 'live', value: s.value, notes: machineNotes(ms, label) };
+  return {
+    kind: 'live',
+    value: s.value,
+    notes: machineNotes(ms, label),
+    real: ms.filter((m) => m.status === 'ok').map((m) => label(m.machine)),
+    other: ms.filter((m) => m.status !== 'ok').map((m) => `${label(m.machine)}: ${m.status}`),
+  };
 }
 
 export function useMachineLabel(machines: { machine: { id: string; label: string } }[]) {
@@ -109,23 +116,59 @@ export function useMachineLabel(machines: { machine: { id: string; label: string
 
 // ---------------------------------------------------------------- display
 
-/** The banner a page puts above a section that is showing sample data instead of a real read. */
-export function SampleWhy({ why }: { why: string }) {
+/**
+ * The one "data coverage" line every data page shows, so the caveats stay one line wide:
+ * "Real data from M2, M4 · Roamy: pending", with the details behind a disclosure. A source that is
+ * sample reads "Sample data · <short reason>" and keeps the full reason in the disclosure. Unread
+ * is always said (never shown as empty). `tail` adds a short fact to the line; `details` is extra
+ * content for the disclosure (retention, fallback explanations).
+ */
+export function Coverage<T>({
+  src,
+  tail,
+  details,
+}: {
+  src: Source<T>;
+  tail?: string;
+  details?: ReactNode;
+}) {
+  if (src.kind === 'loading') return null;
+  if (src.kind === 'sample') {
+    return (
+      <div className="cov cov-sample" data-testid="sample-why">
+        <span className="cov-line">
+          Sample data · the hub has not sent this{tail ? ` · ${tail}` : ''}
+        </span>
+        <details className="cov-details">
+          <summary>why</summary>
+          <p>Showing sample data: {src.why}</p>
+          {details}
+        </details>
+      </div>
+    );
+  }
+  const hasMore = src.notes.length > 0 || !!details;
   return (
-    <p className="v2-note v2-note-warn" data-testid="sample-why">
-      Showing sample data: {why}
-    </p>
-  );
-}
-
-export function DataNotes({ notes }: { notes: string[] }) {
-  if (!notes.length) return null;
-  return (
-    <ul className="quiet" data-testid="data-notes">
-      {notes.map((n) => (
-        <li key={n}>{n}</li>
-      ))}
-    </ul>
+    <div className="cov" data-testid="coverage">
+      <span className="cov-line">
+        Real data from {src.real.join(', ')}
+        {src.other.length > 0 ? ` · ${src.other.join(' · ')}` : ''}
+        {tail ? ` · ${tail}` : ''}
+      </span>
+      {hasMore && (
+        <details className="cov-details">
+          <summary>details</summary>
+          {src.notes.length > 0 && (
+            <ul data-testid="data-notes">
+              {src.notes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          )}
+          {details}
+        </details>
+      )}
+    </div>
   );
 }
 

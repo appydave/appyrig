@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { RigWaitingOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { rigQueue } from '../../../fleet/views.js';
+import '../../data/coverage.css';
 import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
@@ -238,23 +239,36 @@ function NeedsYou({ ctx }: V2PageProps) {
       <p className="ny-summary-line" data-testid="ny-total">
         <b>{real.length}</b> waiting ({fresh.length} fresh, {stale.length} stale in this view)
         across {ctx.machines.length} {ctx.machines.length === 1 ? 'machine' : 'machines'}.
-        {asleep.length > 0 &&
-          ` ${asleep.map((m) => m.machine.label).join(', ')} ${asleep.length === 1 ? 'is' : 'are'} asleep: its items are from its last report.`}
-        {!loaded && ' Reading gates…'}
-        {loaded && unread > 0 && (
-          <span data-testid="ny-unread">
-            {' '}
-            Gates unread for {unread} {unread === 1 ? 'rig' : 'rigs'}: any gate they hold is not
-            counted.
-          </span>
-        )}
-        {sweeps > 0 && (
-          <span data-testid="ny-sweeps">
-            {' '}
-            {sweeps} OpenRig stuck-sweep {sweeps === 1 ? 'notice is' : 'notices are'} hidden.
-          </span>
-        )}
       </p>
+      <div className="cov" data-testid="ny-coverage">
+        <span className="cov-line">
+          Real data from{' '}
+          {ctx.machines
+            .filter((m) => m.liveness !== 'asleep')
+            .map((m) => m.machine.label)
+            .join(', ') || 'no machine'}
+          {asleep.length > 0 && (
+            <span data-testid="ny-asleep">
+              {' · '}
+              {asleep.map((m) => m.machine.label).join(', ')} asleep (last report)
+            </span>
+          )}
+          {!loaded && ' · reading gates…'}
+          {loaded && unread > 0 && (
+            <span data-testid="ny-unread">
+              {' · '}
+              Gates unread for {unread} {unread === 1 ? 'rig' : 'rigs'}: any gate they hold is not
+              counted
+            </span>
+          )}
+          {sweeps > 0 && (
+            <span data-testid="ny-sweeps">
+              {' · '}
+              {sweeps} OpenRig stuck-sweep {sweeps === 1 ? 'notice is' : 'notices are'} hidden
+            </span>
+          )}
+        </span>
+      </div>
 
       <div className="ny-filters" role="tablist" aria-label="Filter" data-testid="ny-filters">
         {FILTERS.map((f) => (

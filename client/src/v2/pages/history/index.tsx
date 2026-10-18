@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { seatKey } from '../../../fleet/model.js';
 import {
-  DataNotes,
+  Coverage,
   Loading,
-  SampleWhy,
   agoFrom,
   pick,
   useMachineLabel,
@@ -219,36 +218,34 @@ function History({ ctx }: V2PageProps) {
     <main className="view v2-history" data-testid="v2-history">
       <h2>History</h2>
       <p className="quiet">
-        What moved through the queues: each handoff and the state it went into, with the reason it
-        was closed. Search by seat, rig, reason or text.
+        Each handoff and the state it went into, with the reason it was closed.
       </p>
       {src.kind === 'loading' && <Loading what="the history" />}
-      {src.kind === 'sample' && (
-        <>
-          <SampleWhy why={src.why} />
-          <p className="quiet" data-testid="hist-fallback">
-            Until then the list below is real but thin: each queue item&apos;s latest state from the
-            machines&apos; snapshots. Earlier steps and closure reasons are not in a snapshot.
-          </p>
-        </>
-      )}
-      {live && (
-        <>
-          <DataNotes notes={src.kind === 'live' ? src.notes : []} />
-          <ul className="quiet" data-testid="hist-retention">
-            {ok.map((m) => (
-              <li key={m.machine}>
-                {label(m.machine)}: {m.held} transitions held
-                {m.earliestAt ? `, from ${new Date(m.earliestAt).toLocaleDateString()}` : ''}
-                {m.truncated || (m.retained != null && m.held < m.retained)
-                  ? ` (older ones exist: ${m.retained ?? 'more'} retained, newest ${m.held} held)`
-                  : ''}
-                . This is not all history.
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <Coverage
+        src={src}
+        tail={live ? `${held} transitions held, newest only` : "showing each item's latest state"}
+        details={
+          live ? (
+            <ul className="quiet" data-testid="hist-retention">
+              {ok.map((m) => (
+                <li key={m.machine}>
+                  {label(m.machine)}: {m.held} transitions held
+                  {m.earliestAt ? `, from ${new Date(m.earliestAt).toLocaleDateString()}` : ''}
+                  {m.truncated || (m.retained != null && m.held < m.retained)
+                    ? ` (older ones exist: ${m.retained ?? 'more'} retained, newest ${m.held} held)`
+                    : ''}
+                  . This is not all history.
+                </li>
+              ))}
+            </ul>
+          ) : src.kind === 'sample' ? (
+            <p className="quiet" data-testid="hist-fallback">
+              Until then the list below is real but thin: each queue item&apos;s latest state from
+              the machines&apos; snapshots. Earlier steps and closure reasons are not in a snapshot.
+            </p>
+          ) : null
+        }
+      />
 
       {src.kind !== 'loading' && (
         <>
