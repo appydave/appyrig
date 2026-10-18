@@ -51,9 +51,57 @@
   font-size: 12px;
 }
 .v2w-team {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
-  padding: 2px 0;
+  padding: 3px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.v2w-team:hover {
+  background: var(--ar-surface);
+}
+/* AppyDave light checkbox: a cream box with an ink rim, a yellow fill and an ink tick when on. */
+.v2w-team input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid var(--ar-ink-muted);
+  border-radius: 4px;
+  background: var(--ar-surface-raised);
+  cursor: pointer;
+}
+.v2w-team input[type='checkbox']::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: var(--ar-ink);
+  clip-path: polygon(14% 44%, 0 62%, 40% 100%, 100% 20%, 84% 4%, 40% 66%);
+  transform: scale(0);
+  transition: transform var(--ar-fast) var(--ar-ease);
+}
+.v2w-team input[type='checkbox']:checked {
+  background: var(--ar-cta);
+  border-color: var(--ar-ink);
+}
+.v2w-team input[type='checkbox']:checked::before {
+  transform: scale(1);
+}
+.v2w-team input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--ar-cta);
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2w-team input[type='checkbox']::before {
+    transition: none;
+  }
 }
 
 /* #8: a card's mock controls sit behind a small "⋯". */
@@ -75,4 +123,13 @@
 }
 .v2-wall > .v2-mock-note {
   margin: 0 0 8px;
+}
+.v2w-team .mono {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.v2w-team .quiet {
+  white-space: nowrap;
+  margin-left: auto;
 }

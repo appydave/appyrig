@@ -720,9 +720,11 @@ function AgentBody({ ctx, tile }: { ctx: V2Context; tile: TileRef }) {
 }
 
 /**
- * The agent shown when none is chosen: a Claude agent in a running rig with real data (an OpenRig
- * seat that is up and has context in use), preferring the shared rig, then working or blocked over
- * idle. Never a plain terminal or tmux seat while a real agent exists; the last resort is any seat.
+ * The agent shown when none is chosen: the best live Claude agent IN the chosen rig (the shared
+ * choice), and only when that rig has none, the best one fleet-wide (an OpenRig Claude seat that is
+ * up, in a running rig, with context in use). Within a pool, agents with messages (queue items in or
+ * out) beat idle ones with none, then working or blocked, then the most recent activity. Plain
+ * terminal and tmux seats come last; the final fallback is any seat, so the page is never blank.
  */
 export function defaultAgent(machines: FleetMachine[], rigName: string | null): TileRef | null {
   const tiles = allTiles(machines);
@@ -739,23 +741,32 @@ export function defaultAgent(machines: FleetMachine[], rigName: string | null): 
     up(t) &&
     rigRunning(t) &&
     (t.seat.contextUsedPct ?? 0) > 0;
+  const messages = (t: TileRef) => {
+    const mine = seatAddresses(t.seat);
+    return t.machine.snapshot.queue.filter(
+      (q) => mine.has(q.destination ?? '') || mine.has(q.source ?? '')
+    ).length;
+  };
   const rank = (t: TileRef) => {
     const pip = pipFor(t.seat, t.machine);
     return (
-      (t.seat.rig === rigName ? 0 : 4) +
+      (messages(t) > 0 ? 0 : 4) +
       (pip === 'working' || pip === 'blocked' ? 0 : 2) +
-      (t.seat.status === 'idle' ? 0 : 1)
+      ((t.seat.contextUsedPct ?? 0) > 0 ? 0 : 1)
     );
   };
   const best = (list: TileRef[]) =>
     [...list].sort(
       (a, b) =>
         rank(a) - rank(b) ||
+        messages(b) - messages(a) ||
         (b.seat.agentActivityAt ?? b.seat.lastActivityAt ?? '').localeCompare(
           a.seat.agentActivityAt ?? a.seat.lastActivityAt ?? ''
         )
     )[0];
+  const inRig = (t: TileRef) => rigName !== null && t.seat.rig === rigName;
   return (
+    best(tiles.filter((t) => inRig(t) && t.seat.source === 'openrig' && claude(t) && up(t))) ??
     best(tiles.filter(real)) ??
     best(tiles.filter((t) => up(t) && claude(t))) ??
     best(tiles.filter((t) => up(t) && t.seat.source === 'openrig')) ??

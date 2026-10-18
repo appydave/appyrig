@@ -171,3 +171,37 @@ describe('UX nav #2: the top of the page is one height on every v2 page', () => 
     expect(css).toMatch(/fleet-strip'\]\s*\{\s*min-height:\s*84px/);
   });
 });
+
+describe('UX polish: the Agent default follows the shared rig', () => {
+  it('picks the best live Claude agent in the chosen rig, preferring one with messages', () => {
+    const roamy = structuredClone(fleetMachine(snapshot('roamy--blocked')));
+    const worker = roamy.snapshot.seats.find((s) => s.id === 'queue-worker@kernel')!;
+    worker.runtime = 'claude-code';
+    // starter has a blocked Claude agent, but the chosen rig is kernel: the pick is in kernel
+    expect(defaultAgent([roamy], 'kernel')!.seat.rig).toBe('kernel');
+    expect(defaultAgent([roamy], 'starter')!.seat.rig).toBe('starter');
+    // one message to queue-worker: it beats advisor-lead, an idle Claude agent with none
+    roamy.snapshot.queue = [
+      {
+        id: 'q-new',
+        source: 'dev-build@starter',
+        destination: 'queue-worker@kernel',
+        state: 'pending',
+        priority: null,
+        tags: [],
+        summary: 'x',
+        createdAt: '2026-10-18T10:00:00.000Z',
+        updatedAt: '2026-10-18T10:00:00.000Z',
+      },
+    ];
+    expect(defaultAgent([roamy], 'kernel')!.seat.id).toBe('queue-worker@kernel');
+  });
+
+  it('falls back fleet-wide only when the chosen rig has no live Claude agent', () => {
+    const fleet = [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
+    // every M2 rig is stopped: nothing live there, so the default comes from elsewhere
+    const pick = defaultAgent(fleet, 'control')!;
+    expect(pick.machine.machine.id).toBe('roamy');
+    expect(pick.seat.runtime).toBe('claude-code');
+  });
+});
