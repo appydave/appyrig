@@ -432,13 +432,13 @@ describe('v2 registry', () => {
     for (const v of CURRENT_VIEWS) expect(inNav).toContain(v);
     expect(inNav).toContain('about');
     expect(v2PageFor('wall')?.label).toBe('Wall');
-    expect(plannedPages()).toContain('health');
+    expect(plannedPages()).toEqual([]);
     expect(plannedPages()).not.toContain('needs-you');
     expect(inNav).toContain('needs-you');
     expect(inNav).toContain('missions');
     expect(navLabel('needs-you')).toBe('Needs You');
     expect(navLabel('map')).toBe('Graph');
     expect(inNav).toContain('history');
-    expect(inNav).not.toContain('health');
+    expect(inNav).toContain('health');
   });
 });
