@@ -129,7 +129,7 @@ describe('v2 version switch', () => {
     expect(localStorage.getItem(MODE_KEY)).toBe('current');
   });
 
-  it("v2 nav is grouped; the Fleet group's Graph page replaces the Rig Map", () => {
+  it("v2 nav is grouped; Fleet holds the new Graph page and Current's Rig Map until its v2 exists", () => {
     history.replaceState(null, '', '/?v=2');
     renderLive();
     // Agents holds Library and Workflows from W5 (the Agent page is W2).
@@ -147,10 +147,12 @@ describe('v2 version switch', () => {
         disconnect() {}
       }
     );
-    fireEvent.click(screen.getByTestId('v2-page-map'));
-    // every Current page has a v2 now (the Rig Map is the Graph), so no "no v2 yet" note shows
+    // Graph is a v2-only page (the fleet overview); the Rig Map is its own page after it
+    fireEvent.click(screen.getByTestId('v2-page-graph'));
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-no-v2')).toBeNull();
+    fireEvent.click(screen.getByTestId('v2-page-map'));
+    expect(screen.queryByTestId('v2-graph')).toBeNull();
   });
 });
 

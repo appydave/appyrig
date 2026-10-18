@@ -78,7 +78,7 @@ export function v2PageFor(key: PageKey): V2PageDef | undefined {
  * until a wave registers them.
  */
 export const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[] = [
-  { key: 'fleet', label: 'Fleet', pages: ['wall', 'map', 'machines', 'accounts'] },
+  { key: 'fleet', label: 'Fleet', pages: ['wall', 'graph', 'map', 'machines', 'accounts'] },
   {
     key: 'work',
     label: 'Work',
@@ -107,6 +107,7 @@ const V2_LABEL: Record<View, string> = {
 /** Names for the v2-only pages before a wave registers them (the registered label wins). */
 const PLANNED_LABEL: Record<V2OnlyKey, string> = {
   about: 'About v2',
+  graph: 'Graph',
   'needs-you': 'Needs You',
   missions: 'Missions',
   history: 'History',

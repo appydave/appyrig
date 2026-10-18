@@ -13,7 +13,7 @@ test.describe('v2 Graph rig menu', () => {
     const errors = watchErrors(page);
     await signIn(page);
     await page.goto('/?v=2');
-    await page.getByTestId('v2-page-map').click();
+    await page.getByTestId('v2-page-graph').click();
     await expect(page.getByTestId('v2-graph')).toBeVisible();
     // dismiss the first-visit hint if it is up (it can sit over the canvas)
     const gotIt = page.getByRole('button', { name: /got it/i });

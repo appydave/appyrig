@@ -99,7 +99,8 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
           await expect(page.locator('main').first()).toBeVisible();
           await page.keyboard.press('b');
           await expect(page.getByTestId('flip')).toHaveAttribute('data-showing', 'new');
-          await expect(page.locator('main[data-testid^="v2-"]')).toHaveCount(1);
+          // back to the new page (or, for a Current page with no v2 yet, its one page root)
+          await expect(root(page)).toHaveCount(1);
         } else {
           await expect(page.getByTestId('v2-flip-note')).toContainText('no old version');
         }
@@ -120,7 +121,7 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
 
     // 5. a mock control on the Graph: dialog, progress, toast, and nothing sent to the hub
     await page.getByTestId('v2-group-fleet').click();
-    await page.getByTestId('v2-page-map').click();
+    await page.getByTestId('v2-page-graph').click();
     await expect(page.getByTestId('v2-graph')).toBeVisible();
     const before = await sent(page);
     // a rig frame (not a machine's no-rig group); stopped rigs are hidden by default

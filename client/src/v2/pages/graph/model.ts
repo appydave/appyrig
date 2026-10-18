@@ -1,49 +1,37 @@
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
-import { modelChip, pipFor, seatKey, seatName, type PipKey } from '../../../fleet/model.js';
+import { pipFor, seatName, type PipKey } from '../../../fleet/model.js';
 import {
-  buildRigMap,
   endpointRig,
   isOpen,
   listRigs,
   resolveEndpoint,
+  rigQueue,
   STALE_MS,
-  type MapEdge,
-  type MapPod,
-  type MapSeat,
   type RigRef,
 } from '../../../fleet/views.js';
 
 /**
- * v2 Graph (C41/C42): every rig on every machine on one page, and the traffic BETWEEN rigs.
- * Pure: a function of the fleet and a time, built on the shared data layer (buildRigMap,
- * resolveEndpoint, endpointRig) read-only. The page draws what this returns.
+ * v2 Graph (the fleet overview): every rig as ONE box, grouped by machine, and the traffic BETWEEN
+ * rigs. Pure: a function of the fleet and a time, built on the shared data layer read-only. It draws
+ * no agents and no handoffs inside a rig: that is the Rig Map's job.
  */
 
-/** A node the cross-rig lines join: a rig, or one machine's sessions that belong to no rig. */
-export type GroupKey = string;
-
-/** `m2:~loose`: the sessions on a machine that are in no rig (orchestrators, research seats). */
-export const LOOSE = '~loose';
-export const looseKey = (machineId: string): GroupKey => `${machineId}:${LOOSE}`;
-export const isLoose = (key: GroupKey) => key.endsWith(`:${LOOSE}`);
-
-/** What the filter buttons (C22) look for, on a seat. */
-export interface SeatFlags {
-  /** Blocked, or it asked David something that is still open and fresh. */
-  needsMe: boolean;
-  /** Work addressed to it has sat open longer than STALE_MS. */
-  stuck: boolean;
-  /** Down (stopped / unknown) while its rig is running, or OpenRig left recovery guidance. */
-  failing: boolean;
+/** What the filter buttons look for, on a rig. */
+export interface RigFlags {
+  /** Seats blocked, or that asked David something still open and fresh. */
+  needsMe: number;
+  /** Seats with work addressed to them open longer than STALE_MS. */
+  stuck: number;
+  /** Seats down while their rig is running, or with OpenRig recovery guidance. */
+  failing: number;
 }
 
-export interface GraphSeat extends MapSeat {
-  flags: SeatFlags;
-  pod: string;
-}
-
-export interface GraphPod extends Omit<MapPod, 'seats'> {
-  seats: GraphSeat[];
+/** The newest handoff that touched a rig, in parts (the page words it against the clock). */
+export interface LastHandoff {
+  from: string;
+  to: string;
+  summary: string | null;
+  at: string;
 }
 
 export interface GraphRig {
@@ -51,22 +39,19 @@ export interface GraphRig {
   machineId: string;
   machineLabel: string;
   name: string;
-  /** Null for the loose group. */
+  /** Null for the machine's no-rig group. */
   ref: RigRef | null;
-  /** RigState for a rig; the loose group reads 'idle' / 'working' / 'attention' from its seats. */
   state: RigRef['state'];
-  pods: GraphPod[];
   agents: number;
   /** Seats working or blocked right now. */
   active: number;
-  /** Real handoff lines inside the rig (both ends are its seats), counts from the queue. */
-  edges: MapEdge[];
-  /** Planned lines from the rig spec (dotted); null: the collector did not send the spec's edges. */
-  planned: MapEdge[] | null;
+  /** Agent names, for the one-line list of an expanded box. */
+  agentNames: string[];
+  flags: RigFlags;
+  last: LastHandoff | null;
   /** Items this rig handed to, and took from, other rigs. */
   crossOut: number;
   crossIn: number;
-  flags: { needsMe: number; stuck: number; failing: number };
 }
 
 export interface GraphMachine {
@@ -91,12 +76,36 @@ export interface CrossEdge {
   items: QueueItem[];
 }
 
+/** One line per rig PAIR: both directions together, the split kept for the tooltip. */
+export interface PairEdge {
+  a: GroupKey;
+  b: GroupKey;
+  count: number;
+  /** Handoffs a → b and b → a. */
+  ab: number;
+  ba: number;
+  open: number;
+  stale: number;
+  items: QueueItem[];
+}
+
 export interface Graph {
   machines: GraphMachine[];
+  /** One line per rig pair. */
+  pairs: PairEdge[];
+  /** Directed traffic as counted (the same rows, per direction). */
   cross: CrossEdge[];
   unplaced: Unplaced;
   totals: { rigs: number; agents: number; active: number };
 }
+
+/** A node the cross-rig lines join: a rig, or one machine's sessions that belong to no rig. */
+export type GroupKey = string;
+
+/** `m2:~loose`: the sessions on a machine that are in no rig (orchestrators, research seats). */
+export const LOOSE = '~loose';
+export const looseKey = (machineId: string): GroupKey => `${machineId}:${LOOSE}`;
+export const isLoose = (key: GroupKey) => key.endsWith(`:${LOOSE}`);
 
 const ms = (iso: string) => {
   const t = Date.parse(iso);
@@ -261,12 +270,6 @@ export interface Unplaced {
   byKind: { machine: number; rig: number };
 }
 
-const POD_ORDER = ['orch', 'lead', 'dev', 'build', 'qa', 'review', 'research'];
-const podRank = (p: string) => {
-  const i = POD_ORDER.indexOf(p);
-  return i === -1 ? POD_ORDER.length : i;
-};
-
 /** Open items each seat addressed to David's mailbox, still fresh. */
 const askedDavid = (fm: FleetMachine, now: number): Map<string, number> =>
   cached(fm.snapshot, `asked:${now}`, () => askedDavidOf(fm, now));
@@ -282,177 +285,176 @@ function askedDavidOf(fm: FleetMachine, now: number): Map<string, number> {
   return out;
 }
 
-function flagsOf(seat: Seat, ms: MapSeat, rigRunning: boolean, asked: number): SeatFlags {
+function flagsOf(seat: Seat, pip: PipKey, rigRunning: boolean, asked: number, stale: boolean) {
   const down: PipKey[] = ['stopped', 'unknown'];
   return {
-    needsMe: ms.pip === 'blocked' || asked > 0,
-    stuck: ms.stale > 0,
-    failing:
-      ms.pip !== 'asleep' && ((rigRunning && down.includes(ms.pip)) || !!seat.recoveryGuidance),
+    needsMe: pip === 'blocked' || asked > 0,
+    stuck: stale,
+    failing: pip !== 'asleep' && ((rigRunning && down.includes(pip)) || !!seat.recoveryGuidance),
   };
 }
 
-const countFlags = (pods: GraphPod[]) => {
-  const seats = pods.flatMap((p) => p.seats);
-  return {
-    needsMe: seats.filter((s) => s.flags.needsMe).length,
-    stuck: seats.filter((s) => s.flags.stuck).length,
-    failing: seats.filter((s) => s.flags.failing).length,
-  };
-};
-
-const isActive = (s: MapSeat) => s.pip === 'working' || s.pip === 'blocked';
-
-function sortPods(pods: GraphPod[]): GraphPod[] {
-  return pods.sort((a, b) => podRank(a.name) - podRank(b.name) || a.name.localeCompare(b.name));
-}
-
-/** One machine's sessions in no rig, as a group with one "sessions" pod. */
-function looseGroup(fm: FleetMachine, asked: Map<string, number>): GraphRig | null {
-  const seats = fm.snapshot.seats.filter(
-    (s) => !s.rig || !fm.snapshot.rigs.some((r) => r.name === s.rig)
-  );
-  if (!seats.length) return null;
-  const gs: GraphSeat[] = seats.map((seat) => {
-    const m: MapSeat = {
-      key: seatKey(fm.machine.id, seat.id),
-      name: seatName(seat),
-      model: modelChip(seat),
-      pip: pipFor(seat, fm),
-      skills: seat.skillCount,
-      address: seat.id,
-      rig: null,
-      source: seat.source,
-      runtime: seat.runtime,
-      modelRaw: seat.model,
-      contextPct: seat.contextUsedPct,
-      contextTokens: seat.contextTokens ?? null,
-      activity: seat.activity?.display ?? null,
-      open: 0,
-      stale: 0,
-      oldestStaleMs: null,
-    };
-    return {
-      ...m,
-      pod: 'sessions',
-      flags: flagsOf(seat, m, false, asked.get(seat.id) ?? 0),
-    };
+/** Seats with open work addressed to them older than STALE_MS, by seat id. */
+const staleSeats = (fm: FleetMachine, now: number): Set<string> =>
+  cached(fm.snapshot, `stale:${now}`, () => {
+    const out = new Set<string>();
+    for (const q of fm.snapshot.queue) {
+      if (!q.destination || !isOpen(q) || now - ms(q.createdAt) <= STALE_MS) continue;
+      const seat = fm.snapshot.seats.find(
+        (s) => s.id === q.destination || s.logicalId === q.destination
+      );
+      if (seat) out.add(seat.id);
+    }
+    return out;
   });
-  const pods = [{ name: 'sessions', seats: gs }];
-  const active = gs.filter(isActive).length;
+
+const isActive = (pip: PipKey) => pip === 'working' || pip === 'blocked';
+
+function boxOf(
+  fm: FleetMachine,
+  key: GroupKey,
+  name: string,
+  ref: RigRef | null,
+  seats: Seat[],
+  now: number,
+  last: LastHandoff | null,
+  crossOut: number,
+  crossIn: number
+): GraphRig {
+  const asked = askedDavid(fm, now);
+  const stale = staleSeats(fm, now);
+  const running = ref?.status === 'running';
+  const pips = seats.map((s) => pipFor(s, fm));
+  const flags = seats.reduce(
+    (acc, s, i) => {
+      const f = flagsOf(s, pips[i]!, !!running, asked.get(s.id) ?? 0, stale.has(s.id));
+      return {
+        needsMe: acc.needsMe + (f.needsMe ? 1 : 0),
+        stuck: acc.stuck + (f.stuck ? 1 : 0),
+        failing: acc.failing + (f.failing ? 1 : 0),
+      };
+    },
+    { needsMe: 0, stuck: 0, failing: 0 }
+  );
+  const active = pips.filter(isActive).length;
   return {
-    key: looseKey(fm.machine.id),
+    key,
     machineId: fm.machine.id,
     machineLabel: fm.machine.label,
-    name: 'no rig',
-    ref: null,
-    state:
-      fm.liveness === 'asleep'
+    name,
+    ref,
+    state: ref
+      ? ref.state
+      : fm.liveness === 'asleep'
         ? 'asleep'
-        : gs.some((s) => s.pip === 'blocked')
+        : pips.includes('blocked')
           ? 'attention'
           : active
             ? 'working'
             : 'idle',
-    pods,
-    agents: gs.length,
+    agents: seats.length,
     active,
-    edges: [],
-    planned: [],
-    crossOut: 0,
-    crossIn: 0,
-    flags: countFlags(pods),
+    agentNames: seats.map((s) => seatName(s)),
+    flags,
+    last,
+    crossOut,
+    crossIn,
   };
 }
 
-/** One rig's map from a view of its own machine only: a rig's in-rig lines never need the others. */
-function rigMapOf(fm: FleetMachine, ref: RigRef, now: number) {
-  return cached(fm.snapshot, `map:${ref.name}:${fm.liveness}:${now}`, () => {
-    // buildRigMap lists every rig of the machines it is given; handing it this rig alone keeps a
-    // 23-rig fleet from listing 23 rigs 23 times. The seats stay whole (name resolution needs them).
-    const slim: FleetMachine = cached(fm.snapshot, `slim:${ref.name}:${fm.liveness}`, () => ({
-      ...fm,
-      snapshot: {
-        ...fm.snapshot,
-        rigs: fm.snapshot.rigs.filter((r) => r.name === ref.name),
-      },
-    }));
-    return buildRigMap([slim], ref.key, now);
-  });
+/** The newest queue row that touches the rig, as a handoff in parts. */
+function lastHandoff(fm: FleetMachine, rig: string): LastHandoff | null {
+  const items = rigQueue(fm, rig);
+  let best: QueueItem | null = null;
+  for (const q of items) if (!best || q.updatedAt > best.updatedAt) best = q;
+  return best
+    ? {
+        from: bare(best.source) || '?',
+        to: bare(best.destination) || '?',
+        summary: best.summary,
+        at: best.updatedAt,
+      }
+    : null;
 }
 
-/** The whole fleet as a graph: machines, their rigs (pods, seats, in-rig lines) and cross-rig lines. */
+/** Both directions of a rig pair as one line. */
+export function pairEdges(cross: CrossEdge[]): PairEdge[] {
+  const map = new Map<string, PairEdge>();
+  for (const e of cross) {
+    const [a, b] = e.from < e.to ? [e.from, e.to] : [e.to, e.from];
+    const k = `${a}\u0000${b}`;
+    const p = map.get(k) ?? { a, b, count: 0, ab: 0, ba: 0, open: 0, stale: 0, items: [] };
+    p.count += e.count;
+    if (e.from === a) p.ab += e.count;
+    else p.ba += e.count;
+    p.open += e.open;
+    p.stale += e.stale;
+    p.items = [...p.items, ...e.items];
+    map.set(k, p);
+  }
+  return [...map.values()]
+    .map((p) => ({
+      ...p,
+      items: [...p.items].sort((x, y) => x.createdAt.localeCompare(y.createdAt)),
+    }))
+    .sort((x, y) => y.count - x.count || `${x.a}${x.b}`.localeCompare(`${y.a}${y.b}`));
+}
+
+/** The whole fleet as an overview: one box per rig, grouped by machine, and the lines between rigs. */
 export function buildGraph(machines: FleetMachine[], now: number = Date.now()): Graph {
-  // Each machine's rig list once; listRigs on one machine is the same rows, in the same order.
-  const refsOf = (fm: FleetMachine) =>
-    cached(fm.snapshot, `refs:${fm.liveness}`, () => listRigs([fm]));
   const { edges: cross, unplaced } = crossRigEdges(machines, now);
-  const out: Map<string, number> = new Map();
-  const into: Map<string, number> = new Map();
+  const out = new Map<string, number>();
+  const into = new Map<string, number>();
   for (const e of cross) {
     out.set(e.from, (out.get(e.from) ?? 0) + e.count);
     into.set(e.to, (into.get(e.to) ?? 0) + e.count);
   }
   let rigCount = 0;
   const built: GraphMachine[] = machines.map((fm) => {
-    const asked = askedDavid(fm, now);
-    const refs = refsOf(fm);
+    const refs = cached(fm.snapshot, `refs:${fm.liveness}`, () => listRigs([fm]));
     rigCount += refs.length;
-    const rigs: GraphRig[] = refs.map((ref) => {
-      const crossOut = out.get(ref.key) ?? 0;
-      const crossIn = into.get(ref.key) ?? 0;
-      // The same object while nothing it is made of has changed, so memo(RigFrame) can skip it.
+    const rigs = refs.map((ref) => {
+      const o = out.get(ref.key) ?? 0;
+      const i = into.get(ref.key) ?? 0;
+      // the same object while nothing it is made of changed, so the page can skip the box
       return cached(
         fm.snapshot,
-        `rig:${ref.key}:${fm.liveness}:${now}:${crossOut}:${crossIn}:${ref.state}`,
-        () => {
-          const map = rigMapOf(fm, ref, now);
-          const home = map?.lanes[0];
-          const running = ref.status === 'running';
-          const pods: GraphPod[] = sortPods(
-            (home?.pods ?? []).map((p) => ({
-              name: p.name,
-              seats: p.seats.map((s) => {
-                const seat = fm.snapshot.seats.find((x) => seatKey(fm.machine.id, x.id) === s.key)!;
-                return {
-                  ...s,
-                  pod: p.name,
-                  flags: flagsOf(seat, s, running, asked.get(seat.id) ?? 0),
-                };
-              }),
-            }))
-          );
-          const mine = new Set(pods.flatMap((p) => p.seats.map((s) => s.key)));
-          const seats = pods.flatMap((p) => p.seats);
-          return {
-            key: ref.key,
-            machineId: fm.machine.id,
-            machineLabel: fm.machine.label,
-            name: ref.name,
+        `rig:${ref.key}:${fm.liveness}:${now}:${o}:${i}:${ref.state}`,
+        () =>
+          boxOf(
+            fm,
+            ref.key,
+            ref.name,
             ref,
-            state: ref.state,
-            pods,
-            agents: seats.length,
-            active: seats.filter(isActive).length,
-            edges: (map?.edges ?? []).filter((e) => mine.has(e.from) && mine.has(e.to)),
-            planned: map?.planned ?? null,
-            crossOut,
-            crossIn,
-            flags: countFlags(pods),
-          } satisfies GraphRig;
-        }
+            fm.snapshot.seats.filter((s) => s.rig === ref.name),
+            now,
+            lastHandoff(fm, ref.name),
+            o,
+            i
+          )
       );
     });
+    const loseKey = looseKey(fm.machine.id);
     const loose = cached(
       fm.snapshot,
-      `loose:${fm.liveness}:${now}:${out.get(looseKey(fm.machine.id)) ?? 0}:${into.get(looseKey(fm.machine.id)) ?? 0}`,
+      `loose:${fm.liveness}:${now}:${out.get(loseKey) ?? 0}:${into.get(loseKey) ?? 0}`,
       () => {
-        const l = looseGroup(fm, asked);
-        if (l) {
-          l.crossOut = out.get(l.key) ?? 0;
-          l.crossIn = into.get(l.key) ?? 0;
-        }
-        return l;
+        const seats = fm.snapshot.seats.filter(
+          (s) => !s.rig || !fm.snapshot.rigs.some((r) => r.name === s.rig)
+        );
+        return seats.length
+          ? boxOf(
+              fm,
+              loseKey,
+              'no rig',
+              null,
+              seats,
+              now,
+              null,
+              out.get(loseKey) ?? 0,
+              into.get(loseKey) ?? 0
+            )
+          : null;
       }
     );
     return { id: fm.machine.id, label: fm.machine.label, liveness: fm.liveness, rigs, loose };
@@ -460,6 +462,7 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
   const all = built.flatMap((m) => [...m.rigs, ...(m.loose ? [m.loose] : [])]);
   return {
     machines: built,
+    pairs: pairEdges(cross),
     cross,
     unplaced,
     totals: {
@@ -474,51 +477,35 @@ export function allGroups(g: Graph): GraphRig[] {
   return g.machines.flatMap((m) => [...m.rigs, ...(m.loose ? [m.loose] : [])]);
 }
 
-/** C22: the three filters. */
-export type FlagFilter = keyof SeatFlags;
+/** The three filters. */
+export type FlagFilter = keyof RigFlags;
 export const FLAG_FILTERS: { key: FlagFilter; label: string; glyph: string; hint: string }[] = [
   {
     key: 'needsMe',
     label: 'Needs me',
     glyph: '▲',
-    hint: 'Blocked, or asked David something still open',
+    hint: 'A seat is blocked, or asked David something still open',
   },
   {
     key: 'stuck',
     label: 'Stuck',
     glyph: '⌛',
-    hint: 'Work addressed to it left open over 2 h',
+    hint: 'Work addressed to a seat left open over 2 h',
   },
   {
     key: 'failing',
     label: 'Failing',
     glyph: '✕',
-    hint: 'Down while its rig is running, or OpenRig left recovery guidance',
+    hint: 'A seat is down while its rig runs, or OpenRig left recovery guidance',
   },
 ];
-
-const flagged = (r: GraphRig) =>
-  r.flags.needsMe > 0 || r.flags.stuck > 0 || r.flags.failing > 0 || r.state === 'attention';
 
 /** A rig that is not running (stopped): hidden by default, like the Wall's stopped seats. */
 export const isStopped = (r: GraphRig): boolean => !!r.ref && r.ref.status !== 'running';
 
-/**
- * Rigs open by default, ONE rule for every machine column: a rig is open when it is running and
- * has something going on (an agent working or blocked, or a flag: needs me, stuck, failing,
- * OpenRig's attention), or when it is the picked rig. Every other rig is a one-line row, on every
- * machine alike, so no column shows full detail while its neighbour shows rows, and the page opens
- * short enough to read. Expand all opens the rest.
- */
-export function openByDefault(rig: GraphRig, picked: string | null): boolean {
-  if (rig.key === picked) return true;
-  if (!rig.ref || rig.ref.status !== 'running' || rig.state === 'asleep') return false;
-  return rig.active > 0 || flagged(rig);
-}
-
-/** A rig shows under a flag filter when a seat in it carries the flag (or, for Needs me, OpenRig flags the rig). */
+/** A rig shows under a flag filter when one of its seats carries the flag (or, for Needs me, OpenRig flags the rig). */
 export function rigMatches(r: GraphRig, f: FlagFilter | null): boolean {
   if (!f) return true;
   if (f === 'needsMe' && r.ref && r.state === 'attention') return true;
-  return r.pods.some((p) => p.seats.some((s) => s.flags[f]));
+  return r.flags[f] > 0;
 }

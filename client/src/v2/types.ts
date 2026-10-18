@@ -14,6 +14,7 @@ export type PageKey = View | V2OnlyKey;
  */
 export type V2OnlyKey =
   | 'about'
+  | 'graph'
   | 'needs-you'
   | 'missions'
   | 'history'

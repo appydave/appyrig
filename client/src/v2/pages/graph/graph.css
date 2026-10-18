@@ -1,9 +1,12 @@
-/* v2 Graph. AppyDave light only: tokens from styles/tokens.css, no second palette. */
+/* v2 Graph: the fleet overview. AppyDave light only: tokens from styles/tokens.css, no second palette. */
 
 .g2-graph {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* nothing here may widen the page: boxes wrap, they never push sideways */
+  min-width: 0;
+  overflow-x: clip;
 }
 .g2-toolbar {
   display: flex;
@@ -18,10 +21,10 @@
   gap: 6px;
   flex-wrap: wrap;
 }
-.g2-zoom {
-  min-width: 40px;
-  text-align: center;
+.g2-mock-note {
+  margin-left: auto;
   font-size: 12px;
+  color: var(--ar-ink-muted);
 }
 .mono,
 .g2-graph .mono {
@@ -70,257 +73,9 @@
   border-style: solid;
 }
 
-.g2-teams-wrap {
-  position: relative;
-}
-.g2-teams {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
-  left: 0;
-  width: min(520px, 90vw);
-  max-height: 60vh;
-  overflow: auto;
-  padding: 10px 12px;
-  border: 1px solid var(--ar-line);
-  border-radius: 10px;
-  background: var(--ar-surface-raised);
-  box-shadow: 0 6px 20px rgb(52 45 45 / 0.18);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
-}
-.g2-teams-row {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 6px;
-  margin: 0;
-}
-.g2-teams fieldset {
-  border: 1px solid var(--ar-line-soft);
-  border-radius: 8px;
-  padding: 4px 8px 8px;
-  margin: 0;
-}
-.g2-teams legend {
-  font-family: var(--ar-font-label);
-  letter-spacing: 0.08em;
-  font-size: 12px;
-}
-.g2-team {
-  display: block;
-  font-size: 12px;
-  padding: 2px 0;
-}
-
 .g2-caption {
   margin: 0 16px;
 }
-
-/* Tree (C45) beside the canvas. */
-.g2-body {
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 0;
-  align-items: start;
-  border-top: 1px solid var(--ar-line);
-}
-.g2-tree {
-  overflow: auto;
-  padding: 10px 8px 24px 12px;
-  border-right: 1px solid var(--ar-line);
-  background: var(--ar-surface);
-  font-size: 13px;
-}
-.g2-tree ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.g2-tree ul ul {
-  padding-left: 14px;
-}
-.g2-tree-row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 26px;
-}
-.g2-tree-caret {
-  width: 18px;
-  flex: 0 0 18px;
-  border: 0;
-  background: transparent;
-  color: var(--ar-ink-muted);
-  cursor: pointer;
-  padding: 0;
-  font-size: 11px;
-}
-.g2-tree-item {
-  flex: 1 1 auto;
-  min-width: 0;
-  text-align: left;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  padding: 2px 6px;
-  color: var(--ar-ink);
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font: inherit;
-}
-.g2-tree-item[data-level='1'] {
-  font-family: var(--ar-font-label);
-  letter-spacing: 0.06em;
-  font-size: 14px;
-}
-.g2-tree-item:hover {
-  background: var(--ar-line-soft);
-}
-.g2-tree-item[aria-current='true'] {
-  background: var(--ar-cta);
-}
-.g2-tree-meta {
-  font-size: 11px;
-  color: var(--ar-ink-muted);
-  padding-right: 4px;
-}
-.g2-tree .pip-glyph {
-  color: var(--pip);
-}
-
-/* Canvas: one column per machine, the cross-rig lines in the gaps. */
-.g2-scroll {
-  overflow: auto;
-  max-height: calc(100vh - 150px);
-  min-width: 0;
-}
-.g2-canvas {
-  position: relative;
-  width: max-content;
-  padding: 16px;
-}
-.g2-cols {
-  position: relative;
-  display: flex;
-  /* every column as tall as the tallest, so a short column's sticky head stays too */
-  align-items: stretch;
-  gap: var(--g2-gap);
-}
-/* The column layer sits over the cross-rig lines: only the frames take the pointer, so a line in
-   a gutter (or under a column's empty space) can be hovered and clicked. */
-.g2-cols,
-.g2-col {
-  pointer-events: none;
-}
-.g2-rig,
-.g2-col-head,
-.g2-col-empty {
-  pointer-events: auto;
-}
-.g2-col {
-  width: var(--g2-col);
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.g2-col[data-liveness='asleep'] {
-  opacity: 0.65;
-}
-.g2-col[data-highlight] .g2-col-head {
-  box-shadow: inset 0 -3px 0 var(--ar-cta);
-}
-/* The column heads stay in view while the canvas scrolls under them. */
-.g2-col-head {
-  position: sticky;
-  top: 0;
-  z-index: 6;
-  background: var(--ar-surface);
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 2px 4px 6px;
-  border-bottom: 2px solid var(--ar-ink);
-}
-.g2-col-head b {
-  font-family: var(--ar-font-display);
-  font-size: 26px;
-  letter-spacing: 0.04em;
-}
-.g2-col-head i {
-  font-style: normal;
-  color: var(--ar-ink-muted);
-  font-size: 13px;
-}
-.g2-col-empty {
-  margin: 8px 4px;
-}
-
-/* Cross-rig lines sit under the frames; their count labels above. */
-.g2-cross,
-.g2-cross-labels {
-  position: absolute;
-  inset: 0 auto auto 0;
-  overflow: visible;
-  pointer-events: none;
-}
-.g2-cross {
-  z-index: 0;
-}
-.g2-cross-labels {
-  z-index: 3;
-}
-.g2-cross-line {
-  cursor: pointer;
-}
-.g2-cross-path {
-  fill: none;
-  stroke-opacity: 0.8;
-  transition: stroke-opacity 0.12s;
-}
-.g2-cross-path.open {
-  stroke-opacity: 1;
-}
-.g2-cross-path.stale {
-  stroke-dasharray: 7 5;
-}
-/* Still waiting: a gold halo under the line. */
-.g2-cross-glow {
-  fill: none;
-  stroke: var(--ar-sequence);
-  stroke-opacity: 0.45;
-  stroke-linecap: round;
-}
-/* Following one line (or one rig): the rest fade, the lit line is solid. */
-.g2-cross-line[data-dim] {
-  opacity: 0.12;
-}
-.g2-cross-label[data-dim] {
-  opacity: 0.15;
-}
-.g2-cross-line[data-hot] .g2-cross-path {
-  stroke-opacity: 1;
-  filter: drop-shadow(0 0 2px rgb(0 0 0 / 25%));
-}
-.g2-cross-line:focus-visible {
-  outline: none;
-}
-.g2-cross-line:focus-visible .g2-cross-path {
-  stroke-opacity: 1;
-}
-.g2-cross-label rect {
-  stroke-width: 2;
-}
-
-/* The rig at the end of a lit line wears its colour; a hovered rig wears the ink. */
-.g2-rig[data-trace] {
-  outline: 3px solid var(--g2-trace);
-  outline-offset: 1px;
-}
-
-/* Legend and the one mock note for the page. */
 .g2-legend {
   margin: 0 16px 8px;
   font-size: 12px;
@@ -334,88 +89,224 @@
   vertical-align: middle;
   margin-right: 6px;
 }
-.g2-mock-note {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--ar-ink-muted);
+.g2-unplaced {
+  cursor: help;
+  text-decoration: underline dotted;
 }
 
-/* The left rail: the fleet tree, then the Lines list. */
-.g2-rail {
-  position: sticky;
-  top: 0;
-  max-height: calc(100vh - 150px);
+/* The canvas: one section per machine across the width (they wrap their boxes, so all fit), the
+   handoff lines drawn under the boxes in an svg that only its strokes can touch. */
+.g2-canvas {
+  position: relative;
+  padding: 8px 16px 24px;
+}
+.g2-machines {
+  display: grid;
+  grid-template-columns: repeat(var(--g2-n, 3), minmax(0, 1fr));
+  gap: 0 56px;
+  align-items: start;
+}
+.g2-machine {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--ar-line);
+  gap: 10px;
+}
+.g2-machine[data-liveness='asleep'] {
+  opacity: 0.65;
+}
+.g2-machine-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 2px 4px 6px;
+  border-bottom: 2px solid var(--ar-ink);
+}
+.g2-machine-head b {
+  font-family: var(--ar-font-display);
+  font-size: 26px;
+  letter-spacing: 0.04em;
+}
+.g2-machine-head i {
+  font-style: normal;
+  color: var(--ar-ink-muted);
+  font-size: 13px;
+}
+.g2-col-empty {
+  margin: 8px 4px;
+}
+.g2-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+/* A rig as one box. */
+.g2-box {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--ar-line);
+  border-left: 5px solid var(--ar-idle);
+  border-radius: 10px;
+  background: var(--ar-surface-raised);
+  cursor: pointer;
+}
+.g2-box[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.g2-box[data-state='attention'] {
+  border-left-color: var(--ar-blocked);
+}
+.g2-box[data-state='stopped'] {
+  border-left-style: dashed;
+  border-left-color: var(--ar-ink-muted);
+}
+.g2-box[data-state='asleep'] {
+  border-left-style: dotted;
+}
+.g2-box[data-loose] {
+  border-style: dashed;
   background: var(--ar-surface);
-  min-height: 0;
 }
-.g2-rail .g2-tree {
-  position: static;
-  max-height: none;
-  flex: 1 1 55%;
-  min-height: 120px;
-  border-right: 0;
+/* The box whose menu is open sits above its neighbours (and the lines). */
+.g2-box[data-menu-open] {
+  z-index: 40;
 }
-.g2-lines {
-  flex: 0 1 45%;
-  min-height: 0;
-  overflow: auto;
-  border-top: 1px solid var(--ar-line);
-  padding: 8px 8px 12px 12px;
-  font-size: 12px;
+/* The box at the end of a lit line wears its colour; a hovered box wears the ink. */
+.g2-box[data-trace] {
+  outline: 3px solid var(--g2-trace);
+  outline-offset: 1px;
 }
-.g2-lines h3 {
-  margin: 0 0 6px;
-  font-family: var(--ar-font-label);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.g2-box:hover {
+  border-color: var(--ar-ink);
 }
-.g2-lines ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.g2-lines-row {
+.g2-box-head {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
+  min-width: 0;
+}
+.g2-box-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border: 0;
   background: transparent;
-  text-align: left;
-  padding: 3px 4px;
-  border-radius: 4px;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ar-ink);
   cursor: pointer;
+  text-align: left;
 }
-.g2-lines-row:hover,
-.g2-lines-row:focus-visible,
-.g2-lines-row[data-hot] {
-  background: var(--ar-surface-raised);
-  outline: 1px solid var(--ar-line);
+.g2-box-name:hover {
+  text-decoration: underline;
 }
-.g2-swatch {
-  flex: 0 0 14px;
-  height: 6px;
-  border-radius: 3px;
+.g2-box-machine {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--ar-ink-muted);
 }
-.g2-lines-name {
-  flex: 1 1 auto;
-  min-width: 0;
+.g2-box-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
+  font-size: 12px;
+}
+.g2-box-cross {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+}
+.g2-box-last {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   overflow-wrap: anywhere;
 }
-.g2-lines-count {
-  flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+.g2-box-agents {
+  margin: 0;
+  font-size: 12px;
 }
-.g2-lines-count i {
-  font-style: normal;
-  color: var(--ar-blocked-ink);
+.g2-box-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
 }
-.g2-lines-hidden {
-  margin: 8px 0 0;
+.g2-box-names {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* Handoff lines between rigs: one per pair, in its own colour, under the boxes. */
+.g2-lines {
+  position: absolute;
+  inset: 0 auto auto 0;
+  overflow: visible;
+  pointer-events: none;
+  /* the lines run under the boxes, so a box's text is never struck through; only the counts sit above */
+  z-index: 0;
+}
+.g2-lines-labels {
+  z-index: 3;
+}
+.g2-line {
+  cursor: pointer;
+  outline: none;
+}
+.g2-path {
+  fill: none;
+  stroke-opacity: 0.7;
+  transition: stroke-opacity 0.12s;
+}
+.g2-path.open {
+  stroke-opacity: 0.95;
+}
+.g2-path.stale {
+  stroke-dasharray: 7 5;
+}
+/* Still waiting: a gold halo under the line. */
+.g2-glow {
+  fill: none;
+  stroke: var(--ar-sequence);
+  stroke-opacity: 0.4;
+  stroke-linecap: round;
+}
+.g2-line[data-dim] {
+  opacity: 0.1;
+}
+.g2-label {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.g2-label[data-dim] {
+  opacity: 0.15;
+}
+.g2-label rect {
+  stroke-width: 2;
+}
+.g2-line[data-hot] .g2-path,
+.g2-line:focus-visible .g2-path {
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 2px rgb(0 0 0 / 25%));
 }
 
 /* One mock note per page: a rig's own badge shows only on hover, focus or inside the open menu. */
@@ -437,97 +328,6 @@
   display: inline-block;
 }
 
-/* A rig frame (C42). */
-.g2-rig {
-  position: relative;
-  z-index: 1;
-  border: 1px solid var(--ar-line);
-  border-left: 5px solid var(--ar-idle);
-  border-radius: 10px;
-  background: var(--ar-surface-raised);
-}
-.g2-rig[data-state='working'] {
-  border-left-color: var(--ar-working);
-}
-.g2-rig[data-state='attention'] {
-  border-left-color: var(--ar-blocked);
-}
-.g2-rig[data-state='stopped'] {
-  border-left-color: var(--ar-stopped);
-  border-left-style: dashed;
-  background: var(--ar-canvas);
-}
-.g2-rig[data-state='asleep'] {
-  border-left-color: var(--ar-asleep);
-  border-left-style: dotted;
-}
-.g2-rig[data-loose] {
-  border-style: dashed;
-  border-left-style: dashed;
-}
-.g2-rig[data-picked] {
-  box-shadow: 0 0 0 2px var(--ar-ink);
-}
-.g2-rig[data-highlight],
-.g2-pod[data-highlight],
-.g2-card[data-highlight] {
-  outline: 3px solid var(--ar-cta);
-  outline-offset: 2px;
-}
-.g2-rig-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  padding: 8px 12px;
-}
-.g2-caret {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  color: var(--ar-ink);
-}
-.g2-rig-name {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--ar-ink);
-}
-.g2-rig-name:hover {
-  text-decoration: underline;
-}
-.g2-rig-machine {
-  font-family: var(--ar-font-label);
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--ar-ink-muted);
-}
-.g2-rig-counts,
-.g2-rig-cross {
-  font-size: 12px;
-  color: var(--ar-ink-muted);
-}
-.g2-rig-cross {
-  color: var(--ar-sequence);
-  font-weight: 700;
-}
-.g2-rig-body {
-  border-top: 1px solid var(--ar-line-soft);
-}
-.g2-rig-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px 0;
-}
 /* "⋯": the rig's mock Start / Restore / Launch. The mock mark stays beside it, menu open or not. */
 .g2-menu-wrap {
   position: relative;
@@ -555,145 +355,6 @@
   border-radius: 8px;
   box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
 }
-/* Each frame is its own stacking context, so the frame whose menu is open sits above its
-   neighbours (and above the cross-rig labels), or the menu would draw under the next frame. */
-.g2-rig[data-menu-open] {
-  z-index: 40;
-}
-/* A rig shown because OpenRig itself flags it (Needs me, rig-level match). */
-.g2-rig-head[data-rig-match] {
-  background: var(--ar-blocked-bg);
-  border-bottom: 1px solid var(--ar-blocked);
-}
-.g2-reason {
-  flex-basis: 100%;
-  font-size: 12px;
-  color: var(--ar-blocked-ink);
-}
-.g2-unplaced {
-  cursor: help;
-  text-decoration: underline dotted;
-}
-.g2-fake-btn {
-  font-size: 12px;
-  padding: 2px 10px;
-  min-height: 26px;
-}
-.g2-no-plan {
-  font-size: 11px;
-}
-.g2-rig-canvas {
-  position: relative;
-  padding: 6px 12px 12px 26px;
-}
-.g2-pods {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.g2-pod {
-  position: relative;
-}
-.g2-pod-seats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 56px 32px;
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
-/* C23 / C43: roomier cards, mono ids and numbers. */
-.g2-card {
-  position: relative;
-  z-index: 1;
-  width: 178px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
-  padding: 10px 12px 12px;
-  border: 1px solid var(--ar-line);
-  border-left: 4px solid var(--pip);
-  border-radius: 8px;
-  background: var(--ar-surface-raised);
-  color: var(--ar-ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  --pip-text: var(--ar-ink-muted);
-}
-.g2-card[data-pip='working'] {
-  --pip-text: var(--ar-working-ink);
-}
-.g2-card[data-pip='blocked'] {
-  --pip-text: var(--ar-blocked-ink);
-}
-.g2-card[data-dim] {
-  opacity: 0.35;
-}
-.g2-card:hover {
-  border-color: var(--ar-ink-muted);
-}
-.g2-card:focus-visible {
-  outline: 3px solid var(--ar-ink);
-  outline-offset: 2px;
-}
-.g2-card-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-}
-.g2-card-top .pip {
-  margin-left: auto;
-}
-.g2-card-name {
-  font-family: var(--ar-font-term);
-  font-size: 13px;
-  font-weight: 700;
-  word-break: break-all;
-}
-.g2-card .seat-address {
-  font-size: 11px;
-  color: var(--ar-ink-muted);
-  word-break: break-all;
-}
-.g2-card .seat-context {
-  display: inline-flex;
-  gap: 10px;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.g2-card-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.g2-card-badges:empty {
-  display: none;
-}
-
-/* Hover detail (C44): fixed to the window. */
-.seat-detail.g2-detail {
-  position: fixed;
-  z-index: 45;
-  width: 300px;
-}
-.g2-detail-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-}
-/* The card lets the pointer through to the cards under it (UI-A); its buttons take it. */
-.g2-detail-actions .pill-btn {
-  pointer-events: auto;
-}
-.g2-no-attach {
-  font-size: 11px;
-}
-
 /* Line drawer. */
 .g2-drawer {
   position: fixed;
@@ -774,57 +435,4 @@
 .g2-toast {
   border-color: var(--ar-working);
   color: var(--ar-working-ink);
-}
-
-/* The canvas wrapper holds the pinned "from → to" label above the scrolling canvas. */
-.g2-scroll-wrap {
-  position: relative;
-  min-width: 0;
-}
-.g2-follow {
-  position: absolute;
-  left: 50%;
-  bottom: 10px;
-  transform: translateX(-50%);
-  z-index: 8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 90%;
-  margin: 0;
-  padding: 5px 12px;
-  font-size: 12px;
-  color: var(--ar-ink);
-  background: var(--ar-surface-raised);
-  border: 1px solid var(--ar-ink);
-  border-radius: 999px;
-  box-shadow: 0 4px 14px rgb(0 0 0 / 18%);
-  pointer-events: none;
-}
-.g2-follow .g2-swatch {
-  width: 16px;
-}
-.g2-follow i {
-  font-style: normal;
-  color: var(--ar-blocked-ink);
-}
-.g2-lines-item {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.g2-lines-item .g2-lines-row {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
-}
-.g2-lines-open {
-  flex: 0 0 24px;
-  height: 24px;
-  border: 1px solid var(--ar-line);
-  border-radius: 4px;
-  background: var(--ar-surface-raised);
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1;
 }
