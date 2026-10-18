@@ -2,6 +2,11 @@ import type { View } from '../App.js';
 import type { NavGroupKey, PageKey, V2OnlyKey, V2PageDef } from './types.js';
 import { page as wallPage } from './pages/wall/index.js';
 import { page as aboutPage } from './pages/about/index.js';
+import { page as timelinePage } from './pages/timeline/index.js';
+import { page as accountsPage } from './pages/accounts/index.js';
+import { page as machinesPage } from './pages/machines/index.js';
+import { page as schemaPage } from './pages/schema/index.js';
+import { page as learnPage } from './pages/learn/index.js';
 
 /**
  * The v2 registry: every page that has a v2 version, keyed by page.
@@ -16,7 +21,7 @@ import { page as aboutPage } from './pages/about/index.js';
 export function v2Pages(): V2PageDef[] {
   // A function, not a constant: pages import helpers from here, so the list is read at call time
   // (no import-cycle ordering to get wrong).
-  return [wallPage, aboutPage];
+  return [wallPage, timelinePage, accountsPage, machinesPage, schemaPage, learnPage, aboutPage];
 }
 
 export const CURRENT_VIEWS: View[] = [
