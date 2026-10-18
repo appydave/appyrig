@@ -150,7 +150,11 @@ export class FleetStore {
     const is = snapshot.account?.email?.toLowerCase();
     if (was && is && was !== is) this.emailChanged.set(entry.machine.id, this.now().getTime());
     this.machines.set(entry.machine.id, entry);
-    this.daemonData.pruneSeats(entry.machine.id, new Set(snapshot.seats.map((x) => x.id)));
+    this.daemonData.pruneSeats(
+      entry.machine.id,
+      new Set(snapshot.seats.map((x) => x.id)),
+      this.now().getTime()
+    );
     this.persist(entry);
     if (before !== 'live') {
       this.onLiveness({

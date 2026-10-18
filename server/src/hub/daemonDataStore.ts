@@ -17,11 +17,28 @@ export class DaemonDataStore {
     this.byKey.set(this.key(push.machineId, push.kind, push.key), push);
   }
 
-  /** Forget seat details for seats the machine's newest snapshot no longer lists. */
-  pruneSeats(machine: string, live: Set<string>): void {
+  /** When (ms) each seat-detail key was first missing from its machine's snapshot. */
+  private readonly absentSince = new Map<string, number>();
+
+  /**
+   * Forget the seat details of seats the machine's snapshot no longer lists, but only after they have
+   * been absent for `graceMs`: a partial daemon read can drop a rig from one snapshot, and the
+   * collector would not resend its details just because the rig came back.
+   */
+  pruneSeats(machine: string, live: Set<string>, nowMs: number, graceMs = 5 * 60_000): void {
     for (const k of [...this.byKey.keys()]) {
       const [m, kind, key] = k.split('\u0000');
-      if (m === machine && kind === 'seatdetail' && !live.has(key ?? '')) this.byKey.delete(k);
+      if (m !== machine || kind !== 'seatdetail') continue;
+      if (live.has(key ?? '')) {
+        this.absentSince.delete(k);
+        continue;
+      }
+      const since = this.absentSince.get(k) ?? nowMs;
+      this.absentSince.set(k, since);
+      if (nowMs - since >= graceMs) {
+        this.byKey.delete(k);
+        this.absentSince.delete(k);
+      }
     }
   }
 

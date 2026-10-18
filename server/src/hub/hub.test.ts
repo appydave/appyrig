@@ -808,9 +808,13 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
   it('daemon data: validated, machine-checked, stored and served; an old collector is unaffected', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const announced: string[][] = [];
+    c.on('hub:caps', (x: string[]) => announced.push(x));
     const snap = loadSnapshot('m2');
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({ ok: true, caps: ['v2-fields', 'daemondata'] });
+    // and announced on connection, before any push
+    expect(announced).toEqual([['v2-fields', 'daemondata']]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',

@@ -50,6 +50,8 @@ export const FLEET_EVENTS = {
   DBROWS: 'collector:dbrows',
   /** collector → hub. Payload: DaemonDataPush (one kind of read-only OpenRig daemon data: seat detail, library, transitions, workflows, health, settings). Acked with CollectorAck. v2 data channels. */
   DAEMONDATA: 'collector:daemondata',
+  /** hub → collector, once on connection: the HUB_CAPS this hub understands, so the first push is already right. */
+  CAPS: 'hub:caps',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -106,7 +108,9 @@ export interface CollectorClientToServerEvents {
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */
-export type CollectorServerToClientEvents = Record<string, never>;
+export interface CollectorServerToClientEvents {
+  'hub:caps': (caps: string[]) => void;
+}
 
 /**
  * Test hook for the Playwright smoke tests (AC 11), installed by the client in every build mode:

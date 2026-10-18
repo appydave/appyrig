@@ -62,6 +62,7 @@ function main() {
       queueOrder = snap.queue.map((q) => q.id);
       // v2 data channels: one node-detail read per OpenRig seat (rig name to rig id, from the snapshot).
       const rigIds = new Map(snap.rigs.map((r) => [r.name, r.id]));
+      daemonData.forgetSeatsNotIn(new Set(own.map((s) => s.id)));
       daemonTargets = own.flatMap((s) => {
         const rigId = s.rig ? rigIds.get(s.rig) : undefined;
         return s.source === 'openrig' && s.logicalId && rigId

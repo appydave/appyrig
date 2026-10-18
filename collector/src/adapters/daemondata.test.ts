@@ -141,16 +141,31 @@ describe('v2 · seat detail (step 2)', () => {
     expect(DaemonDataPushSchema.safeParse(p!.pushes[0]).success).toBe(true);
   });
 
-  it('seats that left the target list are forgotten, so a returning seat is sent again', async () => {
+  it('a seat dropped from one snapshot is sent again when it returns, with no reconnect', async () => {
     const { r, tick } = reader(async () => node());
     const p = await r.next([T]);
     p!.markSent();
     tick(61_000);
+    expect(await r.next([T])).toBeNull(); // unchanged since the hub accepted it
+    // the build that drops the rig (a partial daemon read) also forgets what was sent for it
+    r.forgetSeatsNotIn(new Set());
+    tick(61_000);
+    const back = await r.next([T]); // the rig is back in the next snapshot
+    expect(back!.pushes[0]).toMatchObject({ kind: 'seatdetail', key: 'dev-build@r' });
+    back!.markSent();
+    // seats still listed are left alone
+    r.forgetSeatsNotIn(new Set([T.seat]));
+    tick(61_000);
     expect(await r.next([T])).toBeNull();
+  });
+
+  it('a payload the pusher skipped is not recorded as sent, so it is offered again', async () => {
+    const { r, tick } = reader(async () => node());
+    const p = await r.next([T]);
+    p!.markSkipped!(p!.pushes[0]!);
+    p!.markSent();
     tick(61_000);
-    expect(await r.next([])).toBeNull(); // the seat is gone
-    tick(61_000);
-    expect(await r.next([T])).not.toBeNull(); // and back: sent again
+    expect((await r.next([T]))!.pushes).toHaveLength(1);
   });
 
   it('only a seat-detail push has a key; every other kind must have the empty key', () => {
@@ -556,6 +571,23 @@ describe('v2 · queue transitions (step 4)', () => {
     const { r } = trReader(d.get);
     const p = await r.next([]);
     expect(data(p).retained).toBe(300);
+  });
+
+  it('truncated compares rows read with rows held, not ids with rows', async () => {
+    // the daemon pruned its history: high-water mark 900 but only 10 rows exist
+    const { r } = trReader(async () => ({
+      source: { hostId: 'h', bootEpoch: 'b' },
+      rows: Array.from({ length: 10 }, (_, i) => ({
+        transitionId: String(891 + i),
+        qitemId: 'q',
+        originalTimestamp: `2026-10-11T12:00:0${i}.000Z`,
+        state: 's',
+      })),
+      page: { hasMore: false, nextCursor: 'c', retainedHighWatermark: '900' },
+    }));
+    const p = await r.next([]);
+    expect(data(p)).toMatchObject({ retained: 900, truncated: false });
+    expect(data(p).rows).toHaveLength(10);
   });
 
   it('L2: a row that arrives on two pages is held once', async () => {

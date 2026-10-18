@@ -570,9 +570,19 @@ describe('v2 · seat.detail', () => {
       ok: true,
       value: { status: 'seat-not-found', detail: null },
     });
-    // L4: a seat that leaves the machine's snapshot loses its detail
+    // L4: a seat that leaves the machine's snapshot loses its detail, but only after 5 minutes
+    // absent: a partial daemon read can drop a rig from one snapshot and bring it back
     const without = { ...snap, seats: snap.seats.filter((s) => s.id !== seat) };
     store.put(without);
+    clock.advance(60_000);
+    store.put(snap); // back after one snapshot: the detail is still there
+    expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeDefined();
+    store.put(without);
+    clock.advance(4 * 60_000);
+    store.put(without); // 4 minutes absent: kept
+    expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeDefined();
+    clock.advance(61_000);
+    store.put(without); // over 5 minutes absent: gone
     expect(store.daemonData.get('roamy', 'seatdetail', seat)).toBeUndefined();
     store.put(snap);
     expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({

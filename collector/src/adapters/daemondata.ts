@@ -49,6 +49,8 @@ export interface SeatTarget {
 export interface PendingDaemonData {
   pushes: DaemonDataPush[];
   markSent(): void;
+  /** The pusher did not send this push (over the size guard): do not record it as sent. */
+  markSkipped?(push: DaemonDataPush): void;
 }
 
 /** One read: its kind, how often it may run, and what it returns (null = nothing to say this round). */
@@ -668,6 +670,17 @@ export class DaemonDataReader {
     this.jobs = jobs.filter((j) => !opts.kinds || opts.kinds.includes(j.kind));
   }
 
+  /**
+   * Called from the snapshot build with the seats it still lists: forget what was sent for any other
+   * seat in the same build that drops it, so a rig missing from one snapshot (a partial read) is
+   * sent again when it returns, with no reconnect.
+   */
+  forgetSeatsNotIn(ids: Set<string>): void {
+    const prefix = 'seatdetail\u0000';
+    for (const k of [...this.sent.keys()])
+      if (k.startsWith(prefix) && !ids.has(k.slice(prefix.length))) this.sent.delete(k);
+  }
+
   /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
   reset(): void {
     this.sent.clear();
@@ -723,11 +736,6 @@ export class DaemonDataReader {
         }
       }
     }
-    // L4: forget what was sent for seats that are gone, so a seat that returns is sent again.
-    const live = new Set(this.targets.map((t) => t.seat));
-    for (const k of [...this.sent.keys()])
-      if (k.startsWith('seatdetail\u0000') && !live.has(k.slice('seatdetail\u0000'.length)))
-        this.sent.delete(k);
     if (failed > 0)
       this.fail(
         'seatdetail:seats',
@@ -888,7 +896,8 @@ export class DaemonDataReader {
       rows: st.rows,
       // L1: the daemon's own retained high-water mark (its newest transition id), else rows read
       retained: st.high ?? st.read,
-      truncated: (st.high ?? st.read) > st.rows.length,
+      // rows read vs rows held: ids are not counts once the daemon has pruned its history
+      truncated: st.read > st.rows.length,
       hostId: st.hostId,
       bootEpoch: st.bootEpoch,
     };
@@ -990,9 +999,13 @@ export class DaemonDataReader {
       }
     }
     if (pushes.length === 0) return null;
+    const skipped = new Set<string>();
     return {
       pushes,
-      markSent: () => sigs.forEach((sig, k) => this.sent.set(k, sig)),
+      // A payload the pusher refused to send (too large) is not recorded as sent: it is offered
+      // again on the next run of its read.
+      markSkipped: (p) => skipped.add(`${p.kind}\u0000${p.key}`),
+      markSent: () => sigs.forEach((sig, k) => skipped.has(k) || this.sent.set(k, sig)),
     };
   }
 }

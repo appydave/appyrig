@@ -51,6 +51,8 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
   });
 
   nsp.on('connection', (socket) => {
+    // Tell the collector what this hub understands before its first push (the ack repeats it).
+    socket.emit(FLEET_EVENTS.CAPS, [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA]);
     const machineId = (socket.handshake.auth as CollectorAuth).machineId;
     socket.on(FLEET_EVENTS.SNAPSHOT, (raw, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
