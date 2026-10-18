@@ -440,7 +440,10 @@ describe('v2 registry', () => {
     expect(inNav).toContain('needs-you');
     expect(inNav).toContain('missions');
     expect(navLabel('needs-you')).toBe('Needs You');
-    expect(navLabel('map')).toBe('Graph');
+    // the Rig Map has its own v2 (one team, drawn wide), and the Graph is its own v2-only page
+    expect(navLabel('map')).toBe('Rig Map');
+    expect(v2PageFor('map')?.label).toBe('Rig Map');
+    expect(navLabel('graph')).toBe('Graph');
     expect(inNav).toContain('history');
     expect(inNav).toContain('health');
   });
