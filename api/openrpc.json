@@ -3,7 +3,7 @@
   "info": {
     "title": "AppyRig",
     "version": "0.1.0",
-    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n25 methods; 1 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
+    "description": "Read-only live view of OpenRig agent teams across machines. Every verb reads the last snapshot each machine pushed to this hub; none sends anything to a seat. POST JSON-RPC 2.0 to /v1/rpc with header x-fli-principal (agent:<name>, cli or human[:surface]) and the hub session cookie or Authorization: Bearer <hub token>.\n\n26 methods; 1 are human-only in whole or in part (`x-human-only`) and refused with `forbidden` for agent and cli principals.\n\nEvery error carries `data.failureMode` (the canonical name) beside the integer code."
   },
   "servers": [
     {
@@ -9521,6 +9521,618 @@
       "x-required": [
         "machine",
         "rig"
+      ]
+    },
+    {
+      "name": "seat.detail",
+      "summary": "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token, transcript path and event payloads are NOT carried (the seat's resumeCommand is on seat.get). status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node detail for the seat); 'not-openrig' (a plain tmux seat has none).",
+      "tags": [
+        {
+          "name": "seat"
+        }
+      ],
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "machine",
+          "required": true,
+          "summary": "machine id, e.g. m2",
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*$",
+            "description": "machine id, e.g. m2"
+          }
+        },
+        {
+          "name": "seat",
+          "required": true,
+          "summary": "seat id, e.g. dev-hub@appyrig-build",
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "description": "seat id, e.g. dev-hub@appyrig-build"
+          }
+        }
+      ],
+      "result": {
+        "name": "result",
+        "description": "The call envelope: `ok: true` with the value, or `ok: false` with a named refusal.",
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "value"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "value": {}
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "ok",
+                "error"
+              ],
+              "properties": {
+                "ok": {
+                  "const": false
+                },
+                "error": {
+                  "type": "object"
+                }
+              }
+            }
+          ],
+          "x-value": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "type": "object",
+            "properties": {
+              "machine": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*$"
+              },
+              "seat": {
+                "type": "string"
+              },
+              "status": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "ok",
+                      "pending",
+                      "unsupported"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": "not-openrig"
+                  }
+                ]
+              },
+              "reason": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "collectedAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "detail": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "spec": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "version": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 60
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "profile": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              },
+                              "hash": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "maxLength": 120
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "version",
+                              "profile",
+                              "hash"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "startupFiles": {
+                        "maxItems": 60,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "path": {
+                              "type": "string",
+                              "maxLength": 400
+                            },
+                            "deliveryHint": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 60
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "required": {
+                              "type": [
+                                "boolean",
+                                "null"
+                              ]
+                            },
+                            "appliesOn": {
+                              "maxItems": 10,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "maxLength": 60
+                              }
+                            }
+                          },
+                          "required": [
+                            "path",
+                            "deliveryHint",
+                            "required",
+                            "appliesOn"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "startupActions": {
+                        "maxItems": 60,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "maxLength": 60
+                            },
+                            "phase": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 60
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "text": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 400
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "phase",
+                            "text"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "peers": {
+                        "maxItems": 60,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "logicalId": {
+                              "type": "string",
+                              "maxLength": 200
+                            },
+                            "session": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 200
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "runtime": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 60
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "logicalId",
+                            "session",
+                            "runtime"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "recoveryNotes": {
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "maxLength": 300
+                        }
+                      },
+                      "installedResources": {
+                        "maxItems": 60,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "maxLength": 200
+                            },
+                            "category": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "maxLength": 80
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "category"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "spec",
+                      "startupFiles",
+                      "startupActions",
+                      "peers",
+                      "recoveryNotes",
+                      "installedResources"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "machine",
+              "seat",
+              "status",
+              "reason",
+              "collectedAt",
+              "detail"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32001,
+          "message": "forbidden",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "forbidden"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "capability": {
+                    "type": "string"
+                  },
+                  "principal": {
+                    "type": "string"
+                  },
+                  "allowed": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "human",
+                        "agent",
+                        "cli"
+                      ]
+                    }
+                  },
+                  "humanOnly": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "capability",
+                  "principal",
+                  "allowed",
+                  "humanOnly"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32002,
+          "message": "machine-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "machine-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32003,
+          "message": "seat-not-found",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "seat-not-found"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "machine": {
+                    "type": "string"
+                  },
+                  "seat": {
+                    "type": "string"
+                  },
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "machine",
+                  "seat",
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32601,
+          "message": "unknown-capability",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "unknown-capability"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "known": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "known"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32602,
+          "message": "invalid-input",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "invalid-input"
+              },
+              "details": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "path": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "path",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        {
+          "code": -32603,
+          "message": "internal",
+          "data": {
+            "type": "object",
+            "required": [
+              "failureMode"
+            ],
+            "properties": {
+              "failureMode": {
+                "const": "internal"
+              },
+              "details": {}
+            }
+          }
+        }
+      ],
+      "x-kind": "query",
+      "x-family": "seat",
+      "x-principals": [
+        "human",
+        "agent",
+        "cli"
+      ],
+      "x-human-only": false,
+      "x-side-effects": "read-only",
+      "x-idempotent": true,
+      "x-confirmation-required": false,
+      "x-expected-duration": "fast",
+      "x-failure-modes": [
+        "machine-not-found",
+        "seat-not-found"
+      ],
+      "x-required": [
+        "machine",
+        "seat"
       ]
     },
     {

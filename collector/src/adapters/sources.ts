@@ -217,6 +217,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
       return r.stdout;
     },
 
+    daemonGet: getJson,
     account: () => readAccount(),
     /** Cached machine health, re-sampled in the background (v1.4 · S6). */
     health: createHealthSampler(run),

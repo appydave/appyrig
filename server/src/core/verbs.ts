@@ -52,6 +52,9 @@ import {
   DbRowsOutputSchema,
   type DbRowsOutput,
   SeatLoadoutOutputSchema,
+  SeatDetailInputSchema,
+  SeatDetailOutputSchema,
+  type SeatDetailOutput,
   type SeatLoadoutOutput,
   SeatHistoryOutputSchema,
   SeatGetOutputSchema,
@@ -589,6 +592,38 @@ const VERB_SET = {
       if (loadout.status === 'no-listing')
         return out('no-listing', 'no transcript with a skill listing was found for this seat');
       return out(loadout.status, null);
+    }
+  ),
+
+  'seat.detail': query(
+    "What one OpenRig seat is configured with, for the Agent page: its resolved spec (name, version, profile, hash), startup files (path, delivery hint, required, when it applies), startup actions (type, phase, the text it sends, redacted and cut), peers, the daemon's recovery notes, and installed resources. Read from the daemon's node record by that machine's collector, on a slow timer, and pushed only when it changed; the resume token, transcript path and event payloads are NOT carried (the seat's resumeCommand is on seat.get). status: 'ok'; 'pending' (nothing from that machine's collector for this seat yet: older than v2, not sent yet, or the daemon read failed); 'unsupported' (that OpenRig has no node detail for the seat); 'not-openrig' (a plain tmux seat has none).",
+    SeatDetailInputSchema,
+    SeatDetailOutputSchema,
+    SEAT_NOT_FOUND,
+    (input, ctx): SeatDetailOutput => {
+      const { seat } = seatOf(ctx, input.machine, input.seat);
+      const out = (
+        status: SeatDetailOutput['status'],
+        reason: string | null,
+        p?: { collectedAt: string; data: SeatDetailOutput['detail'] }
+      ): SeatDetailOutput => ({
+        machine: input.machine,
+        seat: input.seat,
+        status,
+        reason,
+        collectedAt: p?.collectedAt ?? null,
+        detail: p?.data ?? null,
+      });
+      if (seat.source !== 'openrig')
+        return out('not-openrig', 'a plain terminal seat has no OpenRig node record');
+      const p = ctx.store.daemonData.get(input.machine, 'seatdetail', input.seat);
+      if (!p)
+        return out(
+          'pending',
+          "no seat detail from this machine's collector for this seat yet: it predates v2, has not sent one (it re-reads every minute), or the daemon read failed"
+        );
+      if (p.status === 'unsupported') return out('unsupported', p.reason);
+      return out('ok', null, { collectedAt: p.collectedAt, data: p.data });
     }
   ),
 

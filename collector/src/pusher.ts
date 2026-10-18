@@ -14,6 +14,7 @@ import type { PendingRigFiles } from './adapters/rigfiles.js';
 import type { PendingSchema } from './adapters/dbschema.js';
 import type { PendingLoadouts } from './adapters/loadout.js';
 import type { PendingDbRows } from './adapters/dbrows.js';
+import type { PendingDaemonData } from './adapters/daemondata.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -46,6 +47,9 @@ export interface PusherOptions {
   /** Batch 1 · B5: OpenRig database rows (one push per changed table); null = nothing to send. */
   dbRows?: () => Promise<PendingDbRows | null>;
   dbRowsIntervalMs?: number;
+  /** v2 data channels: OpenRig daemon reads (seat detail, library, …) that changed; null = nothing to send. */
+  daemonData?: () => Promise<PendingDaemonData | null>;
+  daemonDataIntervalMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
   onConnect?: () => void;
 }
@@ -273,6 +277,19 @@ export function startPusher(opts: PusherOptions): Pusher {
       FLEET_EVENTS.DBROWS,
       opts.dbRowsIntervalMs ?? 30_000,
       'v1.5',
+      async () => {
+        const p = await take();
+        return p && { payloads: p.pushes, markSent: p.markSent };
+      }
+    );
+  }
+  if (opts.daemonData) {
+    const take = opts.daemonData;
+    channel(
+      'daemon data',
+      FLEET_EVENTS.DAEMONDATA,
+      opts.daemonDataIntervalMs ?? 10_000,
+      'v2',
       async () => {
         const p = await take();
         return p && { payloads: p.pushes, markSent: p.markSent };

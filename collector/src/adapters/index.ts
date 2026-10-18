@@ -33,3 +33,10 @@ export {
 } from './loadout.js';
 export { DbRowsReader, readAllTableRows, cellOf, type PendingDbRows } from './dbrows.js';
 export { keySkillsOf, seatConfigReader, withSeatCards } from './seatcard.js';
+export {
+  DaemonDataReader,
+  parseSeatDetail,
+  type DaemonGet,
+  type SeatTarget,
+  type PendingDaemonData,
+} from './daemondata.js';

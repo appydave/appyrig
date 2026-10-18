@@ -4,6 +4,7 @@ import type { RigFilesPush } from './rigfiles.js';
 import type { SchemaPush } from './dbschema.js';
 import type { SeatLoadout } from './loadout.js';
 import type { DbRowsPush } from './dbrows.js';
+import type { DaemonDataPush } from './daemondata.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -47,6 +48,8 @@ export const FLEET_EVENTS = {
   LOADOUT: 'collector:loadout',
   /** collector → hub. Payload: DbRowsPush (one table's newest rows, read-only). Acked with CollectorAck. Batch 1 · B5. */
   DBROWS: 'collector:dbrows',
+  /** collector → hub. Payload: DaemonDataPush (one kind of read-only OpenRig daemon data: seat detail, library, transitions, workflows, health, settings). Acked with CollectorAck. v2 data channels. */
+  DAEMONDATA: 'collector:daemondata',
 } as const;
 
 /** Name of the browser session cookie (httpOnly, sameSite=lax). */
@@ -96,6 +99,7 @@ export interface CollectorClientToServerEvents {
   'collector:schema': (push: SchemaPush, ack: (result: CollectorAck) => void) => void;
   'collector:loadout': (loadout: SeatLoadout, ack: (result: CollectorAck) => void) => void;
   'collector:dbrows': (push: DbRowsPush, ack: (result: CollectorAck) => void) => void;
+  'collector:daemondata': (push: DaemonDataPush, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */

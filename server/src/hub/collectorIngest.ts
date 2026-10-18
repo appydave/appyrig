@@ -9,6 +9,7 @@ import {
   SchemaPushSchema,
   SeatLoadoutSchema,
   DbRowsPushSchema,
+  DaemonDataPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -187,6 +188,11 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     socket.on(
       FLEET_EVENTS.DBROWS,
       guarded(DbRowsPushSchema, 'database rows', (d) => opts.store.dbRows.put(d))
+    );
+    // v2 data channels: one kind of read-only OpenRig daemon data. Same checks as the others.
+    socket.on(
+      FLEET_EVENTS.DAEMONDATA,
+      guarded(DaemonDataPushSchema, 'daemon data', (d) => opts.store.daemonData.put(d))
     );
   });
 }

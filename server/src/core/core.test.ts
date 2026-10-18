@@ -44,6 +44,7 @@ describe('AC 9 — exactly one write verb', () => {
       'rig.outputs',
       'rig.topology',
       'rig.waiting',
+      'seat.detail',
       'seat.get',
       'seat.history',
       'seat.list',
@@ -276,6 +277,7 @@ describe('core.call — the one seam', () => {
       'seat.tail': { machine: 'roamy', seat },
       'seat.history': { machine: 'roamy', seat },
       'seat.loadout': { machine: 'roamy', seat },
+      'seat.detail': { machine: 'roamy', seat },
       'handoff.get': { machine: 'roamy', id: store.get('roamy')!.snapshot.queue[0]!.id },
       'rig.entry': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
       'rig.files': { machine: 'roamy', rig: store.get('roamy')!.snapshot.rigs[0]!.name },
@@ -337,7 +339,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 25 },
+      value: { app: 'AppyRig', version: real.version, verbs: 26 },
     });
   });
 
@@ -462,6 +464,74 @@ describe('v1.5 · L1 — seat.loadout', () => {
   it('an unknown seat is refused by name', () => {
     const { core } = fleet();
     expect(core.call(AGENT, 'seat.loadout', { machine: 'roamy', seat: 'nope@x' })).toMatchObject({
+      ok: false,
+      error: { failureMode: 'seat-not-found' },
+    });
+  });
+});
+
+describe('v2 · seat.detail', () => {
+  const detail = {
+    spec: { name: 'implementer', version: '1.0', profile: 'default', hash: 'h' },
+    startupFiles: [
+      {
+        path: 'guidance/role.md',
+        deliveryHint: 'send_text',
+        required: true,
+        appliesOn: ['restore'],
+      },
+    ],
+    startupActions: [{ type: 'send_text', phase: null, text: 'hello' }],
+    peers: [{ logicalId: 'dev.qa', session: 'dev-qa@r', runtime: 'claude-code' }],
+    recoveryNotes: ['try resume'],
+    installedResources: [{ id: 'shared:core', category: 'plugin' }],
+  };
+
+  it('is pending until a collector pushes, then ok with the detail; tmux seats say not-openrig', () => {
+    const clock = manualClock();
+    const store = new FleetStore({ now: clock.now });
+    store.put(loadSnapshot('roamy'));
+    const core = createCore({ store, identity, now: clock.now });
+    const snap = store.get('roamy')!.snapshot;
+    const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'pending', detail: null, collectedAt: null, reason: expect.any(String) },
+    });
+    store.daemonData.put({
+      kind: 'seatdetail',
+      machineId: 'roamy',
+      key: seat,
+      collectedAt: '2026-10-18T12:00:00.000Z',
+      status: 'ok',
+      reason: null,
+      data: detail,
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toEqual({
+      ok: true,
+      value: {
+        machine: 'roamy',
+        seat,
+        status: 'ok',
+        reason: null,
+        collectedAt: '2026-10-18T12:00:00.000Z',
+        detail,
+      },
+    });
+    store.daemonData.put({
+      kind: 'seatdetail',
+      machineId: 'roamy',
+      key: seat,
+      collectedAt: '2026-10-18T12:01:00.000Z',
+      status: 'unsupported',
+      reason: 'no route',
+      data: null,
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat })).toMatchObject({
+      ok: true,
+      value: { status: 'unsupported', reason: 'no route', detail: null },
+    });
+    expect(core.call(AGENT, 'seat.detail', { machine: 'roamy', seat: 'nope@x' })).toMatchObject({
       ok: false,
       error: { failureMode: 'seat-not-found' },
     });
