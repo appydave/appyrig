@@ -192,7 +192,8 @@ describe('v2 per-page flip', () => {
     expect(screen.getByTestId('v2-about')).toBeInTheDocument();
     press('Escape');
     await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
-    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
+    // the group click opened its first page (OpenRig DB), and that is the page underneath
+    expect(screen.getByTestId('v2-schema')).toBeInTheDocument();
   });
 });
 
@@ -336,8 +337,8 @@ describe('W0 fold', () => {
     expect(screen.getByTestId('v2-about')).toBeInTheDocument();
     press('Escape');
     await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
-    // goBack would have popped to the Wall; the Flow is still there
-    expect(screen.getByTestId('v2-flow')).toBeInTheDocument();
+    // goBack would have popped to the Wall; the page underneath (the group's first page) is there
+    expect(screen.getByTestId('v2-schema')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-wall')).toBeNull();
   });
 

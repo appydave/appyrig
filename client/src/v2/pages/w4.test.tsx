@@ -586,15 +586,18 @@ describe('W4 fold: timeline (MEDIUM-2, LOW)', () => {
     expect(screen.getByTestId('tl2-waits')).toHaveTextContent('created → last update');
   });
 
-  it('defaults to the busiest rig when the shared choice has no run', () => {
+  it('shows the shared rig choice (App picks the busiest first), never its own', () => {
     const fm = runMachine();
-    const empty = listRigs([fm]).find((r) => r.name !== 'starter' && r.handoffs === 0)!;
+    const rigs = listRigs([fm]);
+    const empty = rigs.find((r) => r.name !== 'starter' && r.handoffs === 0)!;
     expect(empty).toBeTruthy();
-    const ctx = ctxFor([fm], { activeRig: empty, pickedRig: null });
+    // the shared choice is an empty rig: the page shows exactly that, and picking calls the shared chooseRig
+    const ctx = ctxFor([fm], { activeRig: empty });
     const Page = timelinePage.component;
     render(<Page ctx={ctx} />);
-    expect(screen.getByTestId('tl2-outcome')).toBeInTheDocument();
-    expect(screen.queryByTestId('tl2-empty')).toBeNull();
+    expect(screen.getByTestId('tl2-empty')).toHaveTextContent(empty.name);
+    fireEvent.change(screen.getByTestId('rig-select'), { target: { value: 'roamy:starter' } });
+    expect(ctx.chooseRig).toHaveBeenCalledWith('roamy:starter');
   });
 });
 

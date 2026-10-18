@@ -445,3 +445,32 @@
 .hist-jump {
   flex: none;
 }
+
+/* UX nav: every group's header is the same size. The nav box is reserved, so a group with longer
+   page names never pushes the rest of the header onto a second row (1440 px). */
+.v2-nav {
+  width: 336px;
+  flex: none;
+}
+.v2-nav-groups .view-tab {
+  padding: 6px 10px;
+}
+.v2-nav-pages {
+  flex-wrap: nowrap;
+  gap: 2px 8px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+.v2-nav-page {
+  font-size: 12px;
+}
+
+/* UX nav: in v2 the top of the page is the same height on every page. Current hides the Group
+   control (not on the Wall) and the machine-filter row (not on every page); v2 reserves their
+   room, so switching pages never moves the content up or down. */
+body:has(.v2-nav) header {
+  min-height: 112px;
+}
+body:has(.v2-nav) [data-testid='fleet-strip'] {
+  min-height: 84px;
+}

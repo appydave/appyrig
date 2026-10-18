@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import RigPicker from '../../../components/RigPicker.js';
 import { DOT_STATE_LABEL, dotState, timeScale } from '../../../fleet/timeline.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
@@ -19,21 +19,9 @@ const LABEL_W = 150;
  * (when, how long, who did the work) and who waited on whom. Seat names open the agent panel.
  */
 function TimelineV2({ ctx }: V2PageProps) {
-  // The rig shown: the one the viewer picked here, else the one picked elsewhere, else the shared
-  // choice if it has a run, else the busiest rig (most handoffs, then latest): never an empty one first.
-  const [chosen, setChosen] = useState<string | null>(null);
-  const busiest = useMemo(
-    () =>
-      [...ctx.rigs].sort(
-        (a, b) =>
-          b.handoffs - a.handoffs || (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '')
-      )[0] ?? null,
-    [ctx.rigs]
-  );
-  const rig =
-    ctx.rigs.find((r) => r.key === chosen) ??
-    ctx.pickedRig ??
-    (ctx.activeRig && ctx.activeRig.handoffs > 0 ? ctx.activeRig : busiest);
+  // The rig is the ONE shared choice (App's activeRig), the same on every rig page, old and new:
+  // picking here, flipping with B or V, or moving to another page never changes it.
+  const rig = ctx.activeRig;
   const fm = rig ? ctx.allMachines.find((m) => m.machine.id === rig.machineId) : undefined;
   const tenMin = Math.floor(ctx.now / 600_000) * 600_000;
   const run = useMemo(() => (fm && rig ? buildRun(fm, rig.name, tenMin) : null), [fm, rig, tenMin]);
@@ -61,10 +49,7 @@ function TimelineV2({ ctx }: V2PageProps) {
       <RigPicker
         rigs={ctx.rigs}
         selected={rig?.key ?? null}
-        onSelect={(key) => {
-          setChosen(key);
-          ctx.chooseRig(key);
-        }}
+        onSelect={ctx.chooseRig}
         info={false}
       />
       {!rig && <p className="empty">Pick a rig.</p>}
