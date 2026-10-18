@@ -1,0 +1,103 @@
+/* v2 kit · handoff lines: one quiet style. AppyDave light only: tokens, no second palette. */
+
+/* A line: calm by default (faint ink), full ink when lit, nearly gone when dimmed. The width is set
+   by the screen from lineWidth(count); no halo, no relative width. */
+.hl-line {
+  fill: none;
+  stroke: var(--ar-ink);
+  stroke-linecap: round;
+  transition: stroke-opacity 0.12s;
+}
+.hl-faint {
+  stroke-opacity: 0.32;
+}
+.hl-lit {
+  stroke-opacity: 1;
+}
+.hl-dimmed {
+  stroke-opacity: 0.1;
+}
+/* Dotted means planned and nothing else. */
+.hl-planned {
+  stroke-dasharray: 1 4;
+}
+
+/* Count labels and badges follow their line's state. */
+.hl-label-faint {
+  opacity: 0.7;
+}
+.hl-label-lit {
+  opacity: 1;
+}
+.hl-label-dimmed {
+  opacity: 0.15;
+}
+
+/* Status as marks: amber = still waiting, a clock = left open over 2 h. */
+.hl-badge-waiting rect {
+  fill: var(--ar-sequence);
+}
+.hl-badge-text {
+  font-family: var(--ar-font-term);
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--ar-surface-raised);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.hl-badge-open circle {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-sequence);
+  stroke-width: 1.5;
+}
+.hl-badge-open path {
+  fill: none;
+  stroke: var(--ar-sequence);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.hl-chip {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 16px;
+  font-family: var(--ar-font-term);
+}
+.hl-chip-waiting {
+  background: var(--ar-sequence);
+  color: var(--ar-surface-raised);
+}
+.hl-chip-open {
+  border: 1.5px solid var(--ar-sequence);
+  color: var(--ar-ink);
+}
+
+/* The legend: one source, one look. */
+.hl-legend {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.hl-explain {
+  margin: 0 0 6px;
+}
+.hl-legend ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.hl-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.hl-legend-label {
+  color: var(--ar-ink);
+}
+.hl-legend-compact .hl-legend-means {
+  display: none;
+}
