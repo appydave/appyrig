@@ -9,8 +9,10 @@ test.use({ viewport: { width: 1440, height: 900 } });
 async function open(page: Page) {
   await page.goto(FROZEN);
   await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
-  const gotIt = page.getByTestId('explain-hint-dismiss');
-  if (await gotIt.count()) await gotIt.click();
+  for (const id of ['v2-welcome-dismiss', 'explain-hint-dismiss']) {
+    const b = page.getByTestId(id);
+    if (await b.count()) await b.click();
+  }
 }
 const pageParam = (page: Page) => new URL(page.url()).searchParams.get('page');
 const historyLength = (page: Page) => page.evaluate(() => window.history.length);
@@ -59,6 +61,25 @@ test.describe('Esc never navigates', () => {
     await page.waitForTimeout(400);
     expect(pageParam(page), 'Esc left the Run board').toBe('run');
     await expect(page.getByTestId('v2-run')).toBeVisible();
+    expect(await historyLength(page)).toBeLessThanOrEqual(n);
+  });
+
+  test('Graph with the panel open: Esc closes the panel and stays on the Graph', async ({
+    page,
+  }) => {
+    test.setTimeout(60_000);
+    await open(page);
+    await page.getByTestId('v2-group-fleet').click();
+    await page.getByTestId('v2-page-graph').click();
+    await expect(page.getByTestId('v2-graph')).toBeVisible();
+    await page.getByTestId('rig-drawer-tab').click();
+    await page.getByTestId('drawer-agent').first().click();
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
+    const n = await historyLength(page);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    await page.waitForTimeout(400);
+    expect(pageParam(page), 'Esc left the Graph').toBe('graph');
     expect(await historyLength(page)).toBeLessThanOrEqual(n);
   });
 });

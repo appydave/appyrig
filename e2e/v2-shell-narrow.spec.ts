@@ -7,8 +7,10 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 async function open(page: Page) {
   await page.goto(FROZEN);
   await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
-  const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  for (const id of ['v2-welcome-dismiss', 'explain-hint-dismiss']) {
+    const b = page.getByTestId(id);
+    if (await b.count()) await b.click();
+  }
   await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
 }
 
