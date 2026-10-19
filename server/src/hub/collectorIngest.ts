@@ -35,6 +35,7 @@ const HUB_CAP_LIST = [
   HUB_CAPS.MISSIONFILES,
   HUB_CAPS.SPEC_FIELDS,
   HUB_CAPS.SPEC_FILES,
+  HUB_CAPS.SEAT_SPEC,
 ];
 
 export interface CollectorIngestOptions {

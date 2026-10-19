@@ -36,7 +36,11 @@ export const TopologyNodeSchema = z.discriminatedUnion('altitude', [
   z.object({ altitude: z.literal('instance') }),
   z.object({ altitude: z.literal('rig'), rig: z.string().min(1) }),
   z.object({ altitude: z.literal('pod'), rig: z.string().min(1), pod: z.string().min(1) }),
-  /** `seat` is the MEMBER id (`build`), not the session name. */
+  /**
+   * `seat` is the session name's member leg, everything before the first `@` (`dev-build` for
+   * `dev-build@d09-crew`): OpenRig's own seat-recap-store.ts / rebuild-priming-chain.ts build the
+   * seat folder from `parseSessionName(seatRef).member`.
+   */
   z.object({ altitude: z.literal('seat'), rig: z.string().min(1), seat: z.string().min(1) }),
 ]);
 export type TopologyNode = z.infer<typeof TopologyNodeSchema>;

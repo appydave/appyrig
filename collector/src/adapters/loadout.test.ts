@@ -19,7 +19,12 @@ import {
   newerSet,
   listingOfLine,
   LoadoutReader,
+  agentSpecOf,
+  memberOf,
   readSeatDocs,
+  readTopologyDocs,
+  topologyRootOf,
+  topologySeatName,
   skillFolders,
   trackedSkills,
   withSkillCounts,
@@ -284,7 +289,12 @@ describe('seat documents', () => {
     ].join('\n');
     put(join(team, 'rig.yaml'), rigYaml);
     put(join(team, 'TEAM-CULTURE.md'), '# culture\n');
-    put(join(team, 'LEARNED-orch-lead.md'), '# learned\n');
+    // crew copies beside rig.yaml and in the cwd: NOT OpenRig's place, so never read
+    put(join(team, 'LEARNED-orch-lead.md'), '# crew learned\n');
+    put(join(team, 'RECAP.md'), '# crew recap\n');
+    // OpenRig's topology tree: seats/<member leg of the session name>/
+    const topo = tmp();
+    put(join(topo, 'rigs', 'demo', 'seats', 'orch-lead', 'LEARNED.md'), '# learned\n');
     const spec: SpecInfo = {
       path: join(team, 'rig.yaml'),
       root,
@@ -300,23 +310,46 @@ describe('seat documents', () => {
       'name: orch\nversion: "1.0"\nstartup:\n  files:\n    - path: guidance/role.md\n'
     );
     put(join(agent, 'guidance', 'role.md'), '# Role: Orchestrator\n');
-    const seat: LoadoutSeat = { id: 'orch-lead@demo', rig: 'demo', runtime: 'claude-code', cwd };
-    return { root, team, spec, cwd, agent, seat };
+    const seat: LoadoutSeat = {
+      id: 'orch-lead@demo',
+      rig: 'demo',
+      runtime: 'claude-code',
+      cwd,
+      logicalId: 'orch.lead',
+    };
+    return { root, team, spec, cwd, agent, seat, topo };
   }
 
   it('finds each layer in its fixed place, in order, and says where it looked for an absent one', async () => {
     const w = world();
-    const layers = await readSeatDocs(w.seat, w.spec, w.agent);
+    const layers = await readSeatDocs(w.seat, w.spec, w.agent, w.topo);
     expect(layers.map((l) => [l.id, l.name, l.present])).toEqual([
       ['culture', 'TEAM-CULTURE.md', true],
       ['role', 'role.md', true],
       ['claude-md', 'CLAUDE.md', true],
       ['claude-local', 'CLAUDE.local.md', true],
       ['recap', 'RECAP.md', false],
-      ['learned', 'LEARNED-orch-lead.md', true],
+      ['learned', 'LEARNED.md', true],
     ]);
-    expect(layers[4]?.looked).toEqual([join(w.cwd, 'RECAP.md'), join(w.team, 'RECAP.md')]);
+    const seatDir = join(w.topo, 'rigs', 'demo', 'seats', 'orch-lead');
+    expect(layers[4]?.looked).toEqual([join(seatDir, 'RECAP.md')]);
+    expect(layers[5]).toMatchObject({ path: join(seatDir, 'LEARNED.md'), content: '# learned\n' });
     expect(layers[1]?.content).toBe('# Role: Orchestrator\n');
+  });
+
+  it("RECAP and LEARNED come only from OpenRig's topology seat folder, never the crew copies beside rig.yaml or in the cwd", async () => {
+    const w = world();
+    put(join(w.cwd, 'RECAP.md'), '# cwd recap\n');
+    put(join(w.cwd, 'LEARNED.md'), '# cwd learned\n');
+    rmSync(join(w.topo, 'rigs'), { recursive: true });
+    const layers = await readSeatDocs(w.seat, w.spec, w.agent, w.topo);
+    expect(layers.find((l) => l.id === 'recap')?.present).toBe(false);
+    expect(layers.find((l) => l.id === 'learned')?.present).toBe(false);
+    // no topology root at all: absent, saying why
+    const none = await readSeatDocs(w.seat, w.spec, w.agent, null);
+    expect(none.find((l) => l.id === 'learned')?.looked.join(' ')).toMatch(
+      /no OpenRig topology root/
+    );
   });
 
   it('redacts file text', async () => {
@@ -622,5 +655,158 @@ describe('QA D3: a seat whose folder is gone', () => {
       classifySkills(['loop'], { cwd: new Set(), tracked: new Set(), personal: new Set() })[0]
         ?.source
     ).toBe('builtin');
+  });
+});
+
+describe('what OpenRig gave the seat: topology chain files, member spec, AgentSpec', () => {
+  const RIG = [
+    'version: "0.2"',
+    'name: demo',
+    'pods:',
+    '  - id: dev',
+    '    label: Development',
+    '    members:',
+    '      - id: build',
+    '        agent_ref: "local:agents/impl"',
+    '        profile: reviewer',
+    '        runtime: claude-code',
+    '        role: implementer',
+    '        cwd: .',
+    '        restore_policy: resume_if_possible',
+    '        env: { BUILD_SECRET_HINT: "value-that-must-not-travel" }',
+    '        startup: { files: [{ path: guidance/build-first-move.md }] }',
+    '',
+  ].join('\n');
+  const AGENT = [
+    'name: implementer',
+    'version: "1.0"',
+    'resources:',
+    '  skills: [{ id: tdd, path: skills/tdd }]',
+    'profiles:',
+    '  default: { uses: { skills: [] } }',
+    '  reviewer: { summary: reviews, uses: { skills: [tdd] } }',
+    'startup:',
+    '  files: [{ path: guidance/role.md, orientation: role, delivery_hint: send_text }]',
+    '',
+  ].join('\n');
+  const seat: LoadoutSeat = {
+    id: 'dev-build@demo',
+    rig: 'demo',
+    runtime: 'claude-code',
+    cwd: null,
+    logicalId: 'dev.build',
+  };
+  const spec = (): SpecInfo => ({
+    path: '/x/rig.yaml',
+    root: '/x',
+    summary: null,
+    spec: parseSpec(RIG)!.spec,
+  });
+
+  it('topology root: APPYRIG_TOPOLOGY_ROOT, then OPENRIG_TOPOLOGY_ROOT, then $OPENRIG_HOME/topology, then ~/.openrig/topology', () => {
+    expect(topologyRootOf({}, '/h')).toBe('/h/.openrig/topology');
+    expect(topologyRootOf({ OPENRIG_HOME: '/o' }, '/h')).toBe('/o/topology');
+    expect(topologyRootOf({ OPENRIG_HOME: '/o', OPENRIG_TOPOLOGY_ROOT: '/t' }, '/h')).toBe('/t');
+    expect(topologyRootOf({ OPENRIG_TOPOLOGY_ROOT: '/t', APPYRIG_TOPOLOGY_ROOT: '/a' }, '/h')).toBe(
+      '/a'
+    );
+  });
+
+  it("the seat folder is the session name's member leg (dev-build), as OpenRig's parseSessionName gives it", () => {
+    expect(topologySeatName(seat)).toBe('dev-build');
+    expect(topologySeatName({ ...seat, id: 'plain-tmux', rig: null })).toBeNull();
+  });
+
+  it('chain files at every altitude, root first; RECAP only at the seat; links out of the root refused', async () => {
+    const topo = tmp();
+    put(join(topo, 'CRAFT.md'), '# instance craft\n');
+    put(join(topo, 'rigs', 'demo', 'ORCHESTRATION-CRAFT.md'), '# rig orch\n');
+    put(join(topo, 'rigs', 'demo', 'RECAP.md'), '# not a rig file\n');
+    put(join(topo, 'rigs', 'demo', 'pods', 'dev', 'LEARNED.md'), '# pod learned\n');
+    put(join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'RECAP.md'), '# seat recap\n');
+    put(join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'NOTES.md'), '# not a chain name\n');
+    put(join(topo, 'rigs', 'other', 'seats', 'dev-build', 'LEARNED.md'), '# other rig\n');
+    const outside = tmp();
+    put(join(outside, 'secret.md'), 'secret\n');
+    symlinkSync(
+      join(outside, 'secret.md'),
+      join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'CRAFT.md')
+    );
+    const docs = await readTopologyDocs(seat, topo);
+    expect(docs.map((d) => [d.altitude, d.name])).toEqual([
+      ['instance', 'CRAFT.md'],
+      ['rig', 'ORCHESTRATION-CRAFT.md'],
+      ['pod', 'LEARNED.md'],
+      ['seat', 'RECAP.md'],
+    ]);
+    expect(docs[3]).toMatchObject({
+      path: join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'RECAP.md'),
+      content: '# seat recap\n',
+    });
+    expect(await readTopologyDocs(seat, null)).toEqual([]);
+  });
+
+  it("member: the seat's own rig.yaml entry with its pod, env as names only; null when no validated spec names it", () => {
+    const m = memberOf(spec(), 'dev.build');
+    expect(m).toMatchObject({
+      id: 'build',
+      pod: 'dev',
+      profile: 'reviewer',
+      role: 'implementer',
+      restore_policy: 'resume_if_possible',
+      startup: { files: [{ path: 'guidance/build-first-move.md' }] },
+      envNames: ['BUILD_SECRET_HINT'],
+    });
+    expect(JSON.stringify(m)).not.toContain('value-that-must-not-travel');
+    expect(memberOf(spec(), 'dev.nobody')).toBeNull();
+    expect(memberOf({ ...spec(), spec: null }, 'dev.build')).toBeNull();
+    expect(memberOf(undefined, 'dev.build')).toBeNull();
+  });
+
+  it('AgentSpec: resources and startup as authored, only the profile the member picked', async () => {
+    const dir = tmp();
+    put(join(dir, 'agent.yaml'), AGENT);
+    const a = await agentSpecOf(dir, 'reviewer');
+    expect(a).toMatchObject({
+      name: 'implementer',
+      profileName: 'reviewer',
+      profile: { summary: 'reviews', uses: { skills: ['tdd'] } },
+      resources: { skills: [{ id: 'tdd', path: 'skills/tdd' }] },
+      startup: { files: [{ path: 'guidance/role.md', orientation: 'role' }] },
+    });
+    expect(a).not.toHaveProperty('profiles');
+    expect((await agentSpecOf(dir, 'missing'))?.profile).toBeNull();
+    put(join(dir, 'agent.yaml'), 'startup: nope\n');
+    expect(await agentSpecOf(dir, 'reviewer')).toBeNull();
+    expect(await agentSpecOf(undefined, 'reviewer')).toBeNull();
+  });
+
+  it('the reader puts all of it on every seat it reports (Codex too), valid against the contract', async () => {
+    const topo = tmp();
+    put(join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'LEARNED.md'), '# learned\n');
+    const agent = tmp();
+    put(join(agent, 'agent.yaml'), AGENT);
+    const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
+    const reader = new LoadoutReader('m2', {
+      projectsDir: tmp(),
+      home: tmp(),
+      exec,
+      topologyRoot: topo,
+    });
+    const p = await reader.next(
+      [seat, { ...seat, id: 'dev-qa@demo', runtime: 'codex', logicalId: 'dev.qa' }],
+      new Map([['demo', spec()]]),
+      new Map([[seat.id, agent]])
+    );
+    const [claude, codex] = p!.loadouts;
+    for (const l of p!.loadouts) expect(SeatLoadoutSchema.parse(l)).toEqual(l);
+    expect(claude).toMatchObject({
+      topologyRoot: topo,
+      member: { id: 'build', pod: 'dev' },
+      agentSpec: { name: 'implementer', profileName: 'reviewer' },
+    });
+    expect(claude!.topologyDocs).toMatchObject([{ altitude: 'seat', name: 'LEARNED.md' }]);
+    expect(claude!.layers.find((l) => l.id === 'learned')).toMatchObject({ present: true });
+    expect(codex).toMatchObject({ status: 'not-claude', member: null, agentSpec: null });
   });
 });

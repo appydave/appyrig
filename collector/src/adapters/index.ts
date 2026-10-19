@@ -34,6 +34,8 @@ export {
   classifySkills,
   listingOfLine,
   readSeatDocs,
+  readTopologyDocs,
+  topologyRootOf,
   skillFolders,
   trackedSkills,
   withSkillCounts,

@@ -57,6 +57,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
           'collector:schema',
           'collector:daemondata',
           'collector:missionfiles',
+          'collector:loadout',
         ])
           socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
             extra.push({ event, payload });
@@ -514,6 +515,54 @@ describe('pusher', () => {
     });
     await until(() => seen.length >= 2);
     expect(seen.every(Boolean)).toBe(true);
+  });
+
+  it('seat spec: a loadout loses its member / AgentSpec / topology keys for a hub without seat-spec, keeps them for one with it', async () => {
+    const snap = await build();
+    const seat = snap.seats.find((x) => x.runtime === 'claude-code')!;
+    const loadout = {
+      machineId: 'roamy',
+      seat: seat.id,
+      collectedAt: new Date().toISOString(),
+      runtime: 'claude-code',
+      cwd: null,
+      status: 'no-listing' as const,
+      listing: null,
+      cwdIsGitRepo: null,
+      cwdExists: null,
+      skills: [],
+      layers: [],
+      topologyRoot: '/o/topology',
+      topologyDocs: [],
+      member: null,
+      agentSpec: null,
+    };
+    for (const [caps, want] of [
+      [[HUB_CAPS.V2_FIELDS], false],
+      [[HUB_CAPS.V2_FIELDS, HUB_CAPS.SEAT_SPEC], true],
+    ] as const) {
+      hub = await startHub(0, true, { caps: [...caps] });
+      let sent = false;
+      pusher = startPusher({
+        hubUrl: hub.url,
+        token: TOKEN,
+        machineId: 'roamy',
+        build,
+        intervalMs: 30,
+        loadoutIntervalMs: 30,
+        log: () => {},
+        loadouts: async () =>
+          sent ? null : { loadouts: [loadout], markSent: () => void (sent = true) },
+      });
+      await until(() => hub!.extra.some((e) => e.event === 'collector:loadout'));
+      const got = hub.extra.find((e) => e.event === 'collector:loadout')!.payload as object;
+      expect('topologyRoot' in got, caps.join(',')).toBe(want);
+      expect('member' in got).toBe(want);
+      await pusher.stop();
+      await hub.close();
+      pusher = undefined;
+      hub = undefined;
+    }
   });
 
   it('the daemon-data channel is not even read until the hub advertised it', async () => {

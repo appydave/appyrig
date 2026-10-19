@@ -873,6 +873,46 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     expect(
       await emit(c, 'collector:loadout', { ...loadout, skills: [{ name: 'x', source: 'guess' }] })
     ).toMatchObject({ failureMode: 'invalid_snapshot' });
+
+    // seat spec (hub advertises seat-spec): member, AgentSpec and topology chain files are stored and served
+    const given = {
+      ...loadout,
+      topologyRoot: '/o/topology',
+      topologyDocs: [
+        {
+          altitude: 'seat',
+          name: 'LEARNED.md',
+          path: '/o/topology/rigs/r/seats/dev-build/LEARNED.md',
+          bytes: 9,
+          modifiedAt: '2026-10-12T00:00:00.000Z',
+          truncated: false,
+          content: '# learned',
+        },
+      ],
+      member: {
+        id: 'build',
+        pod: 'dev',
+        agent_ref: 'local:agents/impl',
+        profile: 'default',
+        runtime: 'claude-code',
+        cwd: '.',
+      },
+      agentSpec: { name: 'impl', version: '1.0', profileName: 'default', profile: null },
+    };
+    expect(await emit(c, 'collector:loadout', given)).toMatchObject({ ok: true });
+    expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value.loadout).toMatchObject({
+      member: { id: 'build', pod: 'dev' },
+      agentSpec: { name: 'impl' },
+      topologyDocs: [{ altitude: 'seat', name: 'LEARNED.md' }],
+    });
+    // a member with env values, or a topology doc at an altitude OpenRig has no folder for, is refused
+    for (const bad of [
+      { ...given, member: { ...given.member, env: { A: 'secret' } } },
+      { ...given, topologyDocs: [{ ...given.topologyDocs[0]!, altitude: 'mission' }] },
+    ])
+      expect(await emit(c, 'collector:loadout', bad)).toMatchObject({
+        failureMode: 'invalid_snapshot',
+      });
   });
 
   // Run board lane 1: the collector's list is the allowlist; the hub never reads a disk.
@@ -1006,11 +1046,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({
       ok: true,
-      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files'],
+      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files', 'seat-spec'],
     });
     // and announced on connection, before any push
     expect(announced).toEqual([
-      ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files'],
+      ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files', 'seat-spec'],
     ]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({

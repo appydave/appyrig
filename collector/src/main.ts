@@ -7,6 +7,7 @@ import {
   DbRowsReader,
   DaemonDataReader,
   LoadoutReader,
+  topologyRootOf,
   RigFilesReader,
   MissionFilesReader,
   SchemaReader,
@@ -49,7 +50,10 @@ function main() {
     rigBin: settings.sources.rigBin,
   });
   const dbRows = new DbRowsReader(settings.machine.id);
-  const loadouts = new LoadoutReader(settings.machine.id, { exec: sources.exec! });
+  const loadouts = new LoadoutReader(settings.machine.id, {
+    exec: sources.exec!,
+    topologyRoot: topologyRootOf(process.env),
+  });
   let daemonTargets: SeatTarget[] = [];
   const daemonData = new DaemonDataReader(settings.machine.id, sources.daemonGet!, {
     log: (line) => console.log(`${new Date().toISOString()} ${line}`),
@@ -66,7 +70,13 @@ function main() {
       );
       const own = snap.seats.filter((s) => s.rig !== null);
       knownSeats = new Set(own.map((s) => s.id));
-      openrigSeats = own.map((s) => ({ id: s.id, rig: s.rig, runtime: s.runtime, cwd: s.cwd }));
+      openrigSeats = own.map((s) => ({
+        id: s.id,
+        rig: s.rig,
+        runtime: s.runtime,
+        cwd: s.cwd,
+        logicalId: s.logicalId,
+      }));
       queueOrder = snap.queue.map((q) => q.id);
       // v2 data channels: one node-detail read per OpenRig seat (rig name to rig id, from the snapshot).
       const rigIds = new Map(snap.rigs.map((r) => [r.name, r.id]));

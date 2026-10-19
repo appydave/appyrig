@@ -3,6 +3,7 @@ import {
   FLEET_EVENTS,
   HUB_CAPS,
   namesV2Key,
+  stripSeatSpec,
   stripSpecFields,
   stripV2Fields,
   PUSH_INTERVAL_MS,
@@ -345,7 +346,11 @@ export function startPusher(opts: PusherOptions): Pusher {
     const take = opts.loadouts;
     channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, 'v1.5', async () => {
       const p = await take();
-      return p && { payloads: p.loadouts, markSent: p.markSent };
+      // A hub without seat-spec refuses the member / AgentSpec / topology keys (strict schema).
+      const full = hubCaps.has(HUB_CAPS.SEAT_SPEC);
+      return (
+        p && { payloads: full ? p.loadouts : p.loadouts.map(stripSeatSpec), markSent: p.markSent }
+      );
     });
   }
   if (opts.dbRows) {

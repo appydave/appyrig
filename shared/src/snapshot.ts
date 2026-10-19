@@ -411,6 +411,8 @@ export const HUB_CAPS = {
   SPEC_FIELDS: 'spec-fields',
   /** `collector:rigfiles` may carry scope `rig` files (the ones rig.yaml names). */
   SPEC_FILES: 'spec-files',
+  /** `collector:loadout` may carry SEAT_SPEC_KEYS (member spec, AgentSpec, topology chain files). */
+  SEAT_SPEC: 'seat-spec',
 } as const;
 
 export const V2_SEAT_KEYS = ['tmuxAttachCommand'] as const;
