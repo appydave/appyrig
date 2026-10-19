@@ -447,12 +447,20 @@
   color: var(--ar-ink);
   font-weight: 700;
 }
+/* One fixed height for every tab, so switching documents never moves the page below it
+   (a long MISSION.md scrolls inside; a short spec leaves room rather than shrinking). */
 .run-tab-body {
-  max-height: 560px;
-  min-height: 240px;
+  height: 560px;
   overflow: auto;
   padding-top: 10px;
 }
 .run-tab-body > .run-doc {
   border-top-left-radius: 0;
+}
+
+/* The rig-level Documents overlay (stations with no agent) sits under the header bar and
+   beneath the Rigs drawer, so neither the nav nor the drawer is covered. */
+.run-page .docs-drawer {
+  top: var(--v2-bar-h, 44px);
+  z-index: 19;
 }

@@ -210,19 +210,21 @@ describe('a run in progress', () => {
     expect(rows[2]).toHaveTextContent('not started');
   });
 
-  it('a station card opens the documents drawer for that seat', async () => {
+  it('a station card opens the Agent panel on Documents, not the full-screen overlay', async () => {
     const { ctx } = ctxFor(machineWith(queue), missionAnswers(table(3)));
     render(<Page ctx={ctx} />);
     await waitFor(() =>
       expect(screen.getAllByTestId('run-station-docs').length).toBeGreaterThan(0)
     );
-    fireEvent.click(screen.getAllByTestId('run-station-docs')[0]!);
-    expect(screen.getByTestId('docs-drawer')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(within(screen.getByTestId('docs-list')).getByText('MISSION.md')).toBeInTheDocument()
-    );
-    fireEvent.click(screen.getByTestId('docs-close'));
+    const first = screen.getAllByTestId('run-station')[0]!;
+    fireEvent.click(within(first).getByTestId('run-station-docs'));
     expect(screen.queryByTestId('docs-drawer')).toBeNull();
+    expect(ctx.openAgentPanel).toHaveBeenCalledOnce();
+    const arg = vi.mocked(ctx.openAgentPanel).mock.calls[0]![0];
+    expect(arg).toMatchObject({ machineId: 'm2', tab: 'documents' });
+    const seatIds = ctx.machines[0]!.snapshot.seats.map((x) => `m2/${x.id}`);
+    expect(seatIds).toContain(arg.seatKey);
+    expect(ctx.openAgentPage).not.toHaveBeenCalled();
   });
 
   it('verdictOf reads the tag and nothing else', () => {

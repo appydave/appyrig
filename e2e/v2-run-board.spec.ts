@@ -59,15 +59,24 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
       await selected('culture'),
       await selected('mission'),
     ]).toEqual(['true', 'false', 'false', 'false']);
-    const before = await page.evaluate(() => document.documentElement.scrollHeight);
+    // the page height once reads have landed (two equal reads 200 ms apart)
+    const settledHeight = async () => {
+      let prev = -1;
+      for (let i = 0; i < 25; i++) {
+        const h = await page.evaluate(() => document.documentElement.scrollHeight);
+        if (h === prev) return h;
+        prev = h;
+        await page.waitForTimeout(200);
+      }
+      return prev;
+    };
+    const before = await settledHeight();
     await page.getByTestId('run-tog-mission').click();
     await expect(page.getByTestId('run-doc-mission')).toBeVisible();
     await expect(page.getByTestId('run-doc-spec')).toHaveCount(0);
     await expect(page.getByTestId('run-doc-rig')).toHaveCount(0);
     // nothing is appended below the fold: the page is no taller with MISSION.md open
-    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
-      before + 2
-    );
+    expect(await settledHeight()).toBeLessThanOrEqual(before + 2);
     const docs = await page.getByTestId('run-docs').boundingBox();
     const shots = await page.locator('.run-shots').first().boundingBox();
     expect(
@@ -84,6 +93,16 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     expect(await page.getByTestId('mock-mark').count()).toBeGreaterThan(0);
     await page.getByTestId('run-preview').click();
     await expect(page.getByTestId('run-topline')).toContainText('Waiting for GO');
+
+    // a station's Docs opens the Agent panel on Documents (no full-screen overlay); closing it
+    // leaves the Run board in place
+    await page.getByTestId('run-station-docs').first().click();
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
+    await expect(page.getByTestId('apanel-tab-documents')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+    await page.getByTestId('apanel-close').click();
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    await expect(page.getByTestId('v2-run')).toBeVisible();
 
     // B on a v2-only page says there is no old version
     await page.keyboard.press('b');
