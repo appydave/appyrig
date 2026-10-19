@@ -77,3 +77,4 @@ export {
 } from './docsModel.js';
 export { default as AgentPanel, stripAnsi, type AgentPanelProps } from './AgentPanel.js';
 export { useTopOffset, measureTopOffset } from './useTopOffset.js';
+export { default as WallCard, isFrosted, type WallCardProps } from './WallCard.js';

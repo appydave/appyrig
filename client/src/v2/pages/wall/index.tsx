@@ -4,6 +4,7 @@ import {
   PIP,
   blockedLine,
   WALL_ORDER_TEXT,
+  freshness,
   groupSeats,
   groupState,
   modelChip,
@@ -14,19 +15,24 @@ import {
 } from '../../../fleet/model.js';
 import { useStableOrder } from '../../../lib/stableOrder.js';
 import { groupRank } from '../../../fleet/model.js';
-import { FakeControl, MockNote, PageHeader, TerminalCard } from '../../kit/index.js';
+import { FakeControl, MockNote, PageHeader, WallCard } from '../../kit/index.js';
+import { useUrlParam } from '../../shell/urlState.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   seatFlags,
   teamsOf,
-  wallTail,
+  cardBody,
+  machineCounts,
+  orderByMachine,
   wallView,
   type SeatFlags,
   type WallFilter,
 } from './model.js';
 
+const MACHINE_ORDER_TEXT =
+  'Order: by machine, as in the Rigs drawer · its rigs, then its plain tmux sessions, then its stopped rigs · stopped rigs collapsed';
 const TEAMS_KEY = 'appyrig.v2.wallHiddenTeams';
 // v2 keeps its own choice: switching it here never changes Current's Wall.
 const STOPPED_KEY = 'appyrig.v2.hideStopped';
@@ -101,6 +107,8 @@ interface CardProps {
   machine: FleetMachine;
   seat: Seat;
   now: number;
+  /** The machine's freshness label ("live · 2s"). */
+  fresh: string;
   /** The card body: open the agent (the panel over this page). */
   onOpen: (machineId: string, tileKey: string) => void;
   /** ⋯ → Documents: the same panel on its Documents tab. */
@@ -117,6 +125,7 @@ const SeatCard = memo(function SeatCard({
   machine,
   seat,
   now,
+  fresh,
   onOpen,
   onDocs,
 }: CardProps) {
@@ -139,9 +148,9 @@ const SeatCard = memo(function SeatCard({
   const chip = modelChip(seat);
   const name = seatName(seat);
   const flags = seatFlags(seat, machine, now);
+  const body = cardBody(seat);
   return (
-    <TerminalCard
-      size="wall"
+    <WallCard
       name={name}
       status={pip}
       address={seat.id}
@@ -149,13 +158,18 @@ const SeatCard = memo(function SeatCard({
       model={seat.model}
       modelLabel={chip.text}
       modelFamily={chip.family}
+      role={seat.agentRole}
+      where={machine.machine.label}
+      skillCount={seat.skillCount}
+      lastTyped={body.lastTyped}
+      fallbackLines={body.fallback}
+      warning={pip === 'blocked' ? blockedLine(seat) : null}
+      folder={body.folder}
+      branch={body.branch}
+      fresh={seat.status === 'stopped' ? `stopped · ${fresh}` : fresh}
       contextPct={seat.contextUsedPct}
       contextTokens={seat.contextTokens}
-      tail={wallTail(seat.tail?.lines)}
-      warning={pip === 'blocked' ? blockedLine(seat) : null}
-      skills={seat.keySkills}
-      skillCount={seat.skillCount}
-      where={machine.machine.label}
+      queue={seat.work}
       onOpen={() => onOpen(machine.machine.id, tileKey)}
       ariaLabel={`${name}, ${PIP[pip].label}, ${seat.rig ?? 'tmux'} on ${machine.machine.label}: open the agent panel`}
       testId="v2-seat-card"
@@ -240,6 +254,20 @@ function WallV2({ ctx }: V2PageProps) {
     over
   );
 
+  // The order: by machine (the Rigs drawer's order, the default) or busiest first. Kept in the address
+  // as `order=busy`; the default is left out of it.
+  const [orderParam, setOrderParam] = useUrlParam('order');
+  const busyFirst = orderParam === 'busy';
+  const sections = useMemo(() => {
+    if (busyFirst) return [{ machineId: '', label: '', groups }];
+    const label = new Map(view.machines.map((m) => [m.machine.id, m.machine.label]));
+    return orderByMachine(
+      groups,
+      view.machines.map((m) => m.machine.id),
+      ctx.rigs.map((r) => r.key)
+    ).map((m) => ({ ...m, label: label.get(m.machineId) ?? m.machineId }));
+  }, [busyFirst, groups, view.machines, ctx.rigs]);
+
   const toggleTeam = (key: string) => {
     const next = new Set(hiddenTeams);
     if (!next.delete(key)) next.add(key);
@@ -267,6 +295,7 @@ function WallV2({ ctx }: V2PageProps) {
     setOpenAt(next);
     writeJson(OPEN_KEY, next);
   };
+  const freshLabel = (m: FleetMachine) => freshness(m, ctx.now, ctx.hubConnected).label;
   const noSeats = ctx.received && teams.length === 0 && ctx.hidden.length === 0;
 
   // A rig picked in the Rigs drawer is never a no-op here: its group is scrolled to and outlined,
@@ -302,7 +331,11 @@ function WallV2({ ctx }: V2PageProps) {
       clearTimeout(again);
     };
   }, [focusKey, ctx.focusNonce]);
-  const shown = only && present ? groups.filter((g) => g.key === focusKey) : groups;
+  const shownSections = (
+    only && present
+      ? sections.map((sec) => ({ ...sec, groups: sec.groups.filter((g) => g.key === focusKey) }))
+      : sections
+  ).filter((sec) => sec.groups.length > 0);
 
   return (
     <main
@@ -335,6 +368,29 @@ function WallV2({ ctx }: V2PageProps) {
                 {f.label} <b data-testid={`v2-filter-count-${f.id}`}>{view.counts[f.id]}</b>
               </button>
             ))}
+            <span className="v2w-order-toggle" role="group" aria-label="Wall order">
+              <span className="v2w-order-label">Order:</span>
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="v2w-order-machine"
+                aria-pressed={!busyFirst}
+                title="Machine by machine, in the Rigs drawer's order: its rigs, its plain tmux, its stopped rigs"
+                onClick={() => setOrderParam(null)}
+              >
+                By machine
+              </button>
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="v2w-order-busy"
+                aria-pressed={busyFirst}
+                title="One list, blocked first, then working, idle, unknown, stopped"
+                onClick={() => setOrderParam('busy')}
+              >
+                Busiest first
+              </button>
+            </span>
             <button
               type="button"
               className="pill-btn"
@@ -381,7 +437,7 @@ function WallV2({ ctx }: V2PageProps) {
           <>
             <MockNote>Restart and Stop on the cards are mocks — nothing is sent</MockNote>
             <p className="quiet" data-testid="v2w-order">
-              {WALL_ORDER_TEXT}
+              {busyFirst ? WALL_ORDER_TEXT : MACHINE_ORDER_TEXT}
             </p>
           </>
         }
@@ -413,61 +469,82 @@ function WallV2({ ctx }: V2PageProps) {
             : `No seat is ${FILTERS.find((f) => f.id === filter)!.label.toLowerCase()} right now.`}
         </p>
       )}
-      <div className="v2w-groups" data-testid="v2w-groups">
-        {shown.map((g) => {
-          const open = isOpen(g);
-          const plain = !g.rig;
-          const title = plain ? `No rig \u00b7 ${g.where}` : (g.rig?.displayName ?? g.name);
-          return (
-            <section
-              key={g.key}
-              className="v2w-group"
-              data-testid="v2w-group"
-              data-group-key={g.key}
-              data-state={groupState(g)}
-              data-focused={g.key === focusKey || undefined}
-            >
-              <button
-                type="button"
-                className="v2w-group-head"
-                data-testid="v2w-group-head"
-                aria-expanded={open}
-                onClick={() => toggleGroup(g)}
-              >
-                <span aria-hidden="true">{open ? '\u25be' : '\u25b8'}</span>
-                <b>{title}</b>
-                {!plain && <span>{g.where}</span>}
-                {plain && (
-                  <span className="quiet">plain tmux sessions, not part of an OpenRig rig</span>
-                )}
-                {g.asleep && <span>{'\u00b7'} asleep</span>}
-                <span className="v2w-counts">
-                  {statusCounts(g).map(({ pip, n }) => (
-                    <span key={pip} data-pip={pip}>
-                      {PIP[pip].glyph} {n} {PIP[pip].label}
+      <div
+        className="v2w-groups"
+        data-testid="v2w-groups"
+        data-order={busyFirst ? 'busy' : 'machine'}
+      >
+        {shownSections.map((sec) => (
+          <div key={sec.machineId || 'all'} className="v2w-machine" data-testid="v2w-machine">
+            {!busyFirst && (
+              <h2 className="v2w-machine-head" data-testid="v2w-machine-head">
+                {machineCounts(sec.label, sec.groups)}
+              </h2>
+            )}
+            {sec.groups.map((g) => {
+              const open = isOpen(g);
+              const plain = !g.rig;
+              const title = plain ? `No rig \u00b7 ${g.where}` : (g.rig?.displayName ?? g.name);
+              const state = groupState(g);
+              return (
+                <section
+                  key={g.key}
+                  className="v2w-group"
+                  data-testid="v2w-group"
+                  data-group-key={g.key}
+                  data-state={state}
+                  data-frosted={['stopped', 'asleep', 'unknown'].includes(state) || undefined}
+                  data-focused={g.key === focusKey || undefined}
+                >
+                  <button
+                    type="button"
+                    className="v2w-group-head"
+                    data-testid="v2w-group-head"
+                    aria-expanded={open}
+                    onClick={() => toggleGroup(g)}
+                  >
+                    <span aria-hidden="true">{open ? '\u25be' : '\u25b8'}</span>
+                    <b>{title}</b>
+                    {!plain && <span className="v2w-where">{g.where}</span>}
+                    {g.asleep && <span>{'\u00b7'} asleep</span>}
+                    <span className="v2w-counts">
+                      {statusCounts(g).map(({ pip, n }) => (
+                        <span key={pip} data-pip={pip}>
+                          {PIP[pip].glyph} {n} {PIP[pip].label}
+                        </span>
+                      ))}
                     </span>
-                  ))}
-                </span>
-              </button>
-              {open && g.rig?.summary && <p className="v2w-summary">{g.rig.summary}</p>}
-              {open && (
-                <div className="v2w-grid">
-                  {g.tiles.map((t) => (
-                    <SeatCard
-                      key={t.key}
-                      tileKey={t.key}
-                      machine={t.machine}
-                      seat={t.seat}
-                      now={ctx.now}
-                      onOpen={onOpen}
-                      onDocs={onDocs}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          );
-        })}
+                  </button>
+                  {(plain || g.rig?.summary) && (
+                    <p
+                      className="v2w-summary"
+                      data-testid="v2w-summary"
+                      title={plain ? undefined : (g.rig?.summary ?? undefined)}
+                    >
+                      {plain ? 'plain tmux sessions, not part of an OpenRig rig' : g.rig?.summary}
+                    </p>
+                  )}
+                  {open && (
+                    <div className="v2w-grid">
+                      {g.tiles.map((t) => (
+                        <SeatCard
+                          key={t.key}
+                          tileKey={t.key}
+                          machine={t.machine}
+                          seat={t.seat}
+                          now={ctx.now}
+                          fresh={freshLabel(t.machine)}
+                          onOpen={onOpen}
+                          onDocs={onDocs}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        ))}
       </div>
       <p className="v2w-notread quiet" data-testid="v2w-not-read">
         Reads the default tmux server on each machine only: a session on another tmux server, in
