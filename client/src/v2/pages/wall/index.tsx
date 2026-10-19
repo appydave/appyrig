@@ -280,13 +280,17 @@ function WallV2({ ctx }: V2PageProps) {
   useEffect(() => {
     if (!focusKey) return;
     setOpenAt((o) => (o[focusKey] === true ? o : { ...o, [focusKey]: true }));
-    const id = requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        const el = root.current?.querySelector(`[data-group-key="${focusKey}"]`);
-        el?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
-      })
-    );
-    return () => cancelAnimationFrame(id);
+    const go = () => {
+      const el = root.current?.querySelector(`[data-group-key="${focusKey}"]`);
+      el?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    };
+    // once the open group has laid out, and again after the page settles (the drawer closing reflows it)
+    const id = requestAnimationFrame(() => requestAnimationFrame(go));
+    const again = setTimeout(go, 500);
+    return () => {
+      cancelAnimationFrame(id);
+      clearTimeout(again);
+    };
   }, [focusKey, ctx.focusNonce]);
   const shown = only && present ? groups.filter((g) => g.key === focusKey) : groups;
 

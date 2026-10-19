@@ -135,7 +135,7 @@
 }
 /* A rig picked in the drawer: its group is outlined, and scrolls to just under the page header. */
 .v2w-group {
-  scroll-margin-top: 16px;
+  scroll-margin-top: 56px; /* clears the sticky header */
 }
 .v2w-group[data-focused] {
   outline: 2px solid var(--ar-cta);

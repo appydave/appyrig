@@ -133,3 +133,18 @@
   white-space: nowrap;
   margin-left: auto;
 }
+
+/* The Wall's header sticks to the top while the page scrolls, so the filters and the "Only this rig"
+   chip stay in reach after a rig pick scrolls the page. Its Teams panel must not be clipped. */
+.v2-wall .v2-page-head {
+  position: sticky;
+  top: var(--v2-sticky-top, 0px);
+  z-index: 15;
+  overflow: visible;
+  background: var(--ar-canvas);
+  box-shadow: 0 1px 0 var(--ar-line);
+}
+/* room under the last rig, so a picked rig near the bottom can still scroll up under the sticky header */
+.v2-wall .v2w-notread {
+  margin-bottom: 55vh;
+}
