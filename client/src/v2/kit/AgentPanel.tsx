@@ -17,24 +17,20 @@ import {
   pctText,
   tokensText,
 } from '../../components/SeatCardLines.js';
+import type { AgentPanelTab, AgentPanelTarget } from '../types.js';
 import { findTile, seatAddresses } from '../seats.js';
 import { DocsLayout, useRead } from './DocsDrawer.js';
 import { useTopOffset } from './useTopOffset.js';
 import './docs.css';
 
-export type AgentPanelTab = 'documents' | 'terminal' | 'messages';
 const TABS: { id: AgentPanelTab; label: string }[] = [
   { id: 'documents', label: 'Documents' },
   { id: 'terminal', label: 'Terminal' },
   { id: 'messages', label: 'Messages' },
 ];
 
-export interface AgentPanelProps {
-  machineId: string;
-  /** The agent's tile key (`machine/seat`), or a bare seat id on `machineId`. */
-  seatKey: string;
-  /** Which tab to open on. Default Documents. */
-  tab?: AgentPanelTab;
+/** `machineId`, `seatKey` (`machine/seat`, or a bare seat id) and `tab` (default Documents) come from the shared target. */
+export interface AgentPanelProps extends AgentPanelTarget {
   onClose: () => void;
   /** "Open full agent page →". The host navigates; the panel only asks. */
   onOpenPage: (seatKey: string) => void;

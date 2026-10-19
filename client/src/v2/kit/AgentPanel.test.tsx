@@ -3,11 +3,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
 import { answeringSocket } from '../pages/page-test-kit.js';
 import AgentPanel, { stripAnsi } from './AgentPanel.js';
+import type { AgentPanelTab } from '../types.js';
 import { measureTopOffset } from './useTopOffset.js';
 
 const NOW = Date.parse('2026-10-19T12:00:00.000Z');
 
-function setup(over: { tab?: 'documents' | 'terminal' | 'messages' } = {}) {
+function setup(over: { tab?: AgentPanelTab } = {}) {
   const m = fleetMachine(snapshot('roamy'));
   const seat = m.snapshot.seats.find((s) => s.rig && s.tail)!;
   seat.tail = { lines: ['\u001b[31mred line\u001b[0m', 'plain line'], ansi: true } as never;
