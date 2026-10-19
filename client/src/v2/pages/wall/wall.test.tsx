@@ -75,3 +75,16 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
       expect(screen.getByTestId(`v2-filter-${f}`)).toBeInTheDocument();
   });
 });
+
+describe('Wall v2: documents', () => {
+  it('the card ⋯ menu has Documents, which opens the drawer for that seat', () => {
+    renderWall();
+    const card = screen.getAllByTestId('v2-seat-card')[0]!;
+    fireEvent.click(within(card).getByTestId('v2-card-more'));
+    fireEvent.click(within(card).getByTestId('v2-card-docs'));
+    const drawer = screen.getByTestId('docs-drawer');
+    expect(drawer).toHaveAccessibleName(/^Documents · /);
+    fireEvent.click(screen.getByTestId('docs-close'));
+    expect(screen.queryByTestId('docs-drawer')).toBeNull();
+  });
+});
