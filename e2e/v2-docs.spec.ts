@@ -23,7 +23,7 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     await expect(page.getByTestId('v2-nav')).toBeVisible();
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-wall').click();
-    await page.getByTestId('v2-card-open').first().click();
+    await page.getByTestId('v2-seat-card').first().click();
     await expect(page.getByTestId('v2-agent')).toBeVisible();
     const layout = page.getByTestId('v2a-docs');
     await layout.scrollIntoViewIfNeeded();
@@ -63,5 +63,22 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     expect(errors).toEqual([]);
+  });
+
+  test('a Wall card ⋯ menu opens the documents drawer', async ({ page }) => {
+    await page.goto(FROZEN);
+    await expect(page.getByTestId('view-wall')).toBeVisible();
+    await quietIntro(page);
+    await page.keyboard.press('v');
+    await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await page.getByTestId('v2-group-fleet').click();
+    await page.getByTestId('v2-page-wall').click();
+    const card = page.getByTestId('v2-seat-card').first();
+    await card.getByTestId('v2-card-more').click();
+    await card.getByTestId('v2-card-docs').click();
+    await expect(page.getByTestId('docs-drawer')).toBeVisible();
+    await expect(page.getByTestId('docs-list')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
   });
 });

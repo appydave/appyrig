@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
@@ -15,7 +15,7 @@ import {
 } from '../../../fleet/model.js';
 import { useStableOrder } from '../../../lib/stableOrder.js';
 import { groupRank } from '../../../fleet/model.js';
-import { FakeControl, MockNote, TerminalCard, tailLine } from '../../kit/index.js';
+import { FakeControl, MockNote, TerminalCard, tailLine, useDocsDrawer } from '../../kit/index.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
@@ -96,6 +96,8 @@ interface CardProps {
   seat: Seat;
   now: number;
   onOpen: (key: string) => void;
+  /** Open the documents drawer for this seat. */
+  onDocs: (machineId: string, seat: Seat) => void;
 }
 
 /**
@@ -103,7 +105,14 @@ interface CardProps {
  * same size whatever it holds (a long tail or address is clipped to one line). The ⋯ opens the mock
  * Restart / Stop in a popover over the card, never in its layout.
  */
-const SeatCard = memo(function SeatCard({ tileKey, machine, seat, now, onOpen }: CardProps) {
+const SeatCard = memo(function SeatCard({
+  tileKey,
+  machine,
+  seat,
+  now,
+  onOpen,
+  onDocs,
+}: CardProps) {
   const [more, setMore] = useState(false);
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
@@ -141,7 +150,7 @@ const SeatCard = memo(function SeatCard({ tileKey, machine, seat, now, onOpen }:
           data-testid="v2-card-more"
           aria-expanded={more}
           aria-label={`Actions for ${name} (mocks)`}
-          title="Restart / Stop (mocks: nothing is sent)"
+          title="Documents, or Restart / Stop (mocks: nothing is sent)"
           onClick={() => setMore((m) => !m)}
         >
           {'\u22ef'}
@@ -150,6 +159,17 @@ const SeatCard = memo(function SeatCard({ tileKey, machine, seat, now, onOpen }:
       overlay={
         more ? (
           <div className="v2w-actions" data-testid="v2-card-actions">
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="v2-card-docs"
+              onClick={() => {
+                setMore(false);
+                onDocs(machine.machine.id, seat);
+              }}
+            >
+              Documents
+            </button>
             <FakeControl
               label="Restart"
               question={`Restart ${name} on ${machine.machine.label}?`}
@@ -180,6 +200,11 @@ function WallV2({ ctx }: V2PageProps) {
     setGroupBy(ctx.groupBy);
   }
   const [over, setOver] = useState(false);
+  const { openDocs, drawer } = useDocsDrawer(ctx);
+  const onDocs = useCallback(
+    (machineId: string, seat: Seat) => openDocs({ machineId, seat }),
+    [openDocs]
+  );
 
   const teams = useMemo(() => teamsOf(ctx.machines), [ctx.machines]);
   const view = useMemo(
@@ -364,6 +389,7 @@ function WallV2({ ctx }: V2PageProps) {
                       seat={t.seat}
                       now={ctx.now}
                       onOpen={ctx.openAgentPage}
+                      onDocs={onDocs}
                     />
                   ))}
                 </div>
@@ -376,6 +402,7 @@ function WallV2({ ctx }: V2PageProps) {
         Reads the default tmux server on each machine only: a session on another tmux server, in
         herdr or in iTerm is not shown.
       </p>
+      {drawer}
     </main>
   );
 }
