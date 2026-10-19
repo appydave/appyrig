@@ -1,0 +1,56 @@
+version: "0.2"
+name: d09-crew
+culture_file: CULTURE.md
+summary: >
+  D09 video: the D07 coding team retold on OpenRig. Eight jobs across eight repos, one slice at a time,
+  plan /Users/davidcruwys/dev/ad/brains/openrig/d09-plan.md. 3 seats, no lead: build (Opus) + qa (Opus) + r1 (Fable).
+  Brief: MISSION.md. David's go 2026-10-16 (rulings in d09-plan.md section 5).
+
+# Absolute cwds; launch with `rig up <this file>`, NO --cwd. All seats sit in this neutral folder and
+# work in /Users/davidcruwys/dev/ad/**/<repo>-worktrees/d09 by absolute path (made by preflight.sh).
+managed_blocks:
+  claude-code: CLAUDE.local.md
+permission_policy: builtin:auto
+
+pods:
+  - id: dev
+    label: Development
+    members:
+      - id: build
+        agent_ref: "path:/Users/davidcruwys/.nvm/versions/node/v24.13.0/lib/node_modules/@openrig/cli/daemon/specs/agents/development/implementer"
+        runtime: claude-code
+        model: claude-opus-5-5
+        profile: default
+        cwd: "/Users/davidcruwys/dev/ad/brains/openrig/rigs/d09-crew"
+        startup:
+          files:
+            - path: guidance/build-first-move.md
+              delivery_hint: send_text
+              required: true
+      - id: qa
+        agent_ref: "path:/Users/davidcruwys/.nvm/versions/node/v24.13.0/lib/node_modules/@openrig/cli/daemon/specs/agents/development/qa"
+        runtime: claude-code
+        model: claude-opus-5-5
+        profile: default
+        cwd: "/Users/davidcruwys/dev/ad/brains/openrig/rigs/d09-crew"
+    edges:
+      - kind: delegates_to
+        from: build
+        to: qa
+  - id: review
+    label: Review
+    members:
+      - id: r1
+        agent_ref: "path:/Users/davidcruwys/.nvm/versions/node/v24.13.0/lib/node_modules/@openrig/cli/daemon/specs/agents/review/independent-reviewer"
+        runtime: claude-code
+        model: claude-fable-5-1
+        profile: default
+        cwd: "/Users/davidcruwys/dev/ad/brains/openrig/rigs/d09-crew"
+    edges: []
+edges:
+  - kind: delegates_to
+    from: dev.build
+    to: review.r1
+  - kind: can_observe
+    from: review.r1
+    to: dev.build
