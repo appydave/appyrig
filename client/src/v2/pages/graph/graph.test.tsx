@@ -713,6 +713,11 @@ describe('Graph: open rigs, zoom, people', () => {
     const inside = openRig('roamy:starter');
     const status = within(inside).getByTestId('g2-status');
     expect(status).toHaveTextContent(/running|idle|working|attention/i);
+    // one header line: the box's machine and agent counts are in the status line
+    expect(within(status).getByTestId('g2-status-meta')).toHaveTextContent(/Roamy · 2 agents/);
+    expect(css()).toMatch(
+      /data-expanded\]:not\(\[data-loose\]\) \.g2-box-meta \{\s*display: none;/
+    );
     fireEvent.click(within(status).getByTestId('g2-details'));
     expect(ctx.onOpenFiles).toHaveBeenCalledWith('roamy', 'starter');
   });

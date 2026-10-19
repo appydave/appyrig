@@ -628,3 +628,22 @@
 .g2-human {
   gap: 6px;
 }
+
+/* One header line on an open rig: the box's own meta lives in the status line. */
+.g2-box[data-expanded]:not([data-loose]) .g2-box-meta {
+  display: none;
+}
+.g2-status-meta {
+  color: var(--ar-ink-muted);
+}
+/* The left channel lines between pod rows run down, clear of every card. */
+.g2-inside-body {
+  padding-left: 46px;
+}
+.g2-inside-lines {
+  z-index: 3;
+  pointer-events: none;
+}
+.g2-pod {
+  padding-top: 20px;
+}
