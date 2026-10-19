@@ -183,11 +183,12 @@ describe('Wall v2: page', () => {
     const card = screen
       .getAllByTestId('v2-seat-card')
       .find((c) => c.dataset.seatId === 'dev-review@starter')!;
-    expect(within(card).getByTestId('v2-card-address')).toHaveTextContent('dev-review@starter');
+    expect(within(card).getByTestId('terminal-card-address')).toHaveTextContent(
+      'dev-review@starter'
+    );
     expect(within(card).getByTestId('seat-harness')).toHaveTextContent('Codex');
-    expect(within(card).getByTestId('v2-card-model')).toHaveTextContent('gpt-5.6-terra');
-    expect(within(card).getByTestId('v2-card-pct')).toHaveTextContent('28%');
-    expect(within(card).getByTestId('v2-card-tokens')).toBeInTheDocument();
+    expect(within(card).getByTestId('terminal-card-model')).toHaveTextContent('gpt-5.6-terra');
+    expect(within(card).getByTestId('terminal-card-context')).toHaveTextContent('28%');
   });
 
   it('team picker hides one team like the machine filter, and shows all again', () => {
@@ -222,7 +223,7 @@ describe('Wall v2: page', () => {
     const cards = screen.getAllByTestId('v2-seat-card');
     expect(cards.map((c) => c.dataset.seatId)).toEqual(['dev-build@starter']);
     expect(cards[0]).toHaveAttribute('data-pip', 'blocked');
-    expect(screen.getByTestId('v2-card-why')).toHaveTextContent(/permission|needs input/i);
+    expect(screen.getByTestId('terminal-card-tail')).toHaveTextContent(/permission|needs input/i);
     expect(screen.getByTestId('v2-filter-count-needs')).toHaveTextContent('1');
   });
 
@@ -251,7 +252,7 @@ describe('Wall v2: page', () => {
     const card = screen
       .getAllByTestId('v2-seat-card')
       .find((c) => c.dataset.seatId === 'dev-build@starter')!;
-    fireEvent.click(within(card).getByTestId('v2-card-open'));
+    fireEvent.click(within(card).getByTestId('terminal-card-open'));
     expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
     const emits = raw.emit.mock.calls.length;
     // walk #8: the mocks sit behind the card's "⋯"

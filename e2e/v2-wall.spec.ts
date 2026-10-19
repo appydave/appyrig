@@ -1,0 +1,66 @@
+import { test, expect } from '@playwright/test';
+import { watchErrors } from './support/fleet';
+
+// The v2 Wall at 1440 x 900 on the frozen busy snapshot: V1's dark terminal cards, all one fixed size,
+// grouped by rig with the rig as the heading, plain tmux sessions under "No rig", V2's triage kept.
+
+test.use({ viewport: { width: 1440, height: 900 } });
+
+test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
+  test('one fixed card size, rig headings, No-rig group, dense, triage kept', async ({ page }) => {
+    test.setTimeout(60_000);
+    const errors = watchErrors(page);
+    await page.goto('/?frozen=busy-2026-10-18&v=2');
+    const gotIt = page.getByRole('button', { name: /got it/i });
+    if (await gotIt.count()) await gotIt.first().click();
+    await page.getByTestId('v2-group-fleet').click();
+    await page.getByTestId('v2-page-wall').click();
+    await expect(page.getByTestId('v2-wall')).toBeVisible();
+
+    const cards = page.getByTestId('v2-seat-card');
+    const n = await cards.count();
+    expect(n).toBeGreaterThan(10);
+
+    // every card is the same size, whatever it holds
+    const sizes = await cards.evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return `${Math.round(r.width)}x${Math.round(r.height)}`;
+      })
+    );
+    expect(new Set(sizes).size, `card sizes: ${[...new Set(sizes)].join(', ')}`).toBe(1);
+
+    // the rig is the heading, the machine sits beside it; plain tmux sessions say what they are
+    const heads = await page.getByTestId('v2w-group-head').allInnerTexts();
+    expect(heads.some((h) => /d09-crew/.test(h) && /M2/.test(h))).toBe(true);
+    expect(heads.some((h) => /No rig · /.test(h) && /plain tmux sessions/.test(h))).toBe(true);
+
+    // dense: cards sit above the fold. The app frame above the page belongs to the shell lane,
+    // so count against a page that starts where the shell puts it (y = 140).
+    const top = await page.getByTestId('v2-wall').evaluate((e) => e.getBoundingClientRect().top);
+    const above = await cards.evaluateAll(
+      (els, offset) => els.filter((e) => e.getBoundingClientRect().bottom - offset <= 900).length,
+      top - 140
+    );
+    console.log(
+      `wall: ${n} cards, ${above} above the fold with the page at y=140 (page top now y=${Math.round(top)})`
+    );
+    expect(above).toBeGreaterThanOrEqual(10);
+
+    // triage and the notes
+    await expect(page.getByTestId('v2-hide-stopped')).toBeVisible();
+    for (const f of ['all', 'needs', 'stuck', 'failing'])
+      await expect(page.getByTestId(`v2-filter-${f}`)).toBeVisible();
+    await expect(page.getByTestId('v2w-order')).toContainText('blocked → working');
+    await expect(page.getByTestId('v2w-not-read')).toContainText('default tmux server');
+
+    // the ⋯ popover is not clipped by the card, and a click on a card opens the Agent page
+    await page.getByTestId('v2-card-more').first().click();
+    await expect(page.getByTestId('v2-card-actions')).toBeVisible();
+    await page.getByTestId('v2-card-more').first().click();
+    await page.getByTestId('terminal-card-open').first().click();
+    await expect(page.getByTestId('v2-agent')).toBeVisible();
+
+    expect(errors, 'no console errors or uncaught exceptions').toEqual([]);
+  });
+});

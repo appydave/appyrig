@@ -131,7 +131,7 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-wall').click();
     await expect(page.getByTestId('v2-wall')).toBeVisible();
-    await page.getByTestId('v2-card-open').first().click();
+    await page.getByTestId('terminal-card-open').first().click();
     await expect(page.getByTestId('v2-agent')).toBeVisible();
 
     // 5. a mock control on the Graph: dialog, progress, toast, and nothing sent to the hub
