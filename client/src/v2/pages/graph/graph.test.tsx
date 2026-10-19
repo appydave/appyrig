@@ -135,8 +135,10 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     closeAgentPanel: vi.fn(),
     agentPanel: null,
     focusNonce: 0,
-    openRigs: [],
-    setOpenRigs: vi.fn(),
+    // Left unset on purpose: the Graph then keeps the open set itself (these tests render a static
+    // ctx). The nav-owned path has its own test below, which passes both.
+    openRigs: undefined as unknown as string[],
+    setOpenRigs: undefined as unknown as (keys: string[]) => void,
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
     ...over,
