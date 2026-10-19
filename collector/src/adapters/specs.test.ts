@@ -5,7 +5,13 @@ import { join } from 'node:path';
 import { createSpecIndex, parseSpec, scanSpecs } from './specs.js';
 import { enrichRigs } from '../builder.js';
 import { specFoldersOf } from '../config.js';
-import { DEFAULT_SPEC_FOLDERS, type QueueItem, type RigSummary, type Seat } from '@appydave/shared';
+import {
+  DEFAULT_SPEC_FOLDERS,
+  RigSummarySchema,
+  type QueueItem,
+  type RigSummary,
+  type Seat,
+} from '@appydave/shared';
 
 const dirs: string[] = [];
 const tmp = () => {
@@ -173,5 +179,57 @@ describe('enrichRigs', () => {
     const [a, b] = enrichRigs([rig('a'), rig('b')], [], [], specs);
     expect(a).toMatchObject({ specStatus: 'found', specPath: '/p/rig.yaml', summary: 'about a' });
     expect(b).toMatchObject({ specStatus: 'not-found', specPath: null, summary: null });
+  });
+
+  it("a valid rig.yaml's pods (label, summary, startup, continuity, pod-local edges) and cross-pod edges are carried, OpenRig-shaped", () => {
+    const yaml = [
+      'version: "0.2"',
+      'name: a',
+      'pods:',
+      '  - id: dev',
+      '    label: Development',
+      '    summary: >',
+      '      builds   it',
+      '    continuity_policy: { enabled: true, sync_triggers: [manual] }',
+      '    startup:',
+      '      files: [{ path: guidance/pod.md, required: false }]',
+      '    members:',
+      '      - { id: build, agent_ref: "local:a/impl", profile: default, runtime: claude-code, cwd: . }',
+      '      - { id: qa, agent_ref: "local:a/qa", profile: default, runtime: claude-code, cwd: . }',
+      '    edges: [{ kind: delegates_to, from: build, to: qa }]',
+      '  - id: review',
+      '    label: Review',
+      '    members:',
+      '      - { id: lead, agent_ref: "local:a/rev", profile: default, runtime: claude-code, cwd: . }',
+      'edges: [{ kind: escalates_to, from: dev.qa, to: review.lead }]',
+      '',
+    ].join('\n');
+    const specs = new Map([
+      ['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: parseSpec(yaml)!.spec }],
+    ]);
+    const [a] = enrichRigs([rig('a')], [], [], specs);
+    expect(RigSummarySchema.parse(a)).toEqual(a);
+    expect(a).toMatchObject({ specValid: true });
+    expect(a!.pods).toEqual([
+      {
+        id: 'dev',
+        label: 'Development',
+        summary: 'builds it',
+        members: ['build', 'qa'],
+        continuity_policy: { enabled: true, sync_triggers: ['manual'] },
+        startup: { files: [{ path: 'guidance/pod.md', required: false }] },
+        edges: [{ kind: 'delegates_to', from: 'build', to: 'qa' }],
+      },
+      { id: 'review', label: 'Review', members: ['lead'] },
+    ]);
+    expect(a!.specEdges).toEqual([{ kind: 'escalates_to', from: 'dev.qa', to: 'review.lead' }]);
+  });
+
+  it('a rig.yaml OpenRig would refuse: specValid false, and no pods or spec edges read from it', () => {
+    const specs = new Map([['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: null }]]);
+    const [a] = enrichRigs([rig('a')], [], [], specs);
+    expect(a).toMatchObject({ specStatus: 'found', specValid: false });
+    expect(a).not.toHaveProperty('pods');
+    expect(a).not.toHaveProperty('specEdges');
   });
 });

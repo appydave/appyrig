@@ -107,6 +107,38 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     });
   });
 
+  it("spec fields: a rig's pods (OpenRig PodSpec shape) and cross-pod edges reach the browser; a full member spec or a bad edge kind is refused", async () => {
+    const h = await start();
+    const browser = h.browser();
+    await nextUpdate(browser);
+    const snap = loadSnapshot('roamy');
+    const pods = [
+      {
+        id: 'dev',
+        label: 'Development',
+        summary: 'builds it',
+        members: ['build', 'qa'],
+        edges: [{ kind: 'delegates_to' as const, from: 'build', to: 'qa' }],
+        startup: { files: [{ path: 'guidance/pod.md', required: false }] },
+      },
+    ];
+    const specEdges = [{ kind: 'escalates_to' as const, from: 'dev.qa', to: 'review.lead' }];
+    const rig = { ...snap.rigs[0]!, specValid: true, pods, specEdges };
+    const update = nextUpdate(browser);
+    expect(
+      await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, rigs: [rig] })
+    ).toMatchObject({ ok: true });
+    expect((await update).machines[0]!.snapshot.rigs[0]).toMatchObject({ pods, specEdges });
+    for (const bad of [
+      { ...rig, pods: [{ ...pods[0]!, members: [{ id: 'build' }] }] },
+      { ...rig, specEdges: [{ kind: 'feeds', from: 'dev.qa', to: 'review.lead' }] },
+      { ...rig, pods: [{ ...pods[0]!, mission: 'x' }] },
+    ])
+      expect(
+        await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, rigs: [bad] })
+      ).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
+  });
+
   it("D09 W3: a seat's agentRole and keySkills reach the browser; more than five is refused", async () => {
     const h = await start();
     const browser = h.browser();
@@ -934,10 +966,10 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({
       ok: true,
-      caps: ['v2-fields', 'daemondata', 'missionfiles'],
+      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields'],
     });
     // and announced on connection, before any push
-    expect(announced).toEqual([['v2-fields', 'daemondata', 'missionfiles']]);
+    expect(announced).toEqual([['v2-fields', 'daemondata', 'missionfiles', 'spec-fields']]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',

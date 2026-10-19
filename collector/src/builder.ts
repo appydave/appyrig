@@ -1,11 +1,17 @@
 import {
   MachineSnapshotSchema,
+  POD_MEMBERS_MAX,
+  RIG_EDGES_MAX,
+  RIG_PODS_MAX,
+  RIG_SUMMARY_MAX,
   SNAPSHOT_SCHEMA_VERSION,
+  type OpenRig,
   type MachineIdentity,
   type MachineHealth,
   type MachineSnapshot,
   type Reading,
   type QueueItem,
+  type RigPod,
   type RigSummary,
   type Seat,
   type SourceHealth,
@@ -175,9 +181,31 @@ export function enrichRigs(
       out.specStatus = spec ? 'found' : 'not-found';
       out.specPath = spec?.path ?? null;
       out.summary = spec?.summary ?? null;
+      if (spec) {
+        out.specValid = spec.spec !== null;
+        if (spec.spec) {
+          out.pods = spec.spec.pods.slice(0, RIG_PODS_MAX).map(podOf);
+          out.specEdges = (spec.spec.edges ?? []).slice(0, RIG_EDGES_MAX);
+        }
+      }
     }
     return out;
   });
+}
+
+/** One pod of a validated rig.yaml as the snapshot carries it: members by id, text redacted. */
+export function podOf(pod: OpenRig.PodSpec): RigPod {
+  const summary = pod.summary?.replace(/\s+/g, ' ').trim();
+  const out: RigPod = {
+    id: pod.id,
+    label: pod.label,
+    members: pod.members.map((m) => m.id).slice(0, POD_MEMBERS_MAX),
+  };
+  if (summary) out.summary = redactString(summary).slice(0, RIG_SUMMARY_MAX);
+  if (pod.continuity_policy) out.continuity_policy = pod.continuity_policy;
+  if (pod.startup) out.startup = redactDeep(pod.startup);
+  if (pod.edges) out.edges = pod.edges.slice(0, RIG_EDGES_MAX);
+  return out;
 }
 
 /** One machine, one snapshot. Never throws on a source failure: it reports it in `sources`. */

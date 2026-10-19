@@ -203,8 +203,9 @@ export function parseQueueBodies(raw: unknown): Map<string, string> {
 
 /**
  * D09 W2: the rig's planned edges from GET /api/rigs/:id/graph, seat to seat by session name.
- * OpenRig's edges name graph node ids; a node with no session (a pod group) has no seat, so an edge
- * touching one is left out rather than pinned on a guessed seat.
+ * OpenRig's edges name graph node ids, always member to member. A member with no session yet has
+ * no canonical session name here, so an edge touching it is left out rather than pinned on a
+ * guessed seat. The authored edges, every one, travel as RigSummary.pods[].edges / specEdges.
  */
 export function parseGraphEdges(raw: unknown): RigEdge[] {
   const g = LenientGraph.safeParse(raw);

@@ -3147,6 +3147,255 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "specValid": {
+                                "type": "boolean"
+                              },
+                              "pods": {
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string",
+                                      "pattern": "^[^.@]+$"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "summary": {
+                                      "type": "string"
+                                    },
+                                    "continuity_policy": {
+                                      "type": "object",
+                                      "properties": {
+                                        "enabled": {
+                                          "type": "boolean"
+                                        },
+                                        "sync_triggers": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string",
+                                            "enum": [
+                                              "pre_compaction",
+                                              "pre_shutdown",
+                                              "manual",
+                                              "milestone"
+                                            ]
+                                          }
+                                        },
+                                        "artifacts": {
+                                          "type": "object",
+                                          "properties": {
+                                            "session_log": {
+                                              "type": "boolean"
+                                            },
+                                            "restore_brief": {
+                                              "type": "boolean"
+                                            },
+                                            "quiz": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        },
+                                        "restore_protocol": {
+                                          "type": "object",
+                                          "properties": {
+                                            "peer_driven": {
+                                              "type": "boolean"
+                                            },
+                                            "verify_via_quiz": {
+                                              "type": "boolean"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "required": [
+                                        "enabled"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    "startup": {
+                                      "type": "object",
+                                      "properties": {
+                                        "files": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "path": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              },
+                                              "orientation": {
+                                                "type": "string",
+                                                "const": "role"
+                                              },
+                                              "kind": {
+                                                "type": "string",
+                                                "const": "file"
+                                              },
+                                              "delivery_hint": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "auto",
+                                                  "guidance_merge",
+                                                  "skill_install",
+                                                  "send_text"
+                                                ]
+                                              },
+                                              "required": {
+                                                "type": "boolean"
+                                              },
+                                              "applies_on": {
+                                                "type": "array",
+                                                "items": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "fresh_start",
+                                                    "restore"
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "path"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        },
+                                        "actions": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "type": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "slash_command",
+                                                  "send_text",
+                                                  "startup_proof"
+                                                ]
+                                              },
+                                              "value": {
+                                                "type": "string"
+                                              },
+                                              "phase": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "after_files",
+                                                  "after_ready"
+                                                ]
+                                              },
+                                              "idempotent": {
+                                                "type": "boolean"
+                                              },
+                                              "applies_on": {
+                                                "type": "array",
+                                                "items": {
+                                                  "type": "string",
+                                                  "enum": [
+                                                    "fresh_start",
+                                                    "restore"
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "type",
+                                              "value",
+                                              "idempotent"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        }
+                                      },
+                                      "additionalProperties": false
+                                    },
+                                    "edges": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "kind": {
+                                            "type": "string",
+                                            "enum": [
+                                              "delegates_to",
+                                              "spawned_by",
+                                              "can_observe",
+                                              "collaborates_with",
+                                              "escalates_to"
+                                            ]
+                                          },
+                                          "from": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          },
+                                          "to": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "kind",
+                                          "from",
+                                          "to"
+                                        ],
+                                        "additionalProperties": false
+                                      }
+                                    },
+                                    "members": {
+                                      "maxItems": 200,
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "label",
+                                    "members"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "specEdges": {
+                                "maxItems": 200,
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "kind": {
+                                      "type": "string",
+                                      "enum": [
+                                        "delegates_to",
+                                        "spawned_by",
+                                        "can_observe",
+                                        "collaborates_with",
+                                        "escalates_to"
+                                      ]
+                                    },
+                                    "from": {
+                                      "type": "string",
+                                      "pattern": "^[^.@]+\\.[^.@]+$"
+                                    },
+                                    "to": {
+                                      "type": "string",
+                                      "pattern": "^[^.@]+\\.[^.@]+$"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "from",
+                                    "to"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "displayName": {
                                 "type": "string",
                                 "minLength": 1,
@@ -11571,6 +11820,255 @@
                           "from",
                           "to",
                           "kind"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "specValid": {
+                      "type": "boolean"
+                    },
+                    "pods": {
+                      "maxItems": 50,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "pattern": "^[^.@]+$"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "summary": {
+                            "type": "string"
+                          },
+                          "continuity_policy": {
+                            "type": "object",
+                            "properties": {
+                              "enabled": {
+                                "type": "boolean"
+                              },
+                              "sync_triggers": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "pre_compaction",
+                                    "pre_shutdown",
+                                    "manual",
+                                    "milestone"
+                                  ]
+                                }
+                              },
+                              "artifacts": {
+                                "type": "object",
+                                "properties": {
+                                  "session_log": {
+                                    "type": "boolean"
+                                  },
+                                  "restore_brief": {
+                                    "type": "boolean"
+                                  },
+                                  "quiz": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              "restore_protocol": {
+                                "type": "object",
+                                "properties": {
+                                  "peer_driven": {
+                                    "type": "boolean"
+                                  },
+                                  "verify_via_quiz": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "enabled"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "startup": {
+                            "type": "object",
+                            "properties": {
+                              "files": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "path": {
+                                      "type": "string",
+                                      "minLength": 1
+                                    },
+                                    "orientation": {
+                                      "type": "string",
+                                      "const": "role"
+                                    },
+                                    "kind": {
+                                      "type": "string",
+                                      "const": "file"
+                                    },
+                                    "delivery_hint": {
+                                      "type": "string",
+                                      "enum": [
+                                        "auto",
+                                        "guidance_merge",
+                                        "skill_install",
+                                        "send_text"
+                                      ]
+                                    },
+                                    "required": {
+                                      "type": "boolean"
+                                    },
+                                    "applies_on": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "enum": [
+                                          "fresh_start",
+                                          "restore"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "path"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "actions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "type": {
+                                      "type": "string",
+                                      "enum": [
+                                        "slash_command",
+                                        "send_text",
+                                        "startup_proof"
+                                      ]
+                                    },
+                                    "value": {
+                                      "type": "string"
+                                    },
+                                    "phase": {
+                                      "type": "string",
+                                      "enum": [
+                                        "after_files",
+                                        "after_ready"
+                                      ]
+                                    },
+                                    "idempotent": {
+                                      "type": "boolean"
+                                    },
+                                    "applies_on": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "string",
+                                        "enum": [
+                                          "fresh_start",
+                                          "restore"
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "type",
+                                    "value",
+                                    "idempotent"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "edges": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "enum": [
+                                    "delegates_to",
+                                    "spawned_by",
+                                    "can_observe",
+                                    "collaborates_with",
+                                    "escalates_to"
+                                  ]
+                                },
+                                "from": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "to": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "from",
+                                "to"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "members": {
+                            "maxItems": 200,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label",
+                          "members"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "specEdges": {
+                      "maxItems": 200,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "delegates_to",
+                              "spawned_by",
+                              "can_observe",
+                              "collaborates_with",
+                              "escalates_to"
+                            ]
+                          },
+                          "from": {
+                            "type": "string",
+                            "pattern": "^[^.@]+\\.[^.@]+$"
+                          },
+                          "to": {
+                            "type": "string",
+                            "pattern": "^[^.@]+\\.[^.@]+$"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "from",
+                          "to"
                         ],
                         "additionalProperties": false
                       }

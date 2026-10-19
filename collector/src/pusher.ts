@@ -3,6 +3,7 @@ import {
   FLEET_EVENTS,
   HUB_CAPS,
   namesV2Key,
+  stripSpecFields,
   stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
@@ -175,9 +176,11 @@ export function startPusher(opts: PusherOptions): Pusher {
         await waitForCaps();
         const built = await opts.build();
         const sendV2 = hubCaps.has(HUB_CAPS.V2_FIELDS) && !forceV15;
-        const ack = await push(sendV2 ? built : stripV2Fields(built));
+        const sendSpec = hubCaps.has(HUB_CAPS.SPEC_FIELDS) && !forceV15;
+        const v2 = sendV2 ? built : stripV2Fields(built);
+        const ack = await push(sendSpec ? v2 : stripSpecFields(v2));
         if (!('timeout' in ack) && ack.ok) hubCaps = new Set(ack.caps ?? []);
-        if (!('timeout' in ack) && !ack.ok && sendV2 && namesV2Key(ack.message)) {
+        if (!('timeout' in ack) && !ack.ok && (sendV2 || sendSpec) && namesV2Key(ack.message)) {
           forceV15 = true;
           hubCaps = new Set();
           log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
