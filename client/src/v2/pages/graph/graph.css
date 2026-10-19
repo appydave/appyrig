@@ -647,3 +647,80 @@
 .g2-pod {
   padding-top: 20px;
 }
+
+/* A rig pick landed here: outlined for a moment. */
+.g2-box[data-focus] {
+  outline: 3px solid var(--ar-cta);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgb(255 222 89 / 0.35);
+  transition: outline-color 0.3s;
+}
+
+/* The ⋯ on a compact card: always visible, never part of the card's size. */
+.g2-card-menu {
+  position: relative;
+  display: inline-flex;
+}
+.g2-card-more {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ar-term-fg);
+  font-size: 16px;
+  line-height: 14px;
+  cursor: pointer;
+}
+.g2-card-more:hover,
+.g2-card-more[aria-expanded='true'] {
+  background: rgb(255 255 255 / 0.16);
+}
+.g2-card-more:focus-visible {
+  outline: 2px solid var(--ar-cta);
+}
+.g2-card-menu-pop {
+  position: absolute;
+  top: 22px;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+  padding: 4px;
+  border: 1px solid var(--ar-line);
+  border-radius: 6px;
+  background: var(--ar-surface-raised);
+  box-shadow: 0 6px 18px rgb(52 45 45 / 0.22);
+}
+.g2-card-menu-item {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ar-ink);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.g2-card-menu-item:hover,
+.g2-card-menu-item:focus-visible {
+  background: var(--ar-cta);
+}
+
+/* Compact cards: the harness name drops to its icon so the context and tokens are never cut ("10% 9"). */
+.g2-inside .tcard[data-size='compact'] .harness-mark {
+  font-size: 0;
+}
+.g2-inside .tcard[data-size='compact'] .tcard-ctx {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The filter chips stay above the Explain banner and anything floating over the page. */
+.g2-toolbar {
+  position: relative;
+  z-index: 80;
+}

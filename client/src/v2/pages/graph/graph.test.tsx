@@ -686,7 +686,8 @@ describe('Graph: open rigs, zoom, people', () => {
   });
 
   it('agents are fixed-size compact terminal cards; one quiet line per pair; self-handoffs are text', () => {
-    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const ctx = ctxFor(crossFleet());
+    render(<Graph ctx={ctx} />);
     const inside = openRig('roamy:starter');
     const cards = within(inside).getAllByTestId('g2-agent-card');
     for (const c of cards) expect(c).toHaveAttribute('data-size', 'compact');
@@ -699,9 +700,12 @@ describe('Graph: open rigs, zoom, people', () => {
     fireEvent.pointerEnter(cards[0]!.closest('.g2-cell')!);
     expect(within(inside).getAllByTestId('g2-inside-line')[0]).toHaveAttribute('data-state', 'lit');
     expect(within(inside).getByTestId('seat-detail')).toBeInTheDocument();
-    // its hover card opens that agent's documents
+    // its hover card opens that agent's documents in the Agent panel, on top of this page
     fireEvent.click(within(inside).getByTestId('g2-hover-docs'));
-    expect(screen.getByTestId('docs-drawer')).toHaveAccessibleName(/^Documents · /);
+    expect(ctx.openAgentPanel).toHaveBeenCalledWith(
+      expect.objectContaining({ tab: 'documents', seatKey: expect.stringMatching(/@starter$/) })
+    );
+    expect(ctx.goTo).not.toHaveBeenCalled();
   });
 
   it('self-handoffs are text under the card, never a loop', () => {
@@ -765,5 +769,99 @@ describe('Graph: between-rigs labels stay off the boxes', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+});
+
+describe('Graph: navigation (rig pick, panel, persistence)', () => {
+  const frameOf = (key: string) => frame(key);
+
+  it('a card click opens the Agent panel on this page, never another page', () => {
+    const ctx = ctxFor(crossFleet());
+    render(<Graph ctx={ctx} />);
+    fireEvent.click(within(frameOf('roamy:starter')).getByTestId('g2-rig-toggle'));
+    const card = within(frameOf('roamy:starter')).getAllByTestId('terminal-card-open')[0]!;
+    fireEvent.click(card);
+    expect(ctx.openAgentPanel).toHaveBeenCalledTimes(1);
+    const arg = vi.mocked(ctx.openAgentPanel).mock.calls[0]![0];
+    expect(arg.machineId).toBe('roamy');
+    expect(arg.seatKey).toMatch(/^roamy\/.+@starter$/);
+    expect(arg.tab).toBeUndefined();
+    expect(ctx.openAgentPage).not.toHaveBeenCalled();
+    expect(ctx.goTo).not.toHaveBeenCalled();
+  });
+
+  it('every compact card has a visible ⋯ whose Documents opens the panel on its Documents tab', () => {
+    const ctx = ctxFor(crossFleet());
+    render(<Graph ctx={ctx} />);
+    fireEvent.click(within(frameOf('roamy:starter')).getByTestId('g2-rig-toggle'));
+    const cards = within(frameOf('roamy:starter')).getAllByTestId('g2-agent-card');
+    const more = within(frameOf('roamy:starter')).getAllByTestId('g2-card-more');
+    expect(more).toHaveLength(cards.length);
+    fireEvent.click(more[0]!);
+    fireEvent.click(screen.getByTestId('g2-card-documents'));
+    expect(ctx.openAgentPanel).toHaveBeenCalledWith(
+      expect.objectContaining({ tab: 'documents', machineId: 'roamy' })
+    );
+    // the menu closed, and the ⋯ did not open the panel by itself
+    expect(screen.queryByTestId('g2-card-menu')).toBeNull();
+    expect(ctx.openAgentPanel).toHaveBeenCalledTimes(1);
+  });
+
+  it('a rig pick opens that rig and scrolls to it; a repeat pick (new nonce) focuses it again', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const machines = crossFleet();
+    const rig = (k: string) => listRigs(machines).find((r) => r.key === k)!;
+    // cold open: nothing is pre-opened
+    const { rerender } = render(
+      <Graph ctx={ctxFor(machines, { activeRig: rig('roamy:kernel') })} />
+    );
+    expect(screen.queryAllByTestId('g2-inside')).toHaveLength(0);
+    // a pick of another rig opens it, outlines it and scrolls to it
+    rerender(<Graph ctx={ctxFor(machines, { activeRig: rig('roamy:starter'), focusNonce: 1 })} />);
+    expect(within(frameOf('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+    expect(frameOf('roamy:starter')).toHaveAttribute('data-focus');
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+    expect(scroll.mock.contexts).toContain(frameOf('roamy:starter'));
+    // the same rig picked again: the nonce changes, so it is focused again
+    fireEvent.click(within(frameOf('roamy:starter')).getByTestId('g2-rig-toggle')); // close it
+    expect(within(frameOf('roamy:starter')).queryByTestId('g2-inside')).toBeNull();
+    rerender(<Graph ctx={ctxFor(machines, { activeRig: rig('roamy:starter'), focusNonce: 2 })} />);
+    expect(within(frameOf('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+  });
+
+  it('which rigs are open survives leaving the page and coming back', () => {
+    const machines = crossFleet();
+    const first = render(<Graph ctx={ctxFor(machines)} />);
+    fireEvent.click(within(frameOf('roamy:starter')).getByTestId('g2-rig-toggle'));
+    fireEvent.click(within(frameOf('m2:kernel')).getByTestId('g2-rig-toggle'));
+    first.unmount();
+    render(<Graph ctx={ctxFor(machines)} />);
+    expect(within(frameOf('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+    expect(within(frameOf('m2:kernel')).getByTestId('g2-inside')).toBeInTheDocument();
+    expect(within(frameOf('roamy:kernel')).queryByTestId('g2-inside')).toBeNull();
+  });
+
+  it('when the nav provides openRigs / setOpenRigs they are the source of truth', () => {
+    const machines = crossFleet();
+    const setOpenRigs = vi.fn();
+    const ctx = ctxFor(machines, {
+      openRigs: ['roamy:starter'],
+      setOpenRigs,
+    } as never);
+    render(<Graph ctx={ctx} />);
+    expect(within(frameOf('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+    fireEvent.click(within(frameOf('m2:kernel')).getByTestId('g2-rig-toggle'));
+    expect(setOpenRigs).toHaveBeenLastCalledWith(
+      expect.arrayContaining(['roamy:starter', 'm2:kernel'])
+    );
+  });
+
+  it('compact cards keep their context and tokens whole, and the chips stay above the banner', () => {
+    const c = css();
+    expect(c).toMatch(
+      /\.g2-inside \.tcard\[data-size='compact'\] \.harness-mark \{\s*font-size: 0;/
+    );
+    expect(c).toMatch(/\.g2-toolbar \{[^}]*z-index: 80;/s);
   });
 });

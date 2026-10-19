@@ -8,6 +8,8 @@ import type { GraphRig } from './model.js';
 interface Props {
   rig: GraphRig;
   now: number;
+  /** A rig pick just landed here: outlined for a moment. */
+  focused?: boolean;
   /** The rig is open in place (its inside is showing), or a loose group's one-line list is. */
   expanded: boolean;
   /** The open rig's inside (pods, cards, lines), drawn under the box's own lines. */
@@ -34,7 +36,7 @@ export function lastWords(rig: GraphRig, now: number): string {
  * agents are drawn (a click on the box opens that rig's Rig Map); expanding lists their names on
  * one line. Start / Restore / Launch are mocks behind the "⋯" menu.
  */
-function RigBox({ rig, now, expanded, children, trace, onToggle, onTrace }: Props) {
+function RigBox({ rig, now, expanded, focused, children, trace, onToggle, onTrace }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const st = RIG_STATE[rig.state];
   const loose = !rig.ref;
@@ -50,6 +52,7 @@ function RigBox({ rig, now, expanded, children, trace, onToggle, onTrace }: Prop
       data-state={rig.state}
       data-loose={loose || undefined}
       data-expanded={expanded || undefined}
+      data-focus={focused || undefined}
       data-menu-open={menuOpen || undefined}
       data-trace={trace ? true : undefined}
       style={trace ? ({ ['--g2-trace' as string]: trace } as React.CSSProperties) : undefined}
