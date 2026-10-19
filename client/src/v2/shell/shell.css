@@ -134,9 +134,12 @@ body:has(.v2-nav) header.app-header {
 /* ---- machine status as badges ---- */
 .v2-strip-wrap {
   display: flex;
+  /* wraps rather than overflows: in a narrow page the seats count drops to its own line */
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   min-height: 30px;
+  max-width: 100%;
 }
 .v2-strip-toggle {
   flex: none;
@@ -151,12 +154,19 @@ body:has(.v2-nav) header.app-header {
   cursor: pointer;
 }
 .v2-strip-body {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
 }
 .v2-strip-summary {
   flex: none;
   white-space: nowrap;
+}
+/* In a narrow window the seats count is dropped (the badges say the rest) rather than crowding them. */
+@media (max-width: 1180px) {
+  .v2-strip-summary {
+    display: none;
+  }
 }
 .v2-strip-wrap[data-expanded='false'] .strip {
   padding: 2px 0;
@@ -164,7 +174,7 @@ body:has(.v2-nav) header.app-header {
   background: transparent;
   border-color: transparent;
   border-radius: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 .v2-strip-wrap[data-expanded='false'] .machine {
   gap: 6px;
@@ -185,9 +195,9 @@ body:has(.v2-nav) header.app-header {
 }
 .v2-strip-wrap[data-expanded='false'] .strip-end {
   margin-left: 0;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   min-width: 0;
-  overflow: hidden;
+  max-width: 100%;
 }
 .v2-strip-wrap[data-expanded='false'] .strip-end .alert {
   max-width: 420px;

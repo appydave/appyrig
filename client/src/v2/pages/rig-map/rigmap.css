@@ -4,6 +4,8 @@
 }
 .v2-rigmap .rm-body {
   width: 100%;
+  /* the cards size to the room this page really has (the agent panel or a pinned drawer narrows it) */
+  container-type: inline-size;
 }
 .v2-rigmap .g2-inside {
   margin-top: 0;
@@ -94,7 +96,7 @@
 
 /* The Wall's card, larger: the same slots at a roomier fixed size, with bigger type. */
 .v2-rigmap .wcard {
-  --wc-w: 308px;
+  --wc-w: clamp(232px, calc(100cqw - 225px), 308px);
   --wc-h: 200px;
 }
 .v2-rigmap .wcard-main {
@@ -126,7 +128,7 @@
   max-width: 96px;
 }
 .v2-rigmap .g2-human {
-  width: 308px;
+  width: clamp(232px, calc(100cqw - 225px), 308px);
   height: 132px;
   padding: 12px 14px;
 }
@@ -140,4 +142,18 @@
   top: 8px;
   left: 18px;
   font-size: 19px;
+}
+
+/* A narrow page: a slimmer left channel, and the person card takes the cards' width too. */
+@container (max-width: 760px) {
+  .v2-rigmap .g2-inside-body {
+    padding-left: 120px;
+  }
+  .v2-rigmap .g2-pod {
+    flex-basis: 100%;
+    padding: 36px 14px 18px;
+  }
+  .v2-rigmap .g2-human {
+    width: clamp(232px, calc(100cqw - 185px), 308px);
+  }
 }
