@@ -111,3 +111,15 @@ export function xtermCount(page: Page): Promise<number> {
 export async function expectXtermCount(page: Page, n: number): Promise<void> {
   await expect.poll(() => xtermCount(page), { message: `xtermCount() should be ${n}` }).toBe(n);
 }
+
+/**
+ * v2 frame: choose a rig through the Rigs drawer (the picker and chip row are gone from the screen).
+ * Opens the drawer for the click and leaves it as it found it.
+ */
+export async function chooseRigInDrawer(page: Page, rigKey: string): Promise<void> {
+  const panel = page.getByTestId('rig-drawer-panel');
+  const wasOpen = await panel.isVisible();
+  if (!wasOpen) await page.getByTestId('rig-drawer-tab').click();
+  await page.locator(`[data-testid="drawer-rig"][data-rig-key="${rigKey}"]`).click();
+  if (!wasOpen) await page.getByTestId('rig-drawer-tab').click();
+}

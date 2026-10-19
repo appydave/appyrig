@@ -32,6 +32,10 @@ import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useF
 import { useV2 } from './v2/useV2.js';
 import { busiestRig } from './v2/rigs.js';
 import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
+import RigDrawer from './v2/shell/RigDrawer.js';
+import StripShell from './v2/shell/StripShell.js';
+import MoreMenu from './v2/shell/MoreMenu.js';
+import './v2/shell/shell.css';
 
 const GROUP_KEY = 'appyrig.groupBy';
 const FOLLOW_KEY = 'appyrig.followLatest';
@@ -530,6 +534,62 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     },
   });
 
+  /** The v2 frame (thin bar, machine badges, Rigs drawer) is on whenever the app is in v2 mode. */
+  const v2on = v2.mode === 'v2';
+  const notesButton = (
+    <button
+      type="button"
+      className="pill-btn"
+      data-testid="notes-open"
+      title="The notes filed with Feedback, newest first, with their screenshots"
+      onClick={() => setNotesOpen(true)}
+    >
+      Notes
+    </button>
+  );
+  const compareLink = (
+    <a
+      className="pill-btn compare-link"
+      href="https://claude.ai/artifact/GMbxJcd1rZE5khkXsdgP4S"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid="compare-link"
+      title="OpenRig vs AppyRig: what each one does (opens in a new tab)"
+    >
+      OpenRig vs AppyRig
+    </a>
+  );
+  // B11: the API is findable from the UI. /v1/docs is open and carries no fleet data.
+  const apiLink = (
+    <a
+      className="api-link"
+      href="/v1/docs"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-testid="api-docs-link"
+    >
+      API
+    </a>
+  );
+  const groupButtons = (
+    <>
+      <span className="label">Group</span>
+      {(['rig', 'machine'] as const).map((g) => (
+        <button
+          key={g}
+          type="button"
+          className="pill-btn"
+          data-testid={`group-by-${g}`}
+          aria-pressed={groupBy === g}
+          onClick={() => chooseGroup(g)}
+        >
+          {g}
+        </button>
+      ))}
+    </>
+  );
+  const seatsSummary = `${seatCount} seat${seatCount === 1 ? '' : 's'} · ${machines.length} machine${machines.length === 1 ? '' : 's'}${hiddenShown.length > 0 ? ` · ${hiddenShown.length} hidden` : ''}`;
+
   // Screen keys (S2 ? and Esc), on every screen except Focus, which owns its own Esc.
   // Esc unwinds one layer: the keys overlay, else (an Explain card stops it itself) the screen.
   useEffect(() => {
@@ -601,7 +661,12 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   }, [focused]);
 
   return (
-    <div className="app" data-explain-on={explain || undefined}>
+    <div
+      className={v2on ? 'app app-v2' : 'app'}
+      data-explain-on={explain || undefined}
+      data-legend={v2on ? (legend ? 'on' : 'off') : undefined}
+      data-testid={v2on ? 'v2-shell' : undefined}
+    >
       <header className="app-header" hidden={!!focusTile}>
         <span className="wordmark" aria-label="AppyRig">
           <span className="wordmark-a">Appy</span>
@@ -709,234 +774,242 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
         >
           ⚑ Feedback · F
         </button>
-        <button
-          type="button"
-          className="pill-btn"
-          data-testid="notes-open"
-          title="The notes filed with Feedback, newest first, with their screenshots"
-          onClick={() => setNotesOpen(true)}
-        >
-          Notes
-        </button>
-        <a
-          className="pill-btn compare-link"
-          href="https://claude.ai/artifact/GMbxJcd1rZE5khkXsdgP4S"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="compare-link"
-          title="OpenRig vs AppyRig: what each one does (opens in a new tab)"
-        >
-          OpenRig vs AppyRig
-        </a>
-        <span className="label">
-          {seatCount} seat{seatCount === 1 ? '' : 's'} · {machines.length} machine
-          {machines.length === 1 ? '' : 's'}
-          {hiddenShown.length > 0 ? ` · ${hiddenShown.length} hidden` : ''}
-        </span>
-        <div className="controls" role="group" aria-label="Group tiles by" hidden={view !== 'wall'}>
-          {/* B11: the API is findable from the UI. /v1/docs is open and carries no fleet data. */}
-          <a
-            className="api-link"
-            href="/v1/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid="api-docs-link"
+        {v2on ? (
+          <MoreMenu>
+            {notesButton}
+            {compareLink}
+            {apiLink}
+          </MoreMenu>
+        ) : (
+          <>
+            {notesButton}
+            {compareLink}
+            <span className="label">{seatsSummary}</span>
+          </>
+        )}
+        {!v2on && (
+          <div
+            className="controls"
+            role="group"
+            aria-label="Group tiles by"
+            hidden={view !== 'wall'}
           >
-            API
-          </a>
-          <span className="label">Group</span>
-          {(['rig', 'machine'] as const).map((g) => (
-            <button
-              key={g}
-              type="button"
-              className="pill-btn"
-              data-testid={`group-by-${g}`}
-              aria-pressed={groupBy === g}
-              onClick={() => chooseGroup(g)}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
+            {apiLink}
+            {groupButtons}
+          </div>
+        )}
       </header>
-      <FleetStrip
-        machines={allMachines}
-        now={now}
-        link={link}
-        received={state.received}
-        error={state.error}
-        onOpen={open}
-        onHealth={() => chooseView('machines')}
-        shown={machines}
-        filter={
-          allMachines.length > 1 &&
-          (view === 'wall' || RIG_VIEWS.includes(view) || view === 'machines') ? (
-            <div className="machine-filter" role="group" aria-label="Machines shown">
-              <span className="label">Show</span>
-              {allMachines.map((m) => (
-                <button
-                  key={m.machine.id}
-                  type="button"
-                  className="pill-btn"
-                  data-testid="machine-filter"
-                  data-machine-id={m.machine.id}
-                  aria-pressed={!hidden.includes(m.machine.id)}
-                  title={`${hidden.includes(m.machine.id) ? 'Show' : 'Hide'} ${m.machine.label} on the Wall and in the rig lists`}
-                  onClick={() => toggleMachine(m.machine.id)}
-                >
-                  {hidden.includes(m.machine.id) ? '○' : '●'} {m.machine.label}
-                </button>
-              ))}
-            </div>
-          ) : undefined
-        }
-      />
-      {legend && !focusTile && !v2.newPage && <Legend view={view} onClose={toggleLegend} />}
-      {v2.banner}
-      {v2.body}
-      {!v2.body && view === 'wall' && (
-        <Wall
-          machines={machines}
-          groupBy={groupBy}
-          now={now}
-          hubConnected={hubConnected}
-          received={state.received}
-          onOpen={open}
-          onOpenSkills={openSkills}
-          keys={!focusTile && !overlay}
-          hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
-          onShow={toggleMachine}
-          pickedRig={rigPicked && !followLatest ? activeRig : null}
-        />
-      )}
-      {!v2.body && RIG_VIEWS.includes(view) && (
-        <main className="view" data-testid={`view-body-${view}`}>
-          <p className="follow-row">
-            <button
-              type="button"
-              className="pill-btn"
-              data-testid="follow-latest"
-              aria-pressed={followLatest}
-              title="On: show whichever rig was active most recently, switching by itself. Off: the rig you click stays."
-              onClick={toggleFollow}
-            >
-              {followLatest ? '● Following latest' : '○ Follow latest'}
-            </button>
-            <span className="quiet" data-testid="follow-status">
-              {followLatest
-                ? 'The view switches to the most recently active rig by itself. Click a rig to stop.'
-                : goneRig
-                  ? goneWhy === 'hidden'
-                    ? 'The rig you chose is on a machine your filter hides. Show that machine, or pick another rig.'
-                    : 'The rig you chose is gone. Pick another, or it comes back here if it returns.'
-                  : 'Showing the rig you chose. It changes only when you click another.'}
-            </span>
-          </p>
-          {goneRig && (
-            <p className="rig-gone" role="status" data-testid="rig-gone" data-why={goneWhy}>
-              <b>{goneWhy === 'hidden' ? 'Rig hidden:' : 'Rig gone:'}</b>{' '}
-              {goneRig.split(':').slice(1).join(':')} on{' '}
-              {allMachines.find((m) => m.machine.id === goneRig.split(':')[0])?.machine.label ??
-                goneRig.split(':')[0]}{' '}
-              {goneWhy === 'hidden'
-                ? 'is hidden by your machine filter. Nothing else is shown in its place.'
-                : 'is no longer reported by its machine (removed, or renamed). Nothing else is shown in its place.'}
-            </p>
-          )}
+      <div className="app-body">
+        {v2on && (
+          <RigDrawer
+            machines={allMachines}
+            rigs={rigs}
+            activeRigKey={activeRig?.key ?? null}
+            onChooseRig={chooseRig}
+            onOpenAgent={v2.openAgent}
+          />
+        )}
+        <div className="app-main">
           {(() => {
-            // D09 W0: the run card folds to one line; the chosen rig's info box (summary, owner,
-            // spec path) folds into its Details, so the diagram is the first thing on screen.
-            const fm =
-              activeRig && !goneRig
-                ? allMachines.find((m) => m.machine.id === activeRig.machineId)
-                : undefined;
-            const card =
-              fm && activeRig
-                ? runCardModel(fm, activeRig.name, now) && (
-                    <RunCard
-                      key={activeRig.key}
-                      machine={fm}
-                      rig={activeRig.name}
-                      now={now}
-                      socket={getSocket()}
-                      details={
-                        <RigInfo
-                          rig={activeRig}
-                          preview={false}
-                          onOpenFiles={(r) => openFiles(r.machineId, r.name)}
-                        />
-                      }
-                    />
-                  )
-                : null;
-            return (
-              <>
-                <RigPicker
-                  rigs={rigs}
-                  selected={activeRig?.key ?? null}
-                  onSelect={chooseRig}
-                  onOpenFiles={(r) => openFiles(r.machineId, r.name)}
-                  info={!card}
-                />
-                {card}
-              </>
+            const strip = (
+              <FleetStrip
+                machines={allMachines}
+                now={now}
+                link={link}
+                received={state.received}
+                error={state.error}
+                onOpen={open}
+                onHealth={() => chooseView('machines')}
+                shown={machines}
+                filter={
+                  allMachines.length > 1 &&
+                  (view === 'wall' || RIG_VIEWS.includes(view) || view === 'machines') ? (
+                    <div className="machine-filter" role="group" aria-label="Machines shown">
+                      <span className="label">Show</span>
+                      {allMachines.map((m) => (
+                        <button
+                          key={m.machine.id}
+                          type="button"
+                          className="pill-btn"
+                          data-testid="machine-filter"
+                          data-machine-id={m.machine.id}
+                          aria-pressed={!hidden.includes(m.machine.id)}
+                          title={`${hidden.includes(m.machine.id) ? 'Show' : 'Hide'} ${m.machine.label} on the Wall and in the rig lists`}
+                          onClick={() => toggleMachine(m.machine.id)}
+                        >
+                          {hidden.includes(m.machine.id) ? '○' : '●'} {m.machine.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : undefined
+                }
+              />
+            );
+            return v2on ? (
+              <StripShell
+                summary={seatsSummary}
+                extra={
+                  v2.page === 'wall' ? (
+                    <span className="controls" role="group" aria-label="Group tiles by">
+                      {groupButtons}
+                    </span>
+                  ) : undefined
+                }
+              >
+                {strip}
+              </StripShell>
+            ) : (
+              strip
             );
           })()}
-          {view === 'map' ? (
-            <RigMap
-              map={rigMap}
-              onOpen={openAgent}
+          {legend && !focusTile && !v2.newPage && <Legend view={view} onClose={toggleLegend} />}
+          {v2.banner}
+          {v2.body}
+          {!v2.body && view === 'wall' && (
+            <Wall
+              machines={machines}
+              groupBy={groupBy}
+              now={now}
+              hubConnected={hubConnected}
+              received={state.received}
+              onOpen={open}
               onOpenSkills={openSkills}
-              socket={getSocket()}
-              keys={!focusTile && !overlay && !agentTile}
-              chainOf={chainOf}
-            />
-          ) : view === 'flow' ? (
-            <HandoffFlow
-              machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
-              rig={activeRig?.name ?? null}
-              now={now}
-              socket={getSocket()}
-              keys={!focusTile && !overlay && !agentTile}
-              onOpenAgent={openAgent}
-            />
-          ) : (
-            <RunTimeline
-              machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
-              rig={activeRig?.name ?? null}
-              now={now}
-              socket={getSocket()}
               keys={!focusTile && !overlay}
+              hidden={hiddenShown.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
+              onShow={toggleMachine}
+              pickedRig={rigPicked && !followLatest ? activeRig : null}
             />
           )}
-        </main>
-      )}
-      {!v2.body && view === 'machines' && (
-        <main className="view" data-testid="view-body-machines">
-          <Machines machines={machines} hidden={hiddenShown.length} now={now} />
-        </main>
-      )}
-      {!v2.body && view === 'accounts' && (
-        <main className="view" data-testid="view-body-accounts">
-          <Accounts machines={allMachines} now={now} />
-        </main>
-      )}
-      {!v2.body && view === 'schema' && (
-        <main className="view" data-testid="view-body-schema">
-          <SchemaView
-            socket={getSocket()}
-            machines={allMachines.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
-            now={now}
-            keys={!focusTile && !overlay}
-          />
-        </main>
-      )}
-      <ExplainLayer enabled={explain && !focusTile && !overlay} />
-      {!v2.body && view === 'learn' && (
-        <main className="view" data-testid="view-body-learn">
-          <Learn machines={allMachines} now={now} onGoTo={chooseView} />
-        </main>
-      )}
+          {!v2.body && RIG_VIEWS.includes(view) && (
+            <main className="view" data-testid={`view-body-${view}`}>
+              <p className="follow-row">
+                <button
+                  type="button"
+                  className="pill-btn"
+                  data-testid="follow-latest"
+                  aria-pressed={followLatest}
+                  title="On: show whichever rig was active most recently, switching by itself. Off: the rig you click stays."
+                  onClick={toggleFollow}
+                >
+                  {followLatest ? '● Following latest' : '○ Follow latest'}
+                </button>
+                <span className="quiet" data-testid="follow-status">
+                  {followLatest
+                    ? 'The view switches to the most recently active rig by itself. Click a rig to stop.'
+                    : goneRig
+                      ? goneWhy === 'hidden'
+                        ? 'The rig you chose is on a machine your filter hides. Show that machine, or pick another rig.'
+                        : 'The rig you chose is gone. Pick another, or it comes back here if it returns.'
+                      : 'Showing the rig you chose. It changes only when you click another.'}
+                </span>
+              </p>
+              {goneRig && (
+                <p className="rig-gone" role="status" data-testid="rig-gone" data-why={goneWhy}>
+                  <b>{goneWhy === 'hidden' ? 'Rig hidden:' : 'Rig gone:'}</b>{' '}
+                  {goneRig.split(':').slice(1).join(':')} on{' '}
+                  {allMachines.find((m) => m.machine.id === goneRig.split(':')[0])?.machine.label ??
+                    goneRig.split(':')[0]}{' '}
+                  {goneWhy === 'hidden'
+                    ? 'is hidden by your machine filter. Nothing else is shown in its place.'
+                    : 'is no longer reported by its machine (removed, or renamed). Nothing else is shown in its place.'}
+                </p>
+              )}
+              {(() => {
+                // D09 W0: the run card folds to one line; the chosen rig's info box (summary, owner,
+                // spec path) folds into its Details, so the diagram is the first thing on screen.
+                const fm =
+                  activeRig && !goneRig
+                    ? allMachines.find((m) => m.machine.id === activeRig.machineId)
+                    : undefined;
+                const card =
+                  fm && activeRig
+                    ? runCardModel(fm, activeRig.name, now) && (
+                        <RunCard
+                          key={activeRig.key}
+                          machine={fm}
+                          rig={activeRig.name}
+                          now={now}
+                          socket={getSocket()}
+                          details={
+                            <RigInfo
+                              rig={activeRig}
+                              preview={false}
+                              onOpenFiles={(r) => openFiles(r.machineId, r.name)}
+                            />
+                          }
+                        />
+                      )
+                    : null;
+                return (
+                  <>
+                    <RigPicker
+                      rigs={rigs}
+                      selected={activeRig?.key ?? null}
+                      onSelect={chooseRig}
+                      onOpenFiles={(r) => openFiles(r.machineId, r.name)}
+                      info={!card}
+                    />
+                    {card}
+                  </>
+                );
+              })()}
+              {view === 'map' ? (
+                <RigMap
+                  map={rigMap}
+                  onOpen={openAgent}
+                  onOpenSkills={openSkills}
+                  socket={getSocket()}
+                  keys={!focusTile && !overlay && !agentTile}
+                  chainOf={chainOf}
+                />
+              ) : view === 'flow' ? (
+                <HandoffFlow
+                  machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
+                  rig={activeRig?.name ?? null}
+                  now={now}
+                  socket={getSocket()}
+                  keys={!focusTile && !overlay && !agentTile}
+                  onOpenAgent={openAgent}
+                />
+              ) : (
+                <RunTimeline
+                  machine={allMachines.find((m) => m.machine.id === activeRig?.machineId) ?? null}
+                  rig={activeRig?.name ?? null}
+                  now={now}
+                  socket={getSocket()}
+                  keys={!focusTile && !overlay}
+                />
+              )}
+            </main>
+          )}
+          {!v2.body && view === 'machines' && (
+            <main className="view" data-testid="view-body-machines">
+              <Machines machines={machines} hidden={hiddenShown.length} now={now} />
+            </main>
+          )}
+          {!v2.body && view === 'accounts' && (
+            <main className="view" data-testid="view-body-accounts">
+              <Accounts machines={allMachines} now={now} />
+            </main>
+          )}
+          {!v2.body && view === 'schema' && (
+            <main className="view" data-testid="view-body-schema">
+              <SchemaView
+                socket={getSocket()}
+                machines={allMachines.map((m) => ({ id: m.machine.id, label: m.machine.label }))}
+                now={now}
+                keys={!focusTile && !overlay}
+              />
+            </main>
+          )}
+          <ExplainLayer enabled={explain && !focusTile && !overlay} />
+          {!v2.body && view === 'learn' && (
+            <main className="view" data-testid="view-body-learn">
+              <Learn machines={allMachines} now={now} onGoTo={chooseView} />
+            </main>
+          )}
+        </div>
+      </div>
       {help && !focusTile && <KeysHelp view={view} onClose={() => setHelp(false)} />}
       {feedback && (
         <FeedbackComposer

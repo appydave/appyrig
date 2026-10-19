@@ -74,3 +74,4 @@ export {
   type DocItem,
   type DocGroup,
 } from './docsModel.js';
+export { PageHeader, MockMenu } from './PageHeader.js';
