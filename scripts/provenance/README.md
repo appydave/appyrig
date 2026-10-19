@@ -63,4 +63,15 @@ The aim is to run the check when OpenRig ships a release, not on a timer that mo
 3. **New version:** `git -C <clone> fetch --tags`, then resolve the release commit. Use the tag `v<version>` if one exists. If not, use the `gitHead` field from `npm view @openrig/cli@<version> gitHead`. If neither is there, use the tarball itself: `npm pack @openrig/cli@<version>` into a temp dir. The tarball ships `daemon/dist/**/*.js`, where the `Set`/`Map` literals survive the build. Then run `npm run provenance -- --source <unpacked>` (the source paths differ, so this needs a dist path map; it isn't built).
 4. **Exit 0:** run again with `--update-pin` on a branch and leave it for appyrig-orch to merge. **Exit 1:** wake the repair agent (`AGENT.md`) with `out/report.json`. **Exit 2:** notify David; don't wake the agent.
 
-This only gives a signal when `@openrig/cli` publishes. OpenRig's main branch moves between releases (the pin today is 202 commits past `v0.6.10`, still versioned 0.6.11). For an early warning, add a weekly run against `origin/main` that reports and never moves the pin.
+This only gives a signal when `@openrig/cli` publishes. OpenRig's main branch moves between releases (the pin today is 202 commits past `v0.6.10`, still versioned 0.6.11), so a second, weekly run watches main.
+
+### Weekly early warning (design only, nothing scheduled)
+
+The weekly run catches drift while it is one week's worth, not a release's worth.
+
+1. **Weekly, same task host.** `git -C <clone> fetch origin`, then `npm run provenance -- --ref origin/main`.
+2. **Report only.** It never passes `--update-pin`, never wakes the repair agent and never opens a branch. Only a published release does those (the steps above).
+3. **Tell only on change.** Keep the previous week's `out/report.json` as `out/weekly-last.json`. Compare the drift lines (probe results, unmapped list, refused examples, missing cites). If they are the same as last week's, stay silent; the same drift is not a new alert every week. If there are new lines, send David a short note with only the new lines and the OpenRig commit range they appeared in.
+4. **Exit 2** (the fetch failed, or there's no clone): note it once, then stay silent until it recovers.
+
+The release run stays the only path that changes anything. The weekly run is early warning only, and it is never a gate.
