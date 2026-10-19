@@ -25,7 +25,11 @@ const contentTop = (page: Page) =>
     const kids = [...document.querySelector('.app-main')!.children];
     const strip = document.querySelector('[data-testid="v2-strip"]')!;
     const first = kids[kids.indexOf(strip) + 1] as HTMLElement | undefined;
-    return first ? Math.round(first.getBoundingClientRect().top) : -1;
+    // layout position, not where a scroll left it (the Graph scrolls a chosen rig into view)
+    const main = document.querySelector('.app-main') as HTMLElement;
+    return first
+      ? Math.round(first.getBoundingClientRect().top + window.scrollY + main.scrollTop)
+      : -1;
   });
 
 test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { watchErrors } from './support/fleet';
+import { chooseRigInDrawer, watchErrors } from './support/fleet';
 
 // v2 clean batch, flow lane (UX notes 2026-10-19, Screen 8: "the screen jumps up and down… the
 // button I was about to click has moved out from under my cursor"). On the frozen busy snapshot,
@@ -20,15 +20,8 @@ async function openFlow(page: Page) {
   await quietIntro(page);
   await page.getByTestId('v2-group-work').click();
   await page.getByTestId('v2-page-flow').click();
-  const chip = page.locator('[data-testid="rig-chip"][data-rig-key$=":appyrig-v15-loadout"]');
-  if (await chip.count()) await chip.first().click();
-  else {
-    const select = page.locator('select').first();
-    const option = (await select.locator('option').allTextContents()).find((o) =>
-      o.includes('appyrig-v15-loadout')
-    );
-    await select.selectOption({ label: option! });
-  }
+  // the v2 frame hides the rig picker: choose the rig in the Rigs drawer (machine + rig key)
+  await chooseRigInDrawer(page, 'm2:appyrig-v15-loadout');
   await expect(page.getByTestId('flow-next')).toBeVisible();
   // web fonts landing late would move things for reasons of their own: measure after they are in
   await page.evaluate(() => document.fonts.ready.then(() => true));
