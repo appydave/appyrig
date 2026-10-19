@@ -1,5 +1,6 @@
 import type { FleetMachine, Seat } from '@appydave/shared';
 import { agentActivityOf, groupSeats, pipFor } from '../../../fleet/model.js';
+import { tailLine } from '../../kit/TerminalCard.js';
 
 /** C22: the three "look here" filters, in AppyRig's own status words. */
 export type WallFilter = 'all' | 'needs' | 'stuck' | 'failing';
@@ -118,4 +119,25 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
     if (kept.length > 0) out.push({ ...fm, snapshot: { ...fm.snapshot, seats: kept } });
   }
   return { machines: out, counts, stoppedHidden };
+}
+
+/**
+ * One clean line for a wall card's tail. A tmux capture can start in the middle of a word or after
+ * a half-cut bracket ("ernel] specs"), and can hold box-drawing. Those fragments are dropped, runs of
+ * spaces are collapsed, a long line is cut at a whole word, and a line with nothing readable becomes
+ * an em dash. The card still clips to its one line.
+ */
+export function wallTail(lines: readonly string[] | null | undefined): string {
+  const raw = tailLine(lines);
+  if (!raw) return '\u2014';
+  let s = raw
+    .replace(/[\u2500-\u259f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // a capture cut in the middle: a short fragment closed by a bracket that was never opened
+  const cut = /^([^[\](){}]{1,14})[\])}]\s*/.exec(s);
+  if (cut) s = s.slice(cut[0].length);
+  if (!/[A-Za-z0-9]{2,}/.test(s)) return '\u2014';
+  if (s.length > 120) s = `${s.slice(0, 120).replace(/\s+\S*$/, '')}\u2026`;
+  return s;
 }

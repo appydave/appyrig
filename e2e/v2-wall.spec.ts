@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { watchErrors } from './support/fleet';
+import { chooseRigInDrawer, watchErrors } from './support/fleet';
 
 // The v2 Wall at 1440 x 900 on the frozen busy snapshot: V1's dark terminal cards, all one fixed size,
 // grouped by rig with the rig as the heading, plain tmux sessions under "No rig", V2's triage kept.
@@ -58,8 +58,24 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     await page.getByTestId('v2-card-more').first().click();
     await expect(page.getByTestId('v2-card-actions')).toBeVisible();
     await page.getByTestId('v2-card-more').first().click();
+    // a card body opens the agent panel over the Wall: the page does not change
     await page.getByTestId('terminal-card-open').first().click();
-    await expect(page.getByTestId('v2-agent')).toBeVisible();
+    await expect(page.getByTestId('v2-wall')).toBeVisible();
+    await expect(page.getByTestId('v2-agent')).toHaveCount(0);
+
+    // a rig pick in the drawer is never a no-op: its group is outlined, and "Only this rig" narrows
+    await chooseRigInDrawer(page, 'm2:d09-crew');
+    const group = page.locator('[data-testid="v2w-group"][data-group-key="m2:d09-crew"]');
+    await expect(group).toHaveAttribute('data-focused', 'true');
+    const all = await page.getByTestId('v2w-group').count();
+    await page.getByTestId('v2-only-rig').click();
+    await expect(page.getByTestId('v2w-group')).toHaveCount(1);
+    await page.getByTestId('v2-only-rig').click();
+    await expect(page.getByTestId('v2w-group')).toHaveCount(all);
+
+    // one line header, no Group switch
+    await expect(page.getByTestId('v2-page-head')).toHaveCount(1);
+    await expect(page.getByText('Group', { exact: true })).toHaveCount(0);
 
     expect(errors, 'no console errors or uncaught exceptions').toEqual([]);
   });

@@ -23,7 +23,9 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     await expect(page.getByTestId('v2-nav')).toBeVisible();
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-wall').click();
-    await page.getByTestId('v2-seat-card').first().click();
+    // a card body opens the agent panel now; the Agent page is reached from the nav
+    await page.getByTestId('v2-group-agents').click();
+    await page.getByTestId('v2-page-agent').click();
     await expect(page.getByTestId('v2-agent')).toBeVisible();
     const layout = page.getByTestId('v2a-docs');
     await layout.scrollIntoViewIfNeeded();
@@ -68,7 +70,12 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     expect(errors).toEqual([]);
   });
 
-  test('a Wall card ⋯ menu opens the documents drawer', async ({ page }) => {
+  // TODO(integration): once the agent panel is merged, assert its Documents tab here instead of the
+  // drawer. On the Wall branch the panel does not exist yet, so this checks the hand-off only: ⋯ →
+  // Documents closes the popover and leaves the Wall on screen (no page change).
+  test('a Wall card ⋯ → Documents asks for the agent panel and does not change the page', async ({
+    page,
+  }) => {
     await page.goto(FROZEN);
     await expect(page.getByTestId('view-wall')).toBeVisible();
     await quietIntro(page);
@@ -79,10 +86,9 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     const card = page.getByTestId('v2-seat-card').first();
     await card.getByTestId('v2-card-more').click();
     await card.getByTestId('v2-card-docs').click();
-    await expect(page.getByTestId('docs-drawer')).toBeVisible();
-    await expect(page.getByTestId('docs-list')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+    await expect(page.getByTestId('v2-card-actions')).toHaveCount(0);
+    await expect(page.getByTestId('v2-wall')).toBeVisible();
+    await expect(page.getByTestId('v2-agent')).toHaveCount(0);
   });
 
   test('Graph Details and Flow panel open the documents drawer', async ({ page }) => {

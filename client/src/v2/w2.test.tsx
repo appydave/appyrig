@@ -240,18 +240,17 @@ describe('Wall v2: page', () => {
     expect(screen.getByTestId('v2-wall-none')).toHaveTextContent('No seat is failing');
   });
 
-  it('groups by team or by machine', () => {
+  it('always groups by rig, with no group switch', () => {
     localStorage.setItem('appyrig.v2.hideStopped', 'off');
     const { socket } = verbSocket();
     render(<Wall ctx={makeCtx(fleet(), socket)} />);
     const teams = screen.getAllByTestId('v2w-group').map((g) => g.dataset.groupKey);
     expect(teams).toContain('roamy:starter');
-    fireEvent.click(screen.getByTestId('v2w-by-machine'));
-    const machines = screen.getAllByTestId('v2w-group').map((g) => g.dataset.groupKey);
-    expect(machines.sort()).toEqual(['m2', 'roamy']);
+    expect(screen.queryByTestId('v2w-by-machine')).toBeNull();
+    expect(screen.queryByTestId('v2w-by-rig')).toBeNull();
   });
 
-  it('a card opens the Agent page; Restart and Stop are fakes that send nothing', () => {
+  it('a card opens the agent panel (not the page); Restart and Stop are fakes that send nothing', () => {
     const { socket, sent, raw } = verbSocket();
     const ctx = makeCtx(fleet(), socket);
     render(<Wall ctx={ctx} />);
@@ -259,7 +258,11 @@ describe('Wall v2: page', () => {
       .getAllByTestId('v2-seat-card')
       .find((c) => c.dataset.seatId === 'dev-build@starter')!;
     fireEvent.click(within(card).getByTestId('terminal-card-open'));
-    expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
+    expect(ctx.openAgentPanel).toHaveBeenCalledWith({
+      machineId: 'roamy',
+      seatKey: 'roamy/dev-build@starter',
+    });
+    expect(ctx.openAgentPage).not.toHaveBeenCalled();
     const emits = raw.emit.mock.calls.length;
     // walk #8: the mocks sit behind the card's "⋯"
     expect(within(card).queryByTestId('fake-control')).toBeNull();
