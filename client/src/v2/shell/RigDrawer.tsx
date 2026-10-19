@@ -46,7 +46,15 @@ interface Props {
   scope: string;
   onChooseRig: (key: string) => void;
   onOpenAgent: (key: string) => void;
+  /** The Agent panel is open: a pinned drawer gives way (tab only) when the page would get too narrow. */
+  panelOpen?: boolean;
 }
+
+/** Under this the page is too narrow to share the window with a pinned drawer and the open panel. */
+export const MIN_PAGE_PX = 640;
+/** Width the pinned drawer takes (tab, gap, list) and the space the page keeps clear of the panel. */
+const PINNED_W = 30 + 8 + 272 + 10;
+const pageWidthWith = (win: number) => win - 32 - PINNED_W - Math.min(520, win - 320);
 
 const POD_NONE = '—';
 
@@ -62,8 +70,19 @@ export default function RigDrawer({
   scope,
   onChooseRig,
   onOpenAgent,
+  panelOpen = false,
 }: Props) {
-  const [pinned, setPinned] = useState<boolean>(readPinned);
+  const [pinnedSaved, setPinned] = useState<boolean>(readPinned);
+  const [winW, setWinW] = useState(() => window.innerWidth);
+  useEffect(() => {
+    const on = () => setWinW(window.innerWidth);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  // While the panel is open and the page would be under MIN_PAGE_PX, the drawer shows as its tab only
+  // for that moment. The saved pin is not changed, so it comes back when the panel closes.
+  const squeezed = pinnedSaved && panelOpen && pageWidthWith(winW) < MIN_PAGE_PX;
+  const pinned = pinnedSaved && !squeezed;
   const [hover, setHover] = useState(false);
   const open = pinned || hover;
   const closeTimer = useRef<number | null>(null);
@@ -234,7 +253,7 @@ export default function RigDrawer({
             : 'Rigs: hover to peek over the page, click to pin beside it'
         }
         onClick={() => {
-          const next = !pinned;
+          const next = !pinnedSaved;
           setPinned(next);
           writePinned(next);
           setHover(false);

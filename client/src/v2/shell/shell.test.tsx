@@ -198,6 +198,40 @@ describe('Rigs drawer', () => {
   });
 });
 
+describe('the pinned drawer gives way to an open panel in a narrow window', () => {
+  const props = () => {
+    const machines = fleet();
+    return {
+      machines,
+      rigs: listRigs(machines),
+      highlightRigKey: null,
+      highlightAgentKey: null,
+      scope: 'Whole fleet',
+      onChooseRig: () => {},
+      onOpenAgent: () => {},
+    };
+  };
+  it('shows the tab only while the panel is open and the page would be under 640 px; the pin is kept', () => {
+    localStorage.setItem('appyrig.rigDrawerPinned', '1');
+    Object.defineProperty(window, 'innerWidth', { value: 1100, configurable: true });
+    const { rerender } = render(<RigDrawer {...props()} panelOpen={false} />);
+    expect(screen.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'true');
+    rerender(<RigDrawer {...props()} panelOpen />);
+    expect(screen.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'false');
+    expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
+    expect(localStorage.getItem('appyrig.rigDrawerPinned')).toBe('1');
+    // the panel closes: the pinned drawer comes back
+    rerender(<RigDrawer {...props()} panelOpen={false} />);
+    expect(screen.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'true');
+  });
+  it('stays pinned beside the panel in a window wide enough for both', () => {
+    localStorage.setItem('appyrig.rigDrawerPinned', '1');
+    Object.defineProperty(window, 'innerWidth', { value: 2400, configurable: true });
+    render(<RigDrawer {...props()} panelOpen />);
+    expect(screen.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'true');
+  });
+});
+
 describe('machine badges', () => {
   it('start collapsed with no MACHINES label; a badge or its health mark toggles in place; Machines → is explicit', () => {
     const toMachines = vi.fn();

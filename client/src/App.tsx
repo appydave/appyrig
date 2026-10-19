@@ -953,6 +953,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
             highlightRigKey={drawerRig?.key ?? null}
             highlightAgentKey={drawerAgent}
             scope={drawerScope}
+            panelOpen={!!v2.ctx.agentPanel}
             // a pick closes the agent panel so the page's response is visible, not hidden behind it
             onChooseRig={(key) => {
               v2.closePanelQuiet();
