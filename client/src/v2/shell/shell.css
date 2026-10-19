@@ -527,8 +527,16 @@ body:has(.v2-nav) header.app-header {
 }
 .v2-hint-row .first-hint {
   position: static;
+  width: auto;
   max-width: none;
   box-shadow: none;
+  margin: 0;
+  padding: 3px 12px;
+  min-height: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Machine strip: the chevron is the only control, the badges toggle the detail in place. */
