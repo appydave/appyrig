@@ -13,7 +13,7 @@ import {
   stageOf,
   type FlowOptions,
 } from '../../../fleet/views.js';
-import ReplayConsoles from '../../../components/ReplayConsoles.js';
+import ReplayConsolesV2 from './ReplayConsolesV2.js';
 import HandoffPanel, {
   type PanelMode,
   type PanelSelection,
@@ -151,6 +151,14 @@ interface HoverCard {
 }
 
 const REPLAY_SECONDS = 40;
+const CALM_KEY = 'appyrig.v2.flowCalm';
+function readCalm(): boolean {
+  try {
+    return localStorage.getItem(CALM_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
 /** Replay holds on each chapter for this many 100 ms ticks, so the narration can be read. */
 const CHAPTER_HOLD_TICKS = 30;
 
@@ -182,6 +190,16 @@ export default function HandoffFlowV2({
   const lineFocus = useLineFocus();
   /** C35: which picture of the rig to draw: who handed what (traffic), or who works with whom (structure). */
   const [lens, setLens] = useState<Lens>('traffic');
+  /** V1's replay look by default (current handoff lit, big slow dots, the amber "back" arc); calm = the quiet look. */
+  const [calm, setCalmState] = useState(readCalm);
+  const setCalm = (v: boolean) => {
+    setCalmState(v);
+    try {
+      localStorage.setItem(CALM_KEY, v ? 'on' : 'off');
+    } catch {
+      // per-viewer convenience only
+    }
+  };
   const [card, setCard] = useState<HoverCard | null>(null);
   const [pinned, setPinned] = useState(false);
   const [mode, setMode] = useState<PanelMode>(readPanelMode);
@@ -214,11 +232,21 @@ export default function HandoffFlowV2({
   const steps = useMemo(() => (machine && rig ? replaySteps(machine, rig) : []), [machine, rig]);
   // Set while stepping one handoff at a time; any other move clears it.
   const [stepId, setStepId] = useState<string | null>(null);
+  // Nothing moves under the cursor: a replay move never scrolls the page. The panel scrolls its
+  // current item into view (`block: 'nearest'`), which also scrolls the window when the panel runs
+  // below the fold; this puts the window back after that effect, in the same commit.
+  const keepScroll = useRef<number | null>(null);
   const jump = (t: number | null, step: string | null = null) => {
+    keepScroll.current = window.scrollY;
     atRef.current = t;
     setAt(t);
     setStepId(step);
   };
+  useEffect(() => {
+    const y = keepScroll.current;
+    keepScroll.current = null;
+    if (y !== null && window.scrollY !== y) window.scrollTo({ top: y });
+  });
 
   // S2: ← → press the step buttons. The handler reads the latest step functions from a ref.
   const stepKeys = useRef<{ prev: () => void; next: () => void } | null>(null);
@@ -307,6 +335,7 @@ export default function HandoffFlowV2({
     const q = steps[i];
     if (!q) return;
     setPlaying(false);
+    setLens('traffic');
     jump(Date.parse(q.createdAt), q.id);
     // S4: the stepped handoff's full message, so the one-line narration is readable in full.
     if (!pinned) setSel({ edge: null, itemId: q.id });
@@ -360,7 +389,14 @@ export default function HandoffFlowV2({
   );
   // During a replay, narrate the latest chapter reached.
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
-  const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
+  // The handoff the replay is on: the stepped one, else the latest handed over by the replay time.
+  const replaying = at !== null;
+  let curIdx = stepIdx;
+  if (curIdx < 0 && replaying)
+    steps.forEach((q, k) => {
+      if (Date.parse(q.createdAt) <= t) curIdx = k;
+    });
+  const curItem = curIdx >= 0 ? (steps[curIdx] ?? null) : null;
   const pairOf = (key: string | null) => (key ? pairs.find((p) => p.key === key) : undefined);
   const pairTitle = (p: FlowPair) =>
     `${labelOf(p.a)} ⇄ ${labelOf(p.b)} · ${pairLabel(p)} · ${p.total} handoff${p.total === 1 ? '' : 's'}`;
@@ -390,19 +426,23 @@ export default function HandoffFlowV2({
         itemId && items.some((q) => q.id === itemId) ? itemId : (items[items.length - 1]?.id ?? ''),
     };
   };
+  const curPair = curItem
+    ? pairs.find((p) => p.edges.some((e) => e.items.some((q) => q.id === curItem.id)))
+    : undefined;
   const selection: PanelSelection | null = (() => {
-    if (!sel) return null;
-    if (sel.stage) return stageSelection(sel.stage, sel.itemId);
+    // The panel follows the replay: the current handoff, unless a line, box or item is pinned.
+    const s =
+      sel ?? (curItem && !pinned ? { edge: null, itemId: curItem.id, stage: undefined } : null);
+    if (!s) return null;
+    if (s.stage) return stageSelection(s.stage, s.itemId);
     const pair =
-      pairOf(sel.edge) ||
-      (sel.itemId && pairs.find((p) => pairItems(p).some((q) => q.id === sel.itemId))) ||
+      pairOf(s.edge) ||
+      (s.itemId && pairs.find((p) => pairItems(p).some((q) => q.id === s.itemId))) ||
       null;
     const items = pair ? pairItems(pair) : [];
     if (!pair || !items.length) return null;
     const itemId =
-      sel.itemId && items.some((q) => q.id === sel.itemId)
-        ? sel.itemId
-        : items[items.length - 1]!.id;
+      s.itemId && items.some((q) => q.id === s.itemId) ? s.itemId : items[items.length - 1]!.id;
     return { edge: pair.key, title: pairTitle(pair), items, itemId };
   })();
   // B1: in "Follow pointer" mode the panel follows the pointer (it has a fixed size, so nothing
@@ -588,21 +628,31 @@ export default function HandoffFlowV2({
         )}
       </details>
 
-      {stepItem ? (
-        <p className="flow-narration" data-testid="flow-narration" data-kind="step">
-          <b>
-            Handoff {stepIdx + 1} of {steps.length}
-          </b>{' '}
-          {clock(Date.parse(stepItem.createdAt))} · {(stepItem.source ?? '?').split('@')[0]} →{' '}
-          {(stepItem.destination ?? '?').split('@')[0]}: {stepItem.summary ?? '(no message)'}
-        </p>
-      ) : (
-        chapter && (
-          <p className="flow-narration" data-testid="flow-narration" data-kind={chapter.kind}>
+      <p
+        className="flow-narration v2-narration"
+        data-testid="flow-narration"
+        data-kind={curItem ? 'step' : (chapter?.kind ?? 'rest')}
+        title={curItem?.summary ?? chapter?.text ?? undefined}
+      >
+        {curItem ? (
+          <>
+            <b>
+              Handoff {curIdx + 1} of {steps.length}
+            </b>{' '}
+            {clock(Date.parse(curItem.createdAt))} · {(curItem.source ?? '?').split('@')[0]} →{' '}
+            {(curItem.destination ?? '?').split('@')[0]}
+            {chapter ? <span className="quiet"> · {chapter.title}</span> : null}
+          </>
+        ) : chapter ? (
+          <>
             <b>{chapter.title}</b> {chapter.text}
-          </p>
-        )
-      )}
+          </>
+        ) : (
+          <span className="quiet">
+            The run as it stands now. Replay or step through it from the bar at the bottom.
+          </span>
+        )}
+      </p>
 
       <div
         className="v2-lens"
@@ -669,10 +719,10 @@ export default function HandoffFlowV2({
             </marker>
           </defs>
           {lens === 'traffic' &&
-            pairs.map((p, i) => {
+            pairs.map((p) => {
               const g = pairPath(p, L, ROW_Y, BOX_H);
-              const id = `hf-edge-${i}`;
-              const state = lineFocus.stateOf(p.a, p.b);
+              // A stable id per pair: the pairs re-sort as counts grow, so an index would re-point the dots.
+              const id = `hf-${p.key.replace(/[^A-Za-z0-9]/g, '-')}`;
               const heads = arrowHeads(p);
               // The path runs left box → right box; put each arrowhead at the box it points to.
               const atEnd = g.aLeft ? heads.atB : heads.atA;
@@ -681,6 +731,12 @@ export default function HandoffFlowV2({
               const w = 16 + label.length * 8.5;
               const inFlight = p.edges.flatMap((e) => e.inFlight);
               const lineFocusProps = lineFocus.focusProps(lineFocusId(p.a, p.b));
+              const isCur = replaying && !calm && curPair?.key === p.key;
+              const state = isCur && lineFocus.focus === null ? 'lit' : lineFocus.stateOf(p.a, p.b);
+              const ax = L.x(p.a);
+              const bx = L.x(p.b);
+              const by = ROW_Y + BOX_H / 2;
+              const dip = 46 + Math.abs(L.idx(p.a) - L.idx(p.b)) * 18;
               return (
                 <g
                   key={p.key}
@@ -688,6 +744,7 @@ export default function HandoffFlowV2({
                   data-edge={p.key}
                   data-pair={`${p.a}|${p.b}`}
                   data-kind={p.back ? 'rework' : 'forward'}
+                  data-current={isCur || undefined}
                   data-state={state}
                   data-in-flight={inFlight.length}
                   data-selected={selection?.edge === p.key || undefined}
@@ -724,13 +781,25 @@ export default function HandoffFlowV2({
                   <path
                     id={id}
                     d={g.d}
-                    className={lineClass(state)}
+                    className={`${lineClass(state)}${isCur ? ' v2-current' : ''}`}
                     strokeWidth={lineWidth(p.total)}
                     markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
                     markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
                   />
                   {/* A wide invisible stroke so the line is easy to hover. */}
                   <path d={g.d} className="hit" />
+                  {/* V1's rework loop: what went back, as an amber arc under the boxes. */}
+                  {!calm && p.back > 0 && (
+                    <g data-testid="flow-back-arc" data-back={p.back} className="v2-back">
+                      <path
+                        d={`M${ax},${by} C${ax},${by + dip} ${bx},${by + dip} ${bx},${by}`}
+                        className="v2-back-arc"
+                      />
+                      <text x={(ax + bx) / 2} y={by + dip * 0.75 + 14} className="v2-back-text">
+                        {p.back} back
+                      </text>
+                    </g>
+                  )}
                   <g
                     data-testid="flow-count-pill"
                     data-count={p.total}
@@ -760,8 +829,8 @@ export default function HandoffFlowV2({
                   {inFlight.slice(0, 6).map((q, k) => (
                     <circle
                       key={q.id}
-                      r={4}
-                      className="pulse v2-pulse"
+                      r={calm ? 4 : isCur ? 8 : 6}
+                      className={`pulse v2-pulse${isCur ? ' v2-pulse-current' : ''}`}
                       data-testid="flow-pulse"
                       data-item={q.id}
                       onPointerEnter={(ev) => peek(p.key, q.id, ev)}
@@ -772,7 +841,7 @@ export default function HandoffFlowV2({
                     >
                       <title>{q.summary ?? q.id}</title>
                       <animateMotion
-                        dur="2.4s"
+                        dur={calm ? '2.4s' : '3.6s'}
                         repeatCount="indefinite"
                         begin={`${(k * 0.4).toFixed(1)}s`}
                       >
@@ -1017,7 +1086,10 @@ export default function HandoffFlowV2({
         )}
       </div>
 
-      <HandoffLegend compact />
+      <details className="v2-flow-key" data-testid="flow-key">
+        <summary>Line key</summary>
+        <HandoffLegend compact />
+      </details>
       {flow.mode === 'roles' && (
         <ul className="flow-legend" aria-label="Seats per stage">
           {flow.stages.map((s) => (
@@ -1057,6 +1129,8 @@ export default function HandoffFlowV2({
           onClick={() => {
             if (!playing && t >= range.end) jump(range.start);
             hold.current = 0;
+            // B1: Structure draws no traffic, so the dots would never move. Replay is Traffic.
+            setLens('traffic');
             setPlaying((p) => !p);
           }}
         >
@@ -1073,6 +1147,9 @@ export default function HandoffFlowV2({
         >
           ◀
         </button>
+        <span className="v2-step-count mono" data-testid="flow-step-count" aria-live="off">
+          {curIdx >= 0 ? curIdx + 1 : '–'} / {steps.length}
+        </span>
         <button
           type="button"
           className="pill-btn"
@@ -1094,12 +1171,24 @@ export default function HandoffFlowV2({
           value={t}
           onChange={(e) => {
             setPlaying(false);
+            setLens('traffic');
             jump(Number(e.target.value));
           }}
         />
-        <span className="label" data-testid="flow-time">
-          {t >= range.end ? 'now' : clock(t)} · run {clock(range.start)} → {clock(range.end)}
+        <span className="label v2-replay-time" data-testid="flow-time">
+          {t >= range.end ? 'now' : clock(t)}
+          {chapter ? ` · ${chapter.title}` : ''}
         </span>
+        <button
+          type="button"
+          className="pill-btn"
+          data-testid="flow-calm"
+          aria-pressed={calm}
+          title="Calm: the quiet look (faint lines, small dots, no back arcs). Off: the current handoff is lit, as V1 draws it."
+          onClick={() => setCalm(!calm)}
+        >
+          Calm
+        </button>
       </div>
       {chapters.length > 0 && (
         <ol className="flow-chapters" aria-label="Chapters" data-testid="flow-chapters">
@@ -1113,6 +1202,7 @@ export default function HandoffFlowV2({
                 data-explain="replay"
                 onClick={() => {
                   setPlaying(false);
+                  setLens('traffic');
                   jump(c.at);
                 }}
               >
@@ -1122,7 +1212,19 @@ export default function HandoffFlowV2({
           ))}
         </ol>
       )}
-      <ReplayConsoles machine={machine} rig={rig} at={t} socket={socket} />
+      <ReplayConsolesV2
+        machine={machine}
+        rig={rig}
+        at={t}
+        socket={socket}
+        follow={
+          curItem
+            ? [curItem.source, curItem.destination].flatMap((raw) =>
+                raw && raw.endsWith(`@${rig}`) ? [raw.split('@')[0]!] : []
+              )
+            : []
+        }
+      />
     </section>
   );
 }

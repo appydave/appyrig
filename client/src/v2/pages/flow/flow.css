@@ -33,3 +33,106 @@
 .v2-flow .hl-legend {
   margin: 4px 0 8px;
 }
+
+/* ---- clean batch (UX notes 2026-10-19, Screens 7-8): nothing moves under the cursor ---- */
+
+/* The narration strip is one line, always the same height: it names the handoff, the panel
+   holds the text. */
+.v2-flow .v2-narration {
+  height: 40px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The diagram row and the panel beside it are a fixed height; the panel's text scrolls inside. */
+.v2-flow .flow-row {
+  height: 440px;
+  flex-wrap: nowrap;
+}
+.v2-flow .flow-row > .handoff-panel,
+.v2-flow .flow-row > .follow-work,
+.v2-flow .flow-row > * + * {
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+}
+.v2-flow .flow-row .flow-svg {
+  height: 100%;
+}
+/* The replay bar sits pinned to the bottom of the viewport, one row, always the same size. */
+.v2-flow .flow-replay {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex-wrap: nowrap;
+  height: 52px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--ar-canvas);
+  border-top: 1px solid var(--ar-line);
+  box-shadow: 0 -4px 12px rgb(52 45 45 / 0.08);
+}
+.v2-flow .v2-step-count {
+  min-width: 92px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.v2-flow .v2-replay-time {
+  width: 280px;
+  flex: 0 0 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v2-flow .flow-replay input[type='range'] {
+  flex: 1 1 200px;
+  min-width: 120px;
+}
+
+/* During a replay the current handoff is lit at full ink and colour, as V1 draws it. */
+.v2-flow .hl-line.v2-current {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 1;
+}
+.v2-flow .v2-pulse {
+  fill: var(--ar-sequence);
+  fill-opacity: 0.9;
+}
+.v2-flow .v2-pulse-current {
+  fill: var(--ar-blocked);
+  fill-opacity: 1;
+  stroke: var(--ar-surface-raised);
+  stroke-width: 2;
+}
+/* V1's rework loop: what was sent back, an amber arc under the boxes. */
+.v2-flow .v2-back-arc {
+  fill: none;
+  stroke: var(--ar-sequence);
+  stroke-width: 2;
+  stroke-opacity: 0.85;
+}
+.v2-flow .v2-back-text {
+  fill: var(--ar-sequence);
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.v2-flow .v2-flow-key summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+/* The consoles keep their height whether one, two or none are open. */
+.v2-flow .v2-consoles .console-grid {
+  min-height: 240px;
+}
+.v2-flow .v2-console-mode {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.v2-flow .console[data-current] {
+  border-color: var(--ar-sequence);
+}
