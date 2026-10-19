@@ -24,3 +24,6 @@ export * from './runcard.js';
 export * from './daemondata.js';
 export * from './missionJobs.js';
 export * from './missionfiles.js';
+
+/** OpenRig's own model (rig.yaml, agent.yaml, chain files, project tree), namespaced: OpenRig.RigSpecSchema … */
+export * as OpenRig from './openrig/index.js';

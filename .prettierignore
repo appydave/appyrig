@@ -15,3 +15,5 @@ CLAUDE.local.md
 # Vendored: keep upstream bytes so a re-copy diffs cleanly
 server/src/core/vendor
 /api
+# OpenRig 0.6.11 spec files, copied as-is (Apache-2.0) so the schema test parses the real bytes
+test/root/fixtures
