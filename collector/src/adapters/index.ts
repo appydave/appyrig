@@ -33,7 +33,7 @@ export {
   ListingTracker,
   classifySkills,
   listingOfLine,
-  readLayers,
+  readSeatDocs,
   skillFolders,
   trackedSkills,
   withSkillCounts,

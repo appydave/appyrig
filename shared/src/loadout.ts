@@ -6,7 +6,7 @@ import { MachineIdentitySchema } from './snapshot.js';
  *   - the skills Claude Code listed to the model: the newest full `skill_listing` in the seat's
  *     own transcript plus its later additions (not a guess from folders), each sorted by where it
  *     came from;
- *   - the prompt-layer files, present or absent, with their text for the file viewer.
+ *   - the seat's documents, present or absent, with their text for the file viewer.
  *
  * Listed means available to the model. Which skills were used is not reported here.
  *
@@ -21,8 +21,8 @@ const isoDate = z.iso.datetime({ offset: true });
 /** Most skill names kept per seat. Claude Code listed ~313 on the M2 in Oct 2026. */
 export const LOADOUT_SKILLS_MAX = 2000;
 
-/** Most text kept per prompt-layer file: six of them stay well under socket.io's 1 MB message limit. */
-export const LOADOUT_LAYER_MAX_BYTES = 96 * 1024;
+/** Most text kept per seat document: all of them stay well under socket.io's 1 MB message limit. */
+export const SEAT_DOC_MAX_BYTES = 96 * 1024;
 
 /**
  * Where a listed skill came from:
@@ -58,8 +58,15 @@ export const LoadoutSkillSchema = z.strictObject({
 });
 export type LoadoutSkill = z.infer<typeof LoadoutSkillSchema>;
 
-/** The prompt layers looked for, in the order a seat receives them. */
-export const LoadoutLayerIdSchema = z.enum([
+/**
+ * A seat's documents: the files AppyRig looks for that shape what the seat is told (its culture,
+ * role, CLAUDE.md / CLAUDE.local.md, recap, learned notes). These are file-presence checks, NOT
+ * OpenRig's startup layers (agent → profile → culture → rig → pod → member → operator, see
+ * `OpenRig.STARTUP_LAYERS`), so they are not called layers. The wire key stays `layers`.
+ *
+ * The ids, in the order a seat receives them.
+ */
+export const SeatDocIdSchema = z.enum([
   'culture',
   'role',
   'claude-md',
@@ -67,10 +74,10 @@ export const LoadoutLayerIdSchema = z.enum([
   'recap',
   'learned',
 ]);
-export type LoadoutLayerId = z.infer<typeof LoadoutLayerIdSchema>;
+export type SeatDocId = z.infer<typeof SeatDocIdSchema>;
 
-export const LoadoutLayerSchema = z.strictObject({
-  id: LoadoutLayerIdSchema,
+export const SeatDocSchema = z.strictObject({
+  id: SeatDocIdSchema,
   /** The file name found, or the one looked for when absent. */
   name: z.string().min(1).max(120),
   present: z.boolean(),
@@ -80,12 +87,23 @@ export const LoadoutLayerSchema = z.strictObject({
   looked: z.array(z.string().max(1024)).max(8),
   bytes: z.number().int().nonnegative().nullable(),
   modifiedAt: isoDate.nullable(),
-  /** True when content was cut at LOADOUT_LAYER_MAX_BYTES. */
+  /** True when content was cut at SEAT_DOC_MAX_BYTES. */
   truncated: z.boolean(),
   /** Redacted text; null when absent. */
   content: z.string().nullable(),
 });
-export type LoadoutLayer = z.infer<typeof LoadoutLayerSchema>;
+export type SeatDoc = z.infer<typeof SeatDocSchema>;
+
+/** @deprecated Old names, kept so the client compiles unchanged; use the SeatDoc names. */
+export const LOADOUT_LAYER_MAX_BYTES = SEAT_DOC_MAX_BYTES;
+/** @deprecated Use SeatDocIdSchema. */
+export const LoadoutLayerIdSchema = SeatDocIdSchema;
+/** @deprecated Use SeatDocId. */
+export type LoadoutLayerId = SeatDocId;
+/** @deprecated Use SeatDocSchema. */
+export const LoadoutLayerSchema = SeatDocSchema;
+/** @deprecated Use SeatDoc. */
+export type LoadoutLayer = SeatDoc;
 
 /**
  * `ok`          — a skill listing was read
@@ -128,7 +146,8 @@ export const SeatLoadoutSchema = z.strictObject({
   /** False when the seat's folder no longer exists; null when the daemon reports none. */
   cwdExists: z.boolean().nullable(),
   skills: z.array(LoadoutSkillSchema).max(LOADOUT_SKILLS_MAX),
-  layers: z.array(LoadoutLayerSchema).max(6),
+  /** The seat's documents (wire key kept as `layers` for the client). */
+  layers: z.array(SeatDocSchema).max(6),
 });
 export type SeatLoadout = z.infer<typeof SeatLoadoutSchema>;
 

@@ -73,7 +73,7 @@ export class FleetStore {
   /** v1.4 · S7: rig files and the OpenRig database shape, as collectors pushed them. */
   readonly rigFiles = new RigFileStore();
   readonly schemas: SchemaStore;
-  /** v1.5 · L1: seat loadouts (listed skills, prompt layers) for the Debug view. Memory only. */
+  /** v1.5 · L1: seat loadouts (listed skills, seat documents) for the Debug view. Memory only. */
   readonly loadouts = new LoadoutStore();
   /** Batch 1 · B5: OpenRig table rows (read-only, capped, redacted). Memory only. */
   readonly dbRows = new DbRowsStore();

@@ -11,7 +11,7 @@ import {
 import { statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { LOADOUT_LAYER_MAX_BYTES, SeatLoadoutSchema } from '@appydave/shared';
+import { SEAT_DOC_MAX_BYTES, SeatLoadoutSchema } from '@appydave/shared';
 import {
   classifySkills,
   foldListing,
@@ -19,7 +19,7 @@ import {
   newerSet,
   listingOfLine,
   LoadoutReader,
-  readLayers,
+  readSeatDocs,
   skillFolders,
   trackedSkills,
   withSkillCounts,
@@ -267,7 +267,7 @@ describe('skill folders on disk', () => {
   });
 });
 
-describe('prompt layers', () => {
+describe('seat documents', () => {
   function world() {
     const root = tmp();
     const team = join(root, 'proj', 'team');
@@ -306,7 +306,7 @@ describe('prompt layers', () => {
 
   it('finds each layer in its fixed place, in order, and says where it looked for an absent one', async () => {
     const w = world();
-    const layers = await readLayers(w.seat, w.spec, w.agent);
+    const layers = await readSeatDocs(w.seat, w.spec, w.agent);
     expect(layers.map((l) => [l.id, l.name, l.present])).toEqual([
       ['culture', 'TEAM-CULTURE.md', true],
       ['role', 'role.md', true],
@@ -321,18 +321,20 @@ describe('prompt layers', () => {
 
   it('redacts file text', async () => {
     const w = world();
-    const local = (await readLayers(w.seat, w.spec, w.agent)).find((l) => l.id === 'claude-local');
+    const local = (await readSeatDocs(w.seat, w.spec, w.agent)).find(
+      (l) => l.id === 'claude-local'
+    );
     expect(local?.content).not.toContain('sk-ant-api03');
   });
 
   it('caps a large file and says so', async () => {
     const w = world();
     // plain words: a long unbroken run would be redacted as if it were a token
-    const text = 'some words. '.repeat(Math.ceil(LOADOUT_LAYER_MAX_BYTES / 12) + 10);
+    const text = 'some words. '.repeat(Math.ceil(SEAT_DOC_MAX_BYTES / 12) + 10);
     put(join(w.cwd, 'CLAUDE.md'), text);
-    const md = (await readLayers(w.seat, w.spec, w.agent)).find((l) => l.id === 'claude-md');
+    const md = (await readSeatDocs(w.seat, w.spec, w.agent)).find((l) => l.id === 'claude-md');
     expect(md).toMatchObject({ truncated: true, bytes: text.length });
-    expect(md?.content?.length).toBe(LOADOUT_LAYER_MAX_BYTES);
+    expect(md?.content?.length).toBe(SEAT_DOC_MAX_BYTES);
   });
 
   it('never follows a link out of its folder, nor a culture_file with a path in it', async () => {
@@ -347,7 +349,7 @@ describe('prompt layers', () => {
     );
     const spec = { ...w.spec, spec: parseSpec(yaml)!.spec };
     expect(spec.spec?.culture_file).toBe('../../../etc/passwd');
-    const layers = await readLayers(w.seat, spec, w.agent);
+    const layers = await readSeatDocs(w.seat, spec, w.agent);
     expect(layers.find((l) => l.id === 'claude-md')?.present).toBe(false);
     // the bad culture_file falls back to the default name, which is absent here
     expect(layers.find((l) => l.id === 'culture')).toMatchObject({
@@ -359,7 +361,7 @@ describe('prompt layers', () => {
   it('takes culture_file only from a rig.yaml OpenRig would accept (a refused spec gets the default name)', async () => {
     const w = world();
     const refused = { ...w.spec, spec: null };
-    expect((await readLayers(w.seat, refused, w.agent))[0]).toMatchObject({
+    expect((await readSeatDocs(w.seat, refused, w.agent))[0]).toMatchObject({
       name: 'CULTURE.md',
       present: false,
     });
@@ -381,12 +383,12 @@ describe('prompt layers', () => {
       ].join('\n')
     );
     put(join(w.agent, 'guidance', 'orchestrator.md'), '# Role: the real one\n');
-    const role = (await readLayers(w.seat, w.spec, w.agent)).find((l) => l.id === 'role');
+    const role = (await readSeatDocs(w.seat, w.spec, w.agent)).find((l) => l.id === 'role');
     expect(role?.content).toBe('# Role: the real one\n');
   });
 
   it('with no spec, cwd or agent folder: absent, saying why', async () => {
-    const layers = await readLayers(
+    const layers = await readSeatDocs(
       { id: 'x@y', rig: 'y', runtime: 'claude-code', cwd: null },
       undefined,
       undefined

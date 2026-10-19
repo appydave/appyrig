@@ -4,13 +4,13 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import {
-  LOADOUT_LAYER_MAX_BYTES,
   OpenRig,
+  SEAT_DOC_MAX_BYTES,
   LOADOUT_SKILLS_MAX,
   shortSkillName,
-  type LoadoutLayer,
-  type LoadoutLayerId,
   type LoadoutSkill,
+  type SeatDoc,
+  type SeatDocId,
   type SeatLoadout,
   type SkillSource,
 } from '@appydave/shared';
@@ -27,7 +27,7 @@ import type { SpecInfo } from './specs.js';
  * (foldListing), by an incremental scan (only bytes appended since the last scan). Each name is
  * then sorted by where it lives on this machine; nothing is guessed from folders alone.
  *
- * Prompt layers: a fixed set of names in fixed places (the seat's cwd, its agent spec folder, its
+ * Seat documents: a fixed set of names in fixed places (the seat's cwd, its agent spec folder, its
  * rig's spec folder), all read-only, capped and redacted. Folders come from the daemon (cwd,
  * agentRef) and from the collector's configured spec folders, never from a client.
  */
@@ -275,19 +275,19 @@ export async function trackedSkills(
   }
 }
 
-// ── prompt layers ──────────────────────────────────────────────────────────────────────────────
+// ── seat documents ─────────────────────────────────────────────────────────────────────────────
 
 const isUnder = (child: string, parent: string): boolean =>
   child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 
-interface LayerSpot {
+interface DocSpot {
   path: string;
   /** The real file must stay inside this folder (symlinks resolved). */
   within: string;
 }
 
-async function readLayerFile(
-  spot: LayerSpot
+async function readDocFile(
+  spot: DocSpot
 ): Promise<{ path: string; text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
   let real: string;
   let within: string;
@@ -302,7 +302,7 @@ async function readLayerFile(
   try {
     fh = await open(real, 'r');
     const st = await fh.stat();
-    const want = Math.min(st.size, LOADOUT_LAYER_MAX_BYTES);
+    const want = Math.min(st.size, SEAT_DOC_MAX_BYTES);
     const buf = Buffer.alloc(want);
     const { bytesRead } = await fh.read(buf, 0, want, 0);
     const slice = buf.subarray(0, bytesRead);
@@ -312,7 +312,7 @@ async function readLayerFile(
       text: slice.toString('utf8'),
       bytes: st.size,
       mtime: st.mtime,
-      truncated: st.size > LOADOUT_LAYER_MAX_BYTES,
+      truncated: st.size > SEAT_DOC_MAX_BYTES,
     };
   } catch {
     return null;
@@ -321,15 +321,15 @@ async function readLayerFile(
   }
 }
 
-/** The first of `spots` that exists, as a layer; absent (with where it looked) when none does. */
-async function layer(
-  id: LoadoutLayerId,
+/** The first of `spots` that exists, as a seat document; absent (with where it looked) when none does. */
+async function doc(
+  id: SeatDocId,
   name: string,
-  spots: LayerSpot[],
+  spots: DocSpot[],
   notes: string[] = []
-): Promise<LoadoutLayer> {
+): Promise<SeatDoc> {
   for (const spot of spots) {
-    const r = await readLayerFile(spot);
+    const r = await readDocFile(spot);
     if (r) {
       return {
         id,
@@ -370,7 +370,7 @@ function cultureName(spec: SpecInfo): string {
  * The role file the agent spec delivers: its startup file marked `orientation: role` (OpenRig's own
  * marker), else one named role.md, else guidance/role.md.
  */
-async function roleSpot(agentDir: string): Promise<LayerSpot> {
+async function roleSpot(agentDir: string): Promise<DocSpot> {
   let rel = 'guidance/role.md';
   try {
     const doc = OpenRig.AgentSpecSchema.safeParse(
@@ -394,38 +394,37 @@ export interface LoadoutSeat {
   cwd: string | null;
 }
 
-export async function readLayers(
+export async function readSeatDocs(
   seat: LoadoutSeat,
   spec: SpecInfo | undefined,
   agentDir: string | undefined
-): Promise<LoadoutLayer[]> {
+): Promise<SeatDoc[]> {
   const cwd = seat.cwd;
   const specDir = spec ? dirname(spec.path) : null;
-  const inCwd = (name: string): LayerSpot[] =>
-    cwd ? [{ path: join(cwd, name), within: cwd }] : [];
-  const inSpec = (name: string): LayerSpot[] =>
+  const inCwd = (name: string): DocSpot[] => (cwd ? [{ path: join(cwd, name), within: cwd }] : []);
+  const inSpec = (name: string): DocSpot[] =>
     specDir && spec ? [{ path: join(specDir, name), within: spec.root }] : [];
   const noSpec = specDir ? [] : ['(no rig.yaml found for this rig in the configured spec folders)'];
   const noCwd = cwd ? [] : ['(the daemon reports no folder for this seat)'];
   const member = seat.id.split('@')[0] ?? seat.id;
 
   return [
-    await layer('culture', 'CULTURE.md', spec ? inSpec(cultureName(spec)) : [], noSpec),
-    await layer(
+    await doc('culture', 'CULTURE.md', spec ? inSpec(cultureName(spec)) : [], noSpec),
+    await doc(
       'role',
       'role.md',
       agentDir ? [await roleSpot(agentDir)] : [],
       agentDir ? [] : ['(the daemon reports no agent spec folder for this seat)']
     ),
-    await layer('claude-md', 'CLAUDE.md', inCwd('CLAUDE.md'), noCwd),
-    await layer('claude-local', 'CLAUDE.local.md', inCwd('CLAUDE.local.md'), noCwd),
-    await layer(
+    await doc('claude-md', 'CLAUDE.md', inCwd('CLAUDE.md'), noCwd),
+    await doc('claude-local', 'CLAUDE.local.md', inCwd('CLAUDE.local.md'), noCwd),
+    await doc(
       'recap',
       'RECAP.md',
       [...inCwd('RECAP.md'), ...inSpec('RECAP.md')],
       [...noCwd, ...noSpec]
     ),
-    await layer(
+    await doc(
       'learned',
       `LEARNED-${member}.md`,
       [...inSpec(`LEARNED-${member}.md`), ...inSpec('LEARNED.md'), ...inCwd('LEARNED.md')],
@@ -601,7 +600,7 @@ export class LoadoutReader {
           cwdIsGitRepo: where?.exists ? where.isRepo : null,
           cwdExists: where ? where.exists : null,
           skills: best ? classifySkills(best.listing.names, places) : [],
-          layers: await readLayers(
+          layers: await readSeatDocs(
             seat,
             seat.rig ? specs.get(seat.rig) : undefined,
             agentDirs.get(seat.id)
