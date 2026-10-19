@@ -1,9 +1,11 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
 import { listRigs } from '../../../fleet/views.js';
 import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { fleetMachine, snapshot } from '../../../test/fleetFixtures.js';
+import { relativeWidthLines } from '../../kit/index.js';
 import { v2Pages } from '../../registry.js';
 import type { V2Context } from '../../types.js';
 import { page } from './index.js';
@@ -85,16 +87,66 @@ describe('v2 Rig Map', () => {
     expect(screen.queryByTestId('g2-lines')).toBeNull();
   });
 
-  it('labels every arc with its count, from sender to receiver', () => {
+  it('draws ONE line per pair, labelled with both directions', () => {
     render(<Page ctx={ctxFor(fleet(), 'starter')} />);
     const labels = screen.getAllByTestId('rig-map-edge-label');
     const byEdge = Object.fromEntries(labels.map((l) => [l.dataset.edge, l.textContent])) as Record<
       string,
       string
     >;
-    expect(byEdge['roamy/dev-review@starter→roamy/dev-build@starter']).toBe('6');
-    expect(byEdge['roamy/dev-build@starter→roamy/dev-review@starter']).toBe('6');
-    for (const l of labels) expect(l.textContent).toMatch(/^\d+$/);
+    // dev-build and dev-review handed 6 each way: one line, "6 ⇄ 6", not two arcs
+    const pair = Object.entries(byEdge).filter(
+      ([k]) => k.includes('dev-build@starter') && k.includes('dev-review@starter')
+    );
+    expect(pair).toHaveLength(1);
+    expect(pair[0]![1]).toBe('6 ⇄ 6');
+    // no two lines for one pair of agents
+    const pairs = screen
+      .getAllByTestId('rig-map-edge')
+      .map((g) => (g.dataset.edge ?? '').split('→').sort().join('|'));
+    expect(new Set(pairs).size).toBe(pairs.length);
+    for (const l of labels) expect(l.textContent).toMatch(/^(\d+ ⇄ \d+|\d+ →|← \d+)$/);
+  });
+
+  it('every stroke is thin: three absolute steps, never over 3 px', () => {
+    render(<Page ctx={ctxFor(fleet(), 'starter')} />);
+    const widths = [...document.querySelectorAll('.rigmap-edges path.hl-line')].map((p) =>
+      Number(p.getAttribute('stroke-width'))
+    );
+    expect(widths.length).toBeGreaterThan(0);
+    for (const w of widths) expect([1.5, 2.2, 3]).toContain(w);
+    expect(Math.max(...widths)).toBeLessThanOrEqual(3);
+  });
+
+  it('lines start faint; hovering an agent lights only its own lines and dims the rest', () => {
+    render(<Page ctx={ctxFor(fleet(), 'starter')} />);
+    const states = () =>
+      Object.fromEntries(
+        screen.getAllByTestId('rig-map-edge').map((g) => [g.dataset.edge, g.dataset.state])
+      );
+    expect(Object.values(states()).every((st) => st === 'faint')).toBe(true);
+    const node = screen
+      .getAllByTestId('rig-map-node')
+      .find((n) => n.dataset.nodeKey === 'roamy/dev-review@starter')!;
+    fireEvent.pointerEnter(node);
+    const hovered = states();
+    for (const [k, st] of Object.entries(hovered)) {
+      expect(st, k).toBe(k.includes('dev-review@starter') ? 'lit' : 'dimmed');
+    }
+    expect(Object.values(hovered)).toContain('lit');
+    fireEvent.pointerLeave(node);
+    expect(Object.values(states()).every((st) => st === 'faint')).toBe(true);
+    // keyboard focus does the same
+    fireEvent.focus(node);
+    expect(Object.values(states())).toContain('lit');
+  });
+
+  it('uses the kit legend and no relative-width formula in its own files', () => {
+    render(<Page ctx={ctxFor(fleet(), 'starter')} />);
+    expect(screen.getByTestId('hl-legend')).toBeInTheDocument();
+    for (const f of ['RigMapV2.tsx', 'lines.ts', 'index.tsx']) {
+      expect(relativeWidthLines(readFileSync(`${__dirname}/${f}`, 'utf8')), f).toEqual([]);
+    }
   });
 
   it('a click on an agent opens the v2 Agent page', () => {

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import RigMap from '../../../components/RigMap.js';
+import RigMap from './RigMapV2.js';
 import RigPicker from '../../../components/RigPicker.js';
 import { followWork } from '../../../fleet/timeline.js';
 import { buildRigMap } from '../../../fleet/views.js';
