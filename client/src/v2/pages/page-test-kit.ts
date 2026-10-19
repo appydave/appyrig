@@ -47,6 +47,7 @@ export function pageCtx(machines: FleetMachine[], socket: FleetSocket, now: numb
     allMachines: machines,
     rigs: listRigs(machines),
     activeRig: null,
+    focusNonce: 0,
     chooseRig: vi.fn(),
     pickedRig: null,
     groupBy: 'rig',
@@ -63,6 +64,9 @@ export function pageCtx(machines: FleetMachine[], socket: FleetSocket, now: numb
     onOpenAgent: vi.fn(),
     agentKey: null,
     openAgentPage: vi.fn(),
+    openAgentPanel: vi.fn(),
+    closeAgentPanel: vi.fn(),
+    agentPanel: null,
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
   };

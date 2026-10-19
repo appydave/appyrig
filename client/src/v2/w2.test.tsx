@@ -84,6 +84,10 @@ function makeCtx(
     goTo: vi.fn(),
     agentKey: null,
     openAgentPage: vi.fn(),
+    openAgentPanel: vi.fn(),
+    closeAgentPanel: vi.fn(),
+    agentPanel: null,
+    focusNonce: 0,
     ...over,
   };
 }
