@@ -251,7 +251,10 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     : goneRig
       ? null
       : (rigs.find((r) => r.key === rigKey) ?? busiestRig(rigs));
+  /** Bumped on every rig pick (even a repeat), so a fleet page can re-focus the rig. */
+  const [focusNonce, setFocusNonce] = useState(0);
   const chooseRig = useCallback((key: string) => {
+    setFocusNonce((n) => n + 1);
     setRigKey(key);
     setRigPicked(true);
     setFollowLatest(false);
@@ -516,6 +519,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       allMachines,
       rigs,
       activeRig,
+      focusNonce,
       chooseRig,
       pickedRig: rigPicked && !followLatest ? activeRig : null,
       groupBy,
