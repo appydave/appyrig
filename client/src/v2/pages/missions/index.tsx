@@ -244,6 +244,8 @@ function Missions({ ctx }: V2PageProps) {
   // asks for "× all rigs" (remembered for that pick only: a new pick filters again).
   const pick = ctx.pickedRig;
   const [allFor, setAllFor] = useState<string | null>(null);
+  // Every pick in the drawer filters again, the same rig picked twice included (focusNonce).
+  useEffect(() => setAllFor(null), [ctx.focusNonce]);
   const scoped = !!pick && allFor !== pick.key;
   const inPick = (m: { machineId: string; rig: string }) =>
     !!pick && m.machineId === pick.machineId && m.rig === pick.name;

@@ -168,7 +168,11 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
     for (const def of v2Pages()) {
       const Page = def.component;
       const { container, unmount } = render(<Page ctx={makeCtx(fleet(), socket)} />);
-      if (container.querySelector('[data-testid="fake-control"]')) {
+      // A page whose mocks all sit behind the ⋯ MockMenu carries the mark on the menu instead.
+      const loose = [...container.querySelectorAll('[data-testid="fake-control"]')].filter(
+        (f) => !f.closest('.v2-mock-menu')
+      );
+      if (loose.length > 0) {
         expect(
           container.querySelectorAll('[data-mock-note]').length,
           `${def.key} has a page note`

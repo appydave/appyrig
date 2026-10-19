@@ -48,7 +48,11 @@ function FlowV2({ ctx }: V2PageProps) {
         now={ctx.now}
         socket={ctx.getSocket()}
         keys={ctx.keys}
-        onOpenAgent={ctx.openAgentPage}
+        // Navigation model: an agent click opens the Agent panel on top of this page; it never
+        // leaves the page (the panel's "Open full agent page" is the way there).
+        onOpenAgent={(key) =>
+          ctx.openAgentPanel({ machineId: key.slice(0, key.indexOf('/')), seatKey: key })
+        }
       />
     </main>
   );

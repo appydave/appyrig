@@ -627,14 +627,18 @@ describe('Handoff Flow v2', () => {
     ]);
   });
 
-  it('a one-agent box opens the Agent page', () => {
+  it('a one-agent box opens the Agent panel on top of the Flow (never the Agent page)', () => {
     const { socket } = verbSocket();
     const ctx = makeCtx(fleet(), socket);
     render(<Flow ctx={ctx} />);
     const stages = screen.getAllByTestId('flow-stage');
     const build = stages.find((s) => s.dataset.stage === 'build')!;
     fireEvent.click(build);
-    expect(ctx.openAgentPage).toHaveBeenCalledWith('roamy/dev-build@starter');
+    expect(ctx.openAgentPanel).toHaveBeenCalledWith({
+      machineId: 'roamy',
+      seatKey: 'roamy/dev-build@starter',
+    });
+    expect(ctx.openAgentPage).not.toHaveBeenCalled();
   });
 });
 
