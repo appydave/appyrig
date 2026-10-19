@@ -42,10 +42,6 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     const mh = await page.getByTestId('v2w-machine-head').allInnerTexts();
     expect(mh.length).toBeGreaterThan(1);
     expect(mh[0]).toMatch(/^\S+ · \d+ seats/);
-    const tops = await page
-      .getByTestId('v2w-group')
-      .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
-    expect(new Set(tops).size, 'every group has its own row').toBe(tops.length);
 
     // dense: cards sit above the fold. The app frame above the page belongs to the shell lane,
     // so count against a page that starts where the shell puts it (y = 140).
@@ -57,8 +53,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     console.log(
       `wall: ${n} cards, ${above} above the fold with the page at y=140 (page top now y=${Math.round(top)})`
     );
-    // one group per row plus a machine heading: a row holds only its own team
-    expect(above).toBeGreaterThanOrEqual(4);
+    expect(above).toBeGreaterThanOrEqual(10);
 
     // triage and the notes
     await expect(page.getByTestId('v2-hide-stopped')).toBeVisible();

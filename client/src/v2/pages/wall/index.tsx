@@ -515,11 +515,15 @@ function WallV2({ ctx }: V2PageProps) {
                       ))}
                     </span>
                   </button>
-                  <p className="v2w-summary" data-testid="v2w-summary">
-                    {plain
-                      ? 'plain tmux sessions, not part of an OpenRig rig'
-                      : (g.rig?.summary ?? '\u00a0')}
-                  </p>
+                  {(plain || g.rig?.summary) && (
+                    <p
+                      className="v2w-summary"
+                      data-testid="v2w-summary"
+                      title={plain ? undefined : (g.rig?.summary ?? undefined)}
+                    >
+                      {plain ? 'plain tmux sessions, not part of an OpenRig rig' : g.rig?.summary}
+                    </p>
+                  )}
                   {open && (
                     <div className="v2w-grid">
                       {g.tiles.map((t) => (

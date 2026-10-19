@@ -3,7 +3,7 @@
    dashed edge) for stopped and unknown ones. */
 .wcard {
   --wc-w: 232px;
-  --wc-h: 172px;
+  --wc-h: 134px;
   --pip: var(--ar-term-dim);
   --wc-cwd: #7fd6d6;
   --wc-branch: #d9a0d9;

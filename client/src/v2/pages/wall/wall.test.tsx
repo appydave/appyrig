@@ -49,10 +49,11 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
     }
   });
 
-  it('each group is on its own row: full width, groups stacked (no two share a row)', () => {
+  it('groups size to their cards and flow side by side; only a machine heading forces a new row', () => {
     const css = readFileSync(path.resolve(__dirname, '../../w2.css'), 'utf8');
-    expect(/\.v2w-group\s*\{[^}]*\}/.exec(css)![0]).toMatch(/width:\s*100%/);
-    expect(/\.v2w-groups\s*\{[^}]*\}/.exec(css)![0]).toMatch(/display:\s*block/);
+    expect(/\.v2w-group\s*\{[^}]*\}/.exec(css)![0]).toMatch(/width:\s*fit-content/);
+    expect(/\.v2w-machine\s*\{[^}]*\}/.exec(css)![0]).toMatch(/flex-wrap:\s*wrap/);
+    expect(/\.v2w-machine-head\s*\{[^}]*\}/.exec(css)![0]).toMatch(/flex:\s*0 0 100%/);
   });
 
   it('defaults to machine order with a machine heading; Busiest first is one list and sets order=busy', () => {

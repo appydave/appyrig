@@ -45,13 +45,15 @@
   color: var(--ar-error-ink);
   border-color: var(--ar-error);
 }
-/* Each group is a visible panel on its own row: a tinted band with an edge, a strong heading, one
-   line of description, then its cards. Stopped and unknown groups are frosted (pale, dashed). */
+/* Each group is a visible container that sizes to its cards and flows beside the next: a tinted
+   panel with an edge, a strong heading, one line of description, then its cards. Stopped and unknown groups are frosted (pale, dashed). */
 .v2w-group {
   box-sizing: border-box;
-  width: 100%;
-  margin: 0 0 14px;
-  padding: 8px 12px 12px;
+  /* sizes to its own cards and flows beside the next group, wrapping like an inline block */
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 8px 8px;
   background: color-mix(in srgb, var(--ar-surface-raised) 70%, var(--ar-canvas));
   border: 1px solid var(--ar-line);
   border-left: 5px solid var(--ar-ink-muted);
@@ -83,7 +85,7 @@
 .v2w-group-head b {
   font-family: var(--ar-font-display);
   font-weight: 400;
-  font-size: 22px;
+  font-size: 18px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1.1;
@@ -93,9 +95,16 @@
   outline: 2px solid var(--ar-cta);
   outline-offset: 2px;
 }
+.v2w-machine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
 .v2w-machine-head {
-  margin: 18px 0 8px;
-  padding-bottom: 4px;
+  flex: 0 0 100%;
+  margin: 8px 0 0;
+  padding-bottom: 2px;
   border-bottom: 2px solid var(--ar-ink);
   font-family: var(--ar-font-term);
   font-size: 13px;
@@ -118,6 +127,9 @@
   margin: 2px 0;
   color: var(--ar-ink-muted);
   font-size: 12px;
+  /* contributes no width of its own: the container is as wide as its cards, the line clips to it */
+  width: 0;
+  min-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -126,8 +138,8 @@
 .v2w-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 5px;
   align-items: flex-start;
 }
 /* The ⋯ sits on the dark card, so it is light-on-dark; the actions pop over the card, never in it. */
