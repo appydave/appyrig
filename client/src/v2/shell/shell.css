@@ -437,3 +437,40 @@ body:has(.v2-nav) header.app-header {
 .app-v2[data-legend='off'] .hl-legend {
   display: none;
 }
+
+/* Explainer paragraphs a page marks with .v2-explainer sit behind Legend · L, like .hl-legend. */
+.app-v2[data-legend='off'] .v2-explainer {
+  display: none;
+}
+
+/* Narrow windows: the bar wraps instead of clipping. Groups stay beside the wordmark, the active
+   group's pages drop to their own row, and the helpers keep the first row. */
+@media (max-width: 1300px) {
+  .app-v2 .app-header {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    padding-bottom: 2px;
+  }
+  .app-v2 .v2-nav {
+    display: contents;
+  }
+  .app-v2 .v2-nav-groups {
+    order: 1;
+  }
+  .app-v2 .v2-controls,
+  .app-v2 .app-header .explain-anchor,
+  .app-v2 .app-header > .pill-btn,
+  .app-v2 .v2-more {
+    order: 2;
+  }
+  .app-v2 .v2-controls {
+    margin-left: auto;
+  }
+  .app-v2 .v2-nav-pages {
+    order: 3;
+    flex-basis: 100%;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+}

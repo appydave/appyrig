@@ -846,18 +846,9 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
               />
             );
             return v2on ? (
-              <StripShell
-                summary={seatsSummary}
-                extra={
-                  v2.page === 'wall' ? (
-                    <span className="controls" role="group" aria-label="Group tiles by">
-                      {groupButtons}
-                    </span>
-                  ) : undefined
-                }
-              >
-                {strip}
-              </StripShell>
+              // TODO(wall lane): the Wall groups by rig now, so v2 draws no Group switch. If the Wall
+              // page still needs a team/machine toggle it reads ctx.groupBy and must draw its own.
+              <StripShell summary={seatsSummary}>{strip}</StripShell>
             ) : (
               strip
             );
