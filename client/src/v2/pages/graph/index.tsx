@@ -5,6 +5,7 @@ import {
   HandoffLegend,
   LeftOpenBadgeSvg,
   MockNote,
+  PageHeader,
   WaitingBadgeSvg,
   arrowHeads,
   labelClass,
@@ -416,42 +417,52 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
             </button>
           ))}
         </span>
-        <span className="g2-mock-note" data-testid="g2-mock-note">
-          <MockNote>Rig controls on this page are mocks — nothing is sent</MockNote>
-        </span>
       </div>
-      <p className="view-caption g2-caption" data-testid="g2-caption">
-        <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
-        active · {graph.machines.length} machines ·{' '}
-        <b>
-          {pairs.length} line{pairs.length === 1 ? '' : 's'} between rigs
-        </b>{' '}
-        ({linesTotal} handoffs)
-        {toHidden.length > 0 && (
-          <span data-testid="g2-hidden-lines">
-            {' '}
-            · {toHidden.length} to hidden stopped rig{toHidden.length === 1 ? '' : 's'}
+      <PageHeader
+        title="Graph"
+        facts={[
+          <span key="c" data-testid="g2-caption">
+            <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
+            active · {graph.machines.length} machines ·{' '}
+            <b>
+              {pairs.length} line{pairs.length === 1 ? '' : 's'} between rigs
+            </b>{' '}
+            ({linesTotal} handoffs)
+            {toHidden.length > 0 && (
+              <span data-testid="g2-hidden-lines">
+                {' '}
+                · {toHidden.length} to hidden stopped rig{toHidden.length === 1 ? '' : 's'}
+              </span>
+            )}
+            {graph.unplaced.count > 0 && (
+              <span
+                className="g2-unplaced"
+                data-testid="g2-unplaced"
+                tabIndex={0}
+                title={unplacedHint}
+                aria-label={unplacedHint}
+              >
+                {' '}
+                · +{graph.unplaced.count} not drawn ⓘ
+              </span>
+            )}
+          </span>,
+          ...(pairs.length === 0
+            ? [
+                <span key="n" data-testid="g2-no-lines">
+                  No handoffs between the rigs shown
+                  {toHidden.length > 0 ? ' (some go to hidden stopped rigs)' : ''}.
+                </span>,
+              ]
+            : []),
+        ]}
+        mocks={
+          <span data-testid="g2-mock-note">
+            <MockNote>Rig controls on this page are mocks — nothing is sent</MockNote>
           </span>
-        )}
-        {graph.unplaced.count > 0 && (
-          <span
-            className="g2-unplaced"
-            data-testid="g2-unplaced"
-            tabIndex={0}
-            title={unplacedHint}
-            aria-label={unplacedHint}
-          >
-            {' '}
-            · +{graph.unplaced.count} not drawn ⓘ
-          </span>
-        )}
-      </p>
-      {pairs.length === 0 ? (
-        <p className="g2-legend" data-testid="g2-no-lines">
-          No handoffs between the rigs shown
-          {toHidden.length > 0 ? ' (some go to hidden stopped rigs)' : ''}.
-        </p>
-      ) : (
+        }
+      />
+      {pairs.length > 0 && (
         <div className="g2-legend" data-testid="g2-legend">
           <HandoffLegend compact />
         </div>

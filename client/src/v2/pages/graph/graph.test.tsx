@@ -498,12 +498,12 @@ describe('Graph page', () => {
     expect(spy.sent).toEqual([]);
   });
 
-  it('one mock note on the page; a box’s own badge sits with its ⋯ button and shows only on hover, focus or open', () => {
+  it('one mock note, behind the page’s ⋯ menu; a box’s own badge sits with its ⋯ button and shows only on hover, focus or open', () => {
     render(<Graph ctx={ctxFor(crossFleet())} />);
     expect(screen.getByTestId('g2-mock-note')).toHaveTextContent('controls on this page are mocks');
     expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
     for (const m of screen.getAllByTestId('mock-mark'))
-      expect(m.closest('.g2-menu-wrap')).not.toBeNull();
+      expect(m.closest('.g2-menu-wrap, .v2-mock-menu')).not.toBeNull();
     expect(css()).toMatch(/\.g2-menu-wrap \.v2-mock-mark \{\s*display: none;/);
     expect(css()).toMatch(/\.g2-menu-wrap:hover \.v2-mock-mark/);
     expect(css()).toMatch(/\.g2-menu-wrap\[data-open\] \.v2-mock-mark/);
