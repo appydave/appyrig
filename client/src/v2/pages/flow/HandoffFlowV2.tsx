@@ -11,7 +11,6 @@ import {
   replaySteps,
   rigQueue,
   stageOf,
-  type FlowEdge,
 } from '../../../fleet/views.js';
 import ReplayConsoles from '../../../components/ReplayConsoles.js';
 import HandoffPanel, {
@@ -22,6 +21,22 @@ import FollowWork from '../../../components/FollowWork.js';
 import { entryWords, medianSentence } from '../../../components/HandoffFlow.js';
 import { followWork } from '../../../fleet/timeline.js';
 import { isShortcutBlocked, isSlider } from '../../../lib/keys.js';
+import {
+  HandoffLegend,
+  LINE_WIDTH,
+  LeftOpenBadgeSvg,
+  WaitingBadgeSvg,
+  arrowHeads,
+  labelClass,
+  lineClass,
+  lineFocusId,
+  lineWidth,
+  mergePairs,
+  pairLabel,
+  useLineFocus,
+} from '../../kit/index.js';
+import { flowPairKey, flowPairs, pairPath, type FlowPair } from './flowLines.js';
+import './flow.css';
 
 interface Props {
   machine: FleetMachine | null;
@@ -58,53 +73,6 @@ function layoutFor(ids: string[]): Layout {
     boxW: Math.min(170, slot - 40),
   };
 }
-
-/** Path for an edge between boxes: straight for forward neighbours, arcs otherwise. */
-function edgePath(
-  e: FlowEdge,
-  L: Layout
-): {
-  d: string;
-  lx: number;
-  ly: number;
-  kind: 'forward' | 'report' | 'rework';
-} {
-  const a = L.x(e.from);
-  const b = L.x(e.to);
-  const gap = Math.abs(L.idx(e.to) - L.idx(e.from));
-  if (!e.rework && b > a && gap === 1) {
-    const y = ROW_Y;
-    return {
-      d: `M${a + L.boxW / 2},${y} L${b - L.boxW / 2},${y}`,
-      lx: (a + b) / 2,
-      ly: y - 10,
-      kind: 'forward',
-    };
-  }
-  if (e.rework) {
-    // Below the row, amber: anything sent back to an earlier stage (rework, verdicts, answers).
-    const y0 = ROW_Y + BOX_H / 2;
-    const dip = 70 + gap * 28;
-    return {
-      d: `M${a},${y0} C${a},${y0 + dip} ${b},${y0 + dip} ${b},${y0}`,
-      lx: (a + b) / 2,
-      ly: y0 + dip * 0.75 + 4,
-      kind: 'rework',
-    };
-  }
-  // Above the row: briefs that skip a stage, and reports going back.
-  const y0 = ROW_Y - BOX_H / 2;
-  // Going back flies higher than going out, so A→B and B→A never share a line.
-  const rise = (b < a ? 78 : 40) + gap * 18;
-  return {
-    d: `M${a},${y0} C${a},${y0 - rise} ${b},${y0 - rise} ${b},${y0}`,
-    lx: (a + b) / 2,
-    ly: y0 - rise * 0.75 - 4,
-    kind: b < a ? 'report' : 'forward',
-  };
-}
-
-const EXPLAIN_EDGE = { forward: 'flow-forward', report: 'flow-report', rework: 'rework' } as const;
 
 export type Lens = 'traffic' | 'structure';
 
@@ -203,6 +171,8 @@ export default function HandoffFlowV2({
     itemId: string | null;
     stage?: string | null;
   } | null>(null);
+  // Lines are faint; hovering or focusing a box or a line lights its own (kit: useLineFocus).
+  const lineFocus = useLineFocus();
   /** C35: which picture of the rig to draw: who handed what (traffic), or who works with whom (structure). */
   const [lens, setLens] = useState<Lens>('traffic');
   const [card, setCard] = useState<HoverCard | null>(null);
@@ -371,7 +341,7 @@ export default function HandoffFlowV2({
   }
   const t = at ?? range.end;
   const flow = buildFlow(machine, rig, t, now)!;
-  const max = Math.max(1, ...flow.edges.map((e) => e.count));
+  const pairs = flowPairs(flow.edges, t);
   const L = layoutFor(flow.stages.map((s) => s.stage));
   const labelOf = (id: string) => flow.stages.find((s) => s.stage === id)?.label ?? id;
   const staleStages = flow.stages.filter((s) => s.stale > 0);
@@ -384,7 +354,11 @@ export default function HandoffFlowV2({
   // During a replay, narrate the latest chapter reached.
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
   const stepItem = stepIdx >= 0 ? steps[stepIdx]! : null;
-  const edgeKey = (e: FlowEdge) => `${e.from}→${e.to}`;
+  const pairOf = (key: string | null) => (key ? pairs.find((p) => p.key === key) : undefined);
+  const pairTitle = (p: FlowPair) =>
+    `${labelOf(p.a)} ⇄ ${labelOf(p.b)} · ${pairLabel(p)} · ${p.total} handoff${p.total === 1 ? '' : 's'}`;
+  const pairItems = (p: FlowPair) =>
+    p.edges.flatMap((e) => e.items).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
   const stageSelection = (stage: string, itemId: string | null): PanelSelection | null => {
     const lines = flow.edges.filter((e) => e.from === stage || e.to === stage);
     const seen = new Set<string>();
@@ -412,21 +386,17 @@ export default function HandoffFlowV2({
   const selection: PanelSelection | null = (() => {
     if (!sel) return null;
     if (sel.stage) return stageSelection(sel.stage, sel.itemId);
-    const edge =
-      (sel.edge && flow.edges.find((e) => edgeKey(e) === sel.edge)) ||
-      (sel.itemId && flow.edges.find((e) => e.items.some((q) => q.id === sel.itemId))) ||
+    const pair =
+      pairOf(sel.edge) ||
+      (sel.itemId && pairs.find((p) => pairItems(p).some((q) => q.id === sel.itemId))) ||
       null;
-    if (!edge || !edge.items.length) return null;
+    const items = pair ? pairItems(pair) : [];
+    if (!pair || !items.length) return null;
     const itemId =
-      sel.itemId && edge.items.some((q) => q.id === sel.itemId)
+      sel.itemId && items.some((q) => q.id === sel.itemId)
         ? sel.itemId
-        : edge.items[edge.items.length - 1]!.id;
-    return {
-      edge: edgeKey(edge),
-      title: `${labelOf(edge.from)} → ${labelOf(edge.to)} · ${edge.count} handoff${edge.count === 1 ? '' : 's'}`,
-      items: edge.items,
-      itemId,
-    };
+        : items[items.length - 1]!.id;
+    return { edge: pair.key, title: pairTitle(pair), items, itemId };
   })();
   // B1: in "Follow pointer" mode the panel follows the pointer (it has a fixed size, so nothing
   // moves); in "On click" mode the pointer only raises a floating card.
@@ -441,13 +411,17 @@ export default function HandoffFlowV2({
         ? { x: ev.clientX + 14, y: ev.clientY + 14, title, lines }
         : null
     );
-  const edgeCard = (e: FlowEdge, ev: { clientX: number; clientY: number } | null) => {
-    const last = e.items[e.items.length - 1];
-    cardAt(
-      ev,
-      `${labelOf(e.from)} → ${labelOf(e.to)} · ${e.count} handoff${e.count === 1 ? '' : 's'}`,
-      [...(last ? [`latest: ${last.summary ?? last.id}`] : []), 'Click to show it in the panel.']
-    );
+  const edgeCard = (p: FlowPair, ev: { clientX: number; clientY: number } | null) => {
+    const items = pairItems(p);
+    const last = items[items.length - 1];
+    cardAt(ev, pairTitle(p), [
+      `${labelOf(p.a)} → ${labelOf(p.b)}: ${p.aToB} · ${labelOf(p.b)} → ${labelOf(p.a)}: ${p.bToA}`,
+      ...(p.waiting ? [`${p.waiting} still waiting`] : []),
+      ...(p.leftOpen ? [`${p.leftOpen} left open over 2 h`] : []),
+      ...(p.back ? [`${p.back} sent back to an earlier stage`] : []),
+      ...(last ? [`latest: ${last.summary ?? last.id}`] : []),
+      'Click to show it in the panel.',
+    ]);
   };
   const peek = (
     edge: string,
@@ -456,8 +430,8 @@ export default function HandoffFlowV2({
   ) => {
     if (mode === 'hover' && !pinned) setSel({ edge, itemId });
     else {
-      const e = flow.edges.find((x) => edgeKey(x) === edge);
-      if (e) edgeCard(e, ev);
+      const p = pairOf(edge);
+      if (p) edgeCard(p, ev);
     }
   };
   const peekStage = (stage: string, ev: { clientX: number; clientY: number } | null = null) => {
@@ -667,95 +641,126 @@ export default function HandoffFlowV2({
               viewBox="0 0 10 10"
               refX="9"
               refY="5"
-              markerWidth="11"
-              markerHeight="11"
+              markerWidth="9"
+              markerHeight="9"
               markerUnits="userSpaceOnUse"
               orient="auto"
             >
-              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead" />
+              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead v2-arrowhead" />
             </marker>
             <marker
-              id="hf-arrow-amber"
+              id="hf-arrow-start"
               viewBox="0 0 10 10"
               refX="9"
               refY="5"
-              markerWidth="11"
-              markerHeight="11"
+              markerWidth="9"
+              markerHeight="9"
               markerUnits="userSpaceOnUse"
-              orient="auto"
+              orient="auto-start-reverse"
             >
-              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead amber" />
+              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead v2-arrowhead" />
             </marker>
           </defs>
           {lens === 'traffic' &&
-            flow.edges.map((e, i) => {
-              const p = edgePath(e, L);
+            pairs.map((p, i) => {
+              const g = pairPath(p, L, ROW_Y, BOX_H);
               const id = `hf-edge-${i}`;
+              const state = lineFocus.stateOf(p.a, p.b);
+              const heads = arrowHeads(p);
+              // The path runs left box → right box; put each arrowhead at the box it points to.
+              const atEnd = g.aLeft ? heads.atB : heads.atA;
+              const atStart = g.aLeft ? heads.atA : heads.atB;
+              const label = pairLabel(p);
+              const w = 16 + label.length * 8.5;
+              const inFlight = p.edges.flatMap((e) => e.inFlight);
+              const lineFocusProps = lineFocus.focusProps(lineFocusId(p.a, p.b));
               return (
                 <g
-                  key={`${e.from}→${e.to}`}
+                  key={p.key}
                   data-testid="flow-edge"
-                  data-edge={edgeKey(e)}
-                  data-kind={p.kind}
-                  data-in-flight={e.inFlight.length}
-                  data-selected={selection?.edge === edgeKey(e) || undefined}
+                  data-edge={p.key}
+                  data-pair={`${p.a}|${p.b}`}
+                  data-kind={p.back ? 'rework' : 'forward'}
+                  data-state={state}
+                  data-in-flight={inFlight.length}
+                  data-selected={selection?.edge === p.key || undefined}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${labelOf(e.from)} to ${labelOf(e.to)}: ${e.count} handoff${e.count === 1 ? '' : 's'}. Enter pins the details.`}
-                  onPointerEnter={(ev) => peek(edgeKey(e), null, ev)}
-                  onPointerMove={(ev) => mode !== 'hover' && edgeCard(e, ev)}
-                  onPointerLeave={unpeek}
-                  onFocus={() => peek(edgeKey(e))}
-                  onBlur={unpeek}
-                  onClick={() => pin(edgeKey(e))}
+                  aria-label={`${labelOf(p.a)} and ${labelOf(p.b)}: ${p.aToB} one way, ${p.bToA} the other. Enter pins the details.`}
+                  onPointerEnter={(ev) => {
+                    lineFocusProps.onPointerEnter();
+                    peek(p.key, null, ev);
+                  }}
+                  onPointerMove={(ev) => mode !== 'hover' && edgeCard(p, ev)}
+                  onPointerLeave={() => {
+                    lineFocusProps.onPointerLeave();
+                    unpeek();
+                  }}
+                  onFocus={() => {
+                    lineFocusProps.onFocus();
+                    peek(p.key);
+                  }}
+                  onBlur={() => {
+                    lineFocusProps.onBlur();
+                    unpeek();
+                  }}
+                  onClick={() => pin(p.key)}
                   onKeyDown={(ev) => {
                     if (ev.key === 'Enter' || ev.key === ' ') {
                       ev.preventDefault();
-                      pin(edgeKey(e));
+                      pin(p.key);
                     }
                   }}
-                  data-explain={EXPLAIN_EDGE[p.kind]}
-                  data-explain-ctx={`${labelOf(e.from)} → ${labelOf(e.to)} · ${e.count} handoff${e.count === 1 ? '' : 's'}`}
+                  data-explain="handoff"
+                  data-explain-ctx={pairTitle(p)}
                 >
                   <path
                     id={id}
-                    d={p.d}
-                    className={`flow-edge ${p.kind}`}
-                    strokeWidth={1.5 + (e.count / max) * 6}
-                    markerEnd={p.kind === 'rework' ? 'url(#hf-arrow-amber)' : 'url(#hf-arrow)'}
+                    d={g.d}
+                    className={lineClass(state)}
+                    strokeWidth={lineWidth(p.total)}
+                    markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
+                    markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
                   />
                   {/* A wide invisible stroke so the line is easy to hover. */}
-                  <path d={p.d} className="hit" />
-                  {(() => {
-                    const label = `${e.count}${p.kind === 'rework' ? ' back' : ''}`;
-                    const w = 18 + label.length * 11;
-                    return (
-                      <g data-testid="flow-count-pill" data-count={e.count}>
-                        <rect
-                          x={p.lx - w / 2}
-                          y={p.ly - 17}
-                          width={w}
-                          height={24}
-                          rx={12}
-                          className={`v2-count-pill ${p.kind}`}
-                        />
-                        <text x={p.lx} y={p.ly} className={`flow-count v2-count ${p.kind}`}>
-                          {label}
-                        </text>
-                      </g>
-                    );
-                  })()}
-                  {e.inFlight.slice(0, 6).map((q, k) => (
+                  <path d={g.d} className="hit" />
+                  <g
+                    data-testid="flow-count-pill"
+                    data-count={p.total}
+                    data-label={label}
+                    className={labelClass(state)}
+                  >
+                    <rect
+                      x={g.lx - w / 2}
+                      y={g.ly - 11}
+                      width={w}
+                      height={18}
+                      rx={9}
+                      className="v2-pair-pill"
+                    />
+                    <text x={g.lx} y={g.ly} className="v2-pair-count">
+                      {label}
+                    </text>
+                  </g>
+                  <g className={labelClass(state)}>
+                    <WaitingBadgeSvg x={g.lx + w / 2 + 10} y={g.ly - 2} n={p.waiting} />
+                    <LeftOpenBadgeSvg
+                      x={g.lx + w / 2 + (p.waiting ? 30 : 10)}
+                      y={g.ly - 2}
+                      n={p.leftOpen}
+                    />
+                  </g>
+                  {inFlight.slice(0, 6).map((q, k) => (
                     <circle
                       key={q.id}
-                      r={6}
-                      className={`pulse ${p.kind}`}
+                      r={4}
+                      className="pulse v2-pulse"
                       data-testid="flow-pulse"
                       data-item={q.id}
-                      onPointerEnter={(ev) => peek(edgeKey(e), q.id, ev)}
+                      onPointerEnter={(ev) => peek(p.key, q.id, ev)}
                       onClick={(ev) => {
                         ev.stopPropagation();
-                        pin(edgeKey(e), q.id);
+                        pin(p.key, q.id);
                       }}
                     >
                       <title>{q.summary ?? q.id}</title>
@@ -772,33 +777,48 @@ export default function HandoffFlowV2({
               );
             })}
           {lens === 'structure' &&
-            structure.lines.map((l) => {
-              const p = edgePath(
-                { from: l.from, to: l.to, count: 0, inFlight: [], items: [], rework: false },
-                L
+            mergePairs(
+              structure.lines.map((l) => ({ from: l.from, to: l.to, count: 1, planned: true }))
+            ).map((p) => {
+              const g = pairPath(p, L, ROW_Y, BOX_H);
+              const state = lineFocus.stateOf(p.a, p.b);
+              const both = structure.lines.filter(
+                (l) => flowPairKey(l.from, l.to) === flowPairKey(p.a, p.b)
               );
-              const text = l.kinds.join(' · ');
+              const text = [...new Set(both.flatMap((l) => l.kinds))].join(' · ');
+              const heads = arrowHeads(p);
+              const atEnd = g.aLeft ? heads.atB : heads.atA;
+              const atStart = g.aLeft ? heads.atA : heads.atB;
               const w = 16 + text.length * 7.5;
               return (
                 <g
-                  key={`${l.from}→${l.to}`}
+                  key={flowPairKey(p.a, p.b)}
                   data-testid="flow-structure-line"
-                  data-edge={`${l.from}→${l.to}`}
+                  data-edge={`${p.a}|${p.b}`}
                   data-kind-text={text}
+                  data-state={state}
                 >
-                  <title>{`${labelOf(l.from)} → ${labelOf(l.to)}: ${text}`}</title>
-                  <path d={p.d} className="flow-edge structure" markerEnd="url(#hf-arrow)" />
-                  <rect
-                    x={p.lx - w / 2}
-                    y={p.ly - 15}
-                    width={w}
-                    height={22}
-                    rx={11}
-                    className="v2-kind-pill"
+                  <title>{`${labelOf(p.a)} · ${labelOf(p.b)}: ${text}`}</title>
+                  <path
+                    d={g.d}
+                    className={lineClass(state, structure.source === 'planned')}
+                    strokeWidth={LINE_WIDTH.thin}
+                    markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
+                    markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
                   />
-                  <text x={p.lx} y={p.ly} className="v2-kind">
-                    {text}
-                  </text>
+                  <g className={labelClass(state)}>
+                    <rect
+                      x={g.lx - w / 2}
+                      y={g.ly - 15}
+                      width={w}
+                      height={22}
+                      rx={11}
+                      className="v2-kind-pill"
+                    />
+                    <text x={g.lx} y={g.ly} className="v2-kind">
+                      {text}
+                    </text>
+                  </g>
                 </g>
               );
             })}
@@ -818,11 +838,24 @@ export default function HandoffFlowV2({
                     ? `${s.label}: Enter opens this agent`
                     : `${s.label}: Enter lists its handoffs`
                 }
-                onPointerEnter={(ev) => peekStage(s.stage, ev)}
+                onPointerEnter={(ev) => {
+                  lineFocus.setFocus(s.stage);
+                  peekStage(s.stage, ev);
+                }}
                 onPointerMove={(ev) => mode !== 'hover' && peekStage(s.stage, ev)}
-                onPointerLeave={unpeek}
-                onFocus={() => peekStage(s.stage)}
-                onBlur={unpeek}
+                onPointerLeave={() => {
+                  lineFocus.setFocus(null);
+                  unpeek();
+                }}
+                onFocus={() => {
+                  lineFocus.setFocus(s.stage);
+                  peekStage(s.stage);
+                }}
+                onBlur={() => {
+                  lineFocus.setFocus(null);
+                  unpeek();
+                }}
+                data-focus={lineFocus.focus === s.stage || undefined}
                 onClick={() => pinStage(s.stage)}
                 onKeyDown={(ev) => {
                   if (ev.key === 'Enter' || ev.key === ' ') {
@@ -953,7 +986,7 @@ export default function HandoffFlowV2({
             keys={keys}
             onLine={(dir) => {
               // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
-              const order = flow.edges.map(edgeKey);
+              const order = pairs.map((p) => p.key);
               if (!order.length) return;
               const i = selection?.edge ? order.indexOf(selection.edge) : dir === 1 ? -1 : 0;
               pin(order[(i + dir + order.length) % order.length]!);
@@ -977,6 +1010,7 @@ export default function HandoffFlowV2({
         )}
       </div>
 
+      <HandoffLegend compact />
       {flow.mode === 'roles' && (
         <ul className="flow-legend" aria-label="Seats per stage">
           {flow.stages.map((s) => (

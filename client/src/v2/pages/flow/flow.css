@@ -1,0 +1,35 @@
+/* Handoff Flow v2 on the kit's quiet line style (brief 2026-10-19, handoff lines). Light only. */
+
+/* The count label on a pair: small, light, mono ("14 ⇄ 8"). */
+.v2-flow .v2-pair-pill {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+}
+.v2-flow .v2-pair-count {
+  fill: var(--ar-ink);
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.v2-flow .v2-arrowhead {
+  fill: var(--ar-ink);
+  fill-opacity: 0.6;
+}
+/* A picked line (the panel shows it) stays lit. */
+.v2-flow g[data-testid='flow-edge'][data-selected] .hl-line,
+.v2-flow g[data-testid='flow-edge']:focus-visible .hl-line {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 1;
+}
+.v2-flow .v2-pulse {
+  fill: var(--ar-sequence);
+}
+/* Left open is a badge on the box ("N open · 3h"), never a dashed outline. */
+.v2-flow .flow-box.stale {
+  stroke-dasharray: none;
+}
+.v2-flow .hl-legend {
+  margin: 4px 0 8px;
+}
