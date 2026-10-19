@@ -6,7 +6,8 @@ import { chooseRigInDrawer, watchErrors } from './support/fleet';
 // helper is still reachable.
 
 const FROZEN = '/?frozen=busy-2026-10-18&v=2';
-const FLEET_PAGES = ['wall', 'graph', 'map', 'run'] as const;
+// the Rig Map is no longer in the nav (graph2): it is an alias that opens the Graph
+const FLEET_PAGES = ['wall', 'graph', 'run'] as const;
 const FLOW = 'flow';
 /** The brief's line: content starts at y <= 140 on Wall, Graph, Rig Map, Flow and Run board. */
 const MAX_CONTENT_Y = 140;
