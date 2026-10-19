@@ -17,6 +17,7 @@ import {
   useLineFocus,
 } from '../../kit/index.js';
 import { mapPairs, type MapPair } from '../rig-map/lines.js';
+import type { GraphRig } from './model.js';
 import { TerminalCard, tailLine } from '../../kit/index.js';
 import { findTile } from '../../seats.js';
 
@@ -25,6 +26,8 @@ export type InsideLevel = 'pods' | 'cards';
 
 interface Props {
   map: RigMap;
+  /** The box's own numbers, so the open rig has ONE header line (not the box meta and a status). */
+  rig: GraphRig;
   level: InsideLevel;
   socket: FleetSocket;
   /** Every machine, for each agent's terminal tail. */
@@ -49,6 +52,8 @@ interface Rect {
 }
 
 interface Arc {
+  /** Runs along the gap above its rows and down the left channel, never over a card. */
+  elbow?: boolean;
   pair: MapPair;
   d: string;
   lx: number;
@@ -66,6 +71,7 @@ const LIFT_BASE = 14;
  */
 export default function RigInside({
   map,
+  rig,
   level,
 
   socket,
@@ -151,14 +157,19 @@ export default function RigInside({
         const r = n.getBoundingClientRect();
         return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       };
-      // Stack arcs by span: the shortest lowest, an arc takes the first level where it overlaps none.
-      const withBox = pairs
+      const placedPairs = pairs
         .map((p) => ({ p, a: rect(p.a), b: rect(p.b) }))
-        .filter((x): x is { p: MapPair; a: Rect; b: Rect } => !!x.a && !!x.b)
+        .filter((x): x is { p: MapPair; a: Rect; b: Rect } => !!x.a && !!x.b);
+      // Same row: arcs over the cards, stacked by span (the shortest lowest, first free level).
+      const sameRow = placedPairs
+        .filter((x) => Math.abs(x.a.y - x.b.y) < 20)
         .sort((x, y) => Math.abs(x.a.x - x.b.x) - Math.abs(y.a.x - y.b.x));
+      // Another row: out of the card's top, along the gap above its row, down a channel at the left
+      // of every pod, along the gap above the other row and into the other card. Cards are never crossed.
+      const otherRow = placedPairs.filter((x) => Math.abs(x.a.y - x.b.y) >= 20);
       const levels: [number, number][][] = [];
       const out: Arc[] = [];
-      for (const { p, a, b } of withBox) {
+      for (const { p, a, b } of sameRow) {
         const sx = a.x + a.w / 2;
         const ex = b.x + b.w / 2;
         const lo = Math.min(sx, ex) - 10;
@@ -181,6 +192,22 @@ export default function RigInside({
           ly: (sy + ey) / 2 - up * 0.75,
         });
       }
+      otherRow.forEach(({ p, a, b }, i) => {
+        const sx = a.x + a.w / 2;
+        const ex = b.x + b.w / 2;
+        const gap = 5;
+        const chan = 4 + (i % 4) * 4;
+        const ay = a.y - gap;
+        const by = b.y - gap;
+        out.push({
+          elbow: true,
+          pair: p,
+          d: `M${sx},${a.y} L${sx},${ay} L${chan},${ay} L${chan},${by} L${ex},${by} L${ex},${b.y}`,
+          // labels sit in the left channel, stepped so two never share a spot
+          lx: 28,
+          ly: (ay + by) / 2 + (i - (otherRow.length - 1) / 2) * 16,
+        });
+      });
       setArcs(out);
       setLift(LIFT_BASE + Math.max(1, levels.length) * LEVEL_STEP + 8);
       setSize({ w: el.clientWidth, h: el.clientHeight });
@@ -255,6 +282,36 @@ export default function RigInside({
         <span className="rig-state" data-state={map.rig.state}>
           {st.glyph} {st.label}
         </span>
+        <span className="g2-status-meta mono" data-testid="g2-status-meta">
+          {rig.machineLabel} · {rig.agents} agent{rig.agents === 1 ? '' : 's'} · {rig.active} active
+        </span>
+        {rig.flags.needsMe > 0 && (
+          <span
+            className="g2-flag"
+            data-flag="needsMe"
+            title="Needs you: blocked, or asked you something"
+          >
+            ▲ {rig.flags.needsMe}
+          </span>
+        )}
+        {rig.flags.stuck > 0 && (
+          <span className="g2-flag" data-flag="stuck" title="Work left open over 2 h">
+            ⌛ {rig.flags.stuck}
+          </span>
+        )}
+        {rig.flags.failing > 0 && (
+          <span className="g2-flag" data-flag="failing" title="Down while its rig runs">
+            ✕ {rig.flags.failing}
+          </span>
+        )}
+        {(rig.crossOut > 0 || rig.crossIn > 0) && (
+          <span
+            className="g2-box-cross mono"
+            title="Handoffs with other rigs: sent ↗ and received ↙"
+          >
+            ↗{rig.crossOut} ↙{rig.crossIn}
+          </span>
+        )}
         <span className="g2-status-last" title={lastWords}>
           {lastWords}
         </span>

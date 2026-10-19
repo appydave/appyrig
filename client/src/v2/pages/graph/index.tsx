@@ -517,6 +517,7 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
                     {zoom !== 'fleet' && insideMaps.get(g.key) ? (
                       <RigInside
                         map={insideMaps.get(g.key)!}
+                        rig={g}
                         level={zoom}
                         socket={ctx.getSocket()}
                         machines={ctx.allMachines}
