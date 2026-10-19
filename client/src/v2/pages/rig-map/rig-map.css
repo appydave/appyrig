@@ -47,3 +47,46 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--ar-cta);
 }
+
+/* Quiet handoff lines (the kit's hl-* classes draw the lines; these are the labels and heads). */
+.v2-rigmap .rigmap-edges {
+  z-index: 2;
+}
+.rm2-arrow {
+  fill: var(--ar-ink);
+}
+.rm2-label rect {
+  fill: var(--ar-canvas);
+  stroke: var(--ar-line);
+  pointer-events: all;
+  cursor: pointer;
+}
+.rm2-label.planned rect {
+  stroke-dasharray: 1 3;
+  cursor: default;
+}
+.rm2-label:hover rect,
+.rm2-label[data-selected] rect {
+  stroke: var(--ar-sequence);
+}
+.rm2-count {
+  font-family: var(--ar-font-term);
+  font-size: 11.5px;
+  fill: var(--ar-ink);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.rm2-label.planned .rm2-count {
+  font-size: 11px;
+  fill: var(--ar-ink-muted);
+}
+g[data-testid='rig-map-edge'] {
+  cursor: pointer;
+  outline: none;
+}
+g[data-testid='rig-map-edge']:focus-visible .hl-line {
+  stroke-opacity: 1;
+}
+.v2-rigmap .hl-legend {
+  margin: 4px 0 8px;
+}
