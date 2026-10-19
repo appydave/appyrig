@@ -668,23 +668,70 @@ describe('Graph: open rigs, zoom, people', () => {
     return within(frame(key)).getByTestId('g2-inside');
   };
 
-  it('semantic zoom: cards near, names in the middle, boxes only far; Fit picks by what is open', () => {
+  it('a rig is closed (a box) or open (full cards plus lines): there is no zoom, no Fit', () => {
     render(<Graph ctx={ctxFor(crossFleet())} />);
+    expect(screen.queryByTestId('g2-zoom')).toBeNull();
+    expect(screen.queryByTestId('g2-zoom-in')).toBeNull();
+    expect(screen.queryByTestId('g2-zoom-out')).toBeNull();
+    expect(screen.queryByTestId('g2-fit')).toBeNull();
+    expect(screen.getByTestId('g2-canvas')).not.toHaveAttribute('data-zoom');
+    expect(screen.queryAllByTestId('g2-inside')).toHaveLength(0);
     const inside = openRig('roamy:starter');
-    expect(screen.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'cards');
     expect(within(inside).getAllByTestId('g2-agent-card')).toHaveLength(2);
-    fireEvent.click(screen.getByTestId('g2-zoom-out'));
-    expect(screen.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'pods');
-    expect(within(frame('roamy:starter')).queryAllByTestId('g2-agent-card')).toHaveLength(0);
-    expect(within(frame('roamy:starter')).getAllByTestId('g2-agent-name')).toHaveLength(2);
-    expect(within(frame('roamy:starter')).getAllByTestId('g2-pod-label')[0]).toHaveTextContent(
-      /dev\s*2/
-    );
-    fireEvent.click(screen.getByTestId('g2-zoom-out'));
+    expect(within(inside).queryAllByTestId('g2-agent-name')).toHaveLength(0);
+    expect(within(inside).getAllByTestId('g2-pod-label')[0]).toHaveTextContent(/dev\s*2/);
+    // closing it puts the box back
+    fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-toggle'));
     expect(within(frame('roamy:starter')).queryByTestId('g2-inside')).toBeNull();
-    expect(screen.getByTestId('g2-zoom-out')).toBeDisabled();
-    fireEvent.click(screen.getByTestId('g2-fit'));
-    expect(screen.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'cards');
+    // Expand all opens every shown rig; Collapse all closes them
+    fireEvent.click(screen.getByTestId('g2-expand-all'));
+    expect(screen.getAllByTestId('g2-inside').length).toBeGreaterThan(1);
+    fireEvent.click(screen.getByTestId('g2-collapse-all'));
+    expect(screen.queryAllByTestId('g2-inside')).toHaveLength(0);
+  });
+
+  it('a one-line key explains the box styles, and the styles follow one rule', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const key = screen.getByTestId('g2-key');
+    expect(key).toHaveTextContent('running');
+    expect(key).toHaveTextContent('stopped');
+    expect(key).toHaveTextContent('frosted');
+    expect(key).toHaveTextContent('needs you');
+    expect(key).toHaveTextContent('machine asleep');
+    expect(key).toHaveTextContent('no rig');
+    expect(key).toHaveTextContent('plain tmux');
+    expect(within(screen.getByTestId('g2-sticky')).getByTestId('g2-key')).toBe(key);
+    const c = css();
+    // stopped = frosted (pale fill, dashed edge, dimmed text); no rig = its own dotted group
+    expect(c).toMatch(
+      /\.g2-box\[data-state='stopped'\] \{[^}]*border-style: dashed;[^}]*background: var\(--ar-surface\);/s
+    );
+    expect(c).toMatch(/\.g2-box\[data-loose\] \{[^}]*border-style: dotted;/s);
+    expect(c).toMatch(/\.g2-box\[data-state='attention'\] \{[^}]*--ar-blocked/s);
+  });
+
+  it('the stuck chip says how many seats have work waiting over 2 h, in words', () => {
+    const rig = {
+      key: 'm2:x',
+      machineId: 'm2',
+      machineLabel: 'M2',
+      name: 'x',
+      ref: { status: 'running' },
+      state: 'idle',
+      agents: 3,
+      active: 0,
+      agentNames: [],
+      flags: { needsMe: 0, stuck: 2, failing: 0 },
+      last: null,
+      crossOut: 0,
+      crossIn: 0,
+    } as never;
+    render(
+      <RigBox rig={rig} now={Date.now()} expanded={false} onToggle={() => {}} onTrace={() => {}} />
+    );
+    const chip = document.querySelector('[data-flag="stuck"]')!;
+    expect(chip).toHaveTextContent('2 waiting');
+    expect(chip).toHaveAttribute('title', '2 seats with work waiting over 2 h');
   });
 
   it('agents are fixed-size compact terminal cards; one quiet line per pair; self-handoffs are text', () => {

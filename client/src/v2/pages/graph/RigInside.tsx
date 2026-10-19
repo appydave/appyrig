@@ -21,14 +21,10 @@ import type { GraphRig } from './model.js';
 import { TerminalCard, tailLine } from '../../kit/index.js';
 import { findTile } from '../../seats.js';
 
-/** What the page shows of a rig: names (middle zoom) or full compact cards with lines (near). */
-export type InsideLevel = 'pods' | 'cards';
-
 interface Props {
   map: RigMap;
   /** The box's own numbers, so the open rig has ONE header line (not the box meta and a status). */
   rig: GraphRig;
-  level: InsideLevel;
   socket: FleetSocket;
   /** Every machine, for each agent's terminal tail. */
   machines: FleetMachine[];
@@ -74,7 +70,6 @@ const LIFT_BASE = 14;
 export default function RigInside({
   map,
   rig,
-  level,
 
   socket,
   machines,
@@ -154,7 +149,7 @@ export default function RigInside({
 
   useLayoutEffect(() => {
     const el = box.current;
-    if (!el || level !== 'cards') {
+    if (!el) {
       setArcs([]);
       return;
     }
@@ -228,7 +223,7 @@ export default function RigInside({
     ro.observe(el);
     el.querySelectorAll('[data-node-key]').forEach((n) => ro.observe(n));
     return () => ro.disconnect();
-  }, [pairs, level, agentPods]);
+  }, [pairs, agentPods]);
 
   // The attach line needs the machine's ssh target (rig.waiting); unknown means no button.
   const [ssh, setSsh] = useState<string | null | undefined>(undefined);
@@ -298,7 +293,6 @@ export default function RigInside({
       className="g2-inside"
       data-testid="g2-inside"
       data-rig-key={map.rig.key}
-      data-level={level}
       onClick={(e) => e.stopPropagation()}
     >
       <p className="g2-status" data-testid="g2-status">
@@ -348,7 +342,7 @@ export default function RigInside({
         </button>
       </p>
       <div className="g2-inside-body" ref={box}>
-        {level === 'cards' && (
+        {
           <svg
             className="g2-inside-lines"
             width={size.w}
@@ -376,8 +370,8 @@ export default function RigInside({
               );
             })}
           </svg>
-        )}
-        {level === 'cards' && (
+        }
+        {
           <svg
             className="g2-inside-lines g2-inside-lines-labels"
             width={size.w}
@@ -422,67 +416,52 @@ export default function RigInside({
               );
             })}
           </svg>
-        )}
-        <div className="g2-pods" style={{ paddingTop: level === 'cards' ? lift : 6 }}>
+        }
+        <div className="g2-pods" style={{ paddingTop: lift }}>
           {agentPods.map((pod) => (
             <div className="g2-pod" key={pod.name} data-testid="g2-pod" data-pod={pod.name}>
               <span className="g2-pod-label" data-testid="g2-pod-label">
                 {pod.name} <b>{pod.seats.length}</b>
               </span>
               <div className="g2-pod-cards">
-                {pod.seats.map((s) =>
-                  level === 'cards' ? (
-                    <span
-                      className="g2-cell"
-                      key={s.key}
-                      onPointerEnter={(e) => enter(s, e.currentTarget)}
-                      onFocus={(e) => enter(s, e.currentTarget)}
-                      onPointerLeave={leave}
-                      onBlur={leave}
-                    >
-                      <TerminalCard
-                        size="compact"
-                        name={s.name}
-                        status={s.pip}
-                        runtime={s.runtime}
-                        model={s.modelRaw}
-                        modelLabel={s.model.text}
-                        modelFamily={s.model.family}
-                        contextPct={s.contextPct}
-                        contextTokens={s.contextTokens}
-                        tail={tailLine(findTile(machines, s.key)?.seat.tail?.lines)}
-                        onOpen={() => {
-                          quiet();
-                          onOpenAgent(s.key);
-                        }}
-                        corner={
-                          onDocs && <CardMenu name={s.name} onDocuments={() => onDocs(s.key)} />
-                        }
-                        testId="g2-agent-card"
-                        dataAttrs={{ 'data-node-key': s.key }}
-                        ariaLabel={`${s.name}, ${PIP[s.pip].label}: open the agent page`}
-                      />
-                      {selfOf.get(s.key) ? (
-                        <span className="g2-self" data-testid="g2-self">
-                          ↺ {selfOf.get(s.key)} to itself
-                        </span>
-                      ) : null}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      key={s.key}
-                      className="g2-name"
-                      data-testid="g2-agent-name"
-                      data-pip={s.pip}
-                      onClick={() => onOpenAgent(s.key)}
-                      title={`${s.name} · ${PIP[s.pip].label}`}
-                    >
-                      <span className="g2-card-dot" data-pip={s.pip} aria-hidden="true" />
-                      {s.name}
-                    </button>
-                  )
-                )}
+                {pod.seats.map((s) => (
+                  <span
+                    className="g2-cell"
+                    key={s.key}
+                    onPointerEnter={(e) => enter(s, e.currentTarget)}
+                    onFocus={(e) => enter(s, e.currentTarget)}
+                    onPointerLeave={leave}
+                    onBlur={leave}
+                  >
+                    <TerminalCard
+                      size="compact"
+                      name={s.name}
+                      status={s.pip}
+                      runtime={s.runtime}
+                      model={s.modelRaw}
+                      modelLabel={s.model.text}
+                      modelFamily={s.model.family}
+                      contextPct={s.contextPct}
+                      contextTokens={s.contextTokens}
+                      tail={tailLine(findTile(machines, s.key)?.seat.tail?.lines)}
+                      onOpen={() => {
+                        quiet();
+                        onOpenAgent(s.key);
+                      }}
+                      corner={
+                        onDocs && <CardMenu name={s.name} onDocuments={() => onDocs(s.key)} />
+                      }
+                      testId="g2-agent-card"
+                      dataAttrs={{ 'data-node-key': s.key }}
+                      ariaLabel={`${s.name}, ${PIP[s.pip].label}: open the agent page`}
+                    />
+                    {selfOf.get(s.key) ? (
+                      <span className="g2-self" data-testid="g2-self">
+                        ↺ {selfOf.get(s.key)} to itself
+                      </span>
+                    ) : null}
+                  </span>
+                ))}
               </div>
             </div>
           ))}
@@ -492,15 +471,7 @@ export default function RigInside({
               <div className="g2-pod-cards">
                 {humans.map((h) => {
                   const info = humanInfo(h);
-                  return (
-                    <HumanCard
-                      key={h.key}
-                      seat={h}
-                      from={info.from}
-                      fromTotal={info.total}
-                      compact={level !== 'cards'}
-                    />
-                  );
+                  return <HumanCard key={h.key} seat={h} from={info.from} fromTotal={info.total} />;
                 })}
               </div>
             </div>
