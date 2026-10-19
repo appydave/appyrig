@@ -6,6 +6,7 @@ import { LoadoutStore } from './loadoutStore.js';
 import { DbRowsStore } from './dbRowsStore.js';
 import { DaemonDataStore } from './daemonDataStore.js';
 import { RigFileStore } from './rigFileStore.js';
+import { MissionFileStore } from './missionFileStore.js';
 import { SchemaStore } from './schemaStore.js';
 import {
   ASLEEP_AFTER_MS,
@@ -78,6 +79,8 @@ export class FleetStore {
   readonly dbRows = new DbRowsStore();
   /** v2 data channels: seat detail, library, transitions, workflows, health, settings. Memory only. */
   readonly daemonData = new DaemonDataStore();
+  /** Run board lane 1: files named by a rig's MISSION.md, plus its qa/ and shots/. Memory only. */
+  readonly missionFiles = new MissionFileStore();
   /** v1.4 · S8: in-app feedback notes. The only thing AppyRig writes. */
   readonly feedback: FeedbackStore;
   private readonly machines = new Map<string, FleetMachine>();

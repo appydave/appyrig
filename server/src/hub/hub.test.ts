@@ -803,6 +803,86 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     ).toMatchObject({ failureMode: 'invalid_snapshot' });
   });
 
+  // Run board lane 1: the collector's list is the allowlist; the hub never reads a disk.
+  it('mission files: only listed paths are served; refused, missing, too_large, pending and old-collector are statuses', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const snap = loadSnapshot('m2');
+    await push(c, snap);
+    const rig = snap.rigs[0]!.name;
+    const ask = (path: string) =>
+      call(h, 'mission.file', { machine: 'm2', rig, path }).value as {
+        status: string;
+        text: string | null;
+        base64: string | null;
+      };
+    // an older collector has sent no list: no-data, never a guess
+    expect(ask('/a/spec.md')).toMatchObject({ status: 'no-data' });
+    const at = '2026-10-19T00:00:00.000Z';
+    const mf = 'collector:missionfiles';
+    expect(
+      await emit(c, mf, {
+        kind: 'manifest',
+        machineId: 'm2',
+        collectedAt: at,
+        rig,
+        paths: ['/a/spec.md', '/a/gone.md', '/a/big.md', '/a/pic.png', '/a/later.md'],
+      })
+    ).toMatchObject({ ok: true });
+    const file = (path: string, more: object) => ({
+      kind: 'file',
+      machineId: 'm2',
+      collectedAt: at,
+      rig,
+      path,
+      status: 'ok',
+      part: 0,
+      parts: 1,
+      ...more,
+    });
+    await emit(c, mf, file('/a/spec.md', { mime: 'text/markdown', text: '# hi' }));
+    await emit(c, mf, file('/a/gone.md', { status: 'missing' }));
+    await emit(c, mf, file('/a/big.md', { status: 'too_large', bytes: 300000 }));
+    // an image in two parts, assembled in order
+    await emit(c, mf, file('/a/pic.png', { mime: 'image/png', base64: 'AAAA', parts: 2 }));
+    expect(ask('/a/pic.png')).toMatchObject({ status: 'pending' }); // half a file is not served
+    await emit(c, mf, file('/a/pic.png', { mime: 'image/png', base64: 'BBBB', part: 1, parts: 2 }));
+    expect(ask('/a/spec.md')).toMatchObject({ status: 'ok', text: '# hi' });
+    expect(ask('/a/gone.md')).toMatchObject({ status: 'missing', text: null });
+    expect(ask('/a/big.md')).toMatchObject({ status: 'too_large', text: null, base64: null });
+    expect(ask('/a/pic.png')).toMatchObject({ status: 'ok', base64: 'AAAABBBB' });
+    expect(ask('/a/later.md')).toMatchObject({ status: 'pending' });
+    // not on the list: refused, whatever it looks like
+    for (const p of ['/etc/passwd', '/a/../etc/passwd', '/a/other.md'])
+      expect(ask(p)).toMatchObject({ status: 'refused', text: null, base64: null });
+    // a file pushed for an unlisted path is dropped, not served
+    await emit(c, mf, file('/a/sneak.md', { text: 'nope' }));
+    expect(ask('/a/sneak.md')).toMatchObject({ status: 'refused', text: null });
+    // the push is machine-checked and strictly validated like the others
+    expect(await emit(c, mf, file('/a/spec.md', { text: 'x', machineId: 'roamy' }))).toMatchObject({
+      failureMode: 'machine_mismatch',
+    });
+    expect(await emit(c, mf, file('relative.md', { text: 'x' }))).toMatchObject({
+      failureMode: 'invalid_snapshot',
+    });
+    expect(await emit(c, mf, file('/a/spec.md', { text: 'x', extra: 1 }))).toMatchObject({
+      failureMode: 'invalid_snapshot',
+    });
+    // a new list drops files that left it
+    await emit(c, mf, {
+      kind: 'manifest',
+      machineId: 'm2',
+      collectedAt: at,
+      rig,
+      paths: ['/a/spec.md'],
+    });
+    expect(ask('/a/gone.md')).toMatchObject({ status: 'refused' });
+    // an unknown rig is a refusal, not a guess
+    expect(call(h, 'mission.file', { machine: 'm2', rig: 'nope', path: '/a/spec.md' }).ok).toBe(
+      false
+    );
+  });
+
   // v2 data channels: hub first. An old collector (snapshot only) still pushes; the daemon-data
   // event is validated, machine-checked, stored, and served by seat.detail.
   it('daemon data: validated, machine-checked, stored and served; an old collector is unaffected', async () => {
@@ -812,9 +892,12 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     c.on('hub:caps', (x: string[]) => announced.push(x));
     const snap = loadSnapshot('m2');
     // the ack tells the collector what this hub understands; an older hub sends no caps
-    expect(await push(c, snap)).toMatchObject({ ok: true, caps: ['v2-fields', 'daemondata'] });
+    expect(await push(c, snap)).toMatchObject({
+      ok: true,
+      caps: ['v2-fields', 'daemondata', 'missionfiles'],
+    });
     // and announced on connection, before any push
-    expect(announced).toEqual([['v2-fields', 'daemondata']]);
+    expect(announced).toEqual([['v2-fields', 'daemondata', 'missionfiles']]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',
