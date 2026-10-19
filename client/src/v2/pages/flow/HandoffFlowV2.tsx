@@ -24,6 +24,7 @@ import { followWork } from '../../../fleet/timeline.js';
 import { isShortcutBlocked, isSlider } from '../../../lib/keys.js';
 import {
   HandoffLegend,
+  PageHeader,
   LINE_WIDTH,
   LeftOpenBadgeSvg,
   WaitingBadgeSvg,
@@ -367,12 +368,21 @@ export default function HandoffFlowV2({
       : null;
   });
 
-  if (!machine || !rig) return <p className="empty">Pick a rig.</p>;
+  if (!machine || !rig)
+    return (
+      <>
+        <PageHeader title="Handoff Flow" facts={['no rig chosen']} />
+        <p className="empty">Pick a rig.</p>
+      </>
+    );
   if (!range) {
     return (
-      <p className="empty" data-testid="flow-empty">
-        No handoffs through the queue in {rig} yet.
-      </p>
+      <>
+        <PageHeader title="Handoff Flow" facts={[rig, 'no handoffs yet']} />
+        <p className="empty" data-testid="flow-empty">
+          No handoffs through the queue in {rig} yet.
+        </p>
+      </>
     );
   }
   const t = at ?? range.end;
@@ -544,47 +554,55 @@ export default function HandoffFlowV2({
       data-mode={flow.mode}
       aria-label={`Handoff flow of ${rig}`}
     >
-      <div className="flow-stats">
-        <span data-testid="flow-total" data-explain="handoff">
-          <b>{flow.total}</b> handoffs
-        </span>
-        {(flow.mode === 'roles' || flow.rework > 0) && (
-          <span data-testid="flow-rework" data-explain="rework">
-            <b className="amber">{flow.rework}</b> sent back
-          </span>
-        )}
-        <span
-          data-explain="median-turnaround"
-          data-testid="flow-median"
-          title={medianSentence(flow.medianTurnaroundMin, flow.closedCount)}
-        >
-          <b>
-            {flow.medianTurnaroundMin === null
-              ? '–'
-              : flow.medianTurnaroundMin < 1
-                ? `${Math.round(flow.medianTurnaroundMin * 60)} s`
-                : `${flow.medianTurnaroundMin.toFixed(1)} min`}
-          </b>{' '}
-          median time, handover → close
-        </span>
-        <span data-testid="flow-bottleneck" data-explain="bottleneck">
-          {flow.bottleneck ? (
-            <>
-              queue builds at <b className="amber">{labelOf(flow.bottleneck)}</b>
-            </>
-          ) : (
-            'nothing queued'
-          )}
-        </span>
-        {staleCount > 0 && (
-          <span className="quiet" data-testid="flow-stale" data-explain="stale">
-            {staleCount} left open · oldest {ago(oldestStale)}
-          </span>
-        )}
-      </div>
+      <PageHeader
+        title="Handoff Flow"
+        facts={[
+          <span key="rig" className="mono" data-testid="flow-rig">
+            {rig}
+          </span>,
+          <span key="stats" className="flow-stats">
+            <span data-testid="flow-total" data-explain="handoff">
+              <b>{flow.total}</b> handoffs
+            </span>
+            {(flow.mode === 'roles' || flow.rework > 0) && (
+              <span data-testid="flow-rework" data-explain="rework">
+                <b className="amber">{flow.rework}</b> sent back
+              </span>
+            )}
+            <span
+              data-explain="median-turnaround"
+              data-testid="flow-median"
+              title={medianSentence(flow.medianTurnaroundMin, flow.closedCount)}
+            >
+              <b>
+                {flow.medianTurnaroundMin === null
+                  ? '–'
+                  : flow.medianTurnaroundMin < 1
+                    ? `${Math.round(flow.medianTurnaroundMin * 60)} s`
+                    : `${flow.medianTurnaroundMin.toFixed(1)} min`}
+              </b>{' '}
+              median time, handover → close
+            </span>
+            <span data-testid="flow-bottleneck" data-explain="bottleneck">
+              {flow.bottleneck ? (
+                <>
+                  queue builds at <b className="amber">{labelOf(flow.bottleneck)}</b>
+                </>
+              ) : (
+                'nothing queued'
+              )}
+            </span>
+            {staleCount > 0 && (
+              <span className="quiet" data-testid="flow-stale" data-explain="stale">
+                {staleCount} left open · oldest {ago(oldestStale)}
+              </span>
+            )}
+          </span>,
+        ]}
+      />
       {/* D09 W0: how the stages are read and where work came in fold under one line, so the stage
           diagram sits right under the numbers. Nothing is removed; open it to read them. */}
-      <details className="flow-notes" data-testid="flow-notes">
+      <details className="flow-notes v2-explainer" data-testid="flow-notes">
         <summary>How stages are read · where work came in</summary>
         <p className="view-caption" data-explain={flow.mode === 'roles' ? 'stage' : 'seat-mode'}>
           {flow.mode === 'roles'
@@ -1086,11 +1104,15 @@ export default function HandoffFlowV2({
         )}
       </div>
 
-      <details className="v2-flow-key" data-testid="flow-key">
+      <details className="v2-flow-key v2-explainer" data-testid="flow-key">
         <summary>Line key</summary>
         <HandoffLegend compact />
       </details>
-      {flow.mode === 'roles' && (
+      {flow.mode !== 'roles' ? (
+        <ul className="flow-legend" aria-label="Seats" data-testid="flow-seats-line">
+          <li className="quiet">Each box is one seat of {rig}.</li>
+        </ul>
+      ) : (
         <ul className="flow-legend" aria-label="Seats per stage">
           {flow.stages.map((s) => (
             <li key={s.stage}>

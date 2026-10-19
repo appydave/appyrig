@@ -3,7 +3,7 @@ import type { RigWaitingOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import { rigQueue } from '../../../fleet/views.js';
 import '../../data/coverage.css';
-import { FakeControl, MockMark, MockNote, SampleData } from '../../kit/index.js';
+import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   FILTERS,
@@ -225,11 +225,19 @@ function NeedsYou({ ctx }: V2PageProps) {
 
   return (
     <main className="view v2-needs" data-testid="v2-needs-you">
+      <PageHeader
+        title="Needs You"
+        facts={[
+          <span key="total" className="ny-summary-line" data-testid="ny-total">
+            <b>{real.length}</b> waiting ({fresh.length} fresh, {stale.length} stale in this view)
+            across {ctx.machines.length} {ctx.machines.length === 1 ? 'machine' : 'machines'}.
+          </span>,
+        ]}
+      />
       <MockNote>
         Approve, Reply, Snooze, Dismiss and Clear stale are mocks — nothing is sent
       </MockNote>
-      <h2>Needs You</h2>
-      <p className="quiet">
+      <p className="quiet v2-explainer">
         Everything waiting on David, on every machine, in one list. The longest wait is first;
         anything older than {STALE_DAYS} days is filed under Stale at the bottom.
       </p>
@@ -239,10 +247,6 @@ function NeedsYou({ ctx }: V2PageProps) {
           date.
         </p>
       )}
-      <p className="ny-summary-line" data-testid="ny-total">
-        <b>{real.length}</b> waiting ({fresh.length} fresh, {stale.length} stale in this view)
-        across {ctx.machines.length} {ctx.machines.length === 1 ? 'machine' : 'machines'}.
-      </p>
       <div className="cov" data-testid="ny-coverage">
         <span className="cov-line">
           Real data from{' '}

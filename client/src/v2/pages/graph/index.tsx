@@ -307,11 +307,14 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
     if (!focusChosen || focused.current || !picked) return;
     focused.current = true;
     setExpanded((o) => ({ ...o, [picked]: true }));
-    requestAnimationFrame(() =>
-      document
-        .querySelector(`[data-graph-rig="${CSS.escape(picked)}"]`)
-        ?.scrollIntoView?.({ block: 'center' })
-    );
+    // Only when the chosen rig is off screen, and only as far as it takes: opening the Rig Map
+    // never moves a page whose chosen rig is already in view (clean batch, headers unit).
+    requestAnimationFrame(() => {
+      const el = document.querySelector(`[data-graph-rig="${CSS.escape(picked)}"]`);
+      const r = el?.getBoundingClientRect();
+      if (r && (r.top < 0 || r.top > window.innerHeight))
+        el?.scrollIntoView?.({ block: 'nearest' });
+    });
   }, [focusChosen, picked]);
   const minute = Math.floor(ctx.now / 60_000) * 60_000;
   const openKeys = groups

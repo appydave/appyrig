@@ -15,8 +15,11 @@ export function PageHeader({
   facts,
   actions,
   mocks,
+  titleTestId,
 }: {
   title: string;
+  /** A test id for the title, for pages whose tests already name it (the Agent page's `v2a-name`). */
+  titleTestId?: string;
   /** Short facts, shown inline after the title, separated by a dot. */
   facts?: ReactNode[];
   /** Real controls, drawn at the right. */
@@ -26,7 +29,9 @@ export function PageHeader({
 }) {
   return (
     <header className="v2-page-head" data-testid="v2-page-head">
-      <h2 className="v2-page-title">{title}</h2>
+      <h2 className="v2-page-title" data-testid={titleTestId}>
+        {title}
+      </h2>
       {facts && facts.length > 0 && (
         <span className="v2-page-facts">
           {facts.map((f, i) => (

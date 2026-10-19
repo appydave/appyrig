@@ -522,7 +522,9 @@ describe('Agent page', () => {
       'Handover',
       'Refocus',
     ]);
-    expect(within(header).getAllByTestId('mock-mark')).toHaveLength(5);
+    // one per fake, plus the ⋯ menu's own mark (clean batch: the fakes sit behind MockMenu)
+    expect(within(header).getAllByTestId('mock-mark')).toHaveLength(6);
+    expect(within(header).getByTestId('mock-menu-open')).toBeInTheDocument();
     const verbsBefore = sent.length;
     const emitsBefore = raw.emit.mock.calls.length;
     for (const f of fakes) {

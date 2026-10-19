@@ -21,7 +21,14 @@ import {
   tokensText,
 } from '../../../components/SeatCardLines.js';
 import { attachLine } from '../../../components/WaitingOnDavid.js';
-import { DocsLayout, FakeControl, MockMark, SampleData, SkillsPanel } from '../../kit/index.js';
+import {
+  DocsLayout,
+  FakeControl,
+  MockMark,
+  PageHeader,
+  SampleData,
+  SkillsPanel,
+} from '../../kit/index.js';
 import { allTiles, findTile, seatAddresses } from '../../seats.js';
 import type { V2Context, V2PageDef, V2PageProps } from '../../types.js';
 import { isOpenRigSeat, sampleDetail, type SeatDetailView } from './detail.js';
@@ -127,17 +134,55 @@ function Header({
   const line = attachLine(seat.id, ssh === 'loading' ? null : ssh);
   return (
     <header className="v2a-head" data-testid="v2a-header" data-pip={pip}>
-      <div className="v2a-title">
-        <h2 data-testid="v2a-name">{name}</h2>
-        <span className="state-badge" data-pip={pip} data-testid="v2a-state">
-          {PIP[pip].glyph} {PIP[pip].label}
-          {pip === 'blocked' ? ` · ${blockedBecause(seat)}` : ''}
-        </span>
-        <Picker ctx={ctx} current={tile.key} />
-      </div>
-      <p className="v2a-address mono" data-testid="v2a-address">
-        {seat.id}
-      </p>
+      <PageHeader
+        title={name}
+        titleTestId="v2a-name"
+        facts={[
+          <span key="state" className="state-badge" data-pip={pip} data-testid="v2a-state">
+            {PIP[pip].glyph} {PIP[pip].label}
+            {pip === 'blocked' ? ` · ${blockedBecause(seat)}` : ''}
+          </span>,
+          <span key="addr" className="v2a-address mono" data-testid="v2a-address">
+            {seat.id}
+          </span>,
+        ]}
+        actions={
+          <>
+            <Picker ctx={ctx} current={tile.key} />
+            {line && <CopyAttach session={seat.id} ssh={ssh === 'loading' ? null : ssh} />}
+          </>
+        }
+        mocks={
+          <>
+            <FakeControl
+              label="Copy resume"
+              question="Copy the resume command?"
+              result="resume command copied (pretend)"
+              workMs={400}
+            />
+            <FakeControl
+              label="Restart"
+              question={`Restart ${name} on ${machine.machine.label}?`}
+              result={`${name} restarted (pretend)`}
+            />
+            <FakeControl
+              label="Stop"
+              question={`Stop ${name} on ${machine.machine.label}?`}
+              result={`${name} stopped (pretend)`}
+            />
+            <FakeControl
+              label="Handover"
+              question={`Hand ${name} over to a fresh session?`}
+              result={`${name} handed over (pretend)`}
+            />
+            <FakeControl
+              label="Refocus"
+              question={`Refocus ${name} on its mission?`}
+              result={`${name} refocused (pretend)`}
+            />
+          </>
+        }
+      />
       <dl className="v2a-facts">
         <div>
           <dt>Rig</dt>
@@ -180,56 +225,22 @@ function Header({
           </div>
         )}
       </dl>
-      <div className="v2a-buttons">
+      <div className="v2a-buttons v2-explainer">
         {line ? (
-          <>
-            <CopyAttach session={seat.id} ssh={ssh === 'loading' ? null : ssh} />
-            {ssh === null && (
-              <span className="quiet">
-                run it on {machine.machine.label} (
-                {noRig ? 'no rig, so no ssh address' : 'no ssh address in AppyRig config'})
-              </span>
-            )}
-          </>
+          ssh === null && (
+            <span className="quiet">
+              Run the attach line on {machine.machine.label} (
+              {noRig ? 'no rig, so no ssh address' : 'no ssh address in AppyRig config'})
+            </span>
+          )
         ) : (
           <span className="quiet" data-testid="v2a-no-attach">
             No attach line: this session name has characters a shell would read.
           </span>
         )}
-        <span className="v2a-resume" title={RESUME_WHY}>
-          <FakeControl
-            label="Copy resume"
-            question="Copy the resume command?"
-            result="resume command copied (pretend)"
-            workMs={400}
-          />
-          <span className="quiet" data-testid="v2a-resume-why">
-            {RESUME_WHY}
-          </span>
+        <span className="quiet v2a-resume" data-testid="v2a-resume-why">
+          Copy resume (in ⋯): {RESUME_WHY}
         </span>
-        <details className="v2a-more">
-          <summary>More actions (mock)</summary>
-          <FakeControl
-            label="Restart"
-            question={`Restart ${name} on ${machine.machine.label}?`}
-            result={`${name} restarted (pretend)`}
-          />
-          <FakeControl
-            label="Stop"
-            question={`Stop ${name} on ${machine.machine.label}?`}
-            result={`${name} stopped (pretend)`}
-          />
-          <FakeControl
-            label="Handover"
-            question={`Hand ${name} over to a fresh session?`}
-            result={`${name} handed over (pretend)`}
-          />
-          <FakeControl
-            label="Refocus"
-            question={`Refocus ${name} on its mission?`}
-            result={`${name} refocused (pretend)`}
-          />
-        </details>
       </div>
     </header>
   );
