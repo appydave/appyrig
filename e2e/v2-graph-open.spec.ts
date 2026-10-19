@@ -53,15 +53,14 @@ test.describe('Graph: open rigs and zoom', () => {
     await expect(page.getByTestId('g2-human-card').first()).toBeVisible();
     await expect(page.getByText(/not placed/i)).toHaveCount(0);
 
-    // zoom out: names, then boxes only
-    await page.getByTestId('g2-zoom-out').click();
-    await expect(page.getByTestId('g2-agent-card')).toHaveCount(0);
-    await expect(page.getByTestId('g2-agent-name').first()).toBeVisible();
-    await page.getByTestId('g2-zoom-out').click();
+    // no zoom control: a rig is a box or open. The key explains the box styles.
+    await expect(page.getByTestId('g2-zoom-out')).toHaveCount(0);
+    await expect(page.getByTestId('g2-fit')).toHaveCount(0);
+    await expect(page.getByTestId('g2-key')).toContainText('frosted');
+    await page.getByTestId('g2-collapse-all').click();
     await expect(page.getByTestId('g2-inside')).toHaveCount(0);
-    await expect(page.getByTestId('g2-rig').first()).toBeVisible();
-    await page.getByTestId('g2-fit').click();
-    await expect(page.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'cards');
+    await page.getByTestId('g2-expand-all').click();
+    await expect(page.getByTestId('g2-inside').first()).toBeVisible();
 
     // the Rig Map key is the same page with the chosen rig open
     await expect(page.getByTestId('v2-page-map')).toHaveCount(0);

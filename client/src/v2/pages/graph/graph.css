@@ -155,15 +155,26 @@
 .g2-box[data-state='attention'] {
   border-left-color: var(--ar-blocked);
 }
+/* Stopped is FROSTED, as on the Wall: a pale fill, a dashed edge, dimmed text. Running stays solid. */
 .g2-box[data-state='stopped'] {
-  border-left-style: dashed;
+  border-style: dashed;
+  border-left-width: 5px;
   border-left-color: var(--ar-ink-muted);
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.g2-box[data-state='stopped'] .g2-box-name,
+.g2-box[data-state='stopped'] .g2-box-last,
+.g2-box[data-state='stopped'] .g2-box-meta {
+  opacity: 0.7;
 }
 .g2-box[data-state='asleep'] {
   border-left-style: dotted;
 }
+/* "No rig" (plain tmux sessions) is its own neutral group: grey fill and a DOTTED border, never a rig edge. */
 .g2-box[data-loose] {
-  border-style: dashed;
+  border-style: dotted;
+  border-left-width: 1px;
   background: var(--ar-surface);
 }
 /* The box whose menu is open sits above its neighbours (and the lines). */
@@ -426,12 +437,6 @@
 }
 
 /* ---------- Open rigs: pods, compact cards, quiet lines, people ---------- */
-.g2-zoom-level {
-  min-width: 44px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--ar-ink-muted);
-}
 .g2-inside {
   margin-top: 8px;
   padding-top: 6px;
@@ -777,4 +782,38 @@
   padding: 0 3px;
   background: var(--ar-surface-raised);
   line-height: 12px;
+}
+
+/* The one-line key under the header: what the box styles mean. */
+.g2-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 0 16px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.g2-key b {
+  color: var(--ar-ink);
+  font-family: var(--ar-font-term);
+}
+.g2-key-attn {
+  color: var(--ar-blocked-ink) !important;
+}
+.g2-key i {
+  font-style: normal;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+.g2-key-frost {
+  background: var(--ar-surface);
+  border: 1px dashed var(--ar-ink-muted);
+}
+.g2-key-norig {
+  background: var(--ar-surface);
+  border: 1px dotted var(--ar-ink-muted);
+}
+.g2-flag-glyph {
+  font-size: 13px;
+  line-height: 1;
 }
