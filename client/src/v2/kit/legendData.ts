@@ -289,7 +289,7 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
         {
           mark: 'Rig group (tinted band)',
           means:
-            'Rig · machine · counts, with the rig’s mission on one line. Each group starts its own row.',
+            'Rig · machine · counts, with the rig’s mission on one line. Each group is a container sized to its cards; groups flow side by side, and only a machine heading starts a new row.',
         },
         {
           mark: 'No rig · plain tmux',
