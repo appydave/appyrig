@@ -112,3 +112,39 @@ describe('O4: opening an agent picks that agent’s rig (one scope)', () => {
     expect(location.search).toContain('agent=');
   });
 });
+
+describe('O4 on the rig pages: a Flow seat and a Run board station Docs also name the agent’s rig', () => {
+  const rigWithTraffic = () => {
+    const m2 = fleet()[1]!;
+    return listRigs([m2]).find((r) => r.name === 'fliedit-team')!;
+  };
+
+  it('Handoff Flow: a seat chip opens the panel on that agent and rig= / the drawer / the scope line agree', () => {
+    const rig = rigWithTraffic();
+    renderAt(`?v=2&page=flow&rig=${encodeURIComponent(rigToParam(rig.key))}`);
+    const chip = screen.getAllByTestId('flow-agent-chip')[0]!;
+    fireEvent.click(chip);
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    const p = new URLSearchParams(location.search);
+    expect(p.get('page')).toBe('flow'); // never changes page
+    expect(p.get('agent')).toContain(`@${rig.name}@`);
+    expect(p.get('rig')).toBe(rigToParam(rig.key));
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    expect(pressedRigs()).toEqual([rig.key]);
+    expect(screen.getByTestId('drawer-scope')).toHaveTextContent(`rig ${rig.name}`);
+  });
+
+  it('Run board: a station Docs opens the panel on that agent, and the rig stays the agent’s rig', () => {
+    const rig = rigWithTraffic();
+    renderAt(`?v=2&page=run&rig=${encodeURIComponent(rigToParam(rig.key))}`);
+    const docs = screen.queryAllByTestId('run-station-docs');
+    expect(docs.length, 'the Run board draws station Docs buttons').toBeGreaterThan(0);
+    fireEvent.click(docs[0]!);
+    const p = new URLSearchParams(location.search);
+    expect(p.get('page')).toBe('run');
+    expect(p.get('agent'), 'the station Docs opened an agent').toBeTruthy();
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    expect(p.get('agent')).toContain(`@${rig.name}@`);
+    expect(p.get('rig')).toBe(rigToParam(rig.key));
+  });
+});
