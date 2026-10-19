@@ -1,3 +1,4 @@
+import { PAGE_PURPOSE, PageInfo } from './kit/index.js';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { View } from '../App.js';
 import { isShortcutBlocked } from '../lib/keys.js';
@@ -353,7 +354,11 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
                 className="v2-nav-page"
                 data-testid={`v2-page-${p}`}
                 aria-current={(NAV_ALIAS[page] ?? page) === p ? 'page' : undefined}
-                title={v2PageFor(p)?.blurb ?? `${navLabel(p)}: no v2 yet, shows Current's page`}
+                title={
+                  PAGE_PURPOSE[p] ??
+                  v2PageFor(p)?.blurb ??
+                  `${navLabel(p)}: no v2 yet, shows Current's page`
+                }
                 onClick={() => goTo(p)}
               >
                 {navLabel(p)}
@@ -366,6 +371,7 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
               </button>
             ))}
         </span>
+        <PageInfo page={NAV_ALIAS[page] ?? page} />
       </nav>
     ) : null;
 
