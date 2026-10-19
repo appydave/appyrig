@@ -724,3 +724,55 @@
   position: relative;
   z-index: 80;
 }
+
+/* ---- fixes from the acceptance walk ---- */
+/* The Graph's header and chips stay in view after a rig pick scrolls the page (as the Wall's do). */
+.g2-sticky {
+  position: sticky;
+  top: var(--v2-bar-h, 0px);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 4px;
+  background: var(--ar-canvas);
+  box-shadow: 0 1px 0 var(--ar-line);
+}
+.g2-sticky .g2-toolbar {
+  z-index: auto;
+}
+/* room under the last rig, so a picked rig near the bottom can still scroll up under the sticky header */
+.g2-canvas {
+  padding-bottom: 45vh;
+}
+/* The box that shows a hover card rises above its neighbours, so the card's Documents button and the
+   next box's ⋯ never fight for the pointer. */
+.g2-box:has(.g2-hover) {
+  z-index: 55;
+}
+.g2-inside .g2-hover {
+  z-index: 60;
+}
+/* The card takes the pointer: on the Graph it holds the Documents and Copy attach buttons, and the
+   cards under it must not steal the hover while the pointer travels to them. */
+.g2-inside .g2-hover {
+  pointer-events: auto;
+}
+/* a rig scrolled into view stops below the shell bar and this page's sticky header */
+.g2-box {
+  scroll-margin-top: calc(var(--v2-bar-h, 0px) + 150px);
+}
+/* In-rig lines run UNDER the cards and pods (the cards cover them where they meet); only the counts
+   sit above. A pod's name is lifted over a line that passes behind it. */
+.g2-inside-lines {
+  z-index: 1;
+}
+.g2-inside-lines-labels {
+  z-index: 3;
+}
+.g2-pod-label {
+  z-index: 3;
+  padding: 0 3px;
+  background: var(--ar-surface-raised);
+  line-height: 12px;
+}

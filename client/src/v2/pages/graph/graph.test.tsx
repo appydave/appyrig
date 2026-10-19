@@ -867,3 +867,51 @@ describe('Graph: navigation (rig pick, panel, persistence)', () => {
     expect(c).toMatch(/\.g2-toolbar \{[^}]*z-index: 80;/s);
   });
 });
+
+describe('Graph: acceptance fixes', () => {
+  const openStarter = (ctx: ReturnType<typeof ctxFor>) => {
+    render(<Graph ctx={ctx} />);
+    fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-toggle'));
+    const inside = within(frame('roamy:starter')).getByTestId('g2-inside');
+    fireEvent.pointerEnter(within(inside).getAllByTestId('g2-agent-card')[0]!.closest('.g2-cell')!);
+    return inside;
+  };
+
+  it('the hover card goes away when Documents is clicked, and on a press outside it', () => {
+    const ctx = ctxFor(crossFleet());
+    const inside = openStarter(ctx);
+    fireEvent.click(within(inside).getByTestId('g2-hover-docs'));
+    expect(ctx.openAgentPanel).toHaveBeenCalledWith(expect.objectContaining({ tab: 'documents' }));
+    expect(within(inside).queryByTestId('seat-detail')).toBeNull();
+    // for a moment after the click, the card under the pointer does not pop up its own card
+    fireEvent.pointerEnter(within(inside).getAllByTestId('g2-agent-card')[1]!.closest('.g2-cell')!);
+    expect(within(inside).queryByTestId('seat-detail')).toBeNull();
+    const real = Date.now();
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(real + 1000);
+    // shown again, then a press elsewhere puts it away
+    fireEvent.pointerEnter(within(inside).getAllByTestId('g2-agent-card')[1]!.closest('.g2-cell')!);
+    expect(within(inside).getByTestId('seat-detail')).toBeInTheDocument();
+    fireEvent.pointerDown(document.body);
+    expect(within(inside).queryByTestId('seat-detail')).toBeNull();
+    spy.mockRestore();
+  });
+
+  it('a card click puts the hover card away too', () => {
+    const ctx = ctxFor(crossFleet());
+    const inside = openStarter(ctx);
+    fireEvent.click(within(inside).getAllByTestId('terminal-card-open')[0]!);
+    expect(within(inside).queryByTestId('seat-detail')).toBeNull();
+  });
+
+  it('lines run under the cards, counts above; the box showing a hover card rises over its neighbours; the header is sticky', () => {
+    const c = css();
+    expect(c).toMatch(/\.g2-inside-lines \{\s*z-index: 1;/);
+    expect(c).toMatch(/\.g2-inside-lines-labels \{\s*z-index: 3;/);
+    expect(c).toMatch(/\.g2-box:has\(\.g2-hover\) \{\s*z-index: 55;/);
+    expect(c).toMatch(/\.g2-sticky \{\s*position: sticky;\s*top: var\(--v2-bar-h, 0px\);/);
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const sticky = screen.getByTestId('g2-sticky');
+    expect(within(sticky).getByTestId('g2-expand-all')).toBeInTheDocument();
+    expect(within(sticky).getByTestId('v2-page-head')).toBeInTheDocument();
+  });
+});
