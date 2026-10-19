@@ -38,7 +38,12 @@ function main() {
   const history = new HistoryReader(settings.machine.id);
   const handoffs = new HandoffReader(settings.machine.id);
   const rigFiles = new RigFilesReader(settings.machine.id);
-  const missionFiles = new MissionFilesReader(settings.machine.id);
+  const missionFiles = new MissionFilesReader(
+    settings.machine.id,
+    () => new Date(),
+    30_000,
+    settings.missionRoots
+  );
   const schema = new SchemaReader(settings.machine.id, sources.exec!, {
     rigBin: settings.sources.rigBin,
   });

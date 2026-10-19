@@ -883,6 +883,46 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     );
   });
 
+  it('mission files: the rig-relative qa/ and shots/ names resolve against the list; a missing one is missing, a malformed one refused', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const snap = loadSnapshot('m2');
+    await push(c, snap);
+    const rig = snap.rigs[0]!.name;
+    const ask = (path: string) =>
+      call(h, 'mission.file', { machine: 'm2', rig, path }).value as {
+        status: string;
+        text: string | null;
+        path: string;
+      };
+    const at = '2026-10-19T00:00:00.000Z';
+    const mf = 'collector:missionfiles';
+    await emit(c, mf, {
+      kind: 'manifest',
+      machineId: 'm2',
+      collectedAt: at,
+      rig,
+      paths: ['/m/qa/1.md', '/m/shots/1-before.png'],
+    });
+    await emit(c, mf, {
+      kind: 'file',
+      machineId: 'm2',
+      collectedAt: at,
+      rig,
+      path: '/m/qa/1.md',
+      status: 'ok',
+      mime: 'text/markdown',
+      text: '# qa',
+      part: 0,
+      parts: 1,
+    });
+    expect(ask('qa/1.md')).toMatchObject({ status: 'ok', text: '# qa', path: 'qa/1.md' });
+    expect(ask('shots/1-before.png')).toMatchObject({ status: 'pending' });
+    expect(ask('qa/2.md')).toMatchObject({ status: 'missing' });
+    for (const p of ['qa/../x.md', 'qa/a/b.md', 'etc/passwd', 'specs/x.md', 'qa/'])
+      expect(ask(p), p).toMatchObject({ status: 'refused', text: null });
+  });
+
   // v2 data channels: hub first. An old collector (snapshot only) still pushes; the daemon-data
   // event is validated, machine-checked, stored, and served by seat.detail.
   it('daemon data: validated, machine-checked, stored and served; an old collector is unaffected', async () => {

@@ -21,6 +21,8 @@ export interface CollectorSettings {
   token: string;
   machine: MachineIdentity;
   sources: SourceOptions;
+  /** Folders a MISSION.md's spec files must sit under to be served (default ~/dev). */
+  missionRoots: string[];
 }
 
 export function loadSettings(
@@ -55,6 +57,7 @@ export function loadSettings(
       hostname: hostname(),
     },
     sources,
+    missionRoots: missionRootsOf(env, readFile),
   };
 }
 
@@ -71,4 +74,23 @@ export function specFoldersOf(env: NodeJS.ProcessEnv, readFile: (p: string) => s
     // no config file (or not valid): use the defaults
   }
   return [...DEFAULT_SPEC_FOLDERS];
+}
+
+/**
+ * The folders a rig's MISSION.md may name spec files under: `APPYRIG_MISSION_ROOTS` (colon-separated),
+ * else `missionRoots` from AppyRig's config file, else `~/dev`. A broken file falls back to the default.
+ */
+export function missionRootsOf(env: NodeJS.ProcessEnv, readFile: (p: string) => string): string[] {
+  const fromEnv = env.APPYRIG_MISSION_ROOTS?.split(':')
+    .map((x) => x.trim())
+    .filter(Boolean);
+  if (fromEnv?.length) return fromEnv;
+  const file = env.APPYRIG_CONFIG?.trim() || join(homedir(), '.config', 'appyrig', 'config.json');
+  try {
+    const cfg = AppConfigSchema.parse(JSON.parse(readFile(file)));
+    if (cfg.missionRoots?.length) return cfg.missionRoots;
+  } catch {
+    // no config file (or not valid): use the default
+  }
+  return [join(homedir(), 'dev')];
 }

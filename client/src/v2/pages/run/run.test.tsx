@@ -14,7 +14,7 @@ const files = vi.hoisted(() => ({
 }));
 vi.mock('./useMissionFile.js', async (orig) => ({
   ...(await orig<typeof import('./useMissionFile.js')>()),
-  useMissionFile: (_m: string, _r: string, path: string) => files.result(path),
+  useMissionFile: (_g: unknown, _m: string, _r: string, path: string) => files.result(path),
 }));
 
 const NOW = Date.parse('2026-10-19T12:00:00.000Z');
@@ -238,6 +238,43 @@ describe('the job panel and its documents', () => {
     expect(
       within(screen.getByTestId('run-detail')).getAllByText(/not written yet/).length
     ).toBeGreaterThan(2);
+  });
+
+  it('each non-ok status has its own honest words, and a spec is never "not written yet"', async () => {
+    const { whyNot } = await import('./useMissionFile.js');
+    const r = (status: MissionFileResult['status']): MissionFileResult => ({
+      status,
+      path: '/p.md',
+      machine: 'm4',
+    });
+    expect(whyNot(r('pending'), 'spec')).toBe('loading from m4');
+    expect(whyNot(r('loading'), 'shot')).toBe('loading from m4');
+    expect(whyNot(r('no-data'), 'spec')).toBe(
+      "m4's collector hasn't sent files yet (needs the new collector)"
+    );
+    expect(whyNot(r('missing'), 'qa')).toBe('not written yet');
+    expect(whyNot(r('missing'), 'shot')).toBe('not written yet');
+    expect(whyNot(r('missing'), 'spec')).toBe('spec file not found on m4');
+    expect(whyNot(r('refused'), 'spec')).toBe("not shared (outside the rig's allowlist)");
+    for (const s of ['pending', 'loading', 'no-data', 'refused', 'too_large', 'unread'] as const)
+      expect(whyNot(r(s), 'spec')).not.toMatch(/not written yet/);
+  });
+
+  it('the panel shows the words for the status the hub gave: no-data for a spec, missing for a spec', async () => {
+    files.result = (path) => ({ status: 'no-data', path, machine: 'm2' });
+    const { ctx } = ctxFor(machineWith([]), missionAnswers(table(1)));
+    const { unmount } = render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getByTestId('run-doc-spec')).toBeInTheDocument());
+    expect(
+      within(screen.getByTestId('run-doc-spec')).getByTestId('run-doc-missing')
+    ).toHaveTextContent("m2's collector hasn't sent files yet (needs the new collector)");
+    unmount();
+    files.result = (path) => ({ status: 'missing', path, machine: 'm2' });
+    render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getByTestId('run-doc-spec')).toBeInTheDocument());
+    const spec = within(screen.getByTestId('run-doc-spec')).getByTestId('run-doc-missing');
+    expect(spec).toHaveTextContent('spec file not found on m2');
+    expect(spec).not.toHaveTextContent('not written yet');
   });
 
   it('more than one spec path gives a picker', async () => {

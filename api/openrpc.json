@@ -9127,12 +9127,12 @@
         {
           "name": "path",
           "required": true,
-          "summary": "an absolute path named by that rig's MISSION.md, or a file in its qa/ or shots/",
+          "summary": "an absolute path named by that rig's MISSION.md or in its qa/ or shots/, or the rig-relative form 'qa/<name>.md' / 'shots/<name>.png' (never '..')",
           "schema": {
             "type": "string",
-            "minLength": 2,
+            "minLength": 1,
             "maxLength": 1024,
-            "description": "an absolute path named by that rig's MISSION.md, or a file in its qa/ or shots/"
+            "description": "an absolute path named by that rig's MISSION.md or in its qa/ or shots/, or the rig-relative form 'qa/<name>.md' / 'shots/<name>.png' (never '..')"
           }
         }
       ],

@@ -8,6 +8,7 @@ import { z } from 'zod';
  *   hub        `rigs`           a display name and owner per rig, laid over what collectors send
  *   hub        `accounts`       a plan tier per account email, used when the login record does not report one
  *   collector  `specFolders`    where to look for rig.yaml files (matched on `name:`)
+ *   collector  `missionRoots`   folders a rig's MISSION.md may name spec files under (default: ~/dev)
  *   hub        `machines`       an ssh address per machine, shown in the run card's attach line
  *   collector  `seats`          per seat (session name): `keySkills`, the skills its card names
  *
@@ -58,6 +59,8 @@ export const AppConfigSchema = z.looseObject({
   rigs: z.record(z.string().min(1), RigLabelSchema).optional(),
   /** Absolute folders searched (recursively, a few levels deep) for rig.yaml. */
   specFolders: z.array(z.string().min(1)).optional(),
+  /** Absolute folders a MISSION.md's spec sources must sit under to be served (collector). Default: ~/dev. */
+  missionRoots: z.array(z.string().min(1)).optional(),
   /** Run card R2: machine id → how to reach it, for the copyable attach line (never used to connect). */
   machines: z.record(z.string().min(1), MachineConfigSchema).optional(),
   /** D09 W3: seat id (session name, e.g. `dev-build@d09-crew`) → its card's key skills. */

@@ -12,6 +12,8 @@ import {
 } from './missionfiles.js';
 import type { SpecInfo } from './specs.js';
 
+/** The trust root for these tests: every temp folder below sits under it (the real default is ~/dev). */
+const ROOTS = [realpathSync(tmpdir())];
 const dirs: string[] = [];
 const tmp = () => {
   // realpath: macOS tmpdir is under /var -> /private/var, and the rule is "no symlink in the path"
@@ -54,7 +56,7 @@ function layout() {
 describe('the allowlist: which paths may be read (the boundary)', () => {
   it('accepts the specs the MISSION.md names (with the sibling) and qa/ and shots/ files', async () => {
     const { spec, spec1, spec1b, mission } = layout();
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     expect(await checkPath(spec1, al)).toMatchObject({ ok: true });
     expect(await checkPath(spec1b, al)).toMatchObject({ ok: true });
     expect(await checkPath(join(mission, 'qa', 'qa-1.md'), al)).toMatchObject({ ok: true });
@@ -66,7 +68,7 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
     const { spec, repos, mission, root } = layout();
     put(join(repos, 'plug', 'unlisted.md'), 'secret');
     put(join(root, 'elsewhere.md'), 'secret');
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     for (const p of [
       join(repos, 'plug', 'unlisted.md'),
       join(root, 'elsewhere.md'),
@@ -79,7 +81,7 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
 
   it('refuses ../ however it is spelled, and relative or malformed paths', async () => {
     const { spec, mission, repos } = layout();
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     for (const p of [
       `${mission}/qa/../qa/qa-1.md`,
       `${mission}/qa/../MISSION.md`,
@@ -107,7 +109,7 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
     // a listed path that is a symlink
     put(join(repos, 'real.md'), 'real');
     symlinkSync(join(repos, 'real.md'), join(repos, 'plug', 'gone.md'));
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     expect(await checkPath(join(mission, 'qa', 'link.md'), al)).toEqual({
       ok: false,
       why: 'refused',
@@ -133,7 +135,7 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
     const { spec, mission } = layout();
     put(join(mission, 'qa', 'pic.png'), 'x');
     put(join(mission, 'shots', 'doc.md'), 'x');
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     for (const p of [
       join(mission, 'qa', 'notes.txt'),
       join(mission, 'qa', 'pic.png'),
@@ -146,7 +148,7 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
 
   it('a listed spec that is not on disk is missing, not refused', async () => {
     const { spec, repos } = layout();
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     expect(await checkPath(join(repos, 'plug', 'gone.md'), al)).toEqual({
       ok: false,
       why: 'missing',
@@ -167,10 +169,33 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
   });
 });
 
+describe('the trust root: a listed spec must sit under an allowed root', () => {
+  it('refuses a spec the MISSION.md lists that is outside the root, and keeps it off the manifest', async () => {
+    const { spec, root, spec1, repos } = layout();
+    // the root is the mission's own folder only: the spec sources in another tree are outside it
+    const al = await allowlistFor(spec, [root]);
+    expect(await checkPath(spec1, al)).toEqual({ ok: false, why: 'refused' });
+    expect(await checkPath(join(repos, 'plug', 'gone.md'), al)).toEqual({
+      ok: false,
+      why: 'refused',
+    });
+    expect((await manifestFor(al)).some((p) => p.startsWith(repos))).toBe(false);
+    // and the same spec is served once its tree is a root
+    expect(await checkPath(spec1, await allowlistFor(spec, [root, repos]))).toMatchObject({
+      ok: true,
+    });
+    // a root that does not exist allows nothing
+    expect(await checkPath(spec1, await allowlistFor(spec, ['/nonexistent-root']))).toEqual({
+      ok: false,
+      why: 'refused',
+    });
+  });
+});
+
 describe('the manifest and the reading', () => {
   it('lists listed specs first, then qa/*.md, then shots/*, and nothing else', async () => {
     const { spec, spec1, spec1b, mission, repos } = layout();
-    const list = await manifestFor(await allowlistFor(spec));
+    const list = await manifestFor(await allowlistFor(spec, ROOTS));
     expect(list).toEqual([
       spec1b, // sorted: CT-1-spec.html sorts before CT-1.md
       spec1,
@@ -193,7 +218,7 @@ describe('the manifest and the reading', () => {
     );
     put(join(mission, 'shots', 'big.png'), Buffer.alloc(MISSION_IMAGE_MAX_BYTES + 1, 1));
     put(join(mission, 'shots', 'edge.png'), Buffer.alloc(MISSION_IMAGE_MAX_BYTES, 2));
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     const read = (p: string) => readMissionFile('m2', 'demo', p, al, '2026-10-19T00:00:00.000Z');
     const bigText = await read(join(mission, 'qa', 'big.md'));
     expect(bigText).toHaveLength(1);
@@ -223,7 +248,7 @@ describe('the manifest and the reading', () => {
     const { spec, mission, root } = layout();
     put(join(mission, 'qa', 'key.md'), 'token sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA end');
     put(join(root, 'secret.md'), 'TOP SECRET');
-    const al = await allowlistFor(spec);
+    const al = await allowlistFor(spec, ROOTS);
     const [k] = await readMissionFile('m2', 'demo', join(mission, 'qa', 'key.md'), al, 'x');
     expect(k!.text).not.toContain('sk-ant-api03-AAAA');
     const out = await readMissionFile('m2', 'demo', join(root, 'secret.md'), al, 'x');
@@ -236,7 +261,12 @@ describe('MissionFilesReader', () => {
   it('sends the manifest then the files once, nothing while unchanged, and again after a change or reset', async () => {
     const { spec, mission } = layout();
     let t = 0;
-    const r = new MissionFilesReader('m2', () => new Date(Date.UTC(2026, 9, 19, 0, 0, t)), 10);
+    const r = new MissionFilesReader(
+      'm2',
+      () => new Date(Date.UTC(2026, 9, 19, 0, 0, t)),
+      10,
+      ROOTS
+    );
     const specs = new Map([['demo', spec]]);
     const first = await r.next(specs);
     expect(first!.pushes[0]).toMatchObject({ kind: 'manifest', rig: 'demo' });
@@ -264,7 +294,7 @@ describe('MissionFilesReader', () => {
   it('one rig whose files cannot be listed does not stop another', async () => {
     const { spec } = layout();
     const bad: SpecInfo = { path: '/nonexistent/x/rig.yaml', root: '/nonexistent', summary: null };
-    const r = new MissionFilesReader('m2', () => new Date(), 0);
+    const r = new MissionFilesReader('m2', () => new Date(), 0, ROOTS);
     const got = await r.next(
       new Map([
         ['bad', bad],

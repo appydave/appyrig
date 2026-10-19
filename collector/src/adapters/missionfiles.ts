@@ -1,5 +1,6 @@
 import { lstat, open, readFile, readdir, realpath } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
+import { dirname, join, sep } from 'node:path';
 import {
   MISSION_FILES_MAX,
   MISSION_IMAGE_MAX_BYTES,
@@ -37,10 +38,28 @@ export interface MissionAllowlist {
   listed: Set<string>;
   /** The real folder holding the rig's MISSION.md, or null when it has none. */
   missionDir: string | null;
+  /** Real folders a listed spec must sit under (the trust root: MISSION.md names the files, this bounds where). */
+  roots: string[];
 }
 
+export const defaultMissionRoots = (): string[] => [join(homedir(), 'dev')];
+
+const under = (p: string, roots: string[]): boolean =>
+  roots.some((r) => p.startsWith(r.endsWith(sep) ? r : r + sep));
+
 /** The rig's own MISSION*.md files give both the listed paths and the folder qa/ and shots/ hang off. */
-export async function allowlistFor(spec: SpecInfo): Promise<MissionAllowlist> {
+export async function allowlistFor(
+  spec: SpecInfo,
+  missionRoots: string[] = defaultMissionRoots()
+): Promise<MissionAllowlist> {
+  const roots: string[] = [];
+  for (const r of missionRoots) {
+    try {
+      roots.push(await realpath(r));
+    } catch {
+      /* a root that does not exist on this machine allows nothing */
+    }
+  }
   const listed = new Set<string>();
   let missionDir: string | null = null;
   for (const c of await candidatesFor(spec)) {
@@ -54,7 +73,7 @@ export async function allowlistFor(spec: SpecInfo): Promise<MissionAllowlist> {
       /* unreadable MISSION.md: it lists nothing */
     }
   }
-  return { listed, missionDir };
+  return { listed, missionDir, roots };
 }
 
 export type PathCheck = { ok: true; real: string } | { ok: false; why: 'refused' | 'missing' };
@@ -68,6 +87,7 @@ export async function checkPath(path: unknown, al: MissionAllowlist): Promise<Pa
   const ext = extOf(path);
 
   if (al.listed.has(path)) {
+    if (!under(path, al.roots)) return { ok: false, why: 'refused' }; // outside the trust root
     let real: string;
     try {
       real = await realpath(path);
@@ -75,6 +95,7 @@ export async function checkPath(path: unknown, al: MissionAllowlist): Promise<Pa
       return { ok: false, why: 'missing' };
     }
     if (real !== path) return { ok: false, why: 'refused' }; // a symlink somewhere in the path
+    if (!under(real, al.roots)) return { ok: false, why: 'refused' };
     return (await isFile(real)) ? { ok: true, real } : { ok: false, why: 'missing' };
   }
 
@@ -210,7 +231,8 @@ export class MissionFilesReader {
   constructor(
     private readonly machineId: string,
     private readonly now: () => Date = () => new Date(),
-    private readonly ttlMs = 30_000
+    private readonly ttlMs = 30_000,
+    private readonly roots: string[] = defaultMissionRoots()
   ) {}
 
   /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
@@ -227,7 +249,7 @@ export class MissionFilesReader {
     let leftOver = false;
     for (const [rig, spec] of specs) {
       try {
-        const al = await allowlistFor(spec);
+        const al = await allowlistFor(spec, this.roots);
         if (al.listed.size === 0 && !al.missionDir) continue;
         const paths = await manifestFor(al);
         const sig = (

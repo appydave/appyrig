@@ -18,7 +18,13 @@ import {
   type RunModel,
   type Station,
 } from './model.js';
-import { useMissionFile, whyNot, type MissionFileResult } from './useMissionFile.js';
+import {
+  useMissionFile,
+  whyNot,
+  type MissionFileKind,
+  type MissionFileResult,
+} from './useMissionFile.js';
+import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { useRigDoc, type RigDoc } from './useRigDoc.js';
 import './run.css';
 
@@ -157,11 +163,11 @@ function StationBox({ s, sample }: { s: Station; sample: boolean }) {
 
 // ---------------------------------------------------------------- documents
 
-function FileView({ r }: { r: MissionFileResult }) {
+function FileView({ r, kind }: { r: MissionFileResult; kind: MissionFileKind }) {
   if (r.status !== 'ok')
     return (
       <p className="quiet" data-testid="run-doc-missing">
-        {whyNot(r)}
+        {whyNot(r, kind)}
       </p>
     );
   const isHtml = (r.mime ?? '').includes('html') || /\.html?$/i.test(r.path);
@@ -185,7 +191,17 @@ function FileView({ r }: { r: MissionFileResult }) {
 const base = (p: string) => p.slice(p.lastIndexOf('/') + 1);
 
 /** A job's spec: one file, or a small picker when the jobs table names more than one. */
-function SpecPanel({ machine, rig, job }: { machine: string; rig: string; job: JobRow }) {
+function SpecPanel({
+  getSocket,
+  machine,
+  rig,
+  job,
+}: {
+  getSocket: () => FleetSocket;
+  machine: string;
+  rig: string;
+  job: JobRow;
+}) {
   const [pick, setPick] = useState(0);
   const path = job.specPaths[pick] ?? null;
   return (
@@ -213,7 +229,7 @@ function SpecPanel({ machine, rig, job }: { machine: string; rig: string; job: J
       {path ? (
         <>
           <div className="run-doc-src mono">{path}</div>
-          <SpecFile machine={machine} rig={rig} path={path} />
+          <SpecFile getSocket={getSocket} machine={machine} rig={rig} path={path} />
         </>
       ) : (
         <p className="quiet" data-testid="run-spec-none">
@@ -229,8 +245,18 @@ function SpecPanel({ machine, rig, job }: { machine: string; rig: string; job: J
   );
 }
 
-function SpecFile({ machine, rig, path }: { machine: string; rig: string; path: string }) {
-  return <FileView r={useMissionFile(machine, rig, path)} />;
+function SpecFile({
+  getSocket,
+  machine,
+  rig,
+  path,
+}: {
+  getSocket: () => FleetSocket;
+  machine: string;
+  rig: string;
+  path: string;
+}) {
+  return <FileView r={useMissionFile(getSocket, machine, rig, path)} kind="spec" />;
 }
 
 function RigFilePanel({ doc, which, name }: { doc: RigDoc; which: DocKey; name: string }) {
@@ -283,23 +309,25 @@ function RigDocs({
 // ---------------------------------------------------------------- the selected job
 
 function Shot({
+  getSocket,
   machine,
   rig,
   path,
   label,
 }: {
+  getSocket: () => FleetSocket;
   machine: string;
   rig: string;
   path: string;
   label: string;
 }) {
-  const r = useMissionFile(machine, rig, path);
+  const r = useMissionFile(getSocket, machine, rig, path);
   return (
     <figure className="run-shot" data-testid="run-shot">
       {r.status === 'ok' && r.base64 ? (
         <img src={`data:${r.mime ?? 'image/png'};base64,${r.base64}`} alt={label} />
       ) : (
-        <div className="run-shot-empty quiet">{whyNot(r)}</div>
+        <div className="run-shot-empty quiet">{whyNot(r, 'shot')}</div>
       )}
       <figcaption className="mono">
         {label} {'·'} {path}
@@ -308,13 +336,23 @@ function Shot({
   );
 }
 
-function DoneCheck({ machine, rig, slice }: { machine: string; rig: string; slice: string }) {
-  const r = useMissionFile(machine, rig, `qa/${slice}.md`);
+function DoneCheck({
+  getSocket,
+  machine,
+  rig,
+  slice,
+}: {
+  getSocket: () => FleetSocket;
+  machine: string;
+  rig: string;
+  slice: string;
+}) {
+  const r = useMissionFile(getSocket, machine, rig, `qa/${slice}.md`);
   const d = r.status === 'ok' ? parseDoneCheck(r.text ?? '') : null;
   const cell = (k: string, v: string | null | undefined) => (
     <div className={`run-chk${v ? ' run-chk-ok' : ''}`} data-testid="run-chk" data-field={k}>
       <div className="run-chk-k">{k.replace('_', ' ')}</div>
-      <div className="run-chk-v">{v ?? 'not written yet'}</div>
+      <div className="run-chk-v">{v ?? whyNot(r, 'qa')}</div>
     </div>
   );
   return (
@@ -378,12 +416,14 @@ function JobPanel({
             </div>
             <div className="run-shots">
               <Shot
+                getSocket={ctx.getSocket}
                 machine={machine}
                 rig={rig}
                 path={`shots/${j.job.slice}-before.png`}
                 label="before"
               />
               <Shot
+                getSocket={ctx.getSocket}
                 machine={machine}
                 rig={rig}
                 path={`shots/${j.job.slice}-after.png`}
@@ -395,11 +435,13 @@ function JobPanel({
             <div className="run-doc-head">
               <b>Done-check</b>
             </div>
-            <DoneCheck machine={machine} rig={rig} slice={j.job.slice} />
+            <DoneCheck getSocket={ctx.getSocket} machine={machine} rig={rig} slice={j.job.slice} />
           </div>
         </div>
         <div className="run-col" data-testid="run-docs">
-          {on.spec && <SpecPanel machine={machine} rig={rig} job={j.job} />}
+          {on.spec && (
+            <SpecPanel getSocket={ctx.getSocket} machine={machine} rig={rig} job={j.job} />
+          )}
           <RigDocs ctx={ctx} machine={machine} rig={rig} on={on} />
           {!on.spec && !on.rig && !on.culture && !on.mission && (
             <p className="quiet" data-testid="run-docs-none">

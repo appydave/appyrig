@@ -81,15 +81,20 @@ export const MissionFileInputSchema = z.strictObject({
     'machine id, e.g. m4 (required: one rig name can exist on two machines)'
   ),
   rig: z.string().min(1).describe('rig name, e.g. d09-crew'),
-  path: MissionPathSchema.describe(
-    "an absolute path named by that rig's MISSION.md, or a file in its qa/ or shots/"
-  ),
+  path: z
+    .string()
+    .min(1)
+    .max(1024)
+    .refine((x) => !x.includes('\0'), 'no NUL')
+    .describe(
+      "an absolute path named by that rig's MISSION.md or in its qa/ or shots/, or the rig-relative form 'qa/<name>.md' / 'shots/<name>.png' (never '..')"
+    ),
 });
 export type MissionFileInput = z.infer<typeof MissionFileInputSchema>;
 
 /**
  *  ok         text or base64 is present
- *  missing    the path is listed for this rig but is not on disk
+ *  missing    the path is listed for this rig but is not on disk (or a rig-relative qa/ or shots/ file that has not been written)
  *  refused    the path is not on this rig's list (never read)
  *  too_large  over the cap (256 KB text, 2 MB image); no bytes are sent
  *  pending    listed, but its bytes have not arrived at the hub yet

@@ -120,8 +120,18 @@ export class MissionFileStore {
     const k = this.key(machine, rig);
     const list = this.lists.get(k);
     if (!list) return { ...empty(machine, rig, path), status: 'no-data' };
-    if (!list.has(path)) return { ...empty(machine, rig, path), status: 'refused' };
-    const h = this.files.get(k)?.get(path);
+    let real = path;
+    if (!path.startsWith('/')) {
+      // Rig-relative form: only qa/<name> and shots/<name>, matched against the pushed list. A name
+      // the collector did not list is a file not written yet; anything else is not a name at all.
+      if (!/^(qa|shots)\/[^/\0]+$/.test(path) || path.includes('..'))
+        return { ...empty(machine, rig, path), status: 'refused' };
+      const hit = [...list].find((p) => p.endsWith(`/${path}`));
+      if (!hit) return { ...empty(machine, rig, path), status: 'missing' };
+      real = hit;
+    }
+    if (!list.has(real)) return { ...empty(machine, rig, path), status: 'refused' };
+    const h = this.files.get(k)?.get(real);
     if (!h) return { ...empty(machine, rig, path), status: 'pending' };
     return {
       machine,
