@@ -3,7 +3,7 @@ import type { FleetMachine, HistoryTransitionsOutput, QueueItem } from '@appydav
 import MarkdownView from '../../../components/MarkdownView.js';
 import RigPicker from '../../../components/RigPicker.js';
 import { useVerb } from '../../data/index.js';
-import { MockMark, useDocsDrawer } from '../../kit/index.js';
+import { MockMark, PageHeader, useDocsDrawer } from '../../kit/index.js';
 import HowRunWent from './HowRunWent.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import { parseMissionJobs, type JobRow } from './jobs.js';
@@ -611,62 +611,85 @@ function RunBoard({ ctx }: V2PageProps) {
         onSelect={ctx.chooseRig}
         info={false}
       />
-      {!rig && <p className="empty">Pick a rig.</p>}
+      {!rig && (
+        <>
+          <PageHeader title="Run board" facts={['no rig chosen']} />
+          <p className="empty">Pick a rig.</p>
+        </>
+      )}
       {rig && fm && run && (
         <>
-          <header className="run-top" data-testid="run-top">
-            <h2 className="run-title" data-testid="run-topline" data-phase={run.phase}>
-              {mdoc.status === 'unread'
-                ? 'Mission file not read'
-                : mdoc.status === 'missing'
-                  ? 'This rig has no MISSION.md'
-                  : topLine(run)}{' '}
-              {run.sample && <MockMark label="sample" />}
-            </h2>
-            <span className="run-meta mono">
-              {rig.name} on {rig.machineLabel}
-              {missions.length === 1 && ` \u00b7 mission ${missions[0]}`}
-            </span>
-            {missions.length > 1 && (
-              <select
-                aria-label="Mission"
-                value={missionId ?? ''}
-                data-testid="run-mission"
-                onChange={(e) => setMissionPick(e.target.value)}
+          <PageHeader
+            title="Run board"
+            facts={[
+              <span
+                key="top"
+                className="run-title"
+                data-testid="run-topline"
+                data-phase={run.phase}
               >
-                {missions.map((m) => (
-                  <option key={m}>{m}</option>
-                ))}
-              </select>
-            )}
-            {mdoc.status !== 'ok' && mdoc.status !== 'loading' && (
-              <span className="run-note quiet" data-testid="run-mission-unread">
-                MISSION.md not readable from {rig.machineLabel}
-                {mdoc.why ? ` (${mdoc.why})` : ''}: not the same as no jobs
-              </span>
-            )}
-            {run.phase === 'no-jobs' && mdoc.status === 'ok' && (
-              <span className="run-note quiet" data-testid="run-no-jobs">
-                This rig&apos;s MISSION.md has no jobs table
-              </span>
-            )}
-            {run.phase === 'running' && !run.verdictTagged && !run.sample && (
-              <span className="run-note quiet" data-testid="run-no-verdicts">
-                no <code>verdict:</code> tags, so rework is not counted
-              </span>
-            )}
-            {real && real.jobs.length > 0 && (
-              <button
-                type="button"
-                className="pill-btn run-preview"
-                data-testid="run-preview"
-                aria-pressed={preview}
-                onClick={() => setPreview((v) => !v)}
-              >
-                {preview ? 'Back to the real run' : 'Preview a mid-run (sample)'}
-              </button>
-            )}
-          </header>
+                {mdoc.status === 'unread'
+                  ? 'Mission file not read'
+                  : mdoc.status === 'missing'
+                    ? 'This rig has no MISSION.md'
+                    : topLine(run)}{' '}
+                {run.sample && <MockMark label="sample" />}
+              </span>,
+              <span key="meta" className="run-meta mono" data-testid="run-top">
+                {rig.name} on {rig.machineLabel}
+                {missions.length === 1 && ` \u00b7 mission ${missions[0]}`}
+              </span>,
+              ...(mdoc.status !== 'ok' && mdoc.status !== 'loading'
+                ? [
+                    <span key="unread" className="run-note" data-testid="run-mission-unread">
+                      MISSION.md not readable from {rig.machineLabel}
+                      {mdoc.why ? ` (${mdoc.why})` : ''}: not the same as no jobs
+                    </span>,
+                  ]
+                : []),
+              ...(run.phase === 'no-jobs' && mdoc.status === 'ok'
+                ? [
+                    <span key="nojobs" className="run-note" data-testid="run-no-jobs">
+                      This rig&apos;s MISSION.md has no jobs table
+                    </span>,
+                  ]
+                : []),
+              ...(run.phase === 'running' && !run.verdictTagged && !run.sample
+                ? [
+                    <span key="noverdict" className="run-note" data-testid="run-no-verdicts">
+                      no <code>verdict:</code> tags, so rework is not counted
+                    </span>,
+                  ]
+                : []),
+            ]}
+            actions={
+              <>
+                {missions.length > 1 && (
+                  <select
+                    aria-label="Mission"
+                    value={missionId ?? ''}
+                    data-testid="run-mission"
+                    onChange={(e) => setMissionPick(e.target.value)}
+                  >
+                    {missions.map((m) => (
+                      <option key={m}>{m}</option>
+                    ))}
+                  </select>
+                )}
+                {real && real.jobs.length > 0 && (
+                  <button
+                    type="button"
+                    className="pill-btn run-preview"
+                    data-testid="run-preview"
+                    aria-pressed={preview}
+                    onClick={() => setPreview((v) => !v)}
+                  >
+                    {preview ? 'Back to the real run' : 'Preview a mid-run (sample)'}
+                  </button>
+                )}
+              </>
+            }
+          />
           {run.jobs.length > 0 && (
             <Strip run={run} selected={selected?.job.slice ?? null} onSelect={setSel} />
           )}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import RigPicker from '../../../components/RigPicker.js';
 import { DOT_STATE_LABEL, dotState, timeScale } from '../../../fleet/timeline.js';
+import { PageHeader } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import { buildRun, dur, OUTCOME, OUTSIDE_LANE } from './model.js';
 import '../w4.css';
@@ -51,6 +52,14 @@ function TimelineV2({ ctx }: V2PageProps) {
         selected={rig?.key ?? null}
         onSelect={ctx.chooseRig}
         info={false}
+      />
+      <PageHeader
+        title="Run Timeline"
+        facts={[
+          rig ? `${rig.name} on ${rig.machineLabel}` : 'no rig chosen',
+          ...(run ? [`${OUTCOME[run.outcome].glyph} ${OUTCOME[run.outcome].word}`] : []),
+          ...(run ? [`${run.timeline.total} handoffs`] : []),
+        ]}
       />
       {!rig && <p className="empty">Pick a rig.</p>}
       {rig && !run && (

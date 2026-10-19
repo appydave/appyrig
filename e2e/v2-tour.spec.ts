@@ -76,7 +76,9 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     const visited: string[] = [];
     for (const g of groups) {
       await page.getByTestId(g).click();
+      // the nav's page links only (a page's own header is `v2-page-head`)
       const pages = await page
+        .getByTestId('v2-nav')
         .locator('[data-testid^="v2-page-"]')
         .evaluateAll((els) =>
           els.map((e) => e.getAttribute('data-testid')!.slice('v2-page-'.length))

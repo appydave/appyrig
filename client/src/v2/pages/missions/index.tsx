@@ -3,7 +3,7 @@ import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import MarkdownView from '../../../components/MarkdownView.js';
 import '../../data/coverage.css';
-import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
+import { FakeControl, MockMark, PageHeader, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   deriveMissions,
@@ -243,29 +243,37 @@ function Missions({ ctx }: V2PageProps) {
 
   return (
     <main className="view v2-missions" data-testid="v2-missions">
-      <h2>Missions</h2>
-      <p className="quiet">
-        Mission, then slices, then jobs, with progress and who holds what.{' '}
-        <FakeControl
-          label="New mission"
-          question="Create a new mission?"
-          result="Mission created (pretend)"
-        />{' '}
-        <FakeControl
-          label="New slice"
-          question="Add a slice to the chosen mission?"
-          result="Slice added (pretend)"
-        />
-      </p>
-
-      <h3>From queue tags</h3>
-      <p className="quiet" data-testid="ms-real-note">
-        Real, but not OpenRig&apos;s own mission model (that store is empty on this fleet): read
-        from <code>mission:</code> and <code>slice:</code> tags on queue items. Each item is a job;
-        open means a seat still holds it.
-      </p>
+      <PageHeader
+        title="Missions"
+        facts={[
+          `${missions.length} mission${missions.length === 1 ? '' : 's'} from queue tags`,
+          ...(unresolved > 0 ? [`${unresolved} jobs with no mission`] : []),
+        ]}
+        mocks={
+          <>
+            <FakeControl
+              label="New mission"
+              question="Create a new mission?"
+              result="Mission created (pretend)"
+            />
+            <FakeControl
+              label="New slice"
+              question="Add a slice to the chosen mission?"
+              result="Slice added (pretend)"
+            />
+          </>
+        }
+      />
+      <div className="v2-explainer">
+        <p className="quiet">Mission, then slices, then jobs, with progress and who holds what.</p>
+        <p className="quiet" data-testid="ms-real-note">
+          Real, but not OpenRig&apos;s own mission model (that store is empty on this fleet): read
+          from <code>mission:</code> and <code>slice:</code> tags on queue items. Each item is a
+          job; open means a seat still holds it.
+        </p>
+      </div>
       {unresolved > 0 && (
-        <p className="quiet" data-testid="ms-unresolved">
+        <p className="quiet v2-explainer" data-testid="ms-unresolved">
           {unresolved} jobs carry a slice tag but no mission tag, so they belong to no mission. They
           are listed below as unattributed jobs, with no progress.
         </p>

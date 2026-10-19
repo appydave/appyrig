@@ -145,3 +145,25 @@
   padding: 4px 0;
   font-size: 12px;
 }
+
+/* ---- one-line header, and a rig change that never moves the page ---- */
+/* The stats sit in the page header's facts: one line, no wrap. */
+.v2-flow .v2-page-facts .flow-stats {
+  display: inline-flex;
+  gap: 14px;
+  margin: 0;
+  white-space: nowrap;
+}
+/* The page never gets shorter on a rig change (a rig without the seats-per-stage line, or with no
+   handoffs at all), so the browser never has to pull the scroll position up. */
+.v2-flow-page {
+  min-height: 1320px;
+}
+/* The chapters stay on one row (scroll sideways), so their count never changes the height. */
+.v2-flow .flow-chapters {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.v2-flow .v2-page-facts .flow-stats b {
+  font-size: 20px;
+}

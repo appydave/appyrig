@@ -11,7 +11,7 @@ import {
   type HistoryTransitionsOutput,
   type VerbState,
 } from '../../data/index.js';
-import { SampleData } from '../../kit/index.js';
+import { PageHeader, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   filterHistory,
@@ -216,8 +216,17 @@ function History({ ctx }: V2PageProps) {
 
   return (
     <main className="view v2-history" data-testid="v2-history">
-      <h2>History</h2>
-      <p className="quiet">
+      <PageHeader
+        title="History"
+        facts={[
+          src.kind === 'loading'
+            ? 'loading…'
+            : live
+              ? `${held} transitions held`
+              : "each item's latest state",
+        ]}
+      />
+      <p className="quiet v2-explainer">
         Each handoff and the state it went into, with the reason it was closed.
       </p>
       {src.kind === 'loading' && <Loading what="the history" />}
