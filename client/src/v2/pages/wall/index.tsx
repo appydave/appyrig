@@ -14,7 +14,7 @@ import {
 } from '../../../fleet/model.js';
 import { useStableOrder } from '../../../lib/stableOrder.js';
 import { groupRank } from '../../../fleet/model.js';
-import { FakeControl, MockNote, PageHeader, TerminalCard, useDocsDrawer } from '../../kit/index.js';
+import { FakeControl, MockNote, PageHeader, TerminalCard } from '../../kit/index.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
@@ -26,19 +26,6 @@ import {
   type SeatFlags,
   type WallFilter,
 } from './model.js';
-
-/**
- * What the navigation lane adds to the ctx. Called optionally until it lands: without it a card
- * falls back to the Agent page and the documents drawer, as before.
- */
-type NavCtx = V2PageProps['ctx'] & {
-  openAgentPanel?: (a: {
-    machineId: string;
-    seatKey: string;
-    tab?: 'documents' | 'terminal' | 'messages';
-  }) => void;
-  focusNonce?: number;
-};
 
 const TEAMS_KEY = 'appyrig.v2.wallHiddenTeams';
 // v2 keeps its own choice: switching it here never changes Current's Wall.
@@ -117,7 +104,7 @@ interface CardProps {
   /** The card body: open the agent (the panel over this page). */
   onOpen: (machineId: string, tileKey: string) => void;
   /** ⋯ → Documents: the same panel on its Documents tab. */
-  onDocs: (machineId: string, tileKey: string, seat: Seat) => void;
+  onDocs: (machineId: string, tileKey: string) => void;
 }
 
 /**
@@ -200,7 +187,7 @@ const SeatCard = memo(function SeatCard({
               data-testid="v2-card-docs"
               onClick={() => {
                 setMore(false);
-                onDocs(machine.machine.id, tileKey, seat);
+                onDocs(machine.machine.id, tileKey);
               }}
             >
               Documents
@@ -222,28 +209,23 @@ const SeatCard = memo(function SeatCard({
   );
 });
 
-function WallV2({ ctx: baseCtx }: V2PageProps) {
-  const ctx = baseCtx as NavCtx;
+function WallV2({ ctx }: V2PageProps) {
   const [filter, setFilter] = useState<WallFilter>('all');
   const [hideStopped, setHideStopped] = useState(readHideStopped);
   const [hiddenTeams, setHiddenTeams] = useState<Set<string>>(() => readSet(TEAMS_KEY));
   const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
   const [over, setOver] = useState(false);
-  const { openDocs, drawer } = useDocsDrawer(ctx);
   // A card body opens the agent panel over the Wall; ⋯ → Documents opens it on its Documents tab.
-  // Until the panel exists, the body goes to the Agent page and Documents to the drawer.
-  const { openAgentPanel, openAgentPage } = ctx;
+  // Neither changes the page: only the panel's own link goes to the Agent page.
+  const { openAgentPanel } = ctx;
   const onOpen = useCallback(
-    (machineId: string, seatKey: string) =>
-      openAgentPanel ? openAgentPanel({ machineId, seatKey }) : openAgentPage(seatKey),
-    [openAgentPanel, openAgentPage]
+    (machineId: string, seatKey: string) => openAgentPanel({ machineId, seatKey }),
+    [openAgentPanel]
   );
   const onDocs = useCallback(
-    (machineId: string, seatKey: string, seat: Seat) =>
-      openAgentPanel
-        ? openAgentPanel({ machineId, seatKey, tab: 'documents' })
-        : openDocs({ machineId, seat }),
-    [openAgentPanel, openDocs]
+    (machineId: string, seatKey: string) =>
+      openAgentPanel({ machineId, seatKey, tab: 'documents' }),
+    [openAgentPanel]
   );
 
   const teams = useMemo(() => teamsOf(ctx.machines), [ctx.machines]);
@@ -474,7 +456,6 @@ function WallV2({ ctx: baseCtx }: V2PageProps) {
         Reads the default tmux server on each machine only: a session on another tmux server, in
         herdr or in iTerm is not shown.
       </p>
-      {drawer}
     </main>
   );
 }

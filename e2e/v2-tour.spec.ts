@@ -136,7 +136,13 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-wall').click();
     await expect(page.getByTestId('v2-wall')).toBeVisible();
+    // a card body opens the agent panel over the Wall (the page does not change); the Agent page
+    // is reached from the nav, or from the panel's own "Open full agent page" link
     await page.getByTestId('terminal-card-open').first().click();
+    await expect(page.getByTestId('v2-wall')).toBeVisible();
+    await expect(page.getByTestId('v2-agent')).toHaveCount(0);
+    await page.getByTestId('v2-group-agents').click();
+    await page.getByTestId('v2-page-agent').click();
     await expect(page.getByTestId('v2-agent')).toBeVisible();
 
     // 5. a mock control on the Graph: dialog, progress, toast, and nothing sent to the hub
