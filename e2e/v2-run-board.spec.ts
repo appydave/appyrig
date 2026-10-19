@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { watchErrors } from './support/fleet';
+import { chooseRigInDrawer, watchErrors } from './support/fleet';
 
 // The Run board at 1440 x 900 on the frozen busy snapshot (no rig has to be running). d09-crew was
 // idle there, before GO: the page must say "Waiting for GO", list the jobs from its MISSION.md, keep
@@ -25,7 +25,7 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     await expect(page.getByTestId('v2-run')).toBeVisible();
 
     // choose the idle d09-crew on the M2 by its rig key (machine + rig, never the bare name)
-    await page.locator('[data-testid="rig-chip"][data-rig-key="m2:d09-crew"]').first().click();
+    await chooseRigInDrawer(page, 'm2:d09-crew');
 
     const top = page.getByTestId('run-topline');
     await expect(top).toContainText('Waiting for GO');

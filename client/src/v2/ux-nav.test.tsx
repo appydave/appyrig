@@ -165,10 +165,12 @@ describe('UX nav #2: a group click opens a page of that group', () => {
 });
 
 describe('UX nav #2: the top of the page is one height on every v2 page', () => {
-  it('v2.css reserves the rows Current hides (measured in a browser: 17 pages, one height)', () => {
-    const css = readFileSync(`${__dirname}/v2.css`, 'utf8');
-    expect(css).toMatch(/body:has\(\.v2-nav\) header\.app-header\s*\{\s*min-height:\s*112px/);
-    expect(css).toMatch(/fleet-strip'\]\s*\{\s*min-height:\s*84px/);
+  it('the shell pins the bar and the badge row to fixed heights, so no page moves the content', () => {
+    const css = readFileSync(`${__dirname}/shell/shell.css`, 'utf8');
+    expect(css).toMatch(/\.app-v2 \.app-header\s*\{[^}]*height:\s*44px/);
+    expect(css).toMatch(/\.v2-strip-wrap\s*\{[^}]*min-height:\s*30px/);
+    // and the old reserved rows are gone: the strip is badges, not an 84 px band
+    expect(readFileSync(`${__dirname}/v2.css`, 'utf8')).not.toMatch(/min-height:\s*(112|84)px/);
   });
 });
 

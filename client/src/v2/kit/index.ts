@@ -49,3 +49,4 @@ export {
   labelClass,
   lineClass,
 } from './HandoffLineMarks.js';
+export { PageHeader, MockMenu } from './PageHeader.js';

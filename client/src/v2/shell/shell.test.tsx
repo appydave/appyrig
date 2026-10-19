@@ -1,0 +1,265 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { FLEET_EVENTS } from '@appydave/shared';
+import App from '../../App.js';
+import { listRigs } from '../../fleet/views.js';
+import type { FleetSocket } from '../../fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '../../test/fleetFixtures.js';
+import { MockMenu, PageHeader } from '../kit/index.js';
+import MoreMenu from './MoreMenu.js';
+import RigDrawer from './RigDrawer.js';
+import StripShell from './StripShell.js';
+
+vi.mock('@xterm/xterm', () => ({
+  Terminal: class {
+    attachCustomKeyEventHandler() {}
+    loadAddon() {}
+    open() {}
+    reset() {}
+    write() {}
+    dispose() {}
+  },
+}));
+vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
+
+type Handler = (...args: unknown[]) => void;
+function spySocket() {
+  const handlers = new Map<string, Set<Handler>>();
+  const s = {
+    connected: true,
+    on(ev: string, h: Handler) {
+      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      handlers.get(ev)!.add(h);
+      return s;
+    },
+    off(ev: string, h: Handler) {
+      handlers.get(ev)?.delete(h);
+      return s;
+    },
+    emit: vi.fn(),
+    timeout: vi.fn(() => ({ emit: () => undefined })),
+  };
+  const fire = (ev: string, ...args: unknown[]) =>
+    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+  return { socket: s as unknown as FleetSocket, fire };
+}
+
+const fleet = () => [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
+
+beforeEach(() => {
+  try {
+    localStorage.clear();
+  } catch {
+    /* ignore */
+  }
+  history.replaceState(null, '', '/');
+});
+
+describe('Rigs drawer', () => {
+  it('has an always-visible tab, opens on a click, and lists machine > rig > pod > agent', () => {
+    const machines = fleet();
+    const rigs = listRigs(machines);
+    const choose = vi.fn();
+    const agent = vi.fn();
+    render(
+      <RigDrawer
+        machines={machines}
+        rigs={rigs}
+        activeRigKey={rigs[0]!.key}
+        onChooseRig={choose}
+        onOpenAgent={agent}
+      />
+    );
+    const tab = screen.getByTestId('rig-drawer-tab');
+    expect(tab).toHaveTextContent('Rigs');
+    expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
+    fireEvent.click(tab);
+    expect(screen.getByTestId('rig-drawer-panel')).not.toHaveAttribute('hidden');
+    // every rig of every machine is a row, machine headings carry the machine label
+    const rows = screen.getAllByTestId('drawer-rig');
+    expect(rows.map((r) => r.getAttribute('data-rig-key')).sort()).toEqual(
+      rigs.map((r) => r.key).sort()
+    );
+    fireEvent.click(rows[1]!);
+    expect(choose).toHaveBeenCalledWith(rows[1]!.getAttribute('data-rig-key'));
+    // the chosen rig is open: its agents are rows, and one click goes to that agent
+    const agents = screen.getAllByTestId('drawer-agent');
+    expect(agents.length).toBeGreaterThan(0);
+    fireEvent.click(agents[0]!);
+    expect(agent).toHaveBeenCalledWith(agents[0]!.getAttribute('data-agent-key'));
+    expect(agents[0]!.getAttribute('data-agent-key')).toMatch(/^[a-z0-9-]+\//);
+  });
+
+  it('the pin is remembered, and stopped rigs are dimmed and listed after the live ones', () => {
+    const machines = fleet();
+    const rigs = listRigs(machines).map((r, i) =>
+      i === 0 ? { ...r, state: 'stopped' as const } : r
+    );
+    const { unmount } = render(
+      <RigDrawer
+        machines={machines}
+        rigs={rigs}
+        activeRigKey={null}
+        onChooseRig={() => {}}
+        onOpenAgent={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    const stoppedKey = rigs[0]!.key;
+    const stoppedRow = document.querySelector(`[data-rig-key="${stoppedKey}"]`)!;
+    expect(stoppedRow.closest('.rd-rig')).toHaveAttribute('data-state', 'stopped');
+    // within its machine, the stopped rig comes after every live one
+    const machineSection = stoppedRow.closest('.rd-machine')!;
+    const order = [...machineSection.querySelectorAll('[data-testid="drawer-rig"]')].map((e) =>
+      e.getAttribute('data-state')
+    );
+    const firstStopped = order.indexOf('stopped');
+    expect(order.slice(firstStopped).every((x) => x === 'stopped')).toBe(true);
+    unmount();
+    render(
+      <RigDrawer
+        machines={machines}
+        rigs={rigs}
+        activeRigKey={null}
+        onChooseRig={() => {}}
+        onOpenAgent={() => {}}
+      />
+    );
+    expect(screen.getByTestId('rig-drawer-panel')).not.toHaveAttribute('hidden'); // pinned open
+    fireEvent.click(screen.getByTestId('rig-drawer-tab')); // un-pin
+    expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
+  });
+
+  it('sessions with no rig sit under "No rig" for their machine', () => {
+    const machines = fleet();
+    render(
+      <RigDrawer
+        machines={machines}
+        rigs={listRigs(machines)}
+        activeRigKey={null}
+        onChooseRig={() => {}}
+        onOpenAgent={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    const loose = machines.flatMap((m) => m.snapshot.seats).filter((s) => s.rig === null);
+    if (loose.length > 0)
+      expect(screen.getAllByText(/No rig · plain tmux/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('machine badges', () => {
+  it('start collapsed; a badge or the toggle opens the full strip', () => {
+    render(
+      <StripShell summary="88 seats · 3 machines">
+        <section className="strip">
+          <span className="machine">M2</span>
+          <span className="counts">1 working</span>
+        </section>
+      </StripShell>
+    );
+    const wrap = screen.getByTestId('v2-strip');
+    expect(wrap).toHaveAttribute('data-expanded', 'false');
+    expect(screen.getByText('88 seats · 3 machines')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('M2'));
+    expect(wrap).toHaveAttribute('data-expanded', 'true');
+    fireEvent.click(screen.getByTestId('strip-toggle'));
+    expect(wrap).toHaveAttribute('data-expanded', 'false');
+  });
+});
+
+describe('the ⋯ menu and the page header kit', () => {
+  it('keeps its items in the page, closed, and shows them when opened', () => {
+    render(
+      <MoreMenu>
+        <button type="button" data-testid="item">
+          Notes
+        </button>
+      </MoreMenu>
+    );
+    expect(screen.getByTestId('item').closest('.v2-more-pop')).toHaveAttribute('hidden');
+    fireEvent.click(screen.getByTestId('more-open'));
+    expect(screen.getByTestId('item').closest('.v2-more-pop')).not.toHaveAttribute('hidden');
+  });
+
+  it('PageHeader is one line, and its mock menu always carries the MockMark', () => {
+    render(
+      <PageHeader
+        title="Run board"
+        facts={['d09-crew on M4', '8 jobs']}
+        mocks={<span>Start</span>}
+      />
+    );
+    const head = screen.getByTestId('v2-page-head');
+    expect(within(head).getByText('Run board')).toBeInTheDocument();
+    expect(within(head).getByText('8 jobs')).toBeInTheDocument();
+    expect(within(head).getByTestId('mock-mark')).toBeInTheDocument();
+    render(
+      <MockMenu>
+        <span>x</span>
+      </MockMenu>
+    );
+    expect(screen.getAllByTestId('mock-mark').length).toBeGreaterThan(1);
+  });
+});
+
+describe('the v2 frame in the app', () => {
+  function renderV2() {
+    history.replaceState(null, '', '/?v=2');
+    const spy = spySocket();
+    render(<App getSocket={() => spy.socket} />);
+    spy.fire(FLEET_EVENTS.UPDATE, update(fleet()));
+  }
+
+  it('v2 mode has the thin bar, the badge strip and the Rigs tab; Current has none of them', () => {
+    renderV2();
+    expect(screen.getByTestId('v2-shell')).toHaveClass('app-v2');
+    expect(screen.getByTestId('rig-drawer-tab')).toBeInTheDocument();
+    expect(screen.getByTestId('v2-strip')).toHaveAttribute('data-expanded', 'false');
+    // the fleet strip is still drawn inside the badges, with its counts
+    expect(screen.getByTestId('fleet-counts')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('version-current'));
+    expect(screen.queryByTestId('v2-shell')).toBeNull();
+    expect(screen.queryByTestId('rig-drawer-tab')).toBeNull();
+    expect(screen.queryByTestId('v2-strip')).toBeNull();
+  });
+
+  it('every helper is still reachable: Explain, Legend, Keys, Feedback, Flip, and Notes / OpenRig vs AppyRig / API behind ⋯', () => {
+    renderV2();
+    for (const id of [
+      'explain-toggle',
+      'legend-toggle',
+      'keys-toggle',
+      'feedback-open',
+      'flip',
+      'notes-open',
+      'compare-link',
+      'api-docs-link',
+      'more-open',
+    ])
+      expect(screen.getByTestId(id), id).toBeInTheDocument();
+    // the rarely used three live inside the ⋯ menu
+    const pop = screen.getByTestId('more-open').parentElement!.querySelector('.v2-more-pop')!;
+    for (const id of ['notes-open', 'compare-link', 'api-docs-link'])
+      expect(pop.querySelector(`[data-testid="${id}"]`), id).not.toBeNull();
+  });
+
+  it('the legend state is on the frame, so explainers can sit behind Legend · L', () => {
+    renderV2();
+    expect(screen.getByTestId('v2-shell')).toHaveAttribute('data-legend', 'off');
+    fireEvent.click(screen.getByTestId('legend-toggle'));
+    expect(screen.getByTestId('v2-shell')).toHaveAttribute('data-legend', 'on');
+  });
+
+  it('choosing a rig in the drawer is the shared rig choice the pages read', () => {
+    renderV2();
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    const row = screen
+      .getAllByTestId('drawer-rig')
+      .find((r) => r.getAttribute('aria-pressed') === 'false')!;
+    fireEvent.click(row);
+    expect(
+      screen.getAllByTestId('drawer-rig').find((r) => r.getAttribute('aria-pressed') === 'true')
+    ).toBe(row);
+  });
+});

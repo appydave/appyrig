@@ -37,6 +37,8 @@ export interface V2Frame {
   body: ReactNode;
   /** "no v2 yet", the flip note, a frozen-snapshot problem. */
   banner: ReactNode;
+  /** Open the v2 Agent page for an agent (a tile key, `machine/seat`): the drawer's agent click. */
+  openAgent: (key: string) => void;
 }
 
 function formatRecorded(iso: string | null): string {
@@ -281,5 +283,15 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     </>
   );
 
-  return { mode, page, newPage, groupedNav: mode === 'v2', controls, nav, body, banner };
+  return {
+    mode,
+    page,
+    newPage,
+    groupedNav: mode === 'v2',
+    controls,
+    nav,
+    body,
+    banner,
+    openAgent: openAgentPage,
+  };
 }

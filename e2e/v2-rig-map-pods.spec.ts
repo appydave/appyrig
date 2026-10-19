@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { watchErrors } from './support/fleet';
+import { chooseRigInDrawer, watchErrors } from './support/fleet';
 
 // The Rig Map is horizontal: every pod of a rig sits in ONE row, left to right, each as wide as its
 // agents, and the agents of the row sit side by side, the way the old map draws them. A pod that is
@@ -59,7 +59,7 @@ test.describe('Rig Map v2 is horizontal', () => {
       await page.getByTestId('v2-group-fleet').click();
       await page.getByTestId('v2-page-map').click();
       await expect(page.getByTestId('v2-rig-map')).toBeVisible();
-      await page.getByTestId('rig-select').selectOption(rig);
+      await chooseRigInDrawer(page, rig);
       await expect(page.getByTestId('rig-map-node').first()).toBeVisible();
 
       const v2 = await layout(page);
