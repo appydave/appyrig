@@ -32,8 +32,20 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
 
     // the rig is the heading, the machine sits beside it; plain tmux sessions say what they are
     const heads = await page.getByTestId('v2w-group-head').allInnerTexts();
-    expect(heads.some((h) => /d09-crew/.test(h) && /M2/.test(h))).toBe(true);
-    expect(heads.some((h) => /No rig · /.test(h) && /plain tmux sessions/.test(h))).toBe(true);
+    expect(heads.some((h) => /d09-crew/i.test(h) && /M2/.test(h))).toBe(true);
+    expect(heads.some((h) => /No rig · /i.test(h))).toBe(true);
+    await expect(
+      page.getByTestId('v2w-summary').filter({ hasText: 'plain tmux sessions' }).first()
+    ).toBeVisible();
+
+    // default order is by machine (headings with counts, in machine order); no two groups share a row
+    const mh = await page.getByTestId('v2w-machine-head').allInnerTexts();
+    expect(mh.length).toBeGreaterThan(1);
+    expect(mh[0]).toMatch(/^\S+ · \d+ seats/);
+    const tops = await page
+      .getByTestId('v2w-group')
+      .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(new Set(tops).size, 'every group has its own row').toBe(tops.length);
 
     // dense: cards sit above the fold. The app frame above the page belongs to the shell lane,
     // so count against a page that starts where the shell puts it (y = 140).
@@ -45,13 +57,20 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     console.log(
       `wall: ${n} cards, ${above} above the fold with the page at y=140 (page top now y=${Math.round(top)})`
     );
-    expect(above).toBeGreaterThanOrEqual(10);
+    // one group per row plus a machine heading: a row holds only its own team
+    expect(above).toBeGreaterThanOrEqual(4);
 
     // triage and the notes
     await expect(page.getByTestId('v2-hide-stopped')).toBeVisible();
     for (const f of ['all', 'needs', 'stuck', 'failing'])
       await expect(page.getByTestId(`v2-filter-${f}`)).toBeVisible();
+    await expect(page.getByTestId('v2w-order')).toContainText('by machine');
+    await page.getByTestId('v2w-order-busy').click();
+    await expect(page).toHaveURL(/order=busy/);
     await expect(page.getByTestId('v2w-order')).toContainText('blocked → working');
+    await expect(page.getByTestId('v2w-machine-head')).toHaveCount(0);
+    await page.getByTestId('v2w-order-machine').click();
+    await expect(page).not.toHaveURL(/order=busy/);
     await expect(page.getByTestId('v2w-not-read')).toContainText('default tmux server');
 
     // the ⋯ popover is not clipped by the card, and a click on a card opens the Agent page
