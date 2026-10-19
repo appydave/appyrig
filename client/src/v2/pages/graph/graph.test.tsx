@@ -690,6 +690,9 @@ describe('Graph: open rigs, zoom, people', () => {
     fireEvent.pointerEnter(cards[0]!.closest('.g2-cell')!);
     expect(within(inside).getAllByTestId('g2-inside-line')[0]).toHaveAttribute('data-state', 'lit');
     expect(within(inside).getByTestId('seat-detail')).toBeInTheDocument();
+    // its hover card opens that agent's documents
+    fireEvent.click(within(inside).getByTestId('g2-hover-docs'));
+    expect(screen.getByTestId('docs-drawer')).toHaveAccessibleName(/^Documents · /);
   });
 
   it('self-handoffs are text under the card, never a loop', () => {
@@ -719,7 +722,8 @@ describe('Graph: open rigs, zoom, people', () => {
       /data-expanded\]:not\(\[data-loose\]\) \.g2-box-meta \{\s*display: none;/
     );
     fireEvent.click(within(status).getByTestId('g2-details'));
-    expect(ctx.onOpenFiles).toHaveBeenCalledWith('roamy', 'starter');
+    // Details opens the rig's files in the shared documents drawer (Rig + Mission groups)
+    expect(screen.getByTestId('docs-drawer')).toHaveAccessibleName('Documents · starter');
   });
 
   it('the Rig Map alias opens with the chosen rig already open', () => {

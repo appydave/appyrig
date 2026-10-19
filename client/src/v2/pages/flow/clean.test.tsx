@@ -138,6 +138,17 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
     expect(screen.queryByText('Click a line', { exact: false })).toBeNull();
   });
 
+  it('the panel offers Documents for the seats of the selected line, opening the shared drawer', () => {
+    render(<Flow ctx={ctxFor(fleet())} />);
+    expect(screen.queryByTestId('flow-docs-bar')).toBeNull();
+    fireEvent.click(screen.getByTestId('flow-next'));
+    const bar = screen.getByTestId('flow-docs-bar');
+    const btns = within(bar).getAllByTestId('flow-docs');
+    expect(btns.length).toBeGreaterThan(0);
+    fireEvent.click(btns[0]!);
+    expect(screen.getByTestId('docs-drawer')).toBeInTheDocument();
+  });
+
   it('calm turns off the lit line and the back arcs, and is remembered', () => {
     render(<Flow ctx={ctxFor(fleet())} />);
     fireEvent.click(screen.getByTestId('flow-next'));

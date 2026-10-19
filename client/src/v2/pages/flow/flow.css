@@ -136,3 +136,12 @@
 .v2-flow .console[data-current] {
   border-color: var(--ar-sequence);
 }
+
+.flow-docs-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  font-size: 12px;
+}

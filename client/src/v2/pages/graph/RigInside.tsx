@@ -36,6 +36,8 @@ interface Props {
   lastWords: string;
   onOpenAgent: (key: string) => void;
   onDetails: () => void;
+  /** Open the documents drawer for an agent (by seat key). */
+  onDocs?: (seatKey: string) => void;
   /** A line was clicked: show its handoffs in the page's drawer. */
   onPin: (title: string, items: QueueItem[]) => void;
 }
@@ -79,6 +81,7 @@ export default function RigInside({
   lastWords,
   onOpenAgent,
   onDetails,
+  onDocs,
   onPin,
 }: Props) {
   const own = map.lanes[0]!;
@@ -481,6 +484,16 @@ export default function RigInside({
                 attachLine(hoverSeat.address, ssh) !== null && (
                   <CopyAttach session={hoverSeat.address} ssh={ssh} />
                 )}
+              {onDocs && (
+                <button
+                  type="button"
+                  className="pill-btn"
+                  data-testid="g2-hover-docs"
+                  onClick={() => onDocs(hoverSeat.key)}
+                >
+                  Documents
+                </button>
+              )}
             </div>
             <dl className="mono">
               <dt>activity</dt>

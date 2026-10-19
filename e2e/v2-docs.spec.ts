@@ -81,4 +81,30 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
   });
+
+  test('Graph Details and Flow panel open the documents drawer', async ({ page }) => {
+    await page.goto(FROZEN);
+    await expect(page.getByTestId('view-wall')).toBeVisible();
+    await quietIntro(page);
+    await page.keyboard.press('v');
+    await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await page.getByTestId('v2-group-fleet').click();
+    await page.getByTestId('v2-page-graph').click();
+    await expect(page.getByTestId('v2-graph')).toBeVisible();
+    const details = page.getByTestId('g2-details').first();
+    if (await details.count()) {
+      await details.click();
+      await expect(page.getByTestId('docs-drawer')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+    }
+    await page.getByTestId('v2-group-work').click();
+    await page.getByTestId('v2-page-flow').click();
+    await expect(page.getByTestId('handoff-flow')).toBeVisible();
+    await page.getByTestId('flow-next').click();
+    await page.getByTestId('flow-docs').first().click();
+    await expect(page.getByTestId('docs-drawer')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+  });
 });
