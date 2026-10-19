@@ -49,7 +49,7 @@ export const PAGE_PURPOSE: Partial<Record<PageKey, string>> = {
   graph:
     'Every rig on every machine, and the handoffs between rigs. Open a rig to see its agents and who hands work to whom.',
   map: 'One rig, full screen: its teams, its agents, and who hands work to whom.',
-  run: "One rig's mission as a list of jobs. Which job is being worked, who has it (build → QA → review), the spec, and the before/after proof. Read from the rig's MISSION.md, qa/ and shots/ files.",
+  run: "One rig's mission as a list of jobs: which job is being worked, who has it (build → QA → review), the spec, and the before/after proof. Reads a crew's own mission files (a MISSION.md jobs table, qa/ and shots/). These are a D09 convention, not OpenRig structures.",
   flow: "How work moved between one rig's roles, handoff by handoff. Replay it to see where it queued or got sent back.",
   agent:
     'One agent in full: who it is, its documents (role, culture, mission), its skills, its handoffs and its terminal.',
@@ -348,20 +348,28 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
         {
           mark: '✕ stopped (frosted)',
           means:
-            'A stopped rig: pale fill, dashed edge, dimmed text. The same rule as the Wall’s stopped cards.',
+            'A stopped rig: pale, dashed edge, dimmed text. The same rule as the Wall’s stopped cards.',
           swatch: 'rd-dot:stopped',
         },
         {
-          mark: '▲ needs you',
+          mark: '▲ needs you (orange edge)',
           means:
-            'Orange edge and ▲, always with words: someone waits on you, or a seat is stuck or failing.',
+            'Someone waits on you, or a seat is stuck or failing. Always shown with its words.',
           swatch: 'rd-dot:blocked',
         },
-        { mark: 'no rig = plain tmux', means: 'A neutral group for sessions outside any rig.' },
         {
-          mark: 'dotted = asleep',
-          means: 'Parked on purpose; it wakes when work arrives.',
+          mark: '◌ machine asleep (dotted edge)',
+          means: 'Its machine is asleep; it wakes when work arrives.',
           swatch: 'pip:asleep',
+        },
+        {
+          mark: '⌛ work waiting over 2 h',
+          means:
+            'Work has sat at a seat of this rig for more than two hours. (The Wall’s STUCK filter is stricter on time: 10 minutes with no activity.)',
+        },
+        {
+          mark: 'no rig = plain tmux sessions',
+          means: 'A neutral group for sessions that are not part of any rig.',
         },
         {
           mark: 'closed / open',
@@ -405,6 +413,9 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
     },
     { title: 'Graph · lines', show: 'handoff-lines', entries: [] },
   ],
+  // RECONCILE (v2/wall-rigmap2): these entries are written for the Rig Map's agent cards becoming
+  // the kit WallCard. After that branch merges, check them against the shipped page (legend2.test.tsx
+  // has a todo for it).
   map: [
     {
       title: 'Rig Map · one rig, full width',
@@ -420,7 +431,8 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
         },
         {
           mark: 'Agent cards',
-          means: 'The same cards as the Graph and Wall. Click opens the Agent panel.',
+          means:
+            'The same V1-style cards as the Wall: fixed slots, solid when live, frosted when stopped. Click opens the Agent panel.',
         },
         { mark: '↺ 2 to itself', means: 'Self-handoffs as text.' },
         {

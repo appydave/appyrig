@@ -3,6 +3,7 @@ import { PIP, type PipKey } from '../../fleet/model.js';
 import type { PageKey } from '../types.js';
 import MockMark from './MockMark.js';
 import TerminalCard from './TerminalCard.js';
+import WallCard from './WallCard.js';
 import { HandoffLegend } from './HandoffLineMarks.js';
 import {
   LEGEND_TITLE,
@@ -85,8 +86,7 @@ function Cards() {
   return (
     <div className="legend2-cards" data-testid="legend2-cards">
       <figure>
-        <TerminalCard
-          size="wall"
+        <WallCard
           name="dev-build"
           status="working"
           address="dev-build@d09-crew"
@@ -94,18 +94,21 @@ function Cards() {
           model="claude-opus-5-5"
           modelLabel="opus 5.5"
           modelFamily="opus"
+          role="builder"
+          where="M2"
+          skillCount={316}
+          lastTyped="run the QA gates for slice 3"
+          folder="~/dev/app"
+          branch="slice-3"
+          fresh="live · 2s"
           contextPct={42}
           contextTokens={83000}
-          tail="running the QA gates for slice 3"
-          skills={['dev-team:e2e', 'recipe']}
-          skillCount={316}
-          where="M2"
+          queue={{ pending: 2, inProgress: 1, blocked: 0 }}
         />
-        <figcaption>A live seat: solid dark.</figcaption>
+        <figcaption>A live seat: solid dark, fixed slots.</figcaption>
       </figure>
       <figure>
-        <TerminalCard
-          size="wall"
+        <WallCard
           name="dev-qa"
           status="stopped"
           address="dev-qa@d09-crew"
@@ -113,12 +116,12 @@ function Cards() {
           model="claude-opus-5-5"
           modelLabel="opus 5.5"
           modelFamily="opus"
-          contextPct={null}
-          contextTokens={null}
-          tail={null}
+          role="qa"
           where="M2"
+          fresh="stopped · M2 live 2s"
+          queue={{ pending: 0, inProgress: 0, blocked: 0 }}
         />
-        <figcaption>A stopped or unknown seat: drawn frosted by the page.</figcaption>
+        <figcaption>A stopped, asleep or unknown seat: frosted.</figcaption>
       </figure>
       <figure>
         <TerminalCard
@@ -133,7 +136,7 @@ function Cards() {
           contextTokens={109000}
           tail="waiting for the next handoff"
         />
-        <figcaption>The compact card (Graph, Rig Map).</figcaption>
+        <figcaption>The compact card (Graph’s open rig).</figcaption>
       </figure>
     </div>
   );

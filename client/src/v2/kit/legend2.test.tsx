@@ -14,7 +14,7 @@ describe('the V2 Legend', () => {
     for (const k of pages) {
       expect(PAGE_PURPOSE[k], `${k}: purpose`).toBeTruthy();
       expect(LEGEND_PAGES, `${k}: legend section`).toContain(k);
-      expect(PAGE_PURPOSE[k]!.length).toBeLessThan(260);
+      expect(PAGE_PURPOSE[k]!.length).toBeLessThan(300);
     }
   });
 
@@ -36,7 +36,8 @@ describe('the V2 Legend', () => {
   it('draws the real marks: status pips, the real card, the machine-order toggle wording', () => {
     render(<Legend2 page="wall" onClose={() => undefined} />);
     expect(document.querySelectorAll('.state-badge[data-pip]').length).toBeGreaterThanOrEqual(6);
-    expect(screen.getAllByTestId('terminal-card').length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId('wall-card').length).toBeGreaterThanOrEqual(2);
+    expect(document.querySelector('.wcard[data-frosted]')).not.toBeNull();
     expect(screen.getByText(/Order: By machine · Busiest first/)).toBeInTheDocument();
     expect(screen.getByText(/frosted/i, { selector: 'b' })).toBeInTheDocument();
   });
@@ -59,7 +60,7 @@ describe('the V2 Legend', () => {
     for (const stale of [
       /IDLE TEAMS/i,
       /show \d+ as tiles/i,
-      /q \d\/\d\/\d/,
+
       /no OpenRig/i,
       /Click for the Machines view/i,
     ])
@@ -72,6 +73,12 @@ describe('the V2 Legend', () => {
     expect(app).toMatch(/!v2on && legend && !focusTile/);
     render(<PageInfo page="run" />);
     expect(screen.getByTestId('page-info')).toHaveAttribute('title', PAGE_PURPOSE.run);
+  });
+
+  it.todo('Rig Map entries match the shipped page once v2/wall-rigmap2 (WallCard cards) is merged');
+
+  it('Run board purpose says its files are a D09 convention, not OpenRig data', () => {
+    expect(PAGE_PURPOSE.run).toMatch(/D09 convention, not OpenRig structures/);
   });
 
   it('Hide closes it', () => {
