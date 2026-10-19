@@ -1,0 +1,21 @@
+{
+  "about": "The OpenRig version and commit that shared/src/openrig mirrors. `npm run provenance` diffs the mirror against this commit; a clean run with --update-pin moves it.",
+  "openrig": {
+    "package": "@openrig/cli",
+    "version": "0.6.11",
+    "commit": "eabc816e584af82be7f97c6269f2551883f569e3",
+    "describe": "v0.6.10-202-geabc816e",
+    "commitDate": "2026-10-18T02:16:40-07:00",
+    "remote": "https://github.com/mvschwarz/openrig"
+  },
+  "source": {
+    "repo": "/Users/davidcruwys/dev/upstream/repos/openrig",
+    "note": "Read-only reference clone. Override with OPENRIG_SRC. Files are read with `git show <commit>:<path>`, never checked out."
+  },
+  "cli": {
+    "path": "/Users/davidcruwys/.nvm/versions/node/v24.13.0/lib/node_modules/@openrig/cli",
+    "note": "Installed @openrig/cli, used only to load its ./spec-validation export. Override with OPENRIG_CLI."
+  },
+  "fixtures": "test/root/fixtures/openrig-0.6.11",
+  "checked": "2026-10-19"
+}

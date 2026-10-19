@@ -17,3 +17,6 @@ server/src/core/vendor
 /api
 # OpenRig 0.6.11 spec files, copied as-is (Apache-2.0) so the schema test parses the real bytes
 test/root/fixtures
+
+# provenance check output
+scripts/provenance/out

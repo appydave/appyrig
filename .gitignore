@@ -23,3 +23,6 @@ Thumbs.db
 
 # Hub runtime state (snapshots/); never under src/
 /data/
+
+# provenance check output (regenerated each run)
+/scripts/provenance/out/

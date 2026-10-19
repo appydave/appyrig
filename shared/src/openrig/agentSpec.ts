@@ -75,6 +75,11 @@ export const AgentProfileSchema = z.object({
   /** The profile layer of startup. */
   startup: StartupBlockSchema.optional(),
   lifecycle: LifecycleSchema.optional(),
+  /**
+   * Activity detection for the seat. Read by agent-manifest.ts `normalizeProfile`; OpenRig drops an
+   * out-of-range value silently (default 3 seconds), so this is not range-checked here.
+   */
+  activity: z.object({ silence_window_seconds: z.number().optional() }).optional(),
 });
 export type AgentProfile = z.infer<typeof AgentProfileSchema>;
 

@@ -1,0 +1,22 @@
+{
+  "about": "Known differences between OpenRig and shared/src/openrig that are NOT drift. `unmapped`: OpenRig has it, we deliberately don't model it. `oursOnly`: we model it, OpenRig's normaliser doesn't read it. Every entry needs a reason a reviewer can check.",
+  "unmapped": [
+    {
+      "probe": "chain.project_files",
+      "value": "MISSION_NOTES.md",
+      "reason": "chain-file-convention.md 'The project tree': a legacy alternative name the walkers read when NOTES.md is absent. We model NOTES.md only; nothing in AppyRig reads mission notes yet."
+    }
+  ],
+  "oursOnly": [
+    {
+      "probe": "agent.keys",
+      "value": "description",
+      "reason": "agent-spec.md documents top-level `description` (shown in the spec library and review surfaces) and 19 shipped agent.yaml files use it; normalizeAgentSpec reads `summary` instead."
+    },
+    {
+      "probe": "profile.keys",
+      "value": "description",
+      "reason": "agent-spec.md: 'Spec review surfaces read a profile `description`'; normalizeProfile reads `summary`."
+    }
+  ]
+}

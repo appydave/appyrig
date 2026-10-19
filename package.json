@@ -31,7 +31,8 @@
     "api:gen": "tsx scripts/gen-api.ts",
     "test:root": "vitest run --config test/root/vitest.config.ts",
     "atlas:sync": "node scripts/sync-atlas.mjs",
-    "rig-commands:sync": "node scripts/sync-rig-commands.mjs"
+    "rig-commands:sync": "node scripts/sync-rig-commands.mjs",
+    "provenance": "tsx scripts/provenance/check.ts"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",
