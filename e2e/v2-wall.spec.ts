@@ -62,6 +62,10 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     await page.getByTestId('terminal-card-open').first().click();
     await expect(page.getByTestId('v2-wall')).toBeVisible();
     await expect(page.getByTestId('v2-agent')).toHaveCount(0);
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
+    // the panel sits over the right side of the page (where the header's chips are): close it
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
 
     // a rig pick in the drawer is never a no-op: its group is outlined, and "Only this rig" narrows
     await chooseRigInDrawer(page, 'm2:d09-crew');

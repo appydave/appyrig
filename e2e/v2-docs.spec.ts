@@ -70,10 +70,7 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     expect(errors).toEqual([]);
   });
 
-  // TODO(integration): once the agent panel is merged, assert its Documents tab here instead of the
-  // drawer. On the Wall branch the panel does not exist yet, so this checks the hand-off only: ⋯ →
-  // Documents closes the popover and leaves the Wall on screen (no page change).
-  test('a Wall card ⋯ → Documents asks for the agent panel and does not change the page', async ({
+  test('a Wall card ⋯ → Documents opens the agent panel on its Documents tab, over the Wall', async ({
     page,
   }) => {
     await page.goto(FROZEN);
@@ -87,8 +84,16 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     await card.getByTestId('v2-card-more').click();
     await card.getByTestId('v2-card-docs').click();
     await expect(page.getByTestId('v2-card-actions')).toHaveCount(0);
+    // the panel opens on the Documents tab, the Wall stays under it, and the page did not change
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
+    await expect(page.getByTestId('apanel-tab-documents')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('apanel-body-documents')).toBeVisible();
     await expect(page.getByTestId('v2-wall')).toBeVisible();
     await expect(page.getByTestId('v2-agent')).toHaveCount(0);
+    // Escape closes it and Back is not needed: the Wall is still there
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    await expect(page.getByTestId('v2-wall')).toBeVisible();
   });
 
   test('Graph Details and Flow panel open the documents drawer', async ({ page }) => {
