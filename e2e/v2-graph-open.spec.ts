@@ -64,7 +64,10 @@ test.describe('Graph: open rigs and zoom', () => {
     await expect(page.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'cards');
 
     // the Rig Map key is the same page with the chosen rig open
-    await page.getByTestId('v2-page-map').click();
+    await expect(page.getByTestId('v2-page-map')).toHaveCount(0);
+    await page.keyboard.press('v'); // Current
+    await page.getByTestId('view-map').click();
+    await page.keyboard.press('v'); // back to v2: the alias page
     await expect(page.getByTestId('v2-graph')).toBeVisible();
     await expect(page.getByTestId('g2-inside').first()).toBeVisible();
 

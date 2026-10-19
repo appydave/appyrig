@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { View } from '../App.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 import type { FrozenMeta } from './frozen/frozenSocket.js';
-import { groupOf, isCurrentView, navGroups, navLabel, v2PageFor } from './registry.js';
+import { groupOf, isCurrentView, NAV_ALIAS, navGroups, navLabel, v2PageFor } from './registry.js';
 import type { NavGroupKey, PageKey, V2Context, V2OnlyKey } from './types.js';
 import { readMode, writeMode, type Mode } from './version.js';
 import './v2.css';
@@ -246,7 +246,7 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
                 type="button"
                 className="v2-nav-page"
                 data-testid={`v2-page-${p}`}
-                aria-current={page === p ? 'page' : undefined}
+                aria-current={(NAV_ALIAS[page] ?? page) === p ? 'page' : undefined}
                 title={v2PageFor(p)?.blurb ?? `${navLabel(p)}: no v2 yet, shows Current's page`}
                 onClick={() => goTo(p)}
               >

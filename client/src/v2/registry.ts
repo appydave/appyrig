@@ -82,7 +82,7 @@ export function v2PageFor(key: PageKey): V2PageDef | undefined {
  * until a wave registers them.
  */
 export const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[] = [
-  { key: 'fleet', label: 'Fleet', pages: ['wall', 'graph', 'map', 'run', 'machines', 'accounts'] },
+  { key: 'fleet', label: 'Fleet', pages: ['wall', 'graph', 'run', 'machines', 'accounts'] },
   {
     key: 'work',
     label: 'Work',
@@ -135,8 +135,14 @@ export function navGroups(): { key: NavGroupKey; label: string; pages: PageKey[]
   })).filter((g) => g.pages.length > 0);
 }
 
+/**
+ * Pages that are not in the nav but open another page's entry: `map` (Current's Rig Map view, and old
+ * links) lands on the Graph, so the Fleet group stays lit with the Graph's sub-link.
+ */
+export const NAV_ALIAS: Partial<Record<PageKey, PageKey>> = { map: 'graph' };
+
 export function groupOf(key: PageKey): NavGroupKey | null {
-  return NAV_GROUPS.find((g) => g.pages.includes(key))?.key ?? null;
+  return NAV_GROUPS.find((g) => g.pages.includes(NAV_ALIAS[key] ?? key))?.key ?? null;
 }
 
 /** Planned v2-only pages not built yet (shown on the About v2 page as the roadmap). */

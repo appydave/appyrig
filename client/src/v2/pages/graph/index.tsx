@@ -142,6 +142,55 @@ export function unplacedText(u: Graph['unplaced']): string {
     .join(' ');
 }
 
+/** The widest a between-rigs count label is (px), for keeping it off the boxes. */
+const LABEL_BOX_W = 48;
+const LABEL_BOX_H = 20;
+
+/**
+ * Where a between-rigs label sits: its own spot if no rig box is under it; otherwise the nearest point
+ * along ITS OWN line (searched outward from the middle) where it is clear of every box, so a count
+ * never lands on a box's text. With no clear point the original spot stays.
+ */
+export function labelClearOf(
+  d: string,
+  lx: number,
+  ly: number,
+  boxes: Box[],
+  host?: SVGSVGElement | null
+): { x: number; y: number } {
+  const hits = (x: number, y: number) =>
+    boxes.some(
+      (b) =>
+        x - LABEL_BOX_W / 2 < b.x + b.w &&
+        x + LABEL_BOX_W / 2 > b.x &&
+        y - LABEL_BOX_H / 2 < b.y + b.h &&
+        y + LABEL_BOX_H / 2 > b.y
+    );
+  if (!hits(lx, ly)) return { x: lx, y: ly };
+  const NS = 'http://www.w3.org/2000/svg';
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', d);
+  // a path measures only while it is in the document: borrow the lines layer for a moment
+  host?.appendChild(path);
+  try {
+    if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') {
+      return { x: lx, y: ly };
+    }
+    const len = path.getTotalLength();
+    if (!(len > 0)) return { x: lx, y: ly };
+    for (let i = 1; i <= 40; i++) {
+      for (const t of [0.5 - i * 0.0125, 0.5 + i * 0.0125]) {
+        if (t < 0.04 || t > 0.96) continue;
+        const pt = path.getPointAtLength(len * t);
+        if (!hits(pt.x, pt.y)) return { x: pt.x, y: pt.y };
+      }
+    }
+    return { x: lx, y: ly };
+  } finally {
+    path.parentNode?.removeChild(path);
+  }
+}
+
 /** An arrowhead at a line's end, faint, lit or dimmed with its line. */
 function Head({ tip, state }: { tip: Tip; state: string }) {
   return (
@@ -218,12 +267,22 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
         const r = f.getBoundingClientRect();
         return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       };
+      const rigBoxes = [...el.querySelectorAll<HTMLElement>('[data-graph-rig]')].map((f) => {
+        const r = f.getBoundingClientRect();
+        return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
+      });
       setGeom(
         new Map(
-          routeLines(pairs, box).map((l) => [
-            pairKey(l.pair),
-            { d: l.d, lx: l.lx, ly: l.ly, tipA: l.tipA, tipB: l.tipB },
-          ])
+          routeLines(pairs, box).map((l) => {
+            const at = labelClearOf(
+              l.d,
+              l.lx,
+              l.ly,
+              rigBoxes,
+              el.querySelector<SVGSVGElement>('svg.g2-lines')
+            );
+            return [pairKey(l.pair), { d: l.d, lx: at.x, ly: at.y, tipA: l.tipA, tipB: l.tipB }];
+          })
         )
       );
       setSize({ w: el.clientWidth, h: el.clientHeight });

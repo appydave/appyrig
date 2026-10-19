@@ -86,12 +86,7 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         await expect(root(page), `${key} renders one page root`).toHaveCount(1);
         await expect(root(page)).toBeVisible();
         const hasCurrent = currentKeys.includes(key);
-        // the Rig Map has its own v2 page, and the Graph is a separate v2-only page
-        if (key === 'map') {
-          await expect(page.getByTestId('v2-graph')).toBeVisible();
-          // a real v2: no "No v2 yet" note, and B flips to the old Rig Map below
-          await expect(page.getByTestId('v2-no-v2')).toHaveCount(0);
-        }
+        // the Graph is a v2-only page; the Rig Map key is an alias of it (checked below), not a nav entry
         if (key === 'graph') await expect(page.getByTestId('v2-graph')).toBeVisible();
 
         // A Current page with no v2 yet shows Current's page and says so: nothing to flip between.
@@ -124,8 +119,16 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     test.info().annotations.push({ type: 'pages visited', description: visited.join(', ') });
     console.log(`v2 tour visited ${visited.length} pages: ${visited.join(', ')}`);
     expect(visited.length).toBeGreaterThanOrEqual(10);
-    expect(visited).toContain('fleet/map');
+    expect(visited).not.toContain('fleet/map');
     expect(visited).toContain('fleet/graph (v2 only)');
+
+    // the `map` key still lands: Current's Rig Map tab, then V, opens the Graph with that rig open
+    await page.keyboard.press('v');
+    await page.getByTestId('view-map').click();
+    await page.keyboard.press('v');
+    await expect(page.getByTestId('v2-graph')).toBeVisible();
+    await expect(page.getByTestId('g2-inside').first()).toBeVisible();
+    await expect(page.getByTestId('v2-no-v2')).toHaveCount(0);
 
     // 4. an agent on the Wall opens the Agent page
     await page.getByTestId('v2-group-fleet').click();
