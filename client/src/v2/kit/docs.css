@@ -173,7 +173,8 @@
   position: fixed;
   right: 0;
   bottom: 0;
-  width: min(1040px, calc(100vw - 320px));
+  /* a side peek: the page stays readable beside it; Expand widens it for a long document */
+  width: min(520px, calc(100vw - 320px));
   z-index: 25;
   display: flex;
   flex-direction: column;
@@ -279,4 +280,35 @@
 .apanel-msgs li {
   padding: 3px 0;
   border-bottom: 1px dashed var(--ar-line, #d9cfbf);
+}
+
+.apanel[data-wide] {
+  width: min(1040px, calc(100vw - 320px));
+}
+.apanel-head {
+  flex-wrap: wrap;
+}
+.apanel-x {
+  min-width: 32px;
+  min-height: 32px;
+  font-size: 14px;
+  border: 1px solid var(--ar-ink, #342d2d);
+}
+/* in the narrow peek the list is slimmer and the reader scrolls */
+.apanel:not([data-wide]) .docs-layout {
+  grid-template-columns: 170px minmax(0, 1fr);
+}
+.apanel:not([data-wide]) .docs-row-sub {
+  display: none;
+}
+.apanel:not([data-wide]) .docs-row[data-present='no'] .docs-row-sub {
+  display: inline;
+}
+.apanel .docs-reader-body {
+  overflow: auto;
+}
+
+/* The narrow peek takes its width from the page, not from on top of it. */
+html[data-agent-panel='peek'] main[data-testid^='v2-'] {
+  margin-right: min(520px, calc(100vw - 320px));
 }

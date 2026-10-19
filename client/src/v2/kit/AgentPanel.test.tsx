@@ -72,6 +72,23 @@ describe('AgentPanel', () => {
     }
   });
 
+  it('opens as a narrow peek; Expand widens it and Narrow goes back; × is a labelled button', () => {
+    setup();
+    const panel = screen.getByTestId('agent-panel');
+    expect(panel).not.toHaveAttribute('data-wide');
+    fireEvent.click(screen.getByTestId('apanel-expand'));
+    expect(panel).toHaveAttribute('data-wide');
+    fireEvent.click(screen.getByTestId('apanel-expand'));
+    expect(panel).not.toHaveAttribute('data-wide');
+    // the narrow peek tells the page to make room; Expand lifts that
+    expect(document.documentElement.getAttribute('data-agent-panel')).toBe('peek');
+    fireEvent.click(screen.getByTestId('apanel-expand'));
+    expect(document.documentElement.hasAttribute('data-agent-panel')).toBe(false);
+    fireEvent.click(screen.getByTestId('apanel-expand'));
+    expect(screen.getByTestId('apanel-close')).toHaveAccessibleName('Close the agent panel');
+    expect(screen.getByTestId('apanel-close')).toHaveTextContent('Close');
+  });
+
   it('says so when the agent is gone', () => {
     const m = fleetMachine(snapshot('roamy'));
     const { socket } = answeringSocket({});
