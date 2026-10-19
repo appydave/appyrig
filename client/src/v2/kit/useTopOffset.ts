@@ -10,6 +10,9 @@ export function measureTopOffset(): number {
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--v2-top-offset');
     const px = parseFloat(raw);
     if (Number.isFinite(px) && px > 0) return px;
+    // before the shell has published the variable: the whole sticky bar (it can be two rows), not just its nav
+    const bar = document.querySelector('.app-header');
+    if (bar) return Math.max(0, Math.round(bar.getBoundingClientRect().bottom));
     const nav = document.querySelector('[data-testid="v2-nav"]');
     if (nav) return Math.max(0, Math.round(nav.getBoundingClientRect().bottom));
   } catch {
@@ -25,7 +28,10 @@ export function useTopOffset(): number {
     on();
     window.addEventListener('resize', on);
     window.addEventListener('scroll', on, true);
+    // the shell re-measures its bar (it wraps to another row once the page settles) and says so
+    window.addEventListener('appyrig:top-offset', on);
     return () => {
+      window.removeEventListener('appyrig:top-offset', on);
       window.removeEventListener('resize', on);
       window.removeEventListener('scroll', on, true);
     };
