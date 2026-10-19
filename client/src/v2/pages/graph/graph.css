@@ -638,7 +638,7 @@
 }
 /* The left channel lines between pod rows run down, clear of every card. */
 .g2-inside-body {
-  padding-left: 46px;
+  padding-left: 64px;
 }
 .g2-inside-lines {
   z-index: 3;

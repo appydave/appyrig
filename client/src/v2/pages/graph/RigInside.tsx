@@ -207,7 +207,7 @@ export default function RigInside({
           pair: p,
           d: `M${sx},${a.y} L${sx},${ay} L${chan},${ay} L${chan},${by} L${ex},${by} L${ex},${b.y}`,
           // labels sit in the left channel, stepped so two never share a spot
-          lx: 28,
+          lx: 34,
           ly: (ay + by) / 2 + (i - (otherRow.length - 1) / 2) * 16,
         });
       });
@@ -355,9 +355,12 @@ export default function RigInside({
                 </g>
               );
             })}
-            {arcs.map(({ pair: p, lx, ly }) => {
+            {arcs.map(({ pair: p, lx, ly, elbow }) => {
               const state = lineFocusState(lf.focus, p.a, p.b);
-              const text = p.planned ? p.plannedWords || 'planned' : pairLabel(p);
+              const full = p.planned ? p.plannedWords || 'planned' : pairLabel(p);
+              // a planned word in the left channel is cut to fit it (the full words are the tooltip)
+              const text =
+                elbow && full.length > 7 ? `${full.split(/[ ·]+/)[0]!.slice(0, 7)}…` : full;
               const w = Math.max(26, text.length * 7 + 12);
               return (
                 <g
@@ -375,6 +378,7 @@ export default function RigInside({
                     )
                   }
                 >
+                  {text !== full && <title>{full}</title>}
                   <rect x={lx - w / 2} y={ly - 9} width={w} height={18} rx={4} />
                   <text x={lx} y={ly} className="g2-label-text">
                     {text}

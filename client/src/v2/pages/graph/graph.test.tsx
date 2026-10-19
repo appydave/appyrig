@@ -640,7 +640,10 @@ describe('Graph in the app', () => {
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
     // the Rig Map is the same page with the chosen rig open; B shows Current's Rig Map on that rig
-    fireEvent.click(screen.getByTestId('v2-page-map'));
+    expect(screen.queryByTestId('v2-page-map')).toBeNull();
+    fireEvent.keyDown(document.body, { key: 'v' }); // Current
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.keyDown(document.body, { key: 'v' }); // v2: the Rig Map key is the Graph with that rig open
     expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
     fireEvent.keyDown(document.body, { key: 'b' });
     expect(screen.queryByTestId('v2-graph')).toBeNull();
@@ -733,5 +736,28 @@ describe('Graph: open rigs, zoom, people', () => {
     render(<GraphV2 ctx={ctx} focusChosen />);
     expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
     expect(within(frame('roamy:kernel')).queryByTestId('g2-inside')).toBeNull();
+  });
+});
+
+describe('Graph: between-rigs labels stay off the boxes', () => {
+  it('slides a label along its own line to the nearest spot clear of every box', async () => {
+    const { labelClearOf } = await import('./index.js');
+    const fake = {
+      setAttribute: () => undefined,
+      getTotalLength: () => 100,
+      getPointAtLength: (n: number) => ({ x: n, y: 0 }),
+    };
+    const spy = vi.spyOn(document, 'createElementNS').mockReturnValue(fake as never);
+    try {
+      const box = { x: 40, y: -50, w: 50, h: 100 };
+      // already clear: stays
+      expect(labelClearOf('M0,0', 200, 0, [box])).toEqual({ x: 200, y: 0 });
+      // on the box: moves along the line to where a 48 px label misses it
+      const at = labelClearOf('M0,0 L100,0', 50, 0, [box]);
+      expect(at.x + 24).toBeLessThanOrEqual(box.x);
+      expect(at.y).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

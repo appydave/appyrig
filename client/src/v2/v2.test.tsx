@@ -18,7 +18,14 @@ import {
 import { loadFrozen } from './frozen/load.js';
 import { guardPortFor, isLocalDevRequest } from './devProxy.js';
 import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from './kit/index.js';
-import { CURRENT_VIEWS, navGroups, navLabel, plannedPages, v2PageFor } from './registry.js';
+import {
+  CURRENT_VIEWS,
+  groupOf,
+  navGroups,
+  navLabel,
+  plannedPages,
+  v2PageFor,
+} from './registry.js';
 import { MODE_KEY, modeFromSearch, readMode, searchWithMode } from './version.js';
 
 vi.mock('@xterm/xterm', () => ({
@@ -151,10 +158,19 @@ describe('v2 version switch', () => {
     fireEvent.click(screen.getByTestId('v2-page-graph'));
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-no-v2')).toBeNull();
-    // the Rig Map is an alias of the Graph with the chosen rig open
-    fireEvent.click(screen.getByTestId('v2-page-map'));
+    // the nav has no Rig Map entry: `map` is an alias that opens the Graph with the chosen rig open
+    expect(screen.queryByTestId('v2-page-map')).toBeNull();
+    expect(groupOf('map')).toBe('fleet');
+    fireEvent.click(screen.getByTestId('v2-page-wall'));
+    fireEvent.keyDown(document.body, { key: 'v' }); // Current
+    fireEvent.click(screen.getByTestId('view-map'));
+    fireEvent.keyDown(document.body, { key: 'v' }); // v2: the alias page
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(screen.getAllByTestId('g2-inside').length).toBeGreaterThan(0);
+    // the Graph's own sub-link is the lit one
+    expect(
+      document.querySelector('[data-testid="v2-nav"] [aria-current="page"]')?.textContent
+    ).toBe('Graph');
   });
 });
 
@@ -434,7 +450,8 @@ describe('dev proxy guard port', () => {
 describe('v2 registry', () => {
   it('every v2 page is reachable from the grouped nav, and planned pages wait their turn', () => {
     const inNav = navGroups().flatMap((g) => g.pages);
-    for (const v of CURRENT_VIEWS) expect(inNav).toContain(v);
+    // `map` is an alias of the Graph, not a nav entry
+    for (const v of CURRENT_VIEWS) if (v !== 'map') expect(inNav).toContain(v);
     expect(inNav).toContain('about');
     expect(v2PageFor('wall')?.label).toBe('Wall');
     expect(plannedPages()).toEqual([]);
