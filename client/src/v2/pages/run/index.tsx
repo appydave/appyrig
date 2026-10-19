@@ -1,0 +1,642 @@
+import { useMemo, useState } from 'react';
+import type { FleetMachine, HistoryTransitionsOutput, QueueItem } from '@appydave/shared';
+import MarkdownView from '../../../components/MarkdownView.js';
+import RigPicker from '../../../components/RigPicker.js';
+import { useVerb } from '../../data/index.js';
+import { MockMark } from '../../kit/index.js';
+import type { V2PageDef, V2PageProps } from '../../types.js';
+import { parseMissionJobs, type JobRow } from './jobs.js';
+import {
+  buildRun,
+  clock,
+  missionsOnRig,
+  parseDoneCheck,
+  sampleRun,
+  topLine,
+  verdictOf,
+  type JobState,
+  type RunModel,
+  type Station,
+} from './model.js';
+import { useMissionFile, whyNot, type MissionFileResult } from './useMissionFile.js';
+import { useRigDoc, type RigDoc } from './useRigDoc.js';
+import './run.css';
+
+/** The four documents a viewer can put beside a job. Spec is on at load; the other three are off. */
+export type DocKey = 'spec' | 'rig' | 'culture' | 'mission';
+export const DOC_DEFAULTS: Record<DocKey, boolean> = {
+  spec: true,
+  rig: false,
+  culture: false,
+  mission: false,
+};
+const DOC_LABEL: Record<DocKey, string> = {
+  spec: 'Spec',
+  rig: 'rig.yaml',
+  culture: 'CULTURE.md',
+  mission: 'MISSION.md',
+};
+const RIG_FILE: Record<Exclude<DocKey, 'spec'>, string> = {
+  rig: 'rig.yaml',
+  culture: 'CULTURE.md',
+  mission: 'MISSION.md',
+};
+
+const hhmm = (iso: string) =>
+  new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+const bare = (raw: string | null) => (raw ?? '?').split('@')[0] || '?';
+
+// ---------------------------------------------------------------- the strip
+
+function Strip({
+  run,
+  selected,
+  onSelect,
+}: {
+  run: RunModel;
+  selected: string | null;
+  onSelect: (slice: string) => void;
+}) {
+  return (
+    <section aria-label="Jobs" data-testid="run-strip">
+      <div className="run-label">The jobs {run.sample && <MockMark label="sample" />}</div>
+      <div className="run-jobs">
+        {run.jobs.map((j) => (
+          <JobTile
+            key={j.job.slice}
+            j={j}
+            picked={selected === j.job.slice}
+            onSelect={() => onSelect(j.job.slice)}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/** One job: a button; picking it opens its panel below. */
+function JobTile({ j, picked, onSelect }: { j: JobState; picked: boolean; onSelect: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`run-job run-job-${j.status}${picked ? ' run-job-picked' : ''}`}
+      aria-pressed={picked}
+      onClick={onSelect}
+      data-testid="run-job"
+      data-job={j.job.slice}
+      data-status={j.status}
+    >
+      <span className="run-job-n">
+        {j.job.slice}
+        {j.status === 'done' ? ' ✓' : ''}
+      </span>
+      <span className="run-job-repo">{j.job.title}</span>
+      <span className="run-job-foot">
+        {j.status === 'waiting' ? (
+          <span className="mono">waiting</span>
+        ) : (
+          <>
+            <span>{clock(j.durationMs)}</span>
+            <span className={j.rework > 0 ? 'run-rework mono' : 'mono'}>
+              {j.status === 'current' && j.holder ? `with ${j.holder} · ` : ''}
+              {j.rounds} {j.rounds === 1 ? 'round' : 'rounds'}
+              {j.rework > 0 ? ` ↺${j.rework}` : ''}
+            </span>
+          </>
+        )}
+      </span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------- stations
+
+function Stations({ run }: { run: RunModel }) {
+  if (run.stations.length === 0)
+    return <p className="quiet">This rig has no seats the machine reports.</p>;
+  const arrow = (a: string, b: string) => run.forward.find((x) => x.from === a && x.to === b);
+  return (
+    <div className="run-stations" data-testid="run-stations">
+      {run.stations.map((s, i) => (
+        <div key={s.key} className="run-station-wrap">
+          <StationBox s={s} sample={run.sample} />
+          {i < run.stations.length - 1 && (
+            <span className="run-arrow" aria-hidden="true">
+              {'→'} <b className="mono">{arrow(s.seat, run.stations[i + 1]!.seat)?.count ?? ''}</b>
+            </span>
+          )}
+        </div>
+      ))}
+      {run.sentBack.map((b) => (
+        <p key={`${b.from}>${b.to}`} className="run-back" data-testid="run-sent-back">
+          {'↺'} sent back {b.count}
+          {'×'} {'·'} {b.from} {'→'} {b.to} {'·'} verdict changes or fail
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function StationBox({ s, sample }: { s: Station; sample: boolean }) {
+  return (
+    <div
+      className={`run-station run-station-${s.state}`}
+      data-testid="run-station"
+      data-state={s.state}
+    >
+      <div className="run-station-word">{s.word}</div>
+      <div className="run-station-seat mono">{s.seat}</div>
+      {s.doing && <div className="run-station-doing">{s.doing}</div>}
+      <div className="run-station-state mono">
+        {s.state}
+        {s.holds > 0 ? ` · ${s.holds} open` : ''} {sample && <MockMark label="sample" />}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- documents
+
+function FileView({ r }: { r: MissionFileResult }) {
+  if (r.status !== 'ok')
+    return (
+      <p className="quiet" data-testid="run-doc-missing">
+        {whyNot(r)}
+      </p>
+    );
+  const isHtml = (r.mime ?? '').includes('html') || /\.html?$/i.test(r.path);
+  if (isHtml)
+    return (
+      <iframe
+        title={r.path}
+        className="run-frame"
+        sandbox=""
+        srcDoc={r.text ?? ''}
+        data-testid="run-doc-html"
+      />
+    );
+  return (
+    <div className="run-md" data-testid="run-doc-md">
+      <MarkdownView source={r.text ?? ''} />
+    </div>
+  );
+}
+
+const base = (p: string) => p.slice(p.lastIndexOf('/') + 1);
+
+/** A job's spec: one file, or a small picker when the jobs table names more than one. */
+function SpecPanel({ machine, rig, job }: { machine: string; rig: string; job: JobRow }) {
+  const [pick, setPick] = useState(0);
+  const path = job.specPaths[pick] ?? null;
+  return (
+    <div className="run-doc" data-testid="run-doc-spec">
+      <div className="run-doc-head">
+        <b>Spec</b>
+        {job.specPaths.length > 1 && (
+          <span role="tablist" aria-label="Spec files" className="run-spec-tabs">
+            {job.specPaths.map((p, i) => (
+              <button
+                key={p}
+                type="button"
+                role="tab"
+                aria-selected={pick === i}
+                className="pill-btn"
+                data-testid="run-spec-tab"
+                onClick={() => setPick(i)}
+              >
+                {base(p)}
+              </button>
+            ))}
+          </span>
+        )}
+      </div>
+      {path ? (
+        <>
+          <div className="run-doc-src mono">{path}</div>
+          <SpecFile machine={machine} rig={rig} path={path} />
+        </>
+      ) : (
+        <p className="quiet" data-testid="run-spec-none">
+          This job&apos;s row names no spec file.
+        </p>
+      )}
+      {job.specNote && (
+        <p className="quiet run-doc-note" data-testid="run-spec-note">
+          {job.specNote}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function SpecFile({ machine, rig, path }: { machine: string; rig: string; path: string }) {
+  return <FileView r={useMissionFile(machine, rig, path)} />;
+}
+
+function RigFilePanel({ doc, which, name }: { doc: RigDoc; which: DocKey; name: string }) {
+  return (
+    <div className="run-doc" data-testid={`run-doc-${which}`}>
+      <div className="run-doc-head">
+        <b>{name}</b>
+      </div>
+      {doc.status === 'ok' ? (
+        name.endsWith('.md') ? (
+          <div className="run-md">
+            <MarkdownView source={doc.text ?? ''} />
+          </div>
+        ) : (
+          <pre className="run-pre">{doc.text}</pre>
+        )
+      ) : (
+        <p className="quiet" data-testid="run-doc-missing">
+          {doc.status === 'loading' ? 'reading…' : (doc.why ?? 'not available')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RigDocs({
+  ctx,
+  machine,
+  rig,
+  on,
+}: {
+  ctx: V2PageProps['ctx'];
+  machine: string;
+  rig: string;
+  on: Record<DocKey, boolean>;
+}) {
+  const g = ctx.getSocket;
+  const rigYaml = useRigDoc(g, machine, rig, RIG_FILE.rig, on.rig);
+  const culture = useRigDoc(g, machine, rig, RIG_FILE.culture, on.culture);
+  const mission = useRigDoc(g, machine, rig, RIG_FILE.mission, on.mission);
+  return (
+    <>
+      {on.rig && <RigFilePanel doc={rigYaml} which="rig" name="rig.yaml" />}
+      {on.culture && <RigFilePanel doc={culture} which="culture" name="CULTURE.md" />}
+      {on.mission && <RigFilePanel doc={mission} which="mission" name="MISSION.md" />}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------- the selected job
+
+function Shot({
+  machine,
+  rig,
+  path,
+  label,
+}: {
+  machine: string;
+  rig: string;
+  path: string;
+  label: string;
+}) {
+  const r = useMissionFile(machine, rig, path);
+  return (
+    <figure className="run-shot" data-testid="run-shot">
+      {r.status === 'ok' && r.base64 ? (
+        <img src={`data:${r.mime ?? 'image/png'};base64,${r.base64}`} alt={label} />
+      ) : (
+        <div className="run-shot-empty quiet">{whyNot(r)}</div>
+      )}
+      <figcaption className="mono">
+        {label} {'·'} {path}
+      </figcaption>
+    </figure>
+  );
+}
+
+function DoneCheck({ machine, rig, slice }: { machine: string; rig: string; slice: string }) {
+  const r = useMissionFile(machine, rig, `qa/${slice}.md`);
+  const d = r.status === 'ok' ? parseDoneCheck(r.text ?? '') : null;
+  const cell = (k: string, v: string | null | undefined) => (
+    <div className={`run-chk${v ? ' run-chk-ok' : ''}`} data-testid="run-chk" data-field={k}>
+      <div className="run-chk-k">{k.replace('_', ' ')}</div>
+      <div className="run-chk-v">{v ?? 'not written yet'}</div>
+    </div>
+  );
+  return (
+    <div className="run-check" data-testid="run-check">
+      {cell('proof', d?.proof)}
+      {cell('test_audit', d?.test_audit)}
+      {cell('before_after', d?.before_after)}
+      {cell('duration', d?.duration)}
+    </div>
+  );
+}
+
+function JobPanel({
+  ctx,
+  machine,
+  rig,
+  j,
+  on,
+  setOn,
+}: {
+  ctx: V2PageProps['ctx'];
+  machine: string;
+  rig: string;
+  j: JobState;
+  on: Record<DocKey, boolean>;
+  setOn: (k: DocKey) => void;
+}) {
+  return (
+    <section className="run-detail" data-testid="run-detail" data-job={j.job.slice}>
+      <div className="run-detail-head">
+        <div>
+          <div className="run-label">
+            Selected job {'·'} {j.status}
+          </div>
+          <h3 className="run-h">
+            Job {j.job.slice} {'·'} {j.job.title}
+          </h3>
+          {j.job.branch && <div className="mono quiet">{j.job.branch}</div>}
+        </div>
+        <div className="run-toggles" role="group" aria-label="Documents shown beside this job">
+          <span className="run-label">Show</span>
+          {(Object.keys(DOC_LABEL) as DocKey[]).map((k) => (
+            <button
+              key={k}
+              type="button"
+              className="run-tog"
+              data-testid={`run-tog-${k}`}
+              aria-pressed={on[k]}
+              onClick={() => setOn(k)}
+            >
+              {DOC_LABEL[k]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="run-cols">
+        <div className="run-col">
+          <div className="run-doc">
+            <div className="run-doc-head">
+              <b>Before / after</b>
+            </div>
+            <div className="run-shots">
+              <Shot
+                machine={machine}
+                rig={rig}
+                path={`shots/${j.job.slice}-before.png`}
+                label="before"
+              />
+              <Shot
+                machine={machine}
+                rig={rig}
+                path={`shots/${j.job.slice}-after.png`}
+                label="after"
+              />
+            </div>
+          </div>
+          <div className="run-doc">
+            <div className="run-doc-head">
+              <b>Done-check</b>
+            </div>
+            <DoneCheck machine={machine} rig={rig} slice={j.job.slice} />
+          </div>
+        </div>
+        <div className="run-col" data-testid="run-docs">
+          {on.spec && <SpecPanel machine={machine} rig={rig} job={j.job} />}
+          <RigDocs ctx={ctx} machine={machine} rig={rig} on={on} />
+          {!on.spec && !on.rig && !on.culture && !on.mission && (
+            <p className="quiet" data-testid="run-docs-none">
+              No documents shown. Use the chips to choose what sits beside this job.
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- ledger
+
+function Ledger({
+  ctx,
+  machine,
+  rig,
+  items,
+  fm,
+}: {
+  ctx: V2PageProps['ctx'];
+  machine: string;
+  rig: string;
+  items: QueueItem[];
+  fm: FleetMachine;
+}) {
+  const t = useVerb<HistoryTransitionsOutput>(ctx.getSocket, 'history.transitions', {
+    machine,
+    rig,
+    limit: 200,
+  });
+  const byId = useMemo(() => new Map(items.map((q) => [q.id, q])), [items]);
+  const rows = useMemo(() => {
+    if (t.phase === 'ok' && t.value.rows.length > 0) {
+      return t.value.rows
+        .filter((r) => byId.has(r.qitemId))
+        .map((r) => ({
+          key: `t${r.id}`,
+          at: r.at,
+          q: byId.get(r.qitemId)!,
+          state: r.state,
+          closure: r.closureReason,
+          exact: true,
+        }));
+    }
+    return items.map((q) => ({
+      key: q.id,
+      at: q.createdAt,
+      q,
+      state: q.state,
+      closure: null as string | null,
+      exact: false,
+    }));
+  }, [t, items, byId]);
+  const sorted = [...rows].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60);
+  void fm;
+  return (
+    <section data-testid="run-ledger">
+      <div className="run-label">What just happened</div>
+      {sorted.length === 0 ? (
+        <p className="quiet">No handoff of this mission yet.</p>
+      ) : (
+        <ul className="run-ledger">
+          {sorted.map((r) => {
+            const v = verdictOf(r.q.tags);
+            return (
+              <li key={r.key} data-testid="run-ledger-row">
+                <span className="mono quiet" title={r.at}>
+                  {hhmm(r.at)}
+                </span>{' '}
+                <b>
+                  {bare(r.q.source)} {'→'} {bare(r.q.destination)}
+                </b>{' '}
+                {v && (
+                  <span
+                    className={`run-chip run-chip-${v}`}
+                    data-testid="run-verdict"
+                    data-verdict={v}
+                  >
+                    {v}
+                  </span>
+                )}{' '}
+                <span className="quiet">{r.state}</span>
+                {r.closure ? (
+                  <span className="quiet">
+                    {' '}
+                    {'·'} {r.closure}
+                  </span>
+                ) : null}
+                <br />
+                {(r.q.summary ?? r.q.id).split('\n')[0]}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {t.phase !== 'ok' && t.phase !== 'loading' && (
+        <p className="quiet" data-testid="run-ledger-fallback">
+          Exact times need the hub&apos;s history; showing each handoff when it was queued.
+        </p>
+      )}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- the page
+
+function RunBoard({ ctx }: V2PageProps) {
+  const rig = ctx.activeRig;
+  const fm = rig ? ctx.allMachines.find((m) => m.machine.id === rig.machineId) : undefined;
+  const machine = rig?.machineId ?? '';
+  const mdoc = useRigDoc(ctx.getSocket, machine, rig?.name ?? '', 'MISSION.md', !!rig);
+  const jobs = useMemo(
+    () => (mdoc.status === 'ok' ? parseMissionJobs(mdoc.text ?? '') : []),
+    [mdoc]
+  );
+  const missions = useMemo(() => (fm && rig ? missionsOnRig(fm, rig.name) : []), [fm, rig]);
+  const [missionPick, setMissionPick] = useState<string | null>(null);
+  const missionId =
+    missionPick && missions.includes(missionPick) ? missionPick : (missions[0] ?? null);
+  const real = useMemo(
+    () => (fm && rig ? buildRun(fm, rig.name, jobs, ctx.now, missionId) : null),
+    [fm, rig, jobs, ctx.now, missionId]
+  );
+  const [preview, setPreview] = useState(false);
+  const run = useMemo(
+    () =>
+      preview && real && fm && rig && real.jobs.length > 0 ? sampleRun(real, fm, rig.name) : real,
+    [preview, real, fm, rig]
+  );
+  const [sel, setSel] = useState<string | null>(null);
+  const [on, setOnAll] = useState<Record<DocKey, boolean>>(DOC_DEFAULTS);
+  const toggle = (k: DocKey) => setOnAll((o) => ({ ...o, [k]: !o[k] }));
+
+  const selected =
+    run && run.jobs.length
+      ? (run.jobs.find((j) => j.job.slice === sel) ??
+        (run.currentIndex !== null ? run.jobs[run.currentIndex] : run.jobs[0]))
+      : null;
+
+  return (
+    <main className="view w4-page run-page" data-testid="v2-run">
+      <RigPicker
+        rigs={ctx.rigs}
+        selected={rig?.key ?? null}
+        onSelect={ctx.chooseRig}
+        info={false}
+      />
+      {!rig && <p className="empty">Pick a rig.</p>}
+      {rig && fm && run && (
+        <>
+          <header className="run-top" data-testid="run-top">
+            <h2 className="run-title" data-testid="run-topline" data-phase={run.phase}>
+              {mdoc.status === 'unread'
+                ? 'Mission file not read'
+                : mdoc.status === 'missing'
+                  ? 'This rig has no MISSION.md'
+                  : topLine(run)}{' '}
+              {run.sample && <MockMark label="sample" />}
+            </h2>
+            <span className="run-meta mono">
+              {rig.name} on {rig.machineLabel}
+              {missions.length === 1 && ` \u00b7 mission ${missions[0]}`}
+            </span>
+            {missions.length > 1 && (
+              <select
+                aria-label="Mission"
+                value={missionId ?? ''}
+                data-testid="run-mission"
+                onChange={(e) => setMissionPick(e.target.value)}
+              >
+                {missions.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            )}
+            {mdoc.status !== 'ok' && mdoc.status !== 'loading' && (
+              <span className="run-note quiet" data-testid="run-mission-unread">
+                MISSION.md not readable from {rig.machineLabel}
+                {mdoc.why ? ` (${mdoc.why})` : ''}: not the same as no jobs
+              </span>
+            )}
+            {run.phase === 'no-jobs' && mdoc.status === 'ok' && (
+              <span className="run-note quiet" data-testid="run-no-jobs">
+                This rig&apos;s MISSION.md has no jobs table
+              </span>
+            )}
+            {run.phase === 'running' && !run.verdictTagged && !run.sample && (
+              <span className="run-note quiet" data-testid="run-no-verdicts">
+                no <code>verdict:</code> tags, so rework is not counted
+              </span>
+            )}
+            {real && real.jobs.length > 0 && (
+              <button
+                type="button"
+                className="pill-btn run-preview"
+                data-testid="run-preview"
+                aria-pressed={preview}
+                onClick={() => setPreview((v) => !v)}
+              >
+                {preview ? 'Back to the real run' : 'Preview a mid-run (sample)'}
+              </button>
+            )}
+          </header>
+          {run.jobs.length > 0 && (
+            <Strip run={run} selected={selected?.job.slice ?? null} onSelect={setSel} />
+          )}
+          <Stations run={run} />
+          <div className="run-lower">
+            {selected ? (
+              <JobPanel
+                ctx={ctx}
+                machine={machine}
+                rig={rig.name}
+                j={selected}
+                on={on}
+                setOn={toggle}
+              />
+            ) : (
+              <div />
+            )}
+            {!run.sample && (
+              <Ledger ctx={ctx} machine={machine} rig={rig.name} items={run.items} fm={fm} />
+            )}
+          </div>
+        </>
+      )}
+    </main>
+  );
+}
+
+export const page: V2PageDef = {
+  key: 'run',
+  label: 'Run board',
+  group: 'fleet',
+  component: RunBoard,
+  blurb:
+    'A mission’s jobs one by one: who holds the job now, rework, and each job’s spec beside its before and after.',
+};

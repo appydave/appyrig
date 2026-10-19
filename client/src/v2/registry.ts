@@ -11,6 +11,7 @@ import { page as needsYouPage } from './pages/needs-you/index.js';
 import { page as missionsPage } from './pages/missions/index.js';
 import { page as flowPage } from './pages/flow/index.js';
 import { page as agentPage } from './pages/agent/index.js';
+import { page as runPage } from './pages/run/index.js';
 import { page as rigMapPage } from './pages/rig-map/index.js';
 import { page as graphPage } from './pages/graph/index.js';
 import { page as healthPage } from './pages/health/index.js';
@@ -36,6 +37,7 @@ export function v2Pages(): V2PageDef[] {
     wallPage,
     graphPage,
     rigMapPage,
+    runPage,
     flowPage,
     agentPage,
     needsYouPage,
@@ -80,7 +82,7 @@ export function v2PageFor(key: PageKey): V2PageDef | undefined {
  * until a wave registers them.
  */
 export const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[] = [
-  { key: 'fleet', label: 'Fleet', pages: ['wall', 'graph', 'map', 'machines', 'accounts'] },
+  { key: 'fleet', label: 'Fleet', pages: ['wall', 'graph', 'map', 'run', 'machines', 'accounts'] },
   {
     key: 'work',
     label: 'Work',
@@ -110,6 +112,7 @@ const V2_LABEL: Record<View, string> = {
 const PLANNED_LABEL: Record<V2OnlyKey, string> = {
   about: 'About v2',
   graph: 'Graph',
+  run: 'Run board',
   'needs-you': 'Needs You',
   missions: 'Missions',
   history: 'History',
