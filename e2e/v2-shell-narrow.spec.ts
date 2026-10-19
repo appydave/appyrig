@@ -72,3 +72,38 @@ test.describe('v2 explainer class', () => {
     await expect(page.getByTestId('probe-explainer')).toBeVisible();
   });
 });
+
+test.describe('v2 shell with the agent panel open', () => {
+  for (const width of [1440, 1280, 1100]) {
+    test(`${width} px: a pinned drawer gives way, and Got it and every machine chip stay clear of the panel`, async ({
+      page,
+    }) => {
+      await page.addInitScript(() => localStorage.setItem('appyrig.rigDrawerPinned', '1'));
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(FROZEN);
+      await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
+      await page.getByTestId('terminal-card-open').first().click();
+      await expect(page.getByTestId('agent-panel')).toBeVisible();
+      const m = await page.evaluate(() => {
+        const left = document
+          .querySelector('[data-testid="agent-panel"]')!
+          .getBoundingClientRect().left;
+        const rights = [
+          ...document.querySelectorAll(
+            '[data-testid="machine-chip"], [data-testid="v2-welcome-dismiss"]'
+          ),
+        ].map((e) => e.getBoundingClientRect().right);
+        const main = document
+          .querySelector('main[data-testid^="v2-"]')!
+          .getBoundingClientRect().width;
+        return { left, maxRight: Math.max(...rights), main };
+      });
+      expect(m.maxRight, JSON.stringify(m)).toBeLessThanOrEqual(m.left);
+      expect(m.main, `page width ${m.main}`).toBeGreaterThanOrEqual(500);
+      // the panel closes: the saved pin is back
+      await page.keyboard.press('Escape');
+      await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+      await expect(page.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'true');
+    });
+  }
+});
