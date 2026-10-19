@@ -234,15 +234,14 @@ describe('Wall v2: page', () => {
     expect(screen.getByTestId('v2-wall-none')).toHaveTextContent('No seat is failing');
   });
 
-  it('groups by team or by machine', () => {
+  it('always groups by rig, with no group switch', () => {
     localStorage.setItem('appyrig.v2.hideStopped', 'off');
     const { socket } = verbSocket();
     render(<Wall ctx={makeCtx(fleet(), socket)} />);
     const teams = screen.getAllByTestId('v2w-group').map((g) => g.dataset.groupKey);
     expect(teams).toContain('roamy:starter');
-    fireEvent.click(screen.getByTestId('v2w-by-machine'));
-    const machines = screen.getAllByTestId('v2w-group').map((g) => g.dataset.groupKey);
-    expect(machines.sort()).toEqual(['m2', 'roamy']);
+    expect(screen.queryByTestId('v2w-by-machine')).toBeNull();
+    expect(screen.queryByTestId('v2w-by-rig')).toBeNull();
   });
 
   it('a card opens the Agent page; Restart and Stop are fakes that send nothing', () => {

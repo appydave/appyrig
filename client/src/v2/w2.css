@@ -114,19 +114,43 @@
   color: var(--ar-term-fg);
 }
 .v2w-actions {
+  /* inside the card, never past it: the popover cannot reach the next heading */
   position: absolute;
   z-index: 5;
   top: 30px;
+  left: 6px;
   right: 6px;
+  max-height: calc(100% - 36px);
+  overflow: auto;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 6px 8px;
   background: var(--ar-surface-raised);
   color: var(--ar-ink);
   border: 1px solid var(--ar-line);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgb(52 45 45 / 0.25);
+}
+/* A rig picked in the drawer: its group is outlined, and scrolls to just under the page header. */
+.v2w-group {
+  scroll-margin-top: 52px;
+}
+.v2w-group[data-focused] {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+.v2w-actions-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.v2w-only {
+  border-color: var(--ar-cta);
 }
 .v2w-groups {
   display: flex;

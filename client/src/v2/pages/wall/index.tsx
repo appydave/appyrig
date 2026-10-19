@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
@@ -9,17 +9,36 @@ import {
   modelChip,
   pipFor,
   seatName,
-  type GroupBy,
   type PipKey,
   type WallGroup,
 } from '../../../fleet/model.js';
 import { useStableOrder } from '../../../lib/stableOrder.js';
 import { groupRank } from '../../../fleet/model.js';
-import { FakeControl, MockNote, TerminalCard, tailLine, useDocsDrawer } from '../../kit/index.js';
+import { FakeControl, MockNote, PageHeader, TerminalCard, useDocsDrawer } from '../../kit/index.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
-import { seatFlags, teamsOf, wallView, type SeatFlags, type WallFilter } from './model.js';
+import {
+  seatFlags,
+  teamsOf,
+  wallTail,
+  wallView,
+  type SeatFlags,
+  type WallFilter,
+} from './model.js';
+
+/**
+ * What the navigation lane adds to the ctx. Called optionally until it lands: without it a card
+ * falls back to the Agent page and the documents drawer, as before.
+ */
+type NavCtx = V2PageProps['ctx'] & {
+  openAgentPanel?: (a: {
+    machineId: string;
+    seatKey: string;
+    tab?: 'documents' | 'terminal' | 'messages';
+  }) => void;
+  focusNonce?: number;
+};
 
 const TEAMS_KEY = 'appyrig.v2.wallHiddenTeams';
 // v2 keeps its own choice: switching it here never changes Current's Wall.
@@ -95,9 +114,10 @@ interface CardProps {
   machine: FleetMachine;
   seat: Seat;
   now: number;
-  onOpen: (key: string) => void;
-  /** Open the documents drawer for this seat. */
-  onDocs: (machineId: string, seat: Seat) => void;
+  /** The card body: open the agent (the panel over this page). */
+  onOpen: (machineId: string, tileKey: string) => void;
+  /** ⋯ → Documents: the same panel on its Documents tab. */
+  onDocs: (machineId: string, tileKey: string, seat: Seat) => void;
 }
 
 /**
@@ -114,6 +134,20 @@ const SeatCard = memo(function SeatCard({
   onDocs,
 }: CardProps) {
   const [more, setMore] = useState(false);
+  // The ⋯ popover closes on Escape or a click anywhere else, so it (and its tooltip) never lingers.
+  useEffect(() => {
+    if (!more) return;
+    const away = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest(`[data-owner="${tileKey}"]`)) setMore(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMore(false);
+    window.addEventListener('pointerdown', away);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('pointerdown', away);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [more, tileKey]);
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
@@ -130,13 +164,13 @@ const SeatCard = memo(function SeatCard({
       modelFamily={chip.family}
       contextPct={seat.contextUsedPct}
       contextTokens={seat.contextTokens}
-      tail={tailLine(seat.tail?.lines)}
+      tail={wallTail(seat.tail?.lines)}
       warning={pip === 'blocked' ? blockedLine(seat) : null}
       skills={seat.keySkills}
       skillCount={seat.skillCount}
       where={machine.machine.label}
-      onOpen={() => onOpen(tileKey)}
-      ariaLabel={`${name}, ${PIP[pip].label}, ${seat.rig ?? 'tmux'} on ${machine.machine.label}: open the agent page`}
+      onOpen={() => onOpen(machine.machine.id, tileKey)}
+      ariaLabel={`${name}, ${PIP[pip].label}, ${seat.rig ?? 'tmux'} on ${machine.machine.label}: open the agent panel`}
       testId="v2-seat-card"
       dataAttrs={{
         'data-seat-key': tileKey,
@@ -148,9 +182,10 @@ const SeatCard = memo(function SeatCard({
           type="button"
           className="v2w-more"
           data-testid="v2-card-more"
+          data-owner={tileKey}
           aria-expanded={more}
-          aria-label={`Actions for ${name} (mocks)`}
-          title="Documents, or Restart / Stop (mocks: nothing is sent)"
+          aria-label={`Documents, and mock actions for ${name}`}
+          title={more ? undefined : 'Documents, or Restart / Stop (mocks: nothing is sent)'}
           onClick={() => setMore((m) => !m)}
         >
           {'\u22ef'}
@@ -158,14 +193,14 @@ const SeatCard = memo(function SeatCard({
       }
       overlay={
         more ? (
-          <div className="v2w-actions" data-testid="v2-card-actions">
+          <div className="v2w-actions" data-testid="v2-card-actions" data-owner={tileKey}>
             <button
               type="button"
               className="pill-btn"
               data-testid="v2-card-docs"
               onClick={() => {
                 setMore(false);
-                onDocs(machine.machine.id, seat);
+                onDocs(machine.machine.id, tileKey, seat);
               }}
             >
               Documents
@@ -187,23 +222,28 @@ const SeatCard = memo(function SeatCard({
   );
 });
 
-function WallV2({ ctx }: V2PageProps) {
+function WallV2({ ctx: baseCtx }: V2PageProps) {
+  const ctx = baseCtx as NavCtx;
   const [filter, setFilter] = useState<WallFilter>('all');
   const [hideStopped, setHideStopped] = useState(readHideStopped);
   const [hiddenTeams, setHiddenTeams] = useState<Set<string>>(() => readSet(TEAMS_KEY));
   const [openAt, setOpenAt] = useState<Record<string, boolean>>(readOpen);
-  const [groupBy, setGroupBy] = useState<GroupBy>(ctx.groupBy);
-  // The header's Group control still works: when it changes, so does this page.
-  const [seenHeader, setSeenHeader] = useState<GroupBy>(ctx.groupBy);
-  if (seenHeader !== ctx.groupBy) {
-    setSeenHeader(ctx.groupBy);
-    setGroupBy(ctx.groupBy);
-  }
   const [over, setOver] = useState(false);
   const { openDocs, drawer } = useDocsDrawer(ctx);
+  // A card body opens the agent panel over the Wall; ⋯ → Documents opens it on its Documents tab.
+  // Until the panel exists, the body goes to the Agent page and Documents to the drawer.
+  const { openAgentPanel, openAgentPage } = ctx;
+  const onOpen = useCallback(
+    (machineId: string, seatKey: string) =>
+      openAgentPanel ? openAgentPanel({ machineId, seatKey }) : openAgentPage(seatKey),
+    [openAgentPanel, openAgentPage]
+  );
   const onDocs = useCallback(
-    (machineId: string, seat: Seat) => openDocs({ machineId, seat }),
-    [openDocs]
+    (machineId: string, seatKey: string, seat: Seat) =>
+      openAgentPanel
+        ? openAgentPanel({ machineId, seatKey, tab: 'documents' })
+        : openDocs({ machineId, seat }),
+    [openAgentPanel, openDocs]
   );
 
   const teams = useMemo(() => teamsOf(ctx.machines), [ctx.machines]);
@@ -212,7 +252,7 @@ function WallV2({ ctx }: V2PageProps) {
     [ctx.machines, hideStopped, hiddenTeams, filter, ctx.now]
   );
   const groups = useStableOrder(
-    groupSeats(view.machines, groupBy),
+    groupSeats(view.machines, 'rig'),
     (g) => g.key,
     (g) => String(groupRank(g)),
     over
@@ -247,85 +287,121 @@ function WallV2({ ctx }: V2PageProps) {
   };
   const noSeats = ctx.received && teams.length === 0 && ctx.hidden.length === 0;
 
+  // A rig picked in the Rigs drawer is never a no-op here: its group is scrolled to and outlined,
+  // and "Only this rig" narrows the Wall to it. A repeat pick (focusNonce) focuses again.
+  const root = useRef<HTMLElement>(null);
+  const picked = ctx.pickedRig;
+  const focusKey = picked?.key ?? null;
+  const [only, setOnly] = useState(false);
+  useEffect(() => setOnly(false), [focusKey]);
+  const present = focusKey !== null && groups.some((g) => g.key === focusKey);
+  useEffect(() => {
+    if (!focusKey) return;
+    setOpenAt((o) => (o[focusKey] === true ? o : { ...o, [focusKey]: true }));
+    const id = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const el = root.current?.querySelector(`[data-group-key="${focusKey}"]`);
+        el?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+      })
+    );
+    return () => cancelAnimationFrame(id);
+  }, [focusKey, ctx.focusNonce]);
+  const shown = only && present ? groups.filter((g) => g.key === focusKey) : groups;
+
   return (
     <main
+      ref={root}
       className="v2-wall"
       data-testid="v2-wall"
       aria-label="The Wall (v2)"
       onPointerEnter={() => setOver(true)}
       onPointerLeave={() => setOver(false)}
     >
-      <MockNote>Restart and Stop on the cards are mocks — nothing is sent</MockNote>
-      <div className="v2w-bar" role="group" aria-label="Filters">
-        <div className="v2w-row" role="group" aria-label="Status filter">
-          {FILTERS.map((f) => (
+      <PageHeader
+        title="Wall"
+        facts={[
+          `${view.counts.all} agents`,
+          view.stoppedHidden > 0 ? `${view.stoppedHidden} stopped hidden` : null,
+        ].filter((f): f is string => f !== null)}
+        actions={
+          <span className="v2w-actions-row" role="group" aria-label="Wall filters">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className="pill-btn v2w-filter"
+                data-testid={`v2-filter-${f.id}`}
+                data-filter={f.id}
+                aria-pressed={filter === f.id}
+                title={f.hint}
+                onClick={() => setFilter(f.id)}
+              >
+                {f.label} <b data-testid={`v2-filter-count-${f.id}`}>{view.counts[f.id]}</b>
+              </button>
+            ))}
             <button
-              key={f.id}
-              type="button"
-              className="pill-btn v2w-filter"
-              data-testid={`v2-filter-${f.id}`}
-              data-filter={f.id}
-              aria-pressed={filter === f.id}
-              title={f.hint}
-              onClick={() => setFilter(f.id)}
-            >
-              {f.label} <b data-testid={`v2-filter-count-${f.id}`}>{view.counts[f.id]}</b>
-            </button>
-          ))}
-          <span className="v2w-sep" aria-hidden="true" />
-          <button
-            type="button"
-            className="pill-btn"
-            data-testid="v2-hide-stopped"
-            aria-pressed={hideStopped}
-            title="On: stopped seats are left off, except failing ones (down while their rig runs). Remembered for you."
-            onClick={toggleStopped}
-          >
-            {hideStopped ? '●' : '○'} Hide stopped
-            {hideStopped && view.stoppedHidden > 0 ? ` · ${view.stoppedHidden} hidden` : ''}
-          </button>
-          <span className="v2w-sep" aria-hidden="true" />
-          <span className="label">Group</span>
-          {(['rig', 'machine'] as const).map((g) => (
-            <button
-              key={g}
               type="button"
               className="pill-btn"
-              data-testid={`v2w-by-${g}`}
-              aria-pressed={groupBy === g}
-              onClick={() => setGroupBy(g)}
+              data-testid="v2-hide-stopped"
+              aria-pressed={hideStopped}
+              title="On: stopped seats are left off, except failing ones (down while their rig runs). Remembered for you."
+              onClick={toggleStopped}
             >
-              {g === 'rig' ? 'team' : 'machine'}
+              {hideStopped ? '\u25cf' : '\u25cb'} Hide stopped
             </button>
-          ))}
-          {teams.length > 0 && (
-            <>
-              <span className="v2w-sep" aria-hidden="true" />
+            {teams.length > 0 && (
               <TeamPicker
                 teams={teams}
                 hidden={hiddenTeams}
                 onToggle={toggleTeam}
                 onSet={setTeams}
               />
-            </>
-          )}
-        </div>
-        {ctx.hidden.length > 0 && (
-          <p className="filter-note" data-testid="v2-wall-hidden">
-            Hidden by the machine filter:{' '}
-            {ctx.hidden.map((m) => (
+            )}
+            {picked && (
               <button
-                key={m.id}
                 type="button"
-                className="pill-btn"
-                onClick={() => ctx.onShowMachine(m.id)}
+                className="pill-btn v2w-only"
+                data-testid="v2-only-rig"
+                aria-pressed={only && present}
+                disabled={!present}
+                title={
+                  present
+                    ? 'Show only this rig on the Wall'
+                    : `${picked.name} has no seat on the Wall right now (stopped seats hidden, a filter, or a team switched off)`
+                }
+                onClick={() => setOnly((o) => !o)}
               >
-                ○ {m.label} · show
+                {present
+                  ? `Only ${picked.displayName ?? picked.name} \u00b7 ${picked.machineLabel}${only ? ' \u00d7' : ''}`
+                  : `${picked.displayName ?? picked.name} \u00b7 ${picked.machineLabel}: not shown`}
               </button>
-            ))}
-          </p>
-        )}
-      </div>
+            )}
+          </span>
+        }
+        mocks={
+          <>
+            <MockNote>Restart and Stop on the cards are mocks — nothing is sent</MockNote>
+            <p className="quiet" data-testid="v2w-order">
+              {WALL_ORDER_TEXT}
+            </p>
+          </>
+        }
+      />
+      {ctx.hidden.length > 0 && (
+        <p className="filter-note" data-testid="v2-wall-hidden">
+          Hidden by the machine filter:{' '}
+          {ctx.hidden.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="pill-btn"
+              onClick={() => ctx.onShowMachine(m.id)}
+            >
+              {'\u25cb'} {m.label} {'\u00b7'} show
+            </button>
+          ))}
+        </p>
+      )}
       {noSeats && (
         <p className="empty">
           No seats yet. Machines appear here as soon as their collector reports.
@@ -338,15 +414,10 @@ function WallV2({ ctx }: V2PageProps) {
             : `No seat is ${FILTERS.find((f) => f.id === filter)!.label.toLowerCase()} right now.`}
         </p>
       )}
-      {groups.length > 0 && (
-        <p className="v2w-order quiet" data-testid="v2w-order">
-          {WALL_ORDER_TEXT}
-        </p>
-      )}
       <div className="v2w-groups" data-testid="v2w-groups">
-        {groups.map((g) => {
+        {shown.map((g) => {
           const open = isOpen(g);
-          const plain = !g.rig && groupBy === 'rig';
+          const plain = !g.rig;
           const title = plain ? `No rig \u00b7 ${g.where}` : (g.rig?.displayName ?? g.name);
           return (
             <section
@@ -355,6 +426,7 @@ function WallV2({ ctx }: V2PageProps) {
               data-testid="v2w-group"
               data-group-key={g.key}
               data-state={groupState(g)}
+              data-focused={g.key === focusKey || undefined}
             >
               <button
                 type="button"
@@ -388,7 +460,7 @@ function WallV2({ ctx }: V2PageProps) {
                       machine={t.machine}
                       seat={t.seat}
                       now={ctx.now}
-                      onOpen={ctx.openAgentPage}
+                      onOpen={onOpen}
                       onDocs={onDocs}
                     />
                   ))}
