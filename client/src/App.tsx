@@ -550,7 +550,21 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       .map((p) => rigFromParam(p))
       .filter((k): k is string => k !== null)
   );
+  /**
+   * O4: opening an agent picks that agent's rig, from every entry point (drawer, Wall card, Graph
+   * card, Flow box, Run board Docs). A plain tmux seat (no rig) leaves the pick alone. It does not
+   * touch the panel, so the panel just opened stays open.
+   */
+  const pickAgentRig = useCallback(
+    (tileKey: string) => {
+      const t = findSeat(state.machines, tileKey);
+      if (!t || !t.seat.rig) return;
+      chooseRig(`${t.machine.machine.id}:${t.seat.rig}`);
+    },
+    [state.machines, chooseRig]
+  );
   const v2 = useV2({
+    onAgentOpened: pickAgentRig,
     onUrlRig,
     view,
     chooseView,
