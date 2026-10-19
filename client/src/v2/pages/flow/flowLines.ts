@@ -47,7 +47,7 @@ export function flowPairs(edges: FlowEdge[], at: number): FlowPair[] {
       ...p,
       key: flowPairKey(p.a, p.b),
       edges: mine,
-      back: mine.filter((e) => e.rework).reduce((n, e) => n + e.count, 0),
+      back: mine.reduce((n, e) => n + (e.back ?? (e.rework ? e.count : 0)), 0),
     };
   });
 }

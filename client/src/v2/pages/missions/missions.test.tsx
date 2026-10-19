@@ -193,8 +193,13 @@ describe('Missions fold: loose slices, outcomes, doc reads', () => {
         q('b', ['mission:alpha', 'slice-1'], 'pending', 'dev-qa@fliedit-team'),
       ],
     };
-    const alpha = deriveMissions([m]).find((x) => x.id === 'alpha')!;
-    expect(alpha.slices.map((x) => x.id)).toEqual(['slice-1 (fliedit-team)', 'slice-1 (starter)']);
+    // run board lane 2: two rigs are two missions now, and each keeps its rig in the slice name
+    const alpha = deriveMissions([m]).filter((x) => x.id === 'alpha');
+    expect(alpha.map((x) => x.rig).sort()).toEqual(['fliedit-team', 'starter']);
+    expect(alpha.flatMap((x) => x.slices.map((s) => s.id)).sort()).toEqual([
+      'slice-1 (fliedit-team)',
+      'slice-1 (starter)',
+    ]);
   });
 
   it('counts cancelled, rejected and expired as closed without being done', () => {

@@ -11,6 +11,7 @@ import {
   replaySteps,
   rigQueue,
   stageOf,
+  type FlowOptions,
 } from '../../../fleet/views.js';
 import ReplayConsoles from '../../../components/ReplayConsoles.js';
 import HandoffPanel, {
@@ -37,6 +38,12 @@ import {
 } from '../../kit/index.js';
 import { flowPairKey, flowPairs, pairPath, type FlowPair } from './flowLines.js';
 import './flow.css';
+
+/**
+ * Run board brief, lane 2: v2 counts a handoff as sent back by its `verdict:` tag (changes / fail)
+ * when the rig uses them, else by the old backwards-stage rule. Current's page passes nothing.
+ */
+const V2_FLOW: FlowOptions = { sentBack: 'verdict-or-stage' };
 
 interface Props {
   machine: FleetMachine | null;
@@ -201,7 +208,7 @@ export default function HandoffFlowV2({
   // Chapters only need the open/closed picture to 10-minute precision.
   const tenMin = Math.floor(now / 600_000) * 600_000;
   const chapters = useMemo(
-    () => (machine && rig ? flowChapters(machine, rig, tenMin) : []),
+    () => (machine && rig ? flowChapters(machine, rig, tenMin, V2_FLOW) : []),
     [machine, rig, tenMin]
   );
   const steps = useMemo(() => (machine && rig ? replaySteps(machine, rig) : []), [machine, rig]);
@@ -340,7 +347,7 @@ export default function HandoffFlowV2({
     );
   }
   const t = at ?? range.end;
-  const flow = buildFlow(machine, rig, t, now)!;
+  const flow = buildFlow(machine, rig, t, now, V2_FLOW)!;
   const pairs = flowPairs(flow.edges, t);
   const L = layoutFor(flow.stages.map((s) => s.stage));
   const labelOf = (id: string) => flow.stages.find((s) => s.stage === id)?.label ?? id;
@@ -501,7 +508,7 @@ export default function HandoffFlowV2({
         <span data-testid="flow-total" data-explain="handoff">
           <b>{flow.total}</b> handoffs
         </span>
-        {flow.mode === 'roles' && (
+        {(flow.mode === 'roles' || flow.rework > 0) && (
           <span data-testid="flow-rework" data-explain="rework">
             <b className="amber">{flow.rework}</b> sent back
           </span>

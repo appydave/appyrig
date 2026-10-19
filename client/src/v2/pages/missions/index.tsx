@@ -34,7 +34,10 @@ function Bar({ value, label }: { value: number; label: string }) {
   );
 }
 
-/** The mission's own MISSION.md, when a rig of it has one (read through rig.files / rig.file). */
+/**
+ * The mission's own MISSION.md, read from ITS machine's rig only (rig.files / rig.file with that
+ * machine), never from a same-named rig on another machine.
+ */
 function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'] }) {
   const [doc, setDoc] = useState<{ rig: string; machineId: string; text: string } | 'none' | null>(
     null
@@ -71,12 +74,13 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'
     return () => {
       live = false;
     };
-  }, [mission.id, rigsKey, getSocket]);
+  }, [mission.key, rigsKey, getSocket]);
   if (doc === null) return <p className="quiet">Looking for a MISSION.md in its rigs…</p>;
   if (doc === 'none')
     return (
       <p className="quiet" data-testid="ms-nodoc">
-        No MISSION.md found in its rigs&apos; folders (or no collector has sent one).
+        No MISSION.md found in {mission.rig} on {mission.machineLabel} (or its collector has not
+        sent one).
       </p>
     );
   const { title } = missionDocSummary(doc.text);
@@ -159,7 +163,13 @@ function MissionCard({
   toggle: () => void;
 }) {
   return (
-    <section className="ms-mission" data-testid="ms-mission" data-mission={mission.id}>
+    <section
+      className="ms-mission"
+      data-testid="ms-mission"
+      data-mission={mission.id}
+      data-mission-key={mission.key}
+      data-machine={mission.machineId}
+    >
       <h3>
         <button
           type="button"
@@ -177,7 +187,17 @@ function MissionCard({
           {mission.slices.length} {mission.slices.length === 1 ? 'slice' : 'slices'}
         </span>
       </h3>
-      <p className="quiet">on {mission.machines.join(', ')}</p>
+      <p className="quiet">
+        on{' '}
+        <span
+          className="chip ms-machine"
+          data-testid="ms-machine"
+          title="The machine this mission runs on"
+        >
+          {mission.machineLabel}
+        </span>{' '}
+        · rig <span className="mono">{mission.rig}</span>
+      </p>
       {open && (
         <>
           <MissionDoc mission={mission} ctx={ctx} />
@@ -219,7 +239,7 @@ function Missions({ ctx }: V2PageProps) {
   const loose = useMemo(() => deriveUnattributed(ctx.machines), [ctx.machines]);
   const sample = useMemo(() => sampleMission(ctx.allMachines), [ctx.allMachines]);
   const [openId, setOpenId] = useState<string | null>(null);
-  const current = openId ?? missions[0]?.id ?? null;
+  const current = openId ?? missions[0]?.key ?? null;
 
   return (
     <main className="view v2-missions" data-testid="v2-missions">
@@ -257,11 +277,11 @@ function Missions({ ctx }: V2PageProps) {
       ) : (
         missions.map((m) => (
           <MissionCard
-            key={m.id}
+            key={m.key}
             mission={m}
             ctx={ctx}
-            open={current === m.id}
-            toggle={() => setOpenId(current === m.id ? '' : m.id)}
+            open={current === m.key}
+            toggle={() => setOpenId(current === m.key ? '' : m.key)}
           />
         ))
       )}
