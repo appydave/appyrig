@@ -429,126 +429,128 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
 
   return (
     <main className="view g2-graph" data-testid="v2-graph" aria-label="Graph: every rig as one box">
-      <div className="g2-toolbar">
-        <span className="g2-tool-group">
-          <button
-            type="button"
-            className="pill-btn"
-            data-testid="g2-expand-all"
-            onClick={() => expandAll(true)}
-          >
-            Expand all
-          </button>
-          <button
-            type="button"
-            className="pill-btn"
-            data-testid="g2-collapse-all"
-            onClick={() => expandAll(false)}
-          >
-            Collapse all
-          </button>
-        </span>
-        <span className="g2-tool-group" role="group" aria-label="Zoom">
-          <button
-            type="button"
-            className="pill-btn"
-            data-testid="g2-zoom-out"
-            aria-label="Zoom out: show less"
-            disabled={zoom === 'fleet'}
-            onClick={() => step(-1)}
-          >
-            −
-          </button>
-          <span className="g2-zoom-level mono" data-testid="g2-zoom" data-zoom={zoom}>
-            {ZOOM_LABEL[zoom]}
-          </span>
-          <button
-            type="button"
-            className="pill-btn"
-            data-testid="g2-zoom-in"
-            aria-label="Zoom in: show more"
-            disabled={zoom === 'cards'}
-            onClick={() => step(1)}
-          >
-            +
-          </button>
-          <button type="button" className="pill-btn" data-testid="g2-fit" onClick={fit}>
-            Fit
-          </button>
-        </span>
-        <span className="g2-tool-group">
-          <button
-            type="button"
-            className="pill-btn"
-            data-testid="g2-show-stopped"
-            aria-pressed={showStopped}
-            title="Stopped rigs are hidden by default, as on the Wall"
-            onClick={() => setShowStopped(!showStopped)}
-          >
-            Show stopped ({stoppedCount})
-          </button>
-        </span>
-        <span className="g2-tool-group" role="group" aria-label="Filter by state">
-          {FLAG_FILTERS.map((f) => (
+      <div className="g2-sticky" data-testid="g2-sticky">
+        <div className="g2-toolbar">
+          <span className="g2-tool-group">
             <button
-              key={f.key}
               type="button"
-              className="pill-btn g2-filter"
-              data-flag={f.key}
-              data-testid={`g2-filter-${f.key}`}
-              aria-pressed={filter === f.key}
-              title={f.hint}
-              onClick={() => setFilter((x) => (x === f.key ? null : f.key))}
+              className="pill-btn"
+              data-testid="g2-expand-all"
+              onClick={() => expandAll(true)}
             >
-              {f.glyph} {f.label} <span className="mono">{counts[f.key]}</span>
+              Expand all
             </button>
-          ))}
-        </span>
-      </div>
-      <PageHeader
-        title="Graph"
-        facts={[
-          <span key="c" data-testid="g2-caption">
-            <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
-            active · {graph.machines.length} machines ·{' '}
-            <b>
-              {pairs.length} line{pairs.length === 1 ? '' : 's'} between rigs
-            </b>{' '}
-            ({linesTotal} handoffs)
-            {toHidden.length > 0 && (
-              <span data-testid="g2-hidden-lines">
-                {' '}
-                · {toHidden.length} to hidden stopped rig{toHidden.length === 1 ? '' : 's'}
-              </span>
-            )}
-            {graph.unplaced.count > 0 && (
-              <span
-                className="g2-unplaced"
-                data-testid="g2-unplaced"
-                tabIndex={0}
-                title={unplacedHint}
-                aria-label={unplacedHint}
-              >
-                {' '}
-                · +{graph.unplaced.count} not drawn ⓘ
-              </span>
-            )}
-          </span>,
-          ...(pairs.length === 0
-            ? [
-                <span key="n" data-testid="g2-no-lines">
-                  No handoffs between the rigs shown
-                  {toHidden.length > 0 ? ' (some go to hidden stopped rigs)' : ''}.
-                </span>,
-              ]
-            : []),
-        ]}
-        mocks={
-          <span data-testid="g2-mock-note">
-            <MockNote>Rig controls on this page are mocks — nothing is sent</MockNote>
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="g2-collapse-all"
+              onClick={() => expandAll(false)}
+            >
+              Collapse all
+            </button>
           </span>
-        }
-      />
+          <span className="g2-tool-group" role="group" aria-label="Zoom">
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="g2-zoom-out"
+              aria-label="Zoom out: show less"
+              disabled={zoom === 'fleet'}
+              onClick={() => step(-1)}
+            >
+              −
+            </button>
+            <span className="g2-zoom-level mono" data-testid="g2-zoom" data-zoom={zoom}>
+              {ZOOM_LABEL[zoom]}
+            </span>
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="g2-zoom-in"
+              aria-label="Zoom in: show more"
+              disabled={zoom === 'cards'}
+              onClick={() => step(1)}
+            >
+              +
+            </button>
+            <button type="button" className="pill-btn" data-testid="g2-fit" onClick={fit}>
+              Fit
+            </button>
+          </span>
+          <span className="g2-tool-group">
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="g2-show-stopped"
+              aria-pressed={showStopped}
+              title="Stopped rigs are hidden by default, as on the Wall"
+              onClick={() => setShowStopped(!showStopped)}
+            >
+              Show stopped ({stoppedCount})
+            </button>
+          </span>
+          <span className="g2-tool-group" role="group" aria-label="Filter by state">
+            {FLAG_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className="pill-btn g2-filter"
+                data-flag={f.key}
+                data-testid={`g2-filter-${f.key}`}
+                aria-pressed={filter === f.key}
+                title={f.hint}
+                onClick={() => setFilter((x) => (x === f.key ? null : f.key))}
+              >
+                {f.glyph} {f.label} <span className="mono">{counts[f.key]}</span>
+              </button>
+            ))}
+          </span>
+        </div>
+        <PageHeader
+          title="Graph"
+          facts={[
+            <span key="c" data-testid="g2-caption">
+              <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
+              active · {graph.machines.length} machines ·{' '}
+              <b>
+                {pairs.length} line{pairs.length === 1 ? '' : 's'} between rigs
+              </b>{' '}
+              ({linesTotal} handoffs)
+              {toHidden.length > 0 && (
+                <span data-testid="g2-hidden-lines">
+                  {' '}
+                  · {toHidden.length} to hidden stopped rig{toHidden.length === 1 ? '' : 's'}
+                </span>
+              )}
+              {graph.unplaced.count > 0 && (
+                <span
+                  className="g2-unplaced"
+                  data-testid="g2-unplaced"
+                  tabIndex={0}
+                  title={unplacedHint}
+                  aria-label={unplacedHint}
+                >
+                  {' '}
+                  · +{graph.unplaced.count} not drawn ⓘ
+                </span>
+              )}
+            </span>,
+            ...(pairs.length === 0
+              ? [
+                  <span key="n" data-testid="g2-no-lines">
+                    No handoffs between the rigs shown
+                    {toHidden.length > 0 ? ' (some go to hidden stopped rigs)' : ''}.
+                  </span>,
+                ]
+              : []),
+          ]}
+          mocks={
+            <span data-testid="g2-mock-note">
+              <MockNote>Rig controls on this page are mocks — nothing is sent</MockNote>
+            </span>
+          }
+        />
+      </div>
       {pairs.length > 0 && (
         <div className="g2-legend" data-testid="g2-legend">
           <HandoffLegend compact />

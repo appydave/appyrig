@@ -93,6 +93,12 @@ export default function RigInside({
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<{ key: string; x: number; y: number } | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** After a click that opened something, the card under the pointer does not pop up its own card for a moment. */
+  const quietUntil = useRef(0);
+  const quiet = () => {
+    quietUntil.current = Date.now() + 700;
+    setHover(null);
+  };
 
   const ownSeats = useMemo(() => own.pods.flatMap((p) => p.seats), [own]);
   const ownKeys = useMemo(() => new Set(ownSeats.map((s) => s.key)), [ownSeats]);
@@ -199,7 +205,7 @@ export default function RigInside({
       otherRow.forEach(({ p, a, b }, i) => {
         const sx = a.x + a.w / 2;
         const ex = b.x + b.w / 2;
-        const gap = 5;
+        const gap = 9;
         const chan = 4 + (i % 4) * 4;
         const ay = a.y - gap;
         const by = b.y - gap;
@@ -247,9 +253,22 @@ export default function RigInside({
     hideTimer.current = setTimeout(() => setHover(null), 220);
   };
   useEffect(() => () => keep(), []);
+  // a press anywhere outside the card, its menu and the hover card puts the hover card away
+  useEffect(() => {
+    if (!hover) return;
+    const away = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (t?.closest('.g2-hover, .g2-cell')) return;
+      keep();
+      setHover(null);
+    };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [hover]);
 
   const showHover = (s: MapSeat, node: HTMLElement) => {
     keep();
+    if (Date.now() < quietUntil.current) return;
     if (document.querySelector('[data-explain-on]')) return;
     const base = box.current?.getBoundingClientRect();
     if (!base) return;
@@ -356,6 +375,15 @@ export default function RigInside({
                 </g>
               );
             })}
+          </svg>
+        )}
+        {level === 'cards' && (
+          <svg
+            className="g2-inside-lines g2-inside-lines-labels"
+            width={size.w}
+            height={size.h}
+            aria-hidden="true"
+          >
             {arcs.map(({ pair: p, lx, ly, elbow }) => {
               const state = lineFocusState(lf.focus, p.a, p.b);
               const full = p.planned ? p.plannedWords || 'planned' : pairLabel(p);
@@ -423,7 +451,10 @@ export default function RigInside({
                         contextPct={s.contextPct}
                         contextTokens={s.contextTokens}
                         tail={tailLine(findTile(machines, s.key)?.seat.tail?.lines)}
-                        onOpen={() => onOpenAgent(s.key)}
+                        onOpen={() => {
+                          quiet();
+                          onOpenAgent(s.key);
+                        }}
                         corner={
                           onDocs && <CardMenu name={s.name} onDocuments={() => onDocs(s.key)} />
                         }
@@ -497,7 +528,10 @@ export default function RigInside({
                   type="button"
                   className="pill-btn"
                   data-testid="g2-hover-docs"
-                  onClick={() => onDocs(hoverSeat.key)}
+                  onClick={() => {
+                    quiet();
+                    onDocs(hoverSeat.key);
+                  }}
                 >
                   Documents
                 </button>
