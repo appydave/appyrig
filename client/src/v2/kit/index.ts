@@ -49,3 +49,11 @@ export {
   labelClass,
   lineClass,
 } from './HandoffLineMarks.js';
+export {
+  default as TerminalCard,
+  SKILL_CHIPS,
+  skillChips,
+  tailLine,
+  type CardSize,
+  type TerminalCardProps,
+} from './TerminalCard.js';
