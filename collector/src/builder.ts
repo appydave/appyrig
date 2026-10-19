@@ -2,6 +2,7 @@ import {
   MachineSnapshotSchema,
   POD_MEMBERS_MAX,
   RIG_EDGES_MAX,
+  RIG_ENV_NAMES_MAX,
   RIG_PODS_MAX,
   RIG_SUMMARY_MAX,
   SNAPSHOT_SCHEMA_VERSION,
@@ -12,6 +13,7 @@ import {
   type Reading,
   type QueueItem,
   type RigPod,
+  type RigSpecView,
   type RigSummary,
   type Seat,
   type SourceHealth,
@@ -186,6 +188,7 @@ export function enrichRigs(
         if (spec.spec) {
           out.pods = spec.spec.pods.slice(0, RIG_PODS_MAX).map(podOf);
           out.specEdges = (spec.spec.edges ?? []).slice(0, RIG_EDGES_MAX);
+          out.rigSpec = rigSpecOf(spec.spec);
         }
       }
     }
@@ -205,6 +208,22 @@ export function podOf(pod: OpenRig.PodSpec): RigPod {
   if (pod.continuity_policy) out.continuity_policy = pod.continuity_policy;
   if (pod.startup) out.startup = redactDeep(pod.startup);
   if (pod.edges) out.edges = pod.edges.slice(0, RIG_EDGES_MAX);
+  return out;
+}
+
+/** The rig-level fields of a validated rig.yaml: env reduced to its names, text redacted. */
+export function rigSpecOf(spec: OpenRig.RigSpec): RigSpecView {
+  const { version, culture_file, non_interruptive, permission_policy, managed_blocks } = spec;
+  const out: RigSpecView = { version };
+  if (culture_file !== undefined) out.culture_file = culture_file;
+  if (non_interruptive !== undefined) out.non_interruptive = non_interruptive;
+  if (permission_policy !== undefined) out.permission_policy = permission_policy;
+  if (managed_blocks !== undefined) out.managed_blocks = managed_blocks;
+  if (spec.docs) out.docs = spec.docs;
+  if (spec.startup) out.startup = redactDeep(spec.startup);
+  if (spec.services) out.services = redactDeep(spec.services);
+  if (spec.workspace) out.workspace = spec.workspace;
+  if (spec.env) out.envNames = Object.keys(spec.env).slice(0, RIG_ENV_NAMES_MAX);
   return out;
 }
 

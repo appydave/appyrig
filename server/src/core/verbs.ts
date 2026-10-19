@@ -1078,7 +1078,7 @@ const VERB_SET = {
   ),
 
   'rig.files': query(
-    "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
+    "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder), and in specFiles the files the rig.yaml itself names (culture_file, docs[], rig / pod / member startup files; ids like rig:guidance/role.md). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
     RigFilesInputSchema,
     RigFilesOutputSchema,
     RIG_NOT_FOUND,
@@ -1096,13 +1096,17 @@ const VERB_SET = {
           }
         );
       }
-      const out = (status: RigFilesOutput['status'], reason: string | null) => ({
-        machine: input.machine,
-        rig: input.rig,
-        status,
-        reason,
-        files: ctx.store.rigFiles.list(input.machine, input.rig),
-      });
+      const out = (status: RigFilesOutput['status'], reason: string | null): RigFilesOutput => {
+        const specFiles = ctx.store.rigFiles.listSpecNamed(input.machine, input.rig);
+        return {
+          machine: input.machine,
+          rig: input.rig,
+          status,
+          reason,
+          files: ctx.store.rigFiles.list(input.machine, input.rig),
+          ...(specFiles.length > 0 ? { specFiles } : {}),
+        };
+      };
       if (rig.specStatus === undefined)
         return out(
           'no-data',

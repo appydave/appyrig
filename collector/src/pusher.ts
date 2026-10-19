@@ -42,7 +42,8 @@ export interface PusherOptions {
   handoffs?: () => Promise<PendingHandoffs | null>;
   handoffIntervalMs?: number;
   /** v1.4 · S7: rig files whose content changed since the hub accepted them; null = nothing to send. */
-  rigFiles?: () => Promise<PendingRigFiles | null>;
+  /** Given the caps the hub advertised, so it can send scope `rig` files only to a hub that takes them. */
+  rigFiles?: (caps: ReadonlySet<string>) => Promise<PendingRigFiles | null>;
   rigFilesIntervalMs?: number;
   /** v1.4 · S7: the OpenRig database shape, when it changed; null = nothing to send. */
   schema?: () => Promise<PendingSchema | null>;
@@ -335,7 +336,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       opts.rigFilesIntervalMs ?? 15_000,
       'v1.4',
       async () => {
-        const p = await take();
+        const p = await take(hubCaps);
         return p && { payloads: p.pushes, markSent: p.markSent };
       }
     );

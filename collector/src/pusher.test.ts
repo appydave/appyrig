@@ -496,6 +496,26 @@ describe('pusher', () => {
     ]);
   });
 
+  it('spec files: the rig-files channel is told which caps the hub advertised', async () => {
+    hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.SPEC_FILES] });
+    const seen: boolean[] = [];
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      rigFilesIntervalMs: 30,
+      log: () => {},
+      rigFiles: async (caps) => {
+        seen.push(caps.has(HUB_CAPS.SPEC_FILES));
+        return null;
+      },
+    });
+    await until(() => seen.length >= 2);
+    expect(seen.every(Boolean)).toBe(true);
+  });
+
   it('the daemon-data channel is not even read until the hub advertised it', async () => {
     hub = await startHub(0, true); // listens, but advertises nothing
     let takes = 0;

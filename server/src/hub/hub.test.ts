@@ -626,7 +626,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
   const file = (id: string, content = 'name: x\n') => ({
     id,
     name: id.split(':')[1]!,
-    scope: id.split(':')[0] as 'spec' | 'mission',
+    scope: id.split(':')[0] as 'spec' | 'mission' | 'rig',
     bytes: content.length,
     modifiedAt: '2026-10-11T12:00:00.000Z',
     truncated: false,
@@ -716,6 +716,46 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value.files).toHaveLength(2);
     await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
     expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value.files).toHaveLength(1);
+  });
+
+  it('scope rig: spec-named files come back in specFiles (files unchanged), are served by id, and keep their own cap', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const { snap, name } = rigOf('m2');
+    await push(c, snap);
+    const base = { machineId: 'm2', collectedAt: '2026-10-11T12:00:00.000Z', rig: name };
+    const allow = Array.from({ length: 16 }, (_, i) => file(`spec:LEARNED-${i}.md`));
+    const named = Array.from({ length: 16 }, (_, i) => file(`rig:guidance/g${i}.md`, `# g${i}`));
+    expect(
+      (await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [...allow, ...named] }))
+        .ok
+    ).toBe(true);
+    const list = call(h, 'rig.files', { machine: 'm2', rig: name }).value;
+    expect(list.files).toHaveLength(16);
+    expect(list.files.every((f: { scope: string }) => f.scope === 'spec')).toBe(true);
+    expect(list.specFiles).toHaveLength(16);
+    expect(list.specFiles[0]).toMatchObject({ id: 'rig:guidance/g0.md', scope: 'rig' });
+    expect(
+      call(h, 'rig.file', { machine: 'm2', rig: name, fileId: 'rig:guidance/g3.md' }).value.file
+        .content
+    ).toBe('# g3');
+    // a rig with no spec-named files has no specFiles key at all (as an older hub answers)
+    await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
+    expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value).not.toHaveProperty(
+      'specFiles'
+    );
+    // still only ids: a rig: id that climbs out is refused as input and as a pushed file
+    for (const fileId of ['rig:../x.md', 'rig:/etc/hosts', 'rig:a//b.md'])
+      expect(call(h, 'rig.file', { machine: 'm2', rig: name, fileId }).ok, fileId).toBe(false);
+    expect(
+      (
+        await emit(c, 'collector:rigfiles', {
+          ...base,
+          replace: true,
+          files: [file('rig:../x.md')],
+        })
+      ).ok
+    ).toBe(false);
   });
 
   it('PATH ESCAPES: a client can only name a file id; paths, dots and absolute paths are refused as input', async () => {
@@ -966,10 +1006,12 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({
       ok: true,
-      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields'],
+      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files'],
     });
     // and announced on connection, before any push
-    expect(announced).toEqual([['v2-fields', 'daemondata', 'missionfiles', 'spec-fields']]);
+    expect(announced).toEqual([
+      ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files'],
+    ]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',

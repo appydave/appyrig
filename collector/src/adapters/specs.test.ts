@@ -225,11 +225,62 @@ describe('enrichRigs', () => {
     expect(a!.specEdges).toEqual([{ kind: 'escalates_to', from: 'dev.qa', to: 'review.lead' }]);
   });
 
+  it('the rig-level spec (culture_file, docs, workspace, services, startup) is carried; env travels as names only', () => {
+    const yaml = [
+      'version: "0.2"',
+      'name: a',
+      'culture_file: CULTURE.md',
+      'permission_policy: builtin:auto',
+      'managed_blocks: { claude-code: CLAUDE.local.md }',
+      'env: { REPO_TOKEN_HINT: "value-that-must-not-travel", LOG_LEVEL: debug }',
+      'docs: [{ path: docs/overview.md }]',
+      'workspace: { workspace_root: ~/dev, repos: [{ name: app, path: app, kind: project }], default_repo: app }',
+      'services: { kind: compose, compose_file: compose.yaml, wait_for: [{ url: "http://localhost:1/health" }] }',
+      'startup:',
+      '  files: [{ path: guidance/rig-start.md, delivery_hint: send_text }]',
+      '  actions: [{ type: send_text, value: "read your role", idempotent: true }]',
+      'pods:',
+      '  - id: dev',
+      '    label: Dev',
+      '    members: [{ id: b, agent_ref: "local:x", profile: default, runtime: claude-code, cwd: . }]',
+      '',
+    ].join('\n');
+    const specs = new Map([
+      ['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: parseSpec(yaml)!.spec }],
+    ]);
+    const [a] = enrichRigs([rig('a')], [], [], specs);
+    expect(RigSummarySchema.parse(a)).toEqual(a);
+    expect(a!.rigSpec).toEqual({
+      version: '0.2',
+      culture_file: 'CULTURE.md',
+      permission_policy: 'builtin:auto',
+      managed_blocks: { 'claude-code': 'CLAUDE.local.md' },
+      docs: [{ path: 'docs/overview.md' }],
+      workspace: {
+        workspace_root: '~/dev',
+        repos: [{ name: 'app', path: 'app', kind: 'project' }],
+        default_repo: 'app',
+      },
+      services: {
+        kind: 'compose',
+        compose_file: 'compose.yaml',
+        wait_for: [{ url: 'http://localhost:1/health' }],
+      },
+      startup: {
+        files: [{ path: 'guidance/rig-start.md', delivery_hint: 'send_text' }],
+        actions: [{ type: 'send_text', value: 'read your role', idempotent: true }],
+      },
+      envNames: ['REPO_TOKEN_HINT', 'LOG_LEVEL'],
+    });
+    expect(JSON.stringify(a)).not.toContain('value-that-must-not-travel');
+  });
+
   it('a rig.yaml OpenRig would refuse: specValid false, and no pods or spec edges read from it', () => {
     const specs = new Map([['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: null }]]);
     const [a] = enrichRigs([rig('a')], [], [], specs);
     expect(a).toMatchObject({ specStatus: 'found', specValid: false });
     expect(a).not.toHaveProperty('pods');
     expect(a).not.toHaveProperty('specEdges');
+    expect(a).not.toHaveProperty('rigSpec');
   });
 });

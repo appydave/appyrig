@@ -189,6 +189,31 @@ export const RigPodSchema = OpenRig.PodSpecSchema.pick({
 });
 export type RigPod = z.infer<typeof RigPodSchema>;
 
+/** Most env names listed for a rig. */
+export const RIG_ENV_NAMES_MAX = 100;
+
+/**
+ * The rig-level part of rig.yaml: OpenRig's own RigSpec fields (snake_case, as authored), minus
+ * name / summary (on RigSummary already), pods and edges (RigSummary.pods / specEdges), and env
+ * VALUES: only the names travel (`envNames`). Collector-set from a rig.yaml OpenRig would accept;
+ * text redacted.
+ */
+export const RigSpecViewSchema = OpenRig.RigSpecSchema.pick({
+  version: true,
+  culture_file: true,
+  non_interruptive: true,
+  permission_policy: true,
+  managed_blocks: true,
+  docs: true,
+  startup: true,
+  services: true,
+  workspace: true,
+}).extend({
+  /** The names of rig.yaml `env`, never the values. */
+  envNames: z.array(z.string().min(1).max(120)).max(RIG_ENV_NAMES_MAX).optional(),
+});
+export type RigSpecView = z.infer<typeof RigSpecViewSchema>;
+
 export const RigSummarySchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -237,6 +262,8 @@ export const RigSummarySchema = z.strictObject({
    * EdgeKind. Unlike `edges` (OpenRig's graph, seat to seat), these include seats with no session yet.
    */
   specEdges: z.array(OpenRig.CrossPodEdgeSchema).max(RIG_EDGES_MAX).optional(),
+  /** The rest of the rig.yaml at rig level: culture_file, docs[], workspace, services, startup… */
+  rigSpec: RigSpecViewSchema.optional(),
   /** Hub-set from AppyRig's own config file (never from OpenRig); the UI falls back to `name`. */
   displayName: z.string().min(1).max(80).optional(),
   /** Hub-set, as displayName. */
@@ -380,8 +407,10 @@ export const HUB_CAPS = {
   DAEMONDATA: 'daemondata',
   /** The hub listens for `collector:missionfiles`. */
   MISSIONFILES: 'missionfiles',
-  /** The snapshot's rigs may carry SPEC_RIG_KEYS (pods, spec edges, from rig.yaml). */
+  /** The snapshot's rigs may carry SPEC_RIG_KEYS (pods, spec edges, rig spec, from rig.yaml). */
   SPEC_FIELDS: 'spec-fields',
+  /** `collector:rigfiles` may carry scope `rig` files (the ones rig.yaml names). */
+  SPEC_FILES: 'spec-files',
 } as const;
 
 export const V2_SEAT_KEYS = ['tmuxAttachCommand'] as const;
@@ -404,7 +433,7 @@ export function stripV2Fields(snapshot: MachineSnapshot): MachineSnapshot {
   };
 }
 
-export const SPEC_RIG_KEYS = ['specValid', 'pods', 'specEdges'] as const;
+export const SPEC_RIG_KEYS = ['specValid', 'pods', 'specEdges', 'rigSpec'] as const;
 
 /** The snapshot as a hub without HUB_CAPS.SPEC_FIELDS accepts it: every spec-only rig key removed. */
 export function stripSpecFields(snapshot: MachineSnapshot): MachineSnapshot {

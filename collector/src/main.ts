@@ -16,6 +16,7 @@ import {
   type LoadoutSeat,
   type SeatTarget,
 } from './adapters/index.js';
+import { HUB_CAPS } from '@appydave/shared';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
 import { startPusher } from './pusher.js';
@@ -95,7 +96,8 @@ function main() {
       daemonData.reset();
     },
     daemonData: () => daemonData.next(daemonTargets),
-    rigFiles: async () => (sources.specs ? rigFiles.next(await sources.specs()) : null),
+    rigFiles: async (caps) =>
+      sources.specs ? rigFiles.next(await sources.specs(), caps.has(HUB_CAPS.SPEC_FILES)) : null,
     missionFiles: async () => (sources.specs ? missionFiles.next(await sources.specs()) : null),
     schema: () => schema.next(),
     dbRows: () => dbRows.next(),

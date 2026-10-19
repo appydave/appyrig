@@ -34,6 +34,7 @@ const HUB_CAP_LIST = [
   HUB_CAPS.DAEMONDATA,
   HUB_CAPS.MISSIONFILES,
   HUB_CAPS.SPEC_FIELDS,
+  HUB_CAPS.SPEC_FILES,
 ];
 
 export interface CollectorIngestOptions {

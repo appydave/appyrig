@@ -3396,6 +3396,340 @@
                                   "additionalProperties": false
                                 }
                               },
+                              "rigSpec": {
+                                "type": "object",
+                                "properties": {
+                                  "version": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "culture_file": {
+                                    "type": "string"
+                                  },
+                                  "non_interruptive": {
+                                    "type": "boolean"
+                                  },
+                                  "permission_policy": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "managed_blocks": {
+                                    "type": "object",
+                                    "properties": {
+                                      "claude-code": {
+                                        "type": "string",
+                                        "enum": [
+                                          "CLAUDE.md",
+                                          "CLAUDE.local.md"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "claude-code"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "docs": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "object",
+                                      "properties": {
+                                        "path": {
+                                          "type": "string",
+                                          "minLength": 1
+                                        }
+                                      },
+                                      "required": [
+                                        "path"
+                                      ],
+                                      "additionalProperties": false
+                                    }
+                                  },
+                                  "startup": {
+                                    "type": "object",
+                                    "properties": {
+                                      "files": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "path": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "orientation": {
+                                              "type": "string",
+                                              "const": "role"
+                                            },
+                                            "kind": {
+                                              "type": "string",
+                                              "const": "file"
+                                            },
+                                            "delivery_hint": {
+                                              "type": "string",
+                                              "enum": [
+                                                "auto",
+                                                "guidance_merge",
+                                                "skill_install",
+                                                "send_text"
+                                              ]
+                                            },
+                                            "required": {
+                                              "type": "boolean"
+                                            },
+                                            "applies_on": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "fresh_start",
+                                                  "restore"
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "path"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "actions": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "type": {
+                                              "type": "string",
+                                              "enum": [
+                                                "slash_command",
+                                                "send_text",
+                                                "startup_proof"
+                                              ]
+                                            },
+                                            "value": {
+                                              "type": "string"
+                                            },
+                                            "phase": {
+                                              "type": "string",
+                                              "enum": [
+                                                "after_files",
+                                                "after_ready"
+                                              ]
+                                            },
+                                            "idempotent": {
+                                              "type": "boolean"
+                                            },
+                                            "applies_on": {
+                                              "type": "array",
+                                              "items": {
+                                                "type": "string",
+                                                "enum": [
+                                                  "fresh_start",
+                                                  "restore"
+                                                ]
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "type",
+                                            "value",
+                                            "idempotent"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      }
+                                    },
+                                    "additionalProperties": false
+                                  },
+                                  "services": {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "const": "compose"
+                                      },
+                                      "compose_file": {
+                                        "type": "string"
+                                      },
+                                      "project_name": {
+                                        "type": "string"
+                                      },
+                                      "profiles": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "down_policy": {
+                                        "type": "string",
+                                        "enum": [
+                                          "leave_running",
+                                          "down",
+                                          "down_and_volumes"
+                                        ]
+                                      },
+                                      "wait_for": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "service": {
+                                              "type": "string"
+                                            },
+                                            "condition": {
+                                              "type": "string",
+                                              "const": "healthy"
+                                            },
+                                            "url": {
+                                              "type": "string"
+                                            },
+                                            "tcp": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "surfaces": {
+                                        "type": "object",
+                                        "properties": {
+                                          "urls": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "name": {
+                                                  "type": "string"
+                                                },
+                                                "url": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "name",
+                                                "url"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          },
+                                          "commands": {
+                                            "type": "array",
+                                            "items": {
+                                              "type": "object",
+                                              "properties": {
+                                                "name": {
+                                                  "type": "string"
+                                                },
+                                                "command": {
+                                                  "type": "string"
+                                                }
+                                              },
+                                              "required": [
+                                                "name",
+                                                "command"
+                                              ],
+                                              "additionalProperties": false
+                                            }
+                                          }
+                                        },
+                                        "additionalProperties": false
+                                      },
+                                      "checkpoints": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "id": {
+                                              "type": "string"
+                                            },
+                                            "export_command": {
+                                              "type": "string"
+                                            },
+                                            "import_command": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "id",
+                                            "export_command"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "compose_file"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "workspace": {
+                                    "type": "object",
+                                    "properties": {
+                                      "workspace_root": {
+                                        "type": "string",
+                                        "minLength": 1
+                                      },
+                                      "repos": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "object",
+                                          "properties": {
+                                            "name": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "path": {
+                                              "type": "string",
+                                              "minLength": 1
+                                            },
+                                            "kind": {
+                                              "type": "string",
+                                              "enum": [
+                                                "user",
+                                                "project",
+                                                "knowledge",
+                                                "lab",
+                                                "delivery"
+                                              ]
+                                            }
+                                          },
+                                          "required": [
+                                            "name",
+                                            "path",
+                                            "kind"
+                                          ],
+                                          "additionalProperties": false
+                                        }
+                                      },
+                                      "default_repo": {
+                                        "type": "string"
+                                      },
+                                      "knowledge_root": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "workspace_root"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "envNames": {
+                                    "maxItems": 100,
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 120
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "version"
+                                ],
+                                "additionalProperties": false
+                              },
                               "displayName": {
                                 "type": "string",
                                 "minLength": 1,
@@ -10516,7 +10850,8 @@
           "summary": "a file id from rig.files, e.g. spec:rig.yaml",
           "schema": {
             "type": "string",
-            "pattern": "^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$",
+            "maxLength": 164,
+            "pattern": "^(?:(?:spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}|rig:[A-Za-z0-9][A-Za-z0-9._-]*(?:\\/[A-Za-z0-9][A-Za-z0-9._-]*){0,7})$",
             "description": "a file id from rig.files, e.g. spec:rig.yaml"
           }
         }
@@ -10571,18 +10906,20 @@
                 "properties": {
                   "id": {
                     "type": "string",
-                    "pattern": "^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+                    "maxLength": 164,
+                    "pattern": "^(?:(?:spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}|rig:[A-Za-z0-9][A-Za-z0-9._-]*(?:\\/[A-Za-z0-9][A-Za-z0-9._-]*){0,7})$"
                   },
                   "name": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 80
+                    "maxLength": 160
                   },
                   "scope": {
                     "type": "string",
                     "enum": [
                       "spec",
-                      "mission"
+                      "mission",
+                      "rig"
                     ]
                   },
                   "bytes": {
@@ -10856,7 +11193,7 @@
     },
     {
       "name": "rig.files",
-      "summary": "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
+      "summary": "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder), and in specFiles the files the rig.yaml itself names (culture_file, docs[], rig / pod / member startup files; ids like rig:guidance/role.md). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
       "tags": [
         {
           "name": "rig"
@@ -10952,18 +11289,68 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "pattern": "^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+                      "maxLength": 164,
+                      "pattern": "^(?:(?:spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}|rig:[A-Za-z0-9][A-Za-z0-9._-]*(?:\\/[A-Za-z0-9][A-Za-z0-9._-]*){0,7})$"
                     },
                     "name": {
                       "type": "string",
                       "minLength": 1,
-                      "maxLength": 80
+                      "maxLength": 160
                     },
                     "scope": {
                       "type": "string",
                       "enum": [
                         "spec",
-                        "mission"
+                        "mission",
+                        "rig"
+                      ]
+                    },
+                    "bytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "modifiedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                    },
+                    "truncated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "scope",
+                    "bytes",
+                    "modifiedAt",
+                    "truncated"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "specFiles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "maxLength": 164,
+                      "pattern": "^(?:(?:spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}|rig:[A-Za-z0-9][A-Za-z0-9._-]*(?:\\/[A-Za-z0-9][A-Za-z0-9._-]*){0,7})$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 160
+                    },
+                    "scope": {
+                      "type": "string",
+                      "enum": [
+                        "spec",
+                        "mission",
+                        "rig"
                       ]
                     },
                     "bytes": {
@@ -12072,6 +12459,340 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "rigSpec": {
+                      "type": "object",
+                      "properties": {
+                        "version": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "culture_file": {
+                          "type": "string"
+                        },
+                        "non_interruptive": {
+                          "type": "boolean"
+                        },
+                        "permission_policy": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "managed_blocks": {
+                          "type": "object",
+                          "properties": {
+                            "claude-code": {
+                              "type": "string",
+                              "enum": [
+                                "CLAUDE.md",
+                                "CLAUDE.local.md"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "claude-code"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "docs": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "path"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "startup": {
+                          "type": "object",
+                          "properties": {
+                            "files": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "orientation": {
+                                    "type": "string",
+                                    "const": "role"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "const": "file"
+                                  },
+                                  "delivery_hint": {
+                                    "type": "string",
+                                    "enum": [
+                                      "auto",
+                                      "guidance_merge",
+                                      "skill_install",
+                                      "send_text"
+                                    ]
+                                  },
+                                  "required": {
+                                    "type": "boolean"
+                                  },
+                                  "applies_on": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "enum": [
+                                        "fresh_start",
+                                        "restore"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "path"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "actions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "slash_command",
+                                      "send_text",
+                                      "startup_proof"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "string"
+                                  },
+                                  "phase": {
+                                    "type": "string",
+                                    "enum": [
+                                      "after_files",
+                                      "after_ready"
+                                    ]
+                                  },
+                                  "idempotent": {
+                                    "type": "boolean"
+                                  },
+                                  "applies_on": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string",
+                                      "enum": [
+                                        "fresh_start",
+                                        "restore"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "value",
+                                  "idempotent"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "services": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "compose"
+                            },
+                            "compose_file": {
+                              "type": "string"
+                            },
+                            "project_name": {
+                              "type": "string"
+                            },
+                            "profiles": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "down_policy": {
+                              "type": "string",
+                              "enum": [
+                                "leave_running",
+                                "down",
+                                "down_and_volumes"
+                              ]
+                            },
+                            "wait_for": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "service": {
+                                    "type": "string"
+                                  },
+                                  "condition": {
+                                    "type": "string",
+                                    "const": "healthy"
+                                  },
+                                  "url": {
+                                    "type": "string"
+                                  },
+                                  "tcp": {
+                                    "type": "string"
+                                  }
+                                },
+                                "additionalProperties": false
+                              }
+                            },
+                            "surfaces": {
+                              "type": "object",
+                              "properties": {
+                                "urls": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "url": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "url"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                },
+                                "commands": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "command": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "name",
+                                      "command"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              "additionalProperties": false
+                            },
+                            "checkpoints": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "export_command": {
+                                    "type": "string"
+                                  },
+                                  "import_command": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "export_command"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "compose_file"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "workspace": {
+                          "type": "object",
+                          "properties": {
+                            "workspace_root": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "repos": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "path": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "user",
+                                      "project",
+                                      "knowledge",
+                                      "lab",
+                                      "delivery"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "path",
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "default_repo": {
+                              "type": "string"
+                            },
+                            "knowledge_root": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "workspace_root"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "envNames": {
+                          "maxItems": 100,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 120
+                          }
+                        }
+                      },
+                      "required": [
+                        "version"
+                      ],
+                      "additionalProperties": false
                     },
                     "displayName": {
                       "type": "string",
