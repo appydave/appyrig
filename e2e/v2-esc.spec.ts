@@ -45,7 +45,7 @@ test.describe('Esc never navigates', () => {
     expect(pageParam(page)).toBe('wall');
   });
 
-  test('repro B: Run board, a station Docs overlay, Esc: closes the overlay and stays on the Run board', async ({
+  test('repro B: Run board, a station Docs (agent panel), Esc: closes the panel and stays on the Run board', async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -53,11 +53,12 @@ test.describe('Esc never navigates', () => {
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-run').click();
     await expect(page.getByTestId('v2-run')).toBeVisible();
+    // a station's Docs now opens the agent panel (the full-screen docs drawer is gone from there)
     await page.getByTestId('run-station-docs').first().click();
-    await expect(page.getByTestId('docs-drawer')).toBeVisible();
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
     const n = await historyLength(page);
     await page.keyboard.press('Escape');
-    await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await page.waitForTimeout(400);
     expect(pageParam(page), 'Esc left the Run board').toBe('run');
     await expect(page.getByTestId('v2-run')).toBeVisible();

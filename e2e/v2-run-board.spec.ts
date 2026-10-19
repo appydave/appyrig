@@ -100,6 +100,12 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     await expect(page.getByTestId('agent-panel')).toBeVisible();
     await expect(page.getByTestId('apanel-tab-documents')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    await expect(page.getByTestId('v2-run')).toBeVisible();
+    // and the × button closes it the same way
+    await page.getByTestId('run-station-docs').first().click();
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
     await page.getByTestId('apanel-close').click();
     await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await expect(page.getByTestId('v2-run')).toBeVisible();

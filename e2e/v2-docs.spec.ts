@@ -64,6 +64,12 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     await expect(page.getByTestId('apanel-body-documents')).toBeVisible();
     await expect(page.getByTestId('v2-nav')).toBeVisible();
     await expect(page.getByTestId('v2-run')).toBeVisible();
+    // Esc closes it and leaves the Run board where it was; the × button does the same
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    await expect(page.getByTestId('v2-run')).toBeVisible();
+    await docs.click();
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
     await page.getByTestId('apanel-close').click();
     await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await expect(page.getByTestId('v2-run')).toBeVisible();
