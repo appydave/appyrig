@@ -705,345 +705,349 @@ export default function HandoffFlowV2({
         )}
       </div>
       <div className="flow-row">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="flow-svg"
-          role="group"
-          aria-label="Handoff flow diagram: Tab to a line to see its handoffs"
-        >
-          <defs>
-            <marker
-              id="hf-arrow"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="9"
-              markerHeight="9"
-              markerUnits="userSpaceOnUse"
-              orient="auto"
-            >
-              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead v2-arrowhead" />
-            </marker>
-            <marker
-              id="hf-arrow-start"
-              viewBox="0 0 10 10"
-              refX="9"
-              refY="5"
-              markerWidth="9"
-              markerHeight="9"
-              markerUnits="userSpaceOnUse"
-              orient="auto-start-reverse"
-            >
-              <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead v2-arrowhead" />
-            </marker>
-          </defs>
-          {lens === 'traffic' &&
-            pairs.map((p) => {
-              const g = pairPath(p, L, ROW_Y, BOX_H);
-              // A stable id per pair: the pairs re-sort as counts grow, so an index would re-point the dots.
-              const id = `hf-${p.key.replace(/[^A-Za-z0-9]/g, '-')}`;
-              const heads = arrowHeads(p);
-              // The path runs left box → right box; put each arrowhead at the box it points to.
-              const atEnd = g.aLeft ? heads.atB : heads.atA;
-              const atStart = g.aLeft ? heads.atA : heads.atB;
-              const label = pairLabel(p);
-              const w = 16 + label.length * 8.5;
-              const inFlight = p.edges.flatMap((e) => e.inFlight);
-              const lineFocusProps = lineFocus.focusProps(lineFocusId(p.a, p.b));
-              const isCur = replaying && !calm && curPair?.key === p.key;
-              const state = isCur && lineFocus.focus === null ? 'lit' : lineFocus.stateOf(p.a, p.b);
-              const ax = L.x(p.a);
-              const bx = L.x(p.b);
-              const by = ROW_Y + BOX_H / 2;
-              const dip = 46 + Math.abs(L.idx(p.a) - L.idx(p.b)) * 18;
+        {/* The diagram keeps a readable scale and scrolls sideways in its own box on a narrow page. */}
+        <div className="flow-svg-scroll" data-testid="flow-diagram-scroll">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            className="flow-svg"
+            role="group"
+            aria-label="Handoff flow diagram: Tab to a line to see its handoffs"
+          >
+            <defs>
+              <marker
+                id="hf-arrow"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="9"
+                markerHeight="9"
+                markerUnits="userSpaceOnUse"
+                orient="auto"
+              >
+                <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead v2-arrowhead" />
+              </marker>
+              <marker
+                id="hf-arrow-start"
+                viewBox="0 0 10 10"
+                refX="9"
+                refY="5"
+                markerWidth="9"
+                markerHeight="9"
+                markerUnits="userSpaceOnUse"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" className="flow-arrowhead v2-arrowhead" />
+              </marker>
+            </defs>
+            {lens === 'traffic' &&
+              pairs.map((p) => {
+                const g = pairPath(p, L, ROW_Y, BOX_H);
+                // A stable id per pair: the pairs re-sort as counts grow, so an index would re-point the dots.
+                const id = `hf-${p.key.replace(/[^A-Za-z0-9]/g, '-')}`;
+                const heads = arrowHeads(p);
+                // The path runs left box → right box; put each arrowhead at the box it points to.
+                const atEnd = g.aLeft ? heads.atB : heads.atA;
+                const atStart = g.aLeft ? heads.atA : heads.atB;
+                const label = pairLabel(p);
+                const w = 16 + label.length * 8.5;
+                const inFlight = p.edges.flatMap((e) => e.inFlight);
+                const lineFocusProps = lineFocus.focusProps(lineFocusId(p.a, p.b));
+                const isCur = replaying && !calm && curPair?.key === p.key;
+                const state =
+                  isCur && lineFocus.focus === null ? 'lit' : lineFocus.stateOf(p.a, p.b);
+                const ax = L.x(p.a);
+                const bx = L.x(p.b);
+                const by = ROW_Y + BOX_H / 2;
+                const dip = 46 + Math.abs(L.idx(p.a) - L.idx(p.b)) * 18;
+                return (
+                  <g
+                    key={p.key}
+                    data-testid="flow-edge"
+                    data-edge={p.key}
+                    data-pair={`${p.a}|${p.b}`}
+                    data-kind={p.back ? 'rework' : 'forward'}
+                    data-current={isCur || undefined}
+                    data-state={state}
+                    data-in-flight={inFlight.length}
+                    data-selected={selection?.edge === p.key || undefined}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${labelOf(p.a)} and ${labelOf(p.b)}: ${p.aToB} one way, ${p.bToA} the other. Enter pins the details.`}
+                    onPointerEnter={(ev) => {
+                      lineFocusProps.onPointerEnter();
+                      peek(p.key, null, ev);
+                    }}
+                    onPointerMove={(ev) => mode !== 'hover' && edgeCard(p, ev)}
+                    onPointerLeave={() => {
+                      lineFocusProps.onPointerLeave();
+                      unpeek();
+                    }}
+                    onFocus={() => {
+                      lineFocusProps.onFocus();
+                      peek(p.key);
+                    }}
+                    onBlur={() => {
+                      lineFocusProps.onBlur();
+                      unpeek();
+                    }}
+                    onClick={() => pin(p.key)}
+                    onKeyDown={(ev) => {
+                      if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        pin(p.key);
+                      }
+                    }}
+                    data-explain="handoff"
+                    data-explain-ctx={pairTitle(p)}
+                  >
+                    <path
+                      id={id}
+                      d={g.d}
+                      className={`${lineClass(state)}${isCur ? ' v2-current' : ''}`}
+                      strokeWidth={lineWidth(p.total)}
+                      markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
+                      markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
+                    />
+                    {/* A wide invisible stroke so the line is easy to hover. */}
+                    <path d={g.d} className="hit" />
+                    {/* V1's rework loop: what went back, as an amber arc under the boxes. */}
+                    {!calm && p.back > 0 && (
+                      <g data-testid="flow-back-arc" data-back={p.back} className="v2-back">
+                        <path
+                          d={`M${ax},${by} C${ax},${by + dip} ${bx},${by + dip} ${bx},${by}`}
+                          className="v2-back-arc"
+                        />
+                        <text x={(ax + bx) / 2} y={by + dip * 0.75 + 14} className="v2-back-text">
+                          {p.back} back
+                        </text>
+                      </g>
+                    )}
+                    <g
+                      data-testid="flow-count-pill"
+                      data-count={p.total}
+                      data-label={label}
+                      className={labelClass(state)}
+                    >
+                      <rect
+                        x={g.lx - w / 2}
+                        y={g.ly - 11}
+                        width={w}
+                        height={18}
+                        rx={9}
+                        className="v2-pair-pill"
+                      />
+                      <text x={g.lx} y={g.ly} className="v2-pair-count">
+                        {label}
+                      </text>
+                    </g>
+                    <g className={labelClass(state)}>
+                      <WaitingBadgeSvg x={g.lx + w / 2 + 10} y={g.ly - 2} n={p.waiting} />
+                      <LeftOpenBadgeSvg
+                        x={g.lx + w / 2 + (p.waiting ? 30 : 10)}
+                        y={g.ly - 2}
+                        n={p.leftOpen}
+                      />
+                    </g>
+                    {inFlight.slice(0, 6).map((q, k) => (
+                      <circle
+                        key={q.id}
+                        r={calm ? 4 : isCur ? 8 : 6}
+                        className={`pulse v2-pulse${isCur ? ' v2-pulse-current' : ''}`}
+                        data-testid="flow-pulse"
+                        data-item={q.id}
+                        onPointerEnter={(ev) => peek(p.key, q.id, ev)}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          pin(p.key, q.id);
+                        }}
+                      >
+                        <title>{q.summary ?? q.id}</title>
+                        <animateMotion
+                          dur={calm ? '2.4s' : '3.6s'}
+                          repeatCount="indefinite"
+                          begin={`${(k * 0.4).toFixed(1)}s`}
+                        >
+                          <mpath href={`#${id}`} />
+                        </animateMotion>
+                      </circle>
+                    ))}
+                  </g>
+                );
+              })}
+            {lens === 'structure' &&
+              mergePairs(
+                structure.lines.map((l) => ({ from: l.from, to: l.to, count: 1, planned: true }))
+              ).map((p) => {
+                const g = pairPath(p, L, ROW_Y, BOX_H);
+                const state = lineFocus.stateOf(p.a, p.b);
+                const both = structure.lines.filter(
+                  (l) => flowPairKey(l.from, l.to) === flowPairKey(p.a, p.b)
+                );
+                const text = [...new Set(both.flatMap((l) => l.kinds))].join(' · ');
+                const heads = arrowHeads(p);
+                const atEnd = g.aLeft ? heads.atB : heads.atA;
+                const atStart = g.aLeft ? heads.atA : heads.atB;
+                const w = 16 + text.length * 7.5;
+                return (
+                  <g
+                    key={flowPairKey(p.a, p.b)}
+                    data-testid="flow-structure-line"
+                    data-edge={`${p.a}|${p.b}`}
+                    data-kind-text={text}
+                    data-state={state}
+                  >
+                    <title>{`${labelOf(p.a)} · ${labelOf(p.b)}: ${text}`}</title>
+                    <path
+                      d={g.d}
+                      className={lineClass(state, structure.source === 'planned')}
+                      strokeWidth={LINE_WIDTH.thin}
+                      markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
+                      markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
+                    />
+                    <g className={labelClass(state)}>
+                      <rect
+                        x={g.lx - w / 2}
+                        y={g.ly - 15}
+                        width={w}
+                        height={22}
+                        rx={11}
+                        className="v2-kind-pill"
+                      />
+                      <text x={g.lx} y={g.ly} className="v2-kind">
+                        {text}
+                      </text>
+                    </g>
+                  </g>
+                );
+              })}
+            {flow.stages.map((s) => {
+              const x = L.x(s.stage);
+              const state = s.waiting ? 'waiting' : s.stale ? 'stale' : '';
               return (
                 <g
-                  key={p.key}
-                  data-testid="flow-edge"
-                  data-edge={p.key}
-                  data-pair={`${p.a}|${p.b}`}
-                  data-kind={p.back ? 'rework' : 'forward'}
-                  data-current={isCur || undefined}
-                  data-state={state}
-                  data-in-flight={inFlight.length}
-                  data-selected={selection?.edge === p.key || undefined}
+                  key={s.stage}
+                  data-testid="flow-stage"
+                  data-stage={s.stage}
+                  data-selected={sel?.stage === s.stage || undefined}
                   tabIndex={0}
                   role="button"
-                  aria-label={`${labelOf(p.a)} and ${labelOf(p.b)}: ${p.aToB} one way, ${p.bToA} the other. Enter pins the details.`}
+                  aria-label={
+                    onOpenAgent && s.seats.length === 1
+                      ? `${s.label}: Enter opens this agent`
+                      : `${s.label}: Enter lists its handoffs`
+                  }
                   onPointerEnter={(ev) => {
-                    lineFocusProps.onPointerEnter();
-                    peek(p.key, null, ev);
+                    lineFocus.setFocus(s.stage);
+                    peekStage(s.stage, ev);
                   }}
-                  onPointerMove={(ev) => mode !== 'hover' && edgeCard(p, ev)}
+                  onPointerMove={(ev) => mode !== 'hover' && peekStage(s.stage, ev)}
                   onPointerLeave={() => {
-                    lineFocusProps.onPointerLeave();
+                    lineFocus.setFocus(null);
                     unpeek();
                   }}
                   onFocus={() => {
-                    lineFocusProps.onFocus();
-                    peek(p.key);
+                    lineFocus.setFocus(s.stage);
+                    peekStage(s.stage);
                   }}
                   onBlur={() => {
-                    lineFocusProps.onBlur();
+                    lineFocus.setFocus(null);
                     unpeek();
                   }}
-                  onClick={() => pin(p.key)}
+                  data-focus={lineFocus.focus === s.stage || undefined}
+                  onClick={() => pinStage(s.stage)}
                   onKeyDown={(ev) => {
                     if (ev.key === 'Enter' || ev.key === ' ') {
                       ev.preventDefault();
-                      pin(p.key);
+                      pinStage(s.stage);
                     }
                   }}
-                  data-explain="handoff"
-                  data-explain-ctx={pairTitle(p)}
+                  data-waiting={s.waiting}
+                  data-stale={s.stale}
+                  data-explain={flow.mode === 'roles' ? `stage-${s.stage}` : 'seat'}
+                  data-explain-ctx={
+                    s.seats.length
+                      ? `${s.label}: ${s.seats.map((x) => `${x.name} (${x.model})`).join(', ')}`
+                      : s.label
+                  }
                 >
-                  <path
-                    id={id}
-                    d={g.d}
-                    className={`${lineClass(state)}${isCur ? ' v2-current' : ''}`}
-                    strokeWidth={lineWidth(p.total)}
-                    markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
-                    markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
+                  <rect
+                    x={x - L.boxW / 2}
+                    y={ROW_Y - BOX_H / 2}
+                    width={L.boxW}
+                    height={BOX_H}
+                    rx={10}
+                    className={`flow-box ${state}${s.noLead ? ' none' : ''}${flow.mode === 'roles' && s.outside ? ' outside' : ''}`}
+                    data-testid={
+                      s.noLead
+                        ? 'flow-no-lead'
+                        : s.outside && flow.mode === 'roles'
+                          ? 'flow-outside'
+                          : undefined
+                    }
                   />
-                  {/* A wide invisible stroke so the line is easy to hover. */}
-                  <path d={g.d} className="hit" />
-                  {/* V1's rework loop: what went back, as an amber arc under the boxes. */}
-                  {!calm && p.back > 0 && (
-                    <g data-testid="flow-back-arc" data-back={p.back} className="v2-back">
-                      <path
-                        d={`M${ax},${by} C${ax},${by + dip} ${bx},${by + dip} ${bx},${by}`}
-                        className="v2-back-arc"
+                  <text
+                    x={x}
+                    y={ROW_Y - 14}
+                    className={
+                      flow.mode !== 'roles'
+                        ? 'flow-seat-name'
+                        : s.noLead || s.outside
+                          ? 'flow-stage-name small'
+                          : 'flow-stage-name'
+                    }
+                  >
+                    {s.noLead ? 'No lead — by design' : s.label}
+                  </text>
+                  <text x={x} y={ROW_Y + 8} className="flow-seats">
+                    {s.seats.length
+                      ? s.seats.map((x) => x.model).join(' · ')
+                      : s.noLead
+                        ? 'no lead seat in this rig'
+                        : s.outside
+                          ? flow.mode === 'roles'
+                            ? 'orchestrator, David or another rig'
+                            : 'outside this rig'
+                          : s.stage === 'others'
+                            ? 'quieter seats'
+                            : 'no seat'}
+                  </text>
+                  {!s.noLead && (
+                    <g data-testid="flow-wait-badge" data-state={state || 'none'}>
+                      <rect
+                        x={x - L.boxW / 2 + 10}
+                        y={ROW_Y + 16}
+                        width={L.boxW - 20}
+                        height={26}
+                        rx={13}
+                        className={`v2-wait-pill ${state}`}
                       />
-                      <text x={(ax + bx) / 2} y={by + dip * 0.75 + 14} className="v2-back-text">
-                        {p.back} back
+                      <text x={x} y={ROW_Y + 34} className="flow-wait v2-wait">
+                        {s.waiting
+                          ? `${s.waiting} waiting · ${ago(s.oldestWaitMs ?? 0)}`
+                          : s.stale
+                            ? `${s.stale} open · ${ago(s.oldestStaleMs ?? 0)}`
+                            : 'nothing waiting'}
                       </text>
                     </g>
                   )}
-                  <g
-                    data-testid="flow-count-pill"
-                    data-count={p.total}
-                    data-label={label}
-                    className={labelClass(state)}
-                  >
-                    <rect
-                      x={g.lx - w / 2}
-                      y={g.ly - 11}
-                      width={w}
-                      height={18}
-                      rx={9}
-                      className="v2-pair-pill"
-                    />
-                    <text x={g.lx} y={g.ly} className="v2-pair-count">
-                      {label}
-                    </text>
-                  </g>
-                  <g className={labelClass(state)}>
-                    <WaitingBadgeSvg x={g.lx + w / 2 + 10} y={g.ly - 2} n={p.waiting} />
-                    <LeftOpenBadgeSvg
-                      x={g.lx + w / 2 + (p.waiting ? 30 : 10)}
-                      y={g.ly - 2}
-                      n={p.leftOpen}
-                    />
-                  </g>
-                  {inFlight.slice(0, 6).map((q, k) => (
-                    <circle
-                      key={q.id}
-                      r={calm ? 4 : isCur ? 8 : 6}
-                      className={`pulse v2-pulse${isCur ? ' v2-pulse-current' : ''}`}
-                      data-testid="flow-pulse"
-                      data-item={q.id}
-                      onPointerEnter={(ev) => peek(p.key, q.id, ev)}
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        pin(p.key, q.id);
-                      }}
+                  {entryNode === s.stage && (
+                    <text
+                      x={x}
+                      y={ROW_Y + BOX_H / 2 + 18}
+                      className="flow-entry-mark"
+                      data-testid="flow-entry-mark"
+                      data-explain="entry-outside"
+                      data-explain-ctx={`${entry!.entry!.seat.split('@')[0]}: ${entryText}`}
                     >
-                      <title>{q.summary ?? q.id}</title>
-                      <animateMotion
-                        dur={calm ? '2.4s' : '3.6s'}
-                        repeatCount="indefinite"
-                        begin={`${(k * 0.4).toFixed(1)}s`}
-                      >
-                        <mpath href={`#${id}`} />
-                      </animateMotion>
-                    </circle>
-                  ))}
+                      ↘ work entered here ·{' '}
+                      {entry!.entry!.origin === 'startup' ? 'at launch' : 'outside the queue'}
+                    </text>
+                  )}
                 </g>
               );
             })}
-          {lens === 'structure' &&
-            mergePairs(
-              structure.lines.map((l) => ({ from: l.from, to: l.to, count: 1, planned: true }))
-            ).map((p) => {
-              const g = pairPath(p, L, ROW_Y, BOX_H);
-              const state = lineFocus.stateOf(p.a, p.b);
-              const both = structure.lines.filter(
-                (l) => flowPairKey(l.from, l.to) === flowPairKey(p.a, p.b)
-              );
-              const text = [...new Set(both.flatMap((l) => l.kinds))].join(' · ');
-              const heads = arrowHeads(p);
-              const atEnd = g.aLeft ? heads.atB : heads.atA;
-              const atStart = g.aLeft ? heads.atA : heads.atB;
-              const w = 16 + text.length * 7.5;
-              return (
-                <g
-                  key={flowPairKey(p.a, p.b)}
-                  data-testid="flow-structure-line"
-                  data-edge={`${p.a}|${p.b}`}
-                  data-kind-text={text}
-                  data-state={state}
-                >
-                  <title>{`${labelOf(p.a)} · ${labelOf(p.b)}: ${text}`}</title>
-                  <path
-                    d={g.d}
-                    className={lineClass(state, structure.source === 'planned')}
-                    strokeWidth={LINE_WIDTH.thin}
-                    markerEnd={atEnd ? 'url(#hf-arrow)' : undefined}
-                    markerStart={atStart ? 'url(#hf-arrow-start)' : undefined}
-                  />
-                  <g className={labelClass(state)}>
-                    <rect
-                      x={g.lx - w / 2}
-                      y={g.ly - 15}
-                      width={w}
-                      height={22}
-                      rx={11}
-                      className="v2-kind-pill"
-                    />
-                    <text x={g.lx} y={g.ly} className="v2-kind">
-                      {text}
-                    </text>
-                  </g>
-                </g>
-              );
-            })}
-          {flow.stages.map((s) => {
-            const x = L.x(s.stage);
-            const state = s.waiting ? 'waiting' : s.stale ? 'stale' : '';
-            return (
-              <g
-                key={s.stage}
-                data-testid="flow-stage"
-                data-stage={s.stage}
-                data-selected={sel?.stage === s.stage || undefined}
-                tabIndex={0}
-                role="button"
-                aria-label={
-                  onOpenAgent && s.seats.length === 1
-                    ? `${s.label}: Enter opens this agent`
-                    : `${s.label}: Enter lists its handoffs`
-                }
-                onPointerEnter={(ev) => {
-                  lineFocus.setFocus(s.stage);
-                  peekStage(s.stage, ev);
-                }}
-                onPointerMove={(ev) => mode !== 'hover' && peekStage(s.stage, ev)}
-                onPointerLeave={() => {
-                  lineFocus.setFocus(null);
-                  unpeek();
-                }}
-                onFocus={() => {
-                  lineFocus.setFocus(s.stage);
-                  peekStage(s.stage);
-                }}
-                onBlur={() => {
-                  lineFocus.setFocus(null);
-                  unpeek();
-                }}
-                data-focus={lineFocus.focus === s.stage || undefined}
-                onClick={() => pinStage(s.stage)}
-                onKeyDown={(ev) => {
-                  if (ev.key === 'Enter' || ev.key === ' ') {
-                    ev.preventDefault();
-                    pinStage(s.stage);
-                  }
-                }}
-                data-waiting={s.waiting}
-                data-stale={s.stale}
-                data-explain={flow.mode === 'roles' ? `stage-${s.stage}` : 'seat'}
-                data-explain-ctx={
-                  s.seats.length
-                    ? `${s.label}: ${s.seats.map((x) => `${x.name} (${x.model})`).join(', ')}`
-                    : s.label
-                }
-              >
-                <rect
-                  x={x - L.boxW / 2}
-                  y={ROW_Y - BOX_H / 2}
-                  width={L.boxW}
-                  height={BOX_H}
-                  rx={10}
-                  className={`flow-box ${state}${s.noLead ? ' none' : ''}${flow.mode === 'roles' && s.outside ? ' outside' : ''}`}
-                  data-testid={
-                    s.noLead
-                      ? 'flow-no-lead'
-                      : s.outside && flow.mode === 'roles'
-                        ? 'flow-outside'
-                        : undefined
-                  }
-                />
-                <text
-                  x={x}
-                  y={ROW_Y - 14}
-                  className={
-                    flow.mode !== 'roles'
-                      ? 'flow-seat-name'
-                      : s.noLead || s.outside
-                        ? 'flow-stage-name small'
-                        : 'flow-stage-name'
-                  }
-                >
-                  {s.noLead ? 'No lead — by design' : s.label}
-                </text>
-                <text x={x} y={ROW_Y + 8} className="flow-seats">
-                  {s.seats.length
-                    ? s.seats.map((x) => x.model).join(' · ')
-                    : s.noLead
-                      ? 'no lead seat in this rig'
-                      : s.outside
-                        ? flow.mode === 'roles'
-                          ? 'orchestrator, David or another rig'
-                          : 'outside this rig'
-                        : s.stage === 'others'
-                          ? 'quieter seats'
-                          : 'no seat'}
-                </text>
-                {!s.noLead && (
-                  <g data-testid="flow-wait-badge" data-state={state || 'none'}>
-                    <rect
-                      x={x - L.boxW / 2 + 10}
-                      y={ROW_Y + 16}
-                      width={L.boxW - 20}
-                      height={26}
-                      rx={13}
-                      className={`v2-wait-pill ${state}`}
-                    />
-                    <text x={x} y={ROW_Y + 34} className="flow-wait v2-wait">
-                      {s.waiting
-                        ? `${s.waiting} waiting · ${ago(s.oldestWaitMs ?? 0)}`
-                        : s.stale
-                          ? `${s.stale} open · ${ago(s.oldestStaleMs ?? 0)}`
-                          : 'nothing waiting'}
-                    </text>
-                  </g>
-                )}
-                {entryNode === s.stage && (
-                  <text
-                    x={x}
-                    y={ROW_Y + BOX_H / 2 + 18}
-                    className="flow-entry-mark"
-                    data-testid="flow-entry-mark"
-                    data-explain="entry-outside"
-                    data-explain-ctx={`${entry!.entry!.seat.split('@')[0]}: ${entryText}`}
-                  >
-                    ↘ work entered here ·{' '}
-                    {entry!.entry!.origin === 'startup' ? 'at launch' : 'outside the queue'}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+          </svg>
+        </div>
         {chain && follow ? (
           <FollowWork
             machineId={machine.machine.id}
