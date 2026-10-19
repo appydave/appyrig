@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { FleetMachine, LoadoutLayer, QueueItem, Seat } from '@appydave/shared';
-import { loadoutCounts } from '@appydave/shared';
+import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
 import {
   PIP,
   ago,
@@ -14,8 +13,6 @@ import {
 } from '../../../fleet/model.js';
 import FocusTerminal from '../../../components/FocusTerminal.js';
 import AnsiText from '../../../components/AnsiText.js';
-import MarkdownView from '../../../components/MarkdownView.js';
-import YamlView from '../../../components/YamlView.js';
 import {
   CopyAttach,
   HarnessMark,
@@ -24,62 +21,14 @@ import {
   tokensText,
 } from '../../../components/SeatCardLines.js';
 import { attachLine } from '../../../components/WaitingOnDavid.js';
-import { FakeControl, MockMark, SampleData } from '../../kit/index.js';
+import { DocsLayout, FakeControl, MockMark, SampleData, SkillsPanel } from '../../kit/index.js';
 import { allTiles, findTile, seatAddresses } from '../../seats.js';
 import type { V2Context, V2PageDef, V2PageProps } from '../../types.js';
 import { isOpenRigSeat, sampleDetail, type SeatDetailView } from './detail.js';
-import { useAgentData, useRigFile } from './useAgentData.js';
+import { useAgentData } from './useAgentData.js';
 
-const LAYER_ORDER: LoadoutLayer['id'][] = [
-  'role',
-  'claude-md',
-  'claude-local',
-  'culture',
-  'recap',
-  'learned',
-];
-const LAYER_ABOUT: Record<LoadoutLayer['id'], string> = {
-  role: 'Its role: the instructions OpenRig types into the agent.',
-  'claude-md': "The agent's own CLAUDE.md.",
-  'claude-local': 'CLAUDE.local.md, with the startup files merged in.',
-  culture: "The team's culture file.",
-  recap: 'A recap, if one was written.',
-  learned: 'What this agent learned.',
-};
 const RESUME_WHY =
   'The resume command holds a session id that AppyRig deliberately never carries, so this is a mock.';
-
-const kb = (n: number) =>
-  n >= 10_240 ? `${Math.round(n / 1024)} KB` : n >= 1024 ? `${(n / 1024).toFixed(1)} KB` : `${n} B`;
-
-function DocView({ name, content }: { name: string; content: string }) {
-  const [source, setSource] = useState(false);
-  const isMd = /\.md$/i.test(name) || !/\.[a-z]+$/i.test(name);
-  const isYaml = /\.ya?ml$/i.test(name);
-  return (
-    <div className="agent-doc-body" data-testid="v2a-doc-body" data-doc-name={name}>
-      {isMd && (
-        <button
-          type="button"
-          className="pill-btn"
-          aria-pressed={source}
-          onClick={() => setSource((v) => !v)}
-        >
-          {source ? 'Show formatted' : 'Show source'}
-        </button>
-      )}
-      {isMd && !source ? (
-        <MarkdownView source={content} />
-      ) : isYaml ? (
-        <YamlView source={content} />
-      ) : (
-        <pre className="md-code" tabIndex={0}>
-          <code>{content}</code>
-        </pre>
-      )}
-    </div>
-  );
-}
 
 function Section({
   id,
@@ -258,154 +207,43 @@ function Header({
             {RESUME_WHY}
           </span>
         </span>
-        <FakeControl
-          label="Restart"
-          question={`Restart ${name} on ${machine.machine.label}?`}
-          result={`${name} restarted (pretend)`}
-        />
-        <FakeControl
-          label="Stop"
-          question={`Stop ${name} on ${machine.machine.label}?`}
-          result={`${name} stopped (pretend)`}
-        />
-        <FakeControl
-          label="Handover"
-          question={`Hand ${name} over to a fresh session?`}
-          result={`${name} handed over (pretend)`}
-        />
-        <FakeControl
-          label="Refocus"
-          question={`Refocus ${name} on its mission?`}
-          result={`${name} refocused (pretend)`}
-        />
+        <details className="v2a-more">
+          <summary>More actions (mock)</summary>
+          <FakeControl
+            label="Restart"
+            question={`Restart ${name} on ${machine.machine.label}?`}
+            result={`${name} restarted (pretend)`}
+          />
+          <FakeControl
+            label="Stop"
+            question={`Stop ${name} on ${machine.machine.label}?`}
+            result={`${name} stopped (pretend)`}
+          />
+          <FakeControl
+            label="Handover"
+            question={`Hand ${name} over to a fresh session?`}
+            result={`${name} handed over (pretend)`}
+          />
+          <FakeControl
+            label="Refocus"
+            question={`Refocus ${name} on its mission?`}
+            result={`${name} refocused (pretend)`}
+          />
+        </details>
       </div>
     </header>
   );
 }
 
-function Instructions({ layers, status }: { layers: LoadoutLayer[]; status: string }) {
-  const present = [...layers]
-    .filter((l) => l.present && l.content !== null)
-    .sort((a, b) => LAYER_ORDER.indexOf(a.id) - LAYER_ORDER.indexOf(b.id));
-  const [pick, setPick] = useState<string | null>(null);
-  const shown = present.find((l) => l.id === pick) ?? present[0];
-  const absent = layers.filter((l) => !(l.present && l.content !== null));
+function Documents({ ctx, tile }: { ctx: V2Context; tile: TileRef }) {
   return (
-    <Section id="instructions" title="Instructions / role">
-      {status === 'loading' && <p className="quiet">Reading its instructions…</p>}
-      {status !== 'loading' && !shown && (
-        <p className="quiet" data-testid="v2a-instructions-none">
-          {status === 'refused'
-            ? 'Could not read its instructions.'
-            : 'No instruction files found for this agent yet.'}
-        </p>
-      )}
-      {present.length > 1 && (
-        <ul className="agent-doc-list">
-          {present.map((l) => (
-            <li key={l.id}>
-              <button
-                type="button"
-                className="agent-doc"
-                aria-current={shown?.id === l.id ? 'true' : undefined}
-                onClick={() => setPick(l.id)}
-              >
-                <b>{l.name}</b>
-                <span className="files-about">{LAYER_ABOUT[l.id]}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {shown && (
-        <>
-          <p className="label" data-testid="v2a-instructions-name">
-            {shown.name} · {kb(shown.bytes ?? 0)}
-            {shown.truncated ? ' · cut' : ''}
-          </p>
-          <DocView key={shown.id} name={shown.name} content={shown.content ?? ''} />
-        </>
-      )}
-      {absent.length > 0 && present.length > 0 && (
-        <p className="quiet">Not present: {absent.map((l) => l.name).join(' · ')}</p>
-      )}
-    </Section>
-  );
-}
-
-function StartupFiles({
-  view,
-  sample,
-  why,
-  notOpenRig,
-}: {
-  view: SeatDetailView;
-  sample: boolean;
-  why: string;
-  notOpenRig: boolean;
-}) {
-  const [at, setAt] = useState(0);
-  const file = view.startupFiles[at] ?? view.startupFiles[0];
-  if (notOpenRig) {
-    return (
-      <Section id="startup" title="Startup files">
-        <p className="quiet" data-testid="v2a-not-openrig">
-          Not an OpenRig seat — no spec or startup files.
-        </p>
-      </Section>
-    );
-  }
-  return (
-    <Section id="startup" title="Startup files">
-      <MaybeSample
-        sample={sample}
-        title="Files sent at start"
-        what={`${why}. File names follow OpenRig's layout; their texts are made up.`}
-      >
-        {view.spec && (
-          <p className="mono" data-testid="v2a-spec">
-            spec {view.spec.name ?? '—'}@{view.spec.version ?? '—'} · profile{' '}
-            {view.spec.profile ?? '—'}
-          </p>
-        )}
-        <ul className="agent-doc-list" data-testid="v2a-startup-list">
-          {view.startupFiles.map((f, i) => (
-            <li key={f.path}>
-              <button
-                type="button"
-                className="agent-doc"
-                data-testid="v2a-startup-file"
-                aria-current={f === file ? 'true' : undefined}
-                onClick={() => setAt(i)}
-              >
-                <b>{f.path}</b>
-                <span className="files-sub">
-                  {f.required ? 'required' : 'optional'}
-                  {f.deliveryHint ? ` · ${f.deliveryHint}` : ''}
-                  {f.appliesOn.length ? ` · on ${f.appliesOn.join(', ')}` : ''}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        {file &&
-          (file.text !== null ? (
-            <DocView key={file.path} name={file.path} content={file.text} />
-          ) : (
-            <p className="quiet">The text of this file is not sent by the hub.</p>
-          ))}
-        {view.startupActions.length > 0 && (
-          <ul data-testid="v2a-startup-actions">
-            {view.startupActions.map((a, i) => (
-              <li key={i} className="mono">
-                {a.type}
-                {a.phase ? ` · ${a.phase}` : ''}
-                {a.text ? `: ${a.text}` : ''}
-              </li>
-            ))}
-          </ul>
-        )}
-      </MaybeSample>
+    <Section id="documents" title="Documents">
+      <div className="v2a-docs" data-testid="v2a-docs">
+        <DocsLayout
+          getSocket={ctx.getSocket}
+          target={{ machineId: tile.machine.machine.id, seat: tile.seat }}
+        />
+      </div>
     </Section>
   );
 }
@@ -418,10 +256,7 @@ function Skills({
   loadout: ReturnType<typeof useAgentData>['loadout'];
 }) {
   const out = loadout.state === 'ok' ? loadout.value : null;
-  const skills = useMemo(() => out?.loadout?.skills ?? [], [out]);
-  const counts = useMemo(() => loadoutCounts(skills), [skills]);
-  const mine = skills.filter((s) => s.source === 'role' || s.source === 'repo');
-  const rest = skills.filter((s) => s.source !== 'role' && s.source !== 'repo');
+  const skills = out?.loadout?.skills ?? [];
   return (
     <Section id="skills" title="Skills">
       {loadout.state === 'loading' && <p className="quiet">Reading its skills…</p>}
@@ -433,115 +268,7 @@ function Skills({
           {out.reason ?? 'No skill listing for this agent yet.'}
         </p>
       )}
-      {seat.keySkills && seat.keySkills.length > 0 && (
-        <p data-testid="v2a-key-skills">
-          <span className="label">Key</span>{' '}
-          {seat.keySkills.map((s) => (
-            <span key={s} className="seat-key-skill">
-              {s.slice(s.lastIndexOf(':') + 1)}
-            </span>
-          ))}
-        </p>
-      )}
-      {skills.length > 0 && (
-        <>
-          <p className="mono" data-testid="v2a-skills-count">
-            {skills.length} listed ·{' '}
-            {(['role', 'repo', 'personal', 'plugin', 'builtin', 'unplaced'] as const)
-              .filter((k) => counts.bySource[k] > 0)
-              .map((k) => `${counts.bySource[k]} ${k}`)
-              .join(' · ')}
-          </p>
-          {mine.length > 0 && (
-            <p className="v2a-chips" data-testid="v2a-role-skills">
-              <span className="label">This team&rsquo;s own</span>{' '}
-              {mine.map((s) => (
-                <span key={s.name} className="seat-key-skill" title={s.source}>
-                  {s.name}
-                </span>
-              ))}
-            </p>
-          )}
-          {rest.length > 0 && (
-            <details>
-              <summary>The other {rest.length} (personal, plugin, built-in)</summary>
-              <p className="v2a-chips">
-                {rest.map((s) => (
-                  <span key={s.name} className="seat-key-skill" title={s.source}>
-                    {s.name}
-                  </span>
-                ))}
-              </p>
-            </details>
-          )}
-        </>
-      )}
-    </Section>
-  );
-}
-
-function ParentDocs({
-  ctx,
-  tile,
-  files,
-}: {
-  ctx: V2Context;
-  tile: TileRef;
-  files: ReturnType<typeof useAgentData>['files'];
-}) {
-  const { seat, machine } = tile;
-  const list = files.state === 'ok' ? files.value.files : [];
-  const [pick, setPick] = useState<string | null>(null);
-  // The rig's MISSION.md is the first thing shown: the page is useful before anyone clicks.
-  const first = list.find((f) => f.name === 'MISSION.md') ?? list[0];
-  const shown = list.find((f) => f.id === pick) ?? first;
-  const doc = useRigFile(ctx.getSocket(), machine.machine.id, seat.rig, shown?.id ?? null);
-  return (
-    <Section id="parent-docs" title={seat.rig ? `Parent docs · rig ${seat.rig}` : 'Parent docs'}>
-      {!seat.rig && <p className="quiet">This agent is not part of a rig.</p>}
-      {seat.rig && files.state === 'loading' && (
-        <p className="quiet">Reading the rig&rsquo;s files…</p>
-      )}
-      {files.state === 'refused' && (
-        <p className="quiet">Could not list the rig&rsquo;s files: {files.error.failureMode}.</p>
-      )}
-      {files.state === 'ok' && files.value.status !== 'ok' && (
-        <p className="quiet" data-testid="v2a-rigfiles-status">
-          {files.value.reason ?? 'No rig files are available for this rig yet.'}
-        </p>
-      )}
-      {list.length > 0 && (
-        <ul className="agent-doc-list" data-testid="v2a-rigfiles">
-          {list.map((f) => (
-            <li key={f.id}>
-              <button
-                type="button"
-                className="agent-doc"
-                data-testid="v2a-rigfile"
-                aria-current={shown?.id === f.id ? 'true' : undefined}
-                onClick={() => setPick(f.id)}
-              >
-                <b>{f.name}</b>
-                <span className="files-sub">
-                  {f.scope === 'spec' ? 'team folder' : 'mission folder'} · {kb(f.bytes)}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {doc?.state === 'loading' && <p className="quiet">Opening…</p>}
-      {doc?.state === 'refused' && (
-        <p className="quiet">Could not open it: {doc.error.failureMode}.</p>
-      )}
-      {doc?.state === 'ok' && (
-        <>
-          <p className="label" data-testid="v2a-parent-name">
-            {doc.name} · {kb(doc.bytes)}
-          </p>
-          <DocView key={doc.name} name={doc.name} content={doc.content} />
-        </>
-      )}
+      {skills.length > 0 && <SkillsPanel skills={skills} keySkills={seat.keySkills ?? []} />}
     </Section>
   );
 }
@@ -686,30 +413,21 @@ function AgentBody({ ctx, tile }: { ctx: V2Context; tile: TileRef }) {
       : notOpenRig
         ? { spec: null, startupFiles: [], startupActions: [], peers: [], recoveryNotes: [] }
         : sampleDetail(seat, mates);
-  const why =
-    data.detail.state === 'sample'
-      ? data.detail.why
-      : data.detail.state === 'loading'
-        ? 'Asking seat.detail…'
-        : '';
   const ssh =
     data.waiting.state === 'loading'
       ? 'loading'
       : data.waiting.state === 'ok'
         ? data.waiting.value.ssh
         : null;
-  const layers = data.loadout.state === 'ok' ? (data.loadout.value.loadout?.layers ?? []) : [];
   return (
     <>
       <Header ctx={ctx} tile={tile} ssh={ssh} noRig={data.waiting.state === 'na'} />
+      <Documents ctx={ctx} tile={tile} />
       <div className="v2a-grid">
         <div className="v2a-col">
-          <Instructions layers={layers} status={data.loadout.state} />
-          <StartupFiles view={detail} sample={sample} why={why} notOpenRig={notOpenRig} />
           <Skills seat={seat} loadout={data.loadout} />
         </div>
         <div className="v2a-col">
-          <ParentDocs ctx={ctx} tile={tile} files={data.files} />
           <Messages tile={tile} now={ctx.now} />
           <Peers tile={tile} detail={detail} sample={sample && !notOpenRig} />
         </div>
@@ -826,6 +544,5 @@ export const page: V2PageDef = {
   label: 'Agent',
   group: 'agents',
   component: AgentV2,
-  blurb:
-    'One page per agent: role, startup files, skills, parent docs, messages, terminal, attach.',
+  blurb: 'One page per agent: its documents (list and reader), skills, messages, terminal, attach.',
 };

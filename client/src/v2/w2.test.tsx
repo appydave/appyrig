@@ -345,7 +345,18 @@ function agentAnswers(detail?: Answers['seat.detail']): Answers {
             { name: 'recipe', source: 'role', plugin: null, alsoIn: [] },
             { name: 'canvas:visual-brief', source: 'plugin', plugin: 'canvas', alsoIn: [] },
           ],
-          layers: [LAYER],
+          layers: [
+            LAYER,
+            {
+              ...LAYER,
+              id: 'recap',
+              name: 'RECAP.md',
+              present: false,
+              path: null,
+              bytes: null,
+              content: null,
+            },
+          ],
         },
       },
     }),
@@ -413,25 +424,25 @@ describe('Agent page', () => {
     expect(screen.getByTestId('v2a-state')).toHaveTextContent('blocked');
     expect(screen.getByTestId('v2a-context')).toHaveTextContent('9%');
     expect(screen.getByTestId('v2a-new-note')).toHaveTextContent('no old version');
-    // loaded sections
+    // one documents section: grouped list left, reader right, no tiles and no sample files
     await waitFor(() =>
-      expect(screen.getByTestId('v2a-instructions')).toHaveTextContent('Build the slice.')
+      expect(screen.getByTestId('docs-reader')).toHaveTextContent('Build the slice.')
     );
-    await waitFor(() =>
-      expect(screen.getByTestId('v2a-parent-docs')).toHaveTextContent('Ship it.')
-    );
+    const list = screen.getByTestId('docs-list');
+    expect(within(list).getByTestId('docs-group-agent')).toHaveTextContent('role.md');
+    expect(within(list).getByTestId('docs-group-mission')).toHaveTextContent('MISSION.md');
+    // absent layers are greyed (disabled), never hidden
+    const absent = within(list)
+      .getAllByTestId('docs-row')
+      .filter((r) => r.getAttribute('data-present') === 'no');
+    expect(absent.length).toBeGreaterThan(0);
+    expect(absent.every((r) => (r as HTMLButtonElement).disabled)).toBe(true);
+    // a rig file opens in the same reader
+    fireEvent.click(within(list).getByText('MISSION.md'));
+    await waitFor(() => expect(screen.getByTestId('docs-reader')).toHaveTextContent('Ship it.'));
     expect(screen.getByTestId('v2a-skills')).toHaveTextContent('recipe');
     expect(screen.getByTestId('v2a-messages')).toBeInTheDocument();
     expect(screen.getByTestId('v2a-terminal-open')).toBeInTheDocument();
-    // startup files: the verb refused, so the section is sample data, with real names, never blank
-    await waitFor(() => {
-      const startup = screen.getByTestId('v2a-startup');
-      expect(within(startup).getByTestId('sample-label')).toBeInTheDocument();
-      expect(within(startup).getByTestId('sample-data')).toHaveTextContent(/seat\.detail refused/);
-    });
-    const startup = screen.getByTestId('v2a-startup');
-    expect(within(startup).getAllByTestId('v2a-startup-file')).toHaveLength(2);
-    expect(within(startup).getByTestId('v2a-doc-body')).toHaveTextContent('dev-build');
   });
 
   it('a seat.detail that answers shows real startup files with no sample label', async () => {
@@ -460,14 +471,12 @@ describe('Agent page', () => {
     );
     render(<Agent ctx={makeCtx(fleet(), socket, { agentKey: KEY })} />);
     await waitFor(() =>
-      expect(screen.getByTestId('v2a-spec')).toHaveTextContent('implementer@1.0.0')
+      expect(within(screen.getByTestId('docs-list')).getByText('role.md')).toBeInTheDocument()
     );
-    const startup = screen.getByTestId('v2a-startup');
-    expect(within(startup).queryByTestId('sample-label')).toBeNull();
-    expect(within(startup).getByTestId('v2a-startup-actions')).toHaveTextContent(
-      'Real startup text'
-    );
-    expect(within(startup).getByText(/not sent by the hub/)).toBeInTheDocument();
+    const rows = within(screen.getByTestId('docs-list')).getAllByTestId('docs-row');
+    // the startup file is listed once (as role.md already comes from the loadout, it is not repeated)
+    expect(rows.filter((r) => r.textContent?.startsWith('role.md'))).toHaveLength(1);
+    expect(screen.queryByTestId('sample-label')).toBeNull();
   });
 
   it('Copy attach is a real, safe button; an unsafe session name gets no button', async () => {
@@ -655,10 +664,8 @@ describe('W2 fold: Agent page defaults, gone agents, no-rig seats', () => {
   it('a seat with no rig: no invented spec or files, and the ssh note says why', () => {
     const { socket } = verbSocket(agentAnswers());
     render(<Agent ctx={makeCtx(fleet(), socket, { agentKey: 'roamy/openrig-orch' })} />);
-    expect(screen.getByTestId('v2a-not-openrig')).toHaveTextContent('Not an OpenRig seat');
-    const startup = screen.getByTestId('v2a-startup');
-    expect(within(startup).queryByTestId('sample-label')).toBeNull();
-    expect(within(startup).queryAllByTestId('v2a-startup-file')).toHaveLength(0);
+    expect(screen.queryByTestId('sample-label')).toBeNull();
+    expect(screen.queryAllByTestId('v2a-startup-file')).toHaveLength(0);
     expect(screen.getByTestId('v2a-header')).toHaveTextContent('no rig, so no ssh address');
   });
 
@@ -690,7 +697,7 @@ describe('W2 fold: Agent page defaults, gone agents, no-rig seats', () => {
     const stale = agentAnswers()['seat.loadout']!({});
     await act(async () => pending[first]!(null, stale as CallAnswer));
     expect(screen.getByTestId('v2a-name')).toHaveTextContent('dev-review');
-    expect(screen.getByTestId('v2a-instructions')).not.toHaveTextContent('Build the slice.');
+    expect(screen.getByTestId('v2a-documents')).not.toHaveTextContent('Build the slice.');
   });
 });
 

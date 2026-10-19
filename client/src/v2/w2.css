@@ -423,3 +423,12 @@
 .v2-flow [data-waiting]:not([data-waiting='0']) .v2-wait {
   fill: var(--ar-blocked-ink);
 }
+
+.v2a-more {
+  display: inline-block;
+}
+.v2a-more > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ar-ink-muted, #8a8078);
+}

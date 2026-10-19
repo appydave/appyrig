@@ -192,6 +192,39 @@ describe('a run in progress', () => {
     expect(screen.getAllByTestId('run-sent-back')).toHaveLength(1);
   });
 
+  it('"How the run went" appears once a job is accepted, with a row per job, and not before', async () => {
+    const early = ctxFor(machineWith([]), missionAnswers(table(3)));
+    const first = render(<Page ctx={early.ctx} />);
+    await waitFor(() => expect(screen.getAllByTestId('run-job')).toHaveLength(3));
+    expect(screen.queryByTestId('run-after')).toBeNull();
+    first.unmount();
+    const { ctx } = ctxFor(machineWith(queue), missionAnswers(table(3)));
+    render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getByTestId('run-after')).toBeInTheDocument());
+    expect(screen.getByTestId('run-after-verdict')).toBeInTheDocument();
+    expect(screen.getByTestId('run-after-stats')).toHaveTextContent('handoffs');
+    const rows = screen.getAllByTestId('run-after-job');
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveTextContent('2 rounds');
+    expect(rows[1]).toHaveTextContent('1 sent back');
+    expect(rows[2]).toHaveTextContent('not started');
+  });
+
+  it('a station card opens the documents drawer for that seat', async () => {
+    const { ctx } = ctxFor(machineWith(queue), missionAnswers(table(3)));
+    render(<Page ctx={ctx} />);
+    await waitFor(() =>
+      expect(screen.getAllByTestId('run-station-docs').length).toBeGreaterThan(0)
+    );
+    fireEvent.click(screen.getAllByTestId('run-station-docs')[0]!);
+    expect(screen.getByTestId('docs-drawer')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(within(screen.getByTestId('docs-list')).getByText('MISSION.md')).toBeInTheDocument()
+    );
+    fireEvent.click(screen.getByTestId('docs-close'));
+    expect(screen.queryByTestId('docs-drawer')).toBeNull();
+  });
+
   it('verdictOf reads the tag and nothing else', () => {
     expect(verdictOf(['x', 'verdict:changes'])).toBe('changes');
     expect(verdictOf(['verdict:maybe'])).toBeNull();
