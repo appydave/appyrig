@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { QueueItem } from '@appydave/shared';
-import type { V2PageDef, V2PageProps } from '../../types.js';
+import type { V2Context, V2PageDef, V2PageProps } from '../../types.js';
 import {
   HandoffLegend,
   LeftOpenBadgeSvg,
@@ -19,6 +19,7 @@ import { buildRigMap } from '../../../fleet/views.js';
 import { findTile } from '../../seats.js';
 import { useDocsDrawer } from '../../kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
+import { useOpenRigs } from './openRigs.js';
 import RigBox, { lastWords } from './RigBox.js';
 import RigInside from './RigInside.js';
 import { routeLines, type Box, type Tip } from './lineRoute.js';
@@ -96,6 +97,16 @@ function writeShowStopped(on: boolean) {
     /* private window or blocked storage: it just is not remembered */
   }
 }
+
+/** What the nav lane adds to the ctx (all optional until it lands): the Agent panel and a repeat-pick nonce. */
+type PanelCtx = V2Context & {
+  openAgentPanel?: (a: {
+    machineId: string;
+    seatKey: string;
+    tab?: 'documents' | 'terminal' | 'messages';
+  }) => void;
+  focusNonce?: number;
+};
 
 /** Semantic zoom: far = rig boxes only, middle = pods and names, near = compact cards and lines. */
 export type Zoom = 'fleet' | 'pods' | 'cards';
@@ -219,7 +230,10 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
     writeShowStopped(on);
   };
   const [filter, setFilter] = useState<FlagFilter | null>(null);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // which rigs are open persists across visits (the URL's `open=` once the nav lane provides it)
+  const [expanded, setExpanded] = useOpenRigs(ctx);
+  const nav = ctx as PanelCtx;
+  const [flash, setFlash] = useState<string | null>(null);
   const [zoom, setZoom] = useState<Zoom>('cards');
   // the rig box or line the pointer or keyboard is on: its lines light up, the rest dim (kit)
   const lineFocus = useLineFocus();
@@ -363,21 +377,45 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
   const fit = () => setZoom(openAgents <= 16 ? 'cards' : openAgents <= 60 ? 'pods' : 'fleet');
   const step = (dir: 1 | -1) =>
     setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + dir))]!);
-  // The `map` alias: the graph opens on the chosen rig.
-  const focused = useRef(false);
+  // A rig pick (the drawer, the Rigs list, a repeat pick) opens that rig here and scrolls to it. A cold
+  // open pre-opens nothing; the `map` alias opens the chosen rig at once.
+  const nonce = nav.focusNonce ?? 0;
+  const seen = useRef<{ rig: string | null; nonce: number } | null>(null);
   useEffect(() => {
-    if (!focusChosen || focused.current || !picked) return;
-    focused.current = true;
+    if (!picked) return;
+    const before = seen.current;
+    seen.current = { rig: picked, nonce };
+    if (!before && !focusChosen && nonce === 0) return;
+    if (before && before.rig === picked && before.nonce === nonce) return;
     setExpanded((o) => ({ ...o, [picked]: true }));
-    // Only when the chosen rig is off screen, and only as far as it takes: opening the Rig Map
-    // never moves a page whose chosen rig is already in view (clean batch, headers unit).
-    requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-graph-rig="${CSS.escape(picked)}"]`);
-      const r = el?.getBoundingClientRect();
-      if (r && (r.top < 0 || r.top > window.innerHeight))
-        el?.scrollIntoView?.({ block: 'nearest' });
-    });
-  }, [focusChosen, picked]);
+    setFlash(picked);
+    const t = window.setTimeout(() => setFlash((f) => (f === picked ? null : f)), 2500);
+    // after the box has grown, bring it into view (centred; never past the page)
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        document
+          .querySelector(`[data-graph-rig="${CSS.escape(picked)}"]`)
+          ?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+      })
+    );
+    return () => window.clearTimeout(t);
+    // setExpanded is stable enough: the pick and the nonce are what trigger this
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked, nonce, focusChosen]);
+  // A card click opens the Agent panel on top of this page; without the nav lane's panel it falls back
+  // to the Agent page. ⋯ → Documents opens the same panel on its Documents tab.
+  const openAgent = (key: string) => {
+    const machineId = key.slice(0, key.indexOf('/'));
+    if (nav.openAgentPanel) nav.openAgentPanel({ machineId, seatKey: key });
+    else ctx.openAgentPage(key);
+  };
+  const openSeatDocs = (key: string) => {
+    const t = findTile(ctx.allMachines, key);
+    if (!t) return;
+    if (nav.openAgentPanel) {
+      nav.openAgentPanel({ machineId: t.machine.machine.id, seatKey: key, tab: 'documents' });
+    } else openDocs({ machineId: t.machine.machine.id, seat: t.seat });
+  };
   const minute = Math.floor(ctx.now / 60_000) * 60_000;
   const openKeys = groups
     .filter((g) => expanded[g.key] && g.ref && shown(g))
@@ -575,6 +613,7 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
                     rig={g}
                     now={ctx.now}
                     expanded={!!expanded[g.key]}
+                    focused={flash === g.key}
                     trace={traceOf(g.key)}
                     onToggle={toggleBox}
                     onTrace={trace}
@@ -587,12 +626,9 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
                         socket={ctx.getSocket()}
                         machines={ctx.allMachines}
                         lastWords={lastWords(g, ctx.now)}
-                        onOpenAgent={ctx.openAgentPage}
+                        onOpenAgent={openAgent}
                         onDetails={() => openDocs({ machineId: g.machineId, rig: g.name })}
-                        onDocs={(key) => {
-                          const t = findTile(ctx.allMachines, key);
-                          if (t) openDocs({ machineId: t.machine.machine.id, seat: t.seat });
-                        }}
+                        onDocs={openSeatDocs}
                         onPin={(title, items) => setPinned({ title, items })}
                       />
                     ) : null}

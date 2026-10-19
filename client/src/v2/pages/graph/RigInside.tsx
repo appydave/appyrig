@@ -184,8 +184,9 @@ export default function RigInside({
         }
         levels[lv]!.push([lo, hi]);
         const up = LIFT_BASE + lv * LEVEL_STEP;
-        const sy = a.y;
-        const ey = b.y;
+        // stop 3 px above the card, so a line never runs over its edge
+        const sy = a.y - 3;
+        const ey = b.y - 3;
         // a cubic with both handles lifted peaks at 3/4 of the lift
         const peak = (up * 4) / 3;
         out.push({
@@ -205,7 +206,7 @@ export default function RigInside({
         out.push({
           elbow: true,
           pair: p,
-          d: `M${sx},${a.y} L${sx},${ay} L${chan},${ay} L${chan},${by} L${ex},${by} L${ex},${b.y}`,
+          d: `M${sx},${a.y - 3} L${sx},${ay} L${chan},${ay} L${chan},${by} L${ex},${by} L${ex},${b.y - 3}`,
           // labels sit in the left channel, stepped so two never share a spot
           lx: 34,
           ly: (ay + by) / 2 + (i - (otherRow.length - 1) / 2) * 16,
@@ -423,6 +424,9 @@ export default function RigInside({
                         contextTokens={s.contextTokens}
                         tail={tailLine(findTile(machines, s.key)?.seat.tail?.lines)}
                         onOpen={() => onOpenAgent(s.key)}
+                        corner={
+                          onDocs && <CardMenu name={s.name} onDocuments={() => onDocs(s.key)} />
+                        }
                         testId="g2-agent-card"
                         dataAttrs={{ 'data-node-key': s.key }}
                         ariaLabel={`${s.name}, ${PIP[s.pip].label}: open the agent page`}
@@ -579,5 +583,63 @@ export function HumanCard({
         )}
       </span>
     </div>
+  );
+}
+
+/**
+ * The visible ⋯ on a compact card: a small menu with Documents (which opens the Agent panel on its
+ * Documents tab). A click on the card itself opens the panel on its first tab.
+ */
+function CardMenu({ name, onDocuments }: { name: string; onDocuments: () => void }) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc, true);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc, true);
+    };
+  }, [open]);
+  return (
+    <span className="g2-card-menu" ref={wrap} onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        className="g2-card-more"
+        data-testid="g2-card-more"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`More for ${name}`}
+        title="More"
+        onClick={() => setOpen((o) => !o)}
+      >
+        ⋯
+      </button>
+      {open && (
+        <span className="g2-card-menu-pop" role="menu" data-testid="g2-card-menu">
+          <button
+            type="button"
+            role="menuitem"
+            className="g2-card-menu-item"
+            data-testid="g2-card-documents"
+            onClick={() => {
+              setOpen(false);
+              onDocuments();
+            }}
+          >
+            Documents
+          </button>
+        </span>
+      )}
+    </span>
   );
 }
