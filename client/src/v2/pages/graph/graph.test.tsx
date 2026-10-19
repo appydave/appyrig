@@ -135,6 +135,8 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     closeAgentPanel: vi.fn(),
     agentPanel: null,
     focusNonce: 0,
+    openRigs: [],
+    setOpenRigs: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
     ...over,

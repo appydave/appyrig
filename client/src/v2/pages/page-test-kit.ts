@@ -48,6 +48,8 @@ export function pageCtx(machines: FleetMachine[], socket: FleetSocket, now: numb
     rigs: listRigs(machines),
     activeRig: null,
     focusNonce: 0,
+    openRigs: [],
+    setOpenRigs: vi.fn(),
     chooseRig: vi.fn(),
     pickedRig: null,
     groupBy: 'rig',

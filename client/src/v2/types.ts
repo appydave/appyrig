@@ -54,6 +54,12 @@ export interface V2Context {
    * rig when `focusNonce` changes (scroll to it, outline it), so picking the same rig again re-focuses.
    */
   focusNonce: number;
+  /**
+   * The rigs the Graph holds open, as rig keys (`m2:d09-crew`), backed by the address's `open=`
+   * parameter so a reload and a copied link restore them. `setOpenRigs` replaces the whole list.
+   */
+  openRigs: string[];
+  setOpenRigs: (keys: string[]) => void;
   chooseRig: (key: string) => void;
   /** The rig the viewer clicked (not the default first one), for the Wall's highlight. */
   pickedRig: RigRef | null;

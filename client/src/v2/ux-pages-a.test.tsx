@@ -89,6 +89,8 @@ function makeCtx(machines: FleetMachine[], socket: FleetSocket): V2Context {
     closeAgentPanel: vi.fn(),
     agentPanel: null,
     focusNonce: 0,
+    openRigs: [],
+    setOpenRigs: vi.fn(),
   };
 }
 

@@ -88,6 +88,8 @@ function makeCtx(
     closeAgentPanel: vi.fn(),
     agentPanel: null,
     focusNonce: 0,
+    openRigs: [],
+    setOpenRigs: vi.fn(),
     ...over,
   };
 }

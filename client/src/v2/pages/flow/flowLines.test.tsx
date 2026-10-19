@@ -70,6 +70,8 @@ function ctxFor(machines: FleetMachine[], rigName = 'starter'): V2Context {
     closeAgentPanel: vi.fn(),
     agentPanel: null,
     focusNonce: 0,
+    openRigs: [],
+    setOpenRigs: vi.fn(),
   };
 }
 

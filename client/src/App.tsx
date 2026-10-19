@@ -37,7 +37,14 @@ import RigDrawer from './v2/shell/RigDrawer.js';
 import StripShell from './v2/shell/StripShell.js';
 import MoreMenu from './v2/shell/MoreMenu.js';
 import AgentPanelV2 from './v2/kit/AgentPanel.js';
-import { isV2Url, readUrlState, rigToParam, writeParams } from './v2/shell/urlState.js';
+import {
+  isV2Url,
+  readUrlState,
+  rigFromParam,
+  rigToParam,
+  useUrlParam,
+  writeParams,
+} from './v2/shell/urlState.js';
 import './v2/shell/shell.css';
 
 const GROUP_KEY = 'appyrig.groupBy';
@@ -531,6 +538,22 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       setRigPicked(true);
     } else setRigPicked(false);
   }, []);
+  // The Graph's open rigs live in the address (`open=`), so reload and a copied link restore them.
+  const [openParam, setOpenParam] = useUrlParam('open');
+  const openRigs = useMemo(
+    () =>
+      (openParam ?? '')
+        .split(',')
+        .map((p) => rigFromParam(p))
+        .filter((k): k is string => k !== null),
+    [openParam]
+  );
+  const setOpenRigs = useCallback(
+    (keys: string[]) => {
+      if (isV2Url()) setOpenParam(keys.length ? keys.map(rigToParam).join(',') : null);
+    },
+    [setOpenParam]
+  );
   const v2 = useV2({
     onUrlRig,
     view,
@@ -543,6 +566,8 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       rigs,
       activeRig,
       focusNonce,
+      openRigs,
+      setOpenRigs,
       chooseRig,
       pickedRig: rigPicked && !followLatest ? activeRig : null,
       groupBy,
