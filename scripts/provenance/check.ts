@@ -7,7 +7,9 @@
  *   npm run provenance -- --update-pin       on a clean run against --ref, move the pin there
  *
  * Exit codes (the gate contract): 0 = no drift · 1 = drift · 2 = the check could not run.
- * Writes scripts/provenance/out/report.json and report.md either way (except on exit 2).
+ * Writes scripts/provenance/out/report.json and report.md either way (except on exit 2); when out/
+ * cannot be written, the report goes to <os tmpdir>/appyrig-provenance and stderr says so.
+ * Run it through main.ts (`npm run provenance`): main.ts turns any unanticipated error into exit 2.
  *
  * Deterministic and read-only: OpenRig files are read with `git show <ref>:<path>` from the
  * reference clone (or from disk with --source); nothing is checked out, installed or run, and no
@@ -16,6 +18,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
@@ -545,9 +548,24 @@ const report = {
   },
 };
 
-const outDir = join(here, 'out');
-mkdirSync(outDir, { recursive: true });
-writeFileSync(join(outDir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);
+// The report goes to out/; when that cannot be written (a read-only tree), to the temp folder
+// instead, said once on stderr. Where the report lands never changes the exit code.
+let outDir = join(here, 'out');
+function writeReport(name: string, text: string): void {
+  try {
+    mkdirSync(outDir, { recursive: true });
+    writeFileSync(join(outDir, name), text);
+  } catch (e) {
+    const fallback = join(tmpdir(), 'appyrig-provenance');
+    if (outDir === fallback) throw e;
+    console.error(
+      `provenance: could not write ${relative(root, outDir) || outDir} (${(e as NodeJS.ErrnoException).code ?? (e as Error).message}); wrote the report to ${fallback}`
+    );
+    outDir = fallback;
+    writeReport(name, text);
+  }
+}
+writeReport('report.json', `${JSON.stringify(report, null, 2)}\n`);
 
 const md: string[] = [
   `# OpenRig provenance: ${drift ? 'DRIFT' : 'clean'}`,
@@ -581,7 +599,7 @@ const md: string[] = [
   `**UI cites (report only):** ${clientCites.length} OpenRig file:line cites in client/; ${clientCites.filter((c) => c.status !== 'line exists (symbol unchecked)').length} point past the end of their file or are ambiguous. Lines are shown in report.json; whether the right symbol is still there is not checked.`,
   '',
 ];
-writeFileSync(join(outDir, 'report.md'), md.join('\n'));
+writeReport('report.md', md.join('\n'));
 console.log(md.join('\n'));
 
 // --update-pin: only on a clean run against a real commit.

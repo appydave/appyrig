@@ -26,7 +26,8 @@ It is deterministic and read-only. No LLM, no network, no install. OpenRig files
 | File                                 | What                                                                                                                                                   |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `shared/src/openrig/PROVENANCE.json` | The pin: OpenRig version, commit, date, clone path, CLI path. Paths can be overridden with `OPENRIG_SRC` and `OPENRIG_CLI`.                            |
-| `check.ts`                           | The check.                                                                                                                                             |
+| `main.ts`                            | Entry point (`npm run provenance`). Holds the exit contract: 0 clean, 1 drift only, 2 cannot run (any unanticipated error).                            |
+| `check.ts`                           | The check. If `out/` cannot be written, the report goes to `<os tmpdir>/appyrig-provenance` and stderr says where.                                     |
 | `extract.ts`                         | Text extractors. Each finds a named anchor in OpenRig's source; a missing anchor counts as drift, not as an empty list.                                |
 | `ignore.json`                        | Known, reasoned differences: `unmapped` (OpenRig has it, we chose not to model it) and `oursOnly` (we model it, OpenRig's normaliser doesn't read it). |
 | `AGENT.md`                           | Spec for the repair agent (not built).                                                                                                                 |
