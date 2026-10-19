@@ -114,6 +114,20 @@ describe('Rig Map page', () => {
     expect(body.textContent ?? '').not.toMatch(/not placed/i);
   });
 
+  it('cards are the Wall card (V1 body, 5 slots), larger than the Wall, never the compact Graph card', () => {
+    render(<RigMap ctx={ctxFor(pickRig().key)} />);
+    const cards = screen.getAllByTestId('g2-agent-card');
+    for (const c of cards) {
+      expect(c.classList.contains('wcard')).toBe(true);
+      expect(c.hasAttribute('data-size')).toBe(false);
+      expect(within(c).getByTestId('terminal-card-tail')).toBeInTheDocument();
+      expect(within(c).getByTestId('terminal-card-context')).toBeInTheDocument();
+      expect(within(c).getByTestId('seat-freshness')).toBeInTheDocument();
+    }
+    const css = readFileSync(path.resolve(__dirname, 'rigmap.css'), 'utf8');
+    expect(css).toMatch(/\.v2-rigmap \.wcard \{[^}]*--wc-w:\s*308px/);
+  });
+
   it('a card click opens the Agent panel on that seat', () => {
     const ctx = ctxFor(pickRig().key);
     render(<RigMap ctx={ctx} />);

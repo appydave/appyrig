@@ -7,6 +7,7 @@ import { allGroups, buildGraph } from '../graph/model.js';
 import { lastWords } from '../graph/RigBox.js';
 import RigInside from '../graph/RigInside.js';
 import { RIG_STATE } from '../../../fleet/views.js';
+import { freshness } from '../../../fleet/model.js';
 import '../graph/graph.css';
 import './rigmap.css';
 
@@ -18,7 +19,7 @@ interface Pinned {
 /**
  * The Rig Map: ONE rig, the one picked in the Rigs drawer, across the full page width. It is the
  * Graph's open-rig inside (pods, compact cards, handoff lines, the person card) with room, so
- * nothing here is forked: it renders the same RigInside. Compact TerminalCards for now.
+ * nothing here is forked: it renders the same RigInside. The cards are the Wall's (V1 body); the Graph keeps its compact ones.
  */
 function RigMapPage({ ctx }: V2PageProps) {
   const rigKey = ctx.activeRig?.key ?? null;
@@ -86,6 +87,7 @@ function RigMapPage({ ctx }: V2PageProps) {
           onDetails={() => openDocs({ machineId: rig.machineId, rig: rig.name })}
           onDocs={openSeatDocs}
           onPin={(title, items) => setPinned({ title, items })}
+          roomy={{ fresh: (m) => freshness(m, ctx.now, ctx.hubConnected).label }}
         />
       </div>
       {pinned && (
