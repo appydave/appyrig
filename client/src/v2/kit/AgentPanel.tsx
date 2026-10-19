@@ -55,6 +55,14 @@ export default function AgentPanel(p: AgentPanelProps) {
   const [tab, setTab] = useState<AgentPanelTab>(p.tab ?? 'documents');
   useEffect(() => setTab(p.tab ?? 'documents'), [p.tab, key]);
   const top = useTopOffset();
+  const [wide, setWide] = useState(false);
+  // In the narrow peek the page makes room (see docs.css), so its chips and controls stay clickable.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (wide) root.removeAttribute('data-agent-panel');
+    else root.setAttribute('data-agent-panel', 'peek');
+    return () => root.removeAttribute('data-agent-panel');
+  }, [wide]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);
@@ -80,12 +88,13 @@ export default function AgentPanel(p: AgentPanelProps) {
           <span className="apanel-spacer" />
           <button
             type="button"
-            className="pill-btn"
+            className="pill-btn apanel-x"
             data-testid="apanel-close"
-            aria-label="Close"
+            aria-label="Close the agent panel"
+            title="Close (Esc)"
             onClick={onClose}
           >
-            ×
+            × Close
           </button>
         </header>
         <p className="quiet" style={{ padding: 16 }} data-testid="apanel-gone">
@@ -107,6 +116,7 @@ export default function AgentPanel(p: AgentPanelProps) {
       aria-label={`Agent · ${name}`}
       data-testid="agent-panel"
       data-pip={pip}
+      data-wide={wide || undefined}
     >
       <header className="apanel-head">
         <h3 data-testid="apanel-name">{name}</h3>
@@ -128,12 +138,23 @@ export default function AgentPanel(p: AgentPanelProps) {
         </button>
         <button
           type="button"
-          className="pill-btn"
+          className="pill-btn apanel-x"
+          data-testid="apanel-expand"
+          aria-pressed={wide}
+          title={wide ? 'Back to the narrow peek' : 'Widen the panel for a long document'}
+          onClick={() => setWide((v) => !v)}
+        >
+          {wide ? '⇥ Narrow' : '⇤ Expand'}
+        </button>
+        <button
+          type="button"
+          className="pill-btn apanel-x"
           data-testid="apanel-close"
           aria-label="Close the agent panel"
+          title="Close (Esc)"
           onClick={onClose}
         >
-          ×
+          × Close
         </button>
       </header>
       <dl className="apanel-id" data-testid="apanel-identity">
