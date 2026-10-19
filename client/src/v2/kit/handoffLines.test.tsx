@@ -260,6 +260,9 @@ describe('one legend, one explain sentence', () => {
     const first = screen.getByTestId('hl-explain').textContent;
     expect(first).toBe(LINE_EXPLAIN);
     expect(a.container.querySelectorAll('li')).toHaveLength(LINE_LEGEND.length);
+    // the "14 ⇄ 8" sample is the label: it appears once in the legend, not twice
+    const both = a.container.querySelector('[data-legend="both"]')!;
+    expect(both.textContent!.match(/14 ⇄ 8/g)).toHaveLength(1);
     a.unmount();
     render(<HandoffLegend compact />);
     expect(screen.getByTestId('hl-explain').textContent).toBe(first);
@@ -281,9 +284,8 @@ describe('guard: no screen sizes a line by a share of the busiest pair', () => {
     expect(relativeWidthLines('const share = done / maxItems; // unrelated')).toHaveLength(0);
   });
 
-  // The screens still carry their own formulas (Rig Map, Handoff Flow, Graph): each lane switches
-  // to this module and then turns this on by changing `it.skip` to `it`.
-  it.skip('no file under client/src/v2 sizes a stroke by a division by a max', () => {
+  // On since the three screens (Rig Map, Handoff Flow, Graph) all use this module.
+  it('no file under client/src/v2 sizes a stroke by a division by a max', () => {
     const root = path.resolve(__dirname, '..');
     const files: string[] = [];
     const walk = (dir: string) => {

@@ -120,7 +120,8 @@ function Sample({ entry }: { entry: LegendEntry }): ReactNode {
     case 'leftOpen':
       return <span className="hl-chip hl-chip-open">◷</span>;
     default:
-      return <span className="mono">{entry.label}</span>;
+      // the label is the sample ("14 ⇄ 8"): shown once, in the label slot
+      return null;
   }
 }
 
