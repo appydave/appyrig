@@ -97,15 +97,6 @@ function writeShowStopped(on: boolean) {
   }
 }
 
-/** Semantic zoom: far = rig boxes only, middle = pods and names, near = compact cards and lines. */
-export type Zoom = 'fleet' | 'pods' | 'cards';
-const ZOOMS: Zoom[] = ['fleet', 'pods', 'cards'];
-const ZOOM_LABEL: Record<Zoom, string> = {
-  fleet: 'Fleet',
-  pods: 'Pods',
-  cards: 'Cards',
-};
-
 interface Pinned {
   title: string;
   items: QueueItem[];
@@ -222,7 +213,6 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
   // which rigs are open persists across visits (the URL's `open=` once the nav lane provides it)
   const [expanded, setExpanded] = useOpenRigs(ctx);
   const [flash, setFlash] = useState<string | null>(null);
-  const [zoom, setZoom] = useState<Zoom>('cards');
   // the rig box or line the pointer or keyboard is on: its lines light up, the rest dim (kit)
   const lineFocus = useLineFocus();
   const [lineHover, setLineHover] = useState<LineHover | null>(null);
@@ -358,13 +348,6 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
   const trace = useStable((k: string | null) => lineFocus.setFocus(k));
   const expandAll = (on: boolean) =>
     setExpanded(Object.fromEntries(groups.filter(shown).map((g) => [g.key, on])));
-  // Fit: the most detail that still fits the rigs that are open.
-  const openAgents = groups
-    .filter((g) => expanded[g.key] && shown(g))
-    .reduce((n, g) => n + g.agents, 0);
-  const fit = () => setZoom(openAgents <= 16 ? 'cards' : openAgents <= 60 ? 'pods' : 'fleet');
-  const step = (dir: 1 | -1) =>
-    setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + dir))]!);
   // A rig pick (the drawer, the Rigs list, a repeat pick) opens that rig here and scrolls to it. A cold
   // open pre-opens nothing; the `map` alias opens the chosen rig at once.
   const nonce = ctx.focusNonce;
@@ -415,12 +398,6 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
       ),
     [openKeys, ctx.allMachines, minute]
   );
-  const onWheel = (e: React.WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault();
-    step(e.deltaY < 0 ? 1 : -1);
-  };
-
   const counts = Object.fromEntries(
     FLAG_FILTERS.map((f) => [f.key, groups.filter((g) => rigMatches(g, f.key)).length])
   ) as Record<FlagFilter, number>;
@@ -447,34 +424,6 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
               onClick={() => expandAll(false)}
             >
               Collapse all
-            </button>
-          </span>
-          <span className="g2-tool-group" role="group" aria-label="Zoom">
-            <button
-              type="button"
-              className="pill-btn"
-              data-testid="g2-zoom-out"
-              aria-label="Zoom out: show less"
-              disabled={zoom === 'fleet'}
-              onClick={() => step(-1)}
-            >
-              −
-            </button>
-            <span className="g2-zoom-level mono" data-testid="g2-zoom" data-zoom={zoom}>
-              {ZOOM_LABEL[zoom]}
-            </span>
-            <button
-              type="button"
-              className="pill-btn"
-              data-testid="g2-zoom-in"
-              aria-label="Zoom in: show more"
-              disabled={zoom === 'cards'}
-              onClick={() => step(1)}
-            >
-              +
-            </button>
-            <button type="button" className="pill-btn" data-testid="g2-fit" onClick={fit}>
-              Fit
             </button>
           </span>
           <span className="g2-tool-group">
@@ -550,19 +499,33 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
             </span>
           }
         />
+        <p className="g2-key" data-testid="g2-key">
+          <span>
+            <b>○</b> running
+          </span>
+          <span>
+            <b>✕</b> stopped <i className="g2-key-frost">frosted</i>
+          </span>
+          <span>
+            <b className="g2-key-attn">▲</b> needs you (orange edge)
+          </span>
+          <span>
+            <b>◌</b> machine asleep (dotted edge)
+          </span>
+          <span>
+            <b>⌛</b> work waiting over 2 h
+          </span>
+          <span>
+            <i className="g2-key-norig">no rig</i> = plain tmux sessions
+          </span>
+        </p>
       </div>
       {pairs.length > 0 && (
         <div className="g2-legend" data-testid="g2-legend">
           <HandoffLegend compact />
         </div>
       )}
-      <div
-        className="g2-canvas"
-        ref={canvas}
-        data-testid="g2-canvas"
-        data-zoom={zoom}
-        onWheel={onWheel}
-      >
+      <div className="g2-canvas" ref={canvas} data-testid="g2-canvas">
         <div className="g2-machines" style={{ ['--g2-n' as string]: Math.max(1, columns.length) }}>
           {columns.map(({ machine, groups: gs }) => (
             <section
@@ -604,11 +567,10 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
                     onToggle={toggleBox}
                     onTrace={trace}
                   >
-                    {zoom !== 'fleet' && insideMaps.get(g.key) ? (
+                    {insideMaps.get(g.key) ? (
                       <RigInside
                         map={insideMaps.get(g.key)!}
                         rig={g}
-                        level={zoom}
                         socket={ctx.getSocket()}
                         machines={ctx.allMachines}
                         lastWords={lastWords(g, ctx.now)}
@@ -778,5 +740,5 @@ export const page: V2PageDef = {
   group: 'fleet',
   component: GraphV2,
   blurb:
-    'Every rig as a box in machine columns; open several in place, zoom from fleet to compact cards, handoff lines between rigs and inside them.',
+    'Every rig as a box in machine columns; open several in place (a rig is a box, or open with its cards), handoff lines between rigs and inside them.',
 };

@@ -31,6 +31,11 @@ function urlNewPage(): V2OnlyKey | null {
 export interface UseV2Args {
   /** The viewer went Back or Forward to an address that names this rig key (or none): restore it. */
   onUrlRig?: (rigKey: string | null) => void;
+  /**
+   * An agent was opened in the panel (from any entry point). The shell picks that agent's rig, so the
+   * Wall outline, the drawer, the scope line and `rig=` all name the same rig. Called with the tile key.
+   */
+  onAgentOpened?: (tileKey: string) => void;
   view: View;
   chooseView: (v: View) => void;
   /** Screen keys are live: nothing on top, no seat open. */
@@ -79,7 +84,15 @@ function formatRecorded(iso: string | null): string {
       });
 }
 
-export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Args): V2Frame {
+export function useV2({
+  view,
+  chooseView,
+  keys,
+  frozen,
+  ctx,
+  onUrlRig,
+  onAgentOpened,
+}: UseV2Args): V2Frame {
   const [mode, setModeState] = useState<Mode>(() => readMode());
   const [newPage, setNewPage] = useState<V2OnlyKey | null>(() =>
     readMode() === 'v2' ? urlNewPage() : null
@@ -102,8 +115,13 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
   });
   const modeRef = useRef(mode);
   modeRef.current = mode;
+  const agentOpenedRef = useRef(onAgentOpened);
+  agentOpenedRef.current = onAgentOpened;
   const openAgentPanel = useCallback((t: AgentPanelTarget) => {
     const key = t.seatKey.startsWith(`${t.machineId}/`) ? t.seatKey : `${t.machineId}/${t.seatKey}`;
+    // First pick the agent's rig (it rewrites `rig=` on the current entry), then open the panel on a
+    // new entry: so the picked rig and the panel agree, and the panel it opens is never closed by it.
+    if (modeRef.current === 'v2') agentOpenedRef.current?.(key);
     setAgentPanel({ machineId: t.machineId, seatKey: key, tab: t.tab ?? 'documents' });
     // a new history entry, so Back closes the panel
     if (modeRef.current === 'v2') writeParams({ agent: agentToParam(key) }, 'push', PANEL_ENTRY);

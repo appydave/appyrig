@@ -87,3 +87,4 @@ export {
 } from './legendData.js';
 export { default as PageInfo } from './PageInfo.js';
 export { PAGE_PURPOSE } from './legendData.js';
+export { default as WallCard, isFrosted, type WallCardProps } from './WallCard.js';

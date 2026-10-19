@@ -45,11 +45,29 @@
   color: var(--ar-error-ink);
   border-color: var(--ar-error);
 }
+/* Each group is a visible container that sizes to its cards and flows beside the next: a tinted
+   panel with an edge, a strong heading, one line of description, then its cards. Stopped and unknown groups are frosted (pale, dashed). */
 .v2w-group {
-  /* shrink to its own cards, so small teams sit side by side like V1's one dense wall */
+  box-sizing: border-box;
+  /* sizes to its own cards and flows beside the next group, wrapping like an inline block */
   width: fit-content;
   max-width: 100%;
-  margin: 0 18px 12px 0;
+  margin: 0;
+  padding: 5px 8px 8px;
+  background: color-mix(in srgb, var(--ar-surface-raised) 70%, var(--ar-canvas));
+  border: 1px solid var(--ar-line);
+  border-left: 5px solid var(--ar-ink-muted);
+  border-radius: 8px;
+}
+.v2w-group[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.v2w-group[data-state='blocked'] {
+  border-left-color: var(--ar-blocked);
+}
+.v2w-group[data-frosted] {
+  background: color-mix(in srgb, var(--ar-canvas) 80%, transparent);
+  border: 1.5px dashed var(--ar-ink-muted);
 }
 .v2w-group-head {
   all: unset;
@@ -59,16 +77,39 @@
   align-items: baseline;
   gap: 10px;
   width: 100%;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--ar-line);
+  padding: 2px 0;
   cursor: pointer;
   font-family: var(--ar-font-term);
   font-size: 13px;
+}
+.v2w-group-head b {
+  font-family: var(--ar-font-display);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
 }
 .v2w-group-head:focus-visible,
 .v2w-name:focus-visible {
   outline: 2px solid var(--ar-cta);
   outline-offset: 2px;
+}
+.v2w-machine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.v2w-machine-head {
+  flex: 0 0 100%;
+  margin: 8px 0 0;
+  padding-bottom: 2px;
+  border-bottom: 2px solid var(--ar-ink);
+  font-family: var(--ar-font-term);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 .v2w-counts {
   display: inline-flex;
@@ -86,30 +127,27 @@
   margin: 2px 0;
   color: var(--ar-ink-muted);
   font-size: 12px;
-  /* contributes no width of its own: the group is as wide as its cards, the summary clips to it */
+  /* contributes no width of its own: the container is as wide as its cards, the line clips to it */
   width: 0;
   min-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* The Wall's cards are the kit's TerminalCard (fixed size). Groups are wrapped rows of them. */
+/* The Wall's cards are the kit's WallCard (fixed 232 x 172), wrapped in rows inside their group. */
 .v2w-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 5px;
   align-items: flex-start;
 }
-.v2w-grid .tcard {
-  position: relative;
-}
 /* The ⋯ sits on the dark card, so it is light-on-dark; the actions pop over the card, never in it. */
-.tcard .v2w-more {
+.wcard .v2w-more {
   color: var(--ar-term-meta);
 }
-.tcard .v2w-more:hover,
-.tcard .v2w-more[aria-expanded='true'] {
+.wcard .v2w-more:hover,
+.wcard .v2w-more[aria-expanded='true'] {
   border-color: var(--ar-term-line);
   color: var(--ar-term-fg);
 }
@@ -153,9 +191,16 @@
   border-color: var(--ar-cta);
 }
 .v2w-groups {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  display: block;
+}
+.v2w-order-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.v2w-order-label {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
 }
 .v2w-order,
 .v2w-notread {

@@ -101,8 +101,15 @@ function RigBox({ rig, now, expanded, focused, children, trace, onToggle, onTrac
           </span>
         )}
         {rig.flags.stuck > 0 && (
-          <span className="g2-flag" data-flag="stuck" title="Work left open over 2 h">
-            ⌛ {rig.flags.stuck}
+          <span
+            className="g2-flag"
+            data-flag="stuck"
+            title={`${rig.flags.stuck} seat${rig.flags.stuck === 1 ? '' : 's'} with work waiting over 2 h`}
+          >
+            <span className="g2-flag-glyph" aria-hidden="true">
+              ⌛
+            </span>{' '}
+            {rig.flags.stuck} waiting
           </span>
         )}
         {rig.flags.failing > 0 && (
