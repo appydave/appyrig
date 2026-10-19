@@ -256,7 +256,15 @@ describe('the job panel and its documents', () => {
     expect(whyNot(r('missing'), 'shot')).toBe('not written yet');
     expect(whyNot(r('missing'), 'spec')).toBe('spec file not found on m4');
     expect(whyNot(r('refused'), 'spec')).toBe("not shared (outside the rig's allowlist)");
-    for (const s of ['pending', 'loading', 'no-data', 'refused', 'too_large', 'unread'] as const)
+    for (const s of [
+      'pending',
+      'loading',
+      'no-data',
+      'refused',
+      'too_large',
+      'unread',
+      'old-hub',
+    ] as const)
       expect(whyNot(r(s), 'spec')).not.toMatch(/not written yet/);
   });
 

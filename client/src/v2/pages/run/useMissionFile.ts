@@ -8,10 +8,10 @@ import type { FleetSocket } from '../../../fleet/useFleet.js';
  * job's `qa/<slice>.md`, its `shots/*`. It asks the read-only `mission.file` verb, always for ONE
  * machine (the same rig name can exist on two), and passes the answer through unchanged: the hub
  * decides ok / missing / refused / too_large / pending / no-data, this hook only adds `loading`
- * (asking) and `unread` (the hub did not answer).
+ * (asking), `unread` (the hub did not answer) and `old-hub` (the hub has no such verb yet).
  */
 export interface MissionFileResult {
-  status: MissionFileOutput['status'] | 'loading' | 'unread';
+  status: MissionFileOutput['status'] | 'loading' | 'unread' | 'old-hub';
   path: string;
   /** The machine asked, for the words in `whyNot`. */
   machine?: string;
@@ -34,7 +34,12 @@ export function useMissionFile(
     void callVerb<MissionFileOutput>(getSocket(), 'mission.file', { machine, rig, path }).then(
       (a) => {
         if (!live) return;
-        if (!a.ok) return setR({ status: 'unread', path, machine });
+        if (!a.ok)
+          return setR({
+            status: a.error.failureMode === 'unknown-capability' ? 'old-hub' : 'unread',
+            path,
+            machine,
+          });
         const v = a.value;
         setR({
           status: v.status,
@@ -72,6 +77,8 @@ export function whyNot(r: MissionFileResult, kind: MissionFileKind): string {
       return 'too large to show here';
     case 'unread':
       return 'the hub did not answer';
+    case 'old-hub':
+      return "this hub doesn't serve mission files yet (needs the new hub)";
     case 'missing':
       return kind === 'spec' ? `spec file not found on ${m}` : 'not written yet';
     default:
