@@ -14,6 +14,7 @@ import {
   type FlowOptions,
 } from '../../../fleet/views.js';
 import ReplayConsolesV2 from './ReplayConsolesV2.js';
+import FlowDocsBar from './FlowDocsBar.js';
 import HandoffPanel, {
   type PanelMode,
   type PanelSelection,
@@ -1036,38 +1037,59 @@ export default function HandoffFlowV2({
             keys={keys}
           />
         ) : (
-          <HandoffPanel
-            machineId={machine.machine.id}
-            selection={selection}
-            mode={mode}
-            pinned={pinned}
-            socket={socket}
-            cache={bodies.current}
-            onPick={(id) =>
-              sel &&
-              setSel(
-                sel.stage ? { ...sel, itemId: id } : { edge: selection?.edge ?? null, itemId: id }
-              )
-            }
-            onMode={chooseMode}
-            onClose={() => {
-              setSel(null);
-              setPinned(false);
-            }}
-            onFollow={(id) => {
-              setPinned(true);
-              setFollow(id);
-            }}
-            onOpenAgent={onOpenAgent}
-            keys={keys}
-            onLine={(dir) => {
-              // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
-              const order = pairs.map((p) => p.key);
-              if (!order.length) return;
-              const i = selection?.edge ? order.indexOf(selection.edge) : dir === 1 ? -1 : 0;
-              pin(order[(i + dir + order.length) % order.length]!);
-            }}
-          />
+          <>
+            <FlowDocsBar
+              machine={machine}
+              socket={socket}
+              seatKeys={[
+                ...new Set(
+                  (selection?.agents?.map((a) => a.key) ?? []).concat(
+                    selection?.agents
+                      ? []
+                      : (pairOf(selection?.edge ?? null)
+                          ? [pairOf(selection!.edge)!.a, pairOf(selection!.edge)!.b]
+                          : []
+                        ).flatMap(
+                          (id) =>
+                            flow.stages.find((x) => x.stage === id)?.seats.map((x) => x.key) ?? []
+                        )
+                  )
+                ),
+              ]}
+            />
+            <HandoffPanel
+              machineId={machine.machine.id}
+              selection={selection}
+              mode={mode}
+              pinned={pinned}
+              socket={socket}
+              cache={bodies.current}
+              onPick={(id) =>
+                sel &&
+                setSel(
+                  sel.stage ? { ...sel, itemId: id } : { edge: selection?.edge ?? null, itemId: id }
+                )
+              }
+              onMode={chooseMode}
+              onClose={() => {
+                setSel(null);
+                setPinned(false);
+              }}
+              onFollow={(id) => {
+                setPinned(true);
+                setFollow(id);
+              }}
+              onOpenAgent={onOpenAgent}
+              keys={keys}
+              onLine={(dir) => {
+                // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
+                const order = pairs.map((p) => p.key);
+                if (!order.length) return;
+                const i = selection?.edge ? order.indexOf(selection.edge) : dir === 1 ? -1 : 0;
+                pin(order[(i + dir + order.length) % order.length]!);
+              }}
+            />
+          </>
         )}
         {card && (
           <div

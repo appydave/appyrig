@@ -16,6 +16,8 @@ import {
   useLineFocus,
 } from '../../kit/index.js';
 import { buildRigMap } from '../../../fleet/views.js';
+import { findTile } from '../../seats.js';
+import { useDocsDrawer } from '../../kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
 import RigBox, { lastWords } from './RigBox.js';
 import RigInside from './RigInside.js';
@@ -173,6 +175,7 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
   // the rig box or line the pointer or keyboard is on: its lines light up, the rest dim (kit)
   const lineFocus = useLineFocus();
   const [lineHover, setLineHover] = useState<LineHover | null>(null);
+  const { openDocs, drawer: docsDrawer } = useDocsDrawer(ctx);
   const [pinned, setPinned] = useState<Pinned | null>(null);
 
   // Stopped rigs are hidden unless asked for (or picked); a line to one is counted, not lost.
@@ -523,7 +526,11 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
                         machines={ctx.allMachines}
                         lastWords={lastWords(g, ctx.now)}
                         onOpenAgent={ctx.openAgentPage}
-                        onDetails={() => ctx.onOpenFiles(g.machineId, g.name)}
+                        onDetails={() => openDocs({ machineId: g.machineId, rig: g.name })}
+                        onDocs={(key) => {
+                          const t = findTile(ctx.allMachines, key);
+                          if (t) openDocs({ machineId: t.machine.machine.id, seat: t.seat });
+                        }}
                         onPin={(title, items) => setPinned({ title, items })}
                       />
                     ) : null}
@@ -668,6 +675,7 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
           )}
         </aside>
       )}
+      {docsDrawer}
     </main>
   );
 }
