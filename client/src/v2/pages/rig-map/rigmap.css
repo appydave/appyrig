@@ -1,0 +1,30 @@
+/* Rig Map: the Graph's open-rig inside, given the whole page for one rig. */
+.v2-rigmap {
+  padding: 8px 16px 24px;
+}
+.v2-rigmap .rm-body {
+  width: 100%;
+}
+.v2-rigmap .g2-inside {
+  margin-top: 0;
+  border-top: 0;
+}
+.v2-rigmap .g2-pods {
+  gap: 14px;
+}
+.v2-rigmap .g2-pod {
+  flex: 1 1 280px;
+}
+/* A stopped rig is frosted, as in the Graph and the Wall: pale fill, dashed edge, dimmed text. */
+.v2-rigmap .rm-body[data-state='stopped'] {
+  border: 1px dashed var(--ar-line);
+  border-left: 5px dashed var(--ar-ink-muted);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.v2-rigmap .rm-body[data-state='stopped'] .g2-status,
+.v2-rigmap .rm-body[data-state='stopped'] .g2-pod-label {
+  opacity: 0.75;
+}

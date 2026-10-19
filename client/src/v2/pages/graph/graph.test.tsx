@@ -641,20 +641,19 @@ describe('Graph in the app', () => {
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
   });
 
-  it('opening a rig box keeps the Graph, and the Rig Map alias and B keep that rig', () => {
+  it('opening a rig box keeps the Graph; "Open in Rig Map" goes to the Rig Map page on that rig', () => {
     live();
     fireEvent.click(screen.getByTestId('v2-page-graph'));
     fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-name'));
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
-    // the Rig Map is the same page with the chosen rig open; B shows Current's Rig Map on that rig
-    expect(screen.queryByTestId('v2-page-map')).toBeNull();
-    fireEvent.keyDown(document.body, { key: 'v' }); // Current
-    fireEvent.click(screen.getByTestId('view-map'));
-    fireEvent.keyDown(document.body, { key: 'v' }); // v2: the Rig Map key is the Graph with that rig open
-    expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
-    fireEvent.keyDown(document.body, { key: 'b' });
+    fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-menu'));
+    fireEvent.click(screen.getByTestId('g2-open-map'));
     expect(screen.queryByTestId('v2-graph')).toBeNull();
+    expect(screen.getByTestId('v2-rigmap')).toBeInTheDocument();
+    expect(screen.getByTestId('rm-body')).toHaveAttribute('data-rig-key', 'roamy:starter');
+    expect(screen.getAllByTestId('g2-inside')).toHaveLength(1);
+    fireEvent.keyDown(document.body, { key: 'b' });
     const chosen = screen
       .getAllByTestId('rig-chip')
       .find((c) => c.getAttribute('aria-pressed') === 'true');

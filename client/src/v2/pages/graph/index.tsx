@@ -383,6 +383,10 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
       seatKey: key,
       tab: 'documents',
     });
+  const openInMap = useStable((k: string) => {
+    ctx.chooseRig(k);
+    ctx.goTo('map');
+  });
   const minute = Math.floor(ctx.now / 60_000) * 60_000;
   const openKeys = groups
     .filter((g) => expanded[g.key] && g.ref && shown(g))
@@ -566,6 +570,7 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
                     trace={traceOf(g.key)}
                     onToggle={toggleBox}
                     onTrace={trace}
+                    onOpenMap={openInMap}
                   >
                     {insideMaps.get(g.key) ? (
                       <RigInside
