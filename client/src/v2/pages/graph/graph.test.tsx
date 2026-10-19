@@ -17,6 +17,7 @@ import type { V2Context } from '../../types.js';
 import { page, SHOW_STOPPED_KEY } from './index.js';
 import { buildGraph, crossRigEdges, endpointGroup, looseKey, pairEdges } from './model.js';
 import { routeLines } from './lineRoute.js';
+import { relativeWidthLines } from '../../kit/index.js';
 import RigBox, { lastWords } from './RigBox.js';
 
 vi.mock('@xterm/xterm', () => ({
@@ -195,7 +196,7 @@ describe('Graph model (the overview: one box per rig)', () => {
     const pairs = pairEdges(edges);
     expect(pairs).toHaveLength(4); // 5 directed edges, two of them one pair
     const both = pairs.find((p) => p.a === 'roamy:kernel' && p.b === 'roamy:starter')!;
-    expect(both).toMatchObject({ count: 4, ab: 1, ba: 3, open: 1 });
+    expect(both).toMatchObject({ total: 4, aToB: 1, bToA: 3, waiting: 1 });
     expect(both.items.map((i) => i.id)).toEqual(
       [...both.items].sort((x, y) => x.createdAt.localeCompare(y.createdAt)).map((i) => i.id)
     );
@@ -231,8 +232,8 @@ describe('Graph model (the overview: one box per rig)', () => {
     const g = buildGraph(machines, now);
     const pair = (x: string, y: string) =>
       g.pairs.find((p) => (p.a === x && p.b === y) || (p.a === y && p.b === x));
-    expect(pair(looseKey('roamy'), 'm2:flicut-ab')?.count).toBe(3);
-    expect(pair(looseKey('m4'), 'm2:d09-crew')?.count).toBe(4);
+    expect(pair(looseKey('roamy'), 'm2:flicut-ab')?.total).toBe(3);
+    expect(pair(looseKey('m4'), 'm2:d09-crew')?.total).toBe(4);
     expect(g.unplaced.byKind.machine).toBe(0);
   });
 
@@ -308,12 +309,24 @@ describe('Graph page', () => {
     expect(vi.mocked(ctx.goTo).mock.calls.length).toBe(calls);
   });
 
-  it('shows the lines between rigs, one per pair, each in its own colour; none says so in one line', () => {
+  it('shows the lines between rigs, one per pair, thin and faint with the count both ways; none says so in one line', () => {
     const { unmount } = render(<Graph ctx={ctxFor(crossFleet())} />);
     const lines = screen.getAllByTestId('g2-cross');
     expect(lines).toHaveLength(4);
-    const colours = lines.map((g) => g.querySelector('.g2-path')!.getAttribute('stroke'));
-    expect(new Set(colours).size).toBe(colours.length);
+    // the kit's quiet style: absolute width steps (these counts are all under 10: thin), faint by default
+    for (const g of lines) {
+      const w = Number(g.querySelector('path.hl-line')!.getAttribute('stroke-width'));
+      expect(w).toBeLessThanOrEqual(3);
+      expect(w).toBe(Number(g.dataset.count) < 10 ? 1.5 : w);
+      expect(g).toHaveAttribute('data-state', 'faint');
+      expect(g.querySelector('.hl-line')).toHaveClass('hl-faint');
+    }
+    // one line per pair, labelled with both directions
+    const labels = screen
+      .getAllByTestId('g2-cross-label')
+      .map((l) => l.querySelector('.g2-label-text')!.textContent);
+    expect(labels).toContain('1 ⇄ 3');
+    expect(screen.getByTestId('hl-explain')).toBeInTheDocument();
     expect(screen.getByTestId('g2-caption')).toHaveTextContent('4 lines between rigs');
     expect(screen.getByTestId('g2-unplaced')).toHaveTextContent('+1 not drawn');
     expect(screen.queryByTestId('g2-no-lines')).toBeNull();
@@ -333,8 +346,8 @@ describe('Graph page', () => {
       .find((g) => g.dataset.from === 'roamy:kernel' && g.dataset.to === 'roamy:starter')!;
     fireEvent.pointerEnter(line);
     const lines = screen.getAllByTestId('g2-cross');
-    expect(lines.filter((g) => g.hasAttribute('data-hot'))).toEqual([line]);
-    expect(lines.filter((g) => g.hasAttribute('data-dim'))).toHaveLength(lines.length - 1);
+    expect(lines.filter((g) => g.dataset.state === 'lit')).toEqual([line]);
+    expect(lines.filter((g) => g.dataset.state === 'dimmed')).toHaveLength(lines.length - 1);
     expect(frame('roamy:starter')).toHaveAttribute('data-trace');
     expect(frame('roamy:kernel')).toHaveAttribute('data-trace');
     expect(frame(looseKey('roamy'))).not.toHaveAttribute('data-trace');
@@ -345,11 +358,11 @@ describe('Graph page', () => {
     fireEvent.pointerEnter(frame('roamy:kernel'));
     for (const g of screen.getAllByTestId('g2-cross')) {
       const touches = g.dataset.from === 'roamy:kernel' || g.dataset.to === 'roamy:kernel';
-      expect(g.hasAttribute('data-hot')).toBe(touches);
+      expect(g.dataset.state).toBe(touches ? 'lit' : 'dimmed');
     }
     fireEvent.pointerLeave(frame('roamy:kernel'));
     fireEvent.focus(line);
-    expect(line).toHaveAttribute('data-hot');
+    expect(line).toHaveAttribute('data-state', 'lit');
     fireEvent.click(line);
     expect(screen.getByTestId('g2-drawer')).toBeInTheDocument();
     expect(screen.getAllByTestId('g2-drawer-item').length).toBe(4);
@@ -357,17 +370,17 @@ describe('Graph page', () => {
     expect(screen.queryByTestId('g2-drawer')).toBeNull();
   });
 
-  it('a line is read from the current fleet: an item closing (same count) changes its class', () => {
+  it('a line is read from the current fleet: an item closing (same count) removes the waiting badge', () => {
     vi.useFakeTimers();
     const before = crossFleet();
     const { rerender } = render(<Graph ctx={ctxFor(before)} />);
-    const cls = () =>
-      screen
-        .getAllByTestId('g2-cross')
-        .find((g) => g.dataset.from === 'roamy:kernel' && g.dataset.to === 'roamy:starter')!
-        .querySelector('.g2-path')!
-        .getAttribute('class');
-    expect(cls()).toContain('open');
+    const waiting = () => {
+      const lab = screen
+        .getAllByTestId('g2-cross-label')
+        .find((l) => l.textContent?.startsWith('1 ⇄ 3'));
+      return lab?.querySelector('[data-testid="hl-waiting"]') ?? null;
+    };
+    expect(waiting()).not.toBeNull(); // r3 is still pending: an amber badge, not a line style
     const roamy = before[1]!;
     const after = [
       before[0]!,
@@ -378,7 +391,7 @@ describe('Graph page', () => {
     ];
     rerender(<Graph ctx={ctxFor(after)} />);
     act(() => vi.advanceTimersByTime(3100));
-    expect(cls()).not.toContain('open');
+    expect(waiting()).toBeNull();
   });
 
   it('the rebuild is throttled with a leading edge: the first update lands at once, later ones wait ~3 s', () => {
@@ -505,16 +518,41 @@ describe('Graph page', () => {
   });
 });
 
+describe('Graph lines use the shared kit', () => {
+  it('on the busy snapshot no line is wider than 3 px, the width follows the count steps, and there is no glow', () => {
+    const { machines, now } = busy();
+    render(<Graph ctx={ctxFor(machines, { now })} />);
+    const lines = screen.getAllByTestId('g2-cross');
+    expect(lines.length).toBeGreaterThan(3);
+    for (const g of lines) {
+      const w = Number(g.querySelector('path.hl-line')!.getAttribute('stroke-width'));
+      const n = Number(g.dataset.count);
+      expect(w).toBeLessThanOrEqual(3);
+      expect(w).toBe(n >= 50 ? 3 : n >= 10 ? 2.2 : 1.5);
+    }
+    expect(document.querySelector('.g2-glow')).toBeNull();
+    expect(document.querySelectorAll('[stroke-dasharray]').length).toBe(0); // dotted is for planned only
+  });
+
+  it('no Graph source sizes a stroke by a share of the busiest pair (the kit guard, run on this lane)', () => {
+    for (const f of ['index.tsx', 'RigBox.tsx', 'lineRoute.ts', 'model.ts']) {
+      expect(relativeWidthLines(readFileSync(path.resolve(__dirname, f), 'utf8')), f).toEqual([]);
+    }
+    expect(css()).not.toMatch(/glow/);
+  });
+});
+
 describe('Graph line routing', () => {
   const box = (x: number, y: number, w = 200, h = 90) => ({ x, y, w, h });
   const pair = (a: string, b: string, count = 1) => ({
     a,
     b,
-    count,
-    ab: count,
-    ba: 0,
-    open: 0,
-    stale: 0,
+    aToB: count,
+    bToA: 0,
+    total: count,
+    waiting: 0,
+    leftOpen: 0,
+    planned: false,
     items: [],
   });
   const start = (d: string) =>

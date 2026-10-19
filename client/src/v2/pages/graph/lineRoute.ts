@@ -1,4 +1,5 @@
-import type { GroupKey, PairEdge } from './model.js';
+import type { GroupKey } from './model.js';
+import type { LinePair } from '../../kit/handoffLines.js';
 
 /** A rig box in canvas pixels. */
 export interface Box {
@@ -8,17 +9,29 @@ export interface Box {
   h: number;
 }
 
-export interface RoutedLine {
-  pair: PairEdge;
+/** A point on a line with the direction an arrowhead there would point (degrees, pointing out of the line). */
+export interface Tip {
+  x: number;
+  y: number;
+  angle: number;
+}
+
+export interface RoutedLine<P extends LinePair = LinePair> {
+  pair: P;
   d: string;
   lx: number;
   ly: number;
+  /** The arrowhead anchor at the `a` end and at the `b` end. */
+  tipA: Tip;
+  tipB: Tip;
 }
 
 type Side = 'l' | 'r' | 't' | 'b';
 
 const LABEL_W = 28;
 const LABEL_H = 18;
+
+const deg = (dx: number, dy: number) => (Math.atan2(dy, dx) * 180) / Math.PI;
 
 const bez = (t: number, p0: number, p1: number, p2: number, p3: number) =>
   (1 - t) ** 3 * p0 + 3 * (1 - t) ** 2 * t * p1 + 3 * (1 - t) * t ** 2 * p2 + t ** 3 * p3;
@@ -30,7 +43,10 @@ const bez = (t: number, p0: number, p1: number, p2: number, p3: number) =>
  * end is), so no two leave from one point, and a count label that would sit on another slides along
  * its own line to the first free spot.
  */
-export function routeLines(pairs: PairEdge[], box: (key: GroupKey) => Box | null): RoutedLine[] {
+export function routeLines<P extends LinePair>(
+  pairs: P[],
+  box: (key: GroupKey) => Box | null
+): RoutedLine<P>[] {
   const drawn = pairs.flatMap((pair) => {
     const a = box(pair.a);
     const b = box(pair.b);
@@ -41,7 +57,7 @@ export function routeLines(pairs: PairEdge[], box: (key: GroupKey) => Box | null
     if (b.x + b.w <= a.x) return ['l', 'r'];
     return a.y <= b.y ? ['b', 't'] : ['t', 'b'];
   };
-  const k = (p: PairEdge) => `${p.a}\u0000${p.b}`;
+  const k = (p: LinePair) => `${p.a}\u0000${p.b}`;
   const ends = new Map<string, { id: string; other: number }[]>();
   for (const { pair, a, b } of drawn) {
     const [sa, sb] = sides(a, b);
@@ -75,7 +91,7 @@ export function routeLines(pairs: PairEdge[], box: (key: GroupKey) => Box | null
     }
   };
 
-  const curves: { line: RoutedLine; at: (t: number) => [number, number] }[] = [];
+  const curves: { line: RoutedLine<P>; at: (t: number) => [number, number] }[] = [];
   for (const { pair, a, b } of drawn) {
     const [sa, sb] = sides(a, b);
     const [sx, sy] = anchor(a, pair.a, sa, `${k(pair)}|a`);
@@ -99,7 +115,14 @@ export function routeLines(pairs: PairEdge[], box: (key: GroupKey) => Box | null
     ];
     const [lx, ly] = at(0.5);
     curves.push({
-      line: { pair, d: `M${sx},${sy} C${c1x},${c1y} ${c2x},${c2y} ${ex},${ey}`, lx, ly },
+      line: {
+        pair,
+        d: `M${sx},${sy} C${c1x},${c1y} ${c2x},${c2y} ${ex},${ey}`,
+        lx,
+        ly,
+        tipA: { x: sx, y: sy, angle: deg(sx - c1x, sy - c1y) },
+        tipB: { x: ex, y: ey, angle: deg(ex - c2x, ey - c2y) },
+      },
       at,
     });
   }

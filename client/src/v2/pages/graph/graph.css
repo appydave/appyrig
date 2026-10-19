@@ -78,16 +78,6 @@
 }
 .g2-legend {
   margin: 0 16px 8px;
-  font-size: 12px;
-  color: var(--ar-ink-muted);
-}
-.g2-legend-line {
-  display: inline-block;
-  width: 26px;
-  height: 0;
-  border-top: 3px solid #2b6cb0;
-  vertical-align: middle;
-  margin-right: 6px;
 }
 .g2-unplaced {
   cursor: help;
@@ -272,41 +262,37 @@
   cursor: pointer;
   outline: none;
 }
-.g2-path {
-  fill: none;
-  stroke-opacity: 0.7;
-  transition: stroke-opacity 0.12s;
+/* Arrowheads follow their line's state (the line itself is styled by the kit's hl- classes). */
+.g2-head {
+  fill: var(--ar-ink);
 }
-.g2-path.open {
-  stroke-opacity: 0.95;
+.g2-head[data-state='faint'] {
+  fill-opacity: 0.32;
 }
-.g2-path.stale {
-  stroke-dasharray: 7 5;
+.g2-head[data-state='lit'] {
+  fill-opacity: 1;
 }
-/* Still waiting: a gold halo under the line. */
-.g2-glow {
-  fill: none;
-  stroke: var(--ar-sequence);
-  stroke-opacity: 0.4;
-  stroke-linecap: round;
+.g2-head[data-state='dimmed'] {
+  fill-opacity: 0.1;
 }
-.g2-line[data-dim] {
-  opacity: 0.1;
+.g2-line:focus-visible .hl-line {
+  stroke-opacity: 1;
 }
 .g2-label {
   pointer-events: auto;
   cursor: pointer;
 }
-.g2-label[data-dim] {
-  opacity: 0.15;
-}
 .g2-label rect {
-  stroke-width: 2;
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+  stroke-width: 1;
 }
-.g2-line[data-hot] .g2-path,
-.g2-line:focus-visible .g2-path {
-  stroke-opacity: 1;
-  filter: drop-shadow(0 0 2px rgb(0 0 0 / 25%));
+.g2-label-text {
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+  fill: var(--ar-ink);
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
 /* One mock note per page: a rig's own badge shows only on hover, focus or inside the open menu. */

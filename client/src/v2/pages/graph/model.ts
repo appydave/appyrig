@@ -1,5 +1,6 @@
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
 import { pipFor, seatName, type PipKey } from '../../../fleet/model.js';
+import { mergePairs, pairKey, type LinePair } from '../../kit/handoffLines.js';
 import {
   endpointRig,
   isOpen,
@@ -76,16 +77,8 @@ export interface CrossEdge {
   items: QueueItem[];
 }
 
-/** One line per rig PAIR: both directions together, the split kept for the tooltip. */
-export interface PairEdge {
-  a: GroupKey;
-  b: GroupKey;
-  count: number;
-  /** Handoffs a → b and b → a. */
-  ab: number;
-  ba: number;
-  open: number;
-  stale: number;
+/** One line per rig PAIR (the kit's LinePair: both directions together) with the queue items behind it. */
+export interface PairEdge extends LinePair {
   items: QueueItem[];
 }
 
@@ -377,27 +370,19 @@ function lastHandoff(fm: FleetMachine, rig: string): LastHandoff | null {
     : null;
 }
 
-/** Both directions of a rig pair as one line. */
+/** Both directions of a rig pair as one line, merged by the kit; the items behind it ride along. */
 export function pairEdges(cross: CrossEdge[]): PairEdge[] {
-  const map = new Map<string, PairEdge>();
-  for (const e of cross) {
-    const [a, b] = e.from < e.to ? [e.from, e.to] : [e.to, e.from];
-    const k = `${a}\u0000${b}`;
-    const p = map.get(k) ?? { a, b, count: 0, ab: 0, ba: 0, open: 0, stale: 0, items: [] };
-    p.count += e.count;
-    if (e.from === a) p.ab += e.count;
-    else p.ba += e.count;
-    p.open += e.open;
-    p.stale += e.stale;
-    p.items = [...p.items, ...e.items];
-    map.set(k, p);
-  }
-  return [...map.values()]
-    .map((p) => ({
-      ...p,
-      items: [...p.items].sort((x, y) => x.createdAt.localeCompare(y.createdAt)),
-    }))
-    .sort((x, y) => y.count - x.count || `${x.a}${x.b}`.localeCompare(`${y.a}${y.b}`));
+  const items = new Map<string, QueueItem[]>();
+  for (const e of cross)
+    items.set(pairKey(e.from, e.to), [...(items.get(pairKey(e.from, e.to)) ?? []), ...e.items]);
+  return mergePairs(
+    cross.map((e) => ({ from: e.from, to: e.to, count: e.count, open: e.open, stale: e.stale }))
+  ).map((p) => ({
+    ...p,
+    items: [...(items.get(pairKey(p.a, p.b)) ?? [])].sort((x, y) =>
+      x.createdAt.localeCompare(y.createdAt)
+    ),
+  }));
 }
 
 /** The whole fleet as an overview: one box per rig, grouped by machine, and the lines between rigs. */
