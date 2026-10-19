@@ -418,3 +418,41 @@
   border-left: 4px dashed var(--ar-sequence, #c8841a);
   background: var(--ar-canvas, #faf5ec);
 }
+
+/* Navigation brief: the documents are tabs in the column beside before / after, one at a time,
+   scrolling inside the column; nothing is appended below the fold. */
+.run-doc-col {
+  gap: 0;
+}
+.run-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--ar-line);
+}
+.run-tab {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.run-tab[aria-selected='true'] {
+  background: var(--ar-canvas);
+  border-color: var(--ar-line);
+  color: var(--ar-ink);
+  font-weight: 700;
+}
+.run-tab-body {
+  max-height: 560px;
+  min-height: 240px;
+  overflow: auto;
+  padding-top: 10px;
+}
+.run-tab-body > .run-doc {
+  border-top-left-radius: 0;
+}

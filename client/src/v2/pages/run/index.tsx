@@ -29,8 +29,13 @@ import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { useRigDoc, type RigDoc } from './useRigDoc.js';
 import './run.css';
 
-/** The four documents a viewer can put beside a job. Spec is on at load; the other three are off. */
+/**
+ * The four documents a viewer can put beside a job, as tabs in the document column next to
+ * before / after (navigation brief: nothing appended below the fold). Spec is the tab at load.
+ */
 export type DocKey = 'spec' | 'rig' | 'culture' | 'mission';
+export const DOC_DEFAULT_TAB: DocKey = 'spec';
+/** Which documents are shown at load (one tab: Spec). Kept for callers that read it as a map. */
 export const DOC_DEFAULTS: Record<DocKey, boolean> = {
   spec: true,
   rig: false,
@@ -313,6 +318,7 @@ function RigDocs({
   on: Record<DocKey, boolean>;
 }) {
   const g = ctx.getSocket;
+  // Each file is read the first time its tab opens, and kept while the job is shown.
   const rigYaml = useRigDoc(g, machine, rig, RIG_FILE.rig, on.rig);
   const culture = useRigDoc(g, machine, rig, RIG_FILE.culture, on.culture);
   const mission = useRigDoc(g, machine, rig, RIG_FILE.mission, on.mission);
@@ -389,16 +395,22 @@ function JobPanel({
   machine,
   rig,
   j,
-  on,
-  setOn,
+  tab,
+  setTab,
 }: {
   ctx: V2PageProps['ctx'];
   machine: string;
   rig: string;
   j: JobState;
-  on: Record<DocKey, boolean>;
-  setOn: (k: DocKey) => void;
+  tab: DocKey;
+  setTab: (k: DocKey) => void;
 }) {
+  const on = {
+    spec: tab === 'spec',
+    rig: tab === 'rig',
+    culture: tab === 'culture',
+    mission: tab === 'mission',
+  };
   return (
     <section className="run-detail" data-testid="run-detail" data-job={j.job.slice}>
       <div className="run-detail-head">
@@ -410,21 +422,6 @@ function JobPanel({
             Job {j.job.slice} {'·'} {j.job.title}
           </h3>
           {j.job.branch && <div className="mono quiet">{j.job.branch}</div>}
-        </div>
-        <div className="run-toggles" role="group" aria-label="Documents shown beside this job">
-          <span className="run-label">Show</span>
-          {(Object.keys(DOC_LABEL) as DocKey[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              className="run-tog"
-              data-testid={`run-tog-${k}`}
-              aria-pressed={on[k]}
-              onClick={() => setOn(k)}
-            >
-              {DOC_LABEL[k]}
-            </button>
-          ))}
         </div>
       </div>
       <div className="run-cols">
@@ -457,16 +454,29 @@ function JobPanel({
             <DoneCheck getSocket={ctx.getSocket} machine={machine} rig={rig} slice={j.job.slice} />
           </div>
         </div>
-        <div className="run-col" data-testid="run-docs">
-          {on.spec && (
-            <SpecPanel getSocket={ctx.getSocket} machine={machine} rig={rig} job={j.job} />
-          )}
-          <RigDocs ctx={ctx} machine={machine} rig={rig} on={on} />
-          {!on.spec && !on.rig && !on.culture && !on.mission && (
-            <p className="quiet" data-testid="run-docs-none">
-              No documents shown. Use the chips to choose what sits beside this job.
-            </p>
-          )}
+        <div className="run-col run-doc-col" data-testid="run-docs">
+          <div className="run-tabs" role="tablist" aria-label="Document beside this job">
+            {(Object.keys(DOC_LABEL) as DocKey[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                className="run-tab"
+                data-testid={`run-tog-${k}`}
+                aria-selected={tab === k}
+                aria-pressed={tab === k}
+                onClick={() => setTab(k)}
+              >
+                {DOC_LABEL[k]}
+              </button>
+            ))}
+          </div>
+          <div className="run-tab-body" role="tabpanel" data-testid="run-tab-body">
+            {on.spec && (
+              <SpecPanel getSocket={ctx.getSocket} machine={machine} rig={rig} job={j.job} />
+            )}
+            <RigDocs ctx={ctx} machine={machine} rig={rig} on={on} />
+          </div>
         </div>
       </div>
     </section>
@@ -594,8 +604,7 @@ function RunBoard({ ctx }: V2PageProps) {
   );
   const { openDocs, drawer } = useDocsDrawer(ctx);
   const [sel, setSel] = useState<string | null>(null);
-  const [on, setOnAll] = useState<Record<DocKey, boolean>>(DOC_DEFAULTS);
-  const toggle = (k: DocKey) => setOnAll((o) => ({ ...o, [k]: !o[k] }));
+  const [tab, setTab] = useState<DocKey>(DOC_DEFAULT_TAB);
 
   const selected =
     run && run.jobs.length
@@ -712,8 +721,8 @@ function RunBoard({ ctx }: V2PageProps) {
                 machine={machine}
                 rig={rig.name}
                 j={selected}
-                on={on}
-                setOn={toggle}
+                tab={tab}
+                setTab={setTab}
               />
             ) : (
               <div />
