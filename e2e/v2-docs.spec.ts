@@ -42,7 +42,9 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     expect(errors).toEqual([]);
   });
 
-  test('a Run board station opens the drawer; it is tall, closes on Escape', async ({ page }) => {
+  test('a Run board station opens the agent panel on its Documents tab, over the Run board', async ({
+    page,
+  }) => {
     const errors = watchErrors(page);
     await page.goto(FROZEN);
     await expect(page.getByTestId('view-wall')).toBeVisible();
@@ -55,18 +57,16 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     const docs = page.getByTestId('run-station-docs').first();
     await expect(docs).toBeVisible();
     await docs.click();
-    const drawer = page.getByTestId('docs-drawer');
-    await expect(drawer).toBeVisible();
-    const box = await drawer.boundingBox();
-    // below the top bar, down to the bottom of the window
-    const nav = await page.getByTestId('v2-nav').boundingBox();
-    expect(box!.y).toBeGreaterThanOrEqual(nav!.y + nav!.height - 1);
-    expect(box!.y + box!.height).toBeGreaterThanOrEqual(895);
-    expect(box!.width).toBeGreaterThan(1000);
-    await expect(page.getByTestId('docs-list')).toBeVisible();
-    await expect(page.getByTestId('docs-reader')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(drawer).toHaveCount(0);
+    // no full-screen overlay: the agent panel, on Documents, with the nav and Run board still there
+    await expect(page.getByTestId('docs-drawer')).toHaveCount(0);
+    await expect(page.getByTestId('agent-panel')).toBeVisible();
+    await expect(page.getByTestId('apanel-tab-documents')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('apanel-body-documents')).toBeVisible();
+    await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await expect(page.getByTestId('v2-run')).toBeVisible();
+    await page.getByTestId('apanel-close').click();
+    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    await expect(page.getByTestId('v2-run')).toBeVisible();
     expect(errors).toEqual([]);
   });
 

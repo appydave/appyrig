@@ -704,14 +704,22 @@ function RunBoard({ ctx }: V2PageProps) {
           )}
           <Stations
             run={run}
-            onDocs={(seatId) =>
+            onDocs={(seatId) => {
+              // An agent's documents live in the Agent panel (deep-linkable, Esc closes only it).
+              if (fm.snapshot.seats.some((x) => x.id === seatId))
+                return ctx.openAgentPanel({
+                  machineId: machine,
+                  seatKey: `${machine}/${seatId}`,
+                  tab: 'documents',
+                });
+              // No agent behind the station: the rig-level overlay (Rig + Mission files).
               openDocs({
                 machineId: machine,
-                seat: fm.snapshot.seats.find((x) => x.id === seatId) ?? null,
+                seat: null,
                 rig: rig.name,
                 missionPaths: [...new Set(run.jobs.flatMap((j) => j.job.specPaths))],
-              })
-            }
+              });
+            }}
           />
           <HowRunWent fm={fm} rig={rig.name} run={run} now={ctx.now} />
           <div className="run-lower">
