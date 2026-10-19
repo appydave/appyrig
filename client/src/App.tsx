@@ -29,12 +29,15 @@ import { findSeat, orderedMachines, seatName, type GroupBy } from './fleet/model
 import { buildRigMap, listRigs } from './fleet/views.js';
 import { followWork } from './fleet/timeline.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from './fleet/useFleet.js';
-import { useV2 } from './v2/useV2.js';
+import { urlView, useV2 } from './v2/useV2.js';
+import { readMode } from './v2/version.js';
 import { busiestRig } from './v2/rigs.js';
 import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
 import RigDrawer from './v2/shell/RigDrawer.js';
 import StripShell from './v2/shell/StripShell.js';
 import MoreMenu from './v2/shell/MoreMenu.js';
+import AgentPanelSlot from './v2/shell/AgentPanelSlot.js';
+import { isV2Url, readUrlState, rigToParam, writeParams } from './v2/shell/urlState.js';
 import './v2/shell/shell.css';
 
 const GROUP_KEY = 'appyrig.groupBy';
@@ -78,12 +81,17 @@ function readView(): View {
   }
 }
 
-/** Explain mode starts on: AppyRig is a training tool as much as a monitor. */
+/**
+ * Explain mode starts on in Current (AppyRig is a training tool as much as a monitor) and OFF in v2
+ * (a cold open is calm). A choice the viewer made is remembered either way.
+ */
 function readExplain(): boolean {
+  const fallback = readMode() !== 'v2';
   try {
-    return localStorage.getItem(EXPLAIN_KEY) !== 'off';
+    const v = localStorage.getItem(EXPLAIN_KEY);
+    return v === 'on' ? true : v === 'off' ? false : fallback;
   } catch {
-    return true;
+    return fallback;
   }
 }
 
@@ -149,7 +157,10 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const { state, link } = useFleet(getSocket);
   const now = frozenNow(useNow(), frozen);
   const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
-  const [view, setView] = useState<View>(readView);
+  // v2 opens deliberately: the Wall, unless the address names a page.
+  const [view, setView] = useState<View>(() =>
+    readMode() === 'v2' ? (urlView() ?? 'wall') : readView()
+  );
   const [explain, setExplain] = useState<boolean>(readExplain);
   const [legendChoice, setLegendChoice] = useState<LegendChoice>(readLegend);
   const [hint, setHint] = useState<boolean>(readHint);
@@ -164,9 +175,11 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     setMapHint(false);
     remember(MAP_HINT_KEY, 'seen');
   }, []);
-  const [rigKey, setRigKey] = useState<string | null>(null);
+  const [rigKey, setRigKey] = useState<string | null>(() =>
+    readMode() === 'v2' ? readUrlState().rig : null
+  );
   /** D09 W1 (QA LOW-3): the viewer clicked a rig; the first rig chosen by default is no pick. */
-  const [rigPicked, setRigPicked] = useState(false);
+  const [rigPicked, setRigPicked] = useState(() => readMode() === 'v2' && !!readUrlState().rig);
   /** Batch 2 · C1: off by default. On, Map and Flow show the most recently active rig, live. */
   const [followLatest, setFollowLatest] = useState<boolean>(readFollow);
   const [focused, setFocused] = useState<string | null>(null);
@@ -255,6 +268,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const [focusNonce, setFocusNonce] = useState(0);
   const chooseRig = useCallback((key: string) => {
     setFocusNonce((n) => n + 1);
+    if (isV2Url()) writeParams({ rig: rigToParam(key) }, 'replace');
     setRigKey(key);
     setRigPicked(true);
     setFollowLatest(false);
@@ -509,7 +523,16 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     [allMachines, activeRig]
   );
   // v2 W0: the version switch, per-page flip and grouped nav; the state above is shared with v2.
+  /** Back or Forward to an address: restore its rig (or none). */
+  const onUrlRig = useCallback((key: string | null) => {
+    setFocusNonce((n) => n + 1);
+    if (key) {
+      setRigKey(key);
+      setRigPicked(true);
+    } else setRigPicked(false);
+  }, []);
   const v2 = useV2({
+    onUrlRig,
     view,
     chooseView,
     keys: !focused && !agentTile && !overlay,
@@ -540,6 +563,24 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
 
   /** The v2 frame (thin bar, machine badges, Rigs drawer) is on whenever the app is in v2 mode. */
   const v2on = v2.mode === 'v2';
+  // The drawer reflects the CURRENT page: a rig page is scoped to its rig; a fleet page only has one
+  // when the viewer picked it; the agent when the panel or the Agent page is open.
+  const RIG_PAGES: string[] = ['flow', 'run', 'timeline'];
+  const drawerRig = RIG_PAGES.includes(v2.page)
+    ? activeRig
+    : rigPicked && !followLatest
+      ? activeRig
+      : null;
+  const drawerAgent = v2.page === 'agent' ? v2.ctx.agentKey : (v2.ctx.agentPanel?.seatKey ?? null);
+  const drawerScope = (() => {
+    if (v2.page === 'agent' && drawerAgent)
+      return `Showing agent ${drawerAgent.split('/').slice(1).join('/')}`;
+    if (!drawerRig) return 'Whole fleet · pick a rig to focus it';
+    const label = `${drawerRig.displayName ?? drawerRig.name} · ${drawerRig.machineLabel}`;
+    return RIG_PAGES.includes(v2.page)
+      ? `Showing ${label}`
+      : `Focused on ${label} in the whole fleet`;
+  })();
   const notesButton = (
     <button
       type="button"
@@ -808,9 +849,13 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
           <RigDrawer
             machines={allMachines}
             rigs={rigs}
-            activeRigKey={activeRig?.key ?? null}
+            highlightRigKey={drawerRig?.key ?? null}
+            highlightAgentKey={drawerAgent}
+            scope={drawerScope}
             onChooseRig={chooseRig}
-            onOpenAgent={v2.openAgent}
+            onOpenAgent={(key) =>
+              v2.ctx.openAgentPanel({ machineId: key.slice(0, key.indexOf('/')), seatKey: key })
+            }
           />
         )}
         <div className="app-main">
@@ -823,7 +868,8 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
                 received={state.received}
                 error={state.error}
                 onOpen={open}
-                onHealth={() => chooseView('machines')}
+                // v2: badges never navigate (the strip's detail toggles in place)
+                onHealth={v2on ? undefined : () => chooseView('machines')}
                 shown={machines}
                 filter={
                   allMachines.length > 1 &&
@@ -850,9 +896,9 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
               />
             );
             return v2on ? (
-              // TODO(wall lane): the Wall groups by rig now, so v2 draws no Group switch. If the Wall
-              // page still needs a team/machine toggle it reads ctx.groupBy and must draw its own.
-              <StripShell summary={seatsSummary}>{strip}</StripShell>
+              <StripShell summary={seatsSummary} onMachines={() => v2.ctx.goTo('machines')}>
+                {strip}
+              </StripShell>
             ) : (
               strip
             );
