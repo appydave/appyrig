@@ -3,9 +3,7 @@ import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
   blockedLine,
-  collapsedByDefault,
-  contentTail,
-  freshness,
+  WALL_ORDER_TEXT,
   groupSeats,
   groupState,
   modelChip,
@@ -15,12 +13,9 @@ import {
   type PipKey,
   type WallGroup,
 } from '../../../fleet/model.js';
-import AnsiText from '../../../components/AnsiText.js';
-import { HarnessMark, RoleTag, pctText, tokensText } from '../../../components/SeatCardLines.js';
-import SkillPill from '../../../components/SkillPill.js';
 import { useStableOrder } from '../../../lib/stableOrder.js';
 import { groupRank } from '../../../fleet/model.js';
-import { FakeControl, MockNote } from '../../kit/index.js';
+import { FakeControl, MockNote, TerminalCard, tailLine } from '../../kit/index.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
 import type { V2PageDef, V2PageProps } from '../../types.js';
@@ -100,52 +95,46 @@ interface CardProps {
   machine: FleetMachine;
   seat: Seat;
   now: number;
-  fresh: string;
   onOpen: (key: string) => void;
-  onOpenSkills: (key: string) => void;
 }
 
-/** The roomier mono card (C23, C43): full address, harness + model, context, queue, fake Restart / Stop. */
-const SeatCard = memo(function SeatCard({
-  tileKey,
-  machine,
-  seat,
-  now,
-  fresh,
-  onOpen,
-  onOpenSkills,
-}: CardProps) {
+/**
+ * One agent on the Wall: the kit's dark TerminalCard at its fixed `wall` size, so every card is the
+ * same size whatever it holds (a long tail or address is clipped to one line). The ⋯ opens the mock
+ * Restart / Stop in a popover over the card, never in its layout.
+ */
+const SeatCard = memo(function SeatCard({ tileKey, machine, seat, now, onOpen }: CardProps) {
   const [more, setMore] = useState(false);
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
   const flags = seatFlags(seat, machine, now);
-  const lines = seat.tail
-    ? contentTail(seat.tail.lines, pip === 'working' || pip === 'blocked' ? 3 : 1)
-    : [];
-  const pct = seat.contextUsedPct;
   return (
-    <article
-      className="v2w-card"
-      data-testid="v2-seat-card"
-      data-seat-key={tileKey}
-      data-seat-id={seat.id}
-      data-pip={pip}
-      data-flags={flagWords(flags).join(',') || undefined}
-    >
-      <header className="v2w-card-head">
-        <button
-          type="button"
-          className="v2w-name"
-          data-testid="v2-card-open"
-          title="Open this agent's page"
-          onClick={() => onOpen(tileKey)}
-        >
-          {name}
-        </button>
-        <span className="v2w-pip" data-pip={pip} data-testid="v2-card-pip">
-          <span aria-hidden="true">{PIP[pip].glyph}</span> {PIP[pip].label}
-        </span>
+    <TerminalCard
+      size="wall"
+      name={name}
+      status={pip}
+      address={seat.id}
+      runtime={seat.runtime}
+      model={seat.model}
+      modelLabel={chip.text}
+      modelFamily={chip.family}
+      contextPct={seat.contextUsedPct}
+      contextTokens={seat.contextTokens}
+      tail={tailLine(seat.tail?.lines)}
+      warning={pip === 'blocked' ? blockedLine(seat) : null}
+      skills={seat.keySkills}
+      skillCount={seat.skillCount}
+      where={machine.machine.label}
+      onOpen={() => onOpen(tileKey)}
+      ariaLabel={`${name}, ${PIP[pip].label}, ${seat.rig ?? 'tmux'} on ${machine.machine.label}: open the agent page`}
+      testId="v2-seat-card"
+      dataAttrs={{
+        'data-seat-key': tileKey,
+        'data-seat-id': seat.id,
+        'data-flags': flagWords(flags).join(',') || undefined,
+      }}
+      corner={
         <button
           type="button"
           className="v2w-more"
@@ -155,71 +144,26 @@ const SeatCard = memo(function SeatCard({
           title="Restart / Stop (mocks: nothing is sent)"
           onClick={() => setMore((m) => !m)}
         >
-          ⋯
+          {'\u22ef'}
         </button>
-      </header>
-      <p className="v2w-address" data-testid="v2-card-address" title="Full mailbox address">
-        {seat.id}
-      </p>
-      <p className="v2w-line">
-        <HarnessMark runtime={seat.runtime} model={seat.model} />
-        <span className="chip" data-family={chip.family} data-testid="v2-card-model">
-          {chip.text}
-        </span>
-        <RoleTag agentRole={seat.agentRole} />
-        <SkillPill count={seat.skillCount} onOpen={() => onOpenSkills(tileKey)} />
-      </p>
-      <p
-        className="v2w-ctx"
-        data-testid="v2-card-context"
-        title="Context used, and tokens in the context"
-      >
-        <span className="v2w-ctx-label">context</span>
-        <span className="v2w-ctx-bar" aria-hidden="true">
-          <i
-            style={{ width: `${Math.min(100, Math.max(0, pct ?? 0))}%` }}
-            data-high={(pct ?? 0) >= 80 || undefined}
-          />
-        </span>
-        <b data-testid="v2-card-pct">{pctText(pct)}</b>
-        <span data-testid="v2-card-tokens">{tokensText(seat.contextTokens)}</span>
-      </p>
-      {pip === 'blocked' && (
-        <p className="v2w-why" data-testid="v2-card-why">
-          ▲ {blockedLine(seat)}
-        </p>
-      )}
-      {lines.length > 0 && seat.tail ? (
-        <AnsiText className="v2w-term" testId="v2-card-tail" lines={lines} ansi={seat.tail.ansi} />
-      ) : (
-        <p className="v2w-term" data-empty="true">
-          {seat.status === 'stopped' ? 'session stopped · no terminal' : 'no terminal text'}
-        </p>
-      )}
-      <footer className="v2w-foot">
-        <span>{machine.machine.label}</span>
-        <span title="queue: pending / in progress / blocked">
-          q {seat.work.pending}/{seat.work.inProgress}/{seat.work.blocked}
-        </span>
-        <span className="v2w-fresh">
-          {seat.status === 'stopped' ? `stopped · ${fresh}` : fresh}
-        </span>
-      </footer>
-      {more && (
-        <div className="v2w-actions" data-testid="v2-card-actions">
-          <FakeControl
-            label="Restart"
-            question={`Restart ${name} on ${machine.machine.label}?`}
-            result={`${name} restarted (pretend)`}
-          />
-          <FakeControl
-            label="Stop"
-            question={`Stop ${name} on ${machine.machine.label}?`}
-            result={`${name} stopped (pretend)`}
-          />
-        </div>
-      )}
-    </article>
+      }
+      overlay={
+        more ? (
+          <div className="v2w-actions" data-testid="v2-card-actions">
+            <FakeControl
+              label="Restart"
+              question={`Restart ${name} on ${machine.machine.label}?`}
+              result={`${name} restarted (pretend)`}
+            />
+            <FakeControl
+              label="Stop"
+              question={`Stop ${name} on ${machine.machine.label}?`}
+              result={`${name} stopped (pretend)`}
+            />
+          </div>
+        ) : null
+      }
+    />
   );
 });
 
@@ -269,7 +213,8 @@ function WallV2({ ctx }: V2PageProps) {
     }
   };
   // A filtered Wall opens every group (the viewer asked to see them); otherwise quiet teams start closed.
-  const isOpen = (g: WallGroup) => openAt[g.key] ?? (filter !== 'all' || !collapsedByDefault(g));
+  const isOpen = (g: WallGroup) =>
+    openAt[g.key] ?? (filter !== 'all' || !['stopped', 'asleep'].includes(groupState(g)));
   const toggleGroup = (g: WallGroup) => {
     const next = { ...openAt, [g.key]: !isOpen(g) };
     setOpenAt(next);
@@ -368,60 +313,69 @@ function WallV2({ ctx }: V2PageProps) {
             : `No seat is ${FILTERS.find((f) => f.id === filter)!.label.toLowerCase()} right now.`}
         </p>
       )}
-      {groups.map((g) => {
-        const open = isOpen(g);
-        const fresh = freshness(
-          g.tiles[0]?.machine ?? ctx.machines[0]!,
-          ctx.now,
-          ctx.hubConnected
-        ).label;
-        return (
-          <section
-            key={g.key}
-            className="v2w-group"
-            data-testid="v2w-group"
-            data-group-key={g.key}
-            data-state={groupState(g)}
-          >
-            <button
-              type="button"
-              className="v2w-group-head"
-              data-testid="v2w-group-head"
-              aria-expanded={open}
-              onClick={() => toggleGroup(g)}
+      {groups.length > 0 && (
+        <p className="v2w-order quiet" data-testid="v2w-order">
+          {WALL_ORDER_TEXT}
+        </p>
+      )}
+      <div className="v2w-groups" data-testid="v2w-groups">
+        {groups.map((g) => {
+          const open = isOpen(g);
+          const plain = !g.rig && groupBy === 'rig';
+          const title = plain ? `No rig \u00b7 ${g.where}` : (g.rig?.displayName ?? g.name);
+          return (
+            <section
+              key={g.key}
+              className="v2w-group"
+              data-testid="v2w-group"
+              data-group-key={g.key}
+              data-state={groupState(g)}
             >
-              <span aria-hidden="true">{open ? '▾' : '▸'}</span>
-              <b>{g.rig?.displayName ?? g.name}</b>
-              <span>{g.where}</span>
-              {g.asleep && <span>· asleep</span>}
-              <span className="v2w-counts">
-                {statusCounts(g).map(({ pip, n }) => (
-                  <span key={pip} data-pip={pip}>
-                    {PIP[pip].glyph} {n} {PIP[pip].label}
-                  </span>
-                ))}
-              </span>
-            </button>
-            {open && g.rig?.summary && <p className="v2w-summary">{g.rig.summary}</p>}
-            {open && (
-              <div className="v2w-grid">
-                {g.tiles.map((t) => (
-                  <SeatCard
-                    key={t.key}
-                    tileKey={t.key}
-                    machine={t.machine}
-                    seat={t.seat}
-                    now={ctx.now}
-                    fresh={fresh}
-                    onOpen={ctx.openAgentPage}
-                    onOpenSkills={ctx.onOpenSkills}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        );
-      })}
+              <button
+                type="button"
+                className="v2w-group-head"
+                data-testid="v2w-group-head"
+                aria-expanded={open}
+                onClick={() => toggleGroup(g)}
+              >
+                <span aria-hidden="true">{open ? '\u25be' : '\u25b8'}</span>
+                <b>{title}</b>
+                {!plain && <span>{g.where}</span>}
+                {plain && (
+                  <span className="quiet">plain tmux sessions, not part of an OpenRig rig</span>
+                )}
+                {g.asleep && <span>{'\u00b7'} asleep</span>}
+                <span className="v2w-counts">
+                  {statusCounts(g).map(({ pip, n }) => (
+                    <span key={pip} data-pip={pip}>
+                      {PIP[pip].glyph} {n} {PIP[pip].label}
+                    </span>
+                  ))}
+                </span>
+              </button>
+              {open && g.rig?.summary && <p className="v2w-summary">{g.rig.summary}</p>}
+              {open && (
+                <div className="v2w-grid">
+                  {g.tiles.map((t) => (
+                    <SeatCard
+                      key={t.key}
+                      tileKey={t.key}
+                      machine={t.machine}
+                      seat={t.seat}
+                      now={ctx.now}
+                      onOpen={ctx.openAgentPage}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+      <p className="v2w-notread quiet" data-testid="v2w-not-read">
+        Reads the default tmux server on each machine only: a session on another tmux server, in
+        herdr or in iTerm is not shown.
+      </p>
     </main>
   );
 }

@@ -1,0 +1,198 @@
+/* v2 kit · TerminalCard. Dark terminal card (an accent inside the light page); ONE fixed size per
+   `data-size`. Do not add min-height / max-height or let content set the height: a test enforces it. */
+.tcard {
+  --tc-w: 200px;
+  --tc-h: 118px;
+  --pip: var(--ar-term-dim);
+  position: relative;
+  flex: none;
+  width: var(--tc-w);
+  height: var(--tc-h);
+  text-align: left;
+}
+.tcard[data-size='compact'] {
+  --tc-w: 172px;
+  --tc-h: 78px;
+}
+/* The face holds the look and clips to the rounded corners; the corner control and any popover sit
+   outside it, so a popover is never clipped and never changes the card's size. */
+.tcard-face {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--ar-term-bg);
+  color: var(--ar-term-fg);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--ar-line);
+}
+.tcard[data-pip='working'] {
+  --pip: var(--ar-working);
+}
+.tcard[data-pip='working'] .tcard-face {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.tcard[data-pip='blocked'] {
+  --pip: var(--ar-blocked);
+}
+.tcard[data-pip='blocked'] .tcard-face {
+  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
+}
+.tcard[data-pip='stopped'],
+.tcard[data-pip='asleep'] {
+  --pip: var(--ar-stopped, #6b6258);
+}
+.tcard[data-pip='stopped'] .tcard-face,
+.tcard[data-pip='asleep'] .tcard-face {
+  background: var(--ar-term-bg-deep);
+  box-shadow: inset 0 0 0 1px var(--ar-stopped, #6b6258);
+  opacity: 0.75;
+}
+.tcard[data-selected] .tcard-face,
+.tcard:hover .tcard-face {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.tcard-bar {
+  flex: none;
+  height: 3px;
+  background: var(--pip);
+}
+.tcard[data-pip='working'] .tcard-bar {
+  height: 4px;
+}
+.tcard[data-pip='blocked'] .tcard-bar {
+  height: 6px;
+}
+.tcard[data-pip='idle'] .tcard-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 10px, transparent 10px 16px);
+}
+.tcard[data-pip='unknown'] .tcard-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 3px, transparent 3px 7px);
+}
+.tcard[data-pip='stopped'] .tcard-bar,
+.tcard[data-pip='asleep'] .tcard-bar {
+  background: transparent;
+}
+.tcard-main {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  gap: 3px;
+  padding: 5px 8px 6px;
+  cursor: pointer;
+}
+.tcard-main:disabled {
+  cursor: default;
+}
+.tcard-main:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: -3px;
+}
+.tcard-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-right: 22px; /* room for the corner control */
+}
+.tcard-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--ar-font-label);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tcard-pip {
+  flex: none;
+  font-family: var(--ar-font-term);
+  font-size: 10px;
+  color: var(--pip);
+  white-space: nowrap;
+}
+.tcard[data-pip='working'] .tcard-pip {
+  color: var(--ar-working-text);
+}
+.tcard[data-pip='blocked'] .tcard-pip {
+  color: var(--ar-blocked-text);
+}
+.tcard-address,
+.tcard-tail {
+  display: block;
+  font-family: var(--ar-font-term);
+  font-size: 10.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tcard-address {
+  color: var(--ar-term-dim);
+}
+.tcard-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 10px;
+}
+.tcard-ctx {
+  color: var(--ar-term-meta);
+}
+.tcard-where {
+  margin-left: auto;
+  color: var(--ar-term-dim);
+}
+.tcard-tail {
+  flex: none;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: var(--ar-term-bg-deep);
+  color: var(--ar-term-fg);
+}
+.tcard-tail[data-empty] {
+  color: var(--ar-term-dim);
+  font-style: italic;
+}
+.tcard-tail[data-warn] {
+  color: var(--ar-blocked-text);
+}
+.tcard-skills {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-top: auto;
+}
+.tcard-skill {
+  font-family: var(--ar-font-term);
+  font-size: 9.5px;
+  padding: 0 5px;
+  border: 1px solid var(--ar-term-line);
+  border-radius: 3px;
+  color: var(--ar-term-meta);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 78px;
+}
+.tcard-more {
+  color: var(--ar-term-dim);
+}
+.tcard-corner {
+  position: absolute;
+  top: 7px;
+  right: 4px;
+}

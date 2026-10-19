@@ -46,7 +46,10 @@
   border-color: var(--ar-error);
 }
 .v2w-group {
-  margin-bottom: 14px;
+  /* shrink to its own cards, so small teams sit side by side like V1's one dense wall */
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 18px 12px 0;
 }
 .v2w-group-head {
   all: unset;
@@ -80,160 +83,60 @@
   color: var(--ar-blocked-ink);
 }
 .v2w-summary {
-  margin: 4px 0;
+  margin: 2px 0;
   color: var(--ar-ink-muted);
-  font-size: 13px;
-}
-.v2w-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-  margin-top: 10px;
-}
-.v2w-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  padding: 14px 16px 12px 18px;
-  background: var(--ar-surface-raised);
-  border: 1px solid var(--ar-line);
-  border-radius: 8px;
-  font-family: var(--ar-font-term);
-  font-size: 12.5px;
-  box-shadow: 0 1px 0 var(--ar-line-soft);
-}
-.v2w-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 5px;
-  border-radius: 8px 0 0 8px;
-  background: var(--ar-idle);
-}
-.v2w-card[data-pip='working']::before {
-  background: var(--ar-working);
-}
-.v2w-card[data-pip='blocked']::before {
-  background: var(--ar-blocked);
-}
-.v2w-card[data-pip='stopped']::before {
-  background: var(--ar-stopped);
-}
-.v2w-card[data-pip='unknown']::before {
-  background: var(--ar-unknown);
-}
-.v2w-card[data-pip='asleep'] {
-  opacity: 0.6;
-}
-.v2w-card[data-flags*='failing']::before {
-  background: var(--ar-error);
-}
-.v2w-card-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-}
-.v2w-name {
-  all: unset;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--ar-ink);
-  border-bottom: 2px solid transparent;
-}
-.v2w-name:hover {
-  border-bottom-color: var(--ar-cta);
-}
-.v2w-pip {
   font-size: 12px;
-  color: var(--ar-ink-muted);
+  /* contributes no width of its own: the group is as wide as its cards, the summary clips to it */
+  width: 0;
+  min-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.v2w-pip[data-pip='working'] {
-  color: var(--ar-working-ink);
-}
-.v2w-pip[data-pip='blocked'] {
-  color: var(--ar-blocked-ink);
-  font-weight: 700;
-}
-.v2w-address {
-  margin: 0;
-  color: var(--ar-ink-muted);
-  overflow-wrap: anywhere;
-  user-select: all;
-}
-.v2w-line {
+/* The Wall's cards are the kit's TerminalCard (fixed size). Groups are wrapped rows of them. */
+.v2w-grid {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-}
-.v2w-ctx {
-  display: flex;
-  align-items: center;
   gap: 8px;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
+  margin-top: 8px;
+  align-items: flex-start;
 }
-.v2w-ctx-label {
-  color: var(--ar-ink-muted);
+.v2w-grid .tcard {
+  position: relative;
 }
-.v2w-ctx-bar {
-  flex: 1;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--ar-line-soft);
-  overflow: hidden;
+/* The ⋯ sits on the dark card, so it is light-on-dark; the actions pop over the card, never in it. */
+.tcard .v2w-more {
+  color: var(--ar-term-meta);
 }
-.v2w-ctx-bar i {
-  display: block;
-  height: 100%;
-  background: var(--ar-ink-muted);
-}
-.v2w-ctx-bar i[data-high] {
-  background: var(--ar-error);
-}
-.v2w-why {
-  margin: 0;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: var(--ar-blocked-bg);
-  color: var(--ar-blocked-ink);
-}
-.v2w-term {
-  margin: 0;
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: var(--ar-term-bg);
+.tcard .v2w-more:hover,
+.tcard .v2w-more[aria-expanded='true'] {
+  border-color: var(--ar-term-line);
   color: var(--ar-term-fg);
-  font-size: 11.5px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  max-height: 6.5em;
-  overflow: hidden;
-}
-.v2w-term[data-empty] {
-  color: var(--ar-term-dim);
-}
-.v2w-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  color: var(--ar-ink-muted);
-}
-.v2w-fresh {
-  margin-left: auto;
 }
 .v2w-actions {
+  position: absolute;
+  z-index: 5;
+  top: 30px;
+  right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--ar-surface-raised);
+  color: var(--ar-ink);
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(52 45 45 / 0.25);
+}
+.v2w-groups {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--ar-line);
+  align-items: flex-start;
+}
+.v2w-order,
+.v2w-notread {
+  font-size: 12px;
+  margin: 4px 0;
 }
 
 /* ---------- Agent page ---------- */
