@@ -65,7 +65,9 @@ describe('Rigs drawer', () => {
       <RigDrawer
         machines={machines}
         rigs={rigs}
-        activeRigKey={rigs[0]!.key}
+        highlightRigKey={rigs[0]!.key}
+        highlightAgentKey={null}
+        scope="Showing x"
         onChooseRig={choose}
         onOpenAgent={agent}
       />
@@ -75,6 +77,7 @@ describe('Rigs drawer', () => {
     expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
     fireEvent.click(tab);
     expect(screen.getByTestId('rig-drawer-panel')).not.toHaveAttribute('hidden');
+    for (const f of screen.queryAllByTestId('drawer-stopped')) fireEvent.click(f);
     // every rig of every machine is a row, machine headings carry the machine label
     const rows = screen.getAllByTestId('drawer-rig');
     expect(rows.map((r) => r.getAttribute('data-rig-key')).sort()).toEqual(
@@ -90,44 +93,89 @@ describe('Rigs drawer', () => {
     expect(agents[0]!.getAttribute('data-agent-key')).toMatch(/^[a-z0-9-]+\//);
   });
 
-  it('the pin is remembered, and stopped rigs are dimmed and listed after the live ones', () => {
+  it('the pin is remembered; stopped rigs are folded under "Stopped (N)", dimmed, after the live ones', () => {
     const machines = fleet();
     const rigs = listRigs(machines).map((r, i) =>
       i === 0 ? { ...r, state: 'stopped' as const } : r
     );
-    const { unmount } = render(
+    const props = {
+      machines,
+      rigs,
+      highlightRigKey: null,
+      highlightAgentKey: null,
+      scope: 'Whole fleet',
+      onChooseRig: () => {},
+      onOpenAgent: () => {},
+    };
+    const { unmount } = render(<RigDrawer {...props} />);
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    const stoppedKey = rigs[0]!.key;
+    // folded: the stopped rig is not a row until its fold is opened
+    expect(document.querySelector(`[data-rig-key="${stoppedKey}"]`)).toBeNull();
+    const fold = screen.getAllByTestId('drawer-stopped')[0]!;
+    expect(fold).toHaveTextContent(/Stopped \(\d+\)/);
+    fireEvent.click(fold);
+    const stoppedRow = document.querySelector(`[data-rig-key="${stoppedKey}"]`)!;
+    expect(stoppedRow.closest('.rd-rig')).toHaveAttribute('data-state', 'stopped');
+    // within its machine, the stopped rig comes after every live one
+    const order = [
+      ...stoppedRow.closest('.rd-machine')!.querySelectorAll('[data-testid="drawer-rig"]'),
+    ].map((e) => e.getAttribute('data-state'));
+    expect(order.slice(order.indexOf('stopped')).every((x) => x === 'stopped')).toBe(true);
+    unmount();
+    render(<RigDrawer {...props} />);
+    expect(screen.getByTestId('rig-drawer-panel')).not.toHaveAttribute('hidden'); // pinned open
+    fireEvent.click(screen.getByTestId('rig-drawer-tab')); // un-pin
+    expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
+  });
+
+  it('hover only peeks (an overlay, not pinned); the scope line and the agent highlight are shown', () => {
+    const machines = fleet();
+    const rigs = listRigs(machines);
+    const seat = machines[0]!.snapshot.seats.find(
+      (s) => s.rig === rigs[0]!.name && rigs[0]!.machineId === machines[0]!.machine.id
+    );
+    render(
       <RigDrawer
         machines={machines}
         rigs={rigs}
-        activeRigKey={null}
+        highlightRigKey={rigs[0]!.key}
+        highlightAgentKey={seat ? `${machines[0]!.machine.id}/${seat.id}` : null}
+        scope="Showing a · M2"
+        onChooseRig={() => {}}
+        onOpenAgent={() => {}}
+      />
+    );
+    const drawer = screen.getByTestId('rig-drawer');
+    fireEvent.pointerEnter(drawer);
+    expect(drawer).toHaveAttribute('data-open', 'true');
+    expect(drawer).toHaveAttribute('data-pinned', 'false'); // overlay: the page does not move
+    expect(screen.getByTestId('drawer-scope')).toHaveTextContent('Showing a · M2');
+    if (seat)
+      expect(
+        screen
+          .getAllByTestId('drawer-agent')
+          .filter((a) => a.getAttribute('aria-pressed') === 'true')
+      ).toHaveLength(1);
+  });
+
+  it('a rig name on more than one machine carries its machine chip', () => {
+    const machines = fleet();
+    const base = listRigs(machines)[0]!;
+    const rigs = [base, { ...base, key: `x:${base.name}`, machineId: 'x', machineLabel: 'X' }];
+    render(
+      <RigDrawer
+        machines={machines}
+        rigs={rigs}
+        highlightRigKey={null}
+        highlightAgentKey={null}
+        scope="Whole fleet"
         onChooseRig={() => {}}
         onOpenAgent={() => {}}
       />
     );
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
-    const stoppedKey = rigs[0]!.key;
-    const stoppedRow = document.querySelector(`[data-rig-key="${stoppedKey}"]`)!;
-    expect(stoppedRow.closest('.rd-rig')).toHaveAttribute('data-state', 'stopped');
-    // within its machine, the stopped rig comes after every live one
-    const machineSection = stoppedRow.closest('.rd-machine')!;
-    const order = [...machineSection.querySelectorAll('[data-testid="drawer-rig"]')].map((e) =>
-      e.getAttribute('data-state')
-    );
-    const firstStopped = order.indexOf('stopped');
-    expect(order.slice(firstStopped).every((x) => x === 'stopped')).toBe(true);
-    unmount();
-    render(
-      <RigDrawer
-        machines={machines}
-        rigs={rigs}
-        activeRigKey={null}
-        onChooseRig={() => {}}
-        onOpenAgent={() => {}}
-      />
-    );
-    expect(screen.getByTestId('rig-drawer-panel')).not.toHaveAttribute('hidden'); // pinned open
-    fireEvent.click(screen.getByTestId('rig-drawer-tab')); // un-pin
-    expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
+    expect(screen.getAllByTestId('drawer-chip').length).toBeGreaterThan(0);
   });
 
   it('sessions with no rig sit under "No rig" for their machine', () => {
@@ -136,7 +184,9 @@ describe('Rigs drawer', () => {
       <RigDrawer
         machines={machines}
         rigs={listRigs(machines)}
-        activeRigKey={null}
+        highlightRigKey={null}
+        highlightAgentKey={null}
+        scope="Whole fleet"
         onChooseRig={() => {}}
         onOpenAgent={() => {}}
       />
@@ -149,22 +199,34 @@ describe('Rigs drawer', () => {
 });
 
 describe('machine badges', () => {
-  it('start collapsed; a badge or the toggle opens the full strip', () => {
+  it('start collapsed with no MACHINES label; a badge or its health mark toggles in place; Machines → is explicit', () => {
+    const toMachines = vi.fn();
     render(
-      <StripShell summary="88 seats · 3 machines">
+      <StripShell summary="88 seats · 3 machines" onMachines={toMachines}>
         <section className="strip">
-          <span className="machine">M2</span>
+          <span className="machine">
+            M2
+            <button type="button" className="health-mark">
+              normal
+            </button>
+          </span>
           <span className="counts">1 working</span>
         </section>
       </StripShell>
     );
     const wrap = screen.getByTestId('v2-strip');
     expect(wrap).toHaveAttribute('data-expanded', 'false');
+    expect(screen.queryByText(/^[▸▾]? ?Machines$/i)).toBeNull();
+    expect(screen.queryByTestId('strip-machines-link')).toBeNull();
     expect(screen.getByText('88 seats · 3 machines')).toBeInTheDocument();
     fireEvent.click(screen.getByText('M2'));
     expect(wrap).toHaveAttribute('data-expanded', 'true');
-    fireEvent.click(screen.getByTestId('strip-toggle'));
+    fireEvent.click(screen.getByText('normal')); // the health mark toggles too, it never navigates
     expect(wrap).toHaveAttribute('data-expanded', 'false');
+    expect(toMachines).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('strip-toggle'));
+    fireEvent.click(screen.getByTestId('strip-machines-link'));
+    expect(toMachines).toHaveBeenCalledOnce();
   });
 });
 

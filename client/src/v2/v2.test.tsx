@@ -123,7 +123,8 @@ describe('v2 version switch', () => {
   it('V switches to v2, writes ?v=2 and remembers it; a reload comes back in v2', () => {
     renderLive();
     press('v');
-    expect(location.search).toBe('?v=2');
+    // the address now carries the page too (the URL is the state)
+    expect(location.search).toBe('?v=2&page=wall');
     expect(localStorage.getItem(MODE_KEY)).toBe('v2');
     expect(screen.getByTestId('v2-nav')).toBeInTheDocument();
     expect(document.querySelector('nav.view-tabs')).toHaveAttribute('hidden');

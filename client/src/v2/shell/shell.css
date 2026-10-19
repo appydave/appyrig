@@ -28,6 +28,10 @@
 
 /* ---- one thin top bar ---- */
 .app-v2 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  background: var(--ar-canvas);
   flex-wrap: nowrap;
   gap: 8px 10px;
   height: 44px;
@@ -201,7 +205,7 @@ body:has(.v2-nav) header.app-header {
   flex: none;
   align-items: stretch;
   position: sticky;
-  top: 8px;
+  top: calc(var(--v2-bar-h, 44px) + 8px);
   align-self: flex-start;
   max-height: calc(100vh - 16px);
   z-index: 20;
@@ -513,34 +517,6 @@ body:has(.v2-nav) header.app-header {
     flex-wrap: wrap;
     overflow: visible;
   }
-}
-
-/* The Agent panel slot: a right-hand column below the top bar, over the page, never over the nav. */
-.agent-panel-slot {
-  position: fixed;
-  z-index: 55;
-  top: var(--v2-bar-bottom, 60px);
-  right: 0;
-  bottom: 0;
-  width: min(440px, 100vw);
-  background: var(--ar-surface-raised);
-  border-left: 1px solid var(--ar-line);
-  box-shadow: -8px 0 24px rgb(52 45 45 / 14%);
-  overflow-y: auto;
-}
-.agent-panel-interim {
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.agent-panel-interim header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.agent-panel-interim header .pill-btn {
-  margin-left: auto;
 }
 
 /* The Explain banner sits in the flow under the bar; it never floats over a control. */

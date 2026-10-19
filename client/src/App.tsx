@@ -36,7 +36,7 @@ import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
 import RigDrawer from './v2/shell/RigDrawer.js';
 import StripShell from './v2/shell/StripShell.js';
 import MoreMenu from './v2/shell/MoreMenu.js';
-import AgentPanelSlot from './v2/shell/AgentPanelSlot.js';
+import AgentPanelV2 from './v2/kit/AgentPanel.js';
 import { isV2Url, readUrlState, rigToParam, writeParams } from './v2/shell/urlState.js';
 import './v2/shell/shell.css';
 
@@ -581,6 +581,70 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       ? `Showing ${label}`
       : `Focused on ${label} in the whole fleet`;
   })();
+  // The bar is sticky in v2. Tell everything that slides out where the bar ends, so the Agent panel
+  // and the Documents drawer start exactly below it and never cover the nav.
+  useLayoutEffect(() => {
+    if (!v2on) return;
+    const root = document.documentElement;
+    const header = document.querySelector<HTMLElement>('.app-header');
+    if (!header) return;
+    const measure = () => {
+      const r = header.getBoundingClientRect();
+      root.style.setProperty('--v2-top-offset', `${Math.max(0, Math.round(r.bottom))}px`);
+      root.style.setProperty('--v2-bar-h', `${Math.round(r.height)}px`);
+    };
+    measure();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(header);
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, { passive: true });
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure);
+      root.style.removeProperty('--v2-top-offset');
+      root.style.removeProperty('--v2-bar-h');
+    };
+  }, [v2on]);
+  const showExplainHint = hint && !((view === 'map' || view === 'flow') && mapHint && !legend);
+  const showLegendHint = (view === 'map' || view === 'flow') && mapHint && !legend && !focusTile;
+  const explainHint = (
+    <span className="first-hint" role="note" data-testid="explain-hint">
+      <span aria-hidden="true">↗</span> New here?{' '}
+      {explain ? (
+        <>
+          <b>Explain</b> is on: hover anything to see what it means.
+        </>
+      ) : (
+        <>
+          Turn on <b>Explain</b>, then hover anything to see what it means.
+        </>
+      )}{' '}
+      <b>Legend</b> names every mark on the screen.
+      <button
+        type="button"
+        className="pill-btn"
+        data-testid="explain-hint-dismiss"
+        onClick={dismissHint}
+      >
+        Got it
+      </button>
+    </span>
+  );
+  const legendHint = (
+    <span className="first-hint" role="note" data-testid="legend-hint">
+      <span aria-hidden="true">↗</span> New here? Press <b>L</b> or click <b>Legend</b> to see what
+      the marks mean.
+      <button
+        type="button"
+        className="pill-btn"
+        data-testid="legend-hint-dismiss"
+        onClick={dismissMapHint}
+      >
+        Got it
+      </button>
+    </span>
+  );
   const notesButton = (
     <button
       type="button"
@@ -745,29 +809,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
           >
             ? Explain {explain ? 'on' : 'off'}
           </button>
-          {hint && !((view === 'map' || view === 'flow') && mapHint && !legend) && (
-            <span className="first-hint" role="note" data-testid="explain-hint">
-              <span aria-hidden="true">↗</span> New here?{' '}
-              {explain ? (
-                <>
-                  <b>Explain</b> is on: hover anything to see what it means.
-                </>
-              ) : (
-                <>
-                  Turn on <b>Explain</b>, then hover anything to see what it means.
-                </>
-              )}{' '}
-              <b>Legend</b> names every mark on the screen.
-              <button
-                type="button"
-                className="pill-btn"
-                data-testid="explain-hint-dismiss"
-                onClick={dismissHint}
-              >
-                Got it
-              </button>
-            </span>
-          )}
+          {!v2on && showExplainHint && explainHint}
         </span>
         <span className="explain-anchor">
           <button
@@ -781,20 +823,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
           >
             Legend · L
           </button>
-          {(view === 'map' || view === 'flow') && mapHint && !legend && !focusTile && (
-            <span className="first-hint" role="note" data-testid="legend-hint">
-              <span aria-hidden="true">↗</span> New here? Press <b>L</b> or click <b>Legend</b> to
-              see what the marks mean.
-              <button
-                type="button"
-                className="pill-btn"
-                data-testid="legend-hint-dismiss"
-                onClick={dismissMapHint}
-              >
-                Got it
-              </button>
-            </span>
-          )}
+          {!v2on && showLegendHint && legendHint}
         </span>
         <button
           type="button"
@@ -859,6 +888,12 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
           />
         )}
         <div className="app-main">
+          {v2on && (showExplainHint || showLegendHint) && (
+            <div className="v2-hint-row" data-testid="v2-hint-row">
+              {showExplainHint && explainHint}
+              {showLegendHint && legendHint}
+            </div>
+          )}
           {(() => {
             const strip = (
               <FleetStrip
@@ -1096,6 +1131,14 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
             OK
           </button>
         </p>
+      )}
+      {v2on && v2.ctx.agentPanel && (
+        <AgentPanelV2
+          ctx={v2.ctx}
+          {...v2.ctx.agentPanel}
+          onClose={v2.ctx.closeAgentPanel}
+          onOpenPage={v2.ctx.openAgentPage}
+        />
       )}
       {focusTile && (
         <Focus
