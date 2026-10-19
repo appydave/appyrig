@@ -669,15 +669,29 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     if (!header) return;
     const measure = () => {
       const r = header.getBoundingClientRect();
-      root.style.setProperty('--v2-top-offset', `${Math.max(0, Math.round(r.bottom))}px`);
+      const next = `${Math.max(0, Math.round(r.bottom))}px`;
+      const changed = root.style.getPropertyValue('--v2-top-offset') !== next;
+      root.style.setProperty('--v2-top-offset', next);
       root.style.setProperty('--v2-bar-h', `${Math.round(r.height)}px`);
+      // a slide-out that read the old value (a panel cold-loaded from its link) follows the bar
+      if (changed) window.dispatchEvent(new Event('appyrig:top-offset'));
     };
     measure();
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     ro?.observe(header);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, { passive: true });
+    // The bar can wrap to another row when the page gains a scrollbar or the panel opens, a moment
+    // after the panel lands: measure again once things settle, so the panel never starts under the bar.
+    const settle = () => {
+      requestAnimationFrame(measure);
+      window.setTimeout(measure, 250);
+    };
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(settle);
+    mo?.observe(root, { attributes: true, attributeFilter: ['data-agent-panel'] });
+    void document.fonts?.ready.then(measure);
     return () => {
+      mo?.disconnect();
       ro?.disconnect();
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure);

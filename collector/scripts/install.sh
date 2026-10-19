@@ -110,7 +110,11 @@ EOF
 </plist>
 EOF
 } > "$PLIST"
-plutil -lint "$PLIST" >/dev/null
+# plutil ships with macOS only. The plist is only ever read by launchd, but writing it works anywhere
+# (CI is Linux), so lint it where the tool exists rather than failing where it cannot.
+if command -v plutil >/dev/null 2>&1; then
+  plutil -lint "$PLIST" >/dev/null
+fi
 
 echo "wrote $PLIST"
 if [ "$LOAD" = 1 ]; then

@@ -125,7 +125,7 @@ describe('Rig Map page', () => {
       expect(within(c).getByTestId('seat-freshness')).toBeInTheDocument();
     }
     const css = readFileSync(path.resolve(__dirname, 'rigmap.css'), 'utf8');
-    expect(css).toMatch(/\.v2-rigmap \.wcard \{[^}]*--wc-w:\s*308px/);
+    expect(css).toMatch(/\.v2-rigmap \.wcard \{[^}]*--wc-w:\s*clamp\(232px,[^;]*308px\)/);
   });
 
   it('a card click opens the Agent panel on that seat', () => {
@@ -140,6 +140,21 @@ describe('Rig Map page', () => {
     if (!stopped) return;
     render(<RigMap ctx={ctxFor(stopped.key)} />);
     expect(screen.getByTestId('rm-body').dataset.state).toBe('stopped');
+  });
+
+  it('lays out in the room it has: a size container, cards that clamp to it, pods that stack when narrow', () => {
+    const css = readFileSync(path.resolve(__dirname, 'rigmap.css'), 'utf8');
+    expect(css).toMatch(/container-type:\s*inline-size/);
+    expect(css).toMatch(/@container \(max-width: 760px\)[^]*flex-basis:\s*100%/);
+  });
+
+  it('the shell strip wraps and drops its seats count when narrow and the replay time shrinks, so no page scrolls sideways', () => {
+    const shell = readFileSync(path.resolve(__dirname, '../../shell/shell.css'), 'utf8');
+    expect(/\.v2-strip-wrap \{[^}]*\}/.exec(shell)![0]).toMatch(/flex-wrap:\s*wrap/);
+    expect(shell).toMatch(/data-expanded='false'\] \.strip \{[^}]*flex-wrap:\s*wrap/);
+    expect(shell).toMatch(/max-width: 1180px\) \{\s*\.v2-strip-summary \{\s*display: none/);
+    const flow = readFileSync(path.resolve(__dirname, '../flow/flow.css'), 'utf8');
+    expect(/\.v2-flow \.v2-replay-time \{[^}]*\}/.exec(flow)![0]).toMatch(/flex:\s*0 1 280px/);
   });
 
   it('ships no dark-mode styles', () => {
