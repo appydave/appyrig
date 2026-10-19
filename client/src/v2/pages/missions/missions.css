@@ -11,3 +11,46 @@
   font-size: 12px;
   padding: 2px 8px;
 }
+
+/* The picked rig's own mission, at the top: obvious, one band, with its Read action. */
+.ms-rig-mission {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--ar-line);
+  border-left: 4px solid var(--ar-sequence, #c8841a);
+  border-radius: 8px;
+  background: var(--ar-surface-raised, #fff);
+}
+.ms-rig-mission-k {
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ms-rig-mission-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 4px;
+}
+.ms-rig-mission-title {
+  font-family: var(--ar-font-display);
+  font-size: 22px;
+  letter-spacing: 0.03em;
+}
+.ms-rig-mission-lead {
+  margin: 4px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ms-read {
+  white-space: nowrap;
+}
+/* The MISSION.md reader sits beside the Rigs drawer, never over it. */
+.v2-missions .docs-drawer {
+  /* starts right of a pinned Rigs drawer (56 + 280 px), so the drawer is never covered */
+  width: min(1180px, calc(100vw - 344px));
+}

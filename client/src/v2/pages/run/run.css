@@ -456,11 +456,10 @@
   border-top-left-radius: 0;
 }
 
-/* The rig-level Documents overlay (stations with no agent) sits under the header bar and
-   beneath the Rigs drawer, so neither the nav nor the drawer is covered. */
+/* The rig-level Documents overlay (stations with no agent) sits under the nav (its own top
+   offset) and starts right of a pinned Rigs drawer (56 + 280 px), so neither is covered. */
 .run-page .docs-drawer {
-  top: var(--v2-bar-h, 44px);
-  z-index: 19;
+  width: min(1180px, calc(100vw - 344px));
 }
 
 /* A narrow page (the Agent panel open, the drawer pinned, or a small window). */
@@ -499,4 +498,9 @@
   .run-cols {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* A deep link scrolls the job panel into view: it lands below the sticky bar, not under it. */
+.run-detail {
+  scroll-margin-top: calc(var(--v2-bar-h, 44px) + 12px);
 }

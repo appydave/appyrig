@@ -107,7 +107,8 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
   for (const f of i.rigFiles) {
     add({
       key: `rig:${f.id}`,
-      group: f.scope === 'spec' ? 'rig' : 'mission',
+      // The rig's MISSION.md is listed under Mission wherever it sits (d09-crew keeps it in the spec folder).
+      group: f.scope === 'mission' || /^mission.*\.md$/i.test(f.name) ? 'mission' : 'rig',
       name: f.name,
       sub: `${kb(f.bytes)}${f.truncated ? ' · cut' : ''}`,
       present: true,

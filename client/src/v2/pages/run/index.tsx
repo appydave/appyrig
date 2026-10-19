@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, HistoryTransitionsOutput, QueueItem } from '@appydave/shared';
 import MarkdownView from '../../../components/MarkdownView.js';
 import RigPicker from '../../../components/RigPicker.js';
@@ -27,14 +27,15 @@ import {
 } from './useMissionFile.js';
 import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { useRigDoc, type RigDoc } from './useRigDoc.js';
+import { useUrlParam } from '../../shell/urlState.js';
+import { DOC_DEFAULT_TAB, jobParam, parseDoc, parseJob, type DocKey } from './deepLink.js';
 import './run.css';
 
 /**
  * The four documents a viewer can put beside a job, as tabs in the document column next to
  * before / after (navigation brief: nothing appended below the fold). Spec is the tab at load.
  */
-export type DocKey = 'spec' | 'rig' | 'culture' | 'mission';
-export const DOC_DEFAULT_TAB: DocKey = 'spec';
+export { DOC_DEFAULT_TAB, type DocKey };
 /** Which documents are shown at load (one tab: Spec). Kept for callers that read it as a map. */
 export const DOC_DEFAULTS: Record<DocKey, boolean> = {
   spec: true,
@@ -603,13 +604,46 @@ function RunBoard({ ctx }: V2PageProps) {
     [preview, real, fm, rig]
   );
   const { openDocs, drawer } = useDocsDrawer(ctx);
-  const [sel, setSel] = useState<string | null>(null);
-  const [tab, setTab] = useState<DocKey>(DOC_DEFAULT_TAB);
+  // The job and the document tab live in the address (`job=`, `doc=`), so a link opens them.
+  const [jobUrl, setJobUrl] = useUrlParam('job');
+  const [docUrl, setDocUrl] = useUrlParam('doc');
+  const tab = parseDoc(docUrl) ?? DOC_DEFAULT_TAB;
+  const setTab = (k: DocKey) => setDocUrl(k);
+  const slices = useMemo(() => (run ? run.jobs.map((j) => j.job.slice) : []), [run]);
+  const picked = parseJob(jobUrl, slices);
+  const setSel = (slice: string) => {
+    const i = slices.indexOf(slice);
+    if (i >= 0) setJobUrl(jobParam(i));
+  };
+  // A link that names a job (`job=` or `doc=`) brings that job's panel into view once, when it is drawn.
+  const linked = useRef(jobUrl !== null || docUrl !== null);
+  const detailDrawn = !!(run && run.jobs.length);
+  useEffect(() => {
+    if (!linked.current || !detailDrawn) return;
+    linked.current = false;
+    document
+      .querySelector('[data-testid="run-detail"]')
+      ?.scrollIntoView?.({ block: 'start', behavior: 'auto' });
+  }, [detailDrawn]);
+  // A different rig drops the job and tab (a cold link's rig arriving late does not).
+  const rigSeen = useRef<string | null>(null);
+  const rigKey = rig?.key ?? null;
+  useEffect(() => {
+    if (!rigKey) return;
+    if (rigSeen.current && rigSeen.current !== rigKey) {
+      setJobUrl(null);
+      setDocUrl(null);
+    }
+    rigSeen.current = rigKey;
+  }, [rigKey, setJobUrl, setDocUrl]);
 
   const selected =
     run && run.jobs.length
-      ? (run.jobs.find((j) => j.job.slice === sel) ??
-        (run.currentIndex !== null ? run.jobs[run.currentIndex] : run.jobs[0]))
+      ? picked !== null
+        ? run.jobs[picked]!
+        : run.currentIndex !== null
+          ? run.jobs[run.currentIndex]!
+          : run.jobs[0]!
       : null;
 
   return (

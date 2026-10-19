@@ -169,8 +169,13 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
     const first = !wroteOnce.current;
     wroteOnce.current = true;
     if (cur === page) return;
+    // `job` and `doc` belong to the page they were set on (the Run board, Missions): a new page drops them.
     writeParams(
-      { page, agent: page === 'agent' && agentKey ? agentToParam(agentKey) : null },
+      {
+        page,
+        agent: page === 'agent' && agentKey ? agentToParam(agentKey) : null,
+        ...(first ? {} : { job: null, doc: null }),
+      },
       first ? 'replace' : 'push'
     );
     // agentKey is written by its own effect below

@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import MarkdownView from '../../../components/MarkdownView.js';
 import '../../data/coverage.css';
 import './missions.css';
-import { FakeControl, MockMark, PageHeader, SampleData } from '../../kit/index.js';
+import { DocsDrawer, FakeControl, MockMark, PageHeader, SampleData } from '../../kit/index.js';
+import { useUrlParam } from '../../shell/urlState.js';
+import { useRigDoc } from '../run/useRigDoc.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   deriveMissions,
@@ -104,6 +106,75 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: V2PageProps['ctx'
   );
 }
 
+/** Which rig's MISSION.md the reader is open on. */
+interface MissionTarget {
+  machineId: string;
+  rig: string;
+}
+
+function ReadMission({ onRead, label }: { onRead: () => void; label?: string }) {
+  return (
+    <button
+      type="button"
+      className="pill-btn ms-read"
+      data-testid="ms-read-mission"
+      onClick={onRead}
+    >
+      {label ?? 'Read MISSION.md'}
+    </button>
+  );
+}
+
+/**
+ * The picked rig's own mission, at the top of the page: its MISSION.md title and a Read action.
+ * Missions below come from queue tags; this one is the rig's file, so a rig with a mission file
+ * (d09-crew) always shows it, tagged jobs or not.
+ */
+function RigMission({
+  ctx,
+  machineId,
+  rig,
+  machineLabel,
+  onRead,
+}: {
+  ctx: V2PageProps['ctx'];
+  machineId: string;
+  rig: string;
+  machineLabel: string;
+  onRead: () => void;
+}) {
+  const doc = useRigDoc(ctx.getSocket, machineId, rig, 'MISSION.md', true);
+  if (doc.status === 'loading')
+    return (
+      <p className="quiet ms-rig-mission" data-testid="ms-rig-mission" data-state="loading">
+        Looking for {rig}&apos;s MISSION.md…
+      </p>
+    );
+  if (doc.status !== 'ok')
+    return (
+      <p className="quiet ms-rig-mission" data-testid="ms-rig-mission" data-state={doc.status}>
+        {doc.status === 'missing'
+          ? `${rig} on ${machineLabel} has no MISSION.md.`
+          : `${rig}'s MISSION.md could not be read from ${machineLabel}${doc.why ? ` (${doc.why})` : ''}.`}
+      </p>
+    );
+  const { title, lead } = missionDocSummary(doc.text ?? '');
+  return (
+    <section className="ms-rig-mission" data-testid="ms-rig-mission" data-state="ok">
+      <div className="ms-rig-mission-k">
+        {rig}&apos;s mission <span className="quiet">· {machineLabel} · MISSION.md</span>
+      </div>
+      <div className="ms-rig-mission-row">
+        <b className="ms-rig-mission-title" data-testid="ms-rig-mission-title">
+          {title || 'MISSION.md'}
+        </b>
+        <ReadMission onRead={onRead} />
+      </div>
+      {lead && <p className="quiet ms-rig-mission-lead">{lead.replace(/\*\*|__|`/g, '')}</p>}
+    </section>
+  );
+}
+
 function SliceRow({ slice }: { slice: Slice }) {
   const [all, setAll] = useState(false);
   const jobs = all ? slice.jobs : slice.jobs.slice(0, SHOWN_JOBS);
@@ -157,11 +228,13 @@ function MissionCard({
   ctx,
   open,
   toggle,
+  onRead,
 }: {
   mission: Mission;
   ctx: V2PageProps['ctx'];
   open: boolean;
   toggle: () => void;
+  onRead: (t: MissionTarget) => void;
 }) {
   return (
     <section
@@ -197,7 +270,8 @@ function MissionCard({
         >
           {mission.machineLabel}
         </span>{' '}
-        · rig <span className="mono">{mission.rig}</span>
+        · rig <span className="mono">{mission.rig}</span>{' '}
+        <ReadMission onRead={() => onRead({ machineId: mission.machineId, rig: mission.rig })} />
       </p>
       {open && (
         <>
@@ -253,6 +327,26 @@ function Missions({ ctx }: V2PageProps) {
   const loose = scoped ? allLoose.filter(inPick) : allLoose;
   const current = openId ?? missions[0]?.key ?? null;
 
+  // The MISSION.md reader. `doc=mission` in the address opens it (on the picked rig, or the rig a
+  // Read button named), so `page=missions&rig=d09-crew@m2&doc=mission` is a link to the mission.
+  const [docUrl, setDocUrl] = useUrlParam('doc');
+  const [readFor, setReadFor] = useState<MissionTarget | null>(null);
+  const reading =
+    docUrl === 'mission'
+      ? (readFor ?? (pick ? { machineId: pick.machineId, rig: pick.name } : null))
+      : null;
+  const readMission = useCallback(
+    (t: MissionTarget) => {
+      setReadFor(t);
+      setDocUrl('mission');
+    },
+    [setDocUrl]
+  );
+  const closeReader = useCallback(() => {
+    setReadFor(null);
+    setDocUrl(null);
+  }, [setDocUrl]);
+
   return (
     <main className="view v2-missions" data-testid="v2-missions">
       <PageHeader
@@ -306,6 +400,16 @@ function Missions({ ctx }: V2PageProps) {
           )}
         </p>
       )}
+      {pick && (
+        <RigMission
+          key={`rig-mission:${pick.key}`}
+          ctx={ctx}
+          machineId={pick.machineId}
+          rig={pick.name}
+          machineLabel={pick.machineLabel}
+          onRead={() => readMission({ machineId: pick.machineId, rig: pick.name })}
+        />
+      )}
       <div className="v2-explainer">
         <p className="quiet">Mission, then slices, then jobs, with progress and who holds what.</p>
         <p className="quiet" data-testid="ms-real-note">
@@ -334,6 +438,7 @@ function Missions({ ctx }: V2PageProps) {
             ctx={ctx}
             open={current === m.key}
             toggle={() => setOpenId(current === m.key ? '' : m.key)}
+            onRead={readMission}
           />
         ))
       )}
@@ -401,6 +506,14 @@ function Missions({ ctx }: V2PageProps) {
           ))}
         </ul>
       </SampleData>
+      {reading && (
+        <DocsDrawer
+          key={`reader:${reading.machineId}:${reading.rig}`}
+          getSocket={ctx.getSocket}
+          target={{ machineId: reading.machineId, rig: reading.rig, open: 'MISSION.md' }}
+          onClose={closeReader}
+        />
+      )}
     </main>
   );
 }

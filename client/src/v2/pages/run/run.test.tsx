@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { fleetMachine, snapshot } from '../../../test/fleetFixtures.js';
@@ -8,6 +8,7 @@ import type { MissionFileResult } from './useMissionFile.js';
 import { page as run, DOC_DEFAULT_TAB } from './index.js';
 import { buildRun, parseDoneCheck, topLine, verdictOf } from './model.js';
 import { parseMissionJobs } from './jobs.js';
+import { jobParam, parseDoc, parseJob } from './deepLink.js';
 
 const files = vi.hoisted(() => ({
   result: (path: string): MissionFileResult => ({ status: 'missing', path }),
@@ -388,5 +389,61 @@ describe('the sample preview is labelled and the page sends nothing', () => {
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(sent).toContain('rig.files'));
     expect(ctx.activeRig?.machineId).toBe('m2');
+  });
+});
+
+describe('the Run board deep link: job= and doc=', () => {
+  const Page = run.component;
+  const at = (search: string) => window.history.replaceState(null, '', `/${search}`);
+  const param = (k: string) => new URLSearchParams(window.location.search).get(k);
+  afterEach(() => at(''));
+
+  it('parses job by number or slice and doc by name; anything else is null', () => {
+    const slices = ['d09/a', 'd09/b', 'd09/c'];
+    expect(parseJob('3', slices)).toBe(2);
+    expect(parseJob('d09/b', slices)).toBe(1);
+    expect(parseJob('0', slices)).toBeNull();
+    expect(parseJob('4', slices)).toBeNull();
+    expect(parseJob('nope', slices)).toBeNull();
+    expect(parseJob(null, slices)).toBeNull();
+    expect(parseDoc('mission')).toBe('mission');
+    expect(parseDoc('MISSION')).toBe('mission');
+    expect(parseDoc('readme')).toBeNull();
+    expect(parseDoc(null)).toBeNull();
+    expect(jobParam(2)).toBe('3');
+  });
+
+  it('a cold link opens that job and that tab', async () => {
+    at('?v=2&page=run&job=3&doc=mission');
+    const { ctx } = ctxFor(machineWith([]), missionAnswers(table(4)));
+    render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getByTestId('run-detail')).toHaveAttribute('data-job', '3'));
+    expect(screen.getByTestId('run-tog-mission')).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('run-tog-spec')).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('a bad value falls back to job 1 and Spec, without a crash', async () => {
+    at('?v=2&page=run&job=99&doc=readme');
+    const { ctx } = ctxFor(machineWith([]), missionAnswers(table(4)));
+    render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getByTestId('run-detail')).toHaveAttribute('data-job', '1'));
+    expect(screen.getByTestId('run-tog-spec')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('clicking a job or a tab writes it to the address, replacing the entry', async () => {
+    at('?v=2&page=run');
+    const before = window.history.length;
+    const { ctx } = ctxFor(machineWith([]), missionAnswers(table(4)));
+    render(<Page ctx={ctx} />);
+    await waitFor(() => expect(screen.getAllByTestId('run-job')).toHaveLength(4));
+    fireEvent.click(screen.getAllByTestId('run-job')[1]!);
+    expect(param('job')).toBe('2');
+    await waitFor(() => expect(screen.getByTestId('run-detail')).toHaveAttribute('data-job', '2'));
+    fireEvent.click(screen.getByTestId('run-tog-rig'));
+    expect(param('doc')).toBe('rig');
+    await waitFor(() =>
+      expect(screen.getByTestId('run-tog-rig')).toHaveAttribute('aria-selected', 'true')
+    );
+    expect(window.history.length).toBe(before);
   });
 });
