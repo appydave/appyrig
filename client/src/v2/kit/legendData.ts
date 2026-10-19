@@ -413,36 +413,65 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
     },
     { title: 'Graph · lines', show: 'handoff-lines', entries: [] },
   ],
-  // RECONCILE (v2/wall-rigmap2): these entries are written for the Rig Map's agent cards becoming
-  // the kit WallCard. After that branch merges, check them against the shipped page (legend2.test.tsx
-  // has a todo for it).
   map: [
     {
       title: 'Rig Map · one rig, full width',
       entries: [
         {
           mark: 'Pick a rig on the left',
-          means: 'The Rig Map shows the rig chosen in the Rigs drawer, and nothing else.',
+          means:
+            'The Rig Map shows the rig chosen in the Rigs drawer, and nothing else. Its address (?page=map&rig=…) is a link to it.',
         },
-        { mark: 'Status line', means: 'State · last handoff · waiting on you · Details.' },
         {
-          mark: 'dashed pod outline "dev 2"',
-          means: 'A pod and its agent count, laid across the page.',
+          mark: '▲ needs attention · 4 agents · 1 active',
+          means:
+            'The status line along the top: the rig’s state, how many agents and how many are active, ↗/↙ handoffs with other rigs, and its last handoff in words. DETAILS opens the rig’s files.',
+        },
+        {
+          mark: 'POD NAME 1',
+          means:
+            'A pod, drawn as a dashed outline with its agent count: a group of agents that work together, laid across the page.',
         },
         {
           mark: 'Agent cards',
           means:
-            'The same V1-style cards as the Wall: fixed slots, solid when live, frosted when stopped. Click opens the Agent panel.',
+            'The same V1-style cards as the Wall, drawn larger so everything on them reads: solid when live, frosted when stopped. Click opens the Agent panel; ⋯ has Documents.',
         },
-        { mark: '↺ 2 to itself', means: 'Self-handoffs as text.' },
         {
-          mark: 'Person card',
-          means: 'The human, with amber badges for what is left open on them.',
+          mark: 'PEOPLE',
+          means:
+            'The humans in or around the rig sit in their own pod as dark PERSON cards: "nothing waiting", or amber badges for what is left open on them.',
         },
-        { mark: 'frosted rig', means: 'A stopped rig is frosted, as on the Graph and Wall.' },
+        {
+          mark: '↺ 2 to itself',
+          means: 'Handoffs an agent sent to itself, as text under its card.',
+        },
+        {
+          mark: 'frosted rig',
+          means: 'A stopped rig is pale and dimmed, as on the Graph and Wall.',
+        },
       ],
     },
-    { title: 'Rig Map · lines', show: 'handoff-lines', entries: [] },
+    {
+      title: 'Rig Map · lines',
+      show: 'handoff-lines',
+      entries: [
+        {
+          mark: 'Heavy line with a label',
+          means:
+            'One line per pair of agents (both directions together). The label is the count of handoffs ("14 ⇄ 8"); heavier means more.',
+        },
+        {
+          mark: 'Dotted line "delegates · escalates"',
+          means: 'A relation the rig’s spec plans but nobody has used yet, named in words.',
+        },
+        {
+          mark: 'Rail between pods',
+          means:
+            'When lines cannot stay in a row (a wrapped pod, another lane) they fold into one rail per pair of pods.',
+        },
+      ],
+    },
   ],
   run: [
     {

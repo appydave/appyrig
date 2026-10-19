@@ -75,7 +75,18 @@ describe('the V2 Legend', () => {
     expect(screen.getByTestId('page-info')).toHaveAttribute('title', PAGE_PURPOSE.run);
   });
 
-  it.todo('Rig Map entries match the shipped page once v2/wall-rigmap2 (WallCard cards) is merged');
+  it('Rig Map entries match the shipped page: WallCard cards, a PEOPLE pod, labelled lines', () => {
+    const inside = readFileSync(path.resolve(__dirname, '../pages/graph/RigInside.tsx'), 'utf8');
+    expect(inside).toMatch(/WallCard/);
+    expect(inside).toMatch(/g2-humans/);
+    const text = legendSections('map')
+      .flatMap((s) => s.entries.map((e) => `${e.mark} ${e.means}`))
+      .join('\n');
+    expect(text).toMatch(/PEOPLE/);
+    expect(text).toMatch(/V1-style cards/);
+    expect(text).toMatch(/Dotted line/);
+    expect(legendSections('map').some((s) => s.show === 'handoff-lines')).toBe(true);
+  });
 
   it('Run board purpose says its files are a D09 convention, not OpenRig data', () => {
     expect(PAGE_PURPOSE.run).toMatch(/D09 convention, not OpenRig structures/);
