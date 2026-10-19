@@ -4,13 +4,17 @@ import { PIP, pipFor, seatKey, seatName } from '../../fleet/model.js';
 import { RIG_STATE, type RigRef } from '../../fleet/views.js';
 
 /**
- * v2 shell · the Rigs drawer. Replaces the rig picker and chip row: a tree, machine, rig, pod,
- * agent, with a status dot on each. It sits at the left edge as a flex column, so opening it
- * shrinks the page beside it instead of covering it. The vertical "Rigs" tab is always there.
+ * v2 shell · the Rigs drawer: the subject picker. A tree, machine, rig, pod, agent, with a status
+ * dot on each. The vertical "Rigs" tab is always there.
  *
- * Hover opens it; leaving closes it again unless it was pinned by a click on the tab. Stopped rigs
- * are dimmed and listed last under each machine. Choosing a rig is the same `chooseRig` the pages
- * already use; an agent goes to the Agent page like every other agent click in v2.
+ * - Hover PEEKS: the list floats over the page as an overlay, so nothing reflows. Leaving closes it.
+ * - A click on the tab PINS it: only then does the page shrink beside it. The pin is remembered.
+ * - The scope line at the top says what the pick did ("Showing d09-crew · M2").
+ * - Stopped rigs are folded under one "Stopped (N)" row per machine, dimmed.
+ * - A rig name that exists on more than one machine carries its machine chip.
+ * - The highlight is what the CURRENT page is scoped to (the rig, and the agent when the panel or
+ *   the Agent page is open), never a stale global.
+ * - An agent click opens the Agent panel on top of the page; it never changes page.
  */
 
 const PIN_KEY = 'appyrig.rigDrawerPinned';
@@ -34,7 +38,12 @@ function writePinned(on: boolean): void {
 interface Props {
   machines: FleetMachine[];
   rigs: RigRef[];
-  activeRigKey: string | null;
+  /** The rig the current page is scoped to, or null when the page shows the whole fleet. */
+  highlightRigKey: string | null;
+  /** The agent the panel (or the Agent page) is open on: a tile key, or null. */
+  highlightAgentKey: string | null;
+  /** What the pick did, in words. */
+  scope: string;
   onChooseRig: (key: string) => void;
   onOpenAgent: (key: string) => void;
 }
@@ -48,7 +57,9 @@ function Dot({ pip, state }: { pip?: string; state?: string }) {
 export default function RigDrawer({
   machines,
   rigs,
-  activeRigKey,
+  highlightRigKey,
+  highlightAgentKey,
+  scope,
   onChooseRig,
   onOpenAgent,
 }: Props) {
@@ -56,12 +67,10 @@ export default function RigDrawer({
   const [hover, setHover] = useState(false);
   const open = pinned || hover;
   const closeTimer = useRef<number | null>(null);
-  // The open drawer always fits the window below where it sits. Its CSS cap (100vh - 16px) only
-  // holds once it is stuck at the top: at scrollY 0 it sits under the header and ran 44 px past the
-  // bottom of a 900 px window, so bringing its tab into view (to close it) scrolled the page.
-  const box = useRef<HTMLElement>(null);
+  // The open list always fits the window below where it sits.
+  const panel = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
-    const el = box.current;
+    const el = panel.current;
     if (!el || !open) return;
     const fit = () => {
       const top = Math.max(0, el.getBoundingClientRect().top);
@@ -76,8 +85,10 @@ export default function RigDrawer({
       el.style.maxHeight = '';
     };
   }, [open]);
-  /** Rigs the viewer opened (or closed) by hand; the chosen rig is open until closed. */
+  /** Rigs the viewer opened (or closed) by hand; the highlighted rig is open until closed. */
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  /** Machines whose "Stopped (N)" fold is open. */
+  const [stoppedOpen, setStoppedOpen] = useState<Record<string, boolean>>({});
 
   useEffect(
     () => () => {
@@ -94,6 +105,13 @@ export default function RigDrawer({
     closeTimer.current = window.setTimeout(() => setHover(false), CLOSE_DELAY_MS);
   };
 
+  /** Rig names that exist on more than one machine: their rows carry the machine chip. */
+  const shared = useMemo(() => {
+    const seen = new Map<string, Set<string>>();
+    for (const r of rigs) seen.set(r.name, (seen.get(r.name) ?? new Set()).add(r.machineId));
+    return new Set([...seen].filter(([, m]) => m.size > 1).map(([n]) => n));
+  }, [rigs]);
+
   const tree = useMemo(
     () =>
       machines.map((fm) => {
@@ -109,20 +127,22 @@ export default function RigDrawer({
   const seatsOf = (fm: FleetMachine, rig: string): Seat[] =>
     fm.snapshot.seats.filter((s) => s.rig === rig);
 
-  const isOpen = (r: RigRef) => expanded[r.key] ?? r.key === activeRigKey;
+  const isOpen = (r: RigRef) => expanded[r.key] ?? r.key === highlightRigKey;
 
   const agentRow = (fm: FleetMachine, s: Seat) => {
     const pip = pipFor(s, fm);
+    const key = seatKey(fm.machine.id, s.id);
     return (
       <li key={s.id}>
         <button
           type="button"
           className="rd-agent"
           data-testid="drawer-agent"
-          data-agent-key={seatKey(fm.machine.id, s.id)}
+          data-agent-key={key}
           data-pip={pip}
+          aria-pressed={key === highlightAgentKey}
           title={`${seatName(s)} · ${PIP[pip].label}`}
-          onClick={() => onOpenAgent(seatKey(fm.machine.id, s.id))}
+          onClick={() => onOpenAgent(key)}
         >
           <Dot pip={pip} />
           <span className="rd-name">{seatName(s)}</span>
@@ -140,7 +160,12 @@ export default function RigDrawer({
     }
     const shown = isOpen(r);
     return (
-      <li key={r.key} className="rd-rig" data-state={r.state} data-active={r.key === activeRigKey}>
+      <li
+        key={r.key}
+        className="rd-rig"
+        data-state={r.state}
+        data-active={r.key === highlightRigKey}
+      >
         <div className="rd-rig-row">
           <button
             type="button"
@@ -157,12 +182,17 @@ export default function RigDrawer({
             data-testid="drawer-rig"
             data-rig-key={r.key}
             data-state={r.state}
-            aria-pressed={r.key === activeRigKey}
+            aria-pressed={r.key === highlightRigKey}
             title={`${RIG_STATE[r.state].glyph} ${RIG_STATE[r.state].label} · ${r.seatCount} seat${r.seatCount === 1 ? '' : 's'}${r.handoffs ? ` · ${r.handoffs} handoffs` : ''}`}
             onClick={() => onChooseRig(r.key)}
           >
             <Dot state={r.state} />
             <span className="rd-name">{r.displayName ?? r.name}</span>
+            {shared.has(r.name) && (
+              <span className="rd-chip" data-testid="drawer-chip">
+                {r.machineLabel}
+              </span>
+            )}
             <span className="rd-count">{r.seatCount}</span>
           </button>
         </div>
@@ -185,10 +215,10 @@ export default function RigDrawer({
 
   return (
     <aside
-      ref={box}
       className="rig-drawer"
       data-testid="rig-drawer"
       data-open={open}
+      data-pinned={pinned}
       onPointerEnter={enter}
       onPointerLeave={leave}
     >
@@ -199,7 +229,9 @@ export default function RigDrawer({
         aria-expanded={open}
         aria-controls="rig-drawer-panel"
         title={
-          pinned ? 'Rigs: pinned open. Click to let it close.' : 'Rigs: hover to peek, click to pin'
+          pinned
+            ? 'Rigs: pinned open. Click to unpin.'
+            : 'Rigs: hover to peek over the page, click to pin beside it'
         }
         onClick={() => {
           const next = !pinned;
@@ -209,42 +241,62 @@ export default function RigDrawer({
         }}
       >
         <span className="rig-drawer-tab-word">Rigs</span>
-        <span aria-hidden="true">{open ? '‹' : '›'}</span>
+        <span aria-hidden="true">{pinned ? '‹' : '›'}</span>
       </button>
       <nav
+        ref={panel}
         id="rig-drawer-panel"
         className="rig-drawer-panel"
         aria-label="Rigs"
         hidden={!open}
         data-testid="rig-drawer-panel"
       >
+        <p className="rd-scope" data-testid="drawer-scope">
+          {scope}
+        </p>
         {rigs.length === 0 && <p className="rd-none">No rigs reported by any machine.</p>}
-        {tree.map(({ fm, live, stopped, loose }) => (
-          <section key={fm.machine.id} className="rd-machine" data-liveness={fm.liveness}>
-            <h3 className="rd-machine-h">
-              <Dot pip={fm.liveness === 'asleep' ? 'asleep' : 'working'} />
-              {fm.machine.label}
-              <span className="rd-count">{live.length + stopped.length}</span>
-            </h3>
-            <ul className="rd-rigs">
-              {live.map((r) => rigRow(fm, r))}
-              {stopped.length > 0 && (
-                <li className="rd-stopped-h" aria-hidden="true">
-                  stopped · {stopped.length}
-                </li>
-              )}
-              {stopped.map((r) => rigRow(fm, r))}
-              {loose.length > 0 && (
-                <li className="rd-rig" data-state="loose">
-                  <div className="rd-pod">
-                    No rig · plain tmux <span className="rd-count">{loose.length}</span>
-                  </div>
-                  <ul className="rd-agents">{loose.map((s) => agentRow(fm, s))}</ul>
-                </li>
-              )}
-            </ul>
-          </section>
-        ))}
+        {tree.map(({ fm, live, stopped, loose }) => {
+          const stoppedShown =
+            stoppedOpen[fm.machine.id] ?? stopped.some((r) => r.key === highlightRigKey);
+          return (
+            <section key={fm.machine.id} className="rd-machine" data-liveness={fm.liveness}>
+              <h3 className="rd-machine-h">
+                <Dot pip={fm.liveness === 'asleep' ? 'asleep' : 'working'} />
+                {fm.machine.label}
+                <span className="rd-count">{live.length + stopped.length}</span>
+              </h3>
+              <ul className="rd-rigs">
+                {live.map((r) => rigRow(fm, r))}
+                {loose.length > 0 && (
+                  <li className="rd-rig" data-state="loose">
+                    <div className="rd-pod">
+                      No rig · plain tmux <span className="rd-count">{loose.length}</span>
+                    </div>
+                    <ul className="rd-agents">{loose.map((s) => agentRow(fm, s))}</ul>
+                  </li>
+                )}
+                {stopped.length > 0 && (
+                  <li className="rd-stopped">
+                    <button
+                      type="button"
+                      className="rd-stopped-h"
+                      data-testid="drawer-stopped"
+                      aria-expanded={stoppedShown}
+                      onClick={() =>
+                        setStoppedOpen((o) => ({ ...o, [fm.machine.id]: !stoppedShown }))
+                      }
+                    >
+                      {stoppedShown ? '▾' : '▸'} Stopped ({stopped.length})
+                    </button>
+                    {stoppedShown && (
+                      <ul className="rd-rigs">{stopped.map((r) => rigRow(fm, r))}</ul>
+                    )}
+                  </li>
+                )}
+              </ul>
+            </section>
+          );
+        })}
       </nav>
     </aside>
   );

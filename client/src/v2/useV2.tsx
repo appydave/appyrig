@@ -3,8 +3,9 @@ import type { View } from '../App.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 import type { FrozenMeta } from './frozen/frozenSocket.js';
 import { groupOf, isCurrentView, NAV_ALIAS, navGroups, navLabel, v2PageFor } from './registry.js';
-import type { NavGroupKey, PageKey, V2Context, V2OnlyKey } from './types.js';
+import type { AgentPanelTarget, NavGroupKey, PageKey, V2Context, V2OnlyKey } from './types.js';
 import { readMode, writeMode, type Mode } from './version.js';
+import { PANEL_ENTRY, agentToParam, readUrlState, writeParams } from './shell/urlState.js';
 import './v2.css';
 import './w2.css';
 
@@ -13,13 +14,31 @@ export const VERSION_KEY = 'v';
 export const FLIP_KEY = 'b';
 const NOTE_MS = 2500;
 
+/** The page the address names (`?page=`), as a Current view; null when it names none or a v2-only page. */
+export function urlView(): View | null {
+  const p = readUrlState().page;
+  return p && isCurrentView(p as PageKey) ? (p as View) : null;
+}
+
+/** The v2-only page the address names, or null. */
+function urlNewPage(): V2OnlyKey | null {
+  const p = readUrlState().page as PageKey | null;
+  if (!p || isCurrentView(p) || !v2PageFor(p)) return null;
+  return p as V2OnlyKey;
+}
+
 export interface UseV2Args {
+  /** The viewer went Back or Forward to an address that names this rig key (or none): restore it. */
+  onUrlRig?: (rigKey: string | null) => void;
   view: View;
   chooseView: (v: View) => void;
   /** Screen keys are live: nothing on top, no seat open. */
   keys: boolean;
   frozen?: FrozenMeta;
-  ctx: Omit<V2Context, 'goTo' | 'agentKey' | 'openAgentPage'>;
+  ctx: Omit<
+    V2Context,
+    'goTo' | 'agentKey' | 'openAgentPage' | 'openAgentPanel' | 'closeAgentPanel' | 'agentPanel'
+  >;
 }
 
 export interface V2Frame {
@@ -39,6 +58,8 @@ export interface V2Frame {
   banner: ReactNode;
   /** Open the v2 Agent page for an agent (a tile key, `machine/seat`): the drawer's agent click. */
   openAgent: (key: string) => void;
+  /** The full context the pages get (the Agent panel host and the drawer read it too). */
+  ctx: V2Context;
 }
 
 function formatRecorded(iso: string | null): string {
@@ -55,16 +76,47 @@ function formatRecorded(iso: string | null): string {
       });
 }
 
-export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Frame {
+export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Args): V2Frame {
   const [mode, setModeState] = useState<Mode>(() => readMode());
-  const [newPage, setNewPage] = useState<V2OnlyKey | null>(null);
+  const [newPage, setNewPage] = useState<V2OnlyKey | null>(() =>
+    readMode() === 'v2' ? urlNewPage() : null
+  );
   /** The page the viewer flipped; flipping is per page and forgotten on leaving it. */
   const [flippedFor, setFlippedFor] = useState<PageKey | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const page: PageKey = newPage ?? view;
   const [openGroup, setOpenGroup] = useState<NavGroupKey | null>(null);
   /** W2: the agent the Agent page shows; kept when the viewer leaves the page and comes back. */
-  const [agentKey, setAgentKey] = useState<string | null>(null);
+  const [agentKey, setAgentKey] = useState<string | null>(() =>
+    readMode() === 'v2' && readUrlState().page === 'agent' ? readUrlState().agent : null
+  );
+  /** The Agent panel: open on top of whatever page is showing. */
+  const [agentPanel, setAgentPanel] = useState<AgentPanelTarget | null>(() => {
+    const u = readUrlState();
+    return readMode() === 'v2' && u.agent && u.page !== 'agent'
+      ? { machineId: u.agent.slice(0, u.agent.indexOf('/')), seatKey: u.agent, tab: 'documents' }
+      : null;
+  });
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
+  const openAgentPanel = useCallback((t: AgentPanelTarget) => {
+    const key = t.seatKey.startsWith(`${t.machineId}/`) ? t.seatKey : `${t.machineId}/${t.seatKey}`;
+    setAgentPanel({ machineId: t.machineId, seatKey: key, tab: t.tab ?? 'documents' });
+    // a new history entry, so Back closes the panel
+    if (modeRef.current === 'v2') writeParams({ agent: agentToParam(key) }, 'push', PANEL_ENTRY);
+  }, []);
+  const closeAgentPanel = useCallback(() => {
+    if (modeRef.current === 'v2') {
+      const st = window.history.state as { ar?: string } | null;
+      if (st?.ar === PANEL_ENTRY && readUrlState().agent) {
+        // the entry that opened it is the one before: go Back, and the pop handler closes it
+        window.history.back();
+        return;
+      }
+      writeParams({ agent: null }, 'replace');
+    }
+    setAgentPanel(null);
+  }, []);
 
   // A remembered v2 shows in the address too, so the link David copies opens the same version.
   useEffect(() => {
@@ -91,6 +143,8 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
 
   const goTo = useCallback(
     (p: PageKey) => {
+      // the panel belongs to the page it was opened on
+      setAgentPanel(null);
       if (isCurrentView(p)) {
         setNewPage(null);
         chooseView(p);
@@ -101,9 +155,60 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     [chooseView]
   );
 
+  // ---- the URL is the state: page pushes, Back and Forward restore -------------------------
+  const wroteOnce = useRef(false);
+  useEffect(() => {
+    if (mode !== 'v2') return;
+    const cur = readUrlState().page;
+    const first = !wroteOnce.current;
+    wroteOnce.current = true;
+    if (cur === page) return;
+    writeParams(
+      { page, agent: page === 'agent' && agentKey ? agentToParam(agentKey) : null },
+      first ? 'replace' : 'push'
+    );
+    // agentKey is written by its own effect below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, page]);
+  useEffect(() => {
+    if (mode !== 'v2' || page !== 'agent' || !agentKey) return;
+    writeParams({ agent: agentToParam(agentKey) }, 'replace');
+  }, [mode, page, agentKey]);
+  useEffect(() => {
+    if (mode !== 'v2') return;
+    const onPop = () => {
+      const u = readUrlState();
+      const want = (u.page ?? 'wall') as PageKey;
+      const ok = isCurrentView(want) || !!v2PageFor(want);
+      const p: PageKey = ok ? want : 'wall';
+      if (isCurrentView(p)) {
+        setNewPage(null);
+        chooseView(p);
+      } else setNewPage(p as V2OnlyKey);
+      if (p === 'agent') {
+        setAgentKey(u.agent);
+        setAgentPanel(null);
+      } else {
+        setAgentPanel(
+          u.agent
+            ? {
+                machineId: u.agent.slice(0, u.agent.indexOf('/')),
+                seatKey: u.agent,
+                tab: 'documents',
+              }
+            : null
+        );
+      }
+      onUrlRig?.(u.rig);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [mode, chooseView, onUrlRig]);
+
   const openAgentPage = useCallback((key: string) => {
     // A plain tmux session ("?/name") has no agent page; the same guard as Current's agent panel.
     if (key.startsWith('?/')) return;
+    setAgentPanel(null);
     setAgentKey(key);
     setNewPage('agent');
   }, []);
@@ -167,7 +272,15 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     return () => window.removeEventListener('keydown', onKey, true);
   }, [keys, newPage]);
 
-  const fullCtx: V2Context = { ...ctx, goTo, agentKey, openAgentPage };
+  const fullCtx: V2Context = {
+    ...ctx,
+    goTo,
+    agentKey,
+    openAgentPage,
+    openAgentPanel,
+    closeAgentPanel,
+    agentPanel,
+  };
   const Page = def?.component;
   const body = Page && (newPage || wantV2) ? <Page ctx={fullCtx} /> : null;
   const showingNew = !!newPage || (wantV2 && !!def);
@@ -293,5 +406,6 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     body,
     banner,
     openAgent: openAgentPage,
+    ctx: fullCtx,
   };
 }

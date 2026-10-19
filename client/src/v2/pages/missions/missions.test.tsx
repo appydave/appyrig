@@ -89,6 +89,12 @@ function ctxFor(ms: FleetMachine[]): V2Context {
     goTo: vi.fn(),
     agentKey: null,
     openAgentPage: vi.fn(),
+    openAgentPanel: vi.fn(),
+    closeAgentPanel: vi.fn(),
+    agentPanel: null,
+    focusNonce: 0,
+    openRigs: [],
+    setOpenRigs: vi.fn(),
   };
 }
 

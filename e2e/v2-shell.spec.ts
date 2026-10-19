@@ -16,6 +16,7 @@ test.use({ viewport: { width: 1440, height: 900 } });
 
 async function open(page: Page) {
   await page.goto(FROZEN);
+  await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
   const gotIt = page.getByRole('button', { name: /got it/i });
   if (await gotIt.count()) await gotIt.first().click();
 }

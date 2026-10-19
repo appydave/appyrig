@@ -28,6 +28,10 @@
 
 /* ---- one thin top bar ---- */
 .app-v2 .app-header {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  background: var(--ar-canvas);
   flex-wrap: nowrap;
   gap: 8px 10px;
   height: 44px;
@@ -201,7 +205,7 @@ body:has(.v2-nav) header.app-header {
   flex: none;
   align-items: stretch;
   position: sticky;
-  top: 8px;
+  top: calc(var(--v2-bar-h, 44px) + 8px);
   align-self: flex-start;
   max-height: calc(100vh - 16px);
   z-index: 20;
@@ -234,10 +238,16 @@ body:has(.v2-nav) header.app-header {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
 }
+/* Peek (hover): the list floats over the page, nothing reflows. Pinned: it sits in the flow and
+   the page shrinks beside it. */
 .rig-drawer-panel {
   box-sizing: border-box;
+  position: absolute;
+  left: 38px;
+  top: 0;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgb(52 45 45 / 18%);
   width: 272px;
-  margin-left: 8px;
   padding: 8px 8px 12px;
   overflow-y: auto;
   background: var(--ar-surface-raised);
@@ -247,6 +257,47 @@ body:has(.v2-nav) header.app-header {
 }
 .rig-drawer-panel[hidden] {
   display: none;
+}
+.rig-drawer[data-pinned='true'] .rig-drawer-panel {
+  position: static;
+  margin-left: 8px;
+  box-shadow: none;
+}
+.rd-scope {
+  margin: 0 0 6px;
+  padding: 4px 6px;
+  border-left: 3px solid var(--ar-cta);
+  background: var(--ar-surface);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.rd-chip {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  font-family: var(--ar-font-label);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.rd-agent[aria-pressed='true'] {
+  background: var(--ar-cta);
+  font-weight: 600;
+}
+.rd-stopped-h {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  margin: 6px 0 2px 6px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.rd-stopped-h:focus-visible {
+  outline: 2px solid var(--ar-cta);
 }
 .rd-machine-h {
   display: flex;
@@ -340,13 +391,6 @@ body:has(.v2-nav) header.app-header {
 .rd-none {
   margin: 4px 6px;
   font-size: 12px;
-  color: var(--ar-ink-muted);
-}
-.rd-stopped-h {
-  margin: 8px 0 2px 6px;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
   color: var(--ar-ink-muted);
 }
 .rd-rig[data-state='stopped'] {
@@ -473,4 +517,39 @@ body:has(.v2-nav) header.app-header {
     flex-wrap: wrap;
     overflow: visible;
   }
+}
+
+/* The Explain banner sits in the flow under the bar; it never floats over a control. */
+.v2-hint-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.v2-hint-row .first-hint {
+  position: static;
+  width: auto;
+  max-width: none;
+  box-shadow: none;
+  margin: 0;
+  padding: 3px 12px;
+  min-height: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Machine strip: the chevron is the only control, the badges toggle the detail in place. */
+.v2-strip-link {
+  flex: none;
+  font-family: var(--ar-font-label);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ar-link);
+  background: transparent;
+  border: 0;
+  padding: 2px 4px;
+  cursor: pointer;
+  text-decoration: underline;
 }
