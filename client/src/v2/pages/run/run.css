@@ -1,6 +1,10 @@
 /* v2 Run board. AppyDave light only; tokens come from the app. */
 .run-page {
   gap: 14px;
+  /* The layout follows the PAGE's width, not the window's: the Rigs drawer and the Agent panel
+     both take width from it. */
+  container: run / inline-size;
+  min-width: 0;
 }
 .run-label {
   font-family: var(--ar-font-label);
@@ -358,12 +362,6 @@
   background: var(--ar-blocked-bg);
   color: var(--ar-blocked-ink);
 }
-@media (max-width: 1100px) {
-  .run-cols,
-  .run-lower {
-    grid-template-columns: 1fr;
-  }
-}
 
 .run-station-docs {
   margin-top: 6px;
@@ -463,4 +461,42 @@
 .run-page .docs-drawer {
   top: var(--v2-bar-h, 44px);
   z-index: 19;
+}
+
+/* A narrow page (the Agent panel open, the drawer pinned, or a small window). */
+.run-lower > * {
+  min-width: 0;
+}
+.run-tabs {
+  flex-wrap: wrap;
+}
+@container run (max-width: 1100px) {
+  /* the ledger ("What just happened") goes below the job panel, which keeps the full width */
+  .run-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* the header wraps: title and facts, then the actions on their own line */
+  .run-page .v2-page-head {
+    height: auto;
+    min-height: 36px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .run-page .v2-page-facts {
+    flex-wrap: wrap;
+    white-space: normal;
+    row-gap: 2px;
+  }
+  .run-page .v2-page-actions {
+    flex-wrap: wrap;
+  }
+  .run-page .v2-page-actions .pill-btn {
+    white-space: nowrap;
+  }
+}
+@container run (max-width: 760px) {
+  /* before / after above the document tabs, each full width */
+  .run-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
