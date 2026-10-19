@@ -119,8 +119,9 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
     await page.keyboard.press('Escape');
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-graph').click();
-    await expect(page.getByTestId('hl-legend')).toBeHidden();
+    const shown = page.locator('[data-testid="hl-legend"]:visible');
+    await expect(shown).toHaveCount(0);
     await page.getByTestId('legend-toggle').click();
-    await expect(page.getByTestId('hl-legend')).toBeVisible();
+    await expect(shown).toHaveCount(1);
   });
 });

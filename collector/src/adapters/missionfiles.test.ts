@@ -49,7 +49,12 @@ function layout() {
   put(join(mission, 'shots', 'a.png'), Buffer.from([137, 80, 78, 71, 1, 2, 3]));
   put(join(mission, 'shots', 'page.html'), '<p>shot</p>');
   put(join(mission, 'shots', 'x.gif'), 'gif');
-  const spec: SpecInfo = { path: join(mission, 'team', 'rig.yaml'), root, summary: 's' };
+  const spec: SpecInfo = {
+    path: join(mission, 'team', 'rig.yaml'),
+    root,
+    summary: 's',
+    spec: null,
+  };
   return { root, repos, mission, spec, spec1, spec1b };
 }
 
@@ -159,7 +164,12 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
     const root = tmp();
     put(join(root, 'solo', 'rig.yaml'), 'name: solo\n');
     put(join(root, 'solo', 'qa', 'q.md'), 'q');
-    const al = await allowlistFor({ path: join(root, 'solo', 'rig.yaml'), root, summary: null });
+    const al = await allowlistFor({
+      path: join(root, 'solo', 'rig.yaml'),
+      root,
+      summary: null,
+      spec: null,
+    });
     expect(al.listed.size).toBe(0);
     expect(await manifestFor(al)).toEqual([]);
     expect(await checkPath(join(root, 'solo', 'qa', 'q.md'), al)).toEqual({
@@ -293,7 +303,12 @@ describe('MissionFilesReader', () => {
 
   it('one rig whose files cannot be listed does not stop another', async () => {
     const { spec } = layout();
-    const bad: SpecInfo = { path: '/nonexistent/x/rig.yaml', root: '/nonexistent', summary: null };
+    const bad: SpecInfo = {
+      path: '/nonexistent/x/rig.yaml',
+      root: '/nonexistent',
+      summary: null,
+      spec: null,
+    };
     const r = new MissionFilesReader('m2', () => new Date(), 0, ROOTS);
     const got = await r.next(
       new Map([

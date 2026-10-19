@@ -12,6 +12,7 @@ import KeysHelp from './components/KeysHelp.js';
 import { captureScreen, composeSnapshot, regionOf } from './feedback/capture.js';
 import type { FeedbackViewState } from '@appydave/shared';
 import Legend from './components/Legend.js';
+import { Legend2 } from './v2/kit/index.js';
 import { isShortcutBlocked } from './lib/keys.js';
 import type { LegendScreen } from './learn/legend.js';
 import RigFiles, { type PresetFile } from './components/RigFiles.js';
@@ -63,6 +64,7 @@ function readFollow(): boolean {
 const VIEW_KEY = 'appyrig.view';
 const EXPLAIN_KEY = 'appyrig.explain';
 const LEGEND_KEY = 'appyrig.legend';
+const LEGEND2_KEY = 'appyrig.v2.legend';
 const HINT_KEY = 'appyrig.hint';
 /** Ruling (batch 2): the Map's legend starts closed; a one-time hint points at the button. */
 const MAP_HINT_KEY = 'appyrig.mapLegendHint';
@@ -174,6 +176,15 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   );
   const [explain, setExplain] = useState<boolean>(readExplain);
   const [legendChoice, setLegendChoice] = useState<LegendChoice>(readLegend);
+  // V2 has its own legend, per V2 page; closed until the viewer opens it. V1's is not used in V2.
+  const [v2Legend, setV2Legend] = useState<Record<string, 'on' | 'off'>>(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(LEGEND2_KEY) ?? '{}');
+      return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+    } catch {
+      return {};
+    }
+  });
   const [hint, setHint] = useState<boolean>(readHint);
   const [mapHint, setMapHint] = useState<boolean>(() => {
     try {
@@ -550,7 +561,21 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       .map((p) => rigFromParam(p))
       .filter((k): k is string => k !== null)
   );
+  /**
+   * O4: opening an agent picks that agent's rig, from every entry point (drawer, Wall card, Graph
+   * card, Flow box, Run board Docs). A plain tmux seat (no rig) leaves the pick alone. It does not
+   * touch the panel, so the panel just opened stays open.
+   */
+  const pickAgentRig = useCallback(
+    (tileKey: string) => {
+      const t = findSeat(state.machines, tileKey);
+      if (!t || !t.seat.rig) return;
+      chooseRig(`${t.machine.machine.id}:${t.seat.rig}`);
+    },
+    [state.machines, chooseRig]
+  );
   const v2 = useV2({
+    onAgentOpened: pickAgentRig,
     onUrlRig,
     view,
     chooseView,
@@ -584,9 +609,19 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
 
   /** The v2 frame (thin bar, machine badges, Rigs drawer) is on whenever the app is in v2 mode. */
   const v2on = v2.mode === 'v2';
+  const legendOpen = v2on ? v2Legend[v2.page] === 'on' : legend;
+  const toggleLegendAny = useCallback(() => {
+    if (!v2on) return toggleLegend();
+    const next = { ...v2Legend, [v2.page]: v2Legend[v2.page] === 'on' ? 'off' : 'on' } as Record<
+      string,
+      'on' | 'off'
+    >;
+    setV2Legend(next);
+    remember(LEGEND2_KEY, JSON.stringify(next));
+  }, [v2on, v2.page, v2Legend, toggleLegend]);
   // The drawer reflects the CURRENT page: a rig page is scoped to its rig; a fleet page only has one
   // when the viewer picked it; the agent when the panel or the Agent page is open.
-  const RIG_PAGES: string[] = ['flow', 'run', 'timeline'];
+  const RIG_PAGES: string[] = ['map', 'flow', 'run', 'timeline'];
   /** Pages that filter or re-scope to the rig (the others only focus it in the whole fleet). */
   const SHOWING_PAGES = [...RIG_PAGES, 'missions'];
   const drawerAgent = v2.page === 'agent' ? v2.ctx.agentKey : (v2.ctx.agentPanel?.seatKey ?? null);
@@ -634,15 +669,29 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     if (!header) return;
     const measure = () => {
       const r = header.getBoundingClientRect();
-      root.style.setProperty('--v2-top-offset', `${Math.max(0, Math.round(r.bottom))}px`);
+      const next = `${Math.max(0, Math.round(r.bottom))}px`;
+      const changed = root.style.getPropertyValue('--v2-top-offset') !== next;
+      root.style.setProperty('--v2-top-offset', next);
       root.style.setProperty('--v2-bar-h', `${Math.round(r.height)}px`);
+      // a slide-out that read the old value (a panel cold-loaded from its link) follows the bar
+      if (changed) window.dispatchEvent(new Event('appyrig:top-offset'));
     };
     measure();
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     ro?.observe(header);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, { passive: true });
+    // The bar can wrap to another row when the page gains a scrollbar or the panel opens, a moment
+    // after the panel lands: measure again once things settle, so the panel never starts under the bar.
+    const settle = () => {
+      requestAnimationFrame(measure);
+      window.setTimeout(measure, 250);
+    };
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(settle);
+    mo?.observe(root, { attributes: true, attributeFilter: ['data-agent-panel'] });
+    void document.fonts?.ready.then(measure);
     return () => {
+      mo?.disconnect();
       ro?.disconnect();
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure);
@@ -810,11 +859,11 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   useEffect(() => {
     if (help || feedback || filesFor || debugFor || notesOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
+      if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegendAny();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [help, feedback, filesFor, debugFor, notesOpen, toggleLegend]);
+  }, [help, feedback, filesFor, debugFor, notesOpen, toggleLegendAny]);
 
   // O ("open files") opens the chosen rig's files from the Rig Map and Handoff Flow. F is Feedback's.
   useEffect(() => {
@@ -845,7 +894,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     <div
       className={v2on ? 'app app-v2' : 'app'}
       data-explain-on={explain || undefined}
-      data-legend={v2on ? (legend ? 'on' : 'off') : undefined}
+      data-legend={v2on ? (legendOpen ? 'on' : 'off') : undefined}
       data-testid={v2on ? 'v2-shell' : undefined}
     >
       <header className="app-header" hidden={!!focusTile}>
@@ -888,10 +937,10 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
             type="button"
             className="pill-btn"
             data-testid="legend-toggle"
-            aria-pressed={legend}
+            aria-pressed={legendOpen}
             aria-keyshortcuts="L"
             title="Legend: what every line, colour and box on this screen means (L)"
-            onClick={toggleLegend}
+            onClick={toggleLegendAny}
           >
             Legend · L
           </button>
@@ -1033,7 +1082,10 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
               strip
             );
           })()}
-          {legend && !focusTile && !v2.newPage && <Legend view={view} onClose={toggleLegend} />}
+          {v2on && legendOpen && <Legend2 page={v2.page} onClose={toggleLegendAny} />}
+          {!v2on && legend && !focusTile && !v2.newPage && (
+            <Legend view={view} onClose={toggleLegend} />
+          )}
           {v2.banner}
           {v2.body}
           {!v2.body && view === 'wall' && (

@@ -77,3 +77,14 @@ export {
 } from './docsModel.js';
 export { default as AgentPanel, stripAnsi, type AgentPanelProps } from './AgentPanel.js';
 export { useTopOffset, measureTopOffset } from './useTopOffset.js';
+export { default as Legend2 } from './Legend2.js';
+export {
+  LEGEND_PAGES,
+  LEGEND_TITLE,
+  legendSections,
+  type LegendMark,
+  type LegendSection,
+} from './legendData.js';
+export { default as PageInfo } from './PageInfo.js';
+export { PAGE_PURPOSE } from './legendData.js';
+export { default as WallCard, isFrosted, type WallCardProps } from './WallCard.js';

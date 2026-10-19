@@ -29,7 +29,14 @@ import type { FleetStore } from './fleetStore.js';
  */
 
 /** What this hub understands beyond v1.5, told to a collector on connect and in every snapshot ack. */
-const HUB_CAP_LIST = [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA, HUB_CAPS.MISSIONFILES];
+const HUB_CAP_LIST = [
+  HUB_CAPS.V2_FIELDS,
+  HUB_CAPS.DAEMONDATA,
+  HUB_CAPS.MISSIONFILES,
+  HUB_CAPS.SPEC_FIELDS,
+  HUB_CAPS.SPEC_FILES,
+  HUB_CAPS.SEAT_SPEC,
+];
 
 export interface CollectorIngestOptions {
   /** Hub token. When undefined, every collector is refused (no open default). */

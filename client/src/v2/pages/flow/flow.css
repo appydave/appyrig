@@ -94,8 +94,9 @@
   font-weight: 700;
 }
 .v2-flow .v2-replay-time {
-  width: 280px;
-  flex: 0 0 280px;
+  width: auto;
+  min-width: 60px;
+  flex: 0 1 280px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

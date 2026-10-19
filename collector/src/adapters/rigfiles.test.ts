@@ -2,15 +2,22 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { RIG_FILES_CHUNK_BYTES, RIG_FILE_MAX_BYTES, type RigFile } from '@appydave/shared';
+import {
+  RIG_FILES_CHUNK_BYTES,
+  RIG_FILE_MAX_BYTES,
+  RigFilesPushSchema,
+  type RigFile,
+} from '@appydave/shared';
 import {
   candidatesFor,
   chunkRigFiles,
   readRigFiles,
   RigFilesReader,
   RIG_FILES_TICK_BYTES,
+  specCandidatesFor,
+  specNamedPaths,
 } from './rigfiles.js';
-import type { SpecInfo } from './specs.js';
+import { parseSpec, type SpecInfo } from './specs.js';
 
 const dirs: string[] = [];
 const tmp = () => {
@@ -30,7 +37,7 @@ function layout() {
   const mission = join(root, 'proj');
   const team = join(mission, 'team');
   put(join(team, 'rig.yaml'), 'name: demo\nsummary: s\n');
-  const spec: SpecInfo = { path: join(team, 'rig.yaml'), root, summary: 's' };
+  const spec: SpecInfo = { path: join(team, 'rig.yaml'), root, summary: 's', spec: null };
   return { root, mission, team, spec };
 }
 const ids = async (spec: SpecInfo) => (await candidatesFor(spec)).map((c) => c.id);
@@ -109,7 +116,12 @@ describe('which files may be read (the boundary)', () => {
     put(join(outside, 'team', 'rig.yaml'), 'name: x\n');
     put(join(outside, 'team', 'MISSION.md'), 'secret plans\n');
     symlinkSync(outside, join(root, 'linked'));
-    const spec: SpecInfo = { path: join(root, 'linked', 'team', 'rig.yaml'), root, summary: null };
+    const spec: SpecInfo = {
+      path: join(root, 'linked', 'team', 'rig.yaml'),
+      root,
+      summary: null,
+      spec: null,
+    };
     expect(await candidatesFor(spec)).toEqual([]);
   });
 
@@ -118,10 +130,15 @@ describe('which files may be read (the boundary)', () => {
     put(join(outer, 'MISSION.md'), 'above the root\n');
     const root = join(outer, 'specs');
     put(join(root, 'demo', 'rig.yaml'), 'name: demo\n');
-    const spec: SpecInfo = { path: join(root, 'demo', 'rig.yaml'), root, summary: null };
+    const spec: SpecInfo = {
+      path: join(root, 'demo', 'rig.yaml'),
+      root,
+      summary: null,
+      spec: null,
+    };
     // parent of the spec folder is the root itself (allowed); the root's parent (outer) never is
     expect(await ids(spec)).toEqual(['spec:rig.yaml']);
-    const rootLevel: SpecInfo = { path: join(root, 'rig.yaml'), root, summary: null };
+    const rootLevel: SpecInfo = { path: join(root, 'rig.yaml'), root, summary: null, spec: null };
     put(join(root, 'rig.yaml'), 'name: top\n');
     expect(await ids(rootLevel)).toEqual(['spec:rig.yaml']); // spec folder == root; its parent is above the root
   });
@@ -132,7 +149,7 @@ describe('which files may be read (the boundary)', () => {
     symlinkSync(join(root, 'nowhere.md'), join(team, 'CULTURE.md'));
     expect(await ids(spec)).toEqual(['spec:rig.yaml']);
     expect(
-      await candidatesFor({ path: join(root, 'gone', 'rig.yaml'), root, summary: null })
+      await candidatesFor({ path: join(root, 'gone', 'rig.yaml'), root, summary: null, spec: null })
     ).toEqual([]);
   });
 });
@@ -217,7 +234,12 @@ describe('chunking and change detection', () => {
     for (let i = 0; i < 9; i++) {
       put(join(root, `rig${i}`, 'rig.yaml'), `name: rig${i}\n`);
       put(join(root, `rig${i}`, 'CULTURE.md'), `culture ${i}\n`);
-      specs.set(`rig${i}`, { path: join(root, `rig${i}`, 'rig.yaml'), root, summary: null });
+      specs.set(`rig${i}`, {
+        path: join(root, `rig${i}`, 'rig.yaml'),
+        root,
+        summary: null,
+        spec: null,
+      });
     }
     let t = 100_000;
     const r = new RigFilesReader('m2', () => new Date(t), 30_000);
@@ -238,7 +260,12 @@ describe('chunking and change detection', () => {
     for (let i = 0; i < 20; i++) {
       put(join(root, `big${i}`, 'rig.yaml'), `name: big${i}\n`);
       put(join(root, `big${i}`, 'MISSION.md'), 'x'.repeat(RIG_FILE_MAX_BYTES - 100));
-      specs.set(`big${i}`, { path: join(root, `big${i}`, 'rig.yaml'), root, summary: null });
+      specs.set(`big${i}`, {
+        path: join(root, `big${i}`, 'rig.yaml'),
+        root,
+        summary: null,
+        spec: null,
+      });
     }
     const t = 100_000;
     const r = new RigFilesReader('m2', () => new Date(t), 30_000); // the clock never moves
@@ -288,8 +315,8 @@ describe('run card R3: variant specs, batch briefs, and the cap', () => {
     ])
       put(join(dir, n));
     return {
-      d10: { path: join(dir, 'rig-d10.yaml'), root, summary: null } as SpecInfo,
-      base: { path: join(dir, 'rig.yaml'), root, summary: null } as SpecInfo,
+      d10: { path: join(dir, 'rig-d10.yaml'), root, summary: null, spec: null } as SpecInfo,
+      base: { path: join(dir, 'rig.yaml'), root, summary: null, spec: null } as SpecInfo,
     };
   }
 
@@ -357,9 +384,108 @@ describe('QA R3 LOW-2: the configured folder is no mission folder', () => {
     put(join(root, 'README.md'));
     put(join(root, 'flicut-ab', 'rig.yaml'), 'name: flicut-ab\n');
     put(join(root, 'flicut-ab', 'MISSION.md'));
-    expect(await ids({ path: join(root, 'flicut-ab', 'rig.yaml'), root, summary: null })).toEqual([
-      'spec:MISSION.md',
-      'spec:rig.yaml',
+    expect(
+      await ids({ path: join(root, 'flicut-ab', 'rig.yaml'), root, summary: null, spec: null })
+    ).toEqual(['spec:MISSION.md', 'spec:rig.yaml']);
+  });
+});
+
+describe('scope rig: the files the validated rig.yaml names (OpenRig resolves them against the rig root)', () => {
+  const RIG_YAML = [
+    'version: "0.2"',
+    'name: demo',
+    'culture_file: CULTURE.md',
+    'docs: [{ path: docs/overview.md }, { path: ../outside.md }, { path: tools/run.sh }]',
+    'startup:',
+    '  files: [{ path: guidance/rig-start.md }, { path: ./guidance/rig-start.md }]',
+    'pods:',
+    '  - id: dev',
+    '    label: Development',
+    '    startup: { files: [{ path: guidance/pod.md }, { path: /etc/hosts }] }',
+    '    members:',
+    '      - id: build',
+    '        agent_ref: "local:agents/impl"',
+    '        profile: default',
+    '        runtime: claude-code',
+    '        cwd: .',
+    '        startup: { files: [{ path: guidance/build-first-move.md }, { path: guidance/gone.md }] }',
+    '',
+  ].join('\n');
+
+  function specWorld() {
+    const root = tmp();
+    const team = join(root, 'proj', 'team');
+    put(join(team, 'rig.yaml'), RIG_YAML);
+    for (const f of [
+      'CULTURE.md',
+      'docs/overview.md',
+      'tools/run.sh',
+      'guidance/rig-start.md',
+      'guidance/pod.md',
+      'guidance/build-first-move.md',
+    ])
+      put(join(team, f), `# ${f}\n`);
+    put(join(root, 'proj', 'outside.md'), 'not the rig root\n');
+    const spec: SpecInfo = {
+      path: join(team, 'rig.yaml'),
+      root,
+      summary: null,
+      spec: parseSpec(RIG_YAML)!.spec,
+    };
+    return { root, team, spec };
+  }
+
+  it('names come from the spec, in layer order, once each; unsafe, absent and non-text paths are left out', async () => {
+    const { spec } = specWorld();
+    expect(spec.spec).not.toBeNull();
+    expect(specNamedPaths(spec)).toContain('../outside.md'); // named, but refused below
+    expect((await specCandidatesFor(spec)).map((c) => c.id)).toEqual([
+      'rig:CULTURE.md',
+      'rig:docs/overview.md',
+      'rig:guidance/rig-start.md',
+      'rig:guidance/pod.md',
+      'rig:guidance/build-first-move.md',
     ]);
+  });
+
+  it('a link out of the rig root is refused, even when it stays inside the configured folder', async () => {
+    const { root, team, spec } = specWorld();
+    put(join(root, 'elsewhere', 'secret.md'), 'secret\n');
+    rmSync(join(team, 'guidance', 'pod.md'));
+    symlinkSync(join(root, 'elsewhere', 'secret.md'), join(team, 'guidance', 'pod.md'));
+    expect((await specCandidatesFor(spec)).map((c) => c.id)).not.toContain('rig:guidance/pod.md');
+  });
+
+  it('a rig.yaml OpenRig would refuse names nothing', async () => {
+    const { spec } = specWorld();
+    expect(await specCandidatesFor({ ...spec, spec: null })).toEqual([]);
+  });
+
+  it('read and redacted like the others; the allowlisted files are unchanged', async () => {
+    const { team, spec } = specWorld();
+    put(
+      join(team, 'guidance', 'build-first-move.md'),
+      'key sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n'
+    );
+    const plain = await readRigFiles(spec);
+    expect(plain.some((f) => f.scope === 'rig')).toBe(false);
+    const all = await readRigFiles(spec, true);
+    expect(all.filter((f) => f.scope !== 'rig')).toEqual(plain);
+    const move = all.find((f) => f.id === 'rig:guidance/build-first-move.md')!;
+    expect(move).toMatchObject({ scope: 'rig', name: 'guidance/build-first-move.md' });
+    expect(move.content).not.toContain('sk-ant-api03');
+  });
+
+  it('the reader sends rig files only when asked (hub has spec-files), and resends when that flips', async () => {
+    const { spec } = specWorld();
+    const reader = new RigFilesReader('m4', () => new Date(), 0);
+    const specs = new Map([['demo', spec]]);
+    const first = await reader.next(specs, false);
+    expect(first!.pushes.flatMap((p) => p.files).some((f) => f.scope === 'rig')).toBe(false);
+    first!.markSent();
+    expect(await reader.next(specs, false)).toBeNull();
+    const second = await reader.next(specs, true);
+    expect(second!.pushes.flatMap((p) => p.files).filter((f) => f.scope === 'rig')).toHaveLength(5);
+    expect(second!.pushes.every((p) => RigFilesPushSchema.safeParse(p).success)).toBe(true);
   });
 });

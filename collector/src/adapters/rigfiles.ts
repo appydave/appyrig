@@ -4,6 +4,8 @@ import {
   RIG_FILES_CHUNK_BYTES,
   RIG_FILES_MAX,
   RIG_FILE_MAX_BYTES,
+  RIG_SPEC_FILES_MAX,
+  RigFileIdSchema,
   type RigFile,
   type RigFilesPush,
 } from '@appydave/shared';
@@ -22,6 +24,11 @@ import { specVariant, type SpecInfo } from './specs.js';
  *   - the REAL path (symlinks resolved) is a regular file whose real folder is still inside the
  *     configured spec folder's real path;
  *   - at most RIG_FILE_MAX_BYTES are read (a `truncated` flag says so), and the text is redacted.
+ *
+ * Scope `rig` (specCandidatesFor) adds only the files the rig's VALIDATED rig.yaml names, the way
+ * OpenRig resolves them (against the rig root, the folder holding rig.yaml): culture_file, docs[],
+ * and the rig, pod and member startup files. Each must be a safe relative path, .md/.yaml/.yml, and
+ * its real path must stay inside the rig root's real path.
  */
 
 const SPEC_NAMES = new Set([
@@ -58,7 +65,7 @@ const keepRank = (name: string): number =>
 export interface Candidate {
   id: string;
   name: string;
-  scope: 'spec' | 'mission';
+  scope: 'spec' | 'mission' | 'rig';
   /** The path to read. Only ever set here, from a directory listing under the configured folder. */
   path: string;
 }
@@ -149,6 +156,48 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   return out.filter((c) => keep.has(c));
 }
 
+/** Every path the rig.yaml names, in OpenRig's layer order, each once. */
+export function specNamedPaths(spec: SpecInfo): string[] {
+  const s = spec.spec;
+  if (!s) return [];
+  const paths = [
+    ...(s.culture_file ? [s.culture_file] : []),
+    ...(s.docs ?? []).map((d) => d.path),
+    ...(s.startup?.files ?? []).map((f) => f.path),
+    ...s.pods.flatMap((p) => [
+      ...(p.startup?.files ?? []).map((f) => f.path),
+      ...p.members.flatMap((m) => (m.startup?.files ?? []).map((f) => f.path)),
+    ]),
+  ].map((p) => p.trim().replace(/^\.\//, ''));
+  return [...new Set(paths)];
+}
+
+/** The files a rig's validated rig.yaml names (scope `rig`), each checked as described above. */
+export async function specCandidatesFor(spec: SpecInfo): Promise<Candidate[]> {
+  let rigRoot: string;
+  try {
+    rigRoot = await realpath(dirname(spec.path));
+  } catch {
+    return [];
+  }
+  const out: Candidate[] = [];
+  for (const rel of specNamedPaths(spec)) {
+    const id = `rig:${rel}`;
+    if (!EXT.test(rel) || !RigFileIdSchema.safeParse(id).success) continue; // absolute, `..`, odd names
+    let real: string;
+    try {
+      real = await realpath(join(rigRoot, rel));
+      if (!(await lstat(real)).isFile()) continue;
+    } catch {
+      continue; // named but absent: nothing to show
+    }
+    if (!isUnder(real, rigRoot)) continue; // a link out of the rig root
+    out.push({ id, name: rel, scope: 'rig', path: real });
+    if (out.length >= RIG_SPEC_FILES_MAX) break;
+  }
+  return out;
+}
+
 async function readCapped(
   path: string
 ): Promise<{ text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
@@ -175,9 +224,13 @@ async function readCapped(
   }
 }
 
-export async function readRigFiles(spec: SpecInfo): Promise<RigFile[]> {
+export async function readRigFiles(spec: SpecInfo, withSpecFiles = false): Promise<RigFile[]> {
   const files: RigFile[] = [];
-  for (const c of await candidatesFor(spec)) {
+  const cands = [
+    ...(await candidatesFor(spec)),
+    ...(withSpecFiles ? await specCandidatesFor(spec) : []),
+  ];
+  for (const c of cands) {
     const r = await readCapped(c.path);
     if (!r) continue;
     files.push({
@@ -246,15 +299,22 @@ export class RigFilesReader {
     this.lastScan = 0;
   }
 
-  async next(specs: Map<string, SpecInfo>): Promise<PendingRigFiles | null> {
+  /**
+   * `withSpecFiles`: also send scope `rig` files, only when the hub advertised HUB_CAPS.SPEC_FILES
+   * (an older hub's strict schema refuses a `rig:` id, and with it the whole push).
+   */
+  async next(specs: Map<string, SpecInfo>, withSpecFiles = false): Promise<PendingRigFiles | null> {
     if (this.now().getTime() - this.lastScan < this.ttlMs) return null;
     const pushes: RigFilesPush[] = [];
     const sigs = new Map<string, string>();
     let bytes = 0;
     let leftOver = false;
     for (const [rig, spec] of specs) {
-      const cands = await candidatesFor(spec);
-      const sig = (
+      const cands = [
+        ...(await candidatesFor(spec)),
+        ...(withSpecFiles ? await specCandidatesFor(spec) : []),
+      ];
+      const sig = `${withSpecFiles ? 'S' : '-'}|${(
         await Promise.all(
           cands.map(async (c) => {
             try {
@@ -265,13 +325,13 @@ export class RigFilesReader {
             }
           })
         )
-      ).join('|');
+      ).join('|')}`;
       if (this.sent.get(rig) === sig) continue;
       if (bytes >= RIG_FILES_TICK_BYTES) {
         leftOver = true; // the budget is spent: this rig goes out on the next tick
         continue;
       }
-      const files = await readRigFiles(spec);
+      const files = await readRigFiles(spec, withSpecFiles);
       bytes += files.reduce((n, f) => n + Buffer.byteLength(f.content), 0);
       pushes.push(...chunkRigFiles(this.machineId, rig, files, this.now().toISOString()));
       sigs.set(rig, sig);

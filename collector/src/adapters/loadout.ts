@@ -4,16 +4,23 @@ import { homedir } from 'node:os';
 import { basename, dirname, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import {
-  LOADOUT_LAYER_MAX_BYTES,
+  MEMBER_ENV_NAMES_MAX,
+  OpenRig,
+  SEAT_DOC_MAX_BYTES,
+  TOPOLOGY_DOCS_MAX,
+  TOPOLOGY_DOC_MAX_BYTES,
+  type AgentSpecView,
+  type MemberView,
+  type TopologyDoc,
   LOADOUT_SKILLS_MAX,
   shortSkillName,
-  type LoadoutLayer,
-  type LoadoutLayerId,
   type LoadoutSkill,
+  type SeatDoc,
+  type SeatDocId,
   type SeatLoadout,
   type SkillSource,
 } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactDeep, redactString } from '../redact.js';
 import { defaultProjectsDir, TranscriptIndex, type TranscriptFile } from './history.js';
 import type { SpecInfo } from './specs.js';
 
@@ -26,8 +33,10 @@ import type { SpecInfo } from './specs.js';
  * (foldListing), by an incremental scan (only bytes appended since the last scan). Each name is
  * then sorted by where it lives on this machine; nothing is guessed from folders alone.
  *
- * Prompt layers: a fixed set of names in fixed places (the seat's cwd, its agent spec folder, its
- * rig's spec folder), all read-only, capped and redacted. Folders come from the daemon (cwd,
+ * Seat documents: a fixed set of names in fixed places (the seat's cwd, its agent spec folder, its
+ * rig's spec folder, and RECAP / LEARNED from OpenRig's topology seat folder), all read-only, capped
+ * and redacted. The topology chain files at every altitude, the member's rig.yaml entry and its
+ * AgentSpec travel beside them (readTopologyDocs, memberOf, agentSpecOf). Folders come from the daemon (cwd,
  * agentRef) and from the collector's configured spec folders, never from a client.
  */
 
@@ -274,19 +283,20 @@ export async function trackedSkills(
   }
 }
 
-// ── prompt layers ──────────────────────────────────────────────────────────────────────────────
+// ── seat documents ─────────────────────────────────────────────────────────────────────────────
 
 const isUnder = (child: string, parent: string): boolean =>
   child === parent || child.startsWith(parent.endsWith(sep) ? parent : parent + sep);
 
-interface LayerSpot {
+interface DocSpot {
   path: string;
   /** The real file must stay inside this folder (symlinks resolved). */
   within: string;
 }
 
-async function readLayerFile(
-  spot: LayerSpot
+async function readDocFile(
+  spot: DocSpot,
+  maxBytes = SEAT_DOC_MAX_BYTES
 ): Promise<{ path: string; text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
   let real: string;
   let within: string;
@@ -301,7 +311,7 @@ async function readLayerFile(
   try {
     fh = await open(real, 'r');
     const st = await fh.stat();
-    const want = Math.min(st.size, LOADOUT_LAYER_MAX_BYTES);
+    const want = Math.min(st.size, maxBytes);
     const buf = Buffer.alloc(want);
     const { bytesRead } = await fh.read(buf, 0, want, 0);
     const slice = buf.subarray(0, bytesRead);
@@ -311,7 +321,7 @@ async function readLayerFile(
       text: slice.toString('utf8'),
       bytes: st.size,
       mtime: st.mtime,
-      truncated: st.size > LOADOUT_LAYER_MAX_BYTES,
+      truncated: st.size > maxBytes,
     };
   } catch {
     return null;
@@ -320,15 +330,15 @@ async function readLayerFile(
   }
 }
 
-/** The first of `spots` that exists, as a layer; absent (with where it looked) when none does. */
-async function layer(
-  id: LoadoutLayerId,
+/** The first of `spots` that exists, as a seat document; absent (with where it looked) when none does. */
+async function doc(
+  id: SeatDocId,
   name: string,
-  spots: LayerSpot[],
+  spots: DocSpot[],
   notes: string[] = []
-): Promise<LoadoutLayer> {
+): Promise<SeatDoc> {
   for (const spot of spots) {
-    const r = await readLayerFile(spot);
+    const r = await readDocFile(spot);
     if (r) {
       return {
         id,
@@ -359,28 +369,27 @@ async function layer(
 /** A plain file name (no folders, no dots-only), as rig.yaml `culture_file` should be. */
 const PLAIN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
-async function cultureName(spec: SpecInfo): Promise<string> {
-  try {
-    const doc = parse(await readFile(spec.path, 'utf8')) as { culture_file?: unknown } | null;
-    const c = doc?.culture_file;
-    if (typeof c === 'string' && PLAIN.test(c.trim())) return c.trim();
-  } catch {
-    // unreadable: the default name
-  }
-  return 'CULTURE.md';
+/** The rig.yaml `culture_file`, when the spec validates and names a plain file; else the default name. */
+function cultureName(spec: SpecInfo): string {
+  const c = spec.spec?.culture_file?.trim();
+  return c && PLAIN.test(c) ? c : 'CULTURE.md';
 }
 
-/** The role file the agent spec types in: its startup file named role.md, else guidance/role.md. */
-async function roleSpot(agentDir: string): Promise<LayerSpot> {
+/**
+ * The role file the agent spec delivers: its startup file marked `orientation: role` (OpenRig's own
+ * marker), else one named role.md, else guidance/role.md.
+ */
+async function roleSpot(agentDir: string): Promise<DocSpot> {
   let rel = 'guidance/role.md';
   try {
-    const doc = parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8')) as {
-      startup?: { files?: { path?: unknown }[] };
-    } | null;
-    const hit = doc?.startup?.files?.find(
-      (f) => typeof f?.path === 'string' && basename(f.path) === 'role.md'
+    const doc = OpenRig.AgentSpecSchema.safeParse(
+      parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8'))
     );
-    if (hit && typeof hit.path === 'string' && !hit.path.split('/').includes('..')) rel = hit.path;
+    const files = doc.success ? (doc.data.startup?.files ?? []) : [];
+    const hit =
+      files.find((f) => f.orientation === 'role') ??
+      files.find((f) => basename(f.path) === 'role.md');
+    if (hit && !hit.path.split('/').includes('..')) rel = hit.path;
   } catch {
     // no agent.yaml: the usual place
   }
@@ -392,46 +401,151 @@ export interface LoadoutSeat {
   rig: string | null;
   runtime: string | null;
   cwd: string | null;
+  /** `pod.member`, from the daemon; absent or null for a plain tmux seat. */
+  logicalId?: string | null;
 }
 
-export async function readLayers(
+/**
+ * The seat's folder name on OpenRig's topology tree: the session name's member leg, everything
+ * before the first `@` (`dev-build` for `dev-build@d09-crew`), as OpenRig's parseSessionName gives
+ * it. null for a session name that is not `<member>@<rig>`.
+ */
+export function topologySeatName(seat: LoadoutSeat): string | null {
+  const at = seat.id.indexOf('@');
+  return at > 0 && seat.rig ? seat.id.slice(0, at) : null;
+}
+
+/**
+ * OpenRig's topology root on this machine: APPYRIG_TOPOLOGY_ROOT, then OpenRig's own
+ * OPENRIG_TOPOLOGY_ROOT, then `$OPENRIG_HOME/topology` (default `~/.openrig/topology`), as
+ * OpenRig's config-store defaults it. A `topology.root` set only in OpenRig's config.json is not
+ * read (the collector reads no OpenRig config): set APPYRIG_TOPOLOGY_ROOT to match it.
+ */
+export function topologyRootOf(env: NodeJS.ProcessEnv, home: string = homedir()): string {
+  const set = (k: string) => env[k]?.trim() || null;
+  return (
+    set('APPYRIG_TOPOLOGY_ROOT') ??
+    set('OPENRIG_TOPOLOGY_ROOT') ??
+    join(set('OPENRIG_HOME') ?? join(home, '.openrig'), 'topology')
+  );
+}
+
+export async function readSeatDocs(
   seat: LoadoutSeat,
   spec: SpecInfo | undefined,
-  agentDir: string | undefined
-): Promise<LoadoutLayer[]> {
+  agentDir: string | undefined,
+  topologyRoot: string | null = null
+): Promise<SeatDoc[]> {
   const cwd = seat.cwd;
   const specDir = spec ? dirname(spec.path) : null;
-  const inCwd = (name: string): LayerSpot[] =>
-    cwd ? [{ path: join(cwd, name), within: cwd }] : [];
-  const inSpec = (name: string): LayerSpot[] =>
+  const inCwd = (name: string): DocSpot[] => (cwd ? [{ path: join(cwd, name), within: cwd }] : []);
+  const inSpec = (name: string): DocSpot[] =>
     specDir && spec ? [{ path: join(specDir, name), within: spec.root }] : [];
   const noSpec = specDir ? [] : ['(no rig.yaml found for this rig in the configured spec folders)'];
   const noCwd = cwd ? [] : ['(the daemon reports no folder for this seat)'];
-  const member = seat.id.split('@')[0] ?? seat.id;
+  const seatName = topologySeatName(seat);
+  const seatDir =
+    topologyRoot && seat.rig && seatName
+      ? join(topologyRoot, OpenRig.topologyDir({ altitude: 'seat', rig: seat.rig, seat: seatName }))
+      : null;
+  const inSeat = (name: string): DocSpot[] =>
+    seatDir && topologyRoot ? [{ path: join(seatDir, name), within: topologyRoot }] : [];
+  const noSeat = seatDir
+    ? []
+    : [
+        topologyRoot
+          ? '(this seat has no <member>@<rig> session name, so no topology seat folder)'
+          : '(no OpenRig topology root on this machine)',
+      ];
 
   return [
-    await layer('culture', 'CULTURE.md', spec ? inSpec(await cultureName(spec)) : [], noSpec),
-    await layer(
+    await doc('culture', 'CULTURE.md', spec ? inSpec(cultureName(spec)) : [], noSpec),
+    await doc(
       'role',
       'role.md',
       agentDir ? [await roleSpot(agentDir)] : [],
       agentDir ? [] : ['(the daemon reports no agent spec folder for this seat)']
     ),
-    await layer('claude-md', 'CLAUDE.md', inCwd('CLAUDE.md'), noCwd),
-    await layer('claude-local', 'CLAUDE.local.md', inCwd('CLAUDE.local.md'), noCwd),
-    await layer(
-      'recap',
-      'RECAP.md',
-      [...inCwd('RECAP.md'), ...inSpec('RECAP.md')],
-      [...noCwd, ...noSpec]
-    ),
-    await layer(
-      'learned',
-      `LEARNED-${member}.md`,
-      [...inSpec(`LEARNED-${member}.md`), ...inSpec('LEARNED.md'), ...inCwd('LEARNED.md')],
-      [...noSpec, ...noCwd]
-    ),
+    await doc('claude-md', 'CLAUDE.md', inCwd('CLAUDE.md'), noCwd),
+    await doc('claude-local', 'CLAUDE.local.md', inCwd('CLAUDE.local.md'), noCwd),
+    // OpenRig keeps both on the seat's topology folder (seat-recap-store.ts, rebuild-priming-chain.ts),
+    // never beside rig.yaml or in the cwd: those copies are a crew's own and are not read here.
+    await doc('recap', 'RECAP.md', inSeat('RECAP.md'), noSeat),
+    await doc('learned', 'LEARNED.md', inSeat('LEARNED.md'), noSeat),
   ];
+}
+
+/**
+ * Every topology chain file that applies to the seat, root first (instance, rig, pod, seat), present
+ * files only. RECAP.md is read at the seat altitude only, where OpenRig keeps it.
+ */
+export async function readTopologyDocs(
+  seat: LoadoutSeat,
+  topologyRoot: string | null
+): Promise<TopologyDoc[]> {
+  if (!topologyRoot || !seat.rig) return [];
+  const pod = seat.logicalId?.includes('.') ? seat.logicalId.split('.')[0]! : null;
+  const out: TopologyDoc[] = [];
+  for (const node of OpenRig.topologyTrace(seat.rig, pod, topologySeatName(seat))) {
+    const dir = join(topologyRoot, OpenRig.topologyDir(node));
+    for (const name of OpenRig.TOPOLOGY_CHAIN_FILES) {
+      if (name === 'RECAP.md' && node.altitude !== 'seat') continue;
+      const r = await readDocFile(
+        { path: join(dir, name), within: topologyRoot },
+        TOPOLOGY_DOC_MAX_BYTES
+      );
+      if (!r) continue;
+      out.push({
+        altitude: node.altitude,
+        name,
+        path: r.path,
+        bytes: r.bytes,
+        modifiedAt: r.mtime.toISOString(),
+        truncated: r.truncated,
+        content: redactString(r.text),
+      });
+      if (out.length >= TOPOLOGY_DOCS_MAX) return out;
+    }
+  }
+  return out;
+}
+
+/** The seat's member entry in a validated rig.yaml, found by its logical id `pod.member`. */
+export function memberOf(
+  spec: SpecInfo | undefined,
+  logicalId: string | null | undefined
+): MemberView | null {
+  const [podId, memberId] = logicalId?.split('.') ?? [];
+  const pod = spec?.spec?.pods.find((p) => p.id === podId);
+  const m = pod?.members.find((x) => x.id === memberId);
+  if (!pod || !m) return null;
+  const { env, ...rest } = m;
+  const out: MemberView = { ...redactDeep(rest), pod: pod.id };
+  if (env) out.envNames = Object.keys(env).slice(0, MEMBER_ENV_NAMES_MAX);
+  return out;
+}
+
+/** The AgentSpec at the seat's agent_ref, with only the member's profile. null when absent or refused. */
+export async function agentSpecOf(
+  agentDir: string | undefined,
+  profileName: string | null
+): Promise<AgentSpecView | null> {
+  if (!agentDir) return null;
+  let parsed;
+  try {
+    parsed = OpenRig.AgentSpecSchema.safeParse(
+      parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8'))
+    );
+  } catch {
+    return null;
+  }
+  if (!parsed.success) return null;
+  const { profiles, ...rest } = parsed.data;
+  return redactDeep({
+    ...rest,
+    profileName,
+    profile: (profileName && profiles?.[profileName]) || null,
+  });
 }
 
 // ── the reader ─────────────────────────────────────────────────────────────────────────────────
@@ -448,6 +562,8 @@ export interface LoadoutReaderOptions {
   exec: Exec;
   now?: () => Date;
   ttlMs?: number;
+  /** OpenRig's topology root (topologyRootOf); null = not resolved, nothing read from it. */
+  topologyRoot?: string | null;
 }
 
 /**
@@ -462,6 +578,7 @@ export class LoadoutReader {
   private readonly exec: Exec;
   private readonly now: () => Date;
   private readonly ttlMs: number;
+  private readonly topologyRoot: string | null;
   private lastScan = 0;
   /** seat → skillCount from the latest scan (null: Codex, or no listing). Kept for the snapshot's pill. */
   private counts = new Map<string, number | null>();
@@ -477,6 +594,7 @@ export class LoadoutReader {
     this.exec = opts.exec;
     this.now = opts.now ?? (() => new Date());
     this.ttlMs = opts.ttlMs ?? 30_000;
+    this.topologyRoot = opts.topologyRoot ?? null;
   }
 
   /** The latest skillCount per seat this reader has scanned (the pill); empty before the first scan. */
@@ -548,12 +666,21 @@ export class LoadoutReader {
     const counts = new Map<string, number | null>();
     const names = new Map<string, string[]>();
     for (const seat of seats) {
+      const spec = seat.rig ? specs.get(seat.rig) : undefined;
+      const member = memberOf(spec, seat.logicalId);
       const base = {
         machineId: this.machineId,
         seat: seat.id,
         collectedAt: this.now().toISOString(),
         runtime: seat.runtime,
         cwd: seat.cwd,
+      };
+      // What OpenRig gave the seat, for every runtime (stripped for a hub without HUB_CAPS.SEAT_SPEC).
+      const given = {
+        topologyRoot: this.topologyRoot,
+        topologyDocs: await readTopologyDocs(seat, this.topologyRoot),
+        member,
+        agentSpec: await agentSpecOf(agentDirs.get(seat.id), member?.profile ?? null),
       };
       let loadout: SeatLoadout;
       if (seat.runtime !== 'claude-code') {
@@ -565,6 +692,7 @@ export class LoadoutReader {
           cwdExists: null,
           skills: [],
           layers: [],
+          ...given,
         };
       } else {
         let best: { listing: ShownSkills; count: number; path: string } | null = null;
@@ -601,11 +729,8 @@ export class LoadoutReader {
           cwdIsGitRepo: where?.exists ? where.isRepo : null,
           cwdExists: where ? where.exists : null,
           skills: best ? classifySkills(best.listing.names, places) : [],
-          layers: await readLayers(
-            seat,
-            seat.rig ? specs.get(seat.rig) : undefined,
-            agentDirs.get(seat.id)
-          ),
+          layers: await readSeatDocs(seat, spec, agentDirs.get(seat.id), this.topologyRoot),
+          ...given,
         };
       }
       counts.set(seat.id, loadout.listing?.skillCount ?? null);

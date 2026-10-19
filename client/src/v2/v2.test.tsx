@@ -159,19 +159,13 @@ describe('v2 version switch', () => {
     fireEvent.click(screen.getByTestId('v2-page-graph'));
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-no-v2')).toBeNull();
-    // the nav has no Rig Map entry: `map` is an alias that opens the Graph with the chosen rig open
-    expect(screen.queryByTestId('v2-page-map')).toBeNull();
-    expect(groupOf('map')).toBe('fleet');
-    fireEvent.click(screen.getByTestId('v2-page-wall'));
-    fireEvent.keyDown(document.body, { key: 'v' }); // Current
-    fireEvent.click(screen.getByTestId('view-map'));
-    fireEvent.keyDown(document.body, { key: 'v' }); // v2: the alias page
-    expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
-    expect(screen.getAllByTestId('g2-inside').length).toBeGreaterThan(0);
-    // the Graph's own sub-link is the lit one
-    expect(
-      document.querySelector('[data-testid="v2-nav"] [aria-current="page"]')?.textContent
-    ).toBe('Graph');
+    // the Rig Map is its own page in the Work group, next to Handoff Flow
+    fireEvent.click(screen.getByTestId('v2-group-work'));
+    expect(screen.getByTestId('v2-page-map')).toBeInTheDocument();
+    expect(groupOf('map')).toBe('work');
+    fireEvent.click(screen.getByTestId('v2-page-map'));
+    expect(screen.getByTestId('v2-rigmap')).toBeInTheDocument();
+    expect(screen.queryByTestId('v2-graph')).toBeNull();
   });
 });
 

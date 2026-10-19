@@ -13,6 +13,16 @@ const hasRig = (() => {
   }
 })();
 
+// plutil is a macOS tool: the plist is only read by launchd, so it is linted only where plutil exists.
+const hasPlutil = (() => {
+  try {
+    execFileSync('/bin/sh', ['-c', 'command -v plutil'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 /** Install script, written to a temp plist dir and never loaded (--no-load). */
 const SCRIPTS = resolve(import.meta.dirname, '../scripts');
 
@@ -44,7 +54,8 @@ describe('launchd install script', () => {
   it('writes a valid plist with absolute paths, a PATH, RunAtLoad and KeepAlive', () => {
     const { dir, token } = install(['--label', 'com.appydave.appyrig.collector.unittest']);
     const plist = join(dir, 'com.appydave.appyrig.collector.unittest.plist');
-    execFileSync('plutil', ['-lint', plist]);
+    if (hasPlutil) execFileSync('plutil', ['-lint', plist]);
+    else expect(readFileSync(plist, 'utf8')).toMatch(/^<\?xml[^>]*\?>\s*<!DOCTYPE plist/);
     const xml = readFileSync(plist, 'utf8');
     expect(xml).toContain('<key>RunAtLoad</key><true/>');
     // launchd sets no locale; tmux mangles control characters without a UTF-8 one

@@ -683,7 +683,7 @@ const VERB_SET = {
   ),
 
   'seat.loadout': query(
-    "What one seat runs with, for the Debug view: the skills Claude Code listed to it (the newest full skill_listing in its transcript plus its later additions, counted once each; each sorted by source: role, repo, personal, plugin, builtin, or unplaced when the seat's folder is gone; same-named copies flagged) and its prompt-layer files, present or absent. Listed = available to the model; which skills were used is not reported. status: 'not-claude' (Codex and terminal seats are not read yet), 'no-listing' (no skill listing found), 'pending' (no loadout from this machine's collector for this seat: older than v1.5, or not sent yet).",
+    "What one seat runs with, for the Debug view: the skills Claude Code listed to it (the newest full skill_listing in its transcript plus its later additions, counted once each; each sorted by source: role, repo, personal, plugin, builtin, or unplaced when the seat's folder is gone; same-named copies flagged) and its documents (culture, role, CLAUDE.md, CLAUDE.local.md, recap, learned), present or absent. Listed = available to the model; which skills were used is not reported. status: 'not-claude' (Codex and terminal seats are not read yet), 'no-listing' (no skill listing found), 'pending' (no loadout from this machine's collector for this seat: older than v1.5, or not sent yet).",
     SeatLoadoutInputSchema,
     SeatLoadoutOutputSchema,
     SEAT_NOT_FOUND,
@@ -1078,7 +1078,7 @@ const VERB_SET = {
   ),
 
   'rig.files': query(
-    "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
+    "The files of a rig that its collector found next to its rig.yaml (rig.yaml, MISSION.md, CULTURE.md, LEARNED*.md, brief.md, REPORT.md, DEBRIEF.md; the spec's folder and its mission folder), and in specFiles the files the rig.yaml itself names (culture_file, docs[], rig / pod / member startup files; ids like rig:guidance/role.md). Names and sizes only; read one with rig.file. status says why a list is empty: 'no-spec' (no rig.yaml found for it), 'no-data' (older collector), 'pending' (found, not received yet).",
     RigFilesInputSchema,
     RigFilesOutputSchema,
     RIG_NOT_FOUND,
@@ -1096,13 +1096,17 @@ const VERB_SET = {
           }
         );
       }
-      const out = (status: RigFilesOutput['status'], reason: string | null) => ({
-        machine: input.machine,
-        rig: input.rig,
-        status,
-        reason,
-        files: ctx.store.rigFiles.list(input.machine, input.rig),
-      });
+      const out = (status: RigFilesOutput['status'], reason: string | null): RigFilesOutput => {
+        const specFiles = ctx.store.rigFiles.listSpecNamed(input.machine, input.rig);
+        return {
+          machine: input.machine,
+          rig: input.rig,
+          status,
+          reason,
+          files: ctx.store.rigFiles.list(input.machine, input.rig),
+          ...(specFiles.length > 0 ? { specFiles } : {}),
+        };
+      };
       if (rig.specStatus === undefined)
         return out(
           'no-data',

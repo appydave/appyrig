@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import * as OpenRig from './openrig/index.js';
 import { MachineIdentitySchema } from './snapshot.js';
 
 /**
@@ -6,7 +7,7 @@ import { MachineIdentitySchema } from './snapshot.js';
  *   - the skills Claude Code listed to the model: the newest full `skill_listing` in the seat's
  *     own transcript plus its later additions (not a guess from folders), each sorted by where it
  *     came from;
- *   - the prompt-layer files, present or absent, with their text for the file viewer.
+ *   - the seat's documents, present or absent, with their text for the file viewer.
  *
  * Listed means available to the model. Which skills were used is not reported here.
  *
@@ -21,8 +22,8 @@ const isoDate = z.iso.datetime({ offset: true });
 /** Most skill names kept per seat. Claude Code listed ~313 on the M2 in Oct 2026. */
 export const LOADOUT_SKILLS_MAX = 2000;
 
-/** Most text kept per prompt-layer file: six of them stay well under socket.io's 1 MB message limit. */
-export const LOADOUT_LAYER_MAX_BYTES = 96 * 1024;
+/** Most text kept per seat document: all of them stay well under socket.io's 1 MB message limit. */
+export const SEAT_DOC_MAX_BYTES = 96 * 1024;
 
 /**
  * Where a listed skill came from:
@@ -58,8 +59,15 @@ export const LoadoutSkillSchema = z.strictObject({
 });
 export type LoadoutSkill = z.infer<typeof LoadoutSkillSchema>;
 
-/** The prompt layers looked for, in the order a seat receives them. */
-export const LoadoutLayerIdSchema = z.enum([
+/**
+ * A seat's documents: the files AppyRig looks for that shape what the seat is told (its culture,
+ * role, CLAUDE.md / CLAUDE.local.md, recap, learned notes). These are file-presence checks, NOT
+ * OpenRig's startup layers (agent → profile → culture → rig → pod → member → operator, see
+ * `OpenRig.STARTUP_LAYERS`), so they are not called layers. The wire key stays `layers`.
+ *
+ * The ids, in the order a seat receives them.
+ */
+export const SeatDocIdSchema = z.enum([
   'culture',
   'role',
   'claude-md',
@@ -67,10 +75,10 @@ export const LoadoutLayerIdSchema = z.enum([
   'recap',
   'learned',
 ]);
-export type LoadoutLayerId = z.infer<typeof LoadoutLayerIdSchema>;
+export type SeatDocId = z.infer<typeof SeatDocIdSchema>;
 
-export const LoadoutLayerSchema = z.strictObject({
-  id: LoadoutLayerIdSchema,
+export const SeatDocSchema = z.strictObject({
+  id: SeatDocIdSchema,
   /** The file name found, or the one looked for when absent. */
   name: z.string().min(1).max(120),
   present: z.boolean(),
@@ -80,12 +88,23 @@ export const LoadoutLayerSchema = z.strictObject({
   looked: z.array(z.string().max(1024)).max(8),
   bytes: z.number().int().nonnegative().nullable(),
   modifiedAt: isoDate.nullable(),
-  /** True when content was cut at LOADOUT_LAYER_MAX_BYTES. */
+  /** True when content was cut at SEAT_DOC_MAX_BYTES. */
   truncated: z.boolean(),
   /** Redacted text; null when absent. */
   content: z.string().nullable(),
 });
-export type LoadoutLayer = z.infer<typeof LoadoutLayerSchema>;
+export type SeatDoc = z.infer<typeof SeatDocSchema>;
+
+/** @deprecated Old names, kept so the client compiles unchanged; use the SeatDoc names. */
+export const LOADOUT_LAYER_MAX_BYTES = SEAT_DOC_MAX_BYTES;
+/** @deprecated Use SeatDocIdSchema. */
+export const LoadoutLayerIdSchema = SeatDocIdSchema;
+/** @deprecated Use SeatDocId. */
+export type LoadoutLayerId = SeatDocId;
+/** @deprecated Use SeatDocSchema. */
+export const LoadoutLayerSchema = SeatDocSchema;
+/** @deprecated Use SeatDoc. */
+export type LoadoutLayer = SeatDoc;
 
 /**
  * `ok`          — a skill listing was read
@@ -94,6 +113,63 @@ export type LoadoutLayer = z.infer<typeof LoadoutLayerSchema>;
  */
 export const LoadoutStatusSchema = z.enum(['ok', 'no-listing', 'not-claude']);
 export type LoadoutStatus = z.infer<typeof LoadoutStatusSchema>;
+
+// ── what OpenRig gave the seat: its member spec, its AgentSpec, its topology chain files ────────
+
+/** Most text kept per topology chain file. */
+export const TOPOLOGY_DOC_MAX_BYTES = 32 * 1024;
+/** Most topology chain files kept per seat (instance → rig → pod → seat, present files only). */
+export const TOPOLOGY_DOCS_MAX = 16;
+
+/**
+ * One chain file on OpenRig's topology tree that applies to this seat, read from
+ * `<topology.root>` (instance), `rigs/<rig>`, `rigs/<rig>/pods/<pod>` or `rigs/<rig>/seats/<seat>`
+ * (see OpenRig.topologyTrace). Present files only. Collector-set, redacted, capped.
+ */
+export const TopologyDocSchema = z.strictObject({
+  altitude: OpenRig.TopologyAltitudeSchema,
+  /** `LEARNED.md`, `CRAFT.md`, `ORCHESTRATION-CRAFT.md`, `CULTURE.md` or `RECAP.md`. */
+  name: z.string().min(1).max(120),
+  path: z.string().min(1).max(1024),
+  bytes: z.number().int().nonnegative(),
+  modifiedAt: isoDate,
+  /** True when content was cut at TOPOLOGY_DOC_MAX_BYTES. */
+  truncated: z.boolean(),
+  content: z.string(),
+});
+export type TopologyDoc = z.infer<typeof TopologyDocSchema>;
+
+/** Most env names listed for a member. */
+export const MEMBER_ENV_NAMES_MAX = 100;
+
+/**
+ * The seat's member entry in rig.yaml: OpenRig's MemberSpec as authored, plus the pod it sits in,
+ * with env reduced to its names. Collector-set from a rig.yaml OpenRig would accept.
+ */
+export const MemberViewSchema = OpenRig.MemberSpecSchema.omit({ env: true }).extend({
+  pod: z.string().min(1),
+  envNames: z.array(z.string().min(1).max(120)).max(MEMBER_ENV_NAMES_MAX).optional(),
+});
+export type MemberView = z.infer<typeof MemberViewSchema>;
+
+/**
+ * The seat's AgentSpec (agent.yaml at its agent_ref), as authored, with only the profile the
+ * member picked (`profileName`; `profile` null when the spec has no such profile).
+ */
+export const AgentSpecViewSchema = OpenRig.AgentSpecSchema.pick({
+  name: true,
+  version: true,
+  description: true,
+  summary: true,
+  defaults: true,
+  imports: true,
+  resources: true,
+  startup: true,
+}).extend({
+  profileName: z.string().min(1).nullable(),
+  profile: OpenRig.AgentProfileSchema.nullable(),
+});
+export type AgentSpecView = z.infer<typeof AgentSpecViewSchema>;
 
 export const SeatLoadoutSchema = z.strictObject({
   machineId: MachineIdentitySchema.shape.id,
@@ -128,9 +204,29 @@ export const SeatLoadoutSchema = z.strictObject({
   /** False when the seat's folder no longer exists; null when the daemon reports none. */
   cwdExists: z.boolean().nullable(),
   skills: z.array(LoadoutSkillSchema).max(LOADOUT_SKILLS_MAX),
-  layers: z.array(LoadoutLayerSchema).max(6),
+  /** The seat's documents (wire key kept as `layers` for the client). */
+  layers: z.array(SeatDocSchema).max(6),
+  /**
+   * Seat-spec fields, sent ONLY to a hub that advertised HUB_CAPS.SEAT_SPEC (see stripSeatSpec).
+   * Absent = not said. `topologyRoot`: where the topology tree was looked for (null: not resolved).
+   */
+  topologyRoot: z.string().max(1024).nullable().optional(),
+  topologyDocs: z.array(TopologyDocSchema).max(TOPOLOGY_DOCS_MAX).optional(),
+  /** null: no validated rig.yaml names this seat. */
+  member: MemberViewSchema.nullable().optional(),
+  /** null: no agent.yaml OpenRig would accept at the seat's agent_ref. */
+  agentSpec: AgentSpecViewSchema.nullable().optional(),
 });
 export type SeatLoadout = z.infer<typeof SeatLoadoutSchema>;
+
+export const SEAT_SPEC_KEYS = ['topologyRoot', 'topologyDocs', 'member', 'agentSpec'] as const;
+
+/** The loadout as a hub without HUB_CAPS.SEAT_SPEC accepts it: every seat-spec key removed. */
+export function stripSeatSpec(loadout: SeatLoadout): SeatLoadout {
+  return Object.fromEntries(
+    Object.entries(loadout).filter(([k]) => !(SEAT_SPEC_KEYS as readonly string[]).includes(k))
+  ) as SeatLoadout;
+}
 
 // ── verb ───────────────────────────────────────────────────────────────────────────────────────
 

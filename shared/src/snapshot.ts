@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AccountDerivedSchema } from './accounts.js';
 import { MachineHealthSchema } from './health.js';
+import * as OpenRig from './openrig/index.js';
 
 /**
  * The AppyRig snapshot contract (P0b).
@@ -165,6 +166,54 @@ export const RigEdgeSchema = z.strictObject({
 });
 export type RigEdge = z.infer<typeof RigEdgeSchema>;
 
+/** Most pods kept per rig. */
+export const RIG_PODS_MAX = 50;
+/** Most members listed per pod. */
+export const POD_MEMBERS_MAX = 200;
+
+/**
+ * A POD as the rig's rig.yaml defines it: OpenRig's own PodSpec (snake_case, as authored), minus its
+ * full member specs, which are listed by id (seats carry the rest). `edges` are the pod-local edges,
+ * between bare member ids. Collector-set from a rig.yaml that OpenRig would accept; text redacted.
+ */
+export const RigPodSchema = OpenRig.PodSpecSchema.pick({
+  id: true,
+  label: true,
+  summary: true,
+  continuity_policy: true,
+  startup: true,
+  edges: true,
+}).extend({
+  /** The pod's member ids in rig.yaml order (`build`, not `dev.build`). */
+  members: z.array(z.string().min(1)).max(POD_MEMBERS_MAX),
+});
+export type RigPod = z.infer<typeof RigPodSchema>;
+
+/** Most env names listed for a rig. */
+export const RIG_ENV_NAMES_MAX = 100;
+
+/**
+ * The rig-level part of rig.yaml: OpenRig's own RigSpec fields (snake_case, as authored), minus
+ * name / summary (on RigSummary already), pods and edges (RigSummary.pods / specEdges), and env
+ * VALUES: only the names travel (`envNames`). Collector-set from a rig.yaml OpenRig would accept;
+ * text redacted.
+ */
+export const RigSpecViewSchema = OpenRig.RigSpecSchema.pick({
+  version: true,
+  culture_file: true,
+  non_interruptive: true,
+  permission_policy: true,
+  managed_blocks: true,
+  docs: true,
+  startup: true,
+  services: true,
+  workspace: true,
+}).extend({
+  /** The names of rig.yaml `env`, never the values. */
+  envNames: z.array(z.string().min(1).max(120)).max(RIG_ENV_NAMES_MAX).optional(),
+});
+export type RigSpecView = z.infer<typeof RigSpecViewSchema>;
+
 export const RigSummarySchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -198,6 +247,23 @@ export const RigSummarySchema = z.strictObject({
    * `[]` = OpenRig has none for this rig.
    */
   edges: z.array(RigEdgeSchema).max(RIG_EDGES_MAX).optional(),
+  /**
+   * Spec fields, collector-set from the matched rig.yaml and sent ONLY to a hub that advertised
+   * HUB_CAPS.SPEC_FIELDS (see stripSpecFields). Absent = not said.
+   *
+   * `specValid`: the matched rig.yaml passes OpenRig's RigSpec schema. false = OpenRig would refuse
+   * it, and `pods` / `specEdges` are then left out rather than read from a file OpenRig rejects.
+   */
+  specValid: z.boolean().optional(),
+  /** The rig's pods, in rig.yaml order, with their pod-local edges. */
+  pods: z.array(RigPodSchema).max(RIG_PODS_MAX).optional(),
+  /**
+   * The rig-level (cross-pod) edges as authored: `pod.member` → `pod.member`, kind an OpenRig
+   * EdgeKind. Unlike `edges` (OpenRig's graph, seat to seat), these include seats with no session yet.
+   */
+  specEdges: z.array(OpenRig.CrossPodEdgeSchema).max(RIG_EDGES_MAX).optional(),
+  /** The rest of the rig.yaml at rig level: culture_file, docs[], workspace, services, startup… */
+  rigSpec: RigSpecViewSchema.optional(),
   /** Hub-set from AppyRig's own config file (never from OpenRig); the UI falls back to `name`. */
   displayName: z.string().min(1).max(80).optional(),
   /** Hub-set, as displayName. */
@@ -341,6 +407,12 @@ export const HUB_CAPS = {
   DAEMONDATA: 'daemondata',
   /** The hub listens for `collector:missionfiles`. */
   MISSIONFILES: 'missionfiles',
+  /** The snapshot's rigs may carry SPEC_RIG_KEYS (pods, spec edges, rig spec, from rig.yaml). */
+  SPEC_FIELDS: 'spec-fields',
+  /** `collector:rigfiles` may carry scope `rig` files (the ones rig.yaml names). */
+  SPEC_FILES: 'spec-files',
+  /** `collector:loadout` may carry SEAT_SPEC_KEYS (member spec, AgentSpec, topology chain files). */
+  SEAT_SPEC: 'seat-spec',
 } as const;
 
 export const V2_SEAT_KEYS = ['tmuxAttachCommand'] as const;
@@ -363,7 +435,28 @@ export function stripV2Fields(snapshot: MachineSnapshot): MachineSnapshot {
   };
 }
 
-/** True when a hub refusal message names a v2-only key (an older strict hub: "Unrecognized key"). */
+export const SPEC_RIG_KEYS = ['specValid', 'pods', 'specEdges', 'rigSpec'] as const;
+
+/** The snapshot as a hub without HUB_CAPS.SPEC_FIELDS accepts it: every spec-only rig key removed. */
+export function stripSpecFields(snapshot: MachineSnapshot): MachineSnapshot {
+  return {
+    ...snapshot,
+    rigs: snapshot.rigs.map(
+      (r) =>
+        Object.fromEntries(
+          Object.entries(r).filter(([k]) => !(SPEC_RIG_KEYS as readonly string[]).includes(k))
+        ) as RigSummary
+    ),
+  };
+}
+
+/**
+ * True when a hub refusal message names a v2-only or spec-only key (an older strict hub:
+ * "Unrecognized key").
+ */
 export function namesV2Key(message: string): boolean {
-  return [...V2_SEAT_KEYS, ...V2_QUEUE_KEYS].some((k) => message.includes(k));
+  return (
+    [...V2_SEAT_KEYS, ...V2_QUEUE_KEYS].some((k) => message.includes(k)) ||
+    SPEC_RIG_KEYS.some((k) => message.includes(`"${k}"`))
+  );
 }

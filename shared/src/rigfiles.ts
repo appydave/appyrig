@@ -16,6 +16,11 @@ export const RIG_FILE_MAX_BYTES = 256 * 1024;
 /** Most files kept per rig. */
 export const RIG_FILES_MAX = 16;
 /**
+ * Most spec-named files kept per rig (scope `rig`), on top of RIG_FILES_MAX: the files its validated
+ * rig.yaml names (culture_file, docs[], rig / pod / member startup files).
+ */
+export const RIG_SPEC_FILES_MAX = 16;
+/**
  * A push is split into messages no bigger than this (content bytes), so one message stays well
  * under socket.io's default 1 MB limit. An older hub that cannot take a big message would drop the
  * whole connection, which would also stop snapshots.
@@ -24,16 +29,29 @@ export const RIG_FILES_CHUNK_BYTES = 700 * 1024;
 
 const isoDate = z.iso.datetime({ offset: true });
 
-/** `spec:rig.yaml` (the spec's own folder) or `mission:MISSION.md` (its parent folder). Names only, never a path. */
+/**
+ * `spec:rig.yaml` (the spec's own folder) or `mission:MISSION.md` (its parent folder): names only.
+ * `rig:guidance/build-first-move.md`: a file the rig's rig.yaml names, as the safe relative path
+ * written there (resolved against the rig root, as OpenRig does). Never an absolute path, never `..`.
+ */
 export const RigFileIdSchema = z
   .string()
-  .regex(/^(spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/, 'a file id like spec:rig.yaml')
+  .regex(
+    /^(?:(?:spec|mission):[A-Za-z0-9][A-Za-z0-9._-]{0,79}|rig:[A-Za-z0-9][A-Za-z0-9._-]*(?:\/[A-Za-z0-9][A-Za-z0-9._-]*){0,7})$/,
+    'a file id like spec:rig.yaml'
+  )
+  .max(164)
   .refine((s) => !s.includes('..'), 'a file id has no ".."');
 
 export const RigFileMetaSchema = z.strictObject({
   id: RigFileIdSchema,
-  name: z.string().min(1).max(80),
-  scope: z.enum(['spec', 'mission']),
+  /** The file name; for scope `rig`, the relative path as rig.yaml writes it. */
+  name: z.string().min(1).max(160),
+  /**
+   * `spec` / `mission`: a name on AppyRig's allowlist, beside rig.yaml or in its parent folder.
+   * `rig`: named by the validated rig.yaml itself (sent only to a hub with HUB_CAPS.SPEC_FILES).
+   */
+  scope: z.enum(['spec', 'mission', 'rig']),
   /** Size on disk. */
   bytes: z.number().int().nonnegative(),
   modifiedAt: isoDate,
@@ -51,7 +69,7 @@ export const RigFilesPushSchema = z.strictObject({
   collectedAt: isoDate,
   rig: z.string().min(1),
   replace: z.boolean(),
-  files: z.array(RigFileSchema).max(RIG_FILES_MAX),
+  files: z.array(RigFileSchema).max(RIG_FILES_MAX + RIG_SPEC_FILES_MAX),
 });
 export type RigFilesPush = z.infer<typeof RigFilesPushSchema>;
 
@@ -74,7 +92,13 @@ export const RigFilesOutputSchema = z.strictObject({
   rig: z.string(),
   status: z.enum(['ok', 'no-spec', 'no-data', 'pending']),
   reason: z.string().nullable(),
+  /** The allowlisted files (scopes spec and mission), as before. */
   files: z.array(RigFileMetaSchema),
+  /**
+   * The files the rig's rig.yaml names (scope `rig`): culture_file, docs[], rig / pod / member
+   * startup files. Absent when the collector sent none (older collector, or a refused rig.yaml).
+   */
+  specFiles: z.array(RigFileMetaSchema).optional(),
 });
 export type RigFilesOutput = z.infer<typeof RigFilesOutputSchema>;
 

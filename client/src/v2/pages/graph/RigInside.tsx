@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
 import { ago, PIP } from '../../../fleet/model.js';
 import { callVerb } from '../../../fleet/coreCall.js';
@@ -18,17 +18,14 @@ import {
 } from '../../kit/index.js';
 import { mapPairs, type MapPair } from '../rig-map/lines.js';
 import type { GraphRig } from './model.js';
-import { TerminalCard, tailLine } from '../../kit/index.js';
+import { TerminalCard, WallCard, tailLine } from '../../kit/index.js';
+import { cardBody } from '../wall/model.js';
 import { findTile } from '../../seats.js';
-
-/** What the page shows of a rig: names (middle zoom) or full compact cards with lines (near). */
-export type InsideLevel = 'pods' | 'cards';
 
 interface Props {
   map: RigMap;
   /** The box's own numbers, so the open rig has ONE header line (not the box meta and a status). */
   rig: GraphRig;
-  level: InsideLevel;
   socket: FleetSocket;
   /** Every machine, for each agent's terminal tail. */
   machines: FleetMachine[];
@@ -40,6 +37,12 @@ interface Props {
   onDocs?: (seatKey: string) => void;
   /** A line was clicked: show its handoffs in the page's drawer. */
   onPin: (title: string, items: QueueItem[]) => void;
+  /**
+   * The Rig Map's roomy look: Wall cards (the V1 body), bigger pods, and heavier, clearly labelled
+   * handoff lines. `fresh` words a machine's freshness for a card's footer. The Graph leaves it off
+   * and keeps the compact cards.
+   */
+  roomy?: { fresh: (m: FleetMachine) => string };
 }
 
 /** A person, not an agent: `human@kernel`, `operator-human`. */
@@ -64,6 +67,18 @@ interface Arc {
 
 const LEVEL_STEP = 12;
 const LIFT_BASE = 14;
+/** The roomy (Rig Map) scale: lines are drawn heavier and labels bigger, with more room for the arcs. */
+const ROOMY = {
+  step: 30,
+  base: 54,
+  stroke: 1.9,
+  label: 8.4,
+  labelH: 24,
+  chan: 8,
+  lx: 84,
+  rowStep: 30,
+  cut: 13,
+};
 
 /**
  * An open rig, in place: pods as light dashed outlines with a count, agents as fixed-size compact
@@ -74,7 +89,6 @@ const LIFT_BASE = 14;
 export default function RigInside({
   map,
   rig,
-  level,
 
   socket,
   machines,
@@ -83,13 +97,17 @@ export default function RigInside({
   onDetails,
   onDocs,
   onPin,
+  roomy,
 }: Props) {
+  const big = Boolean(roomy);
+  const LS = roomy ? ROOMY.step : LEVEL_STEP;
+  const LB = roomy ? ROOMY.base : LIFT_BASE;
   const own = map.lanes[0]!;
   const home = map.rig.machineId;
   const box = useRef<HTMLDivElement>(null);
   const lf = useLineFocus();
   const [arcs, setArcs] = useState<Arc[]>([]);
-  const [lift, setLift] = useState(LIFT_BASE + 14);
+  const [lift, setLift] = useState(LB + 14);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [hover, setHover] = useState<{ key: string; x: number; y: number } | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -154,7 +172,7 @@ export default function RigInside({
 
   useLayoutEffect(() => {
     const el = box.current;
-    if (!el || level !== 'cards') {
+    if (!el) {
       setArcs([]);
       return;
     }
@@ -189,7 +207,7 @@ export default function RigInside({
           levels.push([]);
         }
         levels[lv]!.push([lo, hi]);
-        const up = LIFT_BASE + lv * LEVEL_STEP;
+        const up = LB + lv * LS;
         // stop 3 px above the card, so a line never runs over its edge
         const sy = a.y - 3;
         const ey = b.y - 3;
@@ -199,14 +217,14 @@ export default function RigInside({
           pair: p,
           d: `M${sx},${sy} C${sx},${sy - peak} ${ex},${ey - peak} ${ex},${ey}`,
           lx: (sx + ex) / 2,
-          ly: (sy + ey) / 2 - up * 0.75,
+          ly: (sy + ey) / 2 - up * (big ? 1 : 0.75),
         });
       }
       otherRow.forEach(({ p, a, b }, i) => {
         const sx = a.x + a.w / 2;
         const ex = b.x + b.w / 2;
         const gap = 9;
-        const chan = 4 + (i % 4) * 4;
+        const chan = big ? ROOMY.chan + (i % 4) * 8 : 4 + (i % 4) * 4;
         const ay = a.y - gap;
         const by = b.y - gap;
         out.push({
@@ -214,12 +232,12 @@ export default function RigInside({
           pair: p,
           d: `M${sx},${a.y - 3} L${sx},${ay} L${chan},${ay} L${chan},${by} L${ex},${by} L${ex},${b.y - 3}`,
           // labels sit in the left channel, stepped so two never share a spot
-          lx: 34,
-          ly: (ay + by) / 2 + (i - (otherRow.length - 1) / 2) * 16,
+          lx: big ? ROOMY.lx : 34,
+          ly: (ay + by) / 2 + (i - (otherRow.length - 1) / 2) * (big ? ROOMY.rowStep : 16),
         });
       });
       setArcs(out);
-      setLift(LIFT_BASE + Math.max(1, levels.length) * LEVEL_STEP + 8);
+      setLift(LB + Math.max(1, levels.length) * LS + 8);
       setSize({ w: el.clientWidth, h: el.clientHeight });
     };
     measure();
@@ -228,7 +246,7 @@ export default function RigInside({
     ro.observe(el);
     el.querySelectorAll('[data-node-key]').forEach((n) => ro.observe(n));
     return () => ro.disconnect();
-  }, [pairs, level, agentPods]);
+  }, [pairs, agentPods, LS, LB, big]);
 
   // The attach line needs the machine's ssh target (rig.waiting); unknown means no button.
   const [ssh, setSsh] = useState<string | null | undefined>(undefined);
@@ -298,7 +316,7 @@ export default function RigInside({
       className="g2-inside"
       data-testid="g2-inside"
       data-rig-key={map.rig.key}
-      data-level={level}
+      data-roomy={roomy ? true : undefined}
       onClick={(e) => e.stopPropagation()}
     >
       <p className="g2-status" data-testid="g2-status">
@@ -348,7 +366,7 @@ export default function RigInside({
         </button>
       </p>
       <div className="g2-inside-body" ref={box}>
-        {level === 'cards' && (
+        {
           <svg
             className="g2-inside-lines"
             width={size.w}
@@ -370,14 +388,16 @@ export default function RigInside({
                   <path
                     d={d}
                     className={lineClass(state, planned)}
-                    strokeWidth={planned ? lineWidth(0) : lineWidth(p.total)}
+                    strokeWidth={
+                      (planned ? lineWidth(0) : lineWidth(p.total)) * (roomy ? ROOMY.stroke : 1)
+                    }
                   />
                 </g>
               );
             })}
           </svg>
-        )}
-        {level === 'cards' && (
+        }
+        {
           <svg
             className="g2-inside-lines g2-inside-lines-labels"
             width={size.w}
@@ -389,8 +409,11 @@ export default function RigInside({
               const full = p.planned ? p.plannedWords || 'planned' : pairLabel(p);
               // a planned word in the left channel is cut to fit it (the full words are the tooltip)
               const text =
-                elbow && full.length > 7 ? `${full.split(/[ ·]+/)[0]!.slice(0, 7)}…` : full;
-              const w = Math.max(26, text.length * 7 + 12);
+                elbow && full.length > (roomy ? ROOMY.cut : 7)
+                  ? `${full.split(/[ ·]+/)[0]!.slice(0, roomy ? ROOMY.cut : 7)}…`
+                  : full;
+              const w = Math.max(26, text.length * (roomy ? ROOMY.label : 7) + 12);
+              const lh = roomy ? ROOMY.labelH : 18;
               return (
                 <g
                   key={`l:${p.a}|${p.b}`}
@@ -408,7 +431,7 @@ export default function RigInside({
                   }
                 >
                   {text !== full && <title>{full}</title>}
-                  <rect x={lx - w / 2} y={ly - 9} width={w} height={18} rx={4} />
+                  <rect x={lx - w / 2} y={ly - lh / 2} width={w} height={lh} rx={4} />
                   <text x={lx} y={ly} className="g2-label-text">
                     {text}
                   </text>
@@ -422,24 +445,37 @@ export default function RigInside({
               );
             })}
           </svg>
-        )}
-        <div className="g2-pods" style={{ paddingTop: level === 'cards' ? lift : 6 }}>
+        }
+        <div className="g2-pods" style={{ paddingTop: lift }}>
           {agentPods.map((pod) => (
             <div className="g2-pod" key={pod.name} data-testid="g2-pod" data-pod={pod.name}>
               <span className="g2-pod-label" data-testid="g2-pod-label">
                 {pod.name} <b>{pod.seats.length}</b>
               </span>
               <div className="g2-pod-cards">
-                {pod.seats.map((s) =>
-                  level === 'cards' ? (
-                    <span
-                      className="g2-cell"
-                      key={s.key}
-                      onPointerEnter={(e) => enter(s, e.currentTarget)}
-                      onFocus={(e) => enter(s, e.currentTarget)}
-                      onPointerLeave={leave}
-                      onBlur={leave}
-                    >
+                {pod.seats.map((s) => (
+                  <span
+                    className="g2-cell"
+                    key={s.key}
+                    onPointerEnter={(e) => enter(s, e.currentTarget)}
+                    onFocus={(e) => enter(s, e.currentTarget)}
+                    onPointerLeave={leave}
+                    onBlur={leave}
+                  >
+                    {roomy ? (
+                      <RoomyCard
+                        s={s}
+                        machines={machines}
+                        fresh={roomy.fresh}
+                        onOpen={() => {
+                          quiet();
+                          onOpenAgent(s.key);
+                        }}
+                        corner={
+                          onDocs && <CardMenu name={s.name} onDocuments={() => onDocs(s.key)} />
+                        }
+                      />
+                    ) : (
                       <TerminalCard
                         size="compact"
                         name={s.name}
@@ -462,27 +498,14 @@ export default function RigInside({
                         dataAttrs={{ 'data-node-key': s.key }}
                         ariaLabel={`${s.name}, ${PIP[s.pip].label}: open the agent page`}
                       />
-                      {selfOf.get(s.key) ? (
-                        <span className="g2-self" data-testid="g2-self">
-                          ↺ {selfOf.get(s.key)} to itself
-                        </span>
-                      ) : null}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      key={s.key}
-                      className="g2-name"
-                      data-testid="g2-agent-name"
-                      data-pip={s.pip}
-                      onClick={() => onOpenAgent(s.key)}
-                      title={`${s.name} · ${PIP[s.pip].label}`}
-                    >
-                      <span className="g2-card-dot" data-pip={s.pip} aria-hidden="true" />
-                      {s.name}
-                    </button>
-                  )
-                )}
+                    )}
+                    {selfOf.get(s.key) ? (
+                      <span className="g2-self" data-testid="g2-self">
+                        ↺ {selfOf.get(s.key)} to itself
+                      </span>
+                    ) : null}
+                  </span>
+                ))}
               </div>
             </div>
           ))}
@@ -492,15 +515,7 @@ export default function RigInside({
               <div className="g2-pod-cards">
                 {humans.map((h) => {
                   const info = humanInfo(h);
-                  return (
-                    <HumanCard
-                      key={h.key}
-                      seat={h}
-                      from={info.from}
-                      fromTotal={info.total}
-                      compact={level !== 'cards'}
-                    />
-                  );
+                  return <HumanCard key={h.key} seat={h} from={info.from} fromTotal={info.total} />;
                 })}
               </div>
             </div>
@@ -675,5 +690,53 @@ function CardMenu({ name, onDocuments }: { name: string; onDocuments: () => void
         </span>
       )}
     </span>
+  );
+}
+
+/** A Rig Map card: the Wall's card (V1 body: last typed, folder and branch, footer) for one seat. */
+function RoomyCard({
+  s,
+  machines,
+  fresh,
+  onOpen,
+  corner,
+}: {
+  s: MapSeat;
+  machines: FleetMachine[];
+  fresh: (m: FleetMachine) => string;
+  onOpen: () => void;
+  corner: ReactNode;
+}) {
+  const tile = findTile(machines, s.key);
+  const body = tile
+    ? cardBody(tile.seat)
+    : { lastTyped: null, folder: null, branch: null, fallback: [] };
+  const stopped = s.pip === 'stopped';
+  return (
+    <WallCard
+      name={s.name}
+      status={s.pip}
+      address={s.address}
+      runtime={s.runtime}
+      model={s.modelRaw}
+      modelLabel={s.model.text}
+      modelFamily={s.model.family}
+      role={s.agentRole}
+      where={tile?.machine.machine.label}
+      skillCount={s.skills}
+      lastTyped={body.lastTyped}
+      fallbackLines={body.fallback}
+      folder={body.folder}
+      branch={body.branch}
+      fresh={tile ? (stopped ? `stopped · ${fresh(tile.machine)}` : fresh(tile.machine)) : '\u2014'}
+      contextPct={s.contextPct}
+      contextTokens={s.contextTokens}
+      queue={tile?.seat.work ?? { pending: 0, inProgress: 0, blocked: 0 }}
+      onOpen={onOpen}
+      corner={corner}
+      testId="g2-agent-card"
+      dataAttrs={{ 'data-node-key': s.key }}
+      ariaLabel={`${s.name}, ${PIP[s.pip].label}: open the agent page`}
+    />
   );
 }

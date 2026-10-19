@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse } from 'yaml';
-import { RIG_SUMMARY_MAX } from '@appydave/shared';
+import { OpenRig, RIG_SUMMARY_MAX } from '@appydave/shared';
 import { redactString } from '../redact.js';
 
 /**
@@ -18,6 +18,12 @@ export interface SpecInfo {
   root: string;
   /** The `summary:` text with whitespace folded; null when the file has none. */
   summary: string | null;
+  /**
+   * The whole file as OpenRig's RigSpec (`OpenRig.RigSpecSchema`, strict as OpenRig is). null when
+   * the file does not validate: OpenRig would refuse it, so none of its fields are trusted, though
+   * the rig is still matched on `name:`.
+   */
+  spec: OpenRig.RigSpec | null;
 }
 
 const MAX_DEPTH = 5;
@@ -28,7 +34,9 @@ export const specVariant = (name: string): string | null =>
   /^rig-([A-Za-z0-9._-]+)\.ya?ml$/.exec(name)?.[1] ?? null;
 const SKIP = new Set(['node_modules', '.git', 'dist', 'build']);
 
-export function parseSpec(text: string): { name: string; summary: string | null } | null {
+export function parseSpec(
+  text: string
+): { name: string; summary: string | null; spec: OpenRig.RigSpec | null } | null {
   let doc: unknown;
   try {
     doc = parse(text);
@@ -40,9 +48,11 @@ export function parseSpec(text: string): { name: string; summary: string | null 
   if (typeof name !== 'string' || !name.trim()) return null;
   const folded =
     typeof summary === 'string' ? redactString(summary.replace(/\s+/g, ' ').trim()) : '';
+  const valid = OpenRig.RigSpecSchema.safeParse(doc);
   return {
     name: name.trim(),
     summary: folded ? folded.slice(0, RIG_SUMMARY_MAX) : null,
+    spec: valid.success ? valid.data : null,
   };
 }
 
@@ -70,7 +80,7 @@ export async function scanSpecs(folders: string[]): Promise<Map<string, SpecInfo
       try {
         const spec = parseSpec(await readFile(path, 'utf8'));
         if (spec && !found.has(spec.name))
-          found.set(spec.name, { path, root: folder, summary: spec.summary });
+          found.set(spec.name, { path, root: folder, summary: spec.summary, spec: spec.spec });
       } catch {
         // unreadable file: skip it
       }

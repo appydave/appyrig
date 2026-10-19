@@ -5,6 +5,7 @@ import { Server } from 'socket.io';
 import {
   HUB_CAPS,
   MachineSnapshotSchema,
+  SPEC_RIG_KEYS,
   V2_QUEUE_KEYS,
   V2_SEAT_KEYS,
   type CollectorAck,
@@ -31,6 +32,8 @@ interface HubOpts {
   caps?: string[];
   /** Refuse any snapshot carrying a v2-only key, like a strict v1.5 hub ("Unrecognized key"). */
   strictV15?: boolean;
+  /** Refuse any snapshot carrying a spec-only rig key, like today's hub (before spec-fields). */
+  strictPreSpec?: boolean;
   /** Do not announce caps on connection (only in the ack), like the first v2 hub build. */
   ackOnly?: boolean;
 }
@@ -54,6 +57,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
           'collector:schema',
           'collector:daemondata',
           'collector:missionfiles',
+          'collector:loadout',
         ])
           socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
             extra.push({ event, payload });
@@ -69,6 +73,17 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
               ok: false,
               failureMode: 'invalid_snapshot',
               message: `seats.0: Unrecognized key: "${bad}"`,
+            });
+            return;
+          }
+        }
+        if (hopts.strictPreSpec) {
+          const bad = SPEC_RIG_KEYS.find((k) => JSON.stringify(raw).includes(`"${k}"`));
+          if (bad) {
+            ack({
+              ok: false,
+              failureMode: 'invalid_snapshot',
+              message: `rigs.0: Unrecognized key: "${bad}"`,
             });
             return;
           }
@@ -430,6 +445,124 @@ describe('pusher', () => {
     await until(() => hub!.received.length >= 5);
     expect(hub.received.some(hasV2)).toBe(false);
     expect(lines.filter((l) => l.includes('sending the v1.5 shape'))).toHaveLength(1);
+  });
+
+  // Spec fields (pods, spec edges, from rig.yaml) ride the same rule: only to a hub that said so.
+  const withSpec = async (): Promise<MachineSnapshot> => {
+    const snap = await withV2();
+    return {
+      ...snap,
+      rigs: snap.rigs.map((r) => ({
+        ...r,
+        specValid: true,
+        pods: [{ id: 'dev', label: 'Development', members: ['build'] }],
+        specEdges: [],
+      })),
+    };
+  };
+  const hasSpec = (s: MachineSnapshot) => s.rigs.some((r) => 'pods' in r || 'specValid' in r);
+
+  it("spec fields: today's hub (v2 caps, no spec-fields) gets none of them and refuses nothing", async () => {
+    hub = await startHub(0, false, { strictPreSpec: true, caps: [HUB_CAPS.V2_FIELDS] });
+    const lines: string[] = [];
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withSpec,
+      intervalMs: 30,
+      log: (l) => lines.push(l),
+    });
+    await until(() => hub!.received.length >= 4);
+    expect(hub.received.some(hasSpec)).toBe(false);
+    // v2 fields still flow: the spec gate is its own
+    expect(hub.received.every(hasV2)).toBe(true);
+    expect(lines.filter((l) => l.includes('refused'))).toEqual([]);
+  });
+
+  it('spec fields: a hub that advertises spec-fields gets pods and spec edges', async () => {
+    hub = await startHub(0, false, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.SPEC_FIELDS] });
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: withSpec,
+      intervalMs: 30,
+      log: () => {},
+    });
+    await until(() => hub!.received.length >= 2);
+    expect(hub.received.every(hasSpec)).toBe(true);
+    expect(hub.received[0]!.rigs[0]!.pods).toEqual([
+      { id: 'dev', label: 'Development', members: ['build'] },
+    ]);
+  });
+
+  it('spec files: the rig-files channel is told which caps the hub advertised', async () => {
+    hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.SPEC_FILES] });
+    const seen: boolean[] = [];
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      rigFilesIntervalMs: 30,
+      log: () => {},
+      rigFiles: async (caps) => {
+        seen.push(caps.has(HUB_CAPS.SPEC_FILES));
+        return null;
+      },
+    });
+    await until(() => seen.length >= 2);
+    expect(seen.every(Boolean)).toBe(true);
+  });
+
+  it('seat spec: a loadout loses its member / AgentSpec / topology keys for a hub without seat-spec, keeps them for one with it', async () => {
+    const snap = await build();
+    const seat = snap.seats.find((x) => x.runtime === 'claude-code')!;
+    const loadout = {
+      machineId: 'roamy',
+      seat: seat.id,
+      collectedAt: new Date().toISOString(),
+      runtime: 'claude-code',
+      cwd: null,
+      status: 'no-listing' as const,
+      listing: null,
+      cwdIsGitRepo: null,
+      cwdExists: null,
+      skills: [],
+      layers: [],
+      topologyRoot: '/o/topology',
+      topologyDocs: [],
+      member: null,
+      agentSpec: null,
+    };
+    for (const [caps, want] of [
+      [[HUB_CAPS.V2_FIELDS], false],
+      [[HUB_CAPS.V2_FIELDS, HUB_CAPS.SEAT_SPEC], true],
+    ] as const) {
+      hub = await startHub(0, true, { caps: [...caps] });
+      let sent = false;
+      pusher = startPusher({
+        hubUrl: hub.url,
+        token: TOKEN,
+        machineId: 'roamy',
+        build,
+        intervalMs: 30,
+        loadoutIntervalMs: 30,
+        log: () => {},
+        loadouts: async () =>
+          sent ? null : { loadouts: [loadout], markSent: () => void (sent = true) },
+      });
+      await until(() => hub!.extra.some((e) => e.event === 'collector:loadout'));
+      const got = hub.extra.find((e) => e.event === 'collector:loadout')!.payload as object;
+      expect('topologyRoot' in got, caps.join(',')).toBe(want);
+      expect('member' in got).toBe(want);
+      await pusher.stop();
+      await hub.close();
+      pusher = undefined;
+      hub = undefined;
+    }
   });
 
   it('the daemon-data channel is not even read until the hub advertised it', async () => {

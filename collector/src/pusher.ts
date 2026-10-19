@@ -3,6 +3,8 @@ import {
   FLEET_EVENTS,
   HUB_CAPS,
   namesV2Key,
+  stripSeatSpec,
+  stripSpecFields,
   stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
@@ -41,7 +43,8 @@ export interface PusherOptions {
   handoffs?: () => Promise<PendingHandoffs | null>;
   handoffIntervalMs?: number;
   /** v1.4 · S7: rig files whose content changed since the hub accepted them; null = nothing to send. */
-  rigFiles?: () => Promise<PendingRigFiles | null>;
+  /** Given the caps the hub advertised, so it can send scope `rig` files only to a hub that takes them. */
+  rigFiles?: (caps: ReadonlySet<string>) => Promise<PendingRigFiles | null>;
   rigFilesIntervalMs?: number;
   /** v1.4 · S7: the OpenRig database shape, when it changed; null = nothing to send. */
   schema?: () => Promise<PendingSchema | null>;
@@ -175,9 +178,11 @@ export function startPusher(opts: PusherOptions): Pusher {
         await waitForCaps();
         const built = await opts.build();
         const sendV2 = hubCaps.has(HUB_CAPS.V2_FIELDS) && !forceV15;
-        const ack = await push(sendV2 ? built : stripV2Fields(built));
+        const sendSpec = hubCaps.has(HUB_CAPS.SPEC_FIELDS) && !forceV15;
+        const v2 = sendV2 ? built : stripV2Fields(built);
+        const ack = await push(sendSpec ? v2 : stripSpecFields(v2));
         if (!('timeout' in ack) && ack.ok) hubCaps = new Set(ack.caps ?? []);
-        if (!('timeout' in ack) && !ack.ok && sendV2 && namesV2Key(ack.message)) {
+        if (!('timeout' in ack) && !ack.ok && (sendV2 || sendSpec) && namesV2Key(ack.message)) {
           forceV15 = true;
           hubCaps = new Set();
           log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
@@ -332,7 +337,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       opts.rigFilesIntervalMs ?? 15_000,
       'v1.4',
       async () => {
-        const p = await take();
+        const p = await take(hubCaps);
         return p && { payloads: p.pushes, markSent: p.markSent };
       }
     );
@@ -341,7 +346,11 @@ export function startPusher(opts: PusherOptions): Pusher {
     const take = opts.loadouts;
     channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, 'v1.5', async () => {
       const p = await take();
-      return p && { payloads: p.loadouts, markSent: p.markSent };
+      // A hub without seat-spec refuses the member / AgentSpec / topology keys (strict schema).
+      const full = hubCaps.has(HUB_CAPS.SEAT_SPEC);
+      return (
+        p && { payloads: full ? p.loadouts : p.loadouts.map(stripSeatSpec), markSent: p.markSent }
+      );
     });
   }
   if (opts.dbRows) {

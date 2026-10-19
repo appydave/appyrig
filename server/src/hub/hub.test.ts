@@ -107,6 +107,38 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     });
   });
 
+  it("spec fields: a rig's pods (OpenRig PodSpec shape) and cross-pod edges reach the browser; a full member spec or a bad edge kind is refused", async () => {
+    const h = await start();
+    const browser = h.browser();
+    await nextUpdate(browser);
+    const snap = loadSnapshot('roamy');
+    const pods = [
+      {
+        id: 'dev',
+        label: 'Development',
+        summary: 'builds it',
+        members: ['build', 'qa'],
+        edges: [{ kind: 'delegates_to' as const, from: 'build', to: 'qa' }],
+        startup: { files: [{ path: 'guidance/pod.md', required: false }] },
+      },
+    ];
+    const specEdges = [{ kind: 'escalates_to' as const, from: 'dev.qa', to: 'review.lead' }];
+    const rig = { ...snap.rigs[0]!, specValid: true, pods, specEdges };
+    const update = nextUpdate(browser);
+    expect(
+      await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, rigs: [rig] })
+    ).toMatchObject({ ok: true });
+    expect((await update).machines[0]!.snapshot.rigs[0]).toMatchObject({ pods, specEdges });
+    for (const bad of [
+      { ...rig, pods: [{ ...pods[0]!, members: [{ id: 'build' }] }] },
+      { ...rig, specEdges: [{ kind: 'feeds', from: 'dev.qa', to: 'review.lead' }] },
+      { ...rig, pods: [{ ...pods[0]!, mission: 'x' }] },
+    ])
+      expect(
+        await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, rigs: [bad] })
+      ).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
+  });
+
   it("D09 W3: a seat's agentRole and keySkills reach the browser; more than five is refused", async () => {
     const h = await start();
     const browser = h.browser();
@@ -594,7 +626,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
   const file = (id: string, content = 'name: x\n') => ({
     id,
     name: id.split(':')[1]!,
-    scope: id.split(':')[0] as 'spec' | 'mission',
+    scope: id.split(':')[0] as 'spec' | 'mission' | 'rig',
     bytes: content.length,
     modifiedAt: '2026-10-11T12:00:00.000Z',
     truncated: false,
@@ -684,6 +716,46 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value.files).toHaveLength(2);
     await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
     expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value.files).toHaveLength(1);
+  });
+
+  it('scope rig: spec-named files come back in specFiles (files unchanged), are served by id, and keep their own cap', async () => {
+    const h = await start();
+    const c = h.collector({ token: TOKEN, machineId: 'm2' });
+    const { snap, name } = rigOf('m2');
+    await push(c, snap);
+    const base = { machineId: 'm2', collectedAt: '2026-10-11T12:00:00.000Z', rig: name };
+    const allow = Array.from({ length: 16 }, (_, i) => file(`spec:LEARNED-${i}.md`));
+    const named = Array.from({ length: 16 }, (_, i) => file(`rig:guidance/g${i}.md`, `# g${i}`));
+    expect(
+      (await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [...allow, ...named] }))
+        .ok
+    ).toBe(true);
+    const list = call(h, 'rig.files', { machine: 'm2', rig: name }).value;
+    expect(list.files).toHaveLength(16);
+    expect(list.files.every((f: { scope: string }) => f.scope === 'spec')).toBe(true);
+    expect(list.specFiles).toHaveLength(16);
+    expect(list.specFiles[0]).toMatchObject({ id: 'rig:guidance/g0.md', scope: 'rig' });
+    expect(
+      call(h, 'rig.file', { machine: 'm2', rig: name, fileId: 'rig:guidance/g3.md' }).value.file
+        .content
+    ).toBe('# g3');
+    // a rig with no spec-named files has no specFiles key at all (as an older hub answers)
+    await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
+    expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value).not.toHaveProperty(
+      'specFiles'
+    );
+    // still only ids: a rig: id that climbs out is refused as input and as a pushed file
+    for (const fileId of ['rig:../x.md', 'rig:/etc/hosts', 'rig:a//b.md'])
+      expect(call(h, 'rig.file', { machine: 'm2', rig: name, fileId }).ok, fileId).toBe(false);
+    expect(
+      (
+        await emit(c, 'collector:rigfiles', {
+          ...base,
+          replace: true,
+          files: [file('rig:../x.md')],
+        })
+      ).ok
+    ).toBe(false);
   });
 
   it('PATH ESCAPES: a client can only name a file id; paths, dots and absolute paths are refused as input', async () => {
@@ -801,6 +873,46 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     expect(
       await emit(c, 'collector:loadout', { ...loadout, skills: [{ name: 'x', source: 'guess' }] })
     ).toMatchObject({ failureMode: 'invalid_snapshot' });
+
+    // seat spec (hub advertises seat-spec): member, AgentSpec and topology chain files are stored and served
+    const given = {
+      ...loadout,
+      topologyRoot: '/o/topology',
+      topologyDocs: [
+        {
+          altitude: 'seat',
+          name: 'LEARNED.md',
+          path: '/o/topology/rigs/r/seats/dev-build/LEARNED.md',
+          bytes: 9,
+          modifiedAt: '2026-10-12T00:00:00.000Z',
+          truncated: false,
+          content: '# learned',
+        },
+      ],
+      member: {
+        id: 'build',
+        pod: 'dev',
+        agent_ref: 'local:agents/impl',
+        profile: 'default',
+        runtime: 'claude-code',
+        cwd: '.',
+      },
+      agentSpec: { name: 'impl', version: '1.0', profileName: 'default', profile: null },
+    };
+    expect(await emit(c, 'collector:loadout', given)).toMatchObject({ ok: true });
+    expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value.loadout).toMatchObject({
+      member: { id: 'build', pod: 'dev' },
+      agentSpec: { name: 'impl' },
+      topologyDocs: [{ altitude: 'seat', name: 'LEARNED.md' }],
+    });
+    // a member with env values, or a topology doc at an altitude OpenRig has no folder for, is refused
+    for (const bad of [
+      { ...given, member: { ...given.member, env: { A: 'secret' } } },
+      { ...given, topologyDocs: [{ ...given.topologyDocs[0]!, altitude: 'mission' }] },
+    ])
+      expect(await emit(c, 'collector:loadout', bad)).toMatchObject({
+        failureMode: 'invalid_snapshot',
+      });
   });
 
   // Run board lane 1: the collector's list is the allowlist; the hub never reads a disk.
@@ -934,10 +1046,12 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({
       ok: true,
-      caps: ['v2-fields', 'daemondata', 'missionfiles'],
+      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files', 'seat-spec'],
     });
     // and announced on connection, before any push
-    expect(announced).toEqual([['v2-fields', 'daemondata', 'missionfiles']]);
+    expect(announced).toEqual([
+      ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files', 'seat-spec'],
+    ]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',
