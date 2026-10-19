@@ -1,17 +1,11 @@
 /* Documents drawer, list + reader, skills panel. AppyDave light only. */
-.docs-scrim {
-  position: fixed;
-  inset: 0;
-  background: rgba(52, 45, 45, 0.25);
-  z-index: 60;
-}
 .docs-drawer {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(1180px, 94vw);
-  z-index: 61;
+  width: min(1180px, calc(100vw - 320px));
+  z-index: 25; /* under the shell's menus (30+), over the page */
   display: flex;
   flex-direction: column;
   background: var(--ar-canvas, #faf5ec);
@@ -172,4 +166,117 @@
 .skills-group summary {
   cursor: pointer;
   padding: 3px 0;
+}
+
+/* Agent panel: a right-side slide-out that starts below the top bar and never covers the left drawer. */
+.apanel {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: min(1040px, calc(100vw - 320px));
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  background: var(--ar-canvas, #faf5ec);
+  border-left: 1px solid var(--ar-line, #d9cfbf);
+  box-shadow: -8px 0 24px rgba(52, 45, 45, 0.22);
+  animation: docs-in 0.18s ease-out;
+}
+.apanel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+  border-left: 6px solid var(--ar-idle, #8a8078);
+}
+.apanel[data-pip='working'] .apanel-head {
+  border-left-color: var(--ar-working, #2e8b57);
+}
+.apanel[data-pip='blocked'] .apanel-head {
+  border-left-color: var(--ar-blocked, #c0392b);
+}
+.apanel-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.apanel-head .apanel-spacer {
+  flex: 1;
+}
+.apanel-id {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  margin: 0;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+  font-size: 12px;
+}
+.apanel-id div {
+  display: flex;
+  gap: 5px;
+}
+.apanel-id dt {
+  color: var(--ar-ink-muted, #8a8078);
+}
+.apanel-id dd {
+  margin: 0;
+}
+.apanel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 14px 0;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+}
+.apanel-tab {
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  font: inherit;
+  font-family: var(--ar-font-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.apanel-tab[aria-selected='true'] {
+  background: var(--ar-surface-raised, #fff);
+  border-color: var(--ar-line, #d9cfbf);
+  margin-bottom: -1px;
+}
+.apanel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.apanel-body .docs-layout {
+  flex: 1;
+}
+.apanel-term {
+  flex: 1;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  background: #2b2626;
+  color: #f1e9db;
+  font-family: var(--ar-font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.apanel-msgs {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 16px;
+}
+.apanel-msgs ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.apanel-msgs li {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--ar-line, #d9cfbf);
 }

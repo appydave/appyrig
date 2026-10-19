@@ -21,6 +21,7 @@ import {
   type DocItem,
   type StartupRef,
 } from './docsModel.js';
+import { useTopOffset } from './useTopOffset.js';
 import './docs.css';
 
 /**
@@ -49,7 +50,7 @@ type Got<T> =
   | { state: 'refused'; error: Refusal }
   | { state: 'na' };
 
-function useRead<T>(
+export function useRead<T>(
   getSocket: () => FleetSocket,
   verb: string,
   input: Record<string, unknown> | null
@@ -369,13 +370,14 @@ export function DocsDrawer({
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
+  const top = useTopOffset();
   const rig = target.rig ?? target.seat?.rig ?? null;
   const title = target.seat ? seatName(target.seat) : (rig ?? 'Documents');
   return (
     <>
-      <div className="docs-scrim" onClick={onClose} aria-hidden="true" />
       <aside
         className="docs-drawer"
+        style={{ top }}
         role="dialog"
         aria-label={`Documents · ${title}`}
         data-testid="docs-drawer"

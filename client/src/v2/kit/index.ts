@@ -75,3 +75,10 @@ export {
   type DocItem,
   type DocGroup,
 } from './docsModel.js';
+export {
+  default as AgentPanel,
+  stripAnsi,
+  type AgentPanelProps,
+  type AgentPanelTab,
+} from './AgentPanel.js';
+export { useTopOffset, measureTopOffset } from './useTopOffset.js';
