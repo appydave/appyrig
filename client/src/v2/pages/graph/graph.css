@@ -92,7 +92,9 @@
 }
 .g2-machines {
   display: grid;
-  grid-template-columns: repeat(var(--g2-n, 3), minmax(0, 1fr));
+  /* Columns wrap onto a new row when the room runs out (the Agent panel takes about 530 px; a narrow
+     window does too), never clipped: each column is at least 320 px, or the whole width when narrower. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
   gap: 0 56px;
   align-items: start;
 }

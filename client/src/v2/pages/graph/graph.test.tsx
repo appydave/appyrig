@@ -520,7 +520,7 @@ describe('Graph page', () => {
   it('the layout wraps instead of using fixed wide columns, so every machine fits at 1440 px', () => {
     const c = css();
     expect(c).toMatch(
-      /\.g2-machines \{[^}]*grid-template-columns: repeat\(var\(--g2-n, 3\), minmax\(0, 1fr\)\)/s
+      /\.g2-machines \{[^}]*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 320px\), 1fr\)\)/s
     );
     expect(c).toMatch(
       /\.g2-boxes \{[^}]*grid-template-columns: repeat\(auto-fill, minmax\(190px, 1fr\)\)/s
