@@ -86,9 +86,21 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
         return head!.y >= bar!.y + bar!.height - 1 && head!.y < 140;
       })
       .toBe(true);
+    await expect
+      .poll(async () => {
+        const head = await page.getByTestId('v2-page-head').boundingBox();
+        const h = await group.getByTestId('v2w-group-head').boundingBox();
+        return h!.y >= head!.y + head!.height - 1;
+      })
+      .toBe(true);
     const all = await page.getByTestId('v2w-group').count();
+    // an action while all rigs show, a state once it is on
+    await expect(page.getByTestId('v2-only-rig')).toContainText('Show only d09-crew');
     await page.getByTestId('v2-only-rig').click();
     await expect(page.getByTestId('v2w-group')).toHaveCount(1);
+    await expect(page.getByTestId('v2-only-rig')).toContainText(
+      'Showing only d09-crew · × show all'
+    );
     await page.getByTestId('v2-only-rig').click();
     await expect(page.getByTestId('v2w-group')).toHaveCount(all);
 
