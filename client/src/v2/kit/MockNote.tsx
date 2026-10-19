@@ -42,6 +42,8 @@ function noteElement(): HTMLElement {
 
 export function useMockNote(ref: RefObject<HTMLElement | null>) {
   useEffect(() => {
+    // A control behind the ⋯ MockMenu needs no page note: the menu's button carries the MockMark.
+    if (ref.current?.closest('.v2-mock-menu')) return;
     const main = ref.current?.closest('main');
     if (!main) return;
     let h = auto.get(main);

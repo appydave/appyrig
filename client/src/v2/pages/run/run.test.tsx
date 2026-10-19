@@ -5,7 +5,7 @@ import { fleetMachine, snapshot } from '../../../test/fleetFixtures.js';
 import { answeringSocket, pageCtx } from '../page-test-kit.js';
 import type { V2Context } from '../../types.js';
 import type { MissionFileResult } from './useMissionFile.js';
-import { page as run, DOC_DEFAULTS } from './index.js';
+import { page as run, DOC_DEFAULT_TAB } from './index.js';
 import { buildRun, parseDoneCheck, topLine, verdictOf } from './model.js';
 import { parseMissionJobs } from './jobs.js';
 
@@ -235,31 +235,36 @@ describe('a run in progress', () => {
 describe('the job panel and its documents', () => {
   const Page = run.component;
 
-  it('toggle defaults: Spec on, the other three off, each independent', async () => {
-    expect(DOC_DEFAULTS).toEqual({ spec: true, rig: false, culture: false, mission: false });
+  it('document tabs beside before / after: Spec at load, one document at a time', async () => {
+    expect(DOC_DEFAULT_TAB).toBe('spec');
     const { ctx } = ctxFor(machineWith([]), missionAnswers(table(2)));
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('run-detail')).toBeInTheDocument());
-    const on = (k: string) => screen.getByTestId(`run-tog-${k}`).getAttribute('aria-pressed');
+    const on = (k: string) => screen.getByTestId(`run-tog-${k}`).getAttribute('aria-selected');
     expect([on('spec'), on('rig'), on('culture'), on('mission')]).toEqual([
       'true',
       'false',
       'false',
       'false',
     ]);
-    expect(screen.getByTestId('run-doc-spec')).toBeInTheDocument();
+    // the tabs sit in the document column, beside before / after
+    const col = screen.getByTestId('run-docs');
+    expect(within(col).getByRole('tablist')).toBeInTheDocument();
+    expect(within(col).getByTestId('run-doc-spec')).toBeInTheDocument();
     expect(screen.queryByTestId('run-doc-rig')).toBeNull();
     fireEvent.click(screen.getByTestId('run-tog-culture'));
     expect([on('spec'), on('rig'), on('culture'), on('mission')]).toEqual([
-      'true',
+      'false',
       'false',
       'true',
       'false',
     ]);
-    expect(screen.getByTestId('run-doc-culture')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('run-tog-spec'));
+    // one document at a time: CULTURE.md replaces the spec, nothing is added below
+    expect(within(col).getByTestId('run-doc-culture')).toBeInTheDocument();
     expect(screen.queryByTestId('run-doc-spec')).toBeNull();
-    expect(screen.getByTestId('run-doc-culture')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('run-tog-spec'));
+    expect(screen.getByTestId('run-doc-spec')).toBeInTheDocument();
+    expect(screen.queryByTestId('run-doc-culture')).toBeNull();
   });
 
   it('clicking a tile selects that job; a missing spec or shot says "not written yet"', async () => {

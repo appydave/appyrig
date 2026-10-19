@@ -1,0 +1,13 @@
+/* Missions: the rig-pick scope line (navigation model). */
+.ms-scope {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.ms-scope-chip {
+  background: var(--ar-ink);
+  color: var(--ar-canvas);
+  font-size: 12px;
+  padding: 2px 8px;
+}

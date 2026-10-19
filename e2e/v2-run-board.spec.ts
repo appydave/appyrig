@@ -50,22 +50,33 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     expect(strip!.y + strip!.height).toBeLessThan(900);
     expect(stations!.y + stations!.height).toBeLessThan(900);
 
-    // toggles: Spec on, the other three off, each independent
-    const pressed = async (k: string) =>
-      page.getByTestId(`run-tog-${k}`).getAttribute('aria-pressed');
+    // document tabs in the column beside before / after: Spec at load, one at a time
+    const selected = async (k: string) =>
+      page.getByTestId(`run-tog-${k}`).getAttribute('aria-selected');
     expect([
-      await pressed('spec'),
-      await pressed('rig'),
-      await pressed('culture'),
-      await pressed('mission'),
+      await selected('spec'),
+      await selected('rig'),
+      await selected('culture'),
+      await selected('mission'),
     ]).toEqual(['true', 'false', 'false', 'false']);
+    const before = await page.evaluate(() => document.documentElement.scrollHeight);
     await page.getByTestId('run-tog-mission').click();
     await expect(page.getByTestId('run-doc-mission')).toBeVisible();
-    await expect(page.getByTestId('run-doc-rig')).toHaveCount(0);
-    await expect(page.getByTestId('run-doc-spec')).toBeVisible();
-    await page.getByTestId('run-tog-spec').click();
     await expect(page.getByTestId('run-doc-spec')).toHaveCount(0);
-    await expect(page.getByTestId('run-doc-mission')).toBeVisible();
+    await expect(page.getByTestId('run-doc-rig')).toHaveCount(0);
+    // nothing is appended below the fold: the page is no taller with MISSION.md open
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
+      before + 2
+    );
+    const docs = await page.getByTestId('run-docs').boundingBox();
+    const shots = await page.locator('.run-shots').first().boundingBox();
+    expect(
+      Math.abs(docs!.y - shots!.y),
+      'the document column sits beside before / after'
+    ).toBeLessThan(80);
+    await page.getByTestId('run-tog-spec').click();
+    await expect(page.getByTestId('run-doc-spec')).toBeVisible();
+    await expect(page.getByTestId('run-doc-mission')).toHaveCount(0);
 
     // the sample preview is labelled, and back to real data drops every sample mark
     await page.getByTestId('run-preview').click();

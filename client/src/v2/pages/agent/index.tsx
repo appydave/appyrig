@@ -33,6 +33,7 @@ import { allTiles, findTile, seatAddresses } from '../../seats.js';
 import type { V2Context, V2PageDef, V2PageProps } from '../../types.js';
 import { isOpenRigSeat, sampleDetail, type SeatDetailView } from './detail.js';
 import { useAgentData } from './useAgentData.js';
+import './agent.css';
 
 const RESUME_WHY =
   'The resume command holds a session id that AppyRig deliberately never carries, so this is a mock.';
@@ -522,7 +523,9 @@ function AgentV2({ ctx }: V2PageProps) {
   const defaulted = !!tile && !!auto && tile.key === auto && !missing;
   return (
     <main className="view v2-agent" data-testid="v2-agent">
-      <p className="quiet v2a-new" data-testid="v2a-new-note">
+      {/* Navigation brief: the "new in v2" and mock lines live behind Legend · L, not above the
+          header (the header's ⋯ carries the mock controls and their MockMark). */}
+      <p className="quiet v2a-new v2-explainer" data-testid="v2a-new-note">
         New in v2: there is no old version of this page. <MockMark label="mock" /> marks controls
         that change nothing.
       </p>

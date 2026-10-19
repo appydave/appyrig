@@ -3,6 +3,7 @@ import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
 import { callVerb } from '../../../fleet/coreCall.js';
 import MarkdownView from '../../../components/MarkdownView.js';
 import '../../data/coverage.css';
+import './missions.css';
 import { FakeControl, MockMark, PageHeader, SampleData } from '../../kit/index.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
@@ -234,11 +235,22 @@ function Assign({ job }: { job: string }) {
 }
 
 function Missions({ ctx }: V2PageProps) {
-  const missions = useMemo(() => deriveMissions(ctx.machines), [ctx.machines]);
+  const allMissions = useMemo(() => deriveMissions(ctx.machines), [ctx.machines]);
   const unresolved = useMemo(() => untaggedMissionCount(ctx.machines), [ctx.machines]);
-  const loose = useMemo(() => deriveUnattributed(ctx.machines), [ctx.machines]);
+  const allLoose = useMemo(() => deriveUnattributed(ctx.machines), [ctx.machines]);
   const sample = useMemo(() => sampleMission(ctx.allMachines), [ctx.allMachines]);
   const [openId, setOpenId] = useState<string | null>(null);
+  // Navigation model: a rig picked in the Rigs drawer filters Missions to that rig, until the viewer
+  // asks for "× all rigs" (remembered for that pick only: a new pick filters again).
+  const pick = ctx.pickedRig;
+  const [allFor, setAllFor] = useState<string | null>(null);
+  // Every pick in the drawer filters again, the same rig picked twice included (focusNonce).
+  useEffect(() => setAllFor(null), [ctx.focusNonce]);
+  const scoped = !!pick && allFor !== pick.key;
+  const inPick = (m: { machineId: string; rig: string }) =>
+    !!pick && m.machineId === pick.machineId && m.rig === pick.name;
+  const missions = scoped ? allMissions.filter(inPick) : allMissions;
+  const loose = scoped ? allLoose.filter(inPick) : allLoose;
   const current = openId ?? missions[0]?.key ?? null;
 
   return (
@@ -246,7 +258,9 @@ function Missions({ ctx }: V2PageProps) {
       <PageHeader
         title="Missions"
         facts={[
-          `${missions.length} mission${missions.length === 1 ? '' : 's'} from queue tags`,
+          scoped
+            ? `${missions.length} of ${allMissions.length} missions`
+            : `${missions.length} mission${missions.length === 1 ? '' : 's'} from queue tags`,
           ...(unresolved > 0 ? [`${unresolved} jobs with no mission`] : []),
         ]}
         mocks={
@@ -264,6 +278,34 @@ function Missions({ ctx }: V2PageProps) {
           </>
         }
       />
+      {pick && (
+        <p className="ms-scope" data-testid="ms-scope" data-scoped={scoped}>
+          {scoped ? (
+            <>
+              <span className="chip ms-scope-chip" data-testid="ms-scope-chip">
+                Only {pick.name} · {pick.machineLabel}
+              </span>{' '}
+              <button
+                type="button"
+                className="pill-btn"
+                data-testid="ms-all-rigs"
+                onClick={() => setAllFor(pick.key)}
+              >
+                × all rigs
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="ms-only-rig"
+              onClick={() => setAllFor(null)}
+            >
+              Only {pick.name} · {pick.machineLabel}
+            </button>
+          )}
+        </p>
+      )}
       <div className="v2-explainer">
         <p className="quiet">Mission, then slices, then jobs, with progress and who holds what.</p>
         <p className="quiet" data-testid="ms-real-note">
@@ -280,7 +322,9 @@ function Missions({ ctx }: V2PageProps) {
       )}
       {missions.length === 0 ? (
         <p className="quiet" data-testid="ms-none">
-          No queue item carries a mission: or slice: tag on the machines shown.
+          {scoped
+            ? `No mission in ${pick!.name} on ${pick!.machineLabel}: no queue item there carries a mission: tag.`
+            : 'No queue item carries a mission: or slice: tag on the machines shown.'}
         </p>
       ) : (
         missions.map((m) => (
