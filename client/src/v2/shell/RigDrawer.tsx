@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import { PIP, pipFor, seatKey, seatName } from '../../fleet/model.js';
 import { RIG_STATE, type RigRef } from '../../fleet/views.js';
@@ -56,6 +56,26 @@ export default function RigDrawer({
   const [hover, setHover] = useState(false);
   const open = pinned || hover;
   const closeTimer = useRef<number | null>(null);
+  // The open drawer always fits the window below where it sits. Its CSS cap (100vh - 16px) only
+  // holds once it is stuck at the top: at scrollY 0 it sits under the header and ran 44 px past the
+  // bottom of a 900 px window, so bringing its tab into view (to close it) scrolled the page.
+  const box = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el || !open) return;
+    const fit = () => {
+      const top = Math.max(0, el.getBoundingClientRect().top);
+      el.style.maxHeight = `${Math.max(160, window.innerHeight - top - 8)}px`;
+    };
+    fit();
+    window.addEventListener('scroll', fit, { passive: true });
+    window.addEventListener('resize', fit);
+    return () => {
+      window.removeEventListener('scroll', fit);
+      window.removeEventListener('resize', fit);
+      el.style.maxHeight = '';
+    };
+  }, [open]);
   /** Rigs the viewer opened (or closed) by hand; the chosen rig is open until closed. */
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
@@ -165,6 +185,7 @@ export default function RigDrawer({
 
   return (
     <aside
+      ref={box}
       className="rig-drawer"
       data-testid="rig-drawer"
       data-open={open}
