@@ -147,12 +147,14 @@ describe('v2 version switch', () => {
         disconnect() {}
       }
     );
-    // Graph is a v2-only page (the fleet overview); the Rig Map is its own page after it
+    // Graph is a v2-only page (the fleet); the Rig Map opens it focused on the chosen rig
     fireEvent.click(screen.getByTestId('v2-page-graph'));
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-no-v2')).toBeNull();
+    // the Rig Map is an alias of the Graph with the chosen rig open
     fireEvent.click(screen.getByTestId('v2-page-map'));
-    expect(screen.queryByTestId('v2-graph')).toBeNull();
+    expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
+    expect(screen.getAllByTestId('g2-inside').length).toBeGreaterThan(0);
   });
 });
 

@@ -97,75 +97,77 @@ export default function TerminalCard(p: TerminalCardProps) {
       data-testid={p.testId ?? 'terminal-card'}
       {...p.dataAttrs}
     >
-      <span className="tcard-bar" aria-hidden="true" />
-      <button
-        type="button"
-        className="tcard-main"
-        onClick={open}
-        disabled={!open}
-        aria-label={p.ariaLabel ?? `${p.name}, ${PIP[p.status].label}`}
-        data-testid="terminal-card-open"
-      >
-        <span className="tcard-head">
-          <span className="tcard-name" title={p.name}>
-            {p.name}
+      <span className="tcard-face">
+        <span className="tcard-bar" aria-hidden="true" />
+        <button
+          type="button"
+          className="tcard-main"
+          onClick={open}
+          disabled={!open}
+          aria-label={p.ariaLabel ?? `${p.name}, ${PIP[p.status].label}`}
+          data-testid="terminal-card-open"
+        >
+          <span className="tcard-head">
+            <span className="tcard-name" title={p.name}>
+              {p.name}
+            </span>
+            <span
+              className="tcard-pip"
+              data-testid="terminal-card-status"
+              title={PIP[p.status].label}
+            >
+              <span aria-hidden="true">{PIP[p.status].glyph}</span> {PIP[p.status].label}
+            </span>
           </span>
-          <span
-            className="tcard-pip"
-            data-testid="terminal-card-status"
-            title={PIP[p.status].label}
-          >
-            <span aria-hidden="true">{PIP[p.status].glyph}</span> {PIP[p.status].label}
-          </span>
-        </span>
-        {!compact && (
-          <span
-            className="tcard-address"
-            data-testid="terminal-card-address"
-            title={p.address ?? ''}
-          >
-            {p.address ?? ' '}
-          </span>
-        )}
-        <span className="tcard-meta">
-          {(p.runtime || p.model) && <HarnessMark runtime={p.runtime} model={p.model} />}
-          {p.modelLabel && (
-            <span className="chip" data-family={p.modelFamily} data-testid="terminal-card-model">
-              {p.modelLabel}
+          {!compact && (
+            <span
+              className="tcard-address"
+              data-testid="terminal-card-address"
+              title={p.address ?? ''}
+            >
+              {p.address ?? ' '}
             </span>
           )}
-          <span
-            className="tcard-ctx mono"
-            data-testid="terminal-card-context"
-            title="Context used and tokens"
-          >
-            {pctText(p.contextPct)} {tokensText(p.contextTokens)}
-          </span>
-          {!compact && p.where && <span className="tcard-where">{p.where}</span>}
-        </span>
-        <span
-          className="tcard-tail"
-          data-warn={p.warning ? true : undefined}
-          data-empty={line ? undefined : true}
-          data-testid="terminal-card-tail"
-          title={line ?? ''}
-        >
-          {line ?? (p.status === 'stopped' ? 'session stopped' : 'no terminal text')}
-        </span>
-        {chips && (
-          <span className="tcard-skills" data-testid="terminal-card-skills">
-            {chips.shown.map((s) => (
-              <span key={s} className="tcard-skill">
-                {s}
+          <span className="tcard-meta">
+            {(p.runtime || p.model) && <HarnessMark runtime={p.runtime} model={p.model} />}
+            {p.modelLabel && (
+              <span className="chip" data-family={p.modelFamily} data-testid="terminal-card-model">
+                {p.modelLabel}
               </span>
-            ))}
-            {chips.more > 0 && <span className="tcard-skill tcard-more">+{chips.more}</span>}
-            {chips.onlyCount !== null && chips.onlyCount > 0 && (
-              <span className="tcard-skill">{chips.onlyCount} skills</span>
             )}
+            <span
+              className="tcard-ctx mono"
+              data-testid="terminal-card-context"
+              title="Context used and tokens"
+            >
+              {pctText(p.contextPct)} {tokensText(p.contextTokens)}
+            </span>
+            {!compact && p.where && <span className="tcard-where">{p.where}</span>}
           </span>
-        )}
-      </button>
+          <span
+            className="tcard-tail"
+            data-warn={p.warning ? true : undefined}
+            data-empty={line ? undefined : true}
+            data-testid="terminal-card-tail"
+            title={line ?? ''}
+          >
+            {line ?? (p.status === 'stopped' ? 'session stopped' : 'no terminal text')}
+          </span>
+          {chips && (
+            <span className="tcard-skills" data-testid="terminal-card-skills">
+              {chips.shown.map((s) => (
+                <span key={s} className="tcard-skill">
+                  {s}
+                </span>
+              ))}
+              {chips.more > 0 && <span className="tcard-skill tcard-more">+{chips.more}</span>}
+              {chips.onlyCount !== null && chips.onlyCount > 0 && (
+                <span className="tcard-skill">{chips.onlyCount} skills</span>
+              )}
+            </span>
+          )}
+        </button>
+      </span>
       {p.corner && <span className="tcard-corner">{p.corner}</span>}
       {p.overlay}
     </div>

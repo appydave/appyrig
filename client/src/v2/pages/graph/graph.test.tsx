@@ -14,7 +14,7 @@ import type { FleetSocket } from '../../../fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '../../../test/fleetFixtures.js';
 import type { FrozenFile } from '../../frozen/frozenSocket.js';
 import type { V2Context } from '../../types.js';
-import { page, SHOW_STOPPED_KEY } from './index.js';
+import { GraphV2, page, SHOW_STOPPED_KEY } from './index.js';
 import { buildGraph, crossRigEdges, endpointGroup, looseKey, pairEdges } from './model.js';
 import { routeLines } from './lineRoute.js';
 import { relativeWidthLines } from '../../kit/index.js';
@@ -278,35 +278,40 @@ describe('Graph page', () => {
     );
   });
 
-  it('expanding a box lists its agent names on one line; Expand all / Collapse all', () => {
+  it('opening a box shows its inside in place; Expand all / Collapse all; the loose group lists names', () => {
     render(<Graph ctx={ctxFor(crossFleet())} />);
     const box = frame('m2:kernel');
-    expect(within(box).queryByTestId('g2-agent-names')).toBeNull();
+    expect(within(box).queryByTestId('g2-inside')).toBeNull();
     fireEvent.click(within(box).getByTestId('g2-rig-toggle'));
-    const names = within(box).getByTestId('g2-agent-names');
-    expect(names.textContent!.split(' · ')).toHaveLength(4);
+    const inside = within(box).getByTestId('g2-inside');
+    expect(within(inside).getAllByTestId('g2-pod').length).toBeGreaterThan(0);
+    expect(within(inside).getAllByTestId('g2-agent-card').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByTestId('g2-collapse-all'));
-    expect(screen.queryAllByTestId('g2-agent-names')).toHaveLength(0);
+    expect(screen.queryAllByTestId('g2-inside')).toHaveLength(0);
     fireEvent.click(screen.getByTestId('g2-expand-all'));
-    expect(screen.getAllByTestId('g2-agent-names').length).toBeGreaterThan(5);
+    // several rigs open at once
+    expect(screen.getAllByTestId('g2-inside').length).toBeGreaterThan(1);
+    // a machine's no-rig group still lists its names on one line
+    expect(screen.getAllByTestId('g2-agent-names').length).toBeGreaterThan(0);
   });
 
-  it('clicking a box sets the shared rig and goes to the Rig Map page', () => {
+  it('opening a box chooses the rig and stays on the Graph (no page change)', () => {
     const ctx = ctxFor(crossFleet());
     render(<Graph ctx={ctx} />);
     fireEvent.click(within(frame('roamy:kernel')).getByTestId('g2-rig-name'));
     expect(ctx.chooseRig).toHaveBeenCalledWith('roamy:kernel');
-    expect(ctx.goTo).toHaveBeenCalledWith('map');
-    // the box body opens it too; its own buttons do not (the menu, the agents toggle)
+    expect(ctx.goTo).not.toHaveBeenCalled();
+    expect(within(frame('roamy:kernel')).getByTestId('g2-inside')).toBeInTheDocument();
+    // the box body opens it too; closing it does not choose again
     fireEvent.click(frame('roamy:starter'));
     expect(ctx.chooseRig).toHaveBeenLastCalledWith('roamy:starter');
-    const calls = vi.mocked(ctx.goTo).mock.calls.length;
+    const chosen = vi.mocked(ctx.chooseRig).mock.calls.length;
     fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-toggle'));
-    fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-menu'));
-    expect(vi.mocked(ctx.goTo).mock.calls.length).toBe(calls);
-    // the machine's no-rig group has no Rig Map: its name only folds the agent list
+    expect(vi.mocked(ctx.chooseRig).mock.calls.length).toBe(chosen);
+    expect(within(frame('roamy:starter')).queryByTestId('g2-inside')).toBeNull();
+    // the machine's no-rig group only folds the agent list
     fireEvent.click(within(frame(looseKey('roamy'))).getByTestId('g2-rig-name'));
-    expect(vi.mocked(ctx.goTo).mock.calls.length).toBe(calls);
+    expect(ctx.chooseRig).toHaveBeenCalledTimes(chosen);
   });
 
   it('shows the lines between rigs, one per pair, thin and faint with the count both ways; none says so in one line', () => {
@@ -628,14 +633,96 @@ describe('Graph in the app', () => {
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
   });
 
-  it('clicking a rig box lands on the Rig Map page with that rig chosen', () => {
+  it('opening a rig box keeps the Graph, and the Rig Map alias and B keep that rig', () => {
     live();
     fireEvent.click(screen.getByTestId('v2-page-graph'));
     fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-name'));
+    expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
+    expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+    // the Rig Map is the same page with the chosen rig open; B shows Current's Rig Map on that rig
+    fireEvent.click(screen.getByTestId('v2-page-map'));
+    expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: 'b' });
     expect(screen.queryByTestId('v2-graph')).toBeNull();
     const chosen = screen
       .getAllByTestId('rig-chip')
       .find((c) => c.getAttribute('aria-pressed') === 'true');
     expect(chosen?.dataset.rigKey).toBe('roamy:starter');
+  });
+});
+
+describe('Graph: open rigs, zoom, people', () => {
+  const openRig = (key: string) => {
+    fireEvent.click(within(frame(key)).getByTestId('g2-rig-toggle'));
+    return within(frame(key)).getByTestId('g2-inside');
+  };
+
+  it('semantic zoom: cards near, names in the middle, boxes only far; Fit picks by what is open', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const inside = openRig('roamy:starter');
+    expect(screen.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'cards');
+    expect(within(inside).getAllByTestId('g2-agent-card')).toHaveLength(2);
+    fireEvent.click(screen.getByTestId('g2-zoom-out'));
+    expect(screen.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'pods');
+    expect(within(frame('roamy:starter')).queryAllByTestId('g2-agent-card')).toHaveLength(0);
+    expect(within(frame('roamy:starter')).getAllByTestId('g2-agent-name')).toHaveLength(2);
+    expect(within(frame('roamy:starter')).getAllByTestId('g2-pod-label')[0]).toHaveTextContent(
+      /dev\s*2/
+    );
+    fireEvent.click(screen.getByTestId('g2-zoom-out'));
+    expect(within(frame('roamy:starter')).queryByTestId('g2-inside')).toBeNull();
+    expect(screen.getByTestId('g2-zoom-out')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('g2-fit'));
+    expect(screen.getByTestId('g2-zoom')).toHaveAttribute('data-zoom', 'cards');
+  });
+
+  it('agents are fixed-size compact terminal cards; one quiet line per pair; self-handoffs are text', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const inside = openRig('roamy:starter');
+    const cards = within(inside).getAllByTestId('g2-agent-card');
+    for (const c of cards) expect(c).toHaveAttribute('data-size', 'compact');
+    const labels = within(inside).getAllByTestId('g2-inside-label');
+    expect(labels).toHaveLength(1);
+    expect(labels[0]).toHaveTextContent(/^(\d+ ⇄ \d+|\d+ →|← \d+)$/);
+    const lines = within(inside).getAllByTestId('g2-inside-line');
+    expect(lines.every((g) => g.dataset.state === 'faint')).toBe(true);
+    // hovering a card lights its own lines
+    fireEvent.pointerEnter(cards[0]!.closest('.g2-cell')!);
+    expect(within(inside).getAllByTestId('g2-inside-line')[0]).toHaveAttribute('data-state', 'lit');
+    expect(within(inside).getByTestId('seat-detail')).toBeInTheDocument();
+  });
+
+  it('self-handoffs are text under the card, never a loop', () => {
+    render(<Graph ctx={ctxFor([fleetMachine(snapshot('roamy--blocked'))])} />);
+    const inside = openRig('roamy:starter');
+    expect(within(inside).getByTestId('g2-self')).toHaveTextContent('↺ 3 to itself');
+  });
+
+  it('a person is a dark human card with badges, not a NOT PLACED lane or rail', () => {
+    render(<Graph ctx={ctxFor(crossFleet())} />);
+    const inside = openRig('roamy:kernel');
+    const people = within(inside).getByTestId('g2-humans');
+    expect(within(people).getByTestId('g2-human-card')).toHaveTextContent('operator-human');
+    expect(inside.textContent).not.toMatch(/not placed|unplaced/i);
+    expect(document.querySelector('.rigmap-edges, [data-testid="rig-map-lane"]')).toBeNull();
+  });
+
+  it('the open rig has a status line: state, last handoff, waiting on you, Details', () => {
+    const ctx = ctxFor(crossFleet());
+    render(<Graph ctx={ctx} />);
+    const inside = openRig('roamy:starter');
+    const status = within(inside).getByTestId('g2-status');
+    expect(status).toHaveTextContent(/running|idle|working|attention/i);
+    fireEvent.click(within(status).getByTestId('g2-details'));
+    expect(ctx.onOpenFiles).toHaveBeenCalledWith('roamy', 'starter');
+  });
+
+  it('the Rig Map alias opens with the chosen rig already open', () => {
+    const ctx = ctxFor(crossFleet(), {
+      activeRig: listRigs(crossFleet()).find((r) => r.key === 'roamy:starter')!,
+    });
+    render(<GraphV2 ctx={ctx} focusChosen />);
+    expect(within(frame('roamy:starter')).getByTestId('g2-inside')).toBeInTheDocument();
+    expect(within(frame('roamy:kernel')).queryByTestId('g2-inside')).toBeNull();
   });
 });

@@ -1,46 +1,57 @@
 /* v2 kit · TerminalCard. Dark terminal card (an accent inside the light page); ONE fixed size per
    `data-size`. Do not add min-height / max-height or let content set the height: a test enforces it. */
 .tcard {
-  --tc-w: 214px;
-  --tc-h: 128px;
+  --tc-w: 200px;
+  --tc-h: 118px;
   --pip: var(--ar-term-dim);
   position: relative;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
   flex: none;
   width: var(--tc-w);
   height: var(--tc-h);
-  background: var(--ar-term-bg);
-  color: var(--ar-term-fg);
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 1px 0 var(--ar-line);
   text-align: left;
 }
 .tcard[data-size='compact'] {
   --tc-w: 172px;
   --tc-h: 78px;
 }
+/* The face holds the look and clips to the rounded corners; the corner control and any popover sit
+   outside it, so a popover is never clipped and never changes the card's size. */
+.tcard-face {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--ar-term-bg);
+  color: var(--ar-term-fg);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--ar-line);
+}
 .tcard[data-pip='working'] {
   --pip: var(--ar-working);
+}
+.tcard[data-pip='working'] .tcard-face {
   box-shadow: inset 0 0 0 1.5px var(--ar-working);
 }
 .tcard[data-pip='blocked'] {
   --pip: var(--ar-blocked);
-  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
 }
-.tcard[data-pip='unknown'] {
-  --pip: var(--ar-term-dim);
+.tcard[data-pip='blocked'] .tcard-face {
+  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
 }
 .tcard[data-pip='stopped'],
 .tcard[data-pip='asleep'] {
   --pip: var(--ar-stopped, #6b6258);
+}
+.tcard[data-pip='stopped'] .tcard-face,
+.tcard[data-pip='asleep'] .tcard-face {
   background: var(--ar-term-bg-deep);
   box-shadow: inset 0 0 0 1px var(--ar-stopped, #6b6258);
   opacity: 0.75;
 }
-.tcard[data-selected] {
+.tcard[data-selected] .tcard-face,
+.tcard:hover .tcard-face {
   box-shadow: 0 0 0 2px var(--ar-cta);
 }
 .tcard-bar {
@@ -83,15 +94,12 @@
   outline: 2px solid var(--ar-cta);
   outline-offset: -3px;
 }
-.tcard:hover {
-  box-shadow: 0 0 0 2px var(--ar-cta);
-}
 .tcard-head {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
-  padding-right: 18px; /* room for the corner control */
+  padding-right: 22px; /* room for the corner control */
 }
 .tcard-name {
   flex: 1 1 auto;

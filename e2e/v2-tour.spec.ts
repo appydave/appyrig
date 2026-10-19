@@ -88,7 +88,7 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         const hasCurrent = currentKeys.includes(key);
         // the Rig Map has its own v2 page, and the Graph is a separate v2-only page
         if (key === 'map') {
-          await expect(page.getByTestId('v2-rig-map')).toBeVisible();
+          await expect(page.getByTestId('v2-graph')).toBeVisible();
           // a real v2: no "No v2 yet" note, and B flips to the old Rig Map below
           await expect(page.getByTestId('v2-no-v2')).toHaveCount(0);
         }
