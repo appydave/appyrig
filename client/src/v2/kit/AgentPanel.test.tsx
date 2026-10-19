@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
 import { answeringSocket } from '../pages/page-test-kit.js';
 import AgentPanel, { stripAnsi } from './AgentPanel.js';
@@ -67,6 +67,19 @@ describe('AgentPanel', () => {
       expect(measureTopOffset()).toBe(96);
       setup();
       expect(screen.getByTestId('agent-panel').style.top).toBe('96px');
+    } finally {
+      document.documentElement.style.removeProperty('--v2-top-offset');
+    }
+  });
+
+  it('follows the bar when the shell re-measures it after the panel mounted (a cold-loaded link)', () => {
+    setup();
+    act(() => {
+      document.documentElement.style.setProperty('--v2-top-offset', '102px');
+      window.dispatchEvent(new Event('appyrig:top-offset'));
+    });
+    try {
+      expect(screen.getByTestId('agent-panel').style.top).toBe('102px');
     } finally {
       document.documentElement.style.removeProperty('--v2-top-offset');
     }

@@ -669,8 +669,12 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     if (!header) return;
     const measure = () => {
       const r = header.getBoundingClientRect();
-      root.style.setProperty('--v2-top-offset', `${Math.max(0, Math.round(r.bottom))}px`);
+      const next = `${Math.max(0, Math.round(r.bottom))}px`;
+      const changed = root.style.getPropertyValue('--v2-top-offset') !== next;
+      root.style.setProperty('--v2-top-offset', next);
       root.style.setProperty('--v2-bar-h', `${Math.round(r.height)}px`);
+      // a slide-out that read the old value (a panel cold-loaded from its link) follows the bar
+      if (changed) window.dispatchEvent(new Event('appyrig:top-offset'));
     };
     measure();
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
