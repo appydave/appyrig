@@ -4,7 +4,7 @@
  * reader; until it is wired this returns `missing` for everything, so the page shows "not written yet"
  * and never anything invented. The result shape is Lane 1's, plus `loading` for the asking moment.
  *
- * `machine` is required: d09-crew-like rigs exist on more than one machine, and a path means nothing
+ * `machine` is required: the same rig name can exist on more than one machine, and a path means nothing
  * without one.
  */
 export interface MissionFileResult {
