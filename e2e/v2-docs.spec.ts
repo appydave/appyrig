@@ -56,7 +56,10 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     const drawer = page.getByTestId('docs-drawer');
     await expect(drawer).toBeVisible();
     const box = await drawer.boundingBox();
-    expect(box!.height).toBeGreaterThanOrEqual(890);
+    // below the top bar, down to the bottom of the window
+    const nav = await page.getByTestId('v2-nav').boundingBox();
+    expect(box!.y).toBeGreaterThanOrEqual(nav!.y + nav!.height - 1);
+    expect(box!.y + box!.height).toBeGreaterThanOrEqual(895);
     expect(box!.width).toBeGreaterThan(1000);
     await expect(page.getByTestId('docs-list')).toBeVisible();
     await expect(page.getByTestId('docs-reader')).toBeVisible();
