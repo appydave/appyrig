@@ -58,6 +58,8 @@ export interface V2Frame {
   banner: ReactNode;
   /** Open the v2 Agent page for an agent (a tile key, `machine/seat`): the drawer's agent click. */
   openAgent: (key: string) => void;
+  /** Close the panel without going Back (a rig pick does this, then re-scopes the page). */
+  closePanelQuiet: () => void;
   /** The full context the pages get (the Agent panel host and the drawer read it too). */
   ctx: V2Context;
 }
@@ -104,6 +106,10 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
     setAgentPanel({ machineId: t.machineId, seatKey: key, tab: t.tab ?? 'documents' });
     // a new history entry, so Back closes the panel
     if (modeRef.current === 'v2') writeParams({ agent: agentToParam(key) }, 'push', PANEL_ENTRY);
+  }, []);
+  const closePanelQuiet = useCallback(() => {
+    if (modeRef.current === 'v2' && readUrlState().agent) writeParams({ agent: null }, 'replace');
+    setAgentPanel(null);
   }, []);
   const closeAgentPanel = useCallback(() => {
     if (modeRef.current === 'v2') {
@@ -259,19 +265,6 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
     return () => window.removeEventListener('keydown', onKey);
   }, [keys, mode, setMode, flip]);
 
-  // Esc on a v2-only page goes back to the page underneath. Capture phase, so App's own Esc
-  // (back to the previous screen) sees it spent and stands down.
-  useEffect(() => {
-    if (!keys || !newPage) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || isShortcutBlocked(e)) return;
-      e.preventDefault();
-      setNewPage(null);
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [keys, newPage]);
-
   const fullCtx: V2Context = {
     ...ctx,
     goTo,
@@ -406,6 +399,7 @@ export function useV2({ view, chooseView, keys, frozen, ctx, onUrlRig }: UseV2Ar
     body,
     banner,
     openAgent: openAgentPage,
+    closePanelQuiet,
     ctx: fullCtx,
   };
 }

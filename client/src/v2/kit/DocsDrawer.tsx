@@ -366,9 +366,16 @@ export function DocsDrawer({
   onClose: () => void;
 }) {
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', k);
-    return () => window.removeEventListener('keydown', k);
+    // Esc closes the top-most layer only: this overlay sits over the agent panel, so it takes the
+    // key first (capture) and swallows it.
+    const k = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', k, true);
+    return () => window.removeEventListener('keydown', k, true);
   }, [onClose]);
   const top = useTopOffset();
   const rig = target.rig ?? target.seat?.rig ?? null;
