@@ -281,8 +281,18 @@ function WallV2({ ctx }: V2PageProps) {
     if (!focusKey) return;
     setOpenAt((o) => (o[focusKey] === true ? o : { ...o, [focusKey]: true }));
     const go = () => {
-      const el = root.current?.querySelector(`[data-group-key="${focusKey}"]`);
-      el?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+      const el = root.current?.querySelector(
+        `[data-group-key="${focusKey}"]`
+      ) as HTMLElement | null;
+      if (!el) return;
+      // Leave room for what is stuck above the content: the shell's bar plus THIS page's header, whose
+      // height changes (it wraps to two rows when the agent panel narrows the page). Measured now.
+      const bar = document.querySelector('.app-header')?.getBoundingClientRect().height ?? 0;
+      const head =
+        root.current?.querySelector('[data-testid="v2-page-head"]')?.getBoundingClientRect()
+          .height ?? 0;
+      el.style.scrollMarginTop = `${Math.round(bar + head + 12)}px`;
+      el.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
     };
     // once the open group has laid out, and again after the page settles (the drawer closing reflows it)
     const id = requestAnimationFrame(() => requestAnimationFrame(go));
@@ -348,17 +358,20 @@ function WallV2({ ctx }: V2PageProps) {
                 type="button"
                 className="pill-btn v2w-only"
                 data-testid="v2-only-rig"
-                aria-pressed={only && present}
                 disabled={!present}
                 title={
                   present
-                    ? 'Show only this rig on the Wall'
+                    ? only
+                      ? 'Showing only this rig: click to show every rig again'
+                      : `Hide every other rig and show only ${picked.displayName ?? picked.name} (${picked.machineLabel})`
                     : `${picked.name} has no seat on the Wall right now (stopped seats hidden, a filter, or a team switched off)`
                 }
                 onClick={() => setOnly((o) => !o)}
               >
                 {present
-                  ? `Only ${picked.displayName ?? picked.name} \u00b7 ${picked.machineLabel}${only ? ' \u00d7' : ''}`
+                  ? only
+                    ? `Showing only ${picked.displayName ?? picked.name} \u00b7 \u00d7 show all`
+                    : `Show only ${picked.displayName ?? picked.name}`
                   : `${picked.displayName ?? picked.name} \u00b7 ${picked.machineLabel}: not shown`}
               </button>
             )}

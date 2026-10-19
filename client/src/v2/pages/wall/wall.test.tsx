@@ -147,6 +147,38 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
     }
   });
 
+  it('scrolls the picked group clear of the shell bar plus this page header, measured (it wraps)', () => {
+    const bar = document.createElement('header');
+    bar.className = 'app-header';
+    document.body.appendChild(bar);
+    const real = HTMLElement.prototype.getBoundingClientRect;
+    const spy = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function (this: HTMLElement) {
+        const h = this.classList.contains('app-header')
+          ? 40
+          : this.dataset.testid === 'v2-page-head'
+            ? 76 // two rows
+            : 0;
+        return { ...real.call(this), height: h } as DOMRect;
+      });
+    vi.useFakeTimers();
+    try {
+      render(<Wall ctx={ctxWith()} />);
+      act(() => {
+        vi.advanceTimersByTime(100);
+      });
+      const group = screen
+        .getAllByTestId('v2w-group')
+        .find((g) => g.dataset.groupKey === 'roamy:starter')!;
+      expect(group.style.scrollMarginTop).toBe('128px'); // 40 + 76 + 12
+    } finally {
+      vi.useRealTimers();
+      spy.mockRestore();
+      bar.remove();
+    }
+  });
+
   it('no pick means no outline; "Only this rig" narrows the Wall and a second click restores it', () => {
     const none = ctxWith(undefined, null);
     const { unmount } = render(<Wall ctx={none} />);
@@ -158,10 +190,13 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
     render(<Wall ctx={ctxWith()} />);
     const all = screen.getAllByTestId('v2w-group').length;
     const chip = screen.getByTestId('v2-only-rig');
-    expect(chip).toHaveTextContent('Only starter · Roamy');
+    expect(chip).toHaveTextContent('Show only starter');
+    expect(chip).not.toHaveTextContent('×');
     fireEvent.click(chip);
     expect(screen.getAllByTestId('v2w-group')).toHaveLength(1);
-    expect(screen.getByTestId('v2-only-rig')).toHaveTextContent('×');
+    expect(screen.getByTestId('v2-only-rig')).toHaveTextContent(
+      'Showing only starter · × show all'
+    );
     fireEvent.click(screen.getByTestId('v2-only-rig'));
     expect(screen.getAllByTestId('v2w-group')).toHaveLength(all);
   });
