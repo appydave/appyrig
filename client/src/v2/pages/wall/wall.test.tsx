@@ -200,12 +200,21 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
     expect(within(card).queryByTestId('v2-card-actions')).toBeNull();
   });
 
-  it('the popover is confined to its card by the stylesheet (it cannot reach the next heading)', () => {
+  it('the popover is not clipped: no overflow or max-height, a raised layer, anchored to the card corner', () => {
     const css = readFileSync(path.resolve(__dirname, '../../w2.css'), 'utf8');
     const rule = /\.v2w-actions\s*\{[^}]*\}/.exec(css)![0];
-    expect(rule).toMatch(/left:\s*6px/);
-    expect(rule).toMatch(/right:\s*6px/);
-    expect(rule).toMatch(/max-height:\s*calc\(100%/);
+    expect(rule).not.toMatch(/overflow\s*:/);
+    expect(rule).not.toMatch(/max-height\s*:/);
+    expect(rule).toMatch(/z-index:\s*(\d{2,})/);
+    expect(rule).toMatch(/top:\s*30px/);
+    expect(rule).toMatch(/right:\s*4px/);
+  });
+
+  it('the sticky header sits under the shell bar (its published height), not behind it', () => {
+    const css = readFileSync(path.resolve(__dirname, 'wall.css'), 'utf8');
+    const rule = /\.v2-wall \.v2-page-head\s*\{[^}]*\}/.exec(css)![0];
+    expect(rule).toMatch(/position:\s*sticky/);
+    expect(rule).toMatch(/top:\s*var\(--v2-bar-h,\s*0px\)/);
   });
 });
 

@@ -57,6 +57,13 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     // the ⋯ popover is not clipped by the card, and a click on a card opens the Agent page
     await page.getByTestId('v2-card-more').first().click();
     await expect(page.getByTestId('v2-card-actions')).toBeVisible();
+    const pop = page.getByTestId('v2-card-actions');
+    await expect(pop.getByRole('button', { name: 'Documents' })).toBeVisible();
+    await expect(pop.getByRole('button', { name: 'Restart' })).toBeVisible();
+    await expect(pop.getByRole('button', { name: 'Stop' })).toBeVisible();
+    expect(
+      await pop.evaluate((e) => e.scrollHeight <= e.clientHeight && e.scrollWidth <= e.clientWidth)
+    ).toBe(true);
     await page.getByTestId('v2-card-more').first().click();
     // a card body opens the agent panel over the Wall: the page does not change
     await page.getByTestId('terminal-card-open').first().click();
@@ -71,6 +78,14 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     await chooseRigInDrawer(page, 'm2:d09-crew');
     const group = page.locator('[data-testid="v2w-group"][data-group-key="m2:d09-crew"]');
     await expect(group).toHaveAttribute('data-focused', 'true');
+    // the page header sticks UNDER the shell's top bar, so it (and the chip) stay in reach
+    await expect
+      .poll(async () => {
+        const bar = await page.locator('.app-header').boundingBox();
+        const head = await page.getByTestId('v2-page-head').boundingBox();
+        return head!.y >= bar!.y + bar!.height - 1 && head!.y < 140;
+      })
+      .toBe(true);
     const all = await page.getByTestId('v2w-group').count();
     await page.getByTestId('v2-only-rig').click();
     await expect(page.getByTestId('v2w-group')).toHaveCount(1);
