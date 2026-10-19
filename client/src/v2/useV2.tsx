@@ -3,7 +3,7 @@ import type { View } from '../App.js';
 import { isShortcutBlocked } from '../lib/keys.js';
 import type { FrozenMeta } from './frozen/frozenSocket.js';
 import { groupOf, isCurrentView, NAV_ALIAS, navGroups, navLabel, v2PageFor } from './registry.js';
-import type { NavGroupKey, PageKey, V2Context, V2OnlyKey } from './types.js';
+import type { AgentPanelTarget, NavGroupKey, PageKey, V2Context, V2OnlyKey } from './types.js';
 import { readMode, writeMode, type Mode } from './version.js';
 import './v2.css';
 import './w2.css';
@@ -19,7 +19,10 @@ export interface UseV2Args {
   /** Screen keys are live: nothing on top, no seat open. */
   keys: boolean;
   frozen?: FrozenMeta;
-  ctx: Omit<V2Context, 'goTo' | 'agentKey' | 'openAgentPage'>;
+  ctx: Omit<
+    V2Context,
+    'goTo' | 'agentKey' | 'openAgentPage' | 'openAgentPanel' | 'closeAgentPanel' | 'agentPanel'
+  >;
 }
 
 export interface V2Frame {
@@ -65,6 +68,13 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
   const [openGroup, setOpenGroup] = useState<NavGroupKey | null>(null);
   /** W2: the agent the Agent page shows; kept when the viewer leaves the page and comes back. */
   const [agentKey, setAgentKey] = useState<string | null>(null);
+  /** The Agent panel: open on top of whatever page is showing. */
+  const [agentPanel, setAgentPanel] = useState<AgentPanelTarget | null>(null);
+  const openAgentPanel = useCallback((t: AgentPanelTarget) => {
+    const key = t.seatKey.startsWith(`${t.machineId}/`) ? t.seatKey : `${t.machineId}/${t.seatKey}`;
+    setAgentPanel({ machineId: t.machineId, seatKey: key, tab: t.tab ?? 'documents' });
+  }, []);
+  const closeAgentPanel = useCallback(() => setAgentPanel(null), []);
 
   // A remembered v2 shows in the address too, so the link David copies opens the same version.
   useEffect(() => {
@@ -167,7 +177,15 @@ export function useV2({ view, chooseView, keys, frozen, ctx }: UseV2Args): V2Fra
     return () => window.removeEventListener('keydown', onKey, true);
   }, [keys, newPage]);
 
-  const fullCtx: V2Context = { ...ctx, goTo, agentKey, openAgentPage };
+  const fullCtx: V2Context = {
+    ...ctx,
+    goTo,
+    agentKey,
+    openAgentPage,
+    openAgentPanel,
+    closeAgentPanel,
+    agentPanel,
+  };
   const Page = def?.component;
   const body = Page && (newPage || wantV2) ? <Page ctx={fullCtx} /> : null;
   const showingNew = !!newPage || (wantV2 && !!def);
