@@ -5,7 +5,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { fleetMachine, snapshot } from '../../../test/fleetFixtures.js';
 import { answeringSocket, pageCtx } from '../page-test-kit.js';
 import { page as wall } from './index.js';
-import { wallTail } from './model.js';
+import { cardBody, machineCounts, orderByMachine, wallTail } from './model.js';
+import { groupSeats, groupState } from '../../../fleet/model.js';
 
 const NOW = Date.parse('2026-10-19T12:00:00.000Z');
 const Wall = wall.component;
@@ -25,13 +26,49 @@ function renderWall() {
 }
 
 describe('Wall v2: V1 terminal cards, V2 triage', () => {
-  it('every card is the kit TerminalCard at the one fixed wall size', () => {
+  it('every card is the kit WallCard: one fixed size, set by the stylesheet, never by content', () => {
     renderWall();
     const cards = screen.getAllByTestId('v2-seat-card');
     expect(cards.length).toBeGreaterThan(3);
-    expect(new Set(cards.map((c) => c.dataset.size))).toEqual(new Set(['wall']));
-    // no card carries its own height: the size is the kit's, never the content's
+    expect(cards.every((c) => c.classList.contains('wcard'))).toBe(true);
     expect(cards.every((c) => c.getAttribute('style') === null)).toBe(true);
+    const css = readFileSync(path.resolve(__dirname, '../../kit/wallCard.css'), 'utf8');
+    const rule = /\.wcard\s*\{[^}]*\}/.exec(css)![0];
+    expect(rule).toMatch(/width:\s*var\(--wc-w\)/);
+    expect(rule).toMatch(/height:\s*var\(--wc-h\)/);
+    expect(rule).not.toMatch(/(min|max)-height/);
+    expect(css).toMatch(/--wc-w:\s*232px/);
+  });
+
+  it('live cards are solid dark; stopped and unknown cards are frosted', () => {
+    renderWall();
+    const cards = screen.getAllByTestId('v2-seat-card');
+    for (const c of cards) {
+      const frosted = ['stopped', 'asleep', 'unknown'].includes(c.dataset.pip ?? '');
+      expect(c.hasAttribute('data-frosted')).toBe(frosted);
+    }
+  });
+
+  it('groups size to their cards and flow side by side; only a machine heading forces a new row', () => {
+    const css = readFileSync(path.resolve(__dirname, '../../w2.css'), 'utf8');
+    expect(/\.v2w-group\s*\{[^}]*\}/.exec(css)![0]).toMatch(/width:\s*fit-content/);
+    expect(/\.v2w-machine\s*\{[^}]*\}/.exec(css)![0]).toMatch(/flex-wrap:\s*wrap/);
+    expect(/\.v2w-machine-head\s*\{[^}]*\}/.exec(css)![0]).toMatch(/flex:\s*0 0 100%/);
+  });
+
+  it('defaults to machine order with a machine heading; Busiest first is one list and sets order=busy', () => {
+    window.history.replaceState(null, '', '/?v=2&page=wall');
+    renderWall();
+    expect(screen.getByTestId('v2w-order-machine')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByTestId('v2w-machine-head')[0]).toHaveTextContent(/^Roamy · \d+ seats/);
+    fireEvent.click(screen.getByTestId('v2w-order-busy'));
+    expect(new URLSearchParams(window.location.search).get('order')).toBe('busy');
+    expect(screen.getByTestId('v2w-order-busy')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryAllByTestId('v2w-machine-head')).toHaveLength(0);
+    expect(screen.getByTestId('v2w-order')).toHaveTextContent(/blocked → working → idle/);
+    fireEvent.click(screen.getByTestId('v2w-order-machine'));
+    expect(new URLSearchParams(window.location.search).get('order')).toBeNull();
+    window.history.replaceState(null, '', '/');
   });
 
   it('groups by rig with the rig as the heading and the machine beside it', () => {
@@ -51,12 +88,12 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
       .find((g) => g.dataset.groupKey === 'roamy:~tmux')!;
     const head = within(group).getByTestId('v2w-group-head');
     expect(head).toHaveTextContent('No rig · Roamy');
-    expect(head).toHaveTextContent('plain tmux sessions');
+    expect(within(group).getByTestId('v2w-summary')).toHaveTextContent('plain tmux sessions');
   });
 
   it('shows the sort order line and says which tmux sources are not read', () => {
     renderWall();
-    expect(screen.getByTestId('v2w-order')).toHaveTextContent(/blocked → working → idle/);
+    expect(screen.getByTestId('v2w-order')).toHaveTextContent(/by machine, as in the Rigs drawer/);
     expect(screen.getByTestId('v2w-not-read')).toHaveTextContent('default tmux server');
     expect(screen.getByTestId('v2w-not-read')).toHaveTextContent('herdr');
   });
@@ -270,5 +307,40 @@ describe('wallTail: whole words or an em dash', () => {
     expect(t.endsWith('…')).toBe(true);
     expect(t.length).toBeLessThanOrEqual(121);
     expect(t).toMatch(/word…$/);
+  });
+});
+
+describe('machine order and card body', () => {
+  it('orders machine by machine: live rigs, then plain tmux, then stopped rigs', () => {
+    const m2 = fleetMachine(snapshot('m2'));
+    const roamy = fleetMachine(snapshot('roamy'));
+    const groups = groupSeats([roamy, m2], 'rig');
+    const out = orderByMachine(
+      groups,
+      ['m2', 'roamy'],
+      groups.map((g) => g.key)
+    );
+    expect(out.map((m) => m.machineId)).toEqual(['m2', 'roamy']);
+    for (const m of out) {
+      const kinds = m.groups.map((g) =>
+        ['stopped', 'asleep'].includes(groupState(g)) ? 'dead' : g.rig ? 'rig' : 'tmux'
+      );
+      const firstDead = kinds.indexOf('dead');
+      if (firstDead >= 0) expect(kinds.slice(firstDead).every((k) => k === 'dead')).toBe(true);
+    }
+    expect(machineCounts('M2', out[0]!.groups)).toMatch(/^M2 · \d+ seats/);
+  });
+
+  it('cardBody: last typed line, a real folder and branch, no false folder from a diff line', () => {
+    const seat = {
+      cwd: null,
+      tail: { lines: ['/metadata.json (+154 -0)', '~/dev/ad/brains (main)', '\u276f fix the bug'] },
+    } as never;
+    const b = cardBody(seat);
+    expect(b.lastTyped).toBe('fix the bug');
+    expect(b.folder).toBe('~/dev/ad/brains');
+    expect(b.branch).toBe('main');
+    const none = cardBody({ cwd: null, tail: { lines: ['/ (1)'] } } as never);
+    expect(none.folder).toBeNull();
   });
 });

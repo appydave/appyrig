@@ -1,0 +1,235 @@
+/* v2 kit · WallCard. V1's seat card body, in fixed slots, at one fixed size. Do not add min-height /
+   max-height or let content set the height: a test enforces it. Dark for live seats; frosted (pale,
+   dashed edge) for stopped and unknown ones. */
+.wcard {
+  --wc-w: 232px;
+  --wc-h: 134px;
+  --pip: var(--ar-term-dim);
+  --wc-cwd: #7fd6d6;
+  --wc-branch: #d9a0d9;
+  position: relative;
+  flex: none;
+  width: var(--wc-w);
+  height: var(--wc-h);
+  text-align: left;
+}
+.wcard-face {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--ar-term-bg);
+  color: var(--ar-term-fg);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 0 var(--ar-line);
+}
+.wcard[data-pip='working'] {
+  --pip: var(--ar-working);
+}
+.wcard[data-pip='working'] .wcard-face {
+  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+}
+.wcard[data-pip='blocked'] {
+  --pip: var(--ar-blocked);
+}
+.wcard[data-pip='blocked'] .wcard-face {
+  box-shadow: inset 0 0 0 2.5px var(--ar-blocked);
+}
+/* Frosted: pale, with a dashed edge. Stopped is the palest; unknown (plain tmux) a step darker. */
+.wcard[data-frosted] .wcard-face {
+  background: color-mix(in srgb, var(--ar-term-bg) 58%, var(--ar-canvas));
+  box-shadow: none;
+  outline: 1.5px dashed color-mix(in srgb, var(--ar-term-fg) 55%, transparent);
+  outline-offset: -3px;
+}
+.wcard[data-pip='unknown'] .wcard-face {
+  background: color-mix(in srgb, var(--ar-term-bg) 78%, var(--ar-canvas));
+}
+.wcard[data-selected] .wcard-face,
+.wcard:hover .wcard-face {
+  box-shadow: 0 0 0 2px var(--ar-cta);
+}
+.wcard-bar {
+  flex: none;
+  height: 3px;
+  background: var(--pip);
+}
+.wcard[data-pip='working'] .wcard-bar {
+  height: 4px;
+}
+.wcard[data-pip='blocked'] .wcard-bar {
+  height: 6px;
+}
+.wcard[data-pip='idle'] .wcard-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 10px, transparent 10px 16px);
+}
+.wcard[data-pip='unknown'] .wcard-bar {
+  background: repeating-linear-gradient(90deg, var(--pip) 0 3px, transparent 3px 7px);
+}
+.wcard[data-pip='stopped'] .wcard-bar,
+.wcard[data-pip='asleep'] .wcard-bar {
+  background: transparent;
+}
+.wcard-main {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  gap: 3px;
+  padding: 6px 9px 7px;
+  cursor: pointer;
+}
+.wcard-main:disabled {
+  cursor: default;
+}
+.wcard-main:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: -3px;
+}
+.wcard-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-right: 20px; /* room for the corner control */
+}
+.wcard-name {
+  flex: 1 0 auto;
+  min-width: 2ch;
+  max-width: 100%;
+  font-family: var(--ar-font-label);
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wcard-head .harness-mark {
+  /* the name wins: the runtime word ("Claude"/"Codex") is dropped, its icon stays (title has the word) */
+  flex: none;
+  font-size: 0;
+  gap: 0;
+}
+.wcard-head .chip {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 64px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wcard-address {
+  display: block;
+  font-family: var(--ar-font-term);
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--ar-term-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wcard-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--ar-font-term);
+  font-size: 10px;
+  color: var(--ar-term-meta);
+}
+.wcard-pip {
+  flex: none;
+  color: var(--pip);
+}
+.wcard[data-pip='working'] .wcard-pip {
+  color: var(--ar-working-text);
+}
+.wcard[data-pip='blocked'] .wcard-pip {
+  color: var(--ar-blocked-text);
+}
+.wcard-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wcard-where {
+  color: var(--ar-term-dim);
+}
+.wcard-skills {
+  margin-left: auto;
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--ar-term-line);
+  color: var(--ar-term-meta);
+  font-size: 9.5px;
+}
+.wcard-term {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 5px 6px;
+  border-radius: 3px;
+  background: var(--ar-term-bg-deep);
+  font-family: var(--ar-font-term);
+  font-size: 10.5px;
+  line-height: 1.35;
+  overflow: hidden;
+}
+.wcard[data-frosted] .wcard-term {
+  background: color-mix(in srgb, var(--ar-term-bg-deep) 45%, transparent);
+}
+.wcard-line {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wcard-prompt {
+  color: var(--ar-working-text);
+}
+.wcard-dim {
+  color: var(--ar-term-dim);
+  font-style: italic;
+}
+.wcard-warn {
+  color: var(--ar-blocked-text);
+}
+.wcard-cwd {
+  color: var(--wc-cwd);
+}
+.wcard-branch {
+  color: var(--wc-branch);
+}
+.wcard-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: var(--ar-font-term);
+  font-size: 9.5px;
+  color: var(--ar-term-meta);
+}
+.wcard-fresh {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.wcard-corner {
+  position: absolute;
+  top: 8px;
+  right: 4px;
+}
