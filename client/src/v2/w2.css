@@ -114,14 +114,14 @@
   color: var(--ar-term-fg);
 }
 .v2w-actions {
-  /* inside the card, never past it: the popover cannot reach the next heading */
+  /* Opens from the card's top-right corner and may run past the card (it is not clipped): wide and
+     short, so it ends well above the next heading, on a raised layer over the neighbours. */
   position: absolute;
-  z-index: 5;
+  z-index: 40;
   top: 30px;
-  left: 6px;
-  right: 6px;
-  max-height: calc(100% - 36px);
-  overflow: auto;
+  right: 4px;
+  width: max-content;
+  max-width: 320px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -135,7 +135,7 @@
 }
 /* A rig picked in the drawer: its group is outlined, and scrolls to just under the page header. */
 .v2w-group {
-  scroll-margin-top: 56px; /* clears the sticky header */
+  scroll-margin-top: calc(var(--v2-bar-h, 0px) + 56px); /* clears the sticky bar and header */
 }
 .v2w-group[data-focused] {
   outline: 2px solid var(--ar-cta);
