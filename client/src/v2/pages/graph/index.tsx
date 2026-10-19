@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { QueueItem } from '@appydave/shared';
-import type { V2Context, V2PageDef, V2PageProps } from '../../types.js';
+import type { V2PageDef, V2PageProps } from '../../types.js';
 import {
   HandoffLegend,
   LeftOpenBadgeSvg,
@@ -16,7 +16,6 @@ import {
   useLineFocus,
 } from '../../kit/index.js';
 import { buildRigMap } from '../../../fleet/views.js';
-import { findTile } from '../../seats.js';
 import { useDocsDrawer } from '../../kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
 import { useOpenRigs } from './openRigs.js';
@@ -97,16 +96,6 @@ function writeShowStopped(on: boolean) {
     /* private window or blocked storage: it just is not remembered */
   }
 }
-
-/** What the nav lane adds to the ctx (all optional until it lands): the Agent panel and a repeat-pick nonce. */
-type PanelCtx = V2Context & {
-  openAgentPanel?: (a: {
-    machineId: string;
-    seatKey: string;
-    tab?: 'documents' | 'terminal' | 'messages';
-  }) => void;
-  focusNonce?: number;
-};
 
 /** Semantic zoom: far = rig boxes only, middle = pods and names, near = compact cards and lines. */
 export type Zoom = 'fleet' | 'pods' | 'cards';
@@ -232,7 +221,6 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
   const [filter, setFilter] = useState<FlagFilter | null>(null);
   // which rigs are open persists across visits (the URL's `open=` once the nav lane provides it)
   const [expanded, setExpanded] = useOpenRigs(ctx);
-  const nav = ctx as PanelCtx;
   const [flash, setFlash] = useState<string | null>(null);
   const [zoom, setZoom] = useState<Zoom>('cards');
   // the rig box or line the pointer or keyboard is on: its lines light up, the rest dim (kit)
@@ -379,7 +367,7 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
     setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + dir))]!);
   // A rig pick (the drawer, the Rigs list, a repeat pick) opens that rig here and scrolls to it. A cold
   // open pre-opens nothing; the `map` alias opens the chosen rig at once.
-  const nonce = nav.focusNonce ?? 0;
+  const nonce = ctx.focusNonce;
   const seen = useRef<{ rig: string | null; nonce: number } | null>(null);
   useEffect(() => {
     if (!picked) return;
@@ -402,20 +390,16 @@ function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: b
     // setExpanded is stable enough: the pick and the nonce are what trigger this
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked, nonce, focusChosen]);
-  // A card click opens the Agent panel on top of this page; without the nav lane's panel it falls back
-  // to the Agent page. ⋯ → Documents opens the same panel on its Documents tab.
-  const openAgent = (key: string) => {
-    const machineId = key.slice(0, key.indexOf('/'));
-    if (nav.openAgentPanel) nav.openAgentPanel({ machineId, seatKey: key });
-    else ctx.openAgentPage(key);
-  };
-  const openSeatDocs = (key: string) => {
-    const t = findTile(ctx.allMachines, key);
-    if (!t) return;
-    if (nav.openAgentPanel) {
-      nav.openAgentPanel({ machineId: t.machine.machine.id, seatKey: key, tab: 'documents' });
-    } else openDocs({ machineId: t.machine.machine.id, seat: t.seat });
-  };
+  // A card click opens the Agent panel on top of this page (never another page). ⋯ → Documents opens the
+  // same panel on its Documents tab.
+  const openAgent = (key: string) =>
+    ctx.openAgentPanel({ machineId: key.slice(0, key.indexOf('/')), seatKey: key });
+  const openSeatDocs = (key: string) =>
+    ctx.openAgentPanel({
+      machineId: key.slice(0, key.indexOf('/')),
+      seatKey: key,
+      tab: 'documents',
+    });
   const minute = Math.floor(ctx.now / 60_000) * 60_000;
   const openKeys = groups
     .filter((g) => expanded[g.key] && g.ref && shown(g))
