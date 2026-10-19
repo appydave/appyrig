@@ -662,29 +662,21 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     setWelcome(false);
     remember(WELCOME_KEY, 'seen');
   };
-  const welcomeLine = (
-    <span className="first-hint" role="note" data-testid="v2-welcome">
-      AppyRig shows your OpenRig teams across{' '}
-      {allMachines.length
-        ? allMachines
-            .map((m) => m.machine.label)
-            .reduce<string[]>(
-              (a, l, i, all) => [...a, i === 0 ? l : i === all.length - 1 ? ` and ${l}` : `, ${l}`],
-              []
-            )
-            .join('')
-        : 'your machines'}{' '}
-      · pick a rig on the left
-      <button
-        type="button"
-        className="pill-btn"
-        data-testid="v2-welcome-dismiss"
-        onClick={dismissWelcome}
-      >
-        Got it
-      </button>
-    </span>
-  );
+  /** v2: ONE first-visit row for all three hints, one line long, one "Got it" that dismisses them all. */
+  const machineWords = allMachines.length
+    ? allMachines
+        .map((m) => m.machine.label)
+        .reduce<string[]>(
+          (acc, l, i, all) => [...acc, i === 0 ? l : i === all.length - 1 ? ` and ${l}` : `, ${l}`],
+          []
+        )
+        .join('')
+    : 'your machines';
+  const dismissAllHints = () => {
+    dismissWelcome();
+    dismissHint();
+    dismissMapHint();
+  };
   const showExplainHint = hint && !((view === 'map' || view === 'flow') && mapHint && !legend);
   const showLegendHint = (view === 'map' || view === 'flow') && mapHint && !legend && !focusTile;
   const explainHint = (
@@ -974,9 +966,26 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
         <div className="app-main">
           {v2on && (welcome || showExplainHint || showLegendHint) && (
             <div className="v2-hint-row" data-testid="v2-hint-row">
-              {welcome && welcomeLine}
-              {showExplainHint && explainHint}
-              {showLegendHint && legendHint}
+              <span
+                className="first-hint"
+                role="note"
+                data-testid="v2-welcome"
+                title="AppyRig shows your OpenRig teams. Pick a rig on the left. Explain tells you what anything means; Legend names every mark."
+              >
+                <span className="v2-hint-text">
+                  AppyRig shows your OpenRig teams across {machineWords} · pick a rig on the left ·
+                  turn on <b>Explain</b> to see what anything means · <b>Legend · L</b> names every
+                  mark
+                </span>
+                <button
+                  type="button"
+                  className="pill-btn"
+                  data-testid="v2-welcome-dismiss"
+                  onClick={dismissAllHints}
+                >
+                  Got it
+                </button>
+              </span>
             </div>
           )}
           {(() => {
