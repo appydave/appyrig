@@ -20,6 +20,8 @@ interface Props {
   onToggle: (rigKey: string, wasExpanded: boolean) => void;
   /** Hover or focus on the box lights its lines on the canvas and dims the rest. */
   onTrace: (rigKey: string | null) => void;
+  /** "Open in Rig Map": choose this rig and go to the Rig Map page. */
+  onOpenMap?: (rigKey: string) => void;
 }
 
 /** The newest handoff in words: "dev-build → dev-qa · Refresh before GO · 5m ago". */
@@ -36,7 +38,17 @@ export function lastWords(rig: GraphRig, now: number): string {
  * agents are drawn (a click on the box opens that rig's Rig Map); expanding lists their names on
  * one line. Start / Restore / Launch are mocks behind the "⋯" menu.
  */
-function RigBox({ rig, now, expanded, focused, children, trace, onToggle, onTrace }: Props) {
+function RigBox({
+  rig,
+  now,
+  expanded,
+  focused,
+  children,
+  trace,
+  onToggle,
+  onTrace,
+  onOpenMap,
+}: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const st = RIG_STATE[rig.state];
   const loose = !rig.ref;
@@ -82,7 +94,9 @@ function RigBox({ rig, now, expanded, focused, children, trace, onToggle, onTrac
         >
           {rig.name}
         </button>
-        {!loose && <RigMenu rig={rig} running={!!running} onOpenChange={setMenuOpen} />}
+        {!loose && (
+          <RigMenu rig={rig} running={!!running} onOpenChange={setMenuOpen} onOpenMap={onOpenMap} />
+        )}
       </header>
       <p className="g2-box-meta" data-testid="g2-rig-counts">
         <span className="g2-box-machine" data-testid="g2-box-machine">
@@ -168,8 +182,10 @@ function RigMenu({
   rig,
   running,
   onOpenChange,
+  onOpenMap,
 }: {
   rig: GraphRig;
+  onOpenMap?: (rigKey: string) => void;
   running: boolean;
   /** The box raises itself above its neighbours while its menu is open. */
   onOpenChange: (open: boolean) => void;
@@ -223,6 +239,19 @@ function RigMenu({
           aria-label={`${rig.name} actions (mock)`}
           data-testid="g2-rig-menu-items"
         >
+          {onOpenMap && (
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="g2-open-map"
+              onClick={() => {
+                close();
+                onOpenMap(rig.key);
+              }}
+            >
+              Open in Rig Map
+            </button>
+          )}
           <FakeButton
             testId="g2-fake-start"
             onAsk={close}

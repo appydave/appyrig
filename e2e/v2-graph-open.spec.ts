@@ -3,7 +3,7 @@ import { watchErrors } from './support/fleet';
 
 // The merged Graph at 1440x900 on the frozen busy snapshot: rigs are boxes in machine columns, several
 // can be open in place, agents are fixed-size compact cards, zoom shows less as you zoom out, a person is a
-// human card (no NOT PLACED rails), and the Rig Map key is an alias that opens the chosen rig.
+// human card (no NOT PLACED rails), and a rig's menu opens it in the Rig Map page.
 
 const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
@@ -20,7 +20,7 @@ const box = (page: Page, key: string) =>
 test.describe('Graph: open rigs and zoom', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('several rigs open in place with fixed-size cards; zoom shows less; the Rig Map alias opens the chosen rig', async ({
+  test('several rigs open in place with fixed-size cards; zoom shows less; "Open in Rig Map" goes to the Rig Map page', async ({
     page,
   }) => {
     test.setTimeout(60_000);
@@ -62,13 +62,16 @@ test.describe('Graph: open rigs and zoom', () => {
     await page.getByTestId('g2-expand-all').click();
     await expect(page.getByTestId('g2-inside').first()).toBeVisible();
 
-    // the Rig Map key is the same page with the chosen rig open
-    await expect(page.getByTestId('v2-page-map')).toHaveCount(0);
-    await page.keyboard.press('v'); // Current
-    await page.getByTestId('view-map').click();
-    await page.keyboard.press('v'); // back to v2: the alias page
-    await expect(page.getByTestId('v2-graph')).toBeVisible();
-    await expect(page.getByTestId('g2-inside').first()).toBeVisible();
+    // a rig's ⋯ menu has "Open in Rig Map": the Rig Map page shows that rig, open, full width
+    const first = page.getByTestId('g2-rig').first();
+    const key = await first.getAttribute('data-rig-key');
+    await first.getByTestId('g2-rig-menu').click();
+    await page.getByTestId('g2-open-map').click();
+    await expect(page.getByTestId('v2-rigmap')).toBeVisible();
+    await expect(page.getByTestId('v2-graph')).toHaveCount(0);
+    await expect(page.getByTestId('rm-body')).toHaveAttribute('data-rig-key', key!);
+    await expect(page.getByTestId('g2-inside')).toHaveCount(1);
+    await expect(page.getByTestId('g2-rig')).toHaveCount(0);
 
     expect(errors, 'no console or page errors').toEqual([]);
   });

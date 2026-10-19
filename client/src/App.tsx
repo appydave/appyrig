@@ -621,7 +621,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   }, [v2on, v2.page, v2Legend, toggleLegend]);
   // The drawer reflects the CURRENT page: a rig page is scoped to its rig; a fleet page only has one
   // when the viewer picked it; the agent when the panel or the Agent page is open.
-  const RIG_PAGES: string[] = ['flow', 'run', 'timeline'];
+  const RIG_PAGES: string[] = ['map', 'flow', 'run', 'timeline'];
   /** Pages that filter or re-scope to the rig (the others only focus it in the whole fleet). */
   const SHOWING_PAGES = [...RIG_PAGES, 'missions'];
   const drawerAgent = v2.page === 'agent' ? v2.ctx.agentKey : (v2.ctx.agentPanel?.seatKey ?? null);

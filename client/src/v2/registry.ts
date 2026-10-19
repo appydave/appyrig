@@ -86,7 +86,7 @@ export const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[]
   {
     key: 'work',
     label: 'Work',
-    pages: ['needs-you', 'missions', 'flow', 'timeline', 'history'],
+    pages: ['needs-you', 'missions', 'map', 'flow', 'timeline', 'history'],
   },
   { key: 'agents', label: 'Agents', pages: ['agent', 'library', 'workflows'] },
   {
@@ -135,11 +135,8 @@ export function navGroups(): { key: NavGroupKey; label: string; pages: PageKey[]
   })).filter((g) => g.pages.length > 0);
 }
 
-/**
- * Pages that are not in the nav but open another page's entry: `map` (Current's Rig Map view, and old
- * links) lands on the Graph, so the Fleet group stays lit with the Graph's sub-link.
- */
-export const NAV_ALIAS: Partial<Record<PageKey, PageKey>> = { map: 'graph' };
+/** Pages that are not in the nav but open another page's entry (none now: the Rig Map has its own). */
+export const NAV_ALIAS: Partial<Record<PageKey, PageKey>> = {};
 
 export function groupOf(key: PageKey): NavGroupKey | null {
   return NAV_GROUPS.find((g) => g.pages.includes(NAV_ALIAS[key] ?? key))?.key ?? null;
