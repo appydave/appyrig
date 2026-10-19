@@ -8,12 +8,13 @@ import type { GraphRig } from './model.js';
 interface Props {
   rig: GraphRig;
   now: number;
-  /** The one-line agent list is showing. */
+  /** The rig is open in place (its inside is showing), or a loose group's one-line list is. */
   expanded: boolean;
+  /** The open rig's inside (pods, cards, lines), drawn under the box's own lines. */
+  children?: React.ReactNode;
   /** The colour of the hovered line that ends at this rig (or the ink when the rig itself is hovered). */
   trace?: string;
   /** All callbacks are stable, so memo(RigBox) skips a box whose rig object is unchanged. */
-  onOpen: (rigKey: string) => void;
   onToggle: (rigKey: string, wasExpanded: boolean) => void;
   /** Hover or focus on the box lights its lines on the canvas and dims the rest. */
   onTrace: (rigKey: string | null) => void;
@@ -33,12 +34,13 @@ export function lastWords(rig: GraphRig, now: number): string {
  * agents are drawn (a click on the box opens that rig's Rig Map); expanding lists their names on
  * one line. Start / Restore / Launch are mocks behind the "⋯" menu.
  */
-function RigBox({ rig, now, expanded, trace, onOpen, onToggle, onTrace }: Props) {
+function RigBox({ rig, now, expanded, children, trace, onToggle, onTrace }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const st = RIG_STATE[rig.state];
   const loose = !rig.ref;
   const running = rig.ref?.status === 'running';
-  const open = () => (loose ? onToggle(rig.key, expanded) : onOpen(rig.key));
+  // A click opens or closes the box in place (and chooses the rig, in the page's handler).
+  const open = () => onToggle(rig.key, expanded);
   return (
     <article
       className="g2-box"
@@ -68,7 +70,11 @@ function RigBox({ rig, now, expanded, trace, onOpen, onToggle, onTrace }: Props)
           type="button"
           className="g2-box-name mono"
           data-testid="g2-rig-name"
-          title={loose ? 'Show or hide the agent names' : `Open ${rig.name}'s Rig Map`}
+          title={
+            loose
+              ? 'Show or hide the agent names'
+              : `${expanded ? 'Close' : 'Open'} ${rig.name} here`
+          }
           onClick={open}
         >
           {rig.name}
@@ -128,15 +134,16 @@ function RigBox({ rig, now, expanded, trace, onOpen, onToggle, onTrace }: Props)
             aria-expanded={expanded}
             onClick={() => onToggle(rig.key, expanded)}
           >
-            {expanded ? '▾' : '▸'} agents
+            {expanded ? '▾' : '▸'} {loose ? 'agents' : expanded ? 'close' : 'open'}
           </button>
-          {expanded && (
+          {expanded && loose && (
             <span className="g2-box-names mono" data-testid="g2-agent-names">
               {rig.agentNames.join(' · ')}
             </span>
           )}
         </p>
       )}
+      {expanded && !loose && children}
     </article>
   );
 }

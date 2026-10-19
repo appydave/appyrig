@@ -5,6 +5,7 @@
 export { default as MockMark, MOCK_TEXT } from './MockMark.js';
 export { default as FakeControl, useFakeAction, type FakePhase } from './FakeControl.js';
 export { default as MockNote, MOCK_NOTE_TEXT, useMockNote } from './MockNote.js';
+export { PageHeader, MockMenu } from './PageHeader.js';
 export {
   default as SampleData,
   SampleLabel,
@@ -74,4 +75,3 @@ export {
   type DocItem,
   type DocGroup,
 } from './docsModel.js';
-export { PageHeader, MockMenu } from './PageHeader.js';

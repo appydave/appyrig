@@ -422,3 +422,209 @@
   border-color: var(--ar-working);
   color: var(--ar-working-ink);
 }
+
+/* ---------- Open rigs: pods, compact cards, quiet lines, people ---------- */
+.g2-zoom-level {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.g2-inside {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--ar-line);
+  cursor: default;
+}
+.g2-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+.g2-status-last {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ar-ink-muted);
+}
+.g2-status-wait {
+  color: var(--ar-blocked-ink);
+  background: var(--ar-blocked-bg);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.g2-inside-body {
+  position: relative;
+}
+.g2-inside-lines {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 1;
+  overflow: visible;
+}
+.g2-inside-lines .g2-label {
+  pointer-events: all;
+  cursor: pointer;
+}
+.g2-pods {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+/* Pods are light dashed outlines with a count, never filled slabs. */
+.g2-pod {
+  position: relative;
+  z-index: 2;
+  padding: 16px 8px 8px;
+  border: 1px dashed var(--ar-line);
+  border-radius: 8px;
+  background: transparent;
+  min-width: 0;
+}
+.g2-pod-label {
+  position: absolute;
+  top: 1px;
+  left: 8px;
+  font-family: var(--ar-font-label);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.g2-pod-label b {
+  color: var(--ar-ink);
+}
+.g2-pod-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.g2-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 2;
+}
+.g2-self {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+  font-family: var(--ar-font-term);
+}
+.g2-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ar-line);
+  border-radius: 999px;
+  background: var(--ar-surface-raised);
+  padding: 2px 10px;
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  cursor: pointer;
+}
+.g2-card-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ar-term-dim);
+  flex: none;
+}
+.g2-card-dot[data-pip='working'] {
+  background: var(--ar-working);
+}
+.g2-card-dot[data-pip='blocked'] {
+  background: var(--ar-blocked);
+}
+.g2-card-dot[data-pip='stopped'] {
+  background: var(--ar-stopped);
+}
+.g2-hover {
+  z-index: 20;
+}
+
+/* The person: a dark card in the same style as the terminal cards, a fixed size, amber badges. */
+.g2-human {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 172px;
+  height: 78px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--ar-term-bg);
+  color: var(--ar-term-fg);
+  border-top: 3px solid var(--ar-sequence);
+  font-family: var(--ar-font-term);
+}
+.g2-human .g2-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.g2-human-glyph {
+  color: var(--ar-sequence);
+}
+.g2-human .g2-card-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g2-human-tag {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-term-dim);
+}
+.g2-human .g2-card-addr {
+  font-size: 10.5px;
+  color: var(--ar-term-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g2-human-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  overflow: hidden;
+}
+.g2-badge {
+  font-size: 10px;
+  line-height: 14px;
+  padding: 0 5px;
+  border-radius: 7px;
+  background: var(--ar-sequence);
+  color: var(--ar-term-bg-deep);
+  white-space: nowrap;
+}
+.g2-badge-quiet {
+  background: transparent;
+  border: 1px solid var(--ar-term-line);
+  color: var(--ar-term-meta);
+}
+
+/* An open rig takes the whole column width, so its pods and cards sit side by side. */
+.g2-box[data-expanded]:not([data-loose]) {
+  grid-column: 1 / -1;
+}
+.g2-box[data-expanded]:not([data-loose]) .g2-box-last {
+  display: none;
+}
+.g2-human .g2-card-addr {
+  display: none;
+}
+.g2-human {
+  gap: 6px;
+}

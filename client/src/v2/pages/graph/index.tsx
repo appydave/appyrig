@@ -5,6 +5,7 @@ import {
   HandoffLegend,
   LeftOpenBadgeSvg,
   MockNote,
+  PageHeader,
   WaitingBadgeSvg,
   arrowHeads,
   labelClass,
@@ -14,12 +15,15 @@ import {
   pairLabel,
   useLineFocus,
 } from '../../kit/index.js';
+import { buildRigMap } from '../../../fleet/views.js';
 import { FakeRunner } from './FakeRunner.js';
-import RigBox from './RigBox.js';
+import RigBox, { lastWords } from './RigBox.js';
+import RigInside from './RigInside.js';
 import { routeLines, type Box, type Tip } from './lineRoute.js';
 import {
   allGroups,
   buildGraph,
+  isLoose,
   FLAG_FILTERS,
   isStopped,
   rigMatches,
@@ -91,6 +95,15 @@ function writeShowStopped(on: boolean) {
   }
 }
 
+/** Semantic zoom: far = rig boxes only, middle = pods and names, near = compact cards and lines. */
+export type Zoom = 'fleet' | 'pods' | 'cards';
+const ZOOMS: Zoom[] = ['fleet', 'pods', 'cards'];
+const ZOOM_LABEL: Record<Zoom, string> = {
+  fleet: 'Fleet',
+  pods: 'Pods',
+  cards: 'Cards',
+};
+
 interface Pinned {
   title: string;
   items: QueueItem[];
@@ -141,7 +154,7 @@ function Head({ tip, state }: { tip: Tip; state: string }) {
   );
 }
 
-function GraphPage({ ctx }: V2PageProps) {
+function GraphPage({ ctx, focusChosen = false }: V2PageProps & { focusChosen?: boolean }) {
   // The fleet arrives about once a second; the overview is rebuilt at most every REBUILD_MS.
   const bucket = Math.floor(ctx.now / 30_000);
   const machines = useThrottled(ctx.machines, REBUILD_MS);
@@ -156,6 +169,7 @@ function GraphPage({ ctx }: V2PageProps) {
   };
   const [filter, setFilter] = useState<FlagFilter | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [zoom, setZoom] = useState<Zoom>('cards');
   // the rig box or line the pointer or keyboard is on: its lines light up, the rest dim (kit)
   const lineFocus = useLineFocus();
   const [lineHover, setLineHover] = useState<LineHover | null>(null);
@@ -271,17 +285,54 @@ function GraphPage({ ctx }: V2PageProps) {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [pinned]);
 
-  // A rig box opens that rig's Rig Map: the shared rig choice, then the page (as the Needs You page does).
-  const openRig = useStable((key: string) => {
-    ctx.chooseRig(key);
-    ctx.goTo('map');
+  // A rig box opens in place (several can be open at once) and becomes the shared rig choice.
+  const chooseRig = ctx.chooseRig;
+  const toggleBox = useStable((k: string, was: boolean) => {
+    setExpanded((o) => ({ ...o, [k]: !was }));
+    if (!was && !isLoose(k)) chooseRig(k);
   });
-  const toggleBox = useStable((k: string, was: boolean) =>
-    setExpanded((o) => ({ ...o, [k]: !was }))
-  );
   const trace = useStable((k: string | null) => lineFocus.setFocus(k));
   const expandAll = (on: boolean) =>
-    setExpanded(Object.fromEntries(groups.map((g) => [g.key, on])));
+    setExpanded(Object.fromEntries(groups.filter(shown).map((g) => [g.key, on])));
+  // Fit: the most detail that still fits the rigs that are open.
+  const openAgents = groups
+    .filter((g) => expanded[g.key] && shown(g))
+    .reduce((n, g) => n + g.agents, 0);
+  const fit = () => setZoom(openAgents <= 16 ? 'cards' : openAgents <= 60 ? 'pods' : 'fleet');
+  const step = (dir: 1 | -1) =>
+    setZoom((z) => ZOOMS[Math.max(0, Math.min(ZOOMS.length - 1, ZOOMS.indexOf(z) + dir))]!);
+  // The `map` alias: the graph opens on the chosen rig.
+  const focused = useRef(false);
+  useEffect(() => {
+    if (!focusChosen || focused.current || !picked) return;
+    focused.current = true;
+    setExpanded((o) => ({ ...o, [picked]: true }));
+    requestAnimationFrame(() =>
+      document
+        .querySelector(`[data-graph-rig="${CSS.escape(picked)}"]`)
+        ?.scrollIntoView?.({ block: 'center' })
+    );
+  }, [focusChosen, picked]);
+  const minute = Math.floor(ctx.now / 60_000) * 60_000;
+  const openKeys = groups
+    .filter((g) => expanded[g.key] && g.ref && shown(g))
+    .map((g) => g.key)
+    .join('|');
+  const insideMaps = useMemo(
+    () =>
+      new Map(
+        openKeys
+          .split('|')
+          .filter(Boolean)
+          .map((k) => [k, buildRigMap(ctx.allMachines, k, minute)] as const)
+      ),
+    [openKeys, ctx.allMachines, minute]
+  );
+  const onWheel = (e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    step(e.deltaY < 0 ? 1 : -1);
+  };
 
   const counts = Object.fromEntries(
     FLAG_FILTERS.map((f) => [f.key, groups.filter((g) => rigMatches(g, f.key)).length])
@@ -308,6 +359,34 @@ function GraphPage({ ctx }: V2PageProps) {
             onClick={() => expandAll(false)}
           >
             Collapse all
+          </button>
+        </span>
+        <span className="g2-tool-group" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="g2-zoom-out"
+            aria-label="Zoom out: show less"
+            disabled={zoom === 'fleet'}
+            onClick={() => step(-1)}
+          >
+            −
+          </button>
+          <span className="g2-zoom-level mono" data-testid="g2-zoom" data-zoom={zoom}>
+            {ZOOM_LABEL[zoom]}
+          </span>
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="g2-zoom-in"
+            aria-label="Zoom in: show more"
+            disabled={zoom === 'cards'}
+            onClick={() => step(1)}
+          >
+            +
+          </button>
+          <button type="button" className="pill-btn" data-testid="g2-fit" onClick={fit}>
+            Fit
           </button>
         </span>
         <span className="g2-tool-group">
@@ -338,47 +417,63 @@ function GraphPage({ ctx }: V2PageProps) {
             </button>
           ))}
         </span>
-        <span className="g2-mock-note" data-testid="g2-mock-note">
-          <MockNote>Rig controls on this page are mocks — nothing is sent</MockNote>
-        </span>
       </div>
-      <p className="view-caption g2-caption" data-testid="g2-caption">
-        <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
-        active · {graph.machines.length} machines ·{' '}
-        <b>
-          {pairs.length} line{pairs.length === 1 ? '' : 's'} between rigs
-        </b>{' '}
-        ({linesTotal} handoffs)
-        {toHidden.length > 0 && (
-          <span data-testid="g2-hidden-lines">
-            {' '}
-            · {toHidden.length} to hidden stopped rig{toHidden.length === 1 ? '' : 's'}
+      <PageHeader
+        title="Graph"
+        facts={[
+          <span key="c" data-testid="g2-caption">
+            <b>{graph.totals.rigs} rigs</b> · {graph.totals.agents} agents · {graph.totals.active}{' '}
+            active · {graph.machines.length} machines ·{' '}
+            <b>
+              {pairs.length} line{pairs.length === 1 ? '' : 's'} between rigs
+            </b>{' '}
+            ({linesTotal} handoffs)
+            {toHidden.length > 0 && (
+              <span data-testid="g2-hidden-lines">
+                {' '}
+                · {toHidden.length} to hidden stopped rig{toHidden.length === 1 ? '' : 's'}
+              </span>
+            )}
+            {graph.unplaced.count > 0 && (
+              <span
+                className="g2-unplaced"
+                data-testid="g2-unplaced"
+                tabIndex={0}
+                title={unplacedHint}
+                aria-label={unplacedHint}
+              >
+                {' '}
+                · +{graph.unplaced.count} not drawn ⓘ
+              </span>
+            )}
+          </span>,
+          ...(pairs.length === 0
+            ? [
+                <span key="n" data-testid="g2-no-lines">
+                  No handoffs between the rigs shown
+                  {toHidden.length > 0 ? ' (some go to hidden stopped rigs)' : ''}.
+                </span>,
+              ]
+            : []),
+        ]}
+        mocks={
+          <span data-testid="g2-mock-note">
+            <MockNote>Rig controls on this page are mocks — nothing is sent</MockNote>
           </span>
-        )}
-        {graph.unplaced.count > 0 && (
-          <span
-            className="g2-unplaced"
-            data-testid="g2-unplaced"
-            tabIndex={0}
-            title={unplacedHint}
-            aria-label={unplacedHint}
-          >
-            {' '}
-            · +{graph.unplaced.count} not drawn ⓘ
-          </span>
-        )}
-      </p>
-      {pairs.length === 0 ? (
-        <p className="g2-legend" data-testid="g2-no-lines">
-          No handoffs between the rigs shown
-          {toHidden.length > 0 ? ' (some go to hidden stopped rigs)' : ''}.
-        </p>
-      ) : (
+        }
+      />
+      {pairs.length > 0 && (
         <div className="g2-legend" data-testid="g2-legend">
           <HandoffLegend compact />
         </div>
       )}
-      <div className="g2-canvas" ref={canvas} data-testid="g2-canvas">
+      <div
+        className="g2-canvas"
+        ref={canvas}
+        data-testid="g2-canvas"
+        data-zoom={zoom}
+        onWheel={onWheel}
+      >
         <div className="g2-machines" style={{ ['--g2-n' as string]: Math.max(1, columns.length) }}>
           {columns.map(({ machine, groups: gs }) => (
             <section
@@ -416,10 +511,22 @@ function GraphPage({ ctx }: V2PageProps) {
                     now={ctx.now}
                     expanded={!!expanded[g.key]}
                     trace={traceOf(g.key)}
-                    onOpen={openRig}
                     onToggle={toggleBox}
                     onTrace={trace}
-                  />
+                  >
+                    {zoom !== 'fleet' && insideMaps.get(g.key) ? (
+                      <RigInside
+                        map={insideMaps.get(g.key)!}
+                        level={zoom}
+                        socket={ctx.getSocket()}
+                        machines={ctx.allMachines}
+                        lastWords={lastWords(g, ctx.now)}
+                        onOpenAgent={ctx.openAgentPage}
+                        onDetails={() => ctx.onOpenFiles(g.machineId, g.name)}
+                        onPin={(title, items) => setPinned({ title, items })}
+                      />
+                    ) : null}
+                  </RigBox>
                 ))}
               </div>
             </section>
@@ -564,7 +671,7 @@ function GraphPage({ ctx }: V2PageProps) {
   );
 }
 
-function GraphV2(props: V2PageProps) {
+export function GraphV2(props: V2PageProps & { focusChosen?: boolean }) {
   return (
     <FakeRunner>
       <GraphPage {...props} />
@@ -578,5 +685,5 @@ export const page: V2PageDef = {
   group: 'fleet',
   component: GraphV2,
   blurb:
-    'Every rig as one box, grouped by machine, with the handoff lines between rigs. Click a box to open its Rig Map.',
+    'Every rig as a box in machine columns; open several in place, zoom from fleet to compact cards, handoff lines between rigs and inside them.',
 };
