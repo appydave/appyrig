@@ -622,6 +622,11 @@ export interface FlowEdge {
    * (PASS too) and answers. The name is historical; the UI calls it "sent back" (legend, glossary).
    */
   rework: boolean;
+  /**
+   * How many of its items were sent back. Set only when the caller passed `opts.sentBack` (the old
+   * page never does, so its edges are unchanged).
+   */
+  back?: number;
 }
 
 export interface FlowStageView {
@@ -681,7 +686,36 @@ export function flowRange(items: QueueItem[]): { start: number; end: number } | 
  * is in flight from createdAt until updatedAt if it is done (updatedAt is when it closed), or
  * until now if it is still open.
  */
-export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number): FlowView | null {
+/**
+ * What counts as "sent back" (run board brief, lane 2, 2026-10-19).
+ *  - `stage` (the default, what every caller had before): roles mode, a handoff to an earlier stage
+ *    other than the Lead or outside.
+ *  - `verdict-or-stage`: when ANY handoff in the rig carries a `verdict:` tag, a handoff is sent back
+ *    exactly when its verdict is `changes` or `fail` (`accept` / `pass` never are, whichever way they
+ *    go); a rig with no verdict tags at all keeps the stage rule.
+ */
+export type SentBackRule = 'stage' | 'verdict-or-stage';
+
+export interface FlowOptions {
+  sentBack?: SentBackRule;
+}
+
+/** Verdicts that send work back. */
+export const SENT_BACK_VERDICTS = new Set(['changes', 'fail']);
+
+/** The `verdict:<word>` tag on a handoff, lower-cased; null when it has none. */
+export function verdictOf(q: Pick<QueueItem, 'tags'>): string | null {
+  const t = q.tags.find((x) => x.startsWith('verdict:'));
+  return t ? t.slice('verdict:'.length).trim().toLowerCase() : null;
+}
+
+export function buildFlow(
+  fm: FleetMachine,
+  rig: string,
+  at: number,
+  now: number,
+  opts: FlowOptions = {}
+): FlowView | null {
   const items = rigQueue(fm, rig);
   const range = flowRange(items);
   if (!range) return null;
@@ -739,6 +773,8 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
   const closedTurn: number[] = [];
   let total = 0;
   let rework = 0;
+  const byVerdict =
+    opts.sentBack === 'verdict-or-stage' && items.some((q) => verdictOf(q) !== null);
 
   for (const q of items) {
     const created = ms(q.createdAt);
@@ -746,14 +782,19 @@ export function buildFlow(fm: FleetMachine, rig: string, at: number, now: number
     total += 1;
     const from = nodeOf(q.source);
     const to = nodeOf(q.destination);
-    const back =
-      mode === 'roles' &&
-      order.indexOf(to) < order.indexOf(from) &&
-      to !== 'lead' &&
-      to !== OUTSIDE;
+    const back = byVerdict
+      ? SENT_BACK_VERDICTS.has(verdictOf(q) ?? '')
+      : mode === 'roles' &&
+        order.indexOf(to) < order.indexOf(from) &&
+        to !== 'lead' &&
+        to !== OUTSIDE;
     if (back) rework += 1;
     const k = `${from}→${to}`;
     const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], items: [], rework: back };
+    // By stage every item on one edge agrees; by verdict one sent-back item marks the edge, and
+    // `back` (set only when a rule was asked for) says how many of its items were.
+    if (back) e.rework = true;
+    if (opts.sentBack) e.back = (e.back ?? 0) + (back ? 1 : 0);
     e.count += 1;
     e.items.push(q);
     const closedAt = isOpen(q) ? now : ms(q.updatedAt);
@@ -846,7 +887,12 @@ const hhmm = (t: number) =>
  * The moments worth pausing on in a run, found from the queue alone so any rig gets them:
  * the first handoff, the first item sent back, the biggest fresh queue, the longest real wait, the end.
  */
-export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapter[] {
+export function flowChapters(
+  fm: FleetMachine,
+  rig: string,
+  now: number,
+  opts: FlowOptions = {}
+): Chapter[] {
   const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const range = flowRange(items);
   if (!range) return [];
@@ -866,7 +912,7 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
   let peak: { at: number; n: number; where: string; flow: FlowView } | null = null;
   for (const q of items) {
     const t = ms(q.createdAt);
-    const flow = buildFlow(fm, rig, t, now)!;
+    const flow = buildFlow(fm, rig, t, now, opts)!;
     if (!reworkSeen && flow.rework > 0) {
       reworkSeen = true;
       out.push({
@@ -906,7 +952,7 @@ export function flowChapters(fm: FleetMachine, rig: string, now: number): Chapte
     });
   }
 
-  const endFlow = buildFlow(fm, rig, range.end, now)!;
+  const endFlow = buildFlow(fm, rig, range.end, now, opts)!;
   out.push({
     at: range.end,
     kind: 'end',

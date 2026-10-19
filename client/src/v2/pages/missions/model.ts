@@ -42,14 +42,22 @@ export interface Slice {
 }
 
 export interface Mission {
+  /** The mission's name (its `mission:` tag). The same name on two machines is two missions. */
   id: string;
+  /** Unique: machine + rig + mission (`m4:d09-crew:d09`). */
+  key: string;
+  machineId: string;
+  machineLabel: string;
+  /** The rig its jobs belong to on that machine; '(no rig)' when no seat or suffix names one. */
+  rig: string;
   slices: Slice[];
   open: number;
   done: number;
   notDone: number;
   progress: number;
+  /** Its one machine's label (kept as a list for callers that join it). */
   machines: string[];
-  /** The rigs whose seats sent or received its jobs, as {machineId, rig}. */
+  /** Its one rig on its one machine, as {machineId, rig} (empty when no rig is known). */
   rigs: { machineId: string; rig: string }[];
   lastAt: string;
 }
@@ -108,16 +116,19 @@ function jobFor(fm: FleetMachine, q: QueueItem): Job {
 
 const natural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true });
 
+const NO_RIG = '(no rig)';
+
 /**
  * Every mission found in the `mission:` tags of every machine's queue; the newest activity first.
- * A loose `slice-N` is only unique within its rig, so it is keyed with the rig ("slice-1 (starter)")
- * and two rigs' slice-1 never merge.
+ * A mission is keyed by machine + rig + mission name (run board brief, lane 2): the same name on two
+ * machines, or in two rigs, is two missions, so the M2's pre-GO chores never merge into the M4's run.
+ * A job belongs to its destination's rig, else its sender's. A loose `slice-N` keeps its rig in its
+ * name ("slice-1 (starter)").
  */
 export function deriveMissions(machines: FleetMachine[]): Mission[] {
-  const byMission = new Map<string, Map<string, Job[]>>();
-  const meta = new Map<
+  const groups = new Map<
     string,
-    { machines: Set<string>; rigs: Map<string, { machineId: string; rig: string }> }
+    { id: string; fm: FleetMachine; rig: string | null; slices: Map<string, Job[]> }
   >();
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
@@ -126,22 +137,16 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
       if (!mid) continue;
       const s = sliceOf(q.tags);
       const rig = jobRig(fm, q);
+      const key = `${fm.machine.id}:${rig ?? NO_RIG}:${mid}`;
       const sid = !s ? WHOLE_MISSION : isLoose(s) ? `${s} (${rig ?? fm.machine.label})` : s;
-      const slices = byMission.get(mid) ?? new Map<string, Job[]>();
-      slices.set(sid, [...(slices.get(sid) ?? []), jobFor(fm, q)]);
-      byMission.set(mid, slices);
-      const md = meta.get(mid) ?? { machines: new Set(), rigs: new Map() };
-      md.machines.add(fm.machine.label);
-      for (const end of [q.destination, q.source]) {
-        const r = rigOf(fm, end);
-        if (r) md.rigs.set(`${fm.machine.id}:${r}`, { machineId: fm.machine.id, rig: r });
-      }
-      meta.set(mid, md);
+      const g = groups.get(key) ?? { id: mid, fm, rig, slices: new Map<string, Job[]>() };
+      g.slices.set(sid, [...(g.slices.get(sid) ?? []), jobFor(fm, q)]);
+      groups.set(key, g);
     }
   }
   const out: Mission[] = [];
-  for (const [id, slices] of byMission) {
-    const list: Slice[] = [...slices.entries()]
+  for (const [key, g] of groups) {
+    const list: Slice[] = [...g.slices.entries()]
       .map(([sid, jobs]) => {
         const open = jobs.filter((j) => j.outcome === 'open').length;
         const notDone = jobs.filter((j) => j.outcome === 'closed-not-done').length;
@@ -161,20 +166,23 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
       .sort((a, b) => natural(a.id, b.id));
     const sum = (k: 'open' | 'done' | 'notDone') => list.reduce((n, x) => n + x[k], 0);
     const total = sum('open') + sum('done') + sum('notDone');
-    const md = meta.get(id)!;
     out.push({
-      id,
+      id: g.id,
+      key,
+      machineId: g.fm.machine.id,
+      machineLabel: g.fm.machine.label,
+      rig: g.rig ?? NO_RIG,
       slices: list,
       open: sum('open'),
       done: sum('done'),
       notDone: sum('notDone'),
       progress: sum('done') / total,
-      machines: [...md.machines],
-      rigs: [...md.rigs.values()],
+      machines: [g.fm.machine.label],
+      rigs: g.rig ? [{ machineId: g.fm.machine.id, rig: g.rig }] : [],
       lastAt: list.reduce((a, x) => (x.lastAt > a ? x.lastAt : a), ''),
     });
   }
-  return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt) || a.key.localeCompare(b.key));
 }
 
 /** Jobs with a slice tag but no mission tag: a flat list per rig, with no progress (there is no mission to measure). */
