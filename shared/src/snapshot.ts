@@ -339,6 +339,8 @@ export const HUB_CAPS = {
   V2_FIELDS: 'v2-fields',
   /** The hub listens for `collector:daemondata`. */
   DAEMONDATA: 'daemondata',
+  /** The hub listens for `collector:missionfiles`. */
+  MISSIONFILES: 'missionfiles',
 } as const;
 
 export const V2_SEAT_KEYS = ['tmuxAttachCommand'] as const;

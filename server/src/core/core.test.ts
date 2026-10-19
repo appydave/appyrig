@@ -52,6 +52,7 @@ describe('AC 9 — exactly one write verb', () => {
       'library.get',
       'library.list',
       'machine.list',
+      'mission.file',
       'queue.list',
       'rig.entry',
       'rig.file',
@@ -305,6 +306,11 @@ describe('core.call — the one seam', () => {
         rig: store.get('roamy')!.snapshot.rigs[0]!.name,
         fileId: 'spec:rig.yaml',
       },
+      'mission.file': {
+        machine: 'roamy',
+        rig: store.get('roamy')!.snapshot.rigs[0]!.name,
+        path: '/x/spec.md',
+      },
       'db.schema': { machine: 'roamy' },
       'db.rows': { machine: 'roamy', table: 'queue_items' },
     };
@@ -364,7 +370,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 32 },
+      value: { app: 'AppyRig', version: real.version, verbs: 33 },
     });
   });
 

@@ -5,6 +5,7 @@ import type { SchemaPush } from './dbschema.js';
 import type { SeatLoadout } from './loadout.js';
 import type { DbRowsPush } from './dbrows.js';
 import type { DaemonDataPush } from './daemondata.js';
+import type { MissionFilesPush } from './missionfiles.js';
 import type { FleetUpdate, MachineSnapshot } from './snapshot.js';
 import type { CallAnswer, CoreCallRequest } from './verbs.js';
 
@@ -50,6 +51,8 @@ export const FLEET_EVENTS = {
   DBROWS: 'collector:dbrows',
   /** collector → hub. Payload: DaemonDataPush (one kind of read-only OpenRig daemon data: seat detail, library, transitions, workflows, health, settings). Acked with CollectorAck. v2 data channels. */
   DAEMONDATA: 'collector:daemondata',
+  /** collector → hub. Payload: MissionFilesPush (a rig's list of servable mission files, or one file/part). Acked with CollectorAck. Run board lane 1. */
+  MISSIONFILES: 'collector:missionfiles',
   /** hub → collector, once on connection: the HUB_CAPS this hub understands, so the first push is already right. */
   CAPS: 'hub:caps',
 } as const;
@@ -105,6 +108,7 @@ export interface CollectorClientToServerEvents {
   'collector:loadout': (loadout: SeatLoadout, ack: (result: CollectorAck) => void) => void;
   'collector:dbrows': (push: DbRowsPush, ack: (result: CollectorAck) => void) => void;
   'collector:daemondata': (push: DaemonDataPush, ack: (result: CollectorAck) => void) => void;
+  'collector:missionfiles': (push: MissionFilesPush, ack: (result: CollectorAck) => void) => void;
 }
 
 /** Events on the `/collector` namespace, hub → collector. None in v1. */

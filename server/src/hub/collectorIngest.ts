@@ -11,6 +11,7 @@ import {
   SeatLoadoutSchema,
   DbRowsPushSchema,
   DaemonDataPushSchema,
+  MissionFilesPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -26,6 +27,9 @@ import type { FleetStore } from './fleetStore.js';
  * of every snapshot, a machine-id check against the handshake, then the store. Refusals are acks
  * with a failureMode, never throws. The hub has no adapters: it only ingests validated snapshots.
  */
+
+/** What this hub understands beyond v1.5, told to a collector on connect and in every snapshot ack. */
+const HUB_CAP_LIST = [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA, HUB_CAPS.MISSIONFILES];
 
 export interface CollectorIngestOptions {
   /** Hub token. When undefined, every collector is refused (no open default). */
@@ -52,7 +56,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
 
   nsp.on('connection', (socket) => {
     // Tell the collector what this hub understands before its first push (the ack repeats it).
-    socket.emit(FLEET_EVENTS.CAPS, [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA]);
+    socket.emit(FLEET_EVENTS.CAPS, HUB_CAP_LIST);
     const machineId = (socket.handshake.auth as CollectorAuth).machineId;
     socket.on(FLEET_EVENTS.SNAPSHOT, (raw, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
@@ -83,7 +87,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
       reply({
         ok: true,
         receivedAt: entry.lastSeen,
-        caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA],
+        caps: HUB_CAP_LIST,
       });
     });
 
@@ -196,6 +200,11 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     socket.on(
       FLEET_EVENTS.DBROWS,
       guarded(DbRowsPushSchema, 'database rows', (d) => opts.store.dbRows.put(d))
+    );
+    // Run board lane 1: a rig's list of servable mission files, then the files. Same checks as the others.
+    socket.on(
+      FLEET_EVENTS.MISSIONFILES,
+      guarded(MissionFilesPushSchema, 'mission files', (d) => opts.store.missionFiles.put(d))
     );
     // v2 data channels: one kind of read-only OpenRig daemon data. Same checks as the others.
     socket.on(

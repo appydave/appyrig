@@ -8,6 +8,7 @@ import {
   DaemonDataReader,
   LoadoutReader,
   RigFilesReader,
+  MissionFilesReader,
   SchemaReader,
   seatConfigReader,
   withSeatCards,
@@ -37,6 +38,7 @@ function main() {
   const history = new HistoryReader(settings.machine.id);
   const handoffs = new HandoffReader(settings.machine.id);
   const rigFiles = new RigFilesReader(settings.machine.id);
+  const missionFiles = new MissionFilesReader(settings.machine.id);
   const schema = new SchemaReader(settings.machine.id, sources.exec!, {
     rigBin: settings.sources.rigBin,
   });
@@ -81,6 +83,7 @@ function main() {
     onConnect: () => {
       handoffs.reset();
       rigFiles.reset();
+      missionFiles.reset();
       schema.reset();
       loadouts.reset();
       dbRows.reset();
@@ -88,6 +91,7 @@ function main() {
     },
     daemonData: () => daemonData.next(daemonTargets),
     rigFiles: async () => (sources.specs ? rigFiles.next(await sources.specs()) : null),
+    missionFiles: async () => (sources.specs ? missionFiles.next(await sources.specs()) : null),
     schema: () => schema.next(),
     dbRows: () => dbRows.next(),
     loadouts: async () =>

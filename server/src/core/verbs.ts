@@ -14,6 +14,8 @@ import {
   DbSchemaOutputSchema,
   RigFileInputSchema,
   RigFileOutputSchema,
+  MissionFileInputSchema,
+  MissionFileOutputSchema,
   RigFilesInputSchema,
   RigFilesOutputSchema,
   type RigFilesOutput,
@@ -1148,6 +1150,28 @@ const VERB_SET = {
         );
       }
       return { machine: input.machine, rig: input.rig, file };
+    }
+  ),
+
+  'mission.file': query(
+    "One file a rig's MISSION.md points at (a spec source, listed by absolute path) or one in the qa/ or shots/ folder beside it, by absolute path. Only paths on the list the rig's collector pushed are ever served; the answer is a status, never a failure: 'ok' (text for .md/.html, base64 for .png/.jpg), 'missing' (listed, not on disk), 'refused' (not on the list, never read), 'too_large' (over 256 KB text or 2 MB image; no bytes), 'pending' (listed, bytes not arrived yet), 'no-data' (that machine's collector has sent no list: older, or not yet). machine is required: the same rig name can exist on two machines.",
+    MissionFileInputSchema,
+    MissionFileOutputSchema,
+    RIG_NOT_FOUND,
+    (input, ctx) => {
+      const [m] = machinesOf(ctx, input.machine);
+      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
+        throw new CapabilityRefusal(
+          'rig-not-found',
+          `Machine "${input.machine}" has no rig "${input.rig}".`,
+          {
+            machine: input.machine,
+            rig: input.rig,
+            known: m!.snapshot.rigs.map((r) => r.name),
+          }
+        );
+      }
+      return ctx.store.missionFiles.get(input.machine, input.rig, input.path);
     }
   ),
 

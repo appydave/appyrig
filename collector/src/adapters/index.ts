@@ -13,6 +13,15 @@ export {
   type PendingRigFiles,
 } from './rigfiles.js';
 export {
+  MissionFilesReader,
+  allowlistFor,
+  checkPath,
+  manifestFor,
+  readMissionFile,
+  type MissionAllowlist,
+  type PendingMissionFiles,
+} from './missionfiles.js';
+export {
   SchemaReader,
   sampleSchema,
   readTables,

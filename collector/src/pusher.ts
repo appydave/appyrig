@@ -19,6 +19,7 @@ import type { PendingSchema } from './adapters/dbschema.js';
 import type { PendingLoadouts } from './adapters/loadout.js';
 import type { PendingDbRows } from './adapters/dbrows.js';
 import type { PendingDaemonData } from './adapters/daemondata.js';
+import type { PendingMissionFiles } from './adapters/missionfiles.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -54,6 +55,9 @@ export interface PusherOptions {
   /** v2 data channels: OpenRig daemon reads (seat detail, library, …) that changed; null = nothing to send. */
   daemonData?: () => Promise<PendingDaemonData | null>;
   daemonDataIntervalMs?: number;
+  /** Run board lane 1: a rig's list of servable mission files and the files; null = nothing to send. Sent only to a hub that advertised `missionfiles`. */
+  missionFiles?: () => Promise<PendingMissionFiles | null>;
+  missionFilesIntervalMs?: number;
   /** How long the first push waits for the hub's `hub:caps` (default 1000 ms; an older hub never sends it). */
   capsWaitMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
@@ -371,6 +375,20 @@ export function startPusher(opts: PusherOptions): Pusher {
         );
       },
       HUB_CAPS.DAEMONDATA
+    );
+  }
+  if (opts.missionFiles) {
+    const take = opts.missionFiles;
+    channel(
+      'mission files',
+      FLEET_EVENTS.MISSIONFILES,
+      opts.missionFilesIntervalMs ?? 30_000,
+      'run board',
+      async () => {
+        const p = await take();
+        return p && { payloads: p.pushes, markSent: p.markSent };
+      },
+      HUB_CAPS.MISSIONFILES
     );
   }
   if (opts.schema) {

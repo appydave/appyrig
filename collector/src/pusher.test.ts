@@ -49,7 +49,12 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
     .on('connection', (socket) => {
       if (hopts.caps && !hopts.ackOnly) socket.emit('hub:caps', hopts.caps);
       if (modern)
-        for (const event of ['collector:rigfiles', 'collector:schema', 'collector:daemondata'])
+        for (const event of [
+          'collector:rigfiles',
+          'collector:schema',
+          'collector:daemondata',
+          'collector:missionfiles',
+        ])
           socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
             extra.push({ event, payload });
             ack({ ok: true, receivedAt: new Date().toISOString() });
@@ -447,6 +452,63 @@ describe('pusher', () => {
     await new Promise((r) => setTimeout(r, 150));
     expect(takes).toBe(0);
   });
+
+  it('mission files: not read for a hub without the cap (old hub), sent to one with it, and a throwing read leaves snapshots flowing', async () => {
+    // an old hub (advertises only daemondata): the channel is never even read, nothing is sent
+    hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA] });
+    let takes = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      log: () => {},
+      missionFilesIntervalMs: 20,
+      missionFiles: async () => {
+        takes++;
+        return null;
+      },
+    });
+    await until(() => hub!.received.length >= 5);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(takes).toBe(0);
+    await pusher.stop();
+    await hub.close();
+
+    // a hub with the cap: sent, marked sent, and a read that throws never stops the snapshot push
+    hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.MISSIONFILES] });
+    let n = 0;
+    let marked = 0;
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      log: () => {},
+      missionFilesIntervalMs: 20,
+      missionFiles: async () => {
+        n++;
+        if (n % 2 === 1) throw new Error('mission files exploded');
+        return {
+          pushes: [
+            {
+              kind: 'manifest' as const,
+              machineId: 'roamy',
+              collectedAt: new Date().toISOString(),
+              rig: 'r',
+              paths: ['/a/x.md'],
+            },
+          ],
+          markSent: () => void marked++,
+        };
+      },
+    });
+    await until(() => n >= 4 && hub!.received.length >= 6 && marked >= 1, 10_000);
+    const sent = hub.extra.filter((e) => e.event === 'collector:missionfiles');
+    expect(sent.length).toBeGreaterThan(0);
+  }, 20_000);
 
   const pushOf = (n: number) => ({
     kind: 'settings' as const,
