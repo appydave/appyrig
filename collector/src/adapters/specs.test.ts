@@ -25,10 +25,34 @@ describe('parseSpec', () => {
     expect(parseSpec('version: "0.2"\nname: demo\nsummary: >\n  one two\n  three\n')).toEqual({
       name: 'demo',
       summary: 'one two three',
+      spec: null,
     });
   });
+  it("carries the whole file as OpenRig's RigSpec when it validates, and null when OpenRig would refuse it", () => {
+    const yaml = [
+      'version: "0.2"',
+      'name: demo',
+      'culture_file: CULTURE.md',
+      'pods:',
+      '  - id: dev',
+      '    label: Development',
+      '    members:',
+      '      - { id: build, agent_ref: "local:agents/impl", profile: default, runtime: claude-code, cwd: . }',
+      '      - { id: qa, agent_ref: "local:agents/qa", profile: default, runtime: claude-code, cwd: . }',
+      '    edges:',
+      '      - { kind: delegates_to, from: build, to: qa }',
+      '',
+    ].join('\n');
+    const ok = parseSpec(yaml)!;
+    expect(ok.spec?.culture_file).toBe('CULTURE.md');
+    expect(ok.spec?.pods[0]).toMatchObject({ id: 'dev', label: 'Development' });
+    expect(ok.spec?.pods[0]?.edges).toEqual([{ kind: 'delegates_to', from: 'build', to: 'qa' }]);
+    // an unknown top-level key: OpenRig refuses the spec, so nothing in it is trusted; still matched by name
+    const bad = parseSpec(`${yaml}mission_board: yes\n`)!;
+    expect(bad).toMatchObject({ name: 'demo', spec: null });
+  });
   it('has no summary when none is written, and is null for non-specs', () => {
-    expect(parseSpec('name: demo\n')).toEqual({ name: 'demo', summary: null });
+    expect(parseSpec('name: demo\n')).toEqual({ name: 'demo', summary: null, spec: null });
     expect(parseSpec('nothing: here\n')).toBeNull();
     expect(parseSpec(': : not yaml [')).toBeNull();
     expect(parseSpec('')).toBeNull();
@@ -67,6 +91,7 @@ describe('scanSpecs', () => {
       path: join(a, 'deep', 'team', 'rig.yaml'),
       root: a,
       summary: 'from a',
+      spec: null,
     });
     expect(found.get('beta')!.summary).toBeNull();
   });
@@ -142,7 +167,9 @@ describe('enrichRigs', () => {
   });
 
   it('a scan that finds one rig and not another says so for each', () => {
-    const specs = new Map([['a', { path: '/p/rig.yaml', root: '/p', summary: 'about a' }]]);
+    const specs = new Map([
+      ['a', { path: '/p/rig.yaml', root: '/p', summary: 'about a', spec: null }],
+    ]);
     const [a, b] = enrichRigs([rig('a'), rig('b')], [], [], specs);
     expect(a).toMatchObject({ specStatus: 'found', specPath: '/p/rig.yaml', summary: 'about a' });
     expect(b).toMatchObject({ specStatus: 'not-found', specPath: null, summary: null });

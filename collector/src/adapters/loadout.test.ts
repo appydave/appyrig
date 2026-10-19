@@ -3,6 +3,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -25,7 +26,7 @@ import {
   type Exec,
   type LoadoutSeat,
 } from './loadout.js';
-import type { SpecInfo } from './specs.js';
+import { parseSpec, type SpecInfo } from './specs.js';
 
 const dirs: string[] = [];
 const tmp = () => {
@@ -270,15 +271,34 @@ describe('prompt layers', () => {
   function world() {
     const root = tmp();
     const team = join(root, 'proj', 'team');
-    put(join(team, 'rig.yaml'), 'name: demo\nculture_file: TEAM-CULTURE.md\n');
+    const rigYaml = [
+      'version: "0.2"',
+      'name: demo',
+      'culture_file: TEAM-CULTURE.md',
+      'pods:',
+      '  - id: orch',
+      '    label: Orchestration',
+      '    members:',
+      '      - { id: lead, agent_ref: "local:agent", profile: default, runtime: claude-code, cwd: . }',
+      '',
+    ].join('\n');
+    put(join(team, 'rig.yaml'), rigYaml);
     put(join(team, 'TEAM-CULTURE.md'), '# culture\n');
     put(join(team, 'LEARNED-orch-lead.md'), '# learned\n');
-    const spec: SpecInfo = { path: join(team, 'rig.yaml'), root, summary: null };
+    const spec: SpecInfo = {
+      path: join(team, 'rig.yaml'),
+      root,
+      summary: null,
+      spec: parseSpec(rigYaml)!.spec,
+    };
     const cwd = tmp();
     put(join(cwd, 'CLAUDE.md'), '# claude\n');
     put(join(cwd, 'CLAUDE.local.md'), 'token: sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n');
     const agent = tmp();
-    put(join(agent, 'agent.yaml'), 'startup:\n  files:\n    - path: guidance/role.md\n');
+    put(
+      join(agent, 'agent.yaml'),
+      'name: orch\nversion: "1.0"\nstartup:\n  files:\n    - path: guidance/role.md\n'
+    );
     put(join(agent, 'guidance', 'role.md'), '# Role: Orchestrator\n');
     const seat: LoadoutSeat = { id: 'orch-lead@demo', rig: 'demo', runtime: 'claude-code', cwd };
     return { root, team, spec, cwd, agent, seat };
@@ -321,14 +341,48 @@ describe('prompt layers', () => {
     put(join(outside, 'secret.md'), 'secret\n');
     rmSync(join(w.cwd, 'CLAUDE.md'));
     symlinkSync(join(outside, 'secret.md'), join(w.cwd, 'CLAUDE.md'));
-    put(join(w.team, 'rig.yaml'), 'name: demo\nculture_file: ../../../etc/passwd\n');
-    const layers = await readLayers(w.seat, w.spec, w.agent);
+    const yaml = readFileSync(join(w.team, 'rig.yaml'), 'utf8').replace(
+      'TEAM-CULTURE.md',
+      '../../../etc/passwd'
+    );
+    const spec = { ...w.spec, spec: parseSpec(yaml)!.spec };
+    expect(spec.spec?.culture_file).toBe('../../../etc/passwd');
+    const layers = await readLayers(w.seat, spec, w.agent);
     expect(layers.find((l) => l.id === 'claude-md')?.present).toBe(false);
     // the bad culture_file falls back to the default name, which is absent here
     expect(layers.find((l) => l.id === 'culture')).toMatchObject({
       name: 'CULTURE.md',
       present: false,
     });
+  });
+
+  it('takes culture_file only from a rig.yaml OpenRig would accept (a refused spec gets the default name)', async () => {
+    const w = world();
+    const refused = { ...w.spec, spec: null };
+    expect((await readLayers(w.seat, refused, w.agent))[0]).toMatchObject({
+      name: 'CULTURE.md',
+      present: false,
+    });
+  });
+
+  it("finds the role file by OpenRig's `orientation: role` marker, whatever it is called", async () => {
+    const w = world();
+    put(
+      join(w.agent, 'agent.yaml'),
+      [
+        'name: orch',
+        'version: "1.0"',
+        'startup:',
+        '  files:',
+        '    - path: guidance/role.md',
+        '    - path: guidance/orchestrator.md',
+        '      orientation: role',
+        '',
+      ].join('\n')
+    );
+    put(join(w.agent, 'guidance', 'orchestrator.md'), '# Role: the real one\n');
+    const role = (await readLayers(w.seat, w.spec, w.agent)).find((l) => l.id === 'role');
+    expect(role?.content).toBe('# Role: the real one\n');
   });
 
   it('with no spec, cwd or agent folder: absent, saying why', async () => {

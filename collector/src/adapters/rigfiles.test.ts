@@ -30,7 +30,7 @@ function layout() {
   const mission = join(root, 'proj');
   const team = join(mission, 'team');
   put(join(team, 'rig.yaml'), 'name: demo\nsummary: s\n');
-  const spec: SpecInfo = { path: join(team, 'rig.yaml'), root, summary: 's' };
+  const spec: SpecInfo = { path: join(team, 'rig.yaml'), root, summary: 's', spec: null };
   return { root, mission, team, spec };
 }
 const ids = async (spec: SpecInfo) => (await candidatesFor(spec)).map((c) => c.id);
@@ -109,7 +109,12 @@ describe('which files may be read (the boundary)', () => {
     put(join(outside, 'team', 'rig.yaml'), 'name: x\n');
     put(join(outside, 'team', 'MISSION.md'), 'secret plans\n');
     symlinkSync(outside, join(root, 'linked'));
-    const spec: SpecInfo = { path: join(root, 'linked', 'team', 'rig.yaml'), root, summary: null };
+    const spec: SpecInfo = {
+      path: join(root, 'linked', 'team', 'rig.yaml'),
+      root,
+      summary: null,
+      spec: null,
+    };
     expect(await candidatesFor(spec)).toEqual([]);
   });
 
@@ -118,10 +123,15 @@ describe('which files may be read (the boundary)', () => {
     put(join(outer, 'MISSION.md'), 'above the root\n');
     const root = join(outer, 'specs');
     put(join(root, 'demo', 'rig.yaml'), 'name: demo\n');
-    const spec: SpecInfo = { path: join(root, 'demo', 'rig.yaml'), root, summary: null };
+    const spec: SpecInfo = {
+      path: join(root, 'demo', 'rig.yaml'),
+      root,
+      summary: null,
+      spec: null,
+    };
     // parent of the spec folder is the root itself (allowed); the root's parent (outer) never is
     expect(await ids(spec)).toEqual(['spec:rig.yaml']);
-    const rootLevel: SpecInfo = { path: join(root, 'rig.yaml'), root, summary: null };
+    const rootLevel: SpecInfo = { path: join(root, 'rig.yaml'), root, summary: null, spec: null };
     put(join(root, 'rig.yaml'), 'name: top\n');
     expect(await ids(rootLevel)).toEqual(['spec:rig.yaml']); // spec folder == root; its parent is above the root
   });
@@ -132,7 +142,7 @@ describe('which files may be read (the boundary)', () => {
     symlinkSync(join(root, 'nowhere.md'), join(team, 'CULTURE.md'));
     expect(await ids(spec)).toEqual(['spec:rig.yaml']);
     expect(
-      await candidatesFor({ path: join(root, 'gone', 'rig.yaml'), root, summary: null })
+      await candidatesFor({ path: join(root, 'gone', 'rig.yaml'), root, summary: null, spec: null })
     ).toEqual([]);
   });
 });
@@ -217,7 +227,12 @@ describe('chunking and change detection', () => {
     for (let i = 0; i < 9; i++) {
       put(join(root, `rig${i}`, 'rig.yaml'), `name: rig${i}\n`);
       put(join(root, `rig${i}`, 'CULTURE.md'), `culture ${i}\n`);
-      specs.set(`rig${i}`, { path: join(root, `rig${i}`, 'rig.yaml'), root, summary: null });
+      specs.set(`rig${i}`, {
+        path: join(root, `rig${i}`, 'rig.yaml'),
+        root,
+        summary: null,
+        spec: null,
+      });
     }
     let t = 100_000;
     const r = new RigFilesReader('m2', () => new Date(t), 30_000);
@@ -238,7 +253,12 @@ describe('chunking and change detection', () => {
     for (let i = 0; i < 20; i++) {
       put(join(root, `big${i}`, 'rig.yaml'), `name: big${i}\n`);
       put(join(root, `big${i}`, 'MISSION.md'), 'x'.repeat(RIG_FILE_MAX_BYTES - 100));
-      specs.set(`big${i}`, { path: join(root, `big${i}`, 'rig.yaml'), root, summary: null });
+      specs.set(`big${i}`, {
+        path: join(root, `big${i}`, 'rig.yaml'),
+        root,
+        summary: null,
+        spec: null,
+      });
     }
     const t = 100_000;
     const r = new RigFilesReader('m2', () => new Date(t), 30_000); // the clock never moves
@@ -288,8 +308,8 @@ describe('run card R3: variant specs, batch briefs, and the cap', () => {
     ])
       put(join(dir, n));
     return {
-      d10: { path: join(dir, 'rig-d10.yaml'), root, summary: null } as SpecInfo,
-      base: { path: join(dir, 'rig.yaml'), root, summary: null } as SpecInfo,
+      d10: { path: join(dir, 'rig-d10.yaml'), root, summary: null, spec: null } as SpecInfo,
+      base: { path: join(dir, 'rig.yaml'), root, summary: null, spec: null } as SpecInfo,
     };
   }
 
@@ -357,9 +377,8 @@ describe('QA R3 LOW-2: the configured folder is no mission folder', () => {
     put(join(root, 'README.md'));
     put(join(root, 'flicut-ab', 'rig.yaml'), 'name: flicut-ab\n');
     put(join(root, 'flicut-ab', 'MISSION.md'));
-    expect(await ids({ path: join(root, 'flicut-ab', 'rig.yaml'), root, summary: null })).toEqual([
-      'spec:MISSION.md',
-      'spec:rig.yaml',
-    ]);
+    expect(
+      await ids({ path: join(root, 'flicut-ab', 'rig.yaml'), root, summary: null, spec: null })
+    ).toEqual(['spec:MISSION.md', 'spec:rig.yaml']);
   });
 });

@@ -10,6 +10,10 @@ These are Zod schemas and inferred types for what OpenRig really stores. Import 
 | `chainFiles.ts` | The topology tree `topology.root/rigs/<rig>[/pods/<pod> \| /seats/<seat>]`, holding `LEARNED.md`, `CRAFT.md`, `CULTURE.md` and `RECAP.md`. Source: `docs/reference/chain-file-convention.md`      |
 | `project.ts`    | The project tree `workspace/missions/<m>/slices/<s>`, holding `SPEC.md`, `PROGRESS.md`, `PROOF.md` and `mission.yaml`/`slice.yaml`. Source: `project-workspace.md`, `slice-indexer.ts`            |
 
+## Source of truth
+
+These schemas are what the collector parses rig.yaml and agent.yaml with (`collector/src/adapters/specs.ts`, `loadout.ts`). A rig.yaml that fails `RigSpecSchema` is still matched by its `name:`, but none of its other fields are used: OpenRig would refuse it. New spec-shaped data must be typed from here, never from an ad-hoc read of the YAML.
+
 ## Why hand-written
 
 OpenRig is TypeScript, but it gives us nothing we could import or generate these from:

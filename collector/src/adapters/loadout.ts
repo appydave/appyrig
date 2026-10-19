@@ -5,6 +5,7 @@ import { basename, dirname, join, sep } from 'node:path';
 import { parse } from 'yaml';
 import {
   LOADOUT_LAYER_MAX_BYTES,
+  OpenRig,
   LOADOUT_SKILLS_MAX,
   shortSkillName,
   type LoadoutLayer,
@@ -359,28 +360,27 @@ async function layer(
 /** A plain file name (no folders, no dots-only), as rig.yaml `culture_file` should be. */
 const PLAIN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
-async function cultureName(spec: SpecInfo): Promise<string> {
-  try {
-    const doc = parse(await readFile(spec.path, 'utf8')) as { culture_file?: unknown } | null;
-    const c = doc?.culture_file;
-    if (typeof c === 'string' && PLAIN.test(c.trim())) return c.trim();
-  } catch {
-    // unreadable: the default name
-  }
-  return 'CULTURE.md';
+/** The rig.yaml `culture_file`, when the spec validates and names a plain file; else the default name. */
+function cultureName(spec: SpecInfo): string {
+  const c = spec.spec?.culture_file?.trim();
+  return c && PLAIN.test(c) ? c : 'CULTURE.md';
 }
 
-/** The role file the agent spec types in: its startup file named role.md, else guidance/role.md. */
+/**
+ * The role file the agent spec delivers: its startup file marked `orientation: role` (OpenRig's own
+ * marker), else one named role.md, else guidance/role.md.
+ */
 async function roleSpot(agentDir: string): Promise<LayerSpot> {
   let rel = 'guidance/role.md';
   try {
-    const doc = parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8')) as {
-      startup?: { files?: { path?: unknown }[] };
-    } | null;
-    const hit = doc?.startup?.files?.find(
-      (f) => typeof f?.path === 'string' && basename(f.path) === 'role.md'
+    const doc = OpenRig.AgentSpecSchema.safeParse(
+      parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8'))
     );
-    if (hit && typeof hit.path === 'string' && !hit.path.split('/').includes('..')) rel = hit.path;
+    const files = doc.success ? (doc.data.startup?.files ?? []) : [];
+    const hit =
+      files.find((f) => f.orientation === 'role') ??
+      files.find((f) => basename(f.path) === 'role.md');
+    if (hit && !hit.path.split('/').includes('..')) rel = hit.path;
   } catch {
     // no agent.yaml: the usual place
   }
@@ -410,7 +410,7 @@ export async function readLayers(
   const member = seat.id.split('@')[0] ?? seat.id;
 
   return [
-    await layer('culture', 'CULTURE.md', spec ? inSpec(await cultureName(spec)) : [], noSpec),
+    await layer('culture', 'CULTURE.md', spec ? inSpec(cultureName(spec)) : [], noSpec),
     await layer(
       'role',
       'role.md',
