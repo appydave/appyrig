@@ -3,7 +3,8 @@ import type { FleetMachine, HistoryTransitionsOutput, QueueItem } from '@appydav
 import MarkdownView from '../../../components/MarkdownView.js';
 import RigPicker from '../../../components/RigPicker.js';
 import { useVerb } from '../../data/index.js';
-import { MockMark } from '../../kit/index.js';
+import { MockMark, useDocsDrawer } from '../../kit/index.js';
+import HowRunWent from './HowRunWent.js';
 import type { V2PageDef, V2PageProps } from '../../types.js';
 import { parseMissionJobs, type JobRow } from './jobs.js';
 import {
@@ -117,7 +118,7 @@ function JobTile({ j, picked, onSelect }: { j: JobState; picked: boolean; onSele
 
 // ---------------------------------------------------------------- stations
 
-function Stations({ run }: { run: RunModel }) {
+function Stations({ run, onDocs }: { run: RunModel; onDocs?: (seatId: string) => void }) {
   if (run.stations.length === 0)
     return <p className="quiet">This rig has no seats the machine reports.</p>;
   const arrow = (a: string, b: string) => run.forward.find((x) => x.from === a && x.to === b);
@@ -125,7 +126,7 @@ function Stations({ run }: { run: RunModel }) {
     <div className="run-stations" data-testid="run-stations">
       {run.stations.map((s, i) => (
         <div key={s.key} className="run-station-wrap">
-          <StationBox s={s} sample={run.sample} />
+          <StationBox s={s} sample={run.sample} onDocs={onDocs} />
           {i < run.stations.length - 1 && (
             <span className="run-arrow" aria-hidden="true">
               {'→'} <b className="mono">{arrow(s.seat, run.stations[i + 1]!.seat)?.count ?? ''}</b>
@@ -143,7 +144,15 @@ function Stations({ run }: { run: RunModel }) {
   );
 }
 
-function StationBox({ s, sample }: { s: Station; sample: boolean }) {
+function StationBox({
+  s,
+  sample,
+  onDocs,
+}: {
+  s: Station;
+  sample: boolean;
+  onDocs?: (seatId: string) => void;
+}) {
   return (
     <div
       className={`run-station run-station-${s.state}`}
@@ -157,6 +166,16 @@ function StationBox({ s, sample }: { s: Station; sample: boolean }) {
         {s.state}
         {s.holds > 0 ? ` · ${s.holds} open` : ''} {sample && <MockMark label="sample" />}
       </div>
+      {onDocs && (
+        <button
+          type="button"
+          className="pill-btn run-station-docs"
+          data-testid="run-station-docs"
+          onClick={() => onDocs(s.key)}
+        >
+          Docs
+        </button>
+      )}
     </div>
   );
 }
@@ -573,6 +592,7 @@ function RunBoard({ ctx }: V2PageProps) {
       preview && real && fm && rig && real.jobs.length > 0 ? sampleRun(real, fm, rig.name) : real,
     [preview, real, fm, rig]
   );
+  const { openDocs, drawer } = useDocsDrawer(ctx);
   const [sel, setSel] = useState<string | null>(null);
   const [on, setOnAll] = useState<Record<DocKey, boolean>>(DOC_DEFAULTS);
   const toggle = (k: DocKey) => setOnAll((o) => ({ ...o, [k]: !o[k] }));
@@ -650,7 +670,18 @@ function RunBoard({ ctx }: V2PageProps) {
           {run.jobs.length > 0 && (
             <Strip run={run} selected={selected?.job.slice ?? null} onSelect={setSel} />
           )}
-          <Stations run={run} />
+          <Stations
+            run={run}
+            onDocs={(seatId) =>
+              openDocs({
+                machineId: machine,
+                seat: fm.snapshot.seats.find((x) => x.id === seatId) ?? null,
+                rig: rig.name,
+                missionPaths: [...new Set(run.jobs.flatMap((j) => j.job.specPaths))],
+              })
+            }
+          />
+          <HowRunWent fm={fm} rig={rig.name} run={run} now={ctx.now} />
           <div className="run-lower">
             {selected ? (
               <JobPanel
@@ -670,6 +701,7 @@ function RunBoard({ ctx }: V2PageProps) {
           </div>
         </>
       )}
+      {drawer}
     </main>
   );
 }

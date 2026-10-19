@@ -57,3 +57,20 @@ export {
   type CardSize,
   type TerminalCardProps,
 } from './TerminalCard.js';
+export {
+  DocReader,
+  DocsDrawer,
+  DocsLayout,
+  useDocsData,
+  useDocsDrawer,
+  type DocsTarget,
+} from './DocsDrawer.js';
+export { default as SkillsPanel } from './SkillsPanel.js';
+export {
+  buildDocItems,
+  docKind,
+  firstDoc,
+  groupSkills,
+  type DocItem,
+  type DocGroup,
+} from './docsModel.js';
