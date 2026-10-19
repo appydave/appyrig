@@ -16879,6 +16879,15 @@
                                           }
                                         },
                                         "additionalProperties": false
+                                      },
+                                      "activity": {
+                                        "type": "object",
+                                        "properties": {
+                                          "silence_window_seconds": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "additionalProperties": false
                                       }
                                     },
                                     "additionalProperties": false
