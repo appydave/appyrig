@@ -128,7 +128,8 @@ describe('the URL is the state', () => {
     );
     expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
-    expect(screen.getByTestId('drawer-scope')).toHaveTextContent(`Showing ${rig.name}`);
+    // the panel's agent is open, so the scope line names it and its rig
+    expect(screen.getByTestId('drawer-scope')).toHaveTextContent(`rig ${rig.name}`);
     expect(document.querySelector('.v2-nav-page[aria-current="page"]')).toHaveTextContent(
       'Handoff Flow'
     );
@@ -141,5 +142,47 @@ describe('the URL is the state', () => {
     expect(screen.getByTestId('v2-strip')).toHaveAttribute('data-expanded', 'true');
     expect(location.search).toBe(before);
     expect(screen.getByTestId('strip-machines-link')).toBeInTheDocument();
+  });
+});
+
+describe('the drawer follows the open agent', () => {
+  it('highlights the panel agent and its rig even when no rig is picked, and a rig pick closes the panel', () => {
+    const m2 = fleet()[1]!;
+    const rig = listRigs([m2])[0]!;
+    const seat = m2.snapshot.seats.find((s) => s.rig === rig.name)!;
+    renderAt(
+      `?v=2&page=wall&agent=${encodeURIComponent(agentToParam(`${m2.machine.id}/${seat.id}`))}`
+    );
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    const rows = screen.getAllByTestId('drawer-rig');
+    expect(
+      rows.filter((r) => r.getAttribute('aria-pressed') === 'true').map((r) => r.dataset.rigKey)
+    ).toEqual([rig.key]);
+    expect(
+      screen.getAllByTestId('drawer-agent').filter((a) => a.getAttribute('aria-pressed') === 'true')
+    ).toHaveLength(1);
+    expect(screen.getByTestId('drawer-scope')).toHaveTextContent(`rig ${rig.name}`);
+    // picking another rig closes the panel so the page's response is visible
+    const other = rows.find((r) => r.dataset.rigKey !== rig.key)!;
+    fireEvent.click(other);
+    expect(screen.queryByTestId('agent-panel')).toBeNull();
+    expect(location.search).not.toContain('agent=');
+    expect(location.search).toContain('rig=');
+  });
+
+  it('open= is in the address only on the Graph', () => {
+    renderAt('?v=2&page=graph&open=a%40m2');
+    expect(location.search).toContain('open=');
+    fireEvent.click(screen.getByTestId('v2-page-wall'));
+    expect(location.search).not.toContain('open=');
+  });
+
+  it('the cold open says what the app is, once, and it is dismissible', () => {
+    renderAt('?v=2');
+    const w = screen.getByTestId('v2-welcome');
+    expect(w).toHaveTextContent(/AppyRig shows your OpenRig teams across/);
+    expect(w).toHaveTextContent(/pick a rig on the left/);
+    fireEvent.click(screen.getByTestId('v2-welcome-dismiss'));
+    expect(screen.queryByTestId('v2-welcome')).toBeNull();
   });
 });

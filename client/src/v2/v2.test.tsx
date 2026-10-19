@@ -202,7 +202,7 @@ describe('v2 per-page flip', () => {
     expect(chosen?.dataset.rigKey).toBe('roamy:kernel');
   });
 
-  it('on a v2-only page the flip says there is no old version and stays put; Esc goes back', async () => {
+  it('on a v2-only page the flip says there is no old version and stays put; Esc never navigates', async () => {
     history.replaceState(null, '', '/?v=2');
     renderLive();
     fireEvent.click(screen.getByTestId('v2-group-hood'));
@@ -211,10 +211,11 @@ describe('v2 per-page flip', () => {
     press('b');
     expect(screen.getByTestId('v2-flip-note')).toHaveTextContent('no old version');
     expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    const n = history.length;
     press('Escape');
-    await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
-    // the group click opened its first page (OpenRig DB), and that is the page underneath
-    expect(screen.getByTestId('v2-schema')).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    expect(history.length).toBe(n);
   });
 });
 
@@ -349,18 +350,19 @@ describe('W0 fold', () => {
     expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
   });
 
-  it("Esc on a v2-only page returns to the page underneath and App's goBack stands down", async () => {
+  it('Esc on a v2 page does not navigate: no page change, no goBack, no new history entry', async () => {
     renderLive();
     fireEvent.click(screen.getByTestId('view-flow')); // history now holds the Wall
     press('v');
     fireEvent.click(screen.getByTestId('v2-group-hood'));
     fireEvent.click(screen.getByTestId('v2-page-about'));
     expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    const n = history.length;
     press('Escape');
-    await waitFor(() => expect(screen.queryByTestId('v2-about')).toBeNull());
-    // goBack would have popped to the Wall; the page underneath (the group's first page) is there
-    expect(screen.getByTestId('v2-schema')).toBeInTheDocument();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-wall')).toBeNull();
+    expect(history.length).toBe(n);
   });
 
   it('V and B are ignored while typing', () => {

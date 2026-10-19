@@ -42,9 +42,13 @@ import {
   readUrlState,
   rigFromParam,
   rigToParam,
-  useUrlParam,
   writeParams,
 } from './v2/shell/urlState.js';
+
+/** The `open` parameter as the address has it right now. */
+function readUrlOpen(): string | null {
+  return new URLSearchParams(window.location.search).get('open');
+}
 import './v2/shell/shell.css';
 
 const GROUP_KEY = 'appyrig.groupBy';
@@ -539,20 +543,12 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     } else setRigPicked(false);
   }, []);
   // The Graph's open rigs live in the address (`open=`), so reload and a copied link restore them.
-  const [openParam, setOpenParam] = useUrlParam('open');
-  const openRigs = useMemo(
-    () =>
-      (openParam ?? '')
-        .split(',')
-        .map((p) => rigFromParam(p))
-        .filter((k): k is string => k !== null),
-    [openParam]
-  );
-  const setOpenRigs = useCallback(
-    (keys: string[]) => {
-      if (isV2Url()) setOpenParam(keys.length ? keys.map(rigToParam).join(',') : null);
-    },
-    [setOpenParam]
+  // The list is held here; the address shows `open=` only while the Graph is on screen.
+  const [openRigs, setOpenRigs] = useState<string[]>(() =>
+    (readUrlOpen() ?? '')
+      .split(',')
+      .map((p) => rigFromParam(p))
+      .filter((k): k is string => k !== null)
   );
   const v2 = useV2({
     onUrlRig,
@@ -591,21 +587,44 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   // The drawer reflects the CURRENT page: a rig page is scoped to its rig; a fleet page only has one
   // when the viewer picked it; the agent when the panel or the Agent page is open.
   const RIG_PAGES: string[] = ['flow', 'run', 'timeline'];
-  const drawerRig = RIG_PAGES.includes(v2.page)
-    ? activeRig
-    : rigPicked && !followLatest
-      ? activeRig
-      : null;
+  /** Pages that filter or re-scope to the rig (the others only focus it in the whole fleet). */
+  const SHOWING_PAGES = [...RIG_PAGES, 'missions'];
   const drawerAgent = v2.page === 'agent' ? v2.ctx.agentKey : (v2.ctx.agentPanel?.seatKey ?? null);
+  // An open agent wins: the drawer follows the panel's agent and ITS rig, even when that rig is not
+  // the picked one, and even when no rig is picked at all.
+  const drawerTile = drawerAgent ? findSeat(state.machines, drawerAgent) : null;
+  const agentRig =
+    drawerTile && drawerTile.seat.rig
+      ? (rigs.find(
+          (r) => r.machineId === drawerTile.machine.machine.id && r.name === drawerTile.seat.rig
+        ) ?? null)
+      : null;
+  const drawerRig = drawerTile
+    ? agentRig
+    : RIG_PAGES.includes(v2.page)
+      ? activeRig
+      : rigPicked && !followLatest
+        ? activeRig
+        : null;
   const drawerScope = (() => {
-    if (v2.page === 'agent' && drawerAgent)
-      return `Showing agent ${drawerAgent.split('/').slice(1).join('/')}`;
+    if (drawerTile)
+      return `Agent ${seatName(drawerTile.seat)} · ${
+        drawerTile.seat.rig ? `rig ${drawerTile.seat.rig}` : 'plain tmux'
+      } · ${drawerTile.machine.machine.label}`;
     if (!drawerRig) return 'Whole fleet · pick a rig to focus it';
     const label = `${drawerRig.displayName ?? drawerRig.name} · ${drawerRig.machineLabel}`;
-    return RIG_PAGES.includes(v2.page)
+    return SHOWING_PAGES.includes(v2.page)
       ? `Showing ${label}`
       : `Focused on ${label} in the whole fleet`;
   })();
+  // `open=` is the Graph's alone: written while it is on screen, removed everywhere else.
+  useEffect(() => {
+    if (!v2on || !isV2Url()) return;
+    writeParams(
+      { open: v2.page === 'graph' && openRigs.length ? openRigs.map(rigToParam).join(',') : null },
+      'replace'
+    );
+  }, [v2on, v2.page, openRigs]);
   // The bar is sticky in v2. Tell everything that slides out where the bar ends, so the Agent panel
   // and the Documents drawer start exactly below it and never cover the nav.
   useLayoutEffect(() => {
@@ -631,6 +650,41 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       root.style.removeProperty('--v2-bar-h');
     };
   }, [v2on]);
+  const WELCOME_KEY = 'appyrig.v2.welcome';
+  const [welcome, setWelcome] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(WELCOME_KEY) !== 'seen';
+    } catch {
+      return true;
+    }
+  });
+  const dismissWelcome = () => {
+    setWelcome(false);
+    remember(WELCOME_KEY, 'seen');
+  };
+  const welcomeLine = (
+    <span className="first-hint" role="note" data-testid="v2-welcome">
+      AppyRig shows your OpenRig teams across{' '}
+      {allMachines.length
+        ? allMachines
+            .map((m) => m.machine.label)
+            .reduce<string[]>(
+              (a, l, i, all) => [...a, i === 0 ? l : i === all.length - 1 ? ` and ${l}` : `, ${l}`],
+              []
+            )
+            .join('')
+        : 'your machines'}{' '}
+      · pick a rig on the left
+      <button
+        type="button"
+        className="pill-btn"
+        data-testid="v2-welcome-dismiss"
+        onClick={dismissWelcome}
+      >
+        Got it
+      </button>
+    </span>
+  );
   const showExplainHint = hint && !((view === 'map' || view === 'flow') && mapHint && !legend);
   const showLegendHint = (view === 'map' || view === 'flow') && mapHint && !legend && !focusTile;
   const explainHint = (
@@ -733,7 +787,8 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
         // Already spent: Focus closing (it re-attaches this listener mid-keypress) or a card.
         if (e.defaultPrevented) return;
         if (help) setHelp(false);
-        else if (!isShortcutBlocked(e)) goBack();
+        // v2: Esc closes the top-most layer and nothing else. It never changes the page.
+        else if (!v2on && !isShortcutBlocked(e)) goBack();
         return;
       }
       if (isShortcutBlocked(e)) return;
@@ -744,7 +799,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [focused, help, feedback, filesFor, notesOpen, goBack]);
+  }, [focused, help, feedback, filesFor, notesOpen, goBack, v2on]);
 
   // S8: F opens the feedback composer, on every screen and in the seat panel (O is Files').
   useEffect(() => {
@@ -906,15 +961,20 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
             highlightRigKey={drawerRig?.key ?? null}
             highlightAgentKey={drawerAgent}
             scope={drawerScope}
-            onChooseRig={chooseRig}
+            // a pick closes the agent panel so the page's response is visible, not hidden behind it
+            onChooseRig={(key) => {
+              v2.closePanelQuiet();
+              chooseRig(key);
+            }}
             onOpenAgent={(key) =>
               v2.ctx.openAgentPanel({ machineId: key.slice(0, key.indexOf('/')), seatKey: key })
             }
           />
         )}
         <div className="app-main">
-          {v2on && (showExplainHint || showLegendHint) && (
+          {v2on && (welcome || showExplainHint || showLegendHint) && (
             <div className="v2-hint-row" data-testid="v2-hint-row">
+              {welcome && welcomeLine}
               {showExplainHint && explainHint}
               {showLegendHint && legendHint}
             </div>
