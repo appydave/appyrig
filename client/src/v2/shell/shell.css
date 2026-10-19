@@ -553,3 +553,38 @@ body:has(.v2-nav) header.app-header {
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* One first-visit row: one line, the text gives way (ellipsis) and "Got it" stays in view. */
+.v2-hint-row .first-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v2-hint-row .v2-hint-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-hint-row .first-hint .pill-btn {
+  flex: none;
+  margin-left: 0;
+}
+
+/* With the agent panel open in its narrow peek, the rows above the page make room too, so no chip
+   or "Got it" sits under the panel. The strip wraps instead of overflowing. */
+html[data-agent-panel='peek'] .v2-hint-row,
+html[data-agent-panel='peek'] .v2-strip-wrap {
+  margin-right: min(520px, calc(100vw - 320px));
+}
+html[data-agent-panel='peek'] .v2-strip-wrap {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+html[data-agent-panel='peek'] .v2-strip-wrap[data-expanded='false'] .strip {
+  flex-wrap: wrap;
+}
+html[data-agent-panel='peek'] .v2-strip-body {
+  flex: 1 1 auto;
+}
