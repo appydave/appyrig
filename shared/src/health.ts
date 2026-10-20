@@ -55,7 +55,7 @@ export const MachineHealthSchema = z.strictObject({
      * terminal sessions in practice, not of windows: window counts need Accessibility access.
      */
     terminalShells: reading(z.number().int().nonnegative()),
-    /** Terminal apps that are running (iTerm, Terminal, Ghostty, kitty, WezTerm, Alacritty, Warp, Hyper, cmux, herdr, tmux), biggest first. */
+    /** Terminal apps that are running (iTerm, Terminal, Ghostty, kitty, WezTerm, Alacritty, Warp, Hyper, cmux, tmux and similar multiplexers), biggest first. */
     terminalApps: reading(z.array(TerminalAppSchema).max(20)),
   }),
 });

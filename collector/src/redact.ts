@@ -83,7 +83,7 @@ const looksLikeBareSecret = (t: string): boolean =>
   (t.match(/\//g)?.length ?? 0) <= 6 &&
   entropy(t) >= 4.3;
 
-/** CSI and OSC escape sequences (colours, cursor moves, hyperlinks), as tmux `capture-pane -e` emits. */
+/** CSI and OSC escape sequences (colours, cursor moves, hyperlinks), as tmux emits when a pane is captured with escapes kept. */
 // eslint-disable-next-line no-control-regex
 const ANSI = /\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_])/g;
 
@@ -130,7 +130,7 @@ export const WRAP_SLACK = 6;
 
 /**
  * Fix-first F2 (QA HIGH-1, ruling 2026-10-13): Claude Code draws its own UI and breaks a long line
- * into separate rows with hard newlines, so `capture-pane -J` has nothing to join and a token's
+ * into separate rows with hard newlines, so the join-wrapped-lines capture flag has nothing to join and a token's
  * second row (no prefix) slipped past the per-row patterns. Where a row ends in an unfinished
  * token-shaped run and the next row, indent stripped, carries it on, the run is redacted joined;
  * each row then gets back its own part with the secret cut out. Rows touched lose their colours.

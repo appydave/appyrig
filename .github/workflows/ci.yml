@@ -25,6 +25,12 @@ jobs:
       - name: Build shared
         run: npm run build --workspace=shared
 
+      - name: Format
+        run: npm run format:check
+
+      - name: Architecture boundaries and banned strings
+        run: npm run arch:check
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -33,3 +39,40 @@ jobs:
 
       - name: Test
         run: npm test
+
+  provenance:
+    name: OpenRig provenance
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Read the OpenRig pin
+        id: pin
+        run: |
+          echo "commit=$(node -p "require('./shared/src/openrig/PROVENANCE.json').openrig.commit")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./shared/src/openrig/PROVENANCE.json').openrig.version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check out OpenRig at the pinned commit
+        uses: actions/checkout@v4
+        with:
+          repository: mvschwarz/openrig
+          ref: ${{ steps.pin.outputs.commit }}
+          path: openrig-src
+
+      - name: Install the pinned OpenRig CLI
+        run: npm install --prefix openrig-cli @openrig/cli@${{ steps.pin.outputs.version }}
+
+      - name: Provenance
+        env:
+          OPENRIG_SRC: ${{ github.workspace }}/openrig-src
+          OPENRIG_CLI: ${{ github.workspace }}/openrig-cli/node_modules/@openrig/cli
+        run: npm run provenance

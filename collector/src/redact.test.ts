@@ -199,7 +199,7 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
     expect(redactString(line)).toBe(line);
   });
 
-  it('the 110-char sk-ant token is caught whole once joined (capture-pane -J), and leaks 0 chars', () => {
+  it('the 110-char sk-ant token is caught whole once joined (a joined capture), and leaks 0 chars', () => {
     const joined = `CLAUDE_CODE_OAUTH_TOKEN=${tok110}`;
     const out = redactString(joined);
     expect(out).toBe(`CLAUDE_CODE_OAUTH_TOKEN=${REDACTED}`);

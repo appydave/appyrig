@@ -156,7 +156,7 @@ export const RIG_SUMMARY_MAX = 600;
 export const RIG_EDGES_MAX = 200;
 
 /**
- * D09 W2: one edge of the rig's topology as OpenRig holds it (GET /api/rigs/:id/graph), between
+ * D09 W2: one edge of the rig's topology as OpenRig holds it (the daemon's rig-graph route), between
  * two seats by session name. `kind` is OpenRig's own word (`delegates_to`, `can_observe`, …).
  */
 export const RigEdgeSchema = z.strictObject({
