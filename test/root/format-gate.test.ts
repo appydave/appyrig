@@ -46,9 +46,31 @@ describe('Feature: the format gate fails unformatted files', () => {
   );
 });
 
+/**
+ * Written in the repo's style so that each option in .prettierrc matters: arrow parens, single
+ * quotes, semicolons, a 93-column line that must stay on one line (print width 100), an object that
+ * must break with a trailing comma, and 2-space nesting. Change an option and this stops passing.
+ */
+const REPO_STYLE = `const id = (x) => x;
+export const mid = { alpha: id('a'), beta: id('b'), gamma: id('c'), delta: id('d'), eps: 1 };
+export const wide = {
+  alpha: id('a'),
+  beta: id('b'),
+  gamma: id('c'),
+  delta: id('d'),
+  epsilon: id('e'),
+  z: 1,
+};
+function nested() {
+  if (true) {
+    return [1, 2];
+  }
+}
+`;
+
 describe('Feature: the format gate passes formatted files', () => {
   it('Scenario: given code written to the repo style, when prettier checks it, then it exits 0', () => {
-    const r = check('ok.ts', "const x = 'a';\nexport { x };\n");
+    const r = check('ok.ts', REPO_STYLE);
     expect(r.status, r.out).toBe(0);
   });
 });
