@@ -2,10 +2,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  CAST_MARKER,
+  CAST_RULE,
+  MARKER_HOMES,
   NOT_SCANNED,
   compare,
   countFindings,
+  findCastExemptions,
   findDisableDirectives,
+  messageFor,
   reportProblem,
   rulesThatGrew,
 } from '../../scripts/oxlint-gate.mjs';
@@ -151,6 +156,58 @@ describe('Feature: a disable comment cannot hide a finding', () => {
   it('Scenario: given the folders the scan skips, then each is also ignored by oxlint.config.ts', () => {
     const config = readFileSync(join(ROOT, 'oxlint.config.ts'), 'utf8');
     for (const prefix of NOT_SCANNED) expect(config, prefix).toContain(`'${prefix}**'`);
+  });
+});
+
+describe('Feature: the count of type casts in production code can only go down', () => {
+  const config = readFileSync(join(ROOT, 'oxlint.config.ts'), 'utf8');
+
+  it('Scenario: given a comment that uses the exemption marker, then it is found with its line', () => {
+    const text = `const a = 1;\n// ${CAST_MARKER}: trust me\nconst b = x as Foo;\n`;
+    expect(findCastExemptions(text)).toEqual([{ line: 2, text: `// ${CAST_MARKER}: trust me` }]);
+  });
+
+  it('Scenario: given an ordinary SAFETY comment, then it is not an exemption and not flagged', () => {
+    expect(findCastExemptions('// SAFETY: checked upstream\nconst b = x as Foo;')).toEqual([]);
+  });
+
+  it('Scenario: given the cast rule fails, then the message says no comment exempts a cast', () => {
+    const msg = messageFor(CAST_RULE, 'This type assertion has no `SAFETY:` justification.');
+    expect(msg).toContain('no comment exempts one');
+    expect(msg).not.toContain('SAFETY');
+    expect(msg).not.toContain(CAST_MARKER);
+  });
+
+  it('Scenario: given any other rule, then its own message is passed through unchanged', () => {
+    expect(messageFor('no-module-mocking', 'Replace module mocking.')).toBe(
+      'Replace module mocking.'
+    );
+  });
+
+  it('Scenario: given the config, then the cast rule runs with the unwritable marker', () => {
+    expect(config).toContain(`anti-slop/${CAST_RULE}`);
+    expect(config).toContain(`markers: ['${CAST_MARKER}']`);
+  });
+
+  it('Scenario: given the files that define the marker, then each contains it and is exempt from the scan', () => {
+    for (const home of MARKER_HOMES) {
+      expect(readFileSync(join(ROOT, home), 'utf8'), home).toContain(CAST_MARKER);
+    }
+  });
+
+  it('Scenario: given the config, then test code, e2e and test support are switched off for the cast rule', () => {
+    for (const glob of ['**/*.test.', '**/*.spec.', "'e2e/**'", "'test/**'", "'**/test/**'"]) {
+      expect(config, glob).toContain(glob);
+    }
+    expect(config).toMatch(new RegExp(`anti-slop/${CAST_RULE}': 'off'`));
+  });
+
+  it('Scenario: given the baseline, then every recorded cast is in production code', () => {
+    const { findings } = JSON.parse(readFileSync(join(ROOT, 'oxlint-baseline.json'), 'utf8'));
+    const files = Object.keys(findings).filter((f) => findings[f][CAST_RULE]);
+    const testLike = /\.(test|spec)\.|(^|\/)(e2e|test)\/|test-kit/;
+    expect(files.length).toBeGreaterThan(0);
+    expect(files.filter((f) => testLike.test(f))).toEqual([]);
   });
 });
 

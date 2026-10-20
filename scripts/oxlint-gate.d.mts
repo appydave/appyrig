@@ -17,3 +17,8 @@ export function ruleTotals(counts: Counts): Record<string, number>;
 export function findDisableDirectives(text: string): { line: number; text: string }[];
 export function reportProblem(report: Report): string | null;
 export const NOT_SCANNED: string[];
+export const CAST_MARKER: string;
+export const MARKER_HOMES: string[];
+export function findCastExemptions(text: string): { line: number; text: string }[];
+export const CAST_RULE: string;
+export function messageFor(rule: string, pluginMessage: string): string;
