@@ -65,3 +65,13 @@ export {
   type SeatTarget,
   type PendingDaemonData,
 } from './daemondata.js';
+export { RigSpecsReader, readSpecAgent, specEntryOf, type PendingRigSpecs } from './rigspecs.js';
+export {
+  RigCommandsReader,
+  RIG_COMMANDS_FILE,
+  commandOf,
+  parseRigCommands,
+  readTail,
+  redactCommandText,
+  type PendingRigCommands,
+} from './rigcommands.js';

@@ -19,6 +19,14 @@ import {
   RigFilesInputSchema,
   RigFilesOutputSchema,
   type RigFilesOutput,
+  RigSpecsInputSchema,
+  RigSpecsOutputSchema,
+  type RigSpecsOutput,
+  RigCommandsInputSchema,
+  RigCommandsOutputSchema,
+  type RigCommandsOutput,
+  RIG_COMMANDS_MAX,
+  commandNamesRig,
   HandoffGetInputSchema,
   HealthGetInputSchema,
   HealthGetOutputSchema,
@@ -1154,6 +1162,78 @@ const VERB_SET = {
         );
       }
       return { machine: input.machine, rig: input.rig, file };
+    }
+  ),
+
+  'rig.specs': query(
+    "Every rig spec (rig.yaml) each machine's collector found in its configured spec folders, launched or not: the rig's summary and rig-level fields (culture_file, docs[], startup…), its pods with every member in full (session name, agent_ref, profile, runtime, model, cwd), the pod-local and cross-pod edges with their kinds, and the AgentSpecs the members point at with their profiles. launched is true when OpenRig on that machine knows a rig of that name (rigStatus then says its status); false means the spec is written but not launched (a draft). machines[] says per machine whether its collector sent specs: 'pending' (an older collector, or not sent yet) is not the same as none. Read-only.",
+    RigSpecsInputSchema,
+    RigSpecsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): RigSpecsOutput => {
+      const out: RigSpecsOutput = { machines: [], specs: [] };
+      for (const m of machinesOf(ctx, input.machine)) {
+        const p = ctx.store.rigSpecs.get(m.machine.id);
+        out.machines.push(
+          p
+            ? { machine: m.machine.id, status: 'ok', reason: null, collectedAt: p.collectedAt }
+            : {
+                machine: m.machine.id,
+                status: 'pending',
+                reason:
+                  "no rig specs from this machine's collector yet: it predates rig specs, or has not sent them",
+                collectedAt: null,
+              }
+        );
+        for (const spec of p?.specs ?? []) {
+          const rig = m.snapshot.rigs.find((r) => r.name === spec.name);
+          out.specs.push({
+            ...spec,
+            machine: m.machine.id,
+            launched: rig !== undefined,
+            rigStatus: rig?.status ?? null,
+          });
+        }
+      }
+      out.specs.sort((a, b) => a.name.localeCompare(b.name) || a.machine.localeCompare(b.machine));
+      return out;
+    }
+  ),
+
+  'rig.commands': query(
+    "The newest `rig` commands each machine logged (its hook's ~/.appyrig/rig-commands.jsonl, read by the collector), newest first: when, who ran it (actor), the command and its shell line, the rig, the phase (attempted, ran, failed, denied…), exit code and the first part of its output. Secrets are masked by the collector before anything leaves the machine. Filter by machine or rig (a rig matches when the entry or any of its commands names it). machines[] says per machine whether a log was sent: 'pending' (an older collector, or not sent yet); fileFound false means the machine has no command log. Read-only.",
+    RigCommandsInputSchema,
+    RigCommandsOutputSchema,
+    NOT_FOUND,
+    (input, ctx): RigCommandsOutput => {
+      const out: RigCommandsOutput = { machines: [], commands: [] };
+      for (const m of machinesOf(ctx, input.machine)) {
+        const p = ctx.store.rigCommands.get(m.machine.id);
+        out.machines.push(
+          p
+            ? {
+                machine: m.machine.id,
+                status: 'ok',
+                reason: p.fileFound ? null : 'this machine has no rig command log',
+                collectedAt: p.collectedAt,
+                fileFound: p.fileFound,
+              }
+            : {
+                machine: m.machine.id,
+                status: 'pending',
+                reason:
+                  "no rig commands from this machine's collector yet: it predates the command feed, or has not sent it",
+                collectedAt: null,
+                fileFound: null,
+              }
+        );
+        for (const c of p?.entries ?? [])
+          if (input.rig === undefined || commandNamesRig(c, input.rig))
+            out.commands.push({ ...c, machine: m.machine.id });
+      }
+      out.commands.sort((a, b) => b.ts.localeCompare(a.ts) || a.machine.localeCompare(b.machine));
+      out.commands = out.commands.slice(0, input.limit ?? RIG_COMMANDS_MAX);
+      return out;
     }
   ),
 

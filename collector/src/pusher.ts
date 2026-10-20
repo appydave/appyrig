@@ -22,6 +22,8 @@ import type { PendingLoadouts } from './adapters/loadout.js';
 import type { PendingDbRows } from './adapters/dbrows.js';
 import type { PendingDaemonData } from './adapters/daemondata.js';
 import type { PendingMissionFiles } from './adapters/missionfiles.js';
+import type { PendingRigSpecs } from './adapters/rigspecs.js';
+import type { PendingRigCommands } from './adapters/rigcommands.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -61,6 +63,12 @@ export interface PusherOptions {
   /** Run board lane 1: a rig's list of servable mission files and the files; null = nothing to send. Sent only to a hub that advertised `missionfiles`. */
   missionFiles?: () => Promise<PendingMissionFiles | null>;
   missionFilesIntervalMs?: number;
+  /** N10: every rig spec found (launched or not), when it changed; sent only to a hub that advertised `rig-specs`. */
+  rigSpecs?: () => Promise<PendingRigSpecs | null>;
+  rigSpecsIntervalMs?: number;
+  /** N10b: the machine's `rig` command log, when it changed; sent only to a hub that advertised `rig-commands`. */
+  rigCommands?: () => Promise<PendingRigCommands | null>;
+  rigCommandsIntervalMs?: number;
   /** How long the first push waits for the hub's `hub:caps` (default 1000 ms; an older hub never sends it). */
   capsWaitMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
@@ -398,6 +406,35 @@ export function startPusher(opts: PusherOptions): Pusher {
         return p && { payloads: p.pushes, markSent: p.markSent };
       },
       HUB_CAPS.MISSIONFILES
+    );
+  }
+  if (opts.rigSpecs) {
+    const take = opts.rigSpecs;
+    channel(
+      'rig specs',
+      FLEET_EVENTS.RIGSPECS,
+      opts.rigSpecsIntervalMs ?? 15_000,
+      'N10',
+      async () => {
+        const p = await take();
+        return p && { payloads: [p.push], markSent: p.markSent };
+      },
+      HUB_CAPS.RIG_SPECS
+    );
+  }
+  if (opts.rigCommands) {
+    const take = opts.rigCommands;
+    // The snapshot's cadence: a new command shows on the page within a push or two.
+    channel(
+      'rig commands',
+      FLEET_EVENTS.RIGCOMMANDS,
+      opts.rigCommandsIntervalMs ?? PUSH_INTERVAL_MS,
+      'N10',
+      async () => {
+        const p = await take();
+        return p && { payloads: [p.push], markSent: p.markSent };
+      },
+      HUB_CAPS.RIG_COMMANDS
     );
   }
   if (opts.schema) {

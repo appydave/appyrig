@@ -8,6 +8,7 @@ import { DaemonDataStore } from './daemonDataStore.js';
 import { RigFileStore } from './rigFileStore.js';
 import { MissionFileStore } from './missionFileStore.js';
 import { SchemaStore } from './schemaStore.js';
+import { LatestByMachine } from './latestByMachine.js';
 import {
   ASLEEP_AFTER_MS,
   MachineSnapshotSchema,
@@ -19,6 +20,8 @@ import {
   type SeatHistory,
   type Liveness,
   type MachineSnapshot,
+  type RigCommandsPush,
+  type RigSpecsPush,
 } from '@appydave/shared';
 
 /**
@@ -81,6 +84,10 @@ export class FleetStore {
   readonly daemonData = new DaemonDataStore();
   /** Run board lane 1: files named by a rig's MISSION.md, plus its qa/ and shots/. Memory only. */
   readonly missionFiles = new MissionFileStore();
+  /** N10: every rig spec each machine found, launched or not. Memory only. */
+  readonly rigSpecs = new LatestByMachine<RigSpecsPush>();
+  /** N10b: each machine's newest `rig` commands (redacted by its collector). Memory only. */
+  readonly rigCommands = new LatestByMachine<RigCommandsPush>();
   /** v1.4 · S8: in-app feedback notes. The only thing AppyRig writes. */
   readonly feedback: FeedbackStore;
   private readonly machines = new Map<string, FleetMachine>();

@@ -10,6 +10,8 @@ import {
   topologyRootOf,
   RigFilesReader,
   MissionFilesReader,
+  RigCommandsReader,
+  RigSpecsReader,
   SchemaReader,
   seatConfigReader,
   withSeatCards,
@@ -50,6 +52,8 @@ function main() {
     rigBin: settings.sources.rigBin,
   });
   const dbRows = new DbRowsReader(settings.machine.id);
+  const rigSpecs = new RigSpecsReader(settings.machine.id);
+  const rigCommands = new RigCommandsReader(settings.machine.id);
   const loadouts = new LoadoutReader(settings.machine.id, {
     exec: sources.exec!,
     topologyRoot: topologyRootOf(process.env),
@@ -104,12 +108,16 @@ function main() {
       loadouts.reset();
       dbRows.reset();
       daemonData.reset();
+      rigSpecs.reset();
+      rigCommands.reset();
     },
     daemonData: () => daemonData.next(daemonTargets),
     rigFiles: async (caps) =>
       sources.specs ? rigFiles.next(await sources.specs(), caps.has(HUB_CAPS.SPEC_FILES)) : null,
     missionFiles: async () => (sources.specs ? missionFiles.next(await sources.specs()) : null),
     schema: () => schema.next(),
+    rigSpecs: async () => (sources.specs ? rigSpecs.next(await sources.specs()) : null),
+    rigCommands: () => rigCommands.next(),
     dbRows: () => dbRows.next(),
     loadouts: async () =>
       loadouts.next(

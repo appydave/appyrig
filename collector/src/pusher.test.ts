@@ -58,6 +58,8 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
           'collector:daemondata',
           'collector:missionfiles',
           'collector:loadout',
+          'collector:rigspecs',
+          'collector:rigcommands',
         ])
           socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
             extra.push({ event, payload });
@@ -641,6 +643,62 @@ describe('pusher', () => {
     await until(() => n >= 4 && hub!.received.length >= 6 && marked >= 1, 10_000);
     const sent = hub.extra.filter((e) => e.event === 'collector:missionfiles');
     expect(sent.length).toBeGreaterThan(0);
+  }, 20_000);
+
+  it('N10: rig specs and rig commands are not even read for a hub without their caps, and sent to one with them', async () => {
+    const reads = { specs: 0, cmds: 0 };
+    const opts = (url: string) => ({
+      hubUrl: url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 30,
+      log: () => {},
+      rigSpecsIntervalMs: 20,
+      rigSpecs: async () => {
+        reads.specs++;
+        return {
+          push: { machineId: 'roamy', collectedAt: new Date().toISOString(), specs: [] },
+          markSent: () => {},
+        };
+      },
+      rigCommandsIntervalMs: 20,
+      rigCommands: async () => {
+        reads.cmds++;
+        return {
+          push: {
+            machineId: 'roamy',
+            collectedAt: new Date().toISOString(),
+            fileFound: false,
+            entries: [],
+          },
+          markSent: () => {},
+        };
+      },
+    });
+    // today's hub (every cap but these two): nothing is read, nothing sent
+    hub = await startHub(0, true, {
+      caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.SPEC_FIELDS, HUB_CAPS.MISSIONFILES],
+    });
+    pusher = startPusher(opts(hub.url));
+    await until(() => hub!.received.length >= 5);
+    await new Promise((r) => setTimeout(r, 150));
+    expect(reads).toEqual({ specs: 0, cmds: 0 });
+    expect(hub.extra.filter((e) => /rigspecs|rigcommands/.test(e.event))).toEqual([]);
+    await pusher.stop();
+    await hub.close();
+
+    hub = await startHub(0, true, {
+      caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.RIG_SPECS, HUB_CAPS.RIG_COMMANDS],
+    });
+    pusher = startPusher(opts(hub.url));
+    await until(
+      () =>
+        hub!.extra.some((e) => e.event === 'collector:rigspecs') &&
+        hub!.extra.some((e) => e.event === 'collector:rigcommands'),
+      10_000
+    );
+    expect(hub.received.length).toBeGreaterThan(0);
   }, 20_000);
 
   const pushOf = (n: number) => ({

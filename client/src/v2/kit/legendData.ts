@@ -48,6 +48,8 @@ export const PAGE_PURPOSE: Partial<Record<PageKey, string>> = {
   wall: 'Every agent on every machine as a card, grouped by rig. Which ones are working, which need you, which are stopped.',
   graph:
     'Every rig on every machine, and the handoffs between rigs. Open a rig to see its agents and who hands work to whom.',
+  specs:
+    'Every rig spec (rig.yaml) on every machine, launched or not: its pods, seats, AgentSpec profiles and edges. Plus a live feed of the rig commands being run, so you can watch a rig being built before it starts.',
   map: 'One rig, full screen: its teams, its agents, and who hands work to whom.',
   run: "One rig's mission as a list of jobs: which job is being worked, who has it (build → QA → review), the spec, and the before/after proof. Reads a crew's own mission files (a MISSION.md jobs table, qa/ and shots/). These are a D09 convention, not OpenRig structures.",
   flow: "How work moved between one rig's roles, handoff by handoff. Replay it to see where it queued or got sent back.",
@@ -760,6 +762,38 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
       ],
     },
   ],
+  specs: [
+    {
+      title: 'Rig specs',
+      entries: [
+        {
+          mark: 'draft (not launched)',
+          means:
+            'A rig.yaml is written, but OpenRig has not started it, so it has no live seats yet.',
+        },
+        {
+          mark: 'running',
+          means: 'OpenRig knows this rig and it is running. The buttons open its live views.',
+        },
+        { mark: 'launched, not running', means: 'OpenRig knows this rig, but it is stopped.' },
+        {
+          mark: 'Pods and seats',
+          means:
+            'Each pod (a team) with its seats: the session name OpenRig gives each seat and the AgentSpec profile it uses.',
+        },
+        {
+          mark: 'Edges',
+          means:
+            'Who works with whom, as written in rig.yaml (delegates, observes…), inside a pod and between pods.',
+        },
+        {
+          mark: 'Commands',
+          means:
+            'Each rig command run on a machine, newest first: when, who, the command, its outcome and the start of its output. Secrets are masked. Updates by itself.',
+        },
+      ],
+    },
+  ],
   workflows: [
     {
       title: 'Workflows',
@@ -810,6 +844,7 @@ export function legendSections(page: PageKey): LegendSection[] {
 export const LEGEND_TITLE: Partial<Record<PageKey, string>> = {
   wall: 'Wall',
   graph: 'Graph',
+  specs: 'Rig specs',
   map: 'Rig Map',
   run: 'Run board',
   flow: 'Handoff Flow',

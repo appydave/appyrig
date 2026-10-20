@@ -12,6 +12,8 @@ import {
   DbRowsPushSchema,
   DaemonDataPushSchema,
   MissionFilesPushSchema,
+  RigCommandsPushSchema,
+  RigSpecsPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
   type CollectorAuth,
@@ -36,6 +38,8 @@ const HUB_CAP_LIST = [
   HUB_CAPS.SPEC_FIELDS,
   HUB_CAPS.SPEC_FILES,
   HUB_CAPS.SEAT_SPEC,
+  HUB_CAPS.RIG_SPECS,
+  HUB_CAPS.RIG_COMMANDS,
 ];
 
 export interface CollectorIngestOptions {
@@ -217,6 +221,15 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     socket.on(
       FLEET_EVENTS.DAEMONDATA,
       guarded(DaemonDataPushSchema, 'daemon data', (d) => opts.store.daemonData.put(d))
+    );
+    // N10: every rig spec the machine found, and its newest `rig` commands. Same checks as the others.
+    socket.on(
+      FLEET_EVENTS.RIGSPECS,
+      guarded(RigSpecsPushSchema, 'rig specs', (d) => opts.store.rigSpecs.put(d))
+    );
+    socket.on(
+      FLEET_EVENTS.RIGCOMMANDS,
+      guarded(RigCommandsPushSchema, 'rig commands', (d) => opts.store.rigCommands.put(d))
     );
   });
 }

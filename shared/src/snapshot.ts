@@ -413,6 +413,10 @@ export const HUB_CAPS = {
   SPEC_FILES: 'spec-files',
   /** `collector:loadout` may carry SEAT_SPEC_KEYS (member spec, AgentSpec, topology chain files). */
   SEAT_SPEC: 'seat-spec',
+  /** N10: the hub listens for `collector:rigspecs` (every rig spec found, launched or not). */
+  RIG_SPECS: 'rig-specs',
+  /** N10: the hub listens for `collector:rigcommands` (the machine's log of `rig` commands). */
+  RIG_COMMANDS: 'rig-commands',
 } as const;
 
 export const V2_SEAT_KEYS = ['tmuxAttachCommand'] as const;

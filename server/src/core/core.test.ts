@@ -54,10 +54,12 @@ describe('AC 9 — exactly one write verb', () => {
       'machine.list',
       'mission.file',
       'queue.list',
+      'rig.commands',
       'rig.entry',
       'rig.file',
       'rig.files',
       'rig.outputs',
+      'rig.specs',
       'rig.topology',
       'rig.waiting',
       'seat.detail',
@@ -370,7 +372,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 33 },
+      value: { app: 'AppyRig', version: real.version, verbs: 35 },
     });
   });
 

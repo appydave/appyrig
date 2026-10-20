@@ -1046,11 +1046,29 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({
       ok: true,
-      caps: ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files', 'seat-spec'],
+      caps: [
+        'v2-fields',
+        'daemondata',
+        'missionfiles',
+        'spec-fields',
+        'spec-files',
+        'seat-spec',
+        'rig-specs',
+        'rig-commands',
+      ],
     });
     // and announced on connection, before any push
     expect(announced).toEqual([
-      ['v2-fields', 'daemondata', 'missionfiles', 'spec-fields', 'spec-files', 'seat-spec'],
+      [
+        'v2-fields',
+        'daemondata',
+        'missionfiles',
+        'spec-fields',
+        'spec-files',
+        'seat-spec',
+        'rig-specs',
+        'rig-commands',
+      ],
     ]);
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({

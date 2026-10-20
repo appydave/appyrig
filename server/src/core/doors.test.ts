@@ -216,7 +216,7 @@ describe('B9 / B10 — docs and console pages', () => {
   it('the OpenRPC document is deterministic and lists every verb, all read-only except the one named write', () => {
     const a = apiDocument(readIdentity());
     expect(JSON.stringify(a)).toBe(JSON.stringify(apiDocument(readIdentity())));
-    expect(a.methods).toHaveLength(33);
+    expect(a.methods).toHaveLength(35);
     const writes = a.methods.filter((m) => m['x-side-effects'] !== 'read-only').map((m) => m.name);
     expect(writes).toEqual(['feedback.add']);
   });
