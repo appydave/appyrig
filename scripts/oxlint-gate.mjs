@@ -76,6 +76,36 @@ export function findDisableDirectives(text) {
   return found;
 }
 
+/**
+ * The cast ratchet counts every `as T` in production code because no comment can exempt one: the
+ * rule's justification marker is this string, which nobody writes. Writing it anyway is a finding.
+ */
+/** The anti-slop rule that counts casts (config: oxlint.config.ts). */
+export const CAST_RULE = 'require-safety-comment-for-type-assertion';
+
+export const CAST_MARKER = 'no-cast-exemption-exists';
+
+/** The two files that must contain the marker (the rule's config and this definition). */
+export const MARKER_HOMES = ['oxlint.config.ts', 'scripts/oxlint-gate.mjs'];
+
+/** Lines that use the marker to try to exempt a cast. */
+export function findCastExemptions(text) {
+  const found = [];
+  text.split('\n').forEach((line, i) => {
+    if (line.includes(CAST_MARKER)) found.push({ line: i + 1, text: line.trim().slice(0, 100) });
+  });
+  return found;
+}
+
+/**
+ * The plugin's own text for the cast rule asks for a justification comment, which is exactly what
+ * must not work here. Say what to do instead.
+ */
+export function messageFor(rule, pluginMessage) {
+  if (rule !== CAST_RULE) return pluginMessage;
+  return 'New type cast (`as T`). The count of casts in production code may only go down, and no comment exempts one. Give the value a type that already fits, or parse it at the boundary with a schema, instead of asserting it.';
+}
+
 /** Findings per rule across all files: a move keeps these, a new lie raises them. */
 export function ruleTotals(counts) {
   const totals = {};
@@ -133,6 +163,35 @@ export const NOT_SCANNED = [
   '.claude/',
 ];
 
+/**
+ * The checks Oxlint cannot do, over in-memory files [{ name, text }]: disable comments that hide an
+ * anti-slop finding, and the cast-exemption marker. Findings come back in Oxlint's diagnostic shape.
+ */
+export function scanTexts(files) {
+  const diagnostics = [];
+  for (const { name, text } of files) {
+    if (NOT_SCANNED.some((p) => name.startsWith(p))) continue;
+    for (const d of findDisableDirectives(text)) {
+      diagnostics.push({
+        filename: name,
+        code: 'anti-slop(inline-disable)',
+        message: `\`${d.text}\` hides an anti-slop finding. Fix the finding instead of silencing it.`,
+        labels: [{ span: { line: d.line } }],
+      });
+    }
+    if (MARKER_HOMES.includes(name)) continue;
+    for (const d of findCastExemptions(text)) {
+      diagnostics.push({
+        filename: name,
+        code: 'anti-slop(cast-exemption-comment)',
+        message: `\`${d.text}\` tries to exempt a cast. No comment does; remove the cast instead.`,
+        labels: [{ span: { line: d.line } }],
+      });
+    }
+  }
+  return diagnostics;
+}
+
 function scanDisableDirectives() {
   const list = spawnSync(
     'git',
@@ -148,27 +207,10 @@ function scanDisableDirectives() {
       '*.cjs',
       '*.mts',
     ],
-    {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 16 * 1024 * 1024,
-    }
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
   );
-  const files = (list.stdout ?? '')
-    .split('\n')
-    .filter((f) => f && !NOT_SCANNED.some((p) => f.startsWith(p)));
-  const diagnostics = [];
-  for (const f of files) {
-    for (const d of findDisableDirectives(readFileSync(join(ROOT, f), 'utf8'))) {
-      diagnostics.push({
-        filename: f,
-        code: 'anti-slop(inline-disable)',
-        message: `\`${d.text}\` hides an anti-slop finding. Fix the finding instead of silencing it.`,
-        labels: [{ span: { line: d.line } }],
-      });
-    }
-  }
-  return diagnostics;
+  const names = (list.stdout ?? '').split('\n').filter(Boolean);
+  return scanTexts(names.map((name) => ({ name, text: readFileSync(join(ROOT, name), 'utf8') })));
 }
 
 function main() {
@@ -223,7 +265,7 @@ function main() {
       const rule = RULE_PREFIX.exec(d.code ?? '')?.[1] ?? d.code;
       if (!byKey.has(`${d.filename}\t${rule}`)) continue;
       const line = d.labels?.[0]?.span?.line ?? '?';
-      console.error(`${d.filename}:${line} [${rule}] ${d.message}`);
+      console.error(`${d.filename}:${line} [${rule}] ${messageFor(rule, d.message)}`);
     }
     console.error(
       '\nIf you only moved or renamed a file, the same findings are at its new path: run npm run oxlint:baseline.\n' +
@@ -241,7 +283,7 @@ function main() {
     process.exit(1);
   }
   console.log(
-    `oxlint-gate ok: ${total} findings, all in the baseline (${out.report.number_of_files} files, ${out.report.number_of_rules} rules)`
+    `oxlint-gate ok: ${total} findings, all in the baseline (${out.report.number_of_files} files, ${out.report.number_of_rules} rules). Type casts in production code: ${ruleTotals(actual)[CAST_RULE] ?? 0}`
   );
 }
 

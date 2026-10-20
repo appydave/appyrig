@@ -28,8 +28,27 @@ export default defineConfig({
     'anti-slop/no-unknown-type-aliases': 'error',
     'anti-slop/no-reflect-get': 'error',
     'anti-slop/no-reflect-apply': 'error',
+    // The cast ratchet (G02-as-ratchet): every `as T` / `<T>x` in production code is a finding, so
+    // today's count is the baseline and it can only go down. `as const` is not counted. The marker is
+    // a string nobody writes, so a comment cannot exempt a cast; the gate also fails on the marker.
+    'anti-slop/require-safety-comment-for-type-assertion': [
+      'error',
+      { markers: ['no-cast-exemption-exists'] },
+    ],
   },
   overrides: [
+    {
+      // Production code only: tests, e2e, test support and recorded fixtures are not counted.
+      files: [
+        '**/*.test.{ts,tsx,mjs,js}',
+        '**/*.spec.{ts,tsx,mjs,js}',
+        'e2e/**',
+        'test/**',
+        '**/test/**',
+        '**/*test-kit*',
+      ],
+      rules: { 'anti-slop/require-safety-comment-for-type-assertion': 'off' },
+    },
     {
       // The I/O boundary: these adapters turn daemon JSON into domain types, so taking `unknown`
       // is their job. Everywhere else a function takes a named type.
