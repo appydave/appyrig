@@ -1,0 +1,1077 @@
+{
+  "about": "What the Learn command list is checked against: the brain copy's version and command counts. Written by `npm run rig-commands:sync`; do not edit.",
+  "openrig_version": "0.6.6 (2620dea8)",
+  "commands": [
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": true
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    },
+    {
+      "curated": false
+    }
+  ]
+}

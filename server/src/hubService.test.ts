@@ -42,9 +42,14 @@ describe('hub-service.sh plist', () => {
   });
 
   it('never carries a token value, only the file path', () => {
-    const xml = plist();
+    // A token is put in the environment on purpose, so the check runs on every machine.
+    const token = 'plist-test-token-0123456789abcdef';
+    const xml = execFileSync('bash', [script, 'plist'], {
+      encoding: 'utf8',
+      env: { ...process.env, HUB_TOKEN: token },
+    });
     expect(xml).not.toMatch(/<key>HUB_TOKEN<\/key>/);
-    if (process.env.HUB_TOKEN) expect(xml).not.toContain(process.env.HUB_TOKEN);
+    expect(xml).not.toContain(token);
   });
 
   it('label, port, bind and log are overridable so a lane test never touches the real job', () => {

@@ -79,8 +79,9 @@ test.describe('v1.1 screens', () => {
     await page.keyboard.press('Escape');
     await expect(card).toHaveCount(0);
     await page.getByTestId('explain-toggle').click();
+    await page.clock.install();
     await page.getByTestId('rig-map').getByTestId('rig-map-node').nth(1).hover();
-    await page.waitForTimeout(300);
+    await page.clock.runFor(500); // well past the 120 ms Explain delay, without waiting for it
     await expect(card).toHaveCount(0);
     expect(errors, 'no console errors in Explain mode').toEqual([]);
   });

@@ -56,11 +56,12 @@ test.describe('v2 one-line page headers', () => {
     await go(page, 'work', 'flow');
     await chooseRig(page, 'm2:appyrig-v15-loadout');
     await expect(page.getByTestId('flow-rig')).toHaveText('appyrig-v15-loadout');
+    await page.clock.install();
     for (const key of ['m2:openrig-watch', 'm4:workshop', 'm2:appyrig-v15-loadout']) {
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const before = await page.evaluate(() => window.scrollY);
       await chooseRig(page, key);
-      await page.waitForTimeout(300);
+      await page.clock.runFor(500); // past the drawer's 250 ms close delay
       expect(await page.evaluate(() => window.scrollY), `scroll after choosing ${key}`).toBe(
         before
       );

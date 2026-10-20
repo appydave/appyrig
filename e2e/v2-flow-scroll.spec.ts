@@ -24,10 +24,11 @@ test.describe('v2 Rigs drawer never scrolls the page', () => {
     await page.getByTestId('v2-group-work').click();
     await page.getByTestId('v2-page-flow').click();
     await expect(page.locator('main[data-testid="v2-flow"]')).toBeVisible();
+    await page.clock.install();
     for (const key of ['m2:appyrig-v15-loadout', 'm2:openrig-watch', 'm2:d09-crew']) {
       const before = await page.evaluate(() => window.scrollY);
       await chooseRigInDrawer(page, key);
-      await page.waitForTimeout(200);
+      await page.clock.runFor(500); // past the drawer's 250 ms close delay
       expect(await page.evaluate(() => window.scrollY), `scrollY after choosing ${key}`).toBe(
         before
       );

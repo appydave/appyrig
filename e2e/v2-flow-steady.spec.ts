@@ -85,8 +85,7 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
       return `${Math.round(b!.x)},${Math.round(b!.y)}`;
     };
     const a = await at();
-    await page.waitForTimeout(500);
-    expect(await at(), 'the dot travels along its line').not.toEqual(a);
+    await expect.poll(at, { message: 'the dot travels along its line' }).not.toEqual(a);
     // the panel follows the step, and the consoles say what they show
     await expect(page.locator('.handoff-panel').first()).not.toContainText('Click a line');
     await expect(page.getByTestId('console-mode')).toContainText('following the handoff');
