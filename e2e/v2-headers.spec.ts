@@ -61,7 +61,7 @@ test.describe('v2 one-line page headers', () => {
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const before = await page.evaluate(() => window.scrollY);
       await chooseRig(page, key);
-      await page.clock.runFor(500); // past the drawer's 250 ms close delay
+      await page.clock.runFor(500); // lets the page's timers (the drawer has a 250 ms close timer) run
       expect(await page.evaluate(() => window.scrollY), `scroll after choosing ${key}`).toBe(
         before
       );
