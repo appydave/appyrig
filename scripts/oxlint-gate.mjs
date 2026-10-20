@@ -53,6 +53,43 @@ export function compare(actual, baseline) {
   return { grown, shrunk };
 }
 
+/**
+ * Disable comments that would hide an anti-slop finding: one naming an anti-slop rule, or one naming
+ * no rule at all. Oxlint has no flag to ignore inline directives, so the gate counts them itself.
+ * Directives for other rules (react-hooks, no-control-regex) are left alone.
+ */
+export function findDisableDirectives(text) {
+  const found = [];
+  const re = /(?:oxlint|eslint)-disable(?:-next-line|-line)?([^\n]*)/g;
+  for (const m of text.matchAll(re)) {
+    const rules = m[1]
+      .replace(/--.*$/, '')
+      .replace(/\*\/.*$/, '')
+      .trim();
+    if (rules === '' || rules.includes('anti-slop')) {
+      found.push({
+        line: text.slice(0, m.index).split('\n').length,
+        text: m[0].trim().slice(0, 100),
+      });
+    }
+  }
+  return found;
+}
+
+/** Findings per rule across all files: a move keeps these, a new lie raises them. */
+export function ruleTotals(counts) {
+  const totals = {};
+  for (const { rule, n } of flat(counts)) totals[rule] = (totals[rule] ?? 0) + n;
+  return totals;
+}
+
+/** Rules whose repo-wide total went up. Moving a file keeps every total; a new lie raises one. */
+export function rulesThatGrew(baseline, actual) {
+  const before = ruleTotals(baseline);
+  const after = ruleTotals(actual);
+  return Object.keys(after).filter((r) => after[r] > (before[r] ?? 0));
+}
+
 const sorted = (counts) =>
   Object.fromEntries(
     Object.keys(counts)
@@ -88,6 +125,52 @@ function run() {
   return { report };
 }
 
+/** Not scanned: vendored, recorded and agent-tooling files (the same ones oxlint.config.ts ignores). */
+export const NOT_SCANNED = [
+  'test/fixtures/',
+  'test/root/fixtures/',
+  'server/src/core/vendor/',
+  '.claude/',
+];
+
+function scanDisableDirectives() {
+  const list = spawnSync(
+    'git',
+    [
+      'ls-files',
+      '--cached',
+      '--others',
+      '--exclude-standard',
+      '*.ts',
+      '*.tsx',
+      '*.js',
+      '*.mjs',
+      '*.cjs',
+      '*.mts',
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    }
+  );
+  const files = (list.stdout ?? '')
+    .split('\n')
+    .filter((f) => f && !NOT_SCANNED.some((p) => f.startsWith(p)));
+  const diagnostics = [];
+  for (const f of files) {
+    for (const d of findDisableDirectives(readFileSync(join(ROOT, f), 'utf8'))) {
+      diagnostics.push({
+        filename: f,
+        code: 'anti-slop(inline-disable)',
+        message: `\`${d.text}\` hides an anti-slop finding. Fix the finding instead of silencing it.`,
+        labels: [{ span: { line: d.line } }],
+      });
+    }
+  }
+  return diagnostics;
+}
+
 function main() {
   const update = process.argv.includes('--update');
   const init = process.argv.includes('--init');
@@ -96,6 +179,7 @@ function main() {
     console.error(`oxlint-gate: the run failed, so nothing was checked.\n${out.error}`);
     process.exit(2);
   }
+  out.report.diagnostics = [...(out.report.diagnostics ?? []), ...scanDisableDirectives()];
   const actual = countFindings(out.report);
   const total = flat(actual).reduce((s, r) => s + r.n, 0);
   const file = join(ROOT, BASELINE_FILE);
@@ -110,9 +194,14 @@ function main() {
   const { grown, shrunk } = compare(actual, baseline);
 
   if (init || update) {
-    if (grown.length && !init) {
+    const before = ruleTotals(baseline);
+    const after = ruleTotals(actual);
+    const worse = rulesThatGrew(baseline, actual);
+    if (worse.length && !init) {
       console.error(
-        `oxlint-gate: refusing to grow the baseline (${grown.length} count(s) above it). Fix the new findings instead:\n` +
+        `oxlint-gate: refusing to grow the baseline. More findings than before for: ${worse
+          .map((r) => `${r} ${before[r] ?? 0} -> ${after[r]}`)
+          .join(', ')}. Fix the new findings instead:\n` +
           grown.map((g) => `  ${g.file}: ${g.rule} ${g.was} -> ${g.now}`).join('\n')
       );
       process.exit(1);
@@ -137,7 +226,8 @@ function main() {
       console.error(`${d.filename}:${line} [${rule}] ${d.message}`);
     }
     console.error(
-      '\nFix the new finding: give the function a named domain type and parse the input where it enters ' +
+      '\nIf you only moved or renamed a file, the same findings are at its new path: run npm run oxlint:baseline.\n' +
+        'Otherwise fix the new finding: give the function a named domain type and parse the input where it enters ' +
         '(a schema or parser at the I/O boundary), or inject the dependency instead of mocking a module. ' +
         'Do not add it to the baseline.'
     );

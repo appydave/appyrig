@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error the gate is a plain .mjs script with no type declarations
-import { compare, countFindings, reportProblem } from '../../scripts/oxlint-gate.mjs';
+import {
+  NOT_SCANNED,
+  compare,
+  countFindings,
+  findDisableDirectives,
+  reportProblem,
+  rulesThatGrew,
+} from '../../scripts/oxlint-gate.mjs';
 
 /**
  * G02 gate wrapper: scripts/oxlint-gate.mjs turns Oxlint's findings into a baseline ratchet. This
@@ -73,6 +80,71 @@ describe('Feature: the baseline can shrink but never grow', () => {
     const r = compare({ 'b.ts': { 'no-module-mocking': 1 } }, baseline);
     expect(r.grown).toHaveLength(1);
     expect(r.shrunk).toHaveLength(1);
+  });
+});
+
+describe('Feature: moving a file is not growing the baseline', () => {
+  const baseline = { 'old.ts': { 'no-unknown-parameters': 2 }, 'x.ts': { 'no-module-mocking': 1 } };
+
+  it('Scenario: given the same findings under a new path, then no rule grew', () => {
+    const moved = { 'new.ts': { 'no-unknown-parameters': 2 }, 'x.ts': { 'no-module-mocking': 1 } };
+    expect(rulesThatGrew(baseline, moved)).toEqual([]);
+  });
+
+  it('Scenario: given one new finding while another was fixed elsewhere in the same rule, then no rule grew', () => {
+    const swapped = {
+      'old.ts': { 'no-unknown-parameters': 1 },
+      'z.ts': { 'no-unknown-parameters': 1 },
+    };
+    expect(rulesThatGrew(baseline, swapped)).toEqual([]);
+  });
+
+  it('Scenario: given a new finding with nothing fixed, then that rule grew', () => {
+    const worse = { ...baseline, 'new.ts': { 'no-unknown-parameters': 1 } };
+    expect(rulesThatGrew(baseline, worse)).toEqual(['no-unknown-parameters']);
+  });
+
+  it('Scenario: given a finding for a rule the baseline never had, then that rule grew', () => {
+    expect(rulesThatGrew({}, { 'a.ts': { 'inline-disable': 1 } })).toEqual(['inline-disable']);
+  });
+});
+
+describe('Feature: a disable comment cannot hide a finding', () => {
+  it('Scenario: given a comment that disables an anti-slop rule, then it is found with its line', () => {
+    const text =
+      'const a = 1;\n// oxlint-disable-next-line anti-slop/no-unknown-parameters\nfn(x);\n';
+    expect(findDisableDirectives(text)).toEqual([
+      { line: 2, text: 'oxlint-disable-next-line anti-slop/no-unknown-parameters' },
+    ]);
+  });
+
+  it('Scenario: given an eslint-style comment for an anti-slop rule, then it is found too', () => {
+    expect(
+      findDisableDirectives('// eslint-disable-line anti-slop/no-module-mocking')
+    ).toHaveLength(1);
+  });
+
+  it('Scenario: given a blanket disable that names no rule, then it is found', () => {
+    expect(findDisableDirectives('/* eslint-disable */')).toHaveLength(1);
+    expect(findDisableDirectives('// oxlint-disable')).toHaveLength(1);
+  });
+
+  it('Scenario: given a disable for another rule, even with a reason, then it is left alone', () => {
+    expect(findDisableDirectives('// eslint-disable-next-line no-control-regex')).toEqual([]);
+    expect(
+      findDisableDirectives('// eslint-disable-next-line react-hooks/exhaustive-deps -- by key')
+    ).toEqual([]);
+  });
+
+  it('Scenario: given a reason that mentions anti-slop after the dashes, then it is left alone', () => {
+    expect(findDisableDirectives('// eslint-disable-next-line no-undef -- not anti-slop')).toEqual(
+      []
+    );
+  });
+
+  it('Scenario: given the folders the scan skips, then each is also ignored by oxlint.config.ts', () => {
+    const config = readFileSync(join(ROOT, 'oxlint.config.ts'), 'utf8');
+    for (const prefix of NOT_SCANNED) expect(config, prefix).toContain(`'${prefix}**'`);
   });
 });
 
