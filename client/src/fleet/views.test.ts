@@ -819,7 +819,7 @@ describe('F4 (r1 LOW-1): most headroom never picks a reading that is not current
 });
 
 describe('ui-d-logical: the collector reports logicalId WITHOUT the @rig suffix', () => {
-  // Real shape from the OpenRig daemon (/api/rigs/:id/nodes): logicalId `desk.planner`, rigName
+  // Real shape from the OpenRig daemon (the daemon's rig-nodes route): logicalId `desk.planner`, rigName
   // `ylo-desk`. The queue address adds the rig: `desk.planner@ylo-desk`.
   const T = '2026-10-10T07:50:00.000Z';
   const setup = () => {

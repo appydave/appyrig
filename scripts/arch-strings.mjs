@@ -11,6 +11,16 @@ const root = resolve(import.meta.dirname, '..');
 const ALLOWED = 'collector/src/adapters/';
 const FORBIDDEN = ['/api/rigs', '/api/ps', 'capture-pane', 'herdr'];
 const ROOTS = ['shared/src', 'server/src', 'server/scripts', 'client/src', 'collector/src'];
+// Display copy that names the terminal app for the reader. Only the app name is allowed here: the
+// route strings and `capture-pane` stay banned. rig-commands.json is generated from the brain.
+const COPY_FILES = new Set([
+  'client/src/learn/glossary.ts',
+  'client/src/learn/legend.ts',
+  'client/src/v2/pages/learn/rig-commands.json',
+  'client/src/v2/pages/wall/index.tsx',
+  'client/src/v2/pages/wall/wall.test.tsx',
+]);
+const COPY_ALLOWED = new Set(['herdr']);
 const SKIP = new Set(['node_modules', 'dist']);
 const EXT = /\.(ts|tsx|js|mjs|cjs|json)$/;
 
@@ -38,7 +48,8 @@ for (const r of ROOTS) {
       .split('\n')
       .forEach((line, i) => {
         for (const s of FORBIDDEN)
-          if (line.toLowerCase().includes(s)) hits.push(`${rel}:${i + 1}: "${s}"`);
+          if (COPY_FILES.has(rel) && COPY_ALLOWED.has(s)) continue;
+          else if (line.toLowerCase().includes(s)) hits.push(`${rel}:${i + 1}: "${s}"`);
       });
   }
 }
