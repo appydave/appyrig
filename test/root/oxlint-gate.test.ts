@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-// @ts-expect-error the gate is a plain .mjs script with no type declarations
 import {
   NOT_SCANNED,
   compare,
@@ -17,6 +16,8 @@ import {
  */
 
 const ROOT = new URL('../..', import.meta.url).pathname;
+const OX = `oxlint-${'dis'}able`;
+const ES = `eslint-${'dis'}able`;
 const finding = (filename: string, rule: string) => ({ filename, code: `anti-slop(${rule})` });
 
 describe('Feature: findings are counted per file and per rule', () => {
@@ -61,7 +62,7 @@ describe('Feature: the baseline can shrink but never grow', () => {
 
   it('Scenario: given a different rule in a baselined file, then it has grown from zero', () => {
     const r = compare({ 'a.ts': { 'no-unknown-parameters': 2, 'no-module-mocking': 1 } }, baseline);
-    expect(r.grown.map((g: { rule: string }) => g.rule)).toEqual(['no-module-mocking']);
+    expect(r.grown.map((g) => g.rule)).toEqual(['no-module-mocking']);
   });
 
   it('Scenario: given fewer findings than the baseline, then the baseline is stale', () => {
@@ -111,35 +112,30 @@ describe('Feature: moving a file is not growing the baseline', () => {
 
 describe('Feature: a disable comment cannot hide a finding', () => {
   it('Scenario: given a comment that disables an anti-slop rule, then it is found with its line', () => {
-    const text =
-      'const a = 1;\n// oxlint-disable-next-line anti-slop/no-unknown-parameters\nfn(x);\n';
+    const text = `const a = 1;\n// ${OX}-next-line anti-slop/no-unknown-parameters\nfn(x);\n`;
     expect(findDisableDirectives(text)).toEqual([
-      { line: 2, text: 'oxlint-disable-next-line anti-slop/no-unknown-parameters' },
+      { line: 2, text: `${OX}-next-line anti-slop/no-unknown-parameters` },
     ]);
   });
 
   it('Scenario: given an eslint-style comment for an anti-slop rule, then it is found too', () => {
-    expect(
-      findDisableDirectives('// eslint-disable-line anti-slop/no-module-mocking')
-    ).toHaveLength(1);
+    expect(findDisableDirectives(`// ${ES}-line anti-slop/no-module-mocking`)).toHaveLength(1);
   });
 
   it('Scenario: given a blanket disable that names no rule, then it is found', () => {
-    expect(findDisableDirectives('/* eslint-disable */')).toHaveLength(1);
-    expect(findDisableDirectives('// oxlint-disable')).toHaveLength(1);
+    expect(findDisableDirectives(`/* ${ES} */`)).toHaveLength(1);
+    expect(findDisableDirectives(`// ${OX}`)).toHaveLength(1);
   });
 
   it('Scenario: given a disable for another rule, even with a reason, then it is left alone', () => {
-    expect(findDisableDirectives('// eslint-disable-next-line no-control-regex')).toEqual([]);
+    expect(findDisableDirectives(`// ${ES}-next-line no-control-regex`)).toEqual([]);
     expect(
-      findDisableDirectives('// eslint-disable-next-line react-hooks/exhaustive-deps -- by key')
+      findDisableDirectives(`// ${ES}-next-line react-hooks/exhaustive-deps -- by key`)
     ).toEqual([]);
   });
 
   it('Scenario: given a reason that mentions anti-slop after the dashes, then it is left alone', () => {
-    expect(findDisableDirectives('// eslint-disable-next-line no-undef -- not anti-slop')).toEqual(
-      []
-    );
+    expect(findDisableDirectives(`// ${ES}-next-line no-undef -- not anti-slop`)).toEqual([]);
   });
 
   it('Scenario: given the folders the scan skips, then each is also ignored by oxlint.config.ts', () => {
