@@ -1,17 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { FIXTURES } from './fixtureSources.js';
 import { missionSpecPaths, parseMissionJobs } from '@appydave/shared';
 
 // The parser lives in shared/src/missionJobs.ts (shared has no test runner; its tests run here, with
 // the collector that uses it to decide which files it may serve).
 
-const REAL = '/Users/davidcruwys/dev/ad/brains/openrig/rigs/d09-crew/MISSION.md';
+// A copy of the real d09-crew MISSION.md, kept in test/fixtures/brain (the brain is its home).
+const REAL = join(FIXTURES, 'brain/d09-crew-MISSION.md');
 
 describe('parseMissionJobs on the real d09-crew MISSION.md', () => {
-  const real = existsSync(REAL) ? readFileSync(REAL, 'utf8') : null;
+  const real = readFileSync(REAL, 'utf8');
 
-  it.skipIf(!real)('finds the jobs table: 8 rows, columns by header name', () => {
-    const jobs = parseMissionJobs(real!);
+  it('finds the jobs table: 8 rows, columns by header name', () => {
+    const jobs = parseMissionJobs(real);
     expect(jobs.map((j) => j.slice)).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
     expect(jobs.map((j) => j.repo)).toEqual([
       'AppyStack',
@@ -32,33 +35,30 @@ describe('parseMissionJobs on the real d09-crew MISSION.md', () => {
     expect(jobs[2]!.repo).toBe('FliStudio');
   });
 
-  it.skipIf(!real)('slice 1 resolves CT-0011-spec.html as a sibling of CT-0011.md', () => {
-    const [one] = parseMissionJobs(real!);
+  it('slice 1 resolves CT-0011-spec.html as a sibling of CT-0011.md', () => {
+    const [one] = parseMissionJobs(real);
     expect(one!.specPaths).toEqual([
       '/Users/davidcruwys/dev/ad/appydave-plugins/dev-team/contract/tickets/CT-0011.md',
       '/Users/davidcruwys/dev/ad/appydave-plugins/dev-team/contract/tickets/CT-0011-spec.html',
     ]);
   });
 
-  it.skipIf(!real)(
-    'every job has absolute spec paths; text outside backticks is kept as a note',
-    () => {
-      const jobs = parseMissionJobs(real!);
-      for (const j of jobs) {
-        expect(j.specPaths.length, `slice ${j.slice}`).toBeGreaterThan(0);
-        for (const p of j.specPaths) expect(p.startsWith('/')).toBe(true);
-      }
-      expect(jobs[2]!.specNote).toContain('requirements-bundle-2026-10-09');
-      // slice 8's second file is a relative path with a "/": never guessed into an absolute path
-      expect(jobs[7]!.specPaths).toEqual([
-        '/Users/davidcruwys/dev/ad/flivideo/flicast/docs/polish/tooltips-spec.html',
-      ]);
-      expect(jobs[7]!.specNote).toContain('log/ux-audit-2026-09-16/fix-report.md');
-      // slice 5 has two worktrees
-      expect(jobs[4]!.worktrees).toHaveLength(2);
-      expect(missionSpecPaths(real!).length).toBeGreaterThan(8);
+  it('every job has absolute spec paths; text outside backticks is kept as a note', () => {
+    const jobs = parseMissionJobs(real);
+    for (const j of jobs) {
+      expect(j.specPaths.length, `slice ${j.slice}`).toBeGreaterThan(0);
+      for (const p of j.specPaths) expect(p.startsWith('/')).toBe(true);
     }
-  );
+    expect(jobs[2]!.specNote).toContain('requirements-bundle-2026-10-09');
+    // slice 8's second file is a relative path with a "/": never guessed into an absolute path
+    expect(jobs[7]!.specPaths).toEqual([
+      '/Users/davidcruwys/dev/ad/flivideo/flicast/docs/polish/tooltips-spec.html',
+    ]);
+    expect(jobs[7]!.specNote).toContain('log/ux-audit-2026-09-16/fix-report.md');
+    // slice 5 has two worktrees
+    expect(jobs[4]!.worktrees).toHaveLength(2);
+    expect(missionSpecPaths(real).length).toBeGreaterThan(8);
+  });
 });
 
 describe('parseMissionJobs is generic', () => {

@@ -40,6 +40,17 @@ const out = {
   commands: brain.commands.map(trim),
 };
 writeFileSync(dst, `${JSON.stringify(out, null, 2)}\n`);
+// What the w4 test compares the copy against, so the test needs no brain checkout on the machine.
+const summary = {
+  about:
+    "What the Learn command list is checked against: the brain copy's version and command counts. Written by `npm run rig-commands:sync`; do not edit.",
+  openrig_version: brain.openrig_version,
+  commands: brain.commands.map((c) => ({ curated: Boolean(c.curated) })),
+};
+writeFileSync(
+  new URL('../test/fixtures/brain/rig-commands-summary.json', import.meta.url),
+  `${JSON.stringify(summary, null, 2)}\n`
+);
 console.log(
   `rig-commands:sync: ${brain.commands.length} commands (OpenRig ${brain.openrig_version}) -> client/src/v2/pages/learn/rig-commands.json`
 );

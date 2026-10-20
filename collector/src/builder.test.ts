@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   MachineSnapshotSchema,
@@ -7,7 +7,7 @@ import {
   TAIL_MAX_LINES,
   type MachineSnapshot,
 } from '@appydave/shared';
-import { blockedDetailOf, buildSnapshot, mergeViewer, type BuilderConfig } from './builder.js';
+import { blockedDetailOf, buildSnapshot, mergeViewer } from './builder.js';
 import {
   FIXTURES,
   fixtureSources,
@@ -15,17 +15,10 @@ import {
   recordedDaemon,
   ROAMY_PANES,
 } from './adapters/fixtureSources.js';
-import { parseNodes, parsePs } from './adapters/daemon.js';
+import { parseNodes } from './adapters/daemon.js';
+import { M2, NOW, ROAMY, SNAPSHOT_CASES } from './snapshotCases.js';
 import type { Seat } from '@appydave/shared';
 
-const NOW = new Date('2026-10-09T13:24:44.000Z');
-const cfg = (id: string, label: string): BuilderConfig => ({
-  machine: { id, label, hostname: null },
-  version: 'fixture',
-  pid: null,
-});
-const ROAMY = cfg('roamy', 'Roamy');
-const M2 = cfg('m2', 'M2');
 const seat = (s: MachineSnapshot, id: string) => s.seats.find((x) => x.id === id)!;
 
 describe('snapshot builder', () => {
@@ -337,44 +330,12 @@ describe('snapshot builder: viewer pairing', () => {
 });
 
 describe('snapshot fixtures (test/fixtures/snapshots)', () => {
-  const update = process.env.UPDATE_SNAPSHOTS === '1';
-  const cases: [string, () => Promise<MachineSnapshot>][] = [
-    ['roamy', () => buildSnapshot(fixtureSources({ machine: 'roamy' }), ROAMY, NOW)],
-    ['m2', () => buildSnapshot(fixtureSources({ machine: 'm2' }), M2, NOW)],
-    [
-      'roamy--blocked',
-      async () => {
-        const nodes = parseNodes(
-          readFixtureJson('synthetic/roamy--api-rig-starter-nodes--blocked-permission.json')
-        );
-        const base = recordedDaemon('roamy');
-        const blockedPs = parsePs(readFixtureJson('synthetic/roamy--api-ps--starter-blocked.json'));
-        const blockedRigs = base.rigs.map((r) => blockedPs.find((x) => x.id === r.id) ?? r);
-        const seats = base.seats.map((s) => nodes.find((n) => n.id === s.id) ?? s);
-        return buildSnapshot(
-          fixtureSources({
-            machine: 'roamy',
-            daemon: async () => ({ ...base, rigs: blockedRigs, seats }),
-            panes: {
-              ...ROAMY_PANES,
-              'dev-build@starter':
-                'synthetic/roamy--tmux-starter-dev-build--blocked-permission-prompt.ans',
-            },
-          }),
-          ROAMY,
-          NOW
-        );
-      },
-    ],
-  ];
-
-  it.each(cases)(
+  it.each(SNAPSHOT_CASES)(
     '%s is what the builder produces from the recorded captures',
     async (name, build) => {
       const file = join(FIXTURES, 'snapshots', `${name}.json`);
       const snap = await build();
       expect(MachineSnapshotSchema.safeParse(snap).success).toBe(true);
-      if (update) writeFileSync(file, JSON.stringify(snap, null, 2) + '\n');
       expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(JSON.parse(JSON.stringify(snap)));
     }
   );

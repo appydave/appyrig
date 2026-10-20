@@ -3,7 +3,6 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   renameSync,
   rmSync,
   symlinkSync,
@@ -22,12 +21,13 @@ import { afterAll, describe, expect, it } from 'vitest';
 const ROOT = new URL('../..', import.meta.url).pathname;
 const TSX = join(ROOT, 'node_modules/.bin/tsx');
 const CHECK = join(ROOT, 'scripts/provenance/main.ts');
-const pin = JSON.parse(readFileSync(join(ROOT, 'shared/src/openrig/PROVENANCE.json'), 'utf8')) as {
-  source: { repo: string };
-  cli: { path: string };
-};
-/** A full run needs the pinned OpenRig clone and the installed CLI on this machine. */
-const canRunFull = existsSync(pin.source.repo) && existsSync(pin.cli.path);
+/**
+ * A full clean run reads a committed copy of the OpenRig files the check cites, at the pinned commit,
+ * so it runs the same on every machine. No CLI is given, which skips the cross-check against the
+ * installed OpenRig validator and keeps the result independent of what is installed.
+ */
+const SOURCE = join(ROOT, 'test/root/fixtures/openrig-0.6.11-source');
+const NO_CLI = { OPENRIG_CLI: join(tmpdir(), 'no-openrig-cli-here') };
 
 const scratch = mkdtempSync(join(tmpdir(), 'prov-exit-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
@@ -54,25 +54,22 @@ describe('provenance exit codes', () => {
     expect(r.out).toContain('provenance: cannot run:');
   });
 
-  it.skipIf(!canRunFull)(
-    'a report that cannot be written goes to the temp folder and a clean run still exits 0',
-    () => {
-      // A FILE where scripts/provenance/out should be: mkdir and the writes under it fail, as on a
-      // read-only tree. The real folder is set aside and put back whatever happens.
-      const out = join(ROOT, 'scripts/provenance/out');
-      const aside = join(scratch, 'out-aside');
-      const had = existsSync(out);
-      if (had) renameSync(out, aside);
-      try {
-        writeFileSync(out, 'not a folder');
-        const r = run([]);
-        expect(r.out).toContain('# OpenRig provenance: clean');
-        expect(r.status, r.out).toBe(0);
-        expect(r.out).toMatch(/provenance: could not write .*; wrote the report to /);
-      } finally {
-        rmSync(out, { force: true });
-        if (had) renameSync(aside, out);
-      }
+  it('a report that cannot be written goes to the temp folder and a clean run still exits 0', () => {
+    // A FILE where scripts/provenance/out should be: mkdir and the writes under it fail, as on a
+    // read-only tree. The real folder is set aside and put back whatever happens.
+    const out = join(ROOT, 'scripts/provenance/out');
+    const aside = join(scratch, 'out-aside');
+    const had = existsSync(out);
+    if (had) renameSync(out, aside);
+    try {
+      writeFileSync(out, 'not a folder');
+      const r = run(['--source', SOURCE], NO_CLI);
+      expect(r.out).toContain('# OpenRig provenance: clean');
+      expect(r.status, r.out).toBe(0);
+      expect(r.out).toMatch(/provenance: could not write .*; wrote the report to /);
+    } finally {
+      rmSync(out, { force: true });
+      if (had) renameSync(aside, out);
     }
-  );
+  });
 });

@@ -1,0 +1,1 @@
+Files copied unchanged from mvschwarz/openrig at commit eabc816e584af82be7f97c6269f2551883f569e3 (@openrig/cli 0.6.11), Apache-2.0, see LICENSE. Used only by test/root/provenance-exit.test.ts; re-copy when the pin in shared/src/openrig/PROVENANCE.json moves.

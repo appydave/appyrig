@@ -31,6 +31,9 @@ jobs:
       - name: Architecture boundaries and banned strings
         run: npm run arch:check
 
+      - name: Tests you can trust (no skips, sleeps, CI branches or snapshot switches)
+        run: npm run test:trust
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -39,6 +42,42 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Coverage thresholds (server, client)
+        run: npm run test:coverage
+
+  e2e:
+    name: Browser tests (v2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # A throwaway token for the hub the tests start on this runner; ports are the defaults.
+      HUB_TOKEN: ci-e2e-token-0123456789abcdef
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright, v2 specs
+        run: npm run test:e2e:v2
+
+      - name: Keep the failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results/
+          if-no-files-found: ignore
 
   provenance:
     name: OpenRig provenance

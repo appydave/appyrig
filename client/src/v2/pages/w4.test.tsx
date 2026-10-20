@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   FLEET_EVENTS,
@@ -657,22 +657,24 @@ describe('W4 fold: machines version watch (MEDIUM-3, LOW)', () => {
 });
 
 describe('W4 fold: the Learn command list matches the brain copy', () => {
-  const brainPath = '/Users/davidcruwys/dev/ad/brains/openrig/rig-commands.json';
-  it.skipIf(!existsSync(brainPath))(
-    'version, count and curated count agree with the brain file',
-    () => {
-      const brain = JSON.parse(readFileSync(brainPath, 'utf8')) as {
-        openrig_version: string;
-        commands: { curated: boolean }[];
-      };
-      const copy = JSON.parse(
-        readFileSync(path.resolve(__dirname, 'learn/rig-commands.json'), 'utf8')
-      ) as RigCommands;
-      expect(copy.openrig_version).toBe(brain.openrig_version);
-      expect(copy.commands.length).toBe(brain.commands.length);
-      expect(copy.commands.filter((c) => c.curated).length).toBe(
-        brain.commands.filter((c) => c.curated).length
-      );
-    }
+  // A summary of the brain file, written by `npm run rig-commands:sync` (the copy and the summary
+  // are regenerated together, so a stale copy fails here).
+  const brainPath = path.resolve(
+    __dirname,
+    '../../../../test/fixtures/brain/rig-commands-summary.json'
   );
+  it('version, count and curated count agree with the brain file', () => {
+    const brain = JSON.parse(readFileSync(brainPath, 'utf8')) as {
+      openrig_version: string;
+      commands: { curated: boolean }[];
+    };
+    const copy = JSON.parse(
+      readFileSync(path.resolve(__dirname, 'learn/rig-commands.json'), 'utf8')
+    ) as RigCommands;
+    expect(copy.openrig_version).toBe(brain.openrig_version);
+    expect(copy.commands.length).toBe(brain.commands.length);
+    expect(copy.commands.filter((c) => c.curated).length).toBe(
+      brain.commands.filter((c) => c.curated).length
+    );
+  });
 });

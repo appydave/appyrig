@@ -59,15 +59,15 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
       await selected('culture'),
       await selected('mission'),
     ]).toEqual(['true', 'false', 'false', 'false']);
-    // the page height once reads have landed (two equal reads 200 ms apart)
+    // the page height once reads have landed (two equal reads in a row)
     const settledHeight = async () => {
       let prev = -1;
-      for (let i = 0; i < 25; i++) {
+      await expect(async () => {
         const h = await page.evaluate(() => document.documentElement.scrollHeight);
-        if (h === prev) return h;
+        const same = h === prev;
         prev = h;
-        await page.waitForTimeout(200);
-      }
+        expect(same, 'page height still changing').toBe(true);
+      }).toPass({ intervals: [100], timeout: 10_000 });
       return prev;
     };
     const before = await settledHeight();
