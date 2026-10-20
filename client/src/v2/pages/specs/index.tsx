@@ -86,10 +86,12 @@ function SpecDetail({
   ctx: V2PageProps['ctx'];
   label: (id: string) => string;
 }) {
-  const fm = ctx.allMachines.find((m) => m.machine.id === spec.machine);
+  const fm = ctx.allMachines.find((m) => m.machine.id === (spec.liveMachine ?? spec.machine));
   const liveSeat = (session: string) => fm?.snapshot.seats.find((s) => s.id === session);
+  const liveKey = spec.liveMachine ? `${spec.liveMachine}:${spec.name}` : spec.key;
+  const elsewhere = spec.liveMachine !== null && spec.liveMachine !== spec.machine;
   const open = (page: PageKey) => {
-    ctx.chooseRig(spec.key);
+    ctx.chooseRig(liveKey);
     ctx.goTo(page);
   };
   const seatCount = spec.pods?.reduce((n, p) => n + p.seats.length, 0) ?? 0;
@@ -101,7 +103,8 @@ function SpecDetail({
           {STATE_WORD[spec.state]}
         </span>
         <span className="quiet">
-          on {label(spec.machine)}
+          spec on {label(spec.machine)}
+          {elsewhere ? ` · launched on ${label(spec.liveMachine!)}` : ''}
           {spec.pods ? ` · ${spec.pods.length} pods · ${seatCount} seats` : ''}
         </span>
       </header>
@@ -113,7 +116,10 @@ function SpecDetail({
       )}
       {spec.state !== 'draft' && (
         <p className="rs-links" data-testid="rs-links">
-          This rig is launched. See it live:{' '}
+          {elsewhere
+            ? `This rig is launched on ${label(spec.liveMachine!)}, from its own copy of the spec.`
+            : 'This rig is launched.'}{' '}
+          See it live:{' '}
           <button type="button" className="pill-btn" onClick={() => open('graph')}>
             Graph
           </button>{' '}
@@ -126,7 +132,7 @@ function SpecDetail({
           <button
             type="button"
             className="pill-btn"
-            onClick={() => ctx.onOpenFiles(spec.machine, spec.name)}
+            onClick={() => ctx.onOpenFiles(spec.liveMachine ?? spec.machine, spec.name)}
           >
             Files
           </button>
@@ -427,7 +433,12 @@ function RigSpecs({ ctx }: V2PageProps) {
               <span className="rs-badge" data-state={s.state}>
                 {STATE_WORD[s.state]}
               </span>
-              <span className="quiet rs-item-where">{label(s.machine)}</span>
+              <span className="quiet rs-item-where">
+                {label(s.machine)}
+                {s.liveMachine && s.liveMachine !== s.machine
+                  ? ` · runs on ${label(s.liveMachine)}`
+                  : ''}
+              </span>
             </button>
           ))}
         </nav>

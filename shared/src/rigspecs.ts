@@ -156,6 +156,11 @@ export const RigSpecsOutputSchema = z.strictObject({
       launched: z.boolean(),
       /** That rig's status as OpenRig reports it (`running`, `stopped`…); null for a draft. */
       rigStatus: z.string().nullable(),
+      /**
+       * Every machine whose OpenRig knows a rig of this name, with its status: a spec found on one
+       * machine (a synced folder) may be launched on another. Empty = launched nowhere.
+       */
+      launchedOn: z.array(z.strictObject({ machine: MachineId, status: z.string() })),
     })
   ),
 });

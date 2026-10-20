@@ -52,6 +52,11 @@ export interface ShownSpec {
   specValid: boolean;
   state: SpecState;
   rigStatus: string | null;
+  /**
+   * The machine whose OpenRig runs (or knows) this rig: the spec's own machine when launched there,
+   * else another one (a spec in a synced folder may be launched elsewhere). null for a draft.
+   */
+  liveMachine: string | null;
   pods: ShownPod[] | null;
   /** Cross-pod edges, `pod.member` → `pod.member`. */
   edges: ShownEdge[] | null;
@@ -65,6 +70,22 @@ export interface ShownSpec {
 
 const stateOf = (launched: boolean, rigStatus: string | null): SpecState =>
   !launched ? 'draft' : rigStatus === 'running' ? 'running' : 'launched';
+
+/** Where the rig lives: its own machine if launched there, else the machine running it (else any that knows it). */
+function liveOf(s: RigSpecsOutput['specs'][number]): {
+  state: SpecState;
+  rigStatus: string | null;
+  liveMachine: string | null;
+} {
+  if (s.launched)
+    return { state: stateOf(true, s.rigStatus), rigStatus: s.rigStatus, liveMachine: s.machine };
+  // `launchedOn` is absent from an older hub's answer: then it is the spec's own machine or nothing.
+  const on = s.launchedOn ?? [];
+  const at = on.find((x) => x.status === 'running') ?? on[0];
+  return at
+    ? { state: stateOf(true, at.status), rigStatus: at.status, liveMachine: at.machine }
+    : { state: 'draft', rigStatus: null, liveMachine: null };
+}
 
 /** Every rig spec to list: the spec scan where a machine sends it, else its launched rigs' records. */
 export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[]): ShownSpec[] {
@@ -81,8 +102,7 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
       summary: s.summary,
       specPath: s.specPath,
       specValid: s.specValid,
-      state: stateOf(s.launched, s.rigStatus),
-      rigStatus: s.rigStatus,
+      ...liveOf(s),
       pods:
         s.pods?.map((p) => ({
           id: p.id,
@@ -119,6 +139,7 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
         specValid: rig.specValid ?? false,
         state: stateOf(true, rig.status),
         rigStatus: rig.status,
+        liveMachine: fm.machine.id,
         pods:
           rig.pods?.map((p) => ({
             id: p.id,

@@ -114,11 +114,43 @@ describe('N10: rig specs over the hub', () => {
       { machine: 'm2', status: 'ok', reason: null, collectedAt: '2026-10-20T00:00:00.000Z' },
     ]);
     const by = Object.fromEntries(out.specs.map((s) => [s.name, s]));
-    expect(by.spaghetti).toMatchObject({ machine: 'm2', launched: false, rigStatus: null });
+    expect(by.spaghetti).toMatchObject({
+      machine: 'm2',
+      launched: false,
+      rigStatus: null,
+      launchedOn: [],
+    });
     expect(by.spaghetti!.pods![0]!.seats[0]).toMatchObject({ session: 'orch-lead@spaghetti' });
-    expect(by[known.name]).toMatchObject({ launched: true, rigStatus: known.status });
+    expect(by[known.name]).toMatchObject({
+      launched: true,
+      rigStatus: known.status,
+      launchedOn: [{ machine: 'm2', status: known.status }],
+    });
     // the snapshot and fleet are untouched by it
     expect(h.hub.store.get('m2')!.snapshot.rigs.map((r) => r.name)).not.toContain('spaghetti');
+  });
+
+  it('a spec found on one machine (a synced folder) but launched on another says where it runs', async () => {
+    const h = await start();
+    const m2 = h.collector({ token: TOKEN, machineId: 'm2' });
+    const roamy = h.collector({ token: TOKEN, machineId: 'roamy' });
+    const m2snap = loadSnapshot('m2');
+    await push(m2, m2snap);
+    await push(roamy, loadSnapshot('roamy'));
+    const name = m2snap.rigs[0]!.name;
+    expect(
+      await emit(roamy, 'collector:rigspecs', {
+        machineId: 'roamy',
+        collectedAt: '2026-10-20T00:00:00.000Z',
+        specs: [specEntry(name)],
+      })
+    ).toMatchObject({ ok: true });
+    const s = call<RigSpecsOutput>(h, 'rig.specs', { machine: 'roamy' }).value!.specs[0]!;
+    expect(s).toMatchObject({
+      machine: 'roamy',
+      launched: (loadSnapshot('roamy').rigs ?? []).some((r) => r.name === name),
+      launchedOn: expect.arrayContaining([{ machine: 'm2', status: m2snap.rigs[0]!.status }]),
+    });
   });
 
   it('refuses a push for another machine, and a malformed one, storing neither', async () => {

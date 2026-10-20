@@ -1166,12 +1166,19 @@ const VERB_SET = {
   ),
 
   'rig.specs': query(
-    "Every rig spec (rig.yaml) each machine's collector found in its configured spec folders, launched or not: the rig's summary and rig-level fields (culture_file, docs[], startup…), its pods with every member in full (session name, agent_ref, profile, runtime, model, cwd), the pod-local and cross-pod edges with their kinds, and the AgentSpecs the members point at with their profiles. launched is true when OpenRig on that machine knows a rig of that name (rigStatus then says its status); false means the spec is written but not launched (a draft). machines[] says per machine whether its collector sent specs: 'pending' (an older collector, or not sent yet) is not the same as none. Read-only.",
+    "Every rig spec (rig.yaml) each machine's collector found in its configured spec folders, launched or not: the rig's summary and rig-level fields (culture_file, docs[], startup…), its pods with every member in full (session name, agent_ref, profile, runtime, model, cwd), the pod-local and cross-pod edges with their kinds, and the AgentSpecs the members point at with their profiles. launched is true when OpenRig on that machine knows a rig of that name (rigStatus then says its status); launchedOn lists every machine whose OpenRig knows it (a spec in a synced folder may run elsewhere); launched false with launchedOn empty means the spec is written but not launched anywhere (a draft). machines[] says per machine whether its collector sent specs: 'pending' (an older collector, or not sent yet) is not the same as none. Read-only.",
     RigSpecsInputSchema,
     RigSpecsOutputSchema,
     NOT_FOUND,
     (input, ctx): RigSpecsOutput => {
       const out: RigSpecsOutput = { machines: [], specs: [] };
+      const fleet = ctx.store.list();
+      const launchedOn = (name: string) =>
+        fleet.flatMap((fm) =>
+          fm.snapshot.rigs
+            .filter((r) => r.name === name)
+            .map((r) => ({ machine: fm.machine.id, status: r.status }))
+        );
       for (const m of machinesOf(ctx, input.machine)) {
         const p = ctx.store.rigSpecs.get(m.machine.id);
         out.machines.push(
@@ -1192,6 +1199,7 @@ const VERB_SET = {
             machine: m.machine.id,
             launched: rig !== undefined,
             rigStatus: rig?.status ?? null,
+            launchedOn: launchedOn(spec.name),
           });
         }
       }

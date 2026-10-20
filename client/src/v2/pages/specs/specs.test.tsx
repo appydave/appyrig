@@ -34,6 +34,7 @@ function specsAnswer(
         name: 'spaghetti',
         launched: false,
         rigStatus: null,
+        launchedOn: [],
         specPath: '/Users/davidcruwys/dev/appyrigs/rigs/spaghetti/rig.yaml',
         summary: 'Takes any application from spaghetti code to clean architecture.',
         specValid: true,
@@ -97,6 +98,7 @@ function specsAnswer(
         name: launchedName,
         launched: true,
         rigStatus: launchedStatus,
+        launchedOn: [{ machine, status: launchedStatus }],
         specPath: '/x/rig.yaml',
         summary: null,
         specValid: true,
@@ -290,6 +292,26 @@ describe('N10: the Rig specs model', () => {
       machines: [{ ...answer.machines[0]!, status: 'pending' as const }],
     };
     expect(shownSpecs(pending, [m2]).every((r) => r.source === 'live-record')).toBe(true);
+  });
+
+  it('a spec found on one machine but launched on another is not a draft, and points at the machine running it', () => {
+    const m2 = fleetMachine(snapshot('m2'));
+    const answer = specsAnswer('m4', 'x', 'running');
+    answer.specs[0] = {
+      ...answer.specs[0]!,
+      launchedOn: [
+        { machine: 'roamy', status: 'stopped' },
+        { machine: 'm2', status: 'running' },
+      ],
+    };
+    answer.machines.push({ ...answer.machines[0]!, machine: 'm2', status: 'pending' });
+    const row = shownSpecs(answer, [m2]).find((r) => r.name === 'spaghetti')!;
+    expect(row).toMatchObject({ machine: 'm4', state: 'running', liveMachine: 'm2' });
+    // an older hub (no launchedOn): its own machine only
+    const old: Partial<(typeof answer.specs)[number]> = { ...answer.specs[0]! };
+    delete old.launchedOn;
+    const legacy = { ...answer, specs: [old as (typeof answer.specs)[number]] };
+    expect(shownSpecs(legacy, [])[0]).toMatchObject({ state: 'draft', liveMachine: null });
   });
 
   it('a command names a rig by its own rig or any of its commands', () => {
