@@ -1,0 +1,341 @@
+{
+  "about": "Findings recorded when G02 was added: per file, per anti-slop rule. It may shrink, never grow. Rewrite with npm run oxlint:baseline.",
+  "findings": {
+    "client/src/App.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-module-mocking": 2,
+      "no-unknown-parameters": 1
+    },
+    "client/src/components/AgentPanel.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2,
+      "no-unknown-parameters": 2
+    },
+    "client/src/components/C3.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/components/C4.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 3
+    },
+    "client/src/components/ErrorFallback.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/components/F3Ages.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/components/HandoffKeys.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/components/Loadout.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/components/PlanStrip.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/components/RigFilesSchema.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unsafe-dictionary-type": 3
+    },
+    "client/src/components/RunCard.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/components/RunOutputs.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 2
+    },
+    "client/src/components/SeatCardsUiA.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 1
+    },
+    "client/src/components/WaitingOnDavid.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-unknown-parameters": 4
+    },
+    "client/src/components/Wall.test.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/config/env.test.ts": {
+      "no-chained-type-assertions": 2
+    },
+    "client/src/fleet/coreCall.test.ts": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 3
+    },
+    "client/src/fleet/coreCall.ts": {
+      "no-unknown-parameters": 1
+    },
+    "client/src/fleet/health.test.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/fleet/runcard.test.ts": {
+      "no-chained-type-assertions": 2
+    },
+    "client/src/fleet/store.ts": {
+      "no-unknown-parameters": 2
+    },
+    "client/src/fleet/timeline.test.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/fleet/useFleet.ts": {
+      "no-unknown-parameters": 1
+    },
+    "client/src/test/queueFixtures.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/v2/data/index.tsx": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/frozen/frozenSocket.ts": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 4,
+      "no-unsafe-dictionary-type": 4
+    },
+    "client/src/v2/kit/DocsDrawer.tsx": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/kit/docs.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/v2/pages/agent/useAgentData.ts": {
+      "no-unknown-parameters": 1
+    },
+    "client/src/v2/pages/flow/clean.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/pages/flow/flowLines.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/pages/flow/verdict.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/pages/graph/graph.test.tsx": {
+      "no-chained-type-assertions": 4,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/pages/headers.test.tsx": {
+      "no-module-mocking": 2
+    },
+    "client/src/v2/pages/history/index.tsx": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/pages/missions/machines.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 3
+    },
+    "client/src/v2/pages/missions/missions.test.tsx": {
+      "no-chained-type-assertions": 2
+    },
+    "client/src/v2/pages/needs-you/needs-you.test.tsx": {
+      "no-chained-type-assertions": 2,
+      "no-unknown-parameters": 2,
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/pages/page-test-kit.ts": {
+      "no-chained-type-assertions": 2,
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/v2/pages/rig-map/rigmap.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/pages/run/run.test.tsx": {
+      "no-module-mocking": 1,
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/pages/w4.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2,
+      "no-unknown-parameters": 3,
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/pages/w5-fold.test.tsx": {
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/v2/pages/w5b.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2,
+      "no-unknown-parameters": 2,
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/v2/pages/wall/index.tsx": {
+      "no-unknown-parameters": 1
+    },
+    "client/src/v2/shell/agentRig.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/shell/nav.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/shell/shell.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/ux-nav.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/ux-pages-a.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/v2/v2.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2
+    },
+    "client/src/v2/w2.test.tsx": {
+      "no-chained-type-assertions": 2,
+      "no-module-mocking": 2,
+      "no-unsafe-dictionary-type": 4
+    },
+    "collector/src/adapters/account.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/adapters/contract.test.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/adapters/daemon.test.ts": {
+      "no-unsafe-dictionary-type": 11
+    },
+    "collector/src/adapters/daemondata.test.ts": {
+      "no-unsafe-dictionary-type": 6
+    },
+    "collector/src/adapters/daemondata.ts": {
+      "no-unsafe-dictionary-type": 2
+    },
+    "collector/src/adapters/dbrows.ts": {
+      "no-unsafe-dictionary-type": 3
+    },
+    "collector/src/adapters/dbschema.ts": {
+      "no-unsafe-dictionary-type": 2
+    },
+    "collector/src/adapters/history.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/adapters/openrigShapes.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/adapters/rigcommands.test.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/adapters/rigcommands.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/adapters/viewer.test.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "collector/src/builder.ts": {
+      "no-unknown-parameters": 1
+    },
+    "collector/src/pusher.ts": {
+      "no-unknown-parameters": 8
+    },
+    "collector/src/redact.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "e2e/support/fleet.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "e2e/v2-tour.spec.ts": {
+      "no-chained-type-assertions": 3
+    },
+    "scripts/customize.ts": {
+      "no-unknown-parameters": 1
+    },
+    "scripts/provenance/check.ts": {
+      "no-unsafe-dictionary-type": 2
+    },
+    "scripts/provenance/main.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/config/env.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/core/core.test.ts": {
+      "no-unsafe-dictionary-type": 3
+    },
+    "server/src/core/core.ts": {
+      "no-unknown-parameters": 3
+    },
+    "server/src/core/doors.test.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/core/doors.ts": {
+      "no-unknown-parameters": 3
+    },
+    "server/src/core/verbs.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "server/src/hub/accounts.test.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "server/src/hub/accounts.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "server/src/hub/appConfig.ts": {
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 1
+    },
+    "server/src/hub/browserAuth.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/hub/collectorIngest.ts": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 4
+    },
+    "server/src/hub/createHub.ts": {
+      "no-unknown-parameters": 2
+    },
+    "server/src/hub/feedback.test.ts": {
+      "no-unknown-parameters": 2,
+      "no-unsafe-dictionary-type": 3
+    },
+    "server/src/hub/feedbackStore.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/hub/fleetStore.ts": {
+      "no-unknown-parameters": 2
+    },
+    "server/src/hub/hub.test.ts": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 9
+    },
+    "server/src/hub/rigspecs.test.ts": {
+      "no-unknown-parameters": 3
+    },
+    "server/src/hub/schemaStore.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/middleware/requestLogger.test.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "server/src/middleware/validate.test.ts": {
+      "no-chained-type-assertions": 1
+    },
+    "server/src/test/hubHarness.ts": {
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 1
+    },
+    "shared/src/types.ts": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "test/root/openrig-types.test.ts": {
+      "no-unsafe-dictionary-type": 3
+    },
+    "test/root/wire-compat.test.ts": {
+      "no-chained-type-assertions": 9
+    }
+  }
+}

@@ -19,6 +19,8 @@
     "test:e2e:v2": "playwright test e2e/v2-",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "oxlint": "node scripts/oxlint-gate.mjs",
+    "oxlint:baseline": "node scripts/oxlint-gate.mjs --update",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck -w shared -w server -w client -w collector && tsc -p tsconfig.e2e.json",
@@ -52,6 +54,8 @@
     "globals": "^15.15.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
+    "oxlint": "1.66.0",
+    "oxlint-plugin-anti-slop": "github:sirknigget/anti-slop#v0.1.2",
     "prettier": "^3.9.5",
     "typescript": "^5.7.3"
   },
