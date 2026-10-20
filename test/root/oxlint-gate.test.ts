@@ -183,9 +183,9 @@ describe('Feature: the gate runs in CI and the baseline is well formed', () => {
     expect(pnpm).toBe(installs);
   });
 
-  it('Scenario: given package.json, then the plugin is pinned to a tag and oxlint to an exact version', () => {
+  it('Scenario: given package.json, then the plugin is pinned to a full commit sha and oxlint to an exact version', () => {
     expect(pkg.devDependencies['oxlint-plugin-anti-slop']).toMatch(
-      /^github:sirknigget\/anti-slop#v\d/
+      /^github:sirknigget\/anti-slop#[0-9a-f]{40}$/
     );
     expect(pkg.devDependencies.oxlint).toMatch(/^\d+\.\d+\.\d+$/);
   });

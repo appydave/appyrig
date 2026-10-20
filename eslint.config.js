@@ -7,4 +7,12 @@ const openRigFiles = ['.openrig/**', '.claude/**', '.agents/**', '.codex/**', 't
 // files copied into test/root/fixtures for the provenance check (Apache-2.0).
 const vendored = ['server/src/core/vendor/**', 'test/root/fixtures/**'];
 
-export default [{ ignores: [...openRigFiles, ...vendored] }, ...appyConfig];
+export default [
+  { ignores: [...openRigFiles, ...vendored] },
+  ...appyConfig,
+  // The shared config only warns on `any`; a warning is a suggestion, so here it fails the build.
+  {
+    files: ['**/*.{js,mjs,cjs,ts,tsx}'],
+    rules: { '@typescript-eslint/no-explicit-any': 'error' },
+  },
+];
