@@ -138,6 +138,16 @@ describe('Feature: a disable comment cannot hide a finding', () => {
     expect(findDisableDirectives(`// ${ES}-next-line no-undef -- not anti-slop`)).toEqual([]);
   });
 
+  it('Scenario: given the folders the disable-comment scan skips, then they are exactly the vendored, recorded and tooling ones', () => {
+    // Skipping another folder lets a disable comment hide a finding there: change this on purpose.
+    expect(NOT_SCANNED).toEqual([
+      'test/fixtures/',
+      'test/root/fixtures/',
+      'server/src/core/vendor/',
+      '.claude/',
+    ]);
+  });
+
   it('Scenario: given the folders the scan skips, then each is also ignored by oxlint.config.ts', () => {
     const config = readFileSync(join(ROOT, 'oxlint.config.ts'), 'utf8');
     for (const prefix of NOT_SCANNED) expect(config, prefix).toContain(`'${prefix}**'`);
