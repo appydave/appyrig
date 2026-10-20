@@ -42,13 +42,14 @@ const RULES = [
   },
   {
     id: 'env',
-    re: /\bif\s*\(\s*!*\s*process\.env\.\w+[^)]*\)\s*\{?\s*(?:await\s+)?expect\b/,
-    why: 'an assertion that runs only when an environment variable is set does not run when it is not. Set the value in the test and assert unconditionally.',
+    // if (env) expect / if (!env) return / env && expect / env ? expect
+    re: /\bif\s*\(\s*!*\s*process\.env\.\w+[^)]*\)\s*\{?\s*(?:await\s+)?(?:expect\b|return\b)|process\.env\.\w+\s*(?:&&|\?)\s*(?:await\s+)?expect\b/,
+    why: 'an assertion (or an early return before it) that depends on an environment variable does not run when it is not set. Set the value in the test and assert unconditionally.',
   },
   {
     id: 'sleep',
-    re: /\bwaitForTimeout\s*\(/,
-    why: 'a fixed sleep is slow when the page is ready and flaky when it is not. Wait on a locator expectation, expect.poll, or run page.clock forward.',
+    re: /\bwaitForTimeout\s*\(|(?<![.\w])setTimeout\s*\(/,
+    why: 'a fixed sleep (waitForTimeout or a setTimeout promise) is slow when the page is ready and flaky when it is not. Wait on a locator expectation, expect.poll, or run page.clock forward.',
     only: /(^|\/)e2e\//,
   },
 ];
