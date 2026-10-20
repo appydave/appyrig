@@ -22,3 +22,6 @@ export const MARKER_HOMES: string[];
 export function findCastExemptions(text: string): { line: number; text: string }[];
 export const CAST_RULE: string;
 export function messageFor(rule: string, pluginMessage: string): string;
+export function scanTexts(
+  files: { name: string; text: string }[]
+): { filename: string; code: string; message: string; labels: { span: { line: number } }[] }[];

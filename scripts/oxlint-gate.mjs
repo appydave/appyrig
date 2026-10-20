@@ -163,6 +163,35 @@ export const NOT_SCANNED = [
   '.claude/',
 ];
 
+/**
+ * The checks Oxlint cannot do, over in-memory files [{ name, text }]: disable comments that hide an
+ * anti-slop finding, and the cast-exemption marker. Findings come back in Oxlint's diagnostic shape.
+ */
+export function scanTexts(files) {
+  const diagnostics = [];
+  for (const { name, text } of files) {
+    if (NOT_SCANNED.some((p) => name.startsWith(p))) continue;
+    for (const d of findDisableDirectives(text)) {
+      diagnostics.push({
+        filename: name,
+        code: 'anti-slop(inline-disable)',
+        message: `\`${d.text}\` hides an anti-slop finding. Fix the finding instead of silencing it.`,
+        labels: [{ span: { line: d.line } }],
+      });
+    }
+    if (MARKER_HOMES.includes(name)) continue;
+    for (const d of findCastExemptions(text)) {
+      diagnostics.push({
+        filename: name,
+        code: 'anti-slop(cast-exemption-comment)',
+        message: `\`${d.text}\` tries to exempt a cast. No comment does; remove the cast instead.`,
+        labels: [{ span: { line: d.line } }],
+      });
+    }
+  }
+  return diagnostics;
+}
+
 function scanDisableDirectives() {
   const list = spawnSync(
     'git',
@@ -178,36 +207,10 @@ function scanDisableDirectives() {
       '*.cjs',
       '*.mts',
     ],
-    {
-      cwd: ROOT,
-      encoding: 'utf8',
-      maxBuffer: 16 * 1024 * 1024,
-    }
+    { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
   );
-  const files = (list.stdout ?? '')
-    .split('\n')
-    .filter((f) => f && !NOT_SCANNED.some((p) => f.startsWith(p)));
-  const diagnostics = [];
-  for (const f of files) {
-    for (const d of findDisableDirectives(readFileSync(join(ROOT, f), 'utf8'))) {
-      diagnostics.push({
-        filename: f,
-        code: 'anti-slop(inline-disable)',
-        message: `\`${d.text}\` hides an anti-slop finding. Fix the finding instead of silencing it.`,
-        labels: [{ span: { line: d.line } }],
-      });
-    }
-    if (MARKER_HOMES.includes(f)) continue;
-    for (const d of findCastExemptions(readFileSync(join(ROOT, f), 'utf8'))) {
-      diagnostics.push({
-        filename: f,
-        code: 'anti-slop(cast-exemption-comment)',
-        message: `\`${d.text}\` tries to exempt a cast. No comment does; remove the cast instead.`,
-        labels: [{ span: { line: d.line } }],
-      });
-    }
-  }
-  return diagnostics;
+  const names = (list.stdout ?? '').split('\n').filter(Boolean);
+  return scanTexts(names.map((name) => ({ name, text: readFileSync(join(ROOT, name), 'utf8') })));
 }
 
 function main() {

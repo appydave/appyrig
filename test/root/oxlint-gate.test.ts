@@ -13,6 +13,7 @@ import {
   messageFor,
   reportProblem,
   rulesThatGrew,
+  scanTexts,
 } from '../../scripts/oxlint-gate.mjs';
 
 /**
@@ -208,6 +209,44 @@ describe('Feature: the count of type casts in production code can only go down',
     const testLike = /\.(test|spec)\.|(^|\/)(e2e|test)\/|test-kit/;
     expect(files.length).toBeGreaterThan(0);
     expect(files.filter((f) => testLike.test(f))).toEqual([]);
+  });
+});
+
+describe('Feature: the scan applies both checks to every file it is given', () => {
+  const marker = `// ${CAST_MARKER}: trust me\nconst b = x as Foo;`;
+  const disable = `// ${OX}-next-line anti-slop/no-unknown-parameters\nfunction f(a: unknown) {}`;
+
+  it('Scenario: given a file using the exemption marker, then it is reported as a cast-exemption-comment', () => {
+    const d = scanTexts([{ name: 'server/src/a.ts', text: marker }]);
+    expect(d.map((x) => [x.filename, x.code, x.labels[0]!.span.line])).toEqual([
+      ['server/src/a.ts', 'anti-slop(cast-exemption-comment)', 1],
+    ]);
+  });
+
+  it('Scenario: given a file with a disable comment, then it is reported as an inline-disable', () => {
+    const d = scanTexts([{ name: 'server/src/b.ts', text: disable }]);
+    expect(d.map((x) => x.code)).toEqual(['anti-slop(inline-disable)']);
+  });
+
+  it('Scenario: given a clean file, then nothing is reported', () => {
+    expect(scanTexts([{ name: 'server/src/c.ts', text: 'export const a = 1;' }])).toEqual([]);
+  });
+
+  it('Scenario: given the files that define the marker, then using it there is not a finding', () => {
+    const d = scanTexts(MARKER_HOMES.map((name) => ({ name, text: marker })));
+    expect(d).toEqual([]);
+  });
+
+  it('Scenario: given the same marker in a vendored folder, then it is not scanned', () => {
+    expect(scanTexts([{ name: `${NOT_SCANNED[0]}x.ts`, text: marker }])).toEqual([]);
+  });
+
+  it('Scenario: given several files, then each finding names its own file', () => {
+    const d = scanTexts([
+      { name: 'client/src/x.ts', text: marker },
+      { name: 'server/src/y.ts', text: disable },
+    ]);
+    expect(d.map((x) => x.filename)).toEqual(['client/src/x.ts', 'server/src/y.ts']);
   });
 });
 
