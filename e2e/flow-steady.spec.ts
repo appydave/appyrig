@@ -10,7 +10,9 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
 }
 
 async function openFlow(page: Page) {
@@ -27,6 +29,7 @@ async function openFlow(page: Page) {
 
 const box = async (page: Page, id: string) => {
   const b = await page.getByTestId(id).boundingBox();
+
   return (
     b && { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }
   );
@@ -50,7 +53,9 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
     };
     const messages = new Set<string>();
     for (let step = 1; step <= 5; step++) {
-      if (step > 1) await page.getByTestId('flow-next').click();
+      if (step > 1) {
+        await page.getByTestId('flow-next').click();
+      }
       await expect(page.getByTestId('flow-step-count')).toHaveText(new RegExp(`^${step} / \\d+$`));
       // the message itself lives in the panel; its length differs from step to step
       const panel = (await page.locator('.handoff-panel').first().textContent()) ?? '';
@@ -80,6 +85,7 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
     await expect(dots.first()).toBeVisible();
     const at = async () => {
       const b = await dots.first().boundingBox();
+
       return `${Math.round(b!.x)},${Math.round(b!.y)}`;
     };
     const a = await at();

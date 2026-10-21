@@ -38,6 +38,7 @@ export function answeringSocket(answers: Record<string, unknown> = {}) {
       },
     })),
   } as unknown as FleetSocket;
+
   return { socket, sent, emitted };
 }
 

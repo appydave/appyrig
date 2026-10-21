@@ -20,7 +20,10 @@ export default function FlowDocsBar({
   const seats = seatKeys
     .map((k) => machine.snapshot.seats.find((s) => seatKey(machine.machine.id, s.id) === k))
     .filter((s): s is NonNullable<typeof s> => !!s);
-  if (!socket || seats.length === 0) return null;
+  if (!socket || seats.length === 0) {
+    return null;
+  }
+
   return (
     <div className="flow-docs-bar" data-testid="flow-docs-bar">
       <span className="quiet">Documents</span>

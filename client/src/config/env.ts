@@ -7,6 +7,7 @@ export function requireEnv(key: string): string {
   if (!value) {
     throw new Error(`Missing required environment variable: ${key}`);
   }
+
   return value;
 }
 

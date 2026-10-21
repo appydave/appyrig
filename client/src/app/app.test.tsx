@@ -23,10 +23,15 @@ import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -41,12 +46,16 @@ function spySocket() {
   const s = {
     connected: true,
     on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      if (!handlers.has(ev)) {
+        handlers.set(ev, new Set());
+      }
       handlers.get(ev)!.add(h);
+
       return s;
     },
     off(ev: string, h: Handler) {
       handlers.get(ev)?.delete(h);
+
       return s;
     },
     emit: vi.fn((ev: string) => sent.push(ev)),
@@ -56,6 +65,7 @@ function spySocket() {
   };
   const fire = (ev: string, ...args: unknown[]) =>
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+
   return { socket: s as unknown as FleetSocket, fire, sent, raw: s };
 }
 
@@ -67,6 +77,7 @@ function renderLive() {
     FLEET_EVENTS.UPDATE,
     update([fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))])
   );
+
   return spy;
 }
 
@@ -140,7 +151,9 @@ describe('one version: V2 is the whole app', () => {
       'ResizeObserver',
       class {
         observe() {}
+
         unobserve() {}
+
         disconnect() {}
       }
     );
@@ -185,7 +198,9 @@ describe('frozen-data mode', () => {
     const t0 = Date.now();
     const miss = await callVerb(socket, 'db.rows', { machine: 'roamy', table: 'x' });
     expect(miss.ok).toBe(false);
-    if (!miss.ok) expect(miss.error.failureMode).toBe('not_in_snapshot');
+    if (!miss.ok) {
+      expect(miss.error.failureMode).toBe('not_in_snapshot');
+    }
     expect(Date.now() - t0).toBeLessThan(1000);
   });
 
@@ -334,8 +349,18 @@ describe('dev proxy guard port', () => {
 describe('v2 registry', () => {
   it('every v2 page is reachable from the grouped nav, and planned pages wait their turn', () => {
     const inNav = navGroups().flatMap((g) => g.pages);
-    for (const v of ['wall', 'map', 'flow', 'timeline', 'accounts', 'machines', 'schema', 'learn'])
+    for (const v of [
+      'wall',
+      'map',
+      'flow',
+      'timeline',
+      'accounts',
+      'machines',
+      'schema',
+      'learn',
+    ]) {
       expect(inNav).toContain(v);
+    }
     expect(inNav).toContain('about');
     expect(pageFor('wall')?.label).toBe('Wall');
     expect(inNav).toContain('needs-you');

@@ -66,34 +66,44 @@ export default function FollowWork({
   // Esc goes back to the handoff panel only (capture, before the panel's own Esc closes it).
   // r1 MEDIUM-2: not while an overlay owns the keyboard, nor from inside a text field.
   useEffect(() => {
-    if (!keys) return;
+    if (!keys) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || isTextEntry(e.target)) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || isTextEntry(e.target)) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       closeRef.current();
     };
     window.addEventListener('keydown', onKey, true);
+
     return () => window.removeEventListener('keydown', onKey, true);
   }, [keys]);
 
   const toggle = (id: string) => {
     if (open[id]) {
       setOpen(({ [id]: _, ...rest }) => rest);
+
       return;
     }
     const cached = cache.get(id);
     if (cached) {
       setOpen((o) => ({ ...o, [id]: cached }));
+
       return;
     }
     if (!socket) {
       setOpen((o) => ({ ...o, [id]: 'No hub connection to read the message.' }));
+
       return;
     }
     setOpen((o) => ({ ...o, [id]: 'loading' }));
     void callVerb<HandoffGetOutput>(socket, 'handoff.get', { machine: machineId, id }).then((a) => {
-      if (a.ok && a.value.bodyStatus === 'present') cache.set(id, a.value);
+      if (a.ok && a.value.bodyStatus === 'present') {
+        cache.set(id, a.value);
+      }
       setOpen((o) =>
         id in o
           ? {
@@ -110,6 +120,7 @@ export default function FollowWork({
   };
 
   const steps = chain.steps;
+
   return (
     <aside
       className="handoff-panel follow-work"
@@ -138,6 +149,7 @@ export default function FollowWork({
         {steps.map(({ item, role }) => {
           const st = dotState(item.state);
           const body = open[item.id];
+
           return (
             <li
               key={item.id}

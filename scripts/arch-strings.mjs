@@ -25,10 +25,15 @@ const EXT = /\.(ts|tsx|js|mjs|cjs|json)$/;
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
-    if (SKIP.has(name)) continue;
+    if (SKIP.has(name)) {
+      continue;
+    }
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) yield* walk(p);
-    else if (EXT.test(name)) yield p;
+    if (statSync(p).isDirectory()) {
+      yield* walk(p);
+    } else if (EXT.test(name)) {
+      yield p;
+    }
   }
 }
 
@@ -42,13 +47,19 @@ for (const r of ROOTS) {
   }
   for (const file of files) {
     const rel = relative(root, file);
-    if (rel.startsWith(ALLOWED)) continue;
+    if (rel.startsWith(ALLOWED)) {
+      continue;
+    }
     readFileSync(file, 'utf8')
       .split('\n')
       .forEach((line, i) => {
-        for (const s of FORBIDDEN)
-          if (COPY_FILES.has(rel) && COPY_ALLOWED.has(s)) continue;
-          else if (line.toLowerCase().includes(s)) hits.push(`${rel}:${i + 1}: "${s}"`);
+        for (const s of FORBIDDEN) {
+          if (COPY_FILES.has(rel) && COPY_ALLOWED.has(s)) {
+            continue;
+          } else if (line.toLowerCase().includes(s)) {
+            hits.push(`${rel}:${i + 1}: "${s}"`);
+          }
+        }
       });
   }
 }

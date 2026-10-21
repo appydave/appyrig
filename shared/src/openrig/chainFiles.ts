@@ -70,8 +70,13 @@ export function topologyTrace(
   seat: string | null
 ): TopologyNode[] {
   const out: TopologyNode[] = [{ altitude: 'instance' }, { altitude: 'rig', rig }];
-  if (pod) out.push({ altitude: 'pod', rig, pod });
-  if (seat) out.push({ altitude: 'seat', rig, seat });
+  if (pod) {
+    out.push({ altitude: 'pod', rig, pod });
+  }
+  if (seat) {
+    out.push({ altitude: 'seat', rig, seat });
+  }
+
   return out;
 }
 

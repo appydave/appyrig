@@ -14,7 +14,9 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     // close (the failure has been seen on CI only, never locally), so the next one is provable.
     const timeline: string[] = [];
     page.on('console', (m) => {
-      if (m.text().startsWith('TIMELINE ')) timeline.push(m.text().slice(9));
+      if (m.text().startsWith('TIMELINE ')) {
+        timeline.push(m.text().slice(9));
+      }
     });
     await page.addInitScript(() => {
       const t0 = performance.now();
@@ -40,7 +42,9 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     });
     await page.goto('/?frozen=busy-2026-10-18&v=2');
     const gotIt = page.getByRole('button', { name: /got it/i });
-    if (await gotIt.count()) await gotIt.first().click();
+    if (await gotIt.count()) {
+      await gotIt.first().click();
+    }
     await page.getByTestId('ar-group-fleet').click();
     await page.getByTestId('ar-page-wall').click();
     await expect(page.getByTestId('ar-wall')).toBeVisible();
@@ -53,6 +57,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     const sizes = await cards.evaluateAll((els) =>
       els.map((e) => {
         const r = e.getBoundingClientRect();
+
         return `${Math.round(r.width)}x${Math.round(r.height)}`;
       })
     );
@@ -85,8 +90,9 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
 
     // triage and the notes
     await expect(page.getByTestId('ar-hide-stopped')).toBeVisible();
-    for (const f of ['all', 'needs', 'stuck', 'failing'])
+    for (const f of ['all', 'needs', 'stuck', 'failing']) {
       await expect(page.getByTestId(`ar-filter-${f}`)).toBeVisible();
+    }
     await expect(page.getByTestId('ar-wall-order')).toContainText('by machine');
     await page.getByTestId('ar-wall-order-busy').click();
     await expect(page).toHaveURL(/order=busy/);
@@ -133,6 +139,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
       .poll(async () => {
         const bar = await page.locator('.app-header').boundingBox();
         const head = await page.getByTestId('ar-page-head').boundingBox();
+
         return head!.y >= bar!.y + bar!.height - 1 && head!.y < 140;
       })
       .toBe(true);
@@ -140,6 +147,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
       .poll(async () => {
         const head = await page.getByTestId('ar-page-head').boundingBox();
         const h = await group.getByTestId('ar-wall-group-head').boundingBox();
+
         return h!.y >= head!.y + head!.height - 1;
       })
       .toBe(true);

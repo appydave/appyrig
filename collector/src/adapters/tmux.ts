@@ -50,10 +50,14 @@ export function parsePanes(stdout: string): TmuxPane[] {
   const bySession = new Map<string, { pane: TmuxPane; active: boolean }>();
   let lines = 0;
   for (const line of stdout.split('\n')) {
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
     lines++;
     const fields = line.split(FIELD_SEP);
-    if (fields.length !== 6 && fields.length !== 7) continue;
+    if (fields.length !== 6 && fields.length !== 7) {
+      continue;
+    }
     const [session, paneId, windowActive, paneActive, command, cwd, w] = fields as [
       string,
       string,
@@ -64,7 +68,9 @@ export function parsePanes(stdout: string): TmuxPane[] {
       string | undefined,
     ];
     const width = w !== undefined && /^\d+$/.test(w) ? Number(w) : null;
-    if (!session || !/^%\d+$/.test(paneId)) continue;
+    if (!session || !/^%\d+$/.test(paneId)) {
+      continue;
+    }
     const active = windowActive === '1' && paneActive === '1';
     const prev = bySession.get(session);
     if (!prev || (active && !prev.active)) {
@@ -79,6 +85,7 @@ export function parsePanes(stdout: string): TmuxPane[] {
       `unparseable list-panes output (${lines} line(s), none with 6 or 7 fields): ${stdout.trim().slice(0, 120)}`
     );
   }
+
   return [...bySession.values()].map((v) => v.pane);
 }
 
@@ -107,14 +114,24 @@ export function tailLines(raw: string): string[] {
     .split('\n')
     .map((l) => l.replace(TRAILING_SPACES, '$1'));
   const blank = (l: string) => stripAnsi(l).trim() === '';
-  while (lines.length && blank(lines[lines.length - 1]!)) lines.pop();
+  while (lines.length && blank(lines[lines.length - 1]!)) {
+    lines.pop();
+  }
+
   return lines.slice(-TAIL_MAX_LINES);
 }
 
 /** What kind of agent a plain tmux session is running, guessed from its foreground command. */
 export function runtimeOfCommand(command: string | null): string {
-  if (!command) return 'terminal';
-  if (/claude/i.test(command) || /^\d+\.\d+\.\d+/.test(command)) return 'claude-code';
-  if (/codex/i.test(command)) return 'codex';
+  if (!command) {
+    return 'terminal';
+  }
+  if (/claude/i.test(command) || /^\d+\.\d+\.\d+/.test(command)) {
+    return 'claude-code';
+  }
+  if (/codex/i.test(command)) {
+    return 'codex';
+  }
+
   return 'terminal';
 }

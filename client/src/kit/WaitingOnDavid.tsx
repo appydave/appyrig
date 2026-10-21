@@ -24,8 +24,11 @@ const who = (raw: string | null) => (raw ?? '?').split('@')[0];
 /** The copyable line that attaches David to a seat's terminal. Shown, never run. */
 export function attachLine(session: string, ssh: string | null): string | null {
   // r1 R2 LOW-2: David pastes this into a shell; a name a shell would read gets no line at all.
-  if (!SAFE_SESSION.test(session)) return null;
+  if (!SAFE_SESSION.test(session)) {
+    return null;
+  }
   const local = `tmux attach -t '${session}'`;
+
   return ssh ? `ssh -t ${ssh} "${local}"` : local;
 }
 
@@ -40,6 +43,7 @@ export async function copyText(text: string): Promise<boolean> {
   if (window.isSecureContext && navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(text);
+
       return true;
     } catch {
       // fall through to the old way
@@ -59,6 +63,7 @@ export async function copyText(text: string): Promise<boolean> {
     ok = false;
   }
   box.remove();
+
   return ok;
 }
 
@@ -74,10 +79,14 @@ function Copy({
   const [said, setSaid] = useState<'copied' | 'select' | null>(null);
   // r1 INFO-1: "Copied" goes back to "Copy" after a moment.
   useEffect(() => {
-    if (said !== 'copied') return;
+    if (said !== 'copied') {
+      return;
+    }
     const t = setTimeout(() => setSaid(null), 2000);
+
     return () => clearTimeout(t);
   }, [said]);
+
   return (
     <>
       <button
@@ -126,12 +135,14 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates 
     setW('loading');
     if (!socket) {
       setW(null);
+
       return;
     }
     let live = true;
     void callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: machineId, rig }).then(
       (a) => live && setW(a.ok ? a.value : null)
     );
+
     return () => {
       live = false;
     };
@@ -155,6 +166,7 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates 
       </p>
     );
   }
+
   return (
     <div className="run-waiting" data-testid="run-waiting">
       {toDavid.length > 0 && (
@@ -162,6 +174,7 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates 
           {toDavid.slice(0, SHOWN).map((q) => {
             const session = q.source && seats.has(q.source) ? q.source : null;
             const line = session && w !== 'loading' ? attachLine(session, got?.ssh ?? null) : null;
+
             return (
               <li key={q.id} data-testid="run-to-david" data-id={q.id}>
                 <span>

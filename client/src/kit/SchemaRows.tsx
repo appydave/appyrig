@@ -18,11 +18,14 @@ const n = (x: number) => x.toLocaleString('en-US');
 
 /** What the rows line says: which rows are shown, of how many, and why some may be missing. */
 export function rowsCaption(out: DbRowsOutput): string {
-  if (out.held === 0) return out.total === 0 ? 'This table is empty.' : 'No rows held.';
+  if (out.held === 0) {
+    return out.total === 0 ? 'This table is empty.' : 'No rows held.';
+  }
   const from = out.offset + 1;
   const to = out.offset + out.rows.length;
   const order = out.order === 'rowid' ? 'newest first' : 'in stored order';
   const head = `Rows ${n(from)}–${n(to)} of ${n(out.held)} held, ${order}.`;
+
   return out.truncated
     ? `${head} Showing the newest ${n(out.held)} of ${n(out.total)}: the rest are not sent (at most ${DB_ROWS_MAX} rows and ${Math.round(DB_ROWS_BYTES_MAX / 1024)} KB per table).`
     : head;
@@ -58,7 +61,9 @@ export default function SchemaRows({
       limit: PAGE,
     }).then((a) => {
       // An answer for another table or page (a slower, older call) is dropped.
-      if (latest.current !== key) return;
+      if (latest.current !== key) {
+        return;
+      }
       setGot(a.ok ? { state: 'ok', out: a.value, key } : { state: 'refused', error: a.error, key });
     });
   }, [socket, machineId, table, offset]);
@@ -68,6 +73,7 @@ export default function SchemaRows({
   // What is shown is only ever the answer for THIS table and page; until it arrives, "loading".
   const shown: State = got.key === want ? got : { state: 'loading' };
   const out = shown.state === 'ok' ? shown.out : null;
+
   return (
     <section
       className="schema-rows"

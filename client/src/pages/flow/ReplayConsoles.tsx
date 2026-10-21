@@ -67,7 +67,9 @@ function Pane({
   const newest = shown.at(-1)?.at;
   useLayoutEffect(() => {
     const el = body.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [shown.length, newest]);
   const source =
     hist?.state === 'ok' && hist.value.available
@@ -75,6 +77,7 @@ function Pane({
       : hist?.state === 'loading'
         ? 'loading…'
         : 'handoffs only · no transcript for this seat';
+
   return (
     <section
       className="console"
@@ -123,7 +126,9 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
   const followKey = follow.filter((n) => names.includes(n)).join(',');
   // Remember the last handoff followed, so the consoles do not empty between steps.
   useEffect(() => {
-    if (followKey) setLastFollow(followKey.split(','));
+    if (followKey) {
+      setLastFollow(followKey.split(','));
+    }
   }, [followKey]);
   // A new rig starts following again.
   useEffect(() => {
@@ -134,11 +139,17 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
   const shown = pinned ?? lastFollow;
 
   useEffect(() => {
-    if (!open || !socket) return;
+    if (!open || !socket) {
+      return;
+    }
     for (const name of shown) {
-      if (hist[name]) continue;
+      if (hist[name]) {
+        continue;
+      }
       const seat = seats.find((s) => seatName(s) === name);
-      if (!seat) continue;
+      if (!seat) {
+        continue;
+      }
       setHist((h) => ({ ...h, [name]: { state: 'loading' } }));
       void callVerb<SeatHistoryOutput>(socket, 'seat.history', {
         machine: machine.machine.id,
@@ -187,6 +198,7 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
             </span>
             {seats.map((s) => {
               const name = seatName(s);
+
               return (
                 <button
                   key={s.id}
@@ -228,6 +240,7 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
               const h = hist[name];
               const events = h?.state === 'ok' && h.value.available ? h.value.events : null;
               const chip = modelChip(s);
+
               return (
                 <Pane
                   key={s.id}

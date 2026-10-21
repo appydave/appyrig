@@ -41,6 +41,7 @@ export function parseAccountIdentity(text: string): {
     const f = acct?.profileFetchedAt;
     const fetched =
       typeof f === 'number' && Number.isFinite(f) && f > 0 ? new Date(f).toISOString() : null;
+
     return {
       email: str(acct?.emailAddress),
       plan: str(acct?.organizationType),
@@ -53,13 +54,17 @@ export function parseAccountIdentity(text: string): {
 }
 
 const num = (v: string | undefined): number | null => {
-  if (v === undefined || v.trim() === '') return null;
+  if (v === undefined || v.trim() === '') {
+    return null;
+  }
   const n = Number(v);
+
   return Number.isFinite(n) ? n : null;
 };
 
 const epochIso = (v: string | undefined): string | null => {
   const n = num(v);
+
   return n && n > 0 ? new Date(n * 1000).toISOString() : null;
 };
 
@@ -86,11 +91,14 @@ export function parseUsageLog(text: string): UsageReading {
     .map((l) => l.trim())
     .filter((l) => /^\d+,/.test(l))
     .map((l) => l.split(','));
-  if (!rows.length) return NO_READING;
+  if (!rows.length) {
+    return NO_READING;
+  }
   const last = rows[rows.length - 1]!;
   const lastWith = (col: number) => [...rows].reverse().find((r) => num(r[col]) !== null);
   const five = lastWith(2);
   const seven = lastWith(4);
+
   return {
     fiveHourPct: five ? num(five[2]) : null,
     fiveHourResetsAt: five ? epochIso(five[3]) : null,
@@ -109,6 +117,7 @@ async function readTail(path: string, bytes = 16_384): Promise<string> {
     const buf = Buffer.alloc(size - start);
     await fh.read(buf, 0, buf.length, start);
     const text = buf.toString('utf8');
+
     // Drop a partial first line when the read started mid-file.
     return start > 0 ? text.slice(text.indexOf('\n') + 1) : text;
   } finally {
@@ -126,12 +135,15 @@ export async function readAccount(
   } catch {
     return null;
   }
-  if (!identity.email) return null;
+  if (!identity.email) {
+    return null;
+  }
   let reading = NO_READING;
   try {
     reading = parseUsageLog(await readTail(paths.usageLog));
   } catch {
     // no sampler on this machine: an honest null reading
   }
+
   return { ...identity, ...reading };
 }

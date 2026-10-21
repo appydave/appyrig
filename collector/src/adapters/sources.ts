@@ -62,7 +62,9 @@ export function createSources(opts: SourceOptions = {}): Sources {
   const queueTtl = opts.queueTtlMs ?? 15_000;
   // A UTF-8 locale for every child: launchd sets none, and tmux mangles control characters without one.
   const env = { LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', ...(opts.env ?? process.env) };
-  if (!/utf-?8/i.test(env.LC_ALL ?? '')) env.LC_ALL = 'en_US.UTF-8';
+  if (!/utf-?8/i.test(env.LC_ALL ?? '')) {
+    env.LC_ALL = 'en_US.UTF-8';
+  }
 
   const run = (bin: string, args: string[]): Promise<ExecResult> =>
     new Promise((resolve, reject) => {
@@ -92,7 +94,10 @@ export function createSources(opts: SourceOptions = {}): Sources {
       }
       throw e;
     }
-    if (!res.ok) throw new Error(`GET ${path} -> HTTP ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`GET ${path} -> HTTP ${res.status}`);
+    }
+
     return res.json();
   };
 
@@ -102,7 +107,9 @@ export function createSources(opts: SourceOptions = {}): Sources {
     bodies: Map<string, string>;
   } | null = null;
   const readQueue = async () => {
-    if (queueCache && Date.now() - queueCache.at < queueTtl) return queueCache.value;
+    if (queueCache && Date.now() - queueCache.at < queueTtl) {
+      return queueCache.value;
+    }
     const r = await run(rigBin, [
       'queue',
       'list',
@@ -113,14 +120,16 @@ export function createSources(opts: SourceOptions = {}): Sources {
       '--limit',
       '5000',
     ]);
-    if (r.code !== 0)
+    if (r.code !== 0) {
       throw new Error(`rig queue list exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
+    }
     const parsedJson: unknown = JSON.parse(r.stdout);
     queueCache = {
       at: Date.now(),
       value: parseQueue(parsedJson),
       bodies: parseQueueBodies(parsedJson),
     };
+
     return queueCache.value;
   };
 
@@ -134,10 +143,13 @@ export function createSources(opts: SourceOptions = {}): Sources {
     rigId: string
   ): Promise<{ edges: RigEdge[] | undefined; error?: string }> => {
     const hit = graphCache.get(rigId);
-    if (hit && Date.now() - hit.at < GRAPH_TTL_MS) return { edges: hit.edges };
+    if (hit && Date.now() - hit.at < GRAPH_TTL_MS) {
+      return { edges: hit.edges };
+    }
     try {
       const edges = parseGraphEdges(await getJson(`/api/rigs/${encodeURIComponent(rigId)}/graph`));
       graphCache.set(rigId, { at: Date.now(), edges });
+
       return { edges };
     } catch (e) {
       return { edges: hit?.edges, error: (e as Error).message };
@@ -151,13 +163,16 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
   let versionCache: string | null | undefined;
   const readVersion = async (): Promise<string | null> => {
-    if (versionCache !== undefined) return versionCache;
+    if (versionCache !== undefined) {
+      return versionCache;
+    }
     try {
       const r = await run(rigBin, ['--version']);
       versionCache = r.stdout.trim().split(/\s+/)[0] || null;
     } catch {
       versionCache = null;
     }
+
     return versionCache;
   };
 
@@ -181,10 +196,18 @@ export function createSources(opts: SourceOptions = {}): Sources {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
         const g = await readEdges(rig.id);
-        if (g.edges) rig.edges = g.edges;
-        if (g.error) graphFailures.push(`${rig.name}: ${g.error}`);
+        if (g.edges) {
+          rig.edges = g.edges;
+        }
+        if (g.error) {
+          graphFailures.push(`${rig.name}: ${g.error}`);
+        }
       }
-      for (const id of graphCache.keys()) if (!rigs.some((r) => r.id === id)) graphCache.delete(id);
+      for (const id of graphCache.keys()) {
+        if (!rigs.some((r) => r.id === id)) {
+          graphCache.delete(id);
+        }
+      }
       // Partial success: a rig or the queue that cannot be read is reported in `warnings` (the
       // builder turns them into sources.daemon.ok=false) while everything readable still shows.
       const warnings = [
@@ -199,21 +222,28 @@ export function createSources(opts: SourceOptions = {}): Sources {
       }
       agentDirs = dirs;
       agentRefs = refs;
+
       return { version: await readVersion(), rigs, seats, queue, warnings };
     },
 
     async tmuxPanes(): Promise<TmuxPane[]> {
       const r = await run(tmuxBin, LIST_PANES_ARGS);
       if (r.code !== 0) {
-        if (isNoServer(r.stderr)) return [];
+        if (isNoServer(r.stderr)) {
+          return [];
+        }
         throw new Error(`tmux list-panes exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
       }
+
       return parsePanes(r.stdout);
     },
 
     async capture(paneId: string): Promise<string> {
       const r = await run(tmuxBin, capturePaneArgs(paneId));
-      if (r.code !== 0) throw new Error(`tmux capture-pane ${paneId} exited ${r.code}`);
+      if (r.code !== 0) {
+        throw new Error(`tmux capture-pane ${paneId} exited ${r.code}`);
+      }
+
       return r.stdout;
     },
 
@@ -227,6 +257,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     /** Bodies from the latest queue read (reads it if it is stale). */
     async queueBodies() {
       await readQueue();
+
       return queueCache?.bodies ?? new Map<string, string>();
     },
     ...(opts.specFolders ? { specs: createSpecIndex(opts.specFolders) } : {}),
@@ -237,6 +268,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
           `viewer agent list exited ${r.code}: ${(r.stderr || r.stdout).trim().slice(0, 200)}`
         );
       }
+
       return parseAgentList(JSON.parse(r.stdout));
     },
   };

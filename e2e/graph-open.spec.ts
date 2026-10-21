@@ -9,7 +9,9 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
 }
 
 const box = (page: Page, key: string) =>

@@ -62,6 +62,7 @@ function load(scenario) {
         : { ...r, specStatus: 'not-found', specPath: null, summary: null }
     );
   }
+
   return snap;
 }
 
@@ -73,6 +74,7 @@ function rigFilesPush(machineId) {
     .map((name) => {
       const content = readFileSync(resolve(dir, name), 'utf8');
       const cut = name.startsWith('LEARNED');
+
       return {
         id: `spec:${name}`,
         name,
@@ -83,6 +85,7 @@ function rigFilesPush(machineId) {
         content,
       };
     });
+
   return {
     machineId,
     collectedAt: new Date().toISOString(),
@@ -108,6 +111,7 @@ function schemaPushes(machineId) {
     openrigVersion: version,
     tables,
   });
+
   return [mk('0.6.5 (fixture00)', older), mk(real.openrigVersion, real.tables)];
 }
 
@@ -155,7 +159,9 @@ function run(scenario) {
           }
         })();
       }
-      if (!values.once) timer = setInterval(push, intervalMs);
+      if (!values.once) {
+        timer = setInterval(push, intervalMs);
+      }
     });
     socket.on('connect_error', (err) => {
       console.error(`[${scenario}] refused: ${err.message}`);
@@ -169,4 +175,6 @@ function run(scenario) {
 }
 
 const results = await Promise.all(scenarios.map(run));
-if (values.once) process.exit(results.every(Boolean) ? 0 : 1);
+if (values.once) {
+  process.exit(results.every(Boolean) ? 0 : 1);
+}

@@ -57,6 +57,7 @@ async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+
   return out;
 }
 
@@ -70,8 +71,11 @@ export function blockedDetailOf(lines: string[]): string | null {
       .replace(/[\s│┃|]+$/, '')
       .trim();
     // Redact before cutting, so a secret straddling the cut cannot leave a recognisable fragment.
-    if (QUESTION.test(text)) return redactString(text).slice(0, 200);
+    if (QUESTION.test(text)) {
+      return redactString(text).slice(0, 200);
+    }
   }
+
   return null;
 }
 
@@ -88,21 +92,30 @@ export function mergeViewer(seats: Seat[], agents: ViewerAgent[]): void {
   const agentCount = new Map<string, number>();
   const seatKey = (s: Seat) => {
     const a = s.runtime ? VIEWER_AGENT_OF_RUNTIME[s.runtime] : undefined;
+
     return a && s.cwd ? key(a, s.cwd) : null;
   };
   for (const s of seats) {
     const k = seatKey(s);
-    if (k) seatCount.set(k, (seatCount.get(k) ?? 0) + 1);
+    if (k) {
+      seatCount.set(k, (seatCount.get(k) ?? 0) + 1);
+    }
   }
   for (const a of agents) {
-    if (!a.cwd) continue;
+    if (!a.cwd) {
+      continue;
+    }
     const k = key(a.agent, a.cwd);
     agentCount.set(k, (agentCount.get(k) ?? 0) + 1);
   }
   for (const s of seats) {
     const k = seatKey(s);
-    if (!k || s.status === 'stopped') continue;
-    if (seatCount.get(k) !== 1 || agentCount.get(k) !== 1) continue;
+    if (!k || s.status === 'stopped') {
+      continue;
+    }
+    if (seatCount.get(k) !== 1 || agentCount.get(k) !== 1) {
+      continue;
+    }
     const agent = agents.find((a) => a.cwd && key(a.agent, a.cwd) === k)!;
     s.viewerStatus = agent.status;
     if (agent.status === 'blocked' && s.status !== 'blocked') {
@@ -133,6 +146,7 @@ function withTmux(
     },
     processes: { claude: gone(), terminalShells: gone(), terminalApps: gone() },
   };
+
   return {
     ...base,
     processes: {
@@ -163,15 +177,21 @@ export function enrichRigs(
     const mine = new Set(seats.filter((s) => s.rig === rig.name).map((s) => s.id));
     let recent: string | null = null;
     const consider = (iso: string | null) => {
-      if (iso && (recent === null || Date.parse(iso) > Date.parse(recent))) recent = iso;
+      if (iso && (recent === null || Date.parse(iso) > Date.parse(recent))) {
+        recent = iso;
+      }
     };
     // F3: the agent's activity, not the terminal's (an older path without it keeps lastActivityAt).
-    for (const s of seats)
-      if (mine.has(s.id))
+    for (const s of seats) {
+      if (mine.has(s.id)) {
         consider(s.agentActivityAt !== undefined ? s.agentActivityAt : s.lastActivityAt);
-    for (const q of queue)
-      if ((q.source && mine.has(q.source)) || (q.destination && mine.has(q.destination)))
+      }
+    }
+    for (const q of queue) {
+      if ((q.source && mine.has(q.source)) || (q.destination && mine.has(q.destination))) {
         consider(q.updatedAt);
+      }
+    }
     const out: RigSummary = { ...rig, recentAt: recent };
     if (specs) {
       const spec = specs.get(rig.name);
@@ -187,6 +207,7 @@ export function enrichRigs(
         }
       }
     }
+
     return out;
   });
 }
@@ -217,7 +238,9 @@ export async function buildSnapshot(
   const known = new Set(seats.map((s) => s.id));
   const paneOf = new Map(panes.map((p) => [p.session, p]));
   for (const p of [...panes].sort((a, b) => a.session.localeCompare(b.session))) {
-    if (known.has(p.session)) continue;
+    if (known.has(p.session)) {
+      continue;
+    }
     seats.push({
       id: p.session,
       source: 'tmux',
@@ -244,7 +267,9 @@ export async function buildSnapshot(
   const captureFailures: string[] = [];
   await pool(seats, CAPTURE_CONCURRENCY, async (seat) => {
     const pane = paneOf.get(seat.id);
-    if (!pane) return;
+    if (!pane) {
+      return;
+    }
     try {
       const raw = await sources.capture(pane.paneId);
       // F2 (QA HIGH-1): secrets a Claude pane hard-wrapped across rows, before the per-row redaction.
@@ -254,22 +279,30 @@ export async function buildSnapshot(
     }
   });
 
-  if ('value' in viewerR) mergeViewer(seats, viewerAgents);
+  if ('value' in viewerR) {
+    mergeViewer(seats, viewerAgents);
+  }
 
   // F3: agent activity from the transcripts, on OpenRig seats only (a plain tmux session has none).
   const transcripts = sources.agentActivity?.() ?? null;
   if (transcripts) {
     for (const seat of seats) {
-      if (seat.rig === null) continue;
+      if (seat.rig === null) {
+        continue;
+      }
       const at = transcripts.get(seat.id);
       seat.agentActivityAt = at === undefined ? null : new Date(at).toISOString();
     }
   }
 
   for (const seat of seats) {
-    if (seat.status !== 'blocked' || !seat.tail) continue;
+    if (seat.status !== 'blocked' || !seat.tail) {
+      continue;
+    }
     const detail = blockedDetailOf(seat.tail.lines);
-    if (detail) seat.blockedDetail = detail;
+    if (detail) {
+      seat.blockedDetail = detail;
+    }
   }
 
   const tmuxHealth: SourceHealth =
@@ -315,5 +348,6 @@ export async function buildSnapshot(
     // Only collectors with a health source report one; an older one sends none (the hub says so).
     ...(sources.health ? { health: withTmux(healthR, tmuxR) } : {}),
   };
+
   return MachineSnapshotSchema.parse(redactDeep(snapshot));
 }

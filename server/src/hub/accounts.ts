@@ -21,16 +21,26 @@ import {
 
 /** The tiers a login record's rate-limit string can name. Anything else is not "reported". */
 export function reportedTier(rateLimitTier: string | null | undefined): string | null {
-  if (!rateLimitTier) return null;
-  if (/max_20x/.test(rateLimitTier)) return 'Max $200';
-  if (/max_5x/.test(rateLimitTier)) return 'Max $100';
+  if (!rateLimitTier) {
+    return null;
+  }
+  if (/max_20x/.test(rateLimitTier)) {
+    return 'Max $200';
+  }
+  if (/max_5x/.test(rateLimitTier)) {
+    return 'Max $100';
+  }
+
   return null;
 }
 
 const configFor = (config: AppConfig, email: string | null): AccountConfig | undefined => {
-  if (!email || !config.accounts) return undefined;
+  if (!email || !config.accounts) {
+    return undefined;
+  }
   const want = email.toLowerCase();
   const key = Object.keys(config.accounts).find((k) => k.toLowerCase() === want);
+
   return key === undefined ? undefined : config.accounts[key];
 };
 
@@ -40,14 +50,20 @@ export function tierOf(
   config: AppConfig
 ): AccountTier {
   const reported = reportedTier(usage.rateLimitTier);
-  if (reported) return { label: reported, source: 'reported' };
+  if (reported) {
+    return { label: reported, source: 'reported' };
+  }
   const fromConfig = configFor(config, usage.email)?.tier;
-  if (fromConfig) return { label: fromConfig, source: 'config' };
+  if (fromConfig) {
+    return { label: fromConfig, source: 'config' };
+  }
+
   return { label: null, source: 'unknown' };
 }
 
 const round = (n: number, places = 1): number => {
   const f = 10 ** places;
+
   return Math.round(n * f) / f;
 };
 
@@ -90,6 +106,7 @@ export function windowOf(
   const sampleMs = sampledAt ? Math.min(Date.parse(sampledAt), now.getTime()) : now.getTime();
   const elapsedAtSample = clampPct(((sampleMs - start) / windowMs) * 100);
   const elapsedNow = clampPct(((now.getTime() - start) / windowMs) * 100);
+
   return {
     status: 'reading',
     usedPct,
@@ -182,12 +199,15 @@ export function accountViews(
   const groups = new Map<string, FleetMachine[]>();
   for (const m of [...machines].sort((a, b) => a.machine.id.localeCompare(b.machine.id))) {
     const email = m.snapshot.account?.email;
-    if (email) groups.set(email.toLowerCase(), [...(groups.get(email.toLowerCase()) ?? []), m]);
+    if (email) {
+      groups.set(email.toLowerCase(), [...(groups.get(email.toLowerCase()) ?? []), m]);
+    }
   }
   const out = new Map<string, AccountView>();
   for (const [key, ms] of groups) {
     const usable = ms.filter((m) => {
       const a = m.snapshot.account!;
+
       return (
         hasReading(a) &&
         Date.parse(a.sampledAt!) >= (changedAt(m.machine.id) ?? 0) - SWITCH_TOLERANCE_MS
@@ -227,6 +247,7 @@ export function accountViews(
       ),
     });
   }
+
   return out;
 }
 
@@ -236,15 +257,21 @@ export function applyAccountDerived(
   views: Map<string, AccountView>
 ): FleetMachine {
   const account = machine.snapshot.account;
-  if (!account) return machine;
+  if (!account) {
+    return machine;
+  }
   const view = account.email ? views.get(account.email.toLowerCase()) : undefined;
   if (!view) {
     // `derived` is the hub's alone: one a collector sent (or one with no account to attach it to) is dropped.
-    if (!account.derived) return machine;
+    if (!account.derived) {
+      return machine;
+    }
     const bare: Record<string, unknown> = { ...account };
     delete bare.derived;
+
     return { ...machine, snapshot: { ...machine.snapshot, account: bare as typeof account } };
   }
+
   return {
     ...machine,
     snapshot: { ...machine.snapshot, account: { ...account, derived: view.derived } },

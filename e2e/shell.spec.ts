@@ -18,7 +18,9 @@ async function open(page: Page) {
   await page.goto(FROZEN);
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
 }
 
 /** Where the page's own content starts: the first child of the main column after the badge row. */
@@ -29,6 +31,7 @@ const contentTop = (page: Page) =>
     const first = kids[kids.indexOf(strip) + 1] as HTMLElement | undefined;
     // layout position, not where a scroll left it (the Graph scrolls a chosen rig into view)
     const main = document.querySelector('.app-main') as HTMLElement;
+
     return first
       ? Math.round(first.getBoundingClientRect().top + window.scrollY + main.scrollTop)
       : -1;
@@ -109,11 +112,13 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
   test('every helper is reachable, the rarely used ones behind the ⋯ menu', async ({ page }) => {
     await open(page);
     await expect(page.getByTestId('legend-toggle')).toBeVisible();
-    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open'])
+    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open']) {
       await expect(page.getByTestId(id), id).toBeHidden();
+    }
     await page.getByTestId('more-open').click();
-    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open'])
+    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open']) {
       await expect(page.getByTestId(id), id).toBeVisible();
+    }
     // the explainer and legend on the diagram pages sit behind Legend · L
     await page.keyboard.press('Escape');
     await page.getByTestId('ar-group-fleet').click();

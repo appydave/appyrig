@@ -60,6 +60,7 @@ function twoMachines(): FleetMachine[] {
       }),
     ],
   };
+
   return [m2, roamy];
 }
 
@@ -99,6 +100,7 @@ function ctxFor(
       },
     })),
   } as unknown as FleetSocket;
+
   return {
     machines,
     allMachines: machines,

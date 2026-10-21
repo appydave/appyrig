@@ -36,10 +36,15 @@ import { filterCommands, groupsOf, type RigCommands } from '../domain/learn/comm
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -48,18 +53,23 @@ vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 
 type Handler = (...args: unknown[]) => void;
+
 function spySocket(answers: Record<string, unknown> = {}) {
   const handlers = new Map<string, Set<Handler>>();
   const sent: { verb: string; input: unknown }[] = [];
   const s = {
     connected: true,
     on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      if (!handlers.has(ev)) {
+        handlers.set(ev, new Set());
+      }
       handlers.get(ev)!.add(h);
+
       return s;
     },
     off(ev: string, h: Handler) {
       handlers.get(ev)?.delete(h);
+
       return s;
     },
     emit: vi.fn(),
@@ -71,17 +81,21 @@ function spySocket(answers: Record<string, unknown> = {}) {
       ) => {
         sent.push(req);
         const a = answers[req.verb];
-        if (a !== undefined) queueMicrotask(() => cb(null, a));
+        if (a !== undefined) {
+          queueMicrotask(() => cb(null, a));
+        }
       },
     })),
   };
   const fire = (ev: string, ...args: unknown[]) =>
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+
   return { socket: s as unknown as FleetSocket, sent, fire };
 }
 
 function ctxFor(machines: FleetMachine[], over: Partial<PageContext> = {}): PageContext {
   const spy = spySocket();
+
   return {
     machines,
     allMachines: machines,
@@ -116,6 +130,7 @@ function busy(): { machines: FleetMachine[]; now: number } {
       'utf8'
     )
   ) as FrozenFile;
+
   return { machines: (file.update as FleetUpdate).machines, now: Date.parse(file.recordedAt) };
 }
 
@@ -135,6 +150,7 @@ const q = (over: Partial<QueueItem>): QueueItem => ({
 /** Roamy's starter with a two-phase run: three handoffs, a 40-minute pause, then one open. */
 function runMachine(last: Partial<QueueItem> = {}): FleetMachine {
   const fm = fleetMachine(snapshot('roamy'));
+
   return {
     ...fm,
     snapshot: {
@@ -497,6 +513,7 @@ describe('W4 pages in the app: registered in their groups', () => {
       'ResizeObserver',
       class {
         observe() {}
+
         disconnect() {}
       }
     );

@@ -13,10 +13,13 @@ import { guardPortFor, isLocalDevRequest } from './src/app/devProxy';
  * ~/.config/appyrig/token). The token never reaches the browser. Unset = today's local hub.
  */
 function remoteHubAuth(hubUrl: string | undefined, tokenFile: string | undefined) {
-  if (!hubUrl) return null;
+  if (!hubUrl) {
+    return null;
+  }
   try {
     const file = tokenFile || path.join(os.homedir(), '.config', 'appyrig', 'token');
     const token = readFileSync(file, 'utf8').trim();
+
     return token ? `Bearer ${token}` : null;
   } catch {
     return null;
@@ -50,8 +53,9 @@ export default defineConfig(({ mode }) => {
       ? {
           configure: (proxy: HttpProxy.Server) => {
             proxy.on('proxyReq', (proxyReq, req) => {
-              if (isLocalDevRequest(req.headers, guardPort))
+              if (isLocalDevRequest(req.headers, guardPort)) {
                 proxyReq.setHeader('authorization', auth);
+              }
             });
             proxy.on('proxyReqWs', (proxyReq, req, socket) => {
               if (isLocalDevRequest(req.headers, guardPort)) {
@@ -65,6 +69,7 @@ export default defineConfig(({ mode }) => {
         }
       : {}),
   });
+
   return {
     plugins: [
       react(),

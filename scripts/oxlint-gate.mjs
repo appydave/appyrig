@@ -26,6 +26,7 @@ export function countFindings(report) {
     counts[d.filename] ??= {};
     counts[d.filename][rule] = (counts[d.filename][rule] ?? 0) + 1;
   }
+
   return counts;
 }
 
@@ -43,13 +44,18 @@ export function compare(actual, baseline) {
   for (const [key, n] of seen) {
     const was = allowed.get(key) ?? 0;
     const [file, rule] = key.split('\t');
-    if (n > was) grown.push({ file, rule, now: n, was });
+    if (n > was) {
+      grown.push({ file, rule, now: n, was });
+    }
   }
   for (const [key, was] of allowed) {
     const n = seen.get(key) ?? 0;
     const [file, rule] = key.split('\t');
-    if (n < was) shrunk.push({ file, rule, now: n, was });
+    if (n < was) {
+      shrunk.push({ file, rule, now: n, was });
+    }
   }
+
   return { grown, shrunk };
 }
 
@@ -73,6 +79,7 @@ export function findDisableDirectives(text) {
       });
     }
   }
+
   return found;
 }
 
@@ -92,8 +99,11 @@ export const MARKER_HOMES = ['oxlint.config.ts', 'scripts/oxlint-gate.mjs'];
 export function findCastExemptions(text) {
   const found = [];
   text.split('\n').forEach((line, i) => {
-    if (line.includes(CAST_MARKER)) found.push({ line: i + 1, text: line.trim().slice(0, 100) });
+    if (line.includes(CAST_MARKER)) {
+      found.push({ line: i + 1, text: line.trim().slice(0, 100) });
+    }
   });
+
   return found;
 }
 
@@ -102,14 +112,20 @@ export function findCastExemptions(text) {
  * must not work here. Say what to do instead.
  */
 export function messageFor(rule, pluginMessage) {
-  if (rule !== CAST_RULE) return pluginMessage;
+  if (rule !== CAST_RULE) {
+    return pluginMessage;
+  }
+
   return 'New type cast (`as T`). The count of casts in production code may only go down, and no comment exempts one. Give the value a type that already fits, or parse it at the boundary with a schema, instead of asserting it.';
 }
 
 /** Findings per rule across all files: a move keeps these, a new lie raises them. */
 export function ruleTotals(counts) {
   const totals = {};
-  for (const { rule, n } of flat(counts)) totals[rule] = (totals[rule] ?? 0) + n;
+  for (const { rule, n } of flat(counts)) {
+    totals[rule] = (totals[rule] ?? 0) + n;
+  }
+
   return totals;
 }
 
@@ -117,6 +133,7 @@ export function ruleTotals(counts) {
 export function rulesThatGrew(baseline, actual) {
   const before = ruleTotals(baseline);
   const after = ruleTotals(actual);
+
   return Object.keys(after).filter((r) => after[r] > (before[r] ?? 0));
 }
 
@@ -129,9 +146,13 @@ const sorted = (counts) =>
 
 /** Why a parsed report cannot be trusted as "clean", or null. A run that checked nothing is not a pass. */
 export function reportProblem(report) {
-  if (!(report.number_of_files > 0)) return 'oxlint checked 0 files';
-  if (!(report.number_of_rules > 0))
+  if (!(report.number_of_files > 0)) {
+    return 'oxlint checked 0 files';
+  }
+  if (!(report.number_of_rules > 0)) {
     return 'oxlint loaded 0 rules (is the anti-slop plugin installed?)';
+  }
+
   return null;
 }
 
@@ -151,7 +172,10 @@ function run() {
     };
   }
   const problem = reportProblem(report);
-  if (problem) return { error: problem };
+  if (problem) {
+    return { error: problem };
+  }
+
   return { report };
 }
 
@@ -170,7 +194,9 @@ export const NOT_SCANNED = [
 export function scanTexts(files) {
   const diagnostics = [];
   for (const { name, text } of files) {
-    if (NOT_SCANNED.some((p) => name.startsWith(p))) continue;
+    if (NOT_SCANNED.some((p) => name.startsWith(p))) {
+      continue;
+    }
     for (const d of findDisableDirectives(text)) {
       diagnostics.push({
         filename: name,
@@ -179,7 +205,9 @@ export function scanTexts(files) {
         labels: [{ span: { line: d.line } }],
       });
     }
-    if (MARKER_HOMES.includes(name)) continue;
+    if (MARKER_HOMES.includes(name)) {
+      continue;
+    }
     for (const d of findCastExemptions(text)) {
       diagnostics.push({
         filename: name,
@@ -189,6 +217,7 @@ export function scanTexts(files) {
       });
     }
   }
+
   return diagnostics;
 }
 
@@ -210,6 +239,7 @@ function scanDisableDirectives() {
     { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
   );
   const names = (list.stdout ?? '').split('\n').filter(Boolean);
+
   return scanTexts(names.map((name) => ({ name, text: readFileSync(join(ROOT, name), 'utf8') })));
 }
 
@@ -255,6 +285,7 @@ function main() {
     console.log(
       `oxlint-gate: wrote ${BASELINE_FILE} (${total} findings in ${Object.keys(actual).length} files)`
     );
+
     return;
   }
 
@@ -263,7 +294,9 @@ function main() {
     const byKey = new Set(grown.map((g) => `${g.file}\t${g.rule}`));
     for (const d of out.report.diagnostics) {
       const rule = RULE_PREFIX.exec(d.code ?? '')?.[1] ?? d.code;
-      if (!byKey.has(`${d.filename}\t${rule}`)) continue;
+      if (!byKey.has(`${d.filename}\t${rule}`)) {
+        continue;
+      }
       const line = d.labels?.[0]?.span?.line ?? '?';
       console.error(`${d.filename}:${line} [${rule}] ${messageFor(rule, d.message)}`);
     }
@@ -287,4 +320,6 @@ function main() {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

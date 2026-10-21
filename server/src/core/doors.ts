@@ -60,9 +60,14 @@ export function apiDocument(identity: AppIdentity): OpenRpcDocument {
 export const LOOPBACK_EXPR = "['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname)";
 
 export function withLiveHosts(html: string, hosts: string[]): string {
-  if (!html.includes(LOOPBACK_EXPR)) throw new Error('api page: which-copy expression not found');
+  if (!html.includes(LOOPBACK_EXPR)) {
+    throw new Error('api page: which-copy expression not found');
+  }
   const names = new Set(['127.0.0.1', 'localhost', '[::1]']);
-  for (const h of hosts) names.add(h.includes(':') ? `[${h}]` : h);
+  for (const h of hosts) {
+    names.add(h.includes(':') ? `[${h}]` : h);
+  }
+
   return html.replace(LOOPBACK_EXPR, `${JSON.stringify([...names])}.includes(location.hostname)`);
 }
 
@@ -71,6 +76,7 @@ export function pageCsp(html: string): string {
   const hash = (body: string) => `'sha256-${createHash('sha256').update(body).digest('base64')}'`;
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => hash(m[1]!));
   const styles = [...html.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => hash(m[1]!));
+
   return [
     "default-src 'none'",
     `script-src ${scripts.join(' ')}`,
@@ -90,6 +96,7 @@ export interface ApiPages {
 
 export function renderPages(doc: OpenRpcDocument, liveHosts: string[]): ApiPages {
   const consoleHint = `open ${CONSOLE_PATH} on this hub (sign in once with /?token=<hub token>), or run: appyrig <verb> --json`;
+
   return {
     docs: withLiveHosts(
       renderApiPage(doc, {
@@ -145,6 +152,7 @@ export function readCallHeaders(headers: IncomingHttpHeaders): HeaderCheck {
       details: { issues: [{ path: DRY_RUN_HEADER, message: `got ${JSON.stringify(dry)}` }] },
     };
   }
+
   return { ok: true, principal, dryRun: dry === undefined ? undefined : dry === '1' };
 }
 
@@ -206,6 +214,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
           }
         )
       );
+
       return;
     }
     if (Array.isArray(body)) {
@@ -219,6 +228,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
           }
         )
       );
+
       return;
     }
     if (typeof body === 'object' && body !== null) {
@@ -235,6 +245,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
             }
           )
         );
+
         return;
       }
     }
@@ -251,12 +262,16 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
             },
           };
         }
+
         return core.call(headers.principal, method, input, { dryRun: dryRun ?? headers.dryRun });
       },
       { codes: FAILURE_CODES, names: NAMES, refuseNotifications: true }
     );
-    if (answer === null) res.status(204).end();
-    else res.json(answer);
+    if (answer === null) {
+      res.status(204).end();
+    } else {
+      res.json(answer);
+    }
   });
 
   router.post('/v1/call', (req, res) => {
@@ -272,6 +287,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
           details: headers.details,
         },
       });
+
       return;
     }
     const body = req.body as { verb?: unknown; input?: unknown; dryRun?: unknown } | undefined;
@@ -285,6 +301,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
           details: { issues: extra.map((k) => ({ path: k, message: 'unknown key' })) },
         },
       });
+
       return;
     }
     send(
@@ -303,6 +320,7 @@ export function rpcParseError(err: unknown, req: Request, res: Response, next: N
         failureMode: 'invalid-input',
       })
     );
+
     return;
   }
   next(err);

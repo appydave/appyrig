@@ -33,13 +33,16 @@ export function useMissionFile(
     setR({ status: 'loading', path, machine });
     void callVerb<MissionFileOutput>(getSocket(), 'mission.file', { machine, rig, path }).then(
       (a) => {
-        if (!live) return;
-        if (!a.ok)
+        if (!live) {
+          return;
+        }
+        if (!a.ok) {
           return setR({
             status: a.error.failureMode === 'unknown-capability' ? 'old-hub' : 'unread',
             path,
             machine,
           });
+        }
         const v = a.value;
         setR({
           status: v.status,
@@ -52,10 +55,12 @@ export function useMissionFile(
         });
       }
     );
+
     return () => {
       live = false;
     };
   }, [getSocket, machine, rig, path]);
+
   return r;
 }
 

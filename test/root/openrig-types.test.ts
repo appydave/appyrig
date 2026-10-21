@@ -15,9 +15,11 @@ const FX = new URL('./fixtures/openrig-0.6.11/', import.meta.url).pathname;
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
     const p = join(dir, n);
+
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
 }
+
 const files = walk(FX);
 const rigFiles = files.filter((f) => /\/rig[^/]*\.yaml$/.test(f));
 const agentFiles = files.filter((f) => f.endsWith('/agent.yaml'));

@@ -15,6 +15,7 @@ export function ansiToHtml(lines: string[]): string {
   // r1 L1: no live links. OSC 8 wrappers are stripped first (keeping the link text); the empty
   // allowlist is the backstop, so nothing inside a tile (itself a button) navigates anywhere.
   au.url_allowlist = {};
+
   return au.ansi_to_html(stripOsc(lines.join('\n')));
 }
 
@@ -34,6 +35,7 @@ export default function AnsiText({ lines, ansi, className, testId }: Props) {
       </div>
     );
   }
+
   return (
     <div className={className} data-testid={testId} dangerouslySetInnerHTML={{ __html: html }} />
   );

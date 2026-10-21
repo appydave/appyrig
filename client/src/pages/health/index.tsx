@@ -56,6 +56,7 @@ function MachineHealth({
   const asOf = when(row?.collectedAt);
   const theirs = reconcile(ctx, d?.contextSummary);
   const diagnosisOff = d?.policy?.diagnosisEnabled !== true;
+
   return (
     <section className="x2-card hl2-machine" data-testid="hl2-machine" data-verdict={v.kind}>
       <header className="hl2-head">
@@ -236,7 +237,9 @@ function HealthPage({ ctx }: PageProps) {
     let live = true;
     const ask = () => {
       void callVerb<HealthFindingsOutput>(ctx.getSocket(), 'health.findings', {}).then((a) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setLoaded(
           a.ok ? { state: 'ok', out: a.value } : { state: 'refused', why: a.error.message }
         );
@@ -245,11 +248,14 @@ function HealthPage({ ctx }: PageProps) {
       void callVerb<SettingsGetOutput>(ctx.getSocket(), 'settings.get', {
         key: 'health.context_pressure.',
       }).then((a) => {
-        if (live && a.ok) setSettings(a.value);
+        if (live && a.ok) {
+          setSettings(a.value);
+        }
       });
     };
     ask();
     const t = setInterval(ask, HEALTH_REFRESH_MS);
+
     return () => {
       live = false;
       clearInterval(t);
@@ -260,6 +266,7 @@ function HealthPage({ ctx }: PageProps) {
   const refusal = loaded.state === 'refused' ? loaded.why : null;
   const rowOf = (id: string) =>
     loaded.state === 'ok' ? loaded.out.machines.find((m) => m.machine === id) : undefined;
+
   return (
     <main className="view x2-page" data-testid="ar-health">
       <div className="view-caption">
@@ -278,6 +285,7 @@ function HealthPage({ ctx }: PageProps) {
             missing: loaded.state === 'ok' && !row,
             stale: staleWords(fm, ctx.now, ctx.hubConnected),
           });
+
           return (
             <li key={fm.machine.id} data-kind={v.kind}>
               <b>{fm.machine.label}</b> {v.glyph} {v.headline}

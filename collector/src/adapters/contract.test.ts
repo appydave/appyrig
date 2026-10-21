@@ -40,7 +40,9 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
   });
 
   it.each(nodeFiles)('nodes %s: every node matches the strict shape and required keys', (f) => {
-    for (const node of nodesOf(f)) expect(nodeContractIssues(node)).toEqual([]);
+    for (const node of nodesOf(f)) {
+      expect(nodeContractIssues(node)).toEqual([]);
+    }
   });
 
   it.each(psFiles)('ps %s: strict', (f) => {
@@ -68,10 +70,17 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
     for (const f of nodeFiles) {
       for (const node of nodesOf(f)) {
         const cls = nodeStatusClass(node.sessionStatus);
-        if (cls === 'running') running++;
-        else stopped++;
-        for (const key of REQUIRED_NODE_KEYS[cls]) expect(node, `${f} ${key}`).toHaveProperty(key);
-        if (cls === 'running') expect(node.activityState, f).not.toBeNull();
+        if (cls === 'running') {
+          running++;
+        } else {
+          stopped++;
+        }
+        for (const key of REQUIRED_NODE_KEYS[cls]) {
+          expect(node, `${f} ${key}`).toHaveProperty(key);
+        }
+        if (cls === 'running') {
+          expect(node.activityState, f).not.toBeNull();
+        }
       }
     }
     expect(running).toBeGreaterThan(0);
@@ -84,6 +93,7 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
         (n) => n.sessionStatus === 'running' && n.activityState
       )!;
       expect(node).toBeDefined();
+
       return node;
     };
 

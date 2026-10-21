@@ -36,6 +36,7 @@ export function sampleAge(
 ): SampleAge {
   const skewMs = clockSkewMs(push.collectedAt, push.receivedAt);
   const onCollector = Math.max(0, Date.parse(push.collectedAt) - Date.parse(sampledAt));
+
   return {
     ageMs: onCollector + Math.max(0, now - Date.parse(push.receivedAt)),
     clockAhead: skewMs >= CLOCK_AHEAD_MS,
@@ -45,8 +46,11 @@ export function sampleAge(
 
 /** "clock ahead 15 min" for a label; null when the clock is not ahead. */
 export function clockAheadText(a: SampleAge): string | null {
-  if (!a.clockAhead) return null;
+  if (!a.clockAhead) {
+    return null;
+  }
   const s = Math.round(a.skewMs / 1000);
+
   return s < 120 ? `clock ahead ${s}s` : `clock ahead ${Math.round(s / 60)} min`;
 }
 

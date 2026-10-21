@@ -41,19 +41,25 @@ export function useVerb<T>(
   const [state, setState] = useState<VerbState<T>>({ phase: 'loading' });
   const key = JSON.stringify(input);
   useEffect(() => {
-    if (!verb) return;
+    if (!verb) {
+      return;
+    }
     let live = true;
     setState({ phase: 'loading' });
     void callVerb<T>(getSocket(), verb, JSON.parse(key)).then((a) => {
-      if (!live) return;
+      if (!live) {
+        return;
+      }
       setState(
         a.ok ? { phase: 'ok', value: a.value } : { phase: 'refused', message: a.error.message }
       );
     });
+
     return () => {
       live = false;
     };
   }, [getSocket, verb, key]);
+
   return state;
 }
 
@@ -85,9 +91,12 @@ export function pick<T>(
   machines: (v: T) => DataMachine[],
   label: (id: string) => string
 ): Source<T> {
-  if (s.phase === 'loading') return { kind: 'loading' };
-  if (s.phase === 'refused')
+  if (s.phase === 'loading') {
+    return { kind: 'loading' };
+  }
+  if (s.phase === 'refused') {
     return { kind: 'sample', why: `the hub refused the read: ${s.message}` };
+  }
   const ms = machines(s.value);
   if (!ms.some((m) => m.status === 'ok')) {
     return {
@@ -97,6 +106,7 @@ export function pick<T>(
         : 'the hub reported no machines.',
     };
   }
+
   return {
     kind: 'live',
     value: s.value,
@@ -109,6 +119,7 @@ export function pick<T>(
 export function useMachineLabel(machines: { machine: { id: string; label: string } }[]) {
   return useMemo(() => {
     const map = new Map(machines.map((m) => [m.machine.id, m.machine.label]));
+
     return (id: string) => map.get(id) ?? id;
   }, [machines]);
 }
@@ -131,7 +142,9 @@ export function Coverage<T>({
   tail?: string;
   details?: ReactNode;
 }) {
-  if (src.kind === 'loading') return null;
+  if (src.kind === 'loading') {
+    return null;
+  }
   if (src.kind === 'sample') {
     return (
       <div className="cov cov-sample" data-testid="sample-why">
@@ -147,6 +160,7 @@ export function Coverage<T>({
     );
   }
   const hasMore = src.notes.length > 0 || !!details;
+
   return (
     <div className="cov" data-testid="coverage">
       <span className="cov-line">
@@ -181,11 +195,22 @@ export function Loading({ what }: { what: string }) {
 
 /** "3h 10m ago" style age from an ISO time ("unknown" when missing). */
 export function agoFrom(iso: string | null, now: number): string {
-  if (!iso) return 'unknown';
+  if (!iso) {
+    return 'unknown';
+  }
   const m = Math.floor((now - Date.parse(iso)) / 60_000);
-  if (Number.isNaN(m)) return 'unknown';
-  if (m < 1) return 'just now';
-  if (m < 60) return `${m}m ago`;
-  if (m < 1440) return `${Math.floor(m / 60)}h ${m % 60}m ago`;
+  if (Number.isNaN(m)) {
+    return 'unknown';
+  }
+  if (m < 1) {
+    return 'just now';
+  }
+  if (m < 60) {
+    return `${m}m ago`;
+  }
+  if (m < 1440) {
+    return `${Math.floor(m / 60)}h ${m % 60}m ago`;
+  }
+
   return `${Math.floor(m / 1440)}d ${Math.floor((m % 1440) / 60)}h ago`;
 }

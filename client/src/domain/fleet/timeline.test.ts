@@ -88,7 +88,9 @@ describe('V1 · scale and stacking', () => {
     tl.marks.forEach((m, i) => {
       const k = `${m.lane}#${rows[i]}`;
       const x = s.x(m.at);
-      for (const other of seen.get(k) ?? []) expect(Math.abs(x - other)).toBeGreaterThanOrEqual(13);
+      for (const other of seen.get(k) ?? []) {
+        expect(Math.abs(x - other)).toBeGreaterThanOrEqual(13);
+      }
       seen.set(k, [...(seen.get(k) ?? []), x]);
     });
     // ylo-lead sent four at 04:43:43: four rows.

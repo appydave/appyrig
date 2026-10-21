@@ -77,11 +77,13 @@ function liveOf(s: RigSpecsOutput['specs'][number]): {
   rigStatus: string | null;
   liveMachine: string | null;
 } {
-  if (s.launched)
+  if (s.launched) {
     return { state: stateOf(true, s.rigStatus), rigStatus: s.rigStatus, liveMachine: s.machine };
+  }
   // `launchedOn` is absent from an older hub's answer: then it is the spec's own machine or nothing.
   const on = s.launchedOn ?? [];
   const at = on.find((x) => x.status === 'running') ?? on[0];
+
   return at
     ? { state: stateOf(true, at.status), rigStatus: at.status, liveMachine: at.machine }
     : { state: 'draft', rigStatus: null, liveMachine: null };
@@ -94,7 +96,9 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
   );
   const out: ShownSpec[] = [];
   for (const s of value?.specs ?? []) {
-    if (!scanned.has(s.machine)) continue;
+    if (!scanned.has(s.machine)) {
+      continue;
+    }
     out.push({
       key: `${s.machine}:${s.name}`,
       machine: s.machine,
@@ -126,9 +130,13 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
     });
   }
   for (const fm of machines) {
-    if (scanned.has(fm.machine.id)) continue;
+    if (scanned.has(fm.machine.id)) {
+      continue;
+    }
     for (const rig of fm.snapshot.rigs) {
-      if (rig.specStatus !== 'found') continue;
+      if (rig.specStatus !== 'found') {
+        continue;
+      }
       const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
       out.push({
         key: `${fm.machine.id}:${rig.name}`,
@@ -148,6 +156,7 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
             edges: p.edges ?? [],
             seats: p.members.map((id) => {
               const live = seats.find((s) => s.logicalId === OpenRig.logicalId(p.id, id));
+
               return {
                 id,
                 session: OpenRig.sessionName(rig.name, p.id, id),
@@ -168,6 +177,7 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
   }
   // Drafts first (the ones being written now), then running, then the rest; by name inside each.
   const rank: Record<SpecState, number> = { draft: 0, running: 1, launched: 2 };
+
   return out.sort(
     (a, b) =>
       rank[a.state] - rank[b.state] || a.name.localeCompare(b.name) || a.key.localeCompare(b.key)
@@ -186,15 +196,21 @@ export function profileSummary(
   agentRef: string | null,
   profile: string | null
 ): string | null {
-  if (!agents || !agentRef || !profile) return null;
+  if (!agents || !agentRef || !profile) {
+    return null;
+  }
   const p = agents.find((a) => a.ref === agentRef)?.spec?.profiles[profile];
+
   return p?.summary ?? p?.description ?? null;
 }
 
 /** The model a seat runs: the member's own, else its profile's preference, else the AgentSpec default. */
 export function seatModel(agents: SpecAgent[] | null, seat: ShownSeat): string | null {
-  if (seat.model) return seat.model;
+  if (seat.model) {
+    return seat.model;
+  }
   const a = agents?.find((x) => x.ref === seat.agentRef)?.spec;
+
   return (
     (seat.profile && a?.profiles[seat.profile]?.preferences?.model) || a?.defaults?.model || null
   );
@@ -216,29 +232,41 @@ export function shownCommands(
   rig: string | null,
   allRigs: boolean
 ): RigCommandRow[] {
-  if (allRigs || !rig) return commands;
+  if (allRigs || !rig) {
+    return commands;
+  }
+
   return commands.filter((c) => commandNamesRig(c, rig));
 }
 
 /** `ran · exit 0`, `failed · exit 1`, `attempted`, `denied`. */
 export function outcomeOf(c: RigCommandRow): string {
   const parts = [c.phase ?? 'unknown'];
-  if (c.exitCode !== null) parts.push(`exit ${c.exitCode}`);
-  if (c.interrupted) parts.push('interrupted');
+  if (c.exitCode !== null) {
+    parts.push(`exit ${c.exitCode}`);
+  }
+  if (c.interrupted) {
+    parts.push('interrupted');
+  }
+
   return parts.join(' · ');
 }
 
 /** The first line or two of the output, short enough for a row. */
 export function shortOutput(c: RigCommandRow, max = 160): string | null {
   const text = [c.stderrHead, c.stdoutHead].filter(Boolean).join('\n').trim();
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
   const firstLines = text.split('\n').slice(0, 2).join(' ⏎ ');
+
   return firstLines.length > max ? `${firstLines.slice(0, max - 1)}…` : firstLines;
 }
 
 /** `14:02:07` (local time) for a command's timestamp. */
 export function clockOf(iso: string): string {
   const d = new Date(iso);
+
   return Number.isNaN(d.getTime())
     ? iso
     : d.toLocaleTimeString(undefined, {

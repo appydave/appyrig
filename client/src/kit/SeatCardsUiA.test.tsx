@@ -9,12 +9,15 @@ import {
   pctText,
   tokensText,
 } from './SeatCardLines.js';
+
 beforeAll(() => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
       observe() {}
+
       disconnect() {}
+
       unobserve() {}
     }
   );

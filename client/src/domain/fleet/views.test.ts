@@ -173,6 +173,7 @@ describe('D09 W2: planned lines from the rig spec', () => {
     queue?: QueueItem[]
   ): FleetMachine => {
     const fm = m2();
+
     return {
       ...fm,
       snapshot: {
@@ -203,7 +204,9 @@ describe('D09 W2: planned lines from the rig spec', () => {
     const map = buildRigMap([withEdges(SPEC)], 'm2:fliedit-team')!;
     const real = new Set(map.edges.map((e) => `${e.from}→${e.to}`));
     expect(real.has('m2/review-r1@fliedit-team→m2/orch-lead@fliedit-team')).toBe(true);
-    for (const p of map.planned!) expect(real.has(`${p.from}→${p.to}`)).toBe(false);
+    for (const p of map.planned!) {
+      expect(real.has(`${p.from}→${p.to}`)).toBe(false);
+    }
     expect(map.planned!.length).toBe(
       SPEC.slice(0, 3).filter((e) => !real.has(`m2/${e.from}→m2/${e.to}`)).length
     );
@@ -567,7 +570,9 @@ describe('B2 rigState (fb-0001): follows rig ps', () => {
   });
 
   it('every listed rig carries a state', () => {
-    for (const r of listRigs([fleetMachine(snapshot('m2'))])) expect(r.state).toMatch(/\w/);
+    for (const r of listRigs([fleetMachine(snapshot('m2'))])) {
+      expect(r.state).toMatch(/\w/);
+    }
   });
 });
 
@@ -589,7 +594,9 @@ describe('B3 (fb-0006): the median stat as one plain sentence', () => {
     const rig = listRigs([fm]).find((r) => r.handoffs > 0)!;
     const flow = buildFlow(fm, rig.name, Date.now(), Date.now());
     expect(flow?.closedCount).toBeGreaterThanOrEqual(0);
-    if (flow && flow.closedCount > 0) expect(flow.medianTurnaroundMin).not.toBeNull();
+    if (flow && flow.closedCount > 0) {
+      expect(flow.medianTurnaroundMin).not.toBeNull();
+    }
   });
 });
 
@@ -789,6 +796,7 @@ describe('F3 (truth #6): a rig reads as recent from its agents, not its terminal
       lastActivityAt: TEN_MIN_AGO,
       ...(agentActivityAt === undefined ? {} : { agentActivityAt }),
     };
+
     return { ...fm, snapshot: { ...fm.snapshot, rigs: [rig], seats: [s], queue: [] } };
   };
   const last = (fm: FleetMachine) => listRigs([fm]).find((r) => r.name === 'boss')!.lastActivity;
@@ -843,6 +851,7 @@ describe('ui-d-logical: the collector reports logicalId WITHOUT the @rig suffix'
       }),
       q({ id: 'b', source: home.id, destination: other.id, state: 'pending', createdAt: T }),
     ];
+
     return { fm, home, other };
   };
 
@@ -883,6 +892,7 @@ describe('ui-c-placed: one seat addressed by session name and by logical id', ()
       mk('by-logical', 'desk.planner@ylo-desk'),
       mk('by-logical-2', 'desk.planner@ylo-desk'),
     ];
+
     return { fm, home, other };
   };
 

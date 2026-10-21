@@ -42,10 +42,14 @@ export function recordedDaemon(machine: 'roamy' | 'm2'): DaemonRead {
     const file = files.find(
       (f) => f.startsWith(`${machine}--api-rig-`) && f.includes(`-${rig.id}-nodes.json`)
     );
-    if (!file) throw new Error(`no recorded nodes fixture for rig ${rig.name} (${rig.id})`);
+    if (!file) {
+      throw new Error(`no recorded nodes fixture for rig ${rig.name} (${rig.id})`);
+    }
+
     return parseNodes(readFixtureJson(file));
   });
   const queueFile = machine === 'm2' ? 'm2--cli-queue-list-all.json' : 'roamy--cli-queue-list.json';
+
   return { version: '0.6.6', rigs, seats, queue: parseQueue(readFixtureJson(queueFile)) };
 }
 
@@ -59,12 +63,16 @@ export function fixtureSources(opts: FixtureOptions): Sources {
     cwd: null,
   }));
   const byPaneId = new Map(panes.map((p) => [p.paneId, p.session]));
+
   return {
     daemon: opts.daemon ?? (async () => recordedDaemon(opts.machine)),
     tmuxPanes: async () => panes,
     capture: async (paneId) => {
       const session = byPaneId.get(paneId);
-      if (!session) throw new Error(`no such pane ${paneId}`);
+      if (!session) {
+        throw new Error(`no such pane ${paneId}`);
+      }
+
       return opts.captureText?.(session) ?? readFixtureText(sessions[session]!);
     },
     viewerAgents:

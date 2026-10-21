@@ -40,8 +40,9 @@ describe('width steps are absolute counts', () => {
       [50, 'heavy'],
       [71, 'heavy'],
       [5000, 'heavy'],
-    ] as const)
+    ] as const) {
       expect(lineStep(n), `count ${n}`).toBe(step);
+    }
   });
 
   it('a high count/max ratio on a low count stays thin: 3 of a max of 3 is thin', () => {
@@ -58,8 +59,9 @@ describe('width steps are absolute counts', () => {
   it('widths are thin 1.5, medium 2.2, heavy 3, and nothing exceeds the cap', () => {
     expect(LINE_WIDTH).toEqual({ thin: 1.5, medium: 2.2, heavy: 3 });
     expect(LINE_WIDTH_CAP).toBe(3);
-    for (const n of [0, 1, 9, 10, 49, 50, 71, 1e6])
+    for (const n of [0, 1, 9, 10, 49, 50, 71, 1e6]) {
       expect(lineWidth(n)).toBeLessThanOrEqual(LINE_WIDTH_CAP);
+    }
   });
 });
 
@@ -211,6 +213,7 @@ describe('calm / lit / dimmed', () => {
   it('the focus handlers spread onto a real element and respond to focus events', () => {
     function Probe() {
       const f = useLineFocus();
+
       return (
         <div>
           <button data-testid="agent" {...f.focusProps('x')}>
@@ -220,6 +223,7 @@ describe('calm / lit / dimmed', () => {
         </div>
       );
     }
+
     render(<Probe />);
     expect(screen.getByTestId('state')).toHaveTextContent('faint');
     fireEvent.focus(screen.getByTestId('agent'));
@@ -276,7 +280,9 @@ describe('guard: no screen sizes a line by a share of the busiest pair', () => {
       'strokeWidth={1.8 + (p.count / maxCount) * 4.5}',
       'const w = 1.5 + (e.count / Math.max(1, ...counts)) * 6; // stroke width',
     ];
-    for (const l of old) expect(relativeWidthLines(l), l).toHaveLength(1);
+    for (const l of old) {
+      expect(relativeWidthLines(l), l).toHaveLength(1);
+    }
     expect(
       relativeWidthLines('// stroke width: count / max is what we stopped doing')
     ).toHaveLength(0);
@@ -291,9 +297,11 @@ describe('guard: no screen sizes a line by a share of the busiest pair', () => {
     const walk = (dir: string) => {
       for (const n of readdirSync(dir)) {
         const f = path.join(dir, n);
-        if (statSync(f).isDirectory()) walk(f);
-        else if (/\.(ts|tsx)$/.test(n) && !/\.test\./.test(n) && n !== 'handoffLines.ts')
+        if (statSync(f).isDirectory()) {
+          walk(f);
+        } else if (/\.(ts|tsx)$/.test(n) && !/\.test\./.test(n) && n !== 'handoffLines.ts') {
           files.push(f);
+        }
       }
     };
     walk(root);

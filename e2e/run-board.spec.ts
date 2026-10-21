@@ -18,7 +18,9 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     const errors = watchErrors(page);
     await page.goto(FROZEN);
     const gotIt = page.getByRole('button', { name: /got it/i });
-    if (await gotIt.count()) await gotIt.first().click();
+    if (await gotIt.count()) {
+      await gotIt.first().click();
+    }
 
     await page.getByTestId('ar-group-fleet').click();
     await page.getByTestId('ar-page-run').click();
@@ -35,8 +37,9 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     expect(n).toBeGreaterThan(0);
     await expect(top).toContainText(`${n} jobs planned`);
     // before GO nothing is done or current, and no rework number is drawn
-    for (let i = 0; i < n; i++)
+    for (let i = 0; i < n; i++) {
       await expect(tiles.nth(i)).toHaveAttribute('data-status', 'waiting');
+    }
     await expect(top).not.toContainText(/rework/);
 
     // the job strip and the stations are both above the 900 px fold
@@ -68,6 +71,7 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
         prev = h;
         expect(same, 'page height still changing').toBe(true);
       }).toPass({ intervals: [100], timeout: 10_000 });
+
       return prev;
     };
     const before = await settledHeight();

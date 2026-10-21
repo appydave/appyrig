@@ -88,6 +88,7 @@ export function createHub(opts: HubOptions): Hub {
         views = accountViews(all, cfg, now(), (id) => store.emailChangedAt(id));
         viewsOf.set(all, views);
       }
+
       return applyAccountDerived(applyRigLabels(m, cfg), views);
     },
     dataDir: opts.dataDir,
@@ -165,8 +166,11 @@ export function createHub(opts: HubOptions): Hub {
   // Browsers: session cookie at connect, then the whole fleet, then changed machines (D3).
   const browsers = io.of(SOCKET_NAMESPACES.BROWSER);
   browsers.use((socket, next) => {
-    if (isAuthorised(socket.handshake.headers, opts.hubToken)) next();
-    else next(new Error(AUTH_ERRORS.browserSession));
+    if (isAuthorised(socket.handshake.headers, opts.hubToken)) {
+      next();
+    } else {
+      next(new Error(AUTH_ERRORS.browserSession));
+    }
   });
   browsers.on('connection', (socket) => {
     const update: FleetUpdate = {
@@ -177,7 +181,9 @@ export function createHub(opts: HubOptions): Hub {
     socket.emit(FLEET_EVENTS.UPDATE, update);
     // The UI's door onto the core (B1, B13): same seam, fixed principal.
     socket.on(FLEET_EVENTS.CALL, (request: CoreCallRequest, ack: (a: CallAnswer) => void) => {
-      if (typeof ack !== 'function') return;
+      if (typeof ack !== 'function') {
+        return;
+      }
       const r: Partial<CoreCallRequest> =
         typeof request === 'object' && request !== null ? request : {};
       ack(core.call(UI_PRINCIPAL, String(r.verb ?? ''), r.input, { dryRun: r.dryRun }));
@@ -185,7 +191,9 @@ export function createHub(opts: HubOptions): Hub {
   });
 
   const emitChanged = (machines: FleetMachine[]) => {
-    if (machines.length === 0) return;
+    if (machines.length === 0) {
+      return;
+    }
     const update: FleetUpdate = { generatedAt: now().toISOString(), full: false, machines };
     browsers.emit(FLEET_EVENTS.UPDATE, update);
   };
@@ -199,6 +207,7 @@ export function createHub(opts: HubOptions): Hub {
   const sweep = () => {
     const changed = store.sweep();
     emitChanged(changed);
+
     return changed;
   };
 
@@ -216,20 +225,26 @@ export function createHub(opts: HubOptions): Hub {
       await store.loadHistories();
       await store.loadHandoffs();
       await store.schemas.load();
+
       return loaded;
     },
     sweep,
     start: () => {
-      if (timer) return;
+      if (timer) {
+        return;
+      }
       timer = setInterval(sweep, opts.livenessIntervalMs ?? 1_000);
       timer.unref();
     },
     listen: async (port, hosts) => {
       listening = await listenOnHosts(httpServer, port, hosts);
+
       return listening;
     },
     close: async () => {
-      if (timer) clearInterval(timer);
+      if (timer) {
+        clearInterval(timer);
+      }
       timer = undefined;
       await listening?.close();
       await new Promise<void>((r) => io.close(() => r())); // also closes httpServer

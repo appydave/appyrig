@@ -43,12 +43,17 @@ export function parseSpec(
   } catch {
     return null;
   }
-  if (typeof doc !== 'object' || doc === null) return null;
+  if (typeof doc !== 'object' || doc === null) {
+    return null;
+  }
   const { name, summary } = doc as { name?: unknown; summary?: unknown };
-  if (typeof name !== 'string' || !name.trim()) return null;
+  if (typeof name !== 'string' || !name.trim()) {
+    return null;
+  }
   const folded =
     typeof summary === 'string' ? redactString(summary.replace(/\s+/g, ' ').trim()) : '';
   const valid = OpenRig.RigSpecSchema.safeParse(doc);
+
   return {
     name: name.trim(),
     summary: folded ? folded.slice(0, RIG_SUMMARY_MAX) : null,
@@ -64,9 +69,11 @@ async function walk(dir: string, depth: number, out: string[]): Promise<void> {
     return; // a configured folder that is missing on this machine is simply empty
   }
   for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-    if (e.isFile() && SPEC_FILE.test(e.name)) out.push(join(dir, e.name));
-    else if (e.isDirectory() && depth < MAX_DEPTH && !SKIP.has(e.name))
+    if (e.isFile() && SPEC_FILE.test(e.name)) {
+      out.push(join(dir, e.name));
+    } else if (e.isDirectory() && depth < MAX_DEPTH && !SKIP.has(e.name)) {
       await walk(join(dir, e.name), depth + 1, out);
+    }
   }
 }
 
@@ -79,13 +86,15 @@ export async function scanSpecs(folders: string[]): Promise<Map<string, SpecInfo
     for (const path of files) {
       try {
         const spec = parseSpec(await readFile(path, 'utf8'));
-        if (spec && !found.has(spec.name))
+        if (spec && !found.has(spec.name)) {
           found.set(spec.name, { path, root: folder, summary: spec.summary, spec: spec.spec });
+        }
       } catch {
         // unreadable file: skip it
       }
     }
   }
+
   return found;
 }
 
@@ -96,9 +105,13 @@ export function createSpecIndex(
   now: () => number = Date.now
 ): () => Promise<Map<string, SpecInfo>> {
   let cache: { at: number; value: Map<string, SpecInfo> } | null = null;
+
   return async () => {
-    if (cache && now() - cache.at < ttlMs) return cache.value;
+    if (cache && now() - cache.at < ttlMs) {
+      return cache.value;
+    }
     cache = { at: now(), value: await scanSpecs(folders) };
+
     return cache.value;
   };
 }

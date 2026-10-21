@@ -50,11 +50,17 @@ export function routeLines<P extends LinePair>(
   const drawn = pairs.flatMap((pair) => {
     const a = box(pair.a);
     const b = box(pair.b);
+
     return a && b ? [{ pair, a, b }] : [];
   });
   const sides = (a: Box, b: Box): [Side, Side] => {
-    if (a.x + a.w <= b.x) return ['r', 'l'];
-    if (b.x + b.w <= a.x) return ['l', 'r'];
+    if (a.x + a.w <= b.x) {
+      return ['r', 'l'];
+    }
+    if (b.x + b.w <= a.x) {
+      return ['l', 'r'];
+    }
+
     return a.y <= b.y ? ['b', 't'] : ['t', 'b'];
   };
   const k = (p: LinePair) => `${p.a}\u0000${p.b}`;
@@ -143,5 +149,6 @@ export function routeLines<P extends LinePair>(
     }
     taken.push({ x: line.lx, y: line.ly });
   }
+
   return curves.map((c) => c.line);
 }

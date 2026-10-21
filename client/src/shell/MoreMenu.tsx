@@ -8,9 +8,13 @@ export default function MoreMenu({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const away = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false);
+      if (!box.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -21,11 +25,13 @@ export default function MoreMenu({ children }: { children: ReactNode }) {
     };
     window.addEventListener('pointerdown', away);
     window.addEventListener('keydown', esc, true);
+
     return () => {
       window.removeEventListener('pointerdown', away);
       window.removeEventListener('keydown', esc, true);
     };
   }, [open]);
+
   return (
     <span className="ar-more" ref={box}>
       <button

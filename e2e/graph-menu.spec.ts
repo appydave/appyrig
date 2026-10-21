@@ -17,11 +17,15 @@ test.describe('v2 Graph rig menu', () => {
     await expect(page.getByTestId('ar-graph')).toBeVisible();
     // dismiss the first-visit hint if it is up (it can sit over the canvas)
     const gotIt = page.getByRole('button', { name: /got it/i });
-    if (await gotIt.count()) await gotIt.first().click();
+    if (await gotIt.count()) {
+      await gotIt.first().click();
+    }
 
     // stopped rigs are hidden by default; the fixture machines mostly have stopped ones
     const showStopped = page.getByTestId('g2-show-stopped');
-    if ((await showStopped.getAttribute('aria-pressed')) !== 'true') await showStopped.click();
+    if ((await showStopped.getAttribute('aria-pressed')) !== 'true') {
+      await showStopped.click();
+    }
     // a column with at least two frames: the menu of the first falls on the second
     const column = page
       .getByTestId('g2-machine')
@@ -44,6 +48,7 @@ test.describe('v2 Graph rig menu', () => {
       const hit = await item.evaluate(
         (el, [x, y]) => {
           const at = document.elementFromPoint(x!, y!);
+
           return at === el || el.contains(at)
             ? 'ok'
             : `${at?.tagName}.${at?.className} ${at?.getAttribute('data-testid')}`;

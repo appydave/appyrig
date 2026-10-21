@@ -285,8 +285,9 @@ describe('contentTail: no ghost text (D09 W3)', () => {
       '────────────────────────────────────────────────',
       '  ⏵⏵ auto mode on (shift+tab to cycle)',
     ];
-    for (const sep of ['\u00a0', ' '])
+    for (const sep of ['\u00a0', ' ']) {
       expect(plain(contentTail(typed(sep), 2))).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
+    }
   });
 });
 

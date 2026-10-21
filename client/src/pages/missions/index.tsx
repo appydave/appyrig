@@ -59,32 +59,44 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
           rig: r.rig,
         });
         const f = files.ok ? files.value.files.find((x) => /^MISSION.*\.md$/i.test(x.name)) : null;
-        if (!f) continue;
+        if (!f) {
+          continue;
+        }
         const got = await callVerb<RigFileOutput>(socket, 'rig.file', {
           machine: r.machineId,
           rig: r.rig,
           fileId: f.id,
         });
         if (got.ok) {
-          if (live) setDoc({ rig: r.rig, machineId: r.machineId, text: got.value.file.content });
+          if (live) {
+            setDoc({ rig: r.rig, machineId: r.machineId, text: got.value.file.content });
+          }
+
           return;
         }
       }
-      if (live) setDoc('none');
+      if (live) {
+        setDoc('none');
+      }
     })();
+
     return () => {
       live = false;
     };
   }, [mission.key, rigsKey, getSocket]);
-  if (doc === null) return <p className="quiet">Looking for a MISSION.md in its rigs…</p>;
-  if (doc === 'none')
+  if (doc === null) {
+    return <p className="quiet">Looking for a MISSION.md in its rigs…</p>;
+  }
+  if (doc === 'none') {
     return (
       <p className="quiet" data-testid="ms-nodoc">
         No MISSION.md found in {mission.rig} on {mission.machineLabel} (or its collector has not
         sent one).
       </p>
     );
+  }
   const { title } = missionDocSummary(doc.text);
+
   return (
     <div className="ms-doc" data-testid="ms-doc">
       <p>
@@ -107,6 +119,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
 function SliceRow({ slice }: { slice: Slice }) {
   const [all, setAll] = useState(false);
   const jobs = all ? slice.jobs : slice.jobs.slice(0, SHOWN_JOBS);
+
   return (
     <li className="ms-slice" data-testid="ms-slice" data-slice={slice.id}>
       <div className="ms-slice-head">
@@ -215,6 +228,7 @@ function MissionCard({
 
 function Assign({ job }: { job: string }) {
   const [to, setTo] = useState<string | null>(null);
+
   return to ? (
     <span data-testid="ms-assigned">
       assigned to {to} (pretend) <MockMark />

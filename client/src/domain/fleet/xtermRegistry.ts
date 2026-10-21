@@ -10,8 +10,11 @@ let live = 0;
 export function trackTerminal(): () => void {
   live += 1;
   let released = false;
+
   return () => {
-    if (released) return;
+    if (released) {
+      return;
+    }
     released = true;
     live -= 1;
   };

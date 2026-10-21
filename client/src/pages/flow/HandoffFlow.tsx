@@ -72,6 +72,7 @@ interface Layout {
 /** Boxes spread evenly across the width: four role stages, or up to six seats. */
 function layoutFor(ids: string[]): Layout {
   const slot = W / ids.length;
+
   return {
     x: (id) => slot * (ids.indexOf(id) + 0.5),
     idx: (id) => ids.indexOf(id),
@@ -100,6 +101,7 @@ export function structureLines(
 ): { lines: StructureLine[]; source: 'planned' | 'traffic' } {
   const idOf = (raw: string) => {
     const n = raw.split('@')[0]!;
+
     return mode === 'roles' ? stageOf(n) : n;
   };
   const ok = new Set(nodes);
@@ -108,26 +110,37 @@ export function structureLines(
     // Like Traffic: an endpoint with no box of its own (seats mode caps the boxes) joins `others`.
     const place = (raw: string) => {
       const id = idOf(raw);
+
       return ok.has(id) ? id : mode === 'seats' && ok.has('others') ? 'others' : null;
     };
     const from = place(e.from);
     const to = place(e.to);
-    if (!from || !to || from === to) continue;
+    if (!from || !to || from === to) {
+      continue;
+    }
     const key = `${from}→${to}`;
     const line = byPair.get(key) ?? { from, to, kinds: [] };
-    if (!line.kinds.includes(e.kind)) line.kinds.push(e.kind);
+    if (!line.kinds.includes(e.kind)) {
+      line.kinds.push(e.kind);
+    }
     byPair.set(key, line);
   }
-  if (byPair.size > 0) return { lines: [...byPair.values()], source: 'planned' };
+  if (byPair.size > 0) {
+    return { lines: [...byPair.values()], source: 'planned' };
+  }
   const seen = new Map<string, StructureLine>();
   for (const e of trafficPairs) {
-    if (e.from === e.to) continue;
+    if (e.from === e.to) {
+      continue;
+    }
     seen.set(`${e.from}→${e.to}`, { from: e.from, to: e.to, kinds: ['handed work'] });
   }
+
   return { lines: [...seen.values()], source: 'traffic' };
 }
 
 const PANEL_KEY = 'appyrig.handoffPanel';
+
 /**
  * Batch 1 · B1 (fb-0005: "hovering over something doesn't mean you want it"): the panel shows what
  * you CLICK unless a viewer chose to have it follow the pointer. A stored choice is kept.
@@ -150,6 +163,7 @@ interface HoverCard {
 
 const REPLAY_SECONDS = 40;
 const CALM_KEY = 'appyrig.v2.flowCalm';
+
 function readCalm(): boolean {
   try {
     return localStorage.getItem(CALM_KEY) === 'on';
@@ -157,6 +171,7 @@ function readCalm(): boolean {
     return false;
   }
 }
+
 /** Replay holds on each chapter for this many 100 ms ticks, so the narration can be read. */
 const CHAPTER_HOLD_TICKS = 30;
 
@@ -243,21 +258,33 @@ export default function HandoffFlow({
   useEffect(() => {
     const y = keepScroll.current;
     keepScroll.current = null;
-    if (y !== null && window.scrollY !== y) window.scrollTo({ top: y });
+    if (y !== null && window.scrollY !== y) {
+      window.scrollTo({ top: y });
+    }
   });
 
   // S2: ← → press the step buttons. The handler reads the latest step functions from a ref.
   const stepKeys = useRef<{ prev: () => void; next: () => void } | null>(null);
   useEffect(() => {
-    if (!keys) return;
+    if (!keys) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-      if (isShortcutBlocked(e) || isSlider(e.target) || !stepKeys.current) return;
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+        return;
+      }
+      if (isShortcutBlocked(e) || isSlider(e.target) || !stepKeys.current) {
+        return;
+      }
       e.preventDefault();
-      if (e.key === 'ArrowLeft') stepKeys.current.prev();
-      else stepKeys.current.next();
+      if (e.key === 'ArrowLeft') {
+        stepKeys.current.prev();
+      } else {
+        stepKeys.current.next();
+      }
     };
     window.addEventListener('keydown', onKey);
+
     return () => window.removeEventListener('keydown', onKey);
   }, [keys]);
 
@@ -268,13 +295,20 @@ export default function HandoffFlow({
     setSel(null);
     setPinned(false);
     setFollow(null);
-    if (!socket || !machineId || !rig) return;
+    if (!socket || !machineId || !rig) {
+      return;
+    }
     let current = true;
     void callVerb<RigEntryOutput>(socket, 'rig.entry', { machine: machineId, rig }).then((a) => {
-      if (!current) return;
-      if (a.ok) setEntry(a.value.entry);
+      if (!current) {
+        return;
+      }
+      if (a.ok) {
+        setEntry(a.value.entry);
+      }
       setEntryLoaded(true);
     });
+
     return () => {
       current = false;
     };
@@ -284,14 +318,19 @@ export default function HandoffFlow({
   useEffect(() => {
     // r1 S4: stand down while a seat panel (or the ? overlay) is on top, so one Esc closes one thing.
     // Views V2: while following work, Esc is FollowWork's (back to this panel).
-    if (!sel || chain || !keys) return;
+    if (!sel || chain || !keys) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (e.key !== 'Escape' || e.defaultPrevented) {
+        return;
+      }
       e.preventDefault();
       setSel(null);
       setPinned(false);
     };
     window.addEventListener('keydown', onKey, true);
+
     return () => window.removeEventListener('keydown', onKey, true);
   }, [sel, chain, keys]);
 
@@ -302,11 +341,14 @@ export default function HandoffFlow({
   }, [machine?.machine.id, rig]);
 
   useEffect(() => {
-    if (!playing || !range) return;
+    if (!playing || !range) {
+      return;
+    }
     const step = (range.end - range.start) / (REPLAY_SECONDS * 10);
     const id = window.setInterval(() => {
       if (hold.current > 0) {
         hold.current -= 1;
+
         return;
       }
       const cur = atRef.current ?? range.start;
@@ -322,6 +364,7 @@ export default function HandoffFlow({
       }
       jump(next);
     }, 100);
+
     return () => window.clearInterval(id);
   }, [playing, range, chapters]);
 
@@ -331,12 +374,16 @@ export default function HandoffFlow({
   const stepIdx = stepId ? steps.findIndex((q) => q.id === stepId) : -1;
   const stepTo = (i: number) => {
     const q = steps[i];
-    if (!q) return;
+    if (!q) {
+      return;
+    }
     setPlaying(false);
     setLens('traffic');
     jump(Date.parse(q.createdAt), q.id);
     // S4: the stepped handoff's full message, so the one-line narration is readable in full.
-    if (!pinned) setSel({ edge: null, itemId: q.id });
+    if (!pinned) {
+      setSel({ edge: null, itemId: q.id });
+    }
   };
   const nextStep = () =>
     stepTo(
@@ -347,11 +394,17 @@ export default function HandoffFlow({
           : steps.findIndex((q) => Date.parse(q.createdAt) > tStep)
     );
   const prevStep = () => {
-    if (stepIdx >= 0) return stepTo(stepIdx - 1);
-    if (at === null) return stepTo(steps.length - 1);
+    if (stepIdx >= 0) {
+      return stepTo(stepIdx - 1);
+    }
+    if (at === null) {
+      return stepTo(steps.length - 1);
+    }
     let i = -1;
     steps.forEach((q, k) => {
-      if (Date.parse(q.createdAt) < tStep) i = k;
+      if (Date.parse(q.createdAt) < tStep) {
+        i = k;
+      }
     });
     stepTo(i);
   };
@@ -365,13 +418,14 @@ export default function HandoffFlow({
       : null;
   });
 
-  if (!machine || !rig)
+  if (!machine || !rig) {
     return (
       <>
         <PageHeader title="Handoff Flow" facts={['no rig chosen']} />
         <p className="empty">Pick a rig.</p>
       </>
     );
+  }
   if (!range) {
     return (
       <>
@@ -413,10 +467,13 @@ export default function HandoffFlow({
   // The handoff the replay is on: the stepped one, else the latest handed over by the replay time.
   const replaying = at !== null;
   let curIdx = stepIdx;
-  if (curIdx < 0 && replaying)
+  if (curIdx < 0 && replaying) {
     steps.forEach((q, k) => {
-      if (Date.parse(q.createdAt) <= t) curIdx = k;
+      if (Date.parse(q.createdAt) <= t) {
+        curIdx = k;
+      }
     });
+  }
   const curItem = curIdx >= 0 ? (steps[curIdx] ?? null) : null;
   const pairOf = (key: string | null) => (key ? pairs.find((p) => p.key === key) : undefined);
   const pairTitle = (p: FlowPair) =>
@@ -432,6 +489,7 @@ export default function HandoffFlow({
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const inN = lines.filter((e) => e.to === stage).reduce((n, e) => n + e.count, 0);
     const outN = lines.filter((e) => e.from === stage).reduce((n, e) => n + e.count, 0);
+
     return {
       edge: `stage:${stage}`,
       title: `${labelOf(stage)} · ${inN} in · ${outN} out`,
@@ -454,16 +512,23 @@ export default function HandoffFlow({
     // The panel follows the replay: the current handoff, unless a line, box or item is pinned.
     const s =
       sel ?? (curItem && !pinned ? { edge: null, itemId: curItem.id, stage: undefined } : null);
-    if (!s) return null;
-    if (s.stage) return stageSelection(s.stage, s.itemId);
+    if (!s) {
+      return null;
+    }
+    if (s.stage) {
+      return stageSelection(s.stage, s.itemId);
+    }
     const pair =
       pairOf(s.edge) ||
       (s.itemId && pairs.find((p) => pairItems(p).some((q) => q.id === s.itemId))) ||
       null;
     const items = pair ? pairItems(pair) : [];
-    if (!pair || !items.length) return null;
+    if (!pair || !items.length) {
+      return null;
+    }
     const itemId =
       s.itemId && items.some((q) => q.id === s.itemId) ? s.itemId : items[items.length - 1]!.id;
+
     return { edge: pair.key, title: pairTitle(pair), items, itemId };
   })();
   // B1: in "Follow pointer" mode the panel follows the pointer (it has a fixed size, so nothing
@@ -490,15 +555,19 @@ export default function HandoffFlow({
     itemId: string | null = null,
     ev: { clientX: number; clientY: number } | null = null
   ) => {
-    if (mode === 'hover' && !pinned) setSel({ edge, itemId });
-    else {
+    if (mode === 'hover' && !pinned) {
+      setSel({ edge, itemId });
+    } else {
       const p = pairOf(edge);
-      if (p) edgeCard(p, ev);
+      if (p) {
+        edgeCard(p, ev);
+      }
     }
   };
   const peekStage = (stage: string, ev: { clientX: number; clientY: number } | null = null) => {
-    if (mode === 'hover' && !pinned) setSel({ edge: null, itemId: null, stage });
-    else {
+    if (mode === 'hover' && !pinned) {
+      setSel({ edge: null, itemId: null, stage });
+    } else {
       const s = flow.stages.find((x) => x.stage === stage);
       const sl = stageSelection(stage, null);
       cardAt(ev, s?.label ?? stage, [
@@ -511,7 +580,9 @@ export default function HandoffFlow({
   };
   const unpeek = () => {
     setCard(null);
-    if (!pinned && mode === 'hover') setSel(null);
+    if (!pinned && mode === 'hover') {
+      setSel(null);
+    }
   };
   const pin = (edge: string, itemId: string | null = null) => {
     setCard(null);
@@ -526,6 +597,7 @@ export default function HandoffFlow({
       setSel(null);
       setPinned(false);
       onOpenAgent(only[0]!.key);
+
       return;
     }
     setSel({ edge: null, itemId: null, stage });
@@ -533,7 +605,9 @@ export default function HandoffFlow({
   };
   const chooseMode = (m: PanelMode) => {
     setMode(m);
-    if (m === 'hover') setPinned(false);
+    if (m === 'hover') {
+      setPinned(false);
+    }
     try {
       localStorage.setItem(PANEL_KEY, m);
     } catch {
@@ -543,9 +617,12 @@ export default function HandoffFlow({
   // S4: the first seat to act, as a box on this diagram.
   const entryText = entry ? entryWords(entry) : null;
   const entryNode = (() => {
-    if (!entry?.entry || entry.status !== 'outside-queue') return null;
+    if (!entry?.entry || entry.status !== 'outside-queue') {
+      return null;
+    }
     const raw = entry.entry.seat;
     const id = flow.mode === 'roles' ? stageOf(raw.split('@')[0]!) : raw.split('@')[0]!;
+
     return flow.stages.some((s) => s.stage === id) ? id : null;
   })();
   const staleCount = staleStages.reduce((n, s) => n + s.stale, 0);
@@ -757,6 +834,7 @@ export default function HandoffFlow({
                 const bx = L.x(p.b);
                 const by = ROW_Y + BOX_H / 2;
                 const dip = 46 + Math.abs(L.idx(p.a) - L.idx(p.b)) * 18;
+
                 return (
                   <g
                     key={p.key}
@@ -893,6 +971,7 @@ export default function HandoffFlow({
                 const atEnd = g.aLeft ? heads.atB : heads.atA;
                 const atStart = g.aLeft ? heads.atA : heads.atB;
                 const w = 16 + text.length * 7.5;
+
                 return (
                   <g
                     key={flowPairKey(p.a, p.b)}
@@ -928,6 +1007,7 @@ export default function HandoffFlow({
             {flow.stages.map((s) => {
               const x = L.x(s.stage);
               const state = s.waiting ? 'waiting' : s.stale ? 'stale' : '';
+
               return (
                 <g
                   key={s.stage}
@@ -1103,7 +1183,9 @@ export default function HandoffFlow({
               onLine={(dir) => {
                 // Views K: ] / [ = next / previous line, in drawing (Tab) order; opens its newest.
                 const order = pairs.map((p) => p.key);
-                if (!order.length) return;
+                if (!order.length) {
+                  return;
+                }
                 const i = selection?.edge ? order.indexOf(selection.edge) : dir === 1 ? -1 : 0;
                 pin(order[(i + dir + order.length) % order.length]!);
               }}
@@ -1170,7 +1252,9 @@ export default function HandoffFlow({
           className="pill-btn cta"
           data-testid="flow-play"
           onClick={() => {
-            if (!playing && t >= range.end) jump(range.start);
+            if (!playing && t >= range.end) {
+              jump(range.start);
+            }
             hold.current = 0;
             // B1: Structure draws no traffic, so the dots would never move. Replay is Traffic.
             setLens('traffic');

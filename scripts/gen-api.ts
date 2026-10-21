@@ -29,7 +29,9 @@ const doc = apiDocument(identity);
 
 // ── invariants the generated files must keep (AC 8, AC 9, B14) ───────────────────────────────────
 const verbNames = Object.keys(VERBS);
-if (verbNames.length === 0) problems.push('the verb registry is empty');
+if (verbNames.length === 0) {
+  problems.push('the verb registry is empty');
+}
 for (const [name, v] of Object.entries(VERBS)) {
   if (!(v.sideEffects === 'read-only' && v.kind === 'query')) {
     problems.push(`verb ${name} is not a read-only query (AC 9)`);
@@ -48,7 +50,9 @@ if (doc.info.version !== identity.version) {
 // machine names are the tell.
 const text = openRpcText(doc);
 for (const leak of ['dev-build@starter', 'advisor-lead@kernel', '/Users/', 'gho_']) {
-  if (text.includes(leak)) problems.push(`openrpc.json contains fleet-looking data: ${leak}`);
+  if (text.includes(leak)) {
+    problems.push(`openrpc.json contains fleet-looking data: ${leak}`);
+  }
 }
 
 // ── the two committed files ──────────────────────────────────────────────────────────────────────
@@ -56,7 +60,9 @@ function emit(rel: string, content: string) {
   const path = resolve(apiDir, rel);
   if (check) {
     const current = existsSync(path) ? readFileSync(path, 'utf8') : '';
-    if (current !== content) problems.push(`api/${rel} is stale: run npm run api:gen`);
+    if (current !== content) {
+      problems.push(`api/${rel} is stale: run npm run api:gen`);
+    }
   } else {
     writeFileSync(path, content);
     console.log(`wrote api/${rel}`);

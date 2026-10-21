@@ -16,9 +16,14 @@ export const LIB_FILTERS: { key: LibFilter; label: string }[] = [
 
 /** The word the page uses for an item: a spec's own kind (workflow, agent, rig), else skill or context pack. */
 export function kindOf(i: LibraryItem): LibKind | 'spec' {
-  if (i.group === 'skill') return 'skill';
-  if (i.group === 'context-pack') return 'context pack';
+  if (i.group === 'skill') {
+    return 'skill';
+  }
+  if (i.group === 'context-pack') {
+    return 'context pack';
+  }
   const k = (i.kind ?? '').toLowerCase();
+
   return k === 'workflow' || k === 'agent' || k === 'rig' ? k : 'spec';
 }
 
@@ -29,6 +34,7 @@ export function filterLibrary(
   text: string
 ): LibraryItem[] {
   const q = text.trim().toLowerCase();
+
   return items.filter(
     (i) =>
       (filter === 'all' || kindOf(i) === filter) &&
@@ -47,8 +53,11 @@ export function countByKind(items: LibraryItem[]): Record<LibFilter, number> {
   };
   for (const i of items) {
     const k = kindOf(i);
-    if (k !== 'spec') c[k] += 1;
+    if (k !== 'spec') {
+      c[k] += 1;
+    }
   }
+
   return c;
 }
 
@@ -131,6 +140,7 @@ export function sampleLibrary(machines: FleetMachine[]): LibraryItem[] {
       })
     ),
   ];
+
   return items;
 }
 
@@ -171,12 +181,19 @@ export function unreadByFilter(
     skill: [],
   };
   for (const m of machines) {
-    if (m.status !== 'ok') continue;
+    if (m.status !== 'ok') {
+      continue;
+    }
     for (const g of ['specs', 'skills', 'contextPacks'] as const) {
-      if (m.counts[g] !== null) continue;
-      for (const f of GROUP_FILTERS[g]) out[f].push(label(m.machine));
+      if (m.counts[g] !== null) {
+        continue;
+      }
+      for (const f of GROUP_FILTERS[g]) {
+        out[f].push(label(m.machine));
+      }
       out.all.push(`${g === 'contextPacks' ? 'context packs' : g} on ${label(m.machine)}`);
     }
   }
+
   return out;
 }

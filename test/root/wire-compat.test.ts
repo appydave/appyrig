@@ -138,8 +138,9 @@ describe('wire contract vs the 37947da base', () => {
     (_n, s, base, extra) => {
       expect(base.filter((k) => !keys(s).includes(k))).toEqual([]); // nothing removed or renamed
       expect(added(s, base).sort()).toEqual([...extra].sort());
-      for (const k of added(s, base))
+      for (const k of added(s, base)) {
         expect((s.shape[k] as z.ZodType).safeParse(undefined).success, k).toBe(true);
+      }
     }
   );
 

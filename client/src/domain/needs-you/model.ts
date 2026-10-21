@@ -70,6 +70,7 @@ type Draft = Omit<NeedItem, 'machineId' | 'machineLabel' | 'waitedMs' | 'stale' 
 
 function item(fm: FleetMachine, now: number, p: Draft): NeedItem {
   const waitedMs = Math.max(0, now - p.since);
+
   return {
     real: true,
     ...p,
@@ -84,6 +85,7 @@ function item(fm: FleetMachine, now: number, p: Draft): NeedItem {
 /** Open queue items addressed to David (`human@…`); OpenRig's own stuck-sweep notices are left out. */
 export function actionItems(fm: FleetMachine, now: number): NeedItem[] {
   const seats = new Set(fm.snapshot.seats.map((s) => s.id));
+
   return fm.snapshot.queue
     .filter((q) => isOpen(q) && bare(q.destination) === 'human' && !isSweep(q))
     .map((q) =>
@@ -101,11 +103,15 @@ export function actionItems(fm: FleetMachine, now: number): NeedItem[] {
 
 /** Seats stopped on a prompt, on machines that are reporting now. */
 export function blockedItems(fm: FleetMachine, now: number): NeedItem[] {
-  if (fm.liveness === 'asleep') return [];
+  if (fm.liveness === 'asleep') {
+    return [];
+  }
+
   return fm.snapshot.seats
     .filter((s) => s.status === 'blocked')
     .map((s) => {
       const at = agentActivityOf(s) ?? s.lastActivityAt;
+
       return item(fm, now, {
         id: `${fm.machine.id}:b:${s.id}`,
         kind: 'blocked',
@@ -128,10 +134,14 @@ export function gateItems(
 ): NeedItem[] {
   // Gates named by the same handoff are one card (one ask, several gate ids).
   const byItem = new Map<string, RigGate[]>();
-  for (const g of gates) byItem.set(g.itemId, [...(byItem.get(g.itemId) ?? []), g]);
+  for (const g of gates) {
+    byItem.set(g.itemId, [...(byItem.get(g.itemId) ?? []), g]);
+  }
+
   return [...byItem.entries()].map(([itemId, group]) => {
     const g = group[0]!;
     const ids = group.map((x) => x.gate);
+
     return item(fm, now, {
       id: `${fm.machine.id}:g:${rig}:${itemId}`,
       kind: 'gate',
@@ -152,9 +162,14 @@ export function gateItems(
 /** OpenRig's own stuck-sweep notices addressed to David that the list leaves out (counted, not shown). */
 export function sweepCount(machines: FleetMachine[]): number {
   let n = 0;
-  for (const fm of machines)
-    for (const q of fm.snapshot.queue)
-      if (isOpen(q) && bare(q.destination) === 'human' && isSweep(q)) n += 1;
+  for (const fm of machines) {
+    for (const q of fm.snapshot.queue) {
+      if (isOpen(q) && bare(q.destination) === 'human' && isSweep(q)) {
+        n += 1;
+      }
+    }
+  }
+
   return n;
 }
 
@@ -167,9 +182,12 @@ export function buildNeeds(machines: FleetMachine[], gates: GatesByRig, now: num
     out.push(...actionItems(fm, now), ...blockedItems(fm, now));
     for (const r of fm.snapshot.rigs) {
       const g = gates[`${fm.machine.id}:${r.name}`];
-      if (g?.length) out.push(...gateItems(fm, r.name, g, now));
+      if (g?.length) {
+        out.push(...gateItems(fm, r.name, g, now));
+      }
     }
   }
+
   return sortNeeds(out);
 }
 
@@ -182,25 +200,40 @@ export function sortNeeds(items: NeedItem[]): NeedItem[] {
 }
 
 export function matches(i: NeedItem, f: NeedFilter): boolean {
-  if (f === 'all') return true;
-  if (f === 'action') return i.kind === 'action' || i.kind === 'gate';
+  if (f === 'all') {
+    return true;
+  }
+  if (f === 'action') {
+    return i.kind === 'action' || i.kind === 'gate';
+  }
+
   return i.kind === f;
 }
 
 export function countsByFilter(real: NeedItem[]): Record<NeedFilter, number> {
   const c = {} as Record<NeedFilter, number>;
-  for (const f of FILTERS) c[f.key] = real.filter((i) => matches(i, f.key)).length;
+  for (const f of FILTERS) {
+    c[f.key] = real.filter((i) => matches(i, f.key)).length;
+  }
+
   return c;
 }
 
 /** "3d 4h", "2h 10m", "5m": how long, in the two largest units. */
 export function waited(ms: number): string {
   const m = Math.floor(ms / 60_000);
-  if (m < 1) return 'just now';
+  if (m < 1) {
+    return 'just now';
+  }
   const d = Math.floor(m / 1440);
   const h = Math.floor((m % 1440) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m % 60}m`;
+  if (d > 0) {
+    return `${d}d ${h}h`;
+  }
+  if (h > 0) {
+    return `${h}h ${m % 60}m`;
+  }
+
   return `${m}m`;
 }
 
@@ -215,6 +248,7 @@ export function sampleNeeds(machines: FleetMachine[], now: number): NeedItem[] {
   const mk = (n: number, kind: NeedKind, summary: string, hours: number): NeedItem => {
     const s = seats[n % seats.length]!;
     const fm = machines.find((m) => m.machine.label === s.machine);
+
     return {
       id: `sample:${kind}:${n}:${hours}`,
       kind,
@@ -230,6 +264,7 @@ export function sampleNeeds(machines: FleetMachine[], now: number): NeedItem[] {
       stale: false,
     };
   };
+
   return sortNeeds([
     mk(0, 'approval', 'Wants your go to merge its branch into main (4 files, tests green)', 5),
     mk(1, 'approval', 'Asks to read a file outside its working folder', 1.5),

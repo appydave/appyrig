@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 const hasRig = (() => {
   try {
     execFileSync('/bin/sh', ['-c', 'command -v rig'], { stdio: 'ignore' });
+
     return true;
   } catch {
     return false;
@@ -17,6 +18,7 @@ const hasRig = (() => {
 const hasPlutil = (() => {
   try {
     execFileSync('/bin/sh', ['-c', 'command -v plutil'], { stdio: 'ignore' });
+
     return true;
   } catch {
     return false;
@@ -47,6 +49,7 @@ function install(extra: string[] = []) {
     ],
     { encoding: 'utf8' }
   );
+
   return { dir, token, out };
 }
 
@@ -54,8 +57,11 @@ describe('launchd install script', () => {
   it('writes a valid plist with absolute paths, a PATH, RunAtLoad and KeepAlive', () => {
     const { dir, token } = install(['--label', 'com.appydave.appyrig.collector.unittest']);
     const plist = join(dir, 'com.appydave.appyrig.collector.unittest.plist');
-    if (hasPlutil) execFileSync('plutil', ['-lint', plist]);
-    else expect(readFileSync(plist, 'utf8')).toMatch(/^<\?xml[^>]*\?>\s*<!DOCTYPE plist/);
+    if (hasPlutil) {
+      execFileSync('plutil', ['-lint', plist]);
+    } else {
+      expect(readFileSync(plist, 'utf8')).toMatch(/^<\?xml[^>]*\?>\s*<!DOCTYPE plist/);
+    }
     const xml = readFileSync(plist, 'utf8');
     expect(xml).toContain('<key>RunAtLoad</key><true/>');
     // launchd sets no locale; tmux mangles control characters without a UTF-8 one

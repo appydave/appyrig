@@ -360,7 +360,9 @@ describe('F3 (truth #6): agent activity comes from the transcript, not the termi
     const snap = await build(() => new Map([['advisor-lead@kernel', DAY_AGO]]));
     expect(seat(snap, 'advisor-lead@kernel').agentActivityAt).toBe(new Date(DAY_AGO).toISOString());
     for (const s of snap.seats) {
-      if (s.id === 'advisor-lead@kernel') continue;
+      if (s.id === 'advisor-lead@kernel') {
+        continue;
+      }
       expect(s.agentActivityAt).toBe(s.rig === null ? undefined : null);
     }
   });

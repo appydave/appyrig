@@ -22,10 +22,19 @@ export function podOf(pod: OpenRig.PodSpec): RigPod {
     label: pod.label,
     members: pod.members.map((m) => m.id).slice(0, POD_MEMBERS_MAX),
   };
-  if (summary) out.summary = redactString(summary).slice(0, RIG_SUMMARY_MAX);
-  if (pod.continuity_policy) out.continuity_policy = pod.continuity_policy;
-  if (pod.startup) out.startup = redactDeep(pod.startup);
-  if (pod.edges) out.edges = pod.edges.slice(0, RIG_EDGES_MAX);
+  if (summary) {
+    out.summary = redactString(summary).slice(0, RIG_SUMMARY_MAX);
+  }
+  if (pod.continuity_policy) {
+    out.continuity_policy = pod.continuity_policy;
+  }
+  if (pod.startup) {
+    out.startup = redactDeep(pod.startup);
+  }
+  if (pod.edges) {
+    out.edges = pod.edges.slice(0, RIG_EDGES_MAX);
+  }
+
   return out;
 }
 
@@ -33,14 +42,33 @@ export function podOf(pod: OpenRig.PodSpec): RigPod {
 export function rigSpecOf(spec: OpenRig.RigSpec): RigSpecView {
   const { version, culture_file, non_interruptive, permission_policy, managed_blocks } = spec;
   const out: RigSpecView = { version };
-  if (culture_file !== undefined) out.culture_file = culture_file;
-  if (non_interruptive !== undefined) out.non_interruptive = non_interruptive;
-  if (permission_policy !== undefined) out.permission_policy = permission_policy;
-  if (managed_blocks !== undefined) out.managed_blocks = managed_blocks;
-  if (spec.docs) out.docs = spec.docs;
-  if (spec.startup) out.startup = redactDeep(spec.startup);
-  if (spec.services) out.services = redactDeep(spec.services);
-  if (spec.workspace) out.workspace = spec.workspace;
-  if (spec.env) out.envNames = Object.keys(spec.env).slice(0, RIG_ENV_NAMES_MAX);
+  if (culture_file !== undefined) {
+    out.culture_file = culture_file;
+  }
+  if (non_interruptive !== undefined) {
+    out.non_interruptive = non_interruptive;
+  }
+  if (permission_policy !== undefined) {
+    out.permission_policy = permission_policy;
+  }
+  if (managed_blocks !== undefined) {
+    out.managed_blocks = managed_blocks;
+  }
+  if (spec.docs) {
+    out.docs = spec.docs;
+  }
+  if (spec.startup) {
+    out.startup = redactDeep(spec.startup);
+  }
+  if (spec.services) {
+    out.services = redactDeep(spec.services);
+  }
+  if (spec.workspace) {
+    out.workspace = spec.workspace;
+  }
+  if (spec.env) {
+    out.envNames = Object.keys(spec.env).slice(0, RIG_ENV_NAMES_MAX);
+  }
+
   return out;
 }

@@ -40,7 +40,10 @@ describe('graceful shutdown', () => {
         .spyOn(httpServer, 'close')
         .mockImplementation((cb?: (err?: Error) => void) => {
           // Invoke the real close so handles are released, but call cb immediately
-          if (cb) cb();
+          if (cb) {
+            cb();
+          }
+
           return originalClose();
         });
 
@@ -64,7 +67,10 @@ describe('graceful shutdown', () => {
       const closeSpy = vi
         .spyOn(httpServer, 'close')
         .mockImplementation((cb?: (err?: Error) => void) => {
-          if (cb) cb();
+          if (cb) {
+            cb();
+          }
+
           return originalClose();
         });
 
@@ -88,7 +94,10 @@ describe('graceful shutdown', () => {
       const closeSpy = vi
         .spyOn(httpServer, 'close')
         .mockImplementation((cb?: (err?: Error) => void) => {
-          if (cb) cb();
+          if (cb) {
+            cb();
+          }
+
           return originalClose();
         });
 

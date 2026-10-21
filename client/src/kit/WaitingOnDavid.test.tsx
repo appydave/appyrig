@@ -40,6 +40,7 @@ function socket(value: Partial<RigWaitingOutput>) {
       ...value,
     },
   };
+
   return {
     emit: vi.fn(),
     timeout: () => ({
@@ -126,8 +127,9 @@ describe('Run card R2 · waiting on David', () => {
     expect(attachLine('dev-qa@appyrig-v15-loadout', null)).toBe(
       "tmux attach -t 'dev-qa@appyrig-v15-loadout'"
     );
-    for (const bad of ["a'b@c", 'x$(rm)@r', 'x`id`@r', 'x"y@r', 'x\\y@r', 'a b@r'])
+    for (const bad of ["a'b@c", 'x$(rm)@r', 'x`id`@r', 'x"y@r', 'x\\y@r', 'a b@r']) {
       expect(attachLine(bad, 'u@1.2.3.4')).toBeNull();
+    }
   });
 
   it('when the hub does not answer, the hint says so instead of blaming the config (r1 R2 LOW-4)', async () => {

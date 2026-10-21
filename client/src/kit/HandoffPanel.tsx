@@ -90,21 +90,28 @@ export default function HandoffPanel({
   // the message move together because both follow selection.itemId.
   const items = selection?.items;
   useEffect(() => {
-    if (!keys || !items?.length || !itemId) return;
+    if (!keys || !items?.length || !itemId) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || isShortcutBlocked(e)) return;
+      if (e.defaultPrevented || isShortcutBlocked(e)) {
+        return;
+      }
       const k = e.key.toLowerCase();
       if (k === 'j' || k === 'k') {
         e.preventDefault();
         const i = items.findIndex((q) => q.id === itemId);
         const next = items[Math.max(0, Math.min(items.length - 1, i + (k === 'j' ? -1 : 1)))];
-        if (next && next.id !== itemId) onPick(next.id);
+        if (next && next.id !== itemId) {
+          onPick(next.id);
+        }
       } else if ((e.key === ']' || e.key === '[') && onLine) {
         e.preventDefault();
         onLine(e.key === ']' ? 1 : -1);
       }
     };
     window.addEventListener('keydown', onKey);
+
     return () => window.removeEventListener('keydown', onKey);
   }, [keys, items, itemId, onPick, onLine]);
 
@@ -114,10 +121,13 @@ export default function HandoffPanel({
   }, [itemId]);
 
   useEffect(() => {
-    if (!itemId) return;
+    if (!itemId) {
+      return;
+    }
     const cached = cache.get(itemId);
     if (cached && cached.bodyStatus === 'present') {
       setGot({ state: 'ok', value: cached });
+
       return;
     }
     if (!socket) {
@@ -125,19 +135,27 @@ export default function HandoffPanel({
         state: 'refused',
         error: { failureMode: 'unavailable', message: 'No hub connection to read the message.' },
       });
+
       return;
     }
     let current = true;
     setGot({ state: 'loading' });
     void callVerb<HandoffGetOutput>(socket, 'handoff.get', { machine: machineId, id: itemId }).then(
       (a) => {
-        if (!current) return;
+        if (!current) {
+          return;
+        }
         if (a.ok) {
-          if (a.value.bodyStatus === 'present') cache.set(itemId, a.value);
+          if (a.value.bodyStatus === 'present') {
+            cache.set(itemId, a.value);
+          }
           setGot({ state: 'ok', value: a.value });
-        } else setGot({ state: 'refused', error: a.error });
+        } else {
+          setGot({ state: 'refused', error: a.error });
+        }
       }
     );
+
     return () => {
       current = false;
     };
@@ -252,6 +270,7 @@ export default function HandoffPanel({
 
   const item = selection.items.find((q) => q.id === selection.itemId) ?? null;
   const v = got.state === 'ok' ? got.value : null;
+
   return (
     <aside
       className="handoff-panel"
@@ -374,6 +393,9 @@ export default function HandoffPanel({
 }
 
 function bodyStatus(got: Got): string {
-  if (got.state !== 'ok') return got.state;
+  if (got.state !== 'ok') {
+    return got.state;
+  }
+
   return got.value.bodyStatus;
 }

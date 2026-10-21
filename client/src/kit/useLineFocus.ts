@@ -25,5 +25,6 @@ export function useLineFocus() {
     []
   );
   const stateOf = useCallback((a: string, b: string) => lineFocusState(focus, a, b), [focus]);
+
   return useMemo(() => ({ focus, setFocus, focusProps, stateOf }), [focus, focusProps, stateOf]);
 }

@@ -29,11 +29,18 @@ export function createRequestLogger(log: Logger) {
     genReqId: () => crypto.randomUUID(),
     customLogLevel: (req, res) => {
       const status = res.statusCode;
-      if (status >= 500) return 'error';
-      if (status >= 400) return 'warn';
+      if (status >= 500) {
+        return 'error';
+      }
+      if (status >= 400) {
+        return 'warn';
+      }
       // A poller hitting these every second filled the production log (P6): routine successes
       // drop to debug, which production does not print. Failures above still show.
-      if (QUIET_PATHS.has((req.url ?? '').split('?')[0]!)) return 'debug';
+      if (QUIET_PATHS.has((req.url ?? '').split('?')[0]!)) {
+        return 'debug';
+      }
+
       return 'info';
     },
     customSuccessMessage: (req, res) => `${req.method} ${maskUrl(req.url)} ${res.statusCode}`,
@@ -41,6 +48,7 @@ export function createRequestLogger(log: Logger) {
       req: (req: IncomingMessage & { id?: unknown; raw?: IncomingMessage }) => {
         // pino-http hands serializers its own wrapped request; the original is on .raw.
         const raw = req.raw ?? req;
+
         return {
           id: req.id,
           method: raw.method,

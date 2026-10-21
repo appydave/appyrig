@@ -26,10 +26,15 @@ interface Props {
 
 /** The newest handoff in words: "dev-build → dev-qa · Refresh before GO · 5m ago". */
 export function lastWords(rig: GraphRig, now: number): string {
-  if (!rig.ref) return 'Sessions on this machine that belong to no rig';
+  if (!rig.ref) {
+    return 'Sessions on this machine that belong to no rig';
+  }
   const l = rig.last;
-  if (!l) return 'No handoffs yet';
+  if (!l) {
+    return 'No handoffs yet';
+  }
   const age = ago(Math.max(0, now - Date.parse(l.at)));
+
   return `${l.from} → ${l.to}${l.summary ? ` · ${l.summary}` : ''} · ${age} ago`;
 }
 
@@ -55,6 +60,7 @@ function RigBox({
   const running = rig.ref?.status === 'running';
   // A click opens or closes the box in place (and chooses the rig, in the page's handler).
   const open = () => onToggle(rig.key, expanded);
+
   return (
     <article
       className="g2-box"
@@ -74,7 +80,9 @@ function RigBox({
       onBlur={() => onTrace(null)}
       onClick={(e) => {
         // the whole box opens the rig; its own buttons do their own thing
-        if (!(e.target as HTMLElement).closest('button, a, [role="group"]')) open();
+        if (!(e.target as HTMLElement).closest('button, a, [role="group"]')) {
+          open();
+        }
       }}
     >
       <header className="g2-box-head" data-testid="g2-rig-head">
@@ -198,12 +206,18 @@ function RigMenu({
   // mid-click swallowed the click in a real browser.
   const close = () => setOpen(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const away = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrap.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     const esc = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape') {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       setOpen(false);
@@ -211,11 +225,13 @@ function RigMenu({
     };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc, true);
+
     return () => {
       document.removeEventListener('pointerdown', away);
       document.removeEventListener('keydown', esc, true);
     };
   }, [open]);
+
   return (
     <span className="g2-menu-wrap" ref={wrap} data-open={open || undefined}>
       <button

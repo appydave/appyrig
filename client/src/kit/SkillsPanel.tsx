@@ -18,6 +18,7 @@ export default function SkillsPanel({
   const [q, setQ] = useState('');
   const groups = useMemo(() => groupSkills(skills, q), [skills, q]);
   const shown = groups.reduce((n, g) => n + g.skills.length, 0);
+
   return (
     <div className="skills-panel" data-testid="skills-panel">
       <div className="skills-top">

@@ -242,7 +242,9 @@ function rigWaiting(
     const announces =
       inRig(q.source) && !inRig(q.destination) && (q.destination ?? '').split('@')[0] !== 'human';
     const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
-    if (body === null) bodiesMissing += 1;
+    if (body === null) {
+      bodiesMissing += 1;
+    }
     const text = `${q.summary ?? ''}\n${body ?? ''}`;
     for (const url of text.match(/https?:\/\/[^\s"'<>)\]]*gate=g_[0-9a-f]{10}[^\s"'<>)\]]*/g) ??
       []) {
@@ -260,16 +262,20 @@ function rigWaiting(
         .replace(/\s+/g, ' ')
         .trim();
       const h = here.get(hit[0]) ?? { open: false, shut: false, context: near };
-      if (SAYS_OPEN.test(near) && !h.open) Object.assign(h, { open: true, context: near });
+      if (SAYS_OPEN.test(near) && !h.open) {
+        Object.assign(h, { open: true, context: near });
+      }
       // r1 R2 LOW-1: a closing word must sit close to the id ("g_… approved", "gate g_… leave
       // it"), so "gate g_… OPEN: rule check PASSED" still reads open.
       const close = text.slice(Math.max(0, at - 30), at + 42).replace(/\s+/g, ' ');
-      if (SAYS_SHUT.test(close)) h.shut = true;
+      if (SAYS_SHUT.test(close)) {
+        h.shut = true;
+      }
       here.set(hit[0], h);
     }
     // A mention that says neither (a list of ids, a link alone) leaves the gate as it was.
-    for (const [gate, h] of here)
-      if ((h.open && announces) || h.shut)
+    for (const [gate, h] of here) {
+      if ((h.open && announces) || h.shut) {
         newest.set(gate, {
           open: h.open && announces && !h.shut,
           gate: {
@@ -282,6 +288,8 @@ function rigWaiting(
             link: null,
           },
         });
+      }
+    }
   }
   const pick = (urls: string[] = []) =>
     urls.find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? urls[0] ?? null;
@@ -290,6 +298,7 @@ function rigWaiting(
     .map((g) => ({ ...g.gate, link: pick(links.get(g.gate.gate)) }))
     .sort((a, b) => b.at.localeCompare(a.at));
   const ssh = config.machines?.[m.machine.id]?.ssh ?? null;
+
   return {
     machine: m.machine.id,
     rig,
@@ -305,6 +314,7 @@ function rigItems(m: FleetMachine, rig: string) {
   const seatRig = new Map(m.snapshot.seats.map((s) => [s.id, s.rig]));
   const inRig = (raw: string | null) =>
     !!raw && raw.split('@')[0] !== 'human' && (seatRig.get(raw) ?? raw.split('@')[1]) === rig;
+
   return m.snapshot.queue
     .filter((q) => inRig(q.source) || inRig(q.destination))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -329,7 +339,9 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
   let bodiesMissing = 0;
   for (const q of items) {
     const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
-    if (body === null) bodiesMissing += 1;
+    if (body === null) {
+      bodiesMissing += 1;
+    }
     const text = `${q.summary ?? ''}\n${body ?? ''}`;
     const near = (at: number) =>
       text
@@ -338,7 +350,9 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
         .trim();
     const seen = new Set<string>();
     const note = (map: Map<string, Named>, key: string, at: number) => {
-      if (seen.has(key)) return;
+      if (seen.has(key)) {
+        return;
+      }
       seen.add(key);
       const prev = map.get(key);
       map.set(key, {
@@ -353,7 +367,9 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
     };
     for (const hit of text.matchAll(SHA)) {
       const sha = hit[1]!;
-      if (/\d/.test(sha) && /[a-f]/.test(sha)) note(commits, sha, hit.index ?? 0);
+      if (/\d/.test(sha) && /[a-f]/.test(sha)) {
+        note(commits, sha, hit.index ?? 0);
+      }
     }
     for (const hit of text.matchAll(FLI_ID)) {
       const id = hit[1]!;
@@ -363,13 +379,17 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
       );
       const f = fli.get(id)!;
       const pick = (url ?? []).find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? url?.[0];
-      if (pick) f.link = pick.replace(/\\n.*$/, '');
-      else f.link ??= null;
+      if (pick) {
+        f.link = pick.replace(/\\n.*$/, '');
+      } else {
+        f.link ??= null;
+      }
     }
   }
   // Newest first; in one handoff, the most-named first.
   const newest = <T extends { at: string; mentions: number }>(xs: T[]) =>
     xs.sort((a, b) => b.at.localeCompare(a.at) || b.mentions - a.mentions);
+
   return {
     machine: m.machine.id,
     rig,
@@ -388,7 +408,9 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
 }
 
 function machinesOf(ctx: VerbContext, id?: string): FleetMachine[] {
-  if (id === undefined) return ctx.store.list();
+  if (id === undefined) {
+    return ctx.store.list();
+  }
   const found = ctx.store.get(id);
   if (!found) {
     throw new CapabilityRefusal('machine-not-found', `No machine "${id}" has reported.`, {
@@ -396,6 +418,7 @@ function machinesOf(ctx: VerbContext, id?: string): FleetMachine[] {
       known: ctx.store.list().map((m) => m.machine.id),
     });
   }
+
   return [found];
 }
 
@@ -409,6 +432,7 @@ function seatOf(ctx: VerbContext, machine: string, seat: string) {
       known: m!.snapshot.seats.map((s) => s.id),
     });
   }
+
   return { m: m!, seat: found };
 }
 
@@ -447,6 +471,7 @@ function dataOf<K extends DaemonKind>(ctx: VerbContext, machine: string, kind: K
           collectedAt: p.collectedAt,
         }
       : { machine, status: 'ok', reason: null, collectedAt: p.collectedAt };
+
   return { header, data: (p?.status === 'ok' ? p.data : null) as DaemonDataFor<K> | null };
 }
 
@@ -458,15 +483,21 @@ export function assess(data: DaemonDataFor<'health'> | null): {
   assessment: 'findings' | 'none-found' | 'unknown';
   caveats: string[];
 } {
-  if (!data) return { assessment: 'unknown', caveats: [] };
-  if (data.findings === null)
+  if (!data) {
+    return { assessment: 'unknown', caveats: [] };
+  }
+  if (data.findings === null) {
     return {
       assessment: 'unknown',
       caveats: [
         "the daemon's findings list could not be read, so nothing can be said about health",
       ],
     };
-  if (data.findings.length > 0) return { assessment: 'findings', caveats: [] };
+  }
+  if (data.findings.length > 0) {
+    return { assessment: 'findings', caveats: [] };
+  }
+
   // One list of reasons, shared with the v2 Health page (shared/src/daemondata.ts).
   return { assessment: 'none-found', caveats: healthCaveats(data) };
 }
@@ -481,6 +512,7 @@ const compareRows = (a: RowKey, b: RowKey): number =>
   b.id.localeCompare(a.id);
 const encodeCursor = (r: RowKey): string =>
   Buffer.from(JSON.stringify([r.at, r.machine, r.id])).toString('base64url');
+
 function decodeCursor(c: string): RowKey {
   try {
     const v = JSON.parse(Buffer.from(c, 'base64url').toString('utf8')) as unknown;
@@ -488,8 +520,9 @@ function decodeCursor(c: string): RowKey {
       Array.isArray(v) &&
       v.length === 3 &&
       v.every((x) => typeof x === 'string' && x.length > 0 && x.length < 100)
-    )
+    ) {
       return { at: v[0] as string, machine: v[1] as string, id: v[2] as string };
+    }
   } catch {
     // falls through to the refusal
   }
@@ -513,6 +546,7 @@ function libraryRows(data: DaemonDataFor<'library'>): { row: LibraryRow; group: 
 const toItem = (machine: string, group: LibraryGroup, row: LibraryRow): LibraryItem => {
   const item: Partial<LibraryRow> = { ...row };
   delete item.files;
+
   return { ...(item as Omit<LibraryRow, 'files'>), machine, group };
 };
 
@@ -537,7 +571,10 @@ const VERB_SET = {
         const seatsByStatus = Object.fromEntries(
           SeatStatusSchema.options.map((s) => [s, 0])
         ) as Record<SeatStatus, number>;
-        for (const seat of m.snapshot.seats) seatsByStatus[seat.status] += 1;
+        for (const seat of m.snapshot.seats) {
+          seatsByStatus[seat.status] += 1;
+        }
+
         return {
           machine: m.machine,
           liveness: m.liveness,
@@ -573,6 +610,7 @@ const VERB_SET = {
     (input, ctx) => {
       const { m, seat } = seatOf(ctx, input.machine, input.seat);
       const n = input.lines ?? 50;
+
       return {
         ...place(m),
         seat: seat.id,
@@ -592,6 +630,7 @@ const VERB_SET = {
     (input, ctx) => {
       machinesOf(ctx, input.machine);
       const h = ctx.store.getHistory(input.machine, input.seat);
+
       return {
         machine: input.machine,
         seat: input.seat,
@@ -613,7 +652,7 @@ const VERB_SET = {
       const p = ctx.store.dbRows.get(input.machine, input.table);
       const offset = input.offset ?? 0;
       const limit = input.limit ?? 50;
-      if (!p)
+      if (!p) {
         return {
           machine: input.machine,
           table: input.table,
@@ -630,6 +669,8 @@ const VERB_SET = {
           offset,
           rows: [],
         };
+      }
+
       return {
         machine: input.machine,
         table: input.table,
@@ -663,20 +704,24 @@ const VERB_SET = {
         reason,
         loadout,
       });
-      if (seat.runtime !== 'claude-code')
+      if (seat.runtime !== 'claude-code') {
         return out(
           'not-claude',
           seat.runtime === 'codex'
             ? 'not read for Codex yet.'
             : `not read for ${seat.runtime ?? 'unknown-runtime'} seats yet.`
         );
-      if (!loadout)
+      }
+      if (!loadout) {
         return out(
           'pending',
           "no loadout from this machine's collector for this seat yet: it predates v1.5, or has not sent one (it rescans every 30 s)"
         );
-      if (loadout.status === 'no-listing')
+      }
+      if (loadout.status === 'no-listing') {
         return out('no-listing', 'no transcript with a skill listing was found for this seat');
+      }
+
       return out(loadout.status, null);
     }
   ),
@@ -700,16 +745,23 @@ const VERB_SET = {
         collectedAt: p?.collectedAt ?? null,
         detail: p?.data ?? null,
       });
-      if (seat.source !== 'openrig')
+      if (seat.source !== 'openrig') {
         return out('not-openrig', 'a plain terminal seat has no OpenRig node record');
+      }
       const p = ctx.store.daemonData.get(input.machine, 'seatdetail', input.seat);
-      if (!p)
+      if (!p) {
         return out(
           'pending',
           "no seat detail from this machine's collector for this seat yet: it predates v2, has not sent one (it re-reads every minute), or the daemon read failed"
         );
-      if (p.status === 'unsupported') return out('unsupported', p.reason);
-      if (p.status === 'not-found') return out('seat-not-found', p.reason);
+      }
+      if (p.status === 'unsupported') {
+        return out('unsupported', p.reason);
+      }
+      if (p.status === 'not-found') {
+        return out('seat-not-found', p.reason);
+      }
+
       return out('ok', null, { collectedAt: p.collectedAt, data: p.data });
     }
   ),
@@ -734,9 +786,11 @@ const VERB_SET = {
             contextPacks: count('contextPacks'),
           },
         });
-        if (data)
-          for (const { row, group } of libraryRows(data))
+        if (data) {
+          for (const { row, group } of libraryRows(data)) {
             all.push(toItem(m.machine.id, group, row));
+          }
+        }
       }
       const text = input.text?.toLowerCase();
       const items = all
@@ -757,6 +811,7 @@ const VERB_SET = {
             a.id.localeCompare(b.id)
         );
       const limit = input.limit ?? 200;
+
       return {
         machines,
         items: items.slice(0, limit),
@@ -777,12 +832,14 @@ const VERB_SET = {
       const hit = data
         ? libraryRows(data).find((r) => r.group === input.group && r.row.id === input.id)
         : undefined;
-      if (!hit)
+      if (!hit) {
         throw new CapabilityRefusal(
           'library-item-not-found',
           `Machine "${input.machine}" has no ${input.group} "${input.id}" in its library (${header.status}).`,
           { machine: input.machine, group: input.group, id: input.id, status: header.status }
         );
+      }
+
       return {
         item: toItem(input.machine, hit.group, hit.row),
         files: hit.row.files,
@@ -825,17 +882,24 @@ const VERB_SET = {
             destination: q?.destination ?? null,
             summary: q?.summary?.slice(0, 200) ?? null,
           };
-          if (input.qitemId !== undefined && r.qitemId !== input.qitemId) continue;
-          if (input.state !== undefined && r.state !== input.state) continue;
-          if (input.closureReason !== undefined && r.closureReason !== input.closureReason)
+          if (input.qitemId !== undefined && r.qitemId !== input.qitemId) {
             continue;
+          }
+          if (input.state !== undefined && r.state !== input.state) {
+            continue;
+          }
+          if (input.closureReason !== undefined && r.closureReason !== input.closureReason) {
+            continue;
+          }
           if (
             input.seat !== undefined &&
             ![row.actor, row.source, row.destination].includes(input.seat)
-          )
+          ) {
             continue;
-          if (input.rig !== undefined && ![row.actor, row.source, row.destination].some(inRig))
+          }
+          if (input.rig !== undefined && ![row.actor, row.source, row.destination].some(inRig)) {
             continue;
+          }
           if (
             text !== undefined &&
             ![
@@ -847,8 +911,9 @@ const VERB_SET = {
               row.summary,
               ...(q?.tags ?? []),
             ].some((v) => (v ?? '').toLowerCase().includes(text))
-          )
+          ) {
             continue;
+          }
           all.push(row);
         }
       }
@@ -860,9 +925,12 @@ const VERB_SET = {
         const key = decodeCursor(input.before);
         // keyset: the first row strictly after the cursor's row in this order
         from = all.findIndex((r) => compareRows(r, key) > 0);
-        if (from === -1) from = all.length;
+        if (from === -1) {
+          from = all.length;
+        }
       }
       const page = all.slice(from, from + limit);
+
       return {
         machines,
         rows: page,
@@ -886,10 +954,14 @@ const VERB_SET = {
           specsRead: data?.specs != null,
           instancesRead: data?.instances != null,
         });
-        for (const s of data?.specs ?? []) out.specs.push({ ...s, machine: m.machine.id });
-        for (const i of data?.instances ?? [])
-          if (input.status === undefined || i.status === input.status)
+        for (const s of data?.specs ?? []) {
+          out.specs.push({ ...s, machine: m.machine.id });
+        }
+        for (const i of data?.instances ?? []) {
+          if (input.status === undefined || i.status === input.status) {
             out.instances.push({ ...i, machine: m.machine.id });
+          }
+        }
       }
       out.specs.sort((a, b) => a.machine.localeCompare(b.machine) || a.name.localeCompare(b.name));
       out.instances.sort(
@@ -897,6 +969,7 @@ const VERB_SET = {
           (b.createdAt ?? '').localeCompare(a.createdAt ?? '') ||
           a.instanceId.localeCompare(b.instanceId)
       );
+
       return out;
     }
   ),
@@ -909,6 +982,7 @@ const VERB_SET = {
     (input, ctx): HealthFindingsOutput => ({
       machines: machinesOf(ctx, input.machine).map((m) => {
         const { header, data } = dataOf(ctx, m.machine.id, 'health', 'health findings');
+
         return { ...header, ...assess(data), data };
       }),
     })
@@ -933,6 +1007,7 @@ const VERB_SET = {
           .map(([key, s]) => ({ key, ...s, changed: s.source !== null && s.source !== 'default' }))
           .filter((s) => !input.changedOnly || s.changed)
           .sort((a, b) => a.key.localeCompare(b.key));
+
         return {
           ...header,
           withheld: data?.withheld ?? 0,
@@ -990,6 +1065,7 @@ const VERB_SET = {
     (input, ctx): HealthRow[] =>
       machinesOf(ctx, input.machine).map((m) => {
         const health = m.snapshot.health ?? null;
+
         return {
           machine: m.machine.id,
           liveness: m.liveness,
@@ -1026,6 +1102,7 @@ const VERB_SET = {
         );
       }
       const stored = ctx.store.getHandoff(input.machine, input.id);
+
       return {
         machine: input.machine,
         id: q.id,
@@ -1064,6 +1141,7 @@ const VERB_SET = {
       }
       const out = (status: RigFilesOutput['status'], reason: string | null): RigFilesOutput => {
         const specFiles = ctx.store.rigFiles.listSpecNamed(input.machine, input.rig);
+
         return {
           machine: input.machine,
           rig: input.rig,
@@ -1073,13 +1151,16 @@ const VERB_SET = {
           ...(specFiles.length > 0 ? { specFiles } : {}),
         };
       };
-      if (rig.specStatus === undefined)
+      if (rig.specStatus === undefined) {
         return out(
           'no-data',
           "this machine's collector does not report rig specs yet (it predates v1.4)"
         );
-      if (rig.specStatus === 'not-found')
+      }
+      if (rig.specStatus === 'not-found') {
         return out('no-spec', 'no rig.yaml for this rig was found in the configured spec folders');
+      }
+
       return ctx.store.rigFiles.has(input.machine, input.rig)
         ? out('ok', null)
         : out(
@@ -1119,6 +1200,7 @@ const VERB_SET = {
           }
         );
       }
+
       return { machine: input.machine, rig: input.rig, file };
     }
   ),
@@ -1162,6 +1244,7 @@ const VERB_SET = {
         }
       }
       out.specs.sort((a, b) => a.name.localeCompare(b.name) || a.machine.localeCompare(b.machine));
+
       return out;
     }
   ),
@@ -1193,12 +1276,15 @@ const VERB_SET = {
                 fileFound: null,
               }
         );
-        for (const c of p?.entries ?? [])
-          if (input.rig === undefined || commandNamesRig(c, input.rig))
+        for (const c of p?.entries ?? []) {
+          if (input.rig === undefined || commandNamesRig(c, input.rig)) {
             out.commands.push({ ...c, machine: m.machine.id });
+          }
+        }
       }
       out.commands.sort((a, b) => b.ts.localeCompare(a.ts) || a.machine.localeCompare(b.machine));
       out.commands = out.commands.slice(0, input.limit ?? RIG_COMMANDS_MAX);
+
       return out;
     }
   ),
@@ -1221,6 +1307,7 @@ const VERB_SET = {
           }
         );
       }
+
       return ctx.store.missionFiles.get(input.machine, input.rig, input.path);
     }
   ),
@@ -1232,6 +1319,7 @@ const VERB_SET = {
     NOT_FOUND,
     (input, ctx) => {
       machinesOf(ctx, input.machine);
+
       return ctx.store.schemas.get(input.machine, ctx.now());
     }
   ),
@@ -1250,6 +1338,7 @@ const VERB_SET = {
           { machine: input.machine, rig: input.rig }
         );
       }
+
       return rigWaiting(m!, input.rig, ctx.store, ctx.config?.() ?? {});
     }
   ),
@@ -1268,6 +1357,7 @@ const VERB_SET = {
           { machine: input.machine, rig: input.rig }
         );
       }
+
       return rigOutputs(m!, input.rig, ctx.store);
     }
   ),
@@ -1287,6 +1377,7 @@ const VERB_SET = {
         );
       }
       const seats = m!.snapshot.seats.filter((s) => s.rig === input.rig).map((s) => s.id);
+
       return {
         machine: input.machine,
         rig: input.rig,
@@ -1311,6 +1402,7 @@ const VERB_SET = {
               list.push({ id: s.id, logicalId: s.logicalId, runtime: s.runtime, status: s.status });
               pods.set(s.pod, list);
             }
+
             return {
               machine: m.machine.id,
               liveness: m.liveness,
@@ -1341,6 +1433,7 @@ const VERB_SET = {
       // The derived part is already account-level (the same answer on every machine of the account).
       const accounts = [...byEmail.values()].map((ms) => {
         const acct = ms[0]!.snapshot.account!;
+
         return {
           ...acct.derived!,
           email: acct.email!,
@@ -1348,6 +1441,7 @@ const VERB_SET = {
           machines: ms.map((m) => m.machine.id),
         };
       });
+
       return {
         configured: accounts.length > 0,
         accounts: accounts.sort((a, b) => a.email.localeCompare(b.email)),
@@ -1372,6 +1466,7 @@ const VERB_SET = {
     (_input, ctx) => {
       const all = ctx.store.list();
       const live = all.filter((m) => m.liveness === 'live').length;
+
       return {
         app: ctx.identity.title,
         version: ctx.identity.version,
@@ -1390,8 +1485,11 @@ export function defineVerbs<S extends Record<string, Verb<z.ZodType, z.ZodType>>
   const writes = Object.entries(set)
     .filter(([, v]) => !(v.contract.sideEffects === 'read-only' && v.contract.kind === 'query'))
     .map(([name]) => name);
-  if (writes.length > 0) throw new Error(`verbs are read-only queries; not: ${writes.join(', ')}`);
+  if (writes.length > 0) {
+    throw new Error(`verbs are read-only queries; not: ${writes.join(', ')}`);
+  }
   defineCapabilities(Object.fromEntries(Object.entries(set).map(([k, v]) => [k, v.contract])));
+
   return set;
 }
 

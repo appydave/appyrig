@@ -79,11 +79,14 @@ export function groupSettings(machines: SettingsMachine[], changedOnly: boolean)
   }
   const groups = new Map<string, SettingLine[]>();
   for (const l of [...lines.values()].sort((a, b) => a.key.localeCompare(b.key))) {
-    if (changedOnly && !l.changed) continue;
+    if (changedOnly && !l.changed) {
+      continue;
+    }
     const g = groupOf(l.key);
     groups.set(g, [...(groups.get(g) ?? []), l]);
   }
   const rank = (g: string) => (ORDER.includes(g) ? ORDER.indexOf(g) : ORDER.length);
+
   return [...groups.entries()]
     .map(([name, ls]) => ({ name, lines: ls }))
     .sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
@@ -173,6 +176,7 @@ export function sampleSettings(machines: FleetMachine[]): SettingsMachine[] {
       // one machine set by hand differently, so "machines differ" shows
       const value = i === 1 && s.key === 'queue.wake_retry_cap' ? 5 : s.value;
       const source = i === 1 && s.key === 'queue.wake_retry_cap' ? 'file' : s.source;
+
       return { ...s, value, source, changed: source !== 'default' };
     }),
   }));
@@ -195,7 +199,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
   const pick = stopped[0];
   const first = machines[0];
   const rows: ScheduleRow[] = [];
-  if (pick)
+  if (pick) {
     rows.push({
       id: 'wake',
       what: `Wake rig ${pick.r.name}`,
@@ -204,6 +208,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
       lastRun: 'today 07:00',
       result: 'pass',
     });
+  }
   rows.push({
     id: 'release',
     what: 'On a new OpenRig release: run rig doctor and tell David',
@@ -212,7 +217,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
     lastRun: '2 days ago',
     result: 'pass',
   });
-  if (first)
+  if (first) {
     rows.push({
       id: 'restore',
       what: 'Restore check',
@@ -221,6 +226,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
       lastRun: 'last night 02:30',
       result: 'fail',
     });
+  }
   rows.push({
     id: 'retention',
     what: 'Trim transitions older than 30 days',
@@ -229,5 +235,6 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
     lastRun: 'never',
     result: 'never',
   });
+
   return rows;
 }

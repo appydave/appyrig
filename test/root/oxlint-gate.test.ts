@@ -156,7 +156,9 @@ describe('Feature: a disable comment cannot hide a finding', () => {
 
   it('Scenario: given the folders the scan skips, then each is also ignored by oxlint.config.ts', () => {
     const config = readFileSync(join(ROOT, 'oxlint.config.ts'), 'utf8');
-    for (const prefix of NOT_SCANNED) expect(config, prefix).toContain(`'${prefix}**'`);
+    for (const prefix of NOT_SCANNED) {
+      expect(config, prefix).toContain(`'${prefix}**'`);
+    }
   });
 });
 

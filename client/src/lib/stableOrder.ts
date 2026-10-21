@@ -21,6 +21,7 @@ export function nextOrder(
   }
   const kept = prev.filter((k) => present.has(k));
   const known = new Set(kept);
+
   return { order: [...kept, ...sorted.filter((k) => !known.has(k))], resorted: false };
 }
 
@@ -39,8 +40,11 @@ export function useStableOrder<T>(
   // Re-render once the freeze lifts or the interval passes, so a held-back sort lands then.
   const [, setTick] = useState(0);
   useEffect(() => {
-    if (frozen) return;
+    if (frozen) {
+      return;
+    }
     const id = window.setInterval(() => setTick((t) => t + 1), everyMs);
+
     return () => window.clearInterval(id);
   }, [frozen, everyMs]);
 
@@ -61,5 +65,6 @@ export function useStableOrder<T>(
   }
   order.current = next;
   const byKey = new Map(sorted.map((s) => [keyOf(s), s]));
+
   return next.map((k) => byKey.get(k)!).filter(Boolean);
 }

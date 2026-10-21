@@ -53,13 +53,18 @@ export default function AgentPanel(p: AgentPanelProps) {
   // In the narrow peek the page makes room (see docs.css), so its chips and controls stay clickable.
   useEffect(() => {
     const root = document.documentElement;
-    if (wide) root.removeAttribute('data-agent-panel');
-    else root.setAttribute('data-agent-panel', 'peek');
+    if (wide) {
+      root.removeAttribute('data-agent-panel');
+    } else {
+      root.setAttribute('data-agent-panel', 'peek');
+    }
+
     return () => root.removeAttribute('data-agent-panel');
   }, [wide]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', k);
+
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
   const rig = tile?.seat.rig ?? null;
@@ -102,6 +107,7 @@ export default function AgentPanel(p: AgentPanelProps) {
   const chip = modelChip(seat);
   const name = seatName(seat);
   const ssh = waiting.state === 'ok' ? waiting.value.ssh : null;
+
   return (
     <aside
       className="apanel"
@@ -223,13 +229,15 @@ export default function AgentPanel(p: AgentPanelProps) {
 }
 
 function TerminalTab({ tail }: { tail: string[] | null }) {
-  if (!tail)
+  if (!tail) {
     return (
       <p className="quiet" style={{ padding: 16 }}>
         No terminal text for this seat.
       </p>
     );
+  }
   const lines = visibleTail(tail, 60).map(stripAnsi);
+
   return (
     <pre className="apanel-term" tabIndex={0} data-testid="apanel-terminal">
       {lines.join('\n')}
@@ -274,6 +282,7 @@ function MessagesTab({
         ))}
       </ul>
     );
+
   return (
     <div className="apanel-msgs" data-testid="apanel-messages" data-seat={seatId}>
       <h4>In · {inbox.length}</h4>

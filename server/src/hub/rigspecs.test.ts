@@ -14,6 +14,7 @@ afterEach(async () => {
 const start = async () => {
   const h = await startHub();
   running.push(h);
+
   return h;
 };
 

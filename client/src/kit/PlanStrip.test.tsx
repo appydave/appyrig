@@ -24,7 +24,7 @@ const meta = (id: string) => ({
 
 function hub(files: Record<string, string> | 'no-spec') {
   const answer = (r: { verb: string; input?: Record<string, unknown> }) => {
-    if (r.verb === 'rig.files')
+    if (r.verb === 'rig.files') {
       return files === 'no-spec'
         ? {
             ok: true,
@@ -40,18 +40,22 @@ function hub(files: Record<string, string> | 'no-spec') {
               files: Object.keys(files).map(meta),
             },
           };
+    }
     if (r.verb === 'rig.file' && files !== 'no-spec') {
       const id = String(r.input?.fileId);
+
       return {
         ok: true,
         value: { machine: 'm4', rig: 'ylo-d10', file: { ...meta(id), content: files[id] } },
       };
     }
+
     return {
       ok: true,
       value: { machine: 'm4', rig: 'ylo-d10', ssh: null, gates: [], scanned: 0, bodiesMissing: 0 },
     };
   };
+
   return {
     emit: vi.fn(),
     timeout: () => ({

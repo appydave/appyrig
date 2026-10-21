@@ -118,10 +118,14 @@ export default function RigFiles({
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const loadList = useCallback(() => {
-    if (preset) return;
+    if (preset) {
+      return;
+    }
     setList({ state: 'loading' });
     void callVerb<RigFilesOutput>(socket, 'rig.files', { machine: machineId, rig }).then((a) => {
-      if (!a.ok) return setList({ state: 'refused', error: a.error });
+      if (!a.ok) {
+        return setList({ state: 'refused', error: a.error });
+      }
       setList({ state: 'ok', out: a.value });
       setSelected(
         (cur) =>
@@ -139,11 +143,15 @@ export default function RigFiles({
   }, [loadList]);
 
   useEffect(() => {
-    if (!selected) return setFile({ state: 'idle' });
+    if (!selected) {
+      return setFile({ state: 'idle' });
+    }
     const given = preset?.files.find((f) => f.id === selected);
     if (preset) {
-      if (given)
+      if (given) {
         setFile({ state: 'ok', file: { ...given, scope: 'spec' } as RigFileOutput['file'] });
+      }
+
       return;
     }
     let current = true;
@@ -153,13 +161,16 @@ export default function RigFiles({
       rig,
       fileId: selected,
     }).then((a) => {
-      if (!current) return;
+      if (!current) {
+        return;
+      }
       setFile(
         a.ok
           ? { state: 'ok', file: a.value.file }
           : { state: 'refused', id: selected, error: a.error }
       );
     });
+
     return () => {
       current = false;
     };
@@ -177,6 +188,7 @@ export default function RigFiles({
         e.preventDefault();
         e.stopPropagation();
         onClose();
+
         return;
       }
       if (
@@ -196,6 +208,7 @@ export default function RigFiles({
     };
     // capture: the screen's own Esc must not also run
     window.addEventListener('keydown', onKey, true);
+
     return () => window.removeEventListener('keydown', onKey, true);
   }, [files, selected, onClose]);
 

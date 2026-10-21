@@ -78,7 +78,9 @@ describe('blocks', () => {
       expect(ul.items[1]!.children[0]).toMatchObject({ t: 'list', items: [{}, {}] });
     }
     const ol = b[1]!;
-    if (ol.t === 'list') expect(ol.ordered).toBe(true);
+    if (ol.t === 'list') {
+      expect(ol.ordered).toBe(true);
+    }
   });
   it('blockquotes nest blocks', () => {
     expect(parseMarkdown('> a\n> - b\n')[0]).toMatchObject({

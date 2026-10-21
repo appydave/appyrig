@@ -45,11 +45,16 @@ const GLYPH = { normal: '●', warn: '▲', critical: '■' } as const;
 export function pressureOf(fm: FleetMachine, now: number = Date.now()): PressureView {
   const v = verdictOf(fm);
   const h = fm.snapshot.health;
-  if (!h || (v.kind !== 'normal' && v.kind !== 'warn' && v.kind !== 'critical')) return v;
+  if (!h || (v.kind !== 'normal' && v.kind !== 'warn' && v.kind !== 'critical')) {
+    return v;
+  }
   const asleep = fm.liveness === 'asleep';
   const age = healthAge(fm, h, now).ageMs;
-  if (!asleep && age <= HEALTH_STALE_MS) return v;
+  if (!asleep && age <= HEALTH_STALE_MS) {
+    return v;
+  }
   const when = ago(age);
+
   return {
     kind: 'stale',
     glyph: '○',
@@ -64,8 +69,11 @@ export function pressureOf(fm: FleetMachine, now: number = Date.now()): Pressure
 
 const ago = (ms: number) => {
   const s = Math.round(ms / 1000);
-  if (s < 90) return `${s}s`;
+  if (s < 90) {
+    return `${s}s`;
+  }
   const m = Math.round(s / 60);
+
   return m < 90 ? `${m} min` : `${Math.round(m / 60)} h`;
 };
 
@@ -112,6 +120,7 @@ function verdictOf(fm: FleetMachine): PressureView {
     share === null
       ? 'swap use not readable'
       : `swap ${gb(used.status === 'ok' ? used.value : 0)} of ${gb(total.status === 'ok' ? total.value : 0)} used (${Math.round(share * 100)}%)`;
+
   return {
     kind,
     glyph: GLYPH[kind],
@@ -130,6 +139,7 @@ export const healthAge = (fm: FleetMachine, h: MachineHealth, now: number): Samp
 
 export function gb(bytes: number): string {
   const g = bytes / 1024 ** 3;
+
   return g >= 100
     ? `${g.toFixed(0)} GB`
     : g >= 1

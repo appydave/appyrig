@@ -50,13 +50,15 @@ export class SchemaStore {
     // Only a readable schema under a known version becomes history.
     if (push.status === 'ok' && push.openrigVersion) {
       const at = versions.findIndex((v) => v.version === push.openrigVersion);
-      if (at >= 0) versions[at] = { ...versions[at]!, tables: push.tables };
-      else
+      if (at >= 0) {
+        versions[at] = { ...versions[at]!, tables: push.tables };
+      } else {
         versions.push({
           version: push.openrigVersion,
           firstSeenAt: push.collectedAt,
           tables: push.tables,
         });
+      }
     }
     const next: Stored = {
       machineId: push.machineId,
@@ -114,6 +116,7 @@ export class SchemaStore {
     const current = idx >= 0 ? s.versions[idx]! : s.versions[s.versions.length - 1];
     const tables: DbTable[] = current?.tables ?? [];
     const before = idx > 0 ? s.versions[idx - 1]! : null;
+
     return {
       ...base,
       status: 'ok',
@@ -129,7 +132,9 @@ export class SchemaStore {
   }
 
   private persist(s: Stored): void {
-    if (!this.dir) return;
+    if (!this.dir) {
+      return;
+    }
     const dir = this.dir;
     const file = join(dir, `${encodeURIComponent(s.machineId)}.json`);
     const prev = this.writes.get(s.machineId) ?? Promise.resolve();
@@ -145,22 +150,30 @@ export class SchemaStore {
     });
     this.writes.set(s.machineId, run);
     void run.then(() => {
-      if (this.writes.get(s.machineId) === run) this.writes.delete(s.machineId);
+      if (this.writes.get(s.machineId) === run) {
+        this.writes.delete(s.machineId);
+      }
     });
   }
 
   async flush(): Promise<void> {
-    while (this.writes.size > 0) await Promise.all([...this.writes.values()]);
+    while (this.writes.size > 0) {
+      await Promise.all([...this.writes.values()]);
+    }
   }
 
   async load(): Promise<number> {
-    if (!this.dir) return 0;
+    if (!this.dir) {
+      return 0;
+    }
     let names: string[];
     try {
       names = (await readdir(this.dir)).filter((n) => n.endsWith('.json'));
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT')
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
         this.onDiskError(`cannot read ${this.dir}`, err);
+      }
+
       return 0;
     }
     for (const name of names) {
@@ -171,12 +184,14 @@ export class SchemaStore {
           this.onDiskError(`${file} is not a stored schema; skipped`, parsed.error);
           continue;
         }
-        if (!this.byMachine.has(parsed.data.machineId))
+        if (!this.byMachine.has(parsed.data.machineId)) {
           this.byMachine.set(parsed.data.machineId, parsed.data);
+        }
       } catch (err) {
         this.onDiskError(`cannot load ${file}; skipped`, err);
       }
     }
+
     return this.byMachine.size;
   }
 }

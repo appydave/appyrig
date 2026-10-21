@@ -10,27 +10,37 @@ import { agentFromParam, agentToParam, rigFromParam, rigToParam } from './urlSta
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
 vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 
 type Handler = (...args: unknown[]) => void;
+
 function spySocket() {
   const handlers = new Map<string, Set<Handler>>();
   const s = {
     connected: true,
     on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      if (!handlers.has(ev)) {
+        handlers.set(ev, new Set());
+      }
       handlers.get(ev)!.add(h);
+
       return s;
     },
     off(ev: string, h: Handler) {
       handlers.get(ev)?.delete(h);
+
       return s;
     },
     emit: vi.fn(),
@@ -38,6 +48,7 @@ function spySocket() {
   };
   const fire = (ev: string, ...args: unknown[]) =>
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+
   return { socket: s as unknown as FleetSocket, fire };
 }
 

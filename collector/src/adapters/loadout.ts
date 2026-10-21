@@ -77,8 +77,13 @@ export interface ShownSkills extends SkillListing {
  * whose set starts from the newest full listing. Deltas are never mixed across files (QA, ruling).
  */
 export function newerSet(a: ShownSkills, b: ShownSkills | null): boolean {
-  if (!b) return true;
-  if (a.isInitial !== b.isInitial) return a.isInitial;
+  if (!b) {
+    return true;
+  }
+  if (a.isInitial !== b.isInitial) {
+    return a.isInitial;
+  }
+
   return a.startedAt > b.startedAt || (a.startedAt === b.startedAt && a.at > b.at);
 }
 
@@ -86,6 +91,7 @@ export function newerSet(a: ShownSkills, b: ShownSkills | null): boolean {
 export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkills {
   if (l.isInitial || !cur) {
     const names = [...new Set(l.names)];
+
     return {
       at: l.at,
       names,
@@ -97,6 +103,7 @@ export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkil
     };
   }
   const names = [...new Set([...cur.names, ...l.names])];
+
   return {
     at: l.at,
     names,
@@ -110,7 +117,9 @@ export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkil
 
 /** The listing on one transcript line, or null when the line is anything else. */
 export function listingOfLine(line: string): SkillListing | null {
-  if (!line.includes('"skill_listing"')) return null;
+  if (!line.includes('"skill_listing"')) {
+    return null;
+  }
   try {
     const d = JSON.parse(line) as {
       type?: unknown;
@@ -118,11 +127,16 @@ export function listingOfLine(line: string): SkillListing | null {
       attachment?: { type?: unknown; skillCount?: unknown; isInitial?: unknown; names?: unknown };
     };
     const a = d.attachment;
-    if (d.type !== 'attachment' || !a || a.type !== 'skill_listing') return null;
-    if (typeof d.timestamp !== 'string' || Number.isNaN(Date.parse(d.timestamp))) return null;
+    if (d.type !== 'attachment' || !a || a.type !== 'skill_listing') {
+      return null;
+    }
+    if (typeof d.timestamp !== 'string' || Number.isNaN(Date.parse(d.timestamp))) {
+      return null;
+    }
     const names = Array.isArray(a.names)
       ? a.names.filter((n): n is string => typeof n === 'string' && n.length > 0)
       : [];
+
     return {
       at: new Date(d.timestamp).toISOString(),
       skillCount: typeof a.skillCount === 'number' ? a.skillCount : names.length,
@@ -152,9 +166,14 @@ export class ListingTracker {
 
   async latest(file: TranscriptFile): Promise<{ listing: ShownSkills; count: number } | null> {
     let s = this.state.get(file.path);
-    if (!s || file.size < s.offset) s = { offset: 0, latest: null, count: 0 };
-    if (file.size > s.offset) s = await this.scan(file.path, s, file.size);
+    if (!s || file.size < s.offset) {
+      s = { offset: 0, latest: null, count: 0 };
+    }
+    if (file.size > s.offset) {
+      s = await this.scan(file.path, s, file.size);
+    }
     this.state.set(file.path, s);
+
     return s.latest ? { listing: s.latest, count: s.count } : null;
   }
 
@@ -167,7 +186,9 @@ export class ListingTracker {
       while (pos < size) {
         const buf = Buffer.alloc(Math.min(BLOCK, size - pos));
         const { bytesRead } = await fh.read(buf, 0, buf.length, pos);
-        if (bytesRead === 0) break;
+        if (bytesRead === 0) {
+          break;
+        }
         pos += bytesRead;
         let chunk = Buffer.concat([carry, buf.subarray(0, bytesRead)]);
         let nl = chunk.indexOf(10);
@@ -187,6 +208,7 @@ export class ListingTracker {
     } finally {
       await fh.close();
     }
+
     return s;
   }
 }
@@ -212,25 +234,39 @@ export function classifySkills(names: string[], places: SkillPlaces): LoadoutSki
   const pluginShort = new Set(names.filter((n) => n.includes(':')).map(shortSkillName));
   const placesOf = (short: string): SkillSource[] => {
     const out: SkillSource[] = [];
-    if (places.cwd.has(short)) out.push(places.tracked.has(short) ? 'repo' : 'role');
-    if (places.personal.has(short)) out.push('personal');
-    if (pluginShort.has(short)) out.push('plugin');
+    if (places.cwd.has(short)) {
+      out.push(places.tracked.has(short) ? 'repo' : 'role');
+    }
+    if (places.personal.has(short)) {
+      out.push('personal');
+    }
+    if (pluginShort.has(short)) {
+      out.push('plugin');
+    }
+
     return out;
   };
+
   return [...new Set(names)].slice(0, LOADOUT_SKILLS_MAX).map((name) => {
     const colon = name.indexOf(':');
     const short = shortSkillName(name);
     const where = placesOf(short);
     let source: SkillSource;
-    if (colon > 0) source = 'plugin';
-    else if (places.cwd.has(name)) source = places.tracked.has(name) ? 'repo' : 'role';
-    else if (places.personal.has(name)) source = 'personal';
-    else source = places.cwdKnown === false ? 'unplaced' : 'builtin';
+    if (colon > 0) {
+      source = 'plugin';
+    } else if (places.cwd.has(name)) {
+      source = places.tracked.has(name) ? 'repo' : 'role';
+    } else if (places.personal.has(name)) {
+      source = 'personal';
+    } else {
+      source = places.cwdKnown === false ? 'unplaced' : 'builtin';
+    }
     // A plugin skill is "also in" a plugin only when it is a different plugin's skill of that name.
     const otherPlugins =
       source === 'plugin' &&
       names.some((n) => n !== name && n.includes(':') && shortSkillName(n) === short);
     const alsoIn = where.filter((w) => w !== source || (w === 'plugin' && otherPlugins));
+
     return {
       name,
       source,
@@ -251,11 +287,14 @@ export async function skillFolders(dir: string): Promise<Set<string>> {
   }
   for (const n of names) {
     try {
-      if ((await stat(join(dir, n, 'SKILL.md'))).isFile()) out.add(n);
+      if ((await stat(join(dir, n, 'SKILL.md'))).isFile()) {
+        out.add(n);
+      }
     } catch {
       // not a skill folder
     }
   }
+
   return out;
 }
 
@@ -272,11 +311,16 @@ export async function trackedSkills(
   const tracked = new Set<string>();
   try {
     const r = await exec('git', ['-C', cwd, 'ls-files', '-z', '--', '.claude/skills']);
-    if (r.code !== 0) return { isRepo: false, tracked };
+    if (r.code !== 0) {
+      return { isRepo: false, tracked };
+    }
     for (const p of r.stdout.split('\0')) {
       const m = /^\.claude\/skills\/([^/]+)\//.exec(p);
-      if (m) tracked.add(m[1]!);
+      if (m) {
+        tracked.add(m[1]!);
+      }
     }
+
     return { isRepo: true, tracked };
   } catch {
     return { isRepo: false, tracked };
@@ -303,7 +347,9 @@ async function readDocFile(
   try {
     real = await realpath(spot.path);
     within = await realpath(spot.within);
-    if (!isUnder(dirname(real), within) || !(await lstat(real)).isFile()) return null;
+    if (!isUnder(dirname(real), within) || !(await lstat(real)).isFile()) {
+      return null;
+    }
   } catch {
     return null; // absent, a broken link, or no permission
   }
@@ -315,7 +361,10 @@ async function readDocFile(
     const buf = Buffer.alloc(want);
     const { bytesRead } = await fh.read(buf, 0, want, 0);
     const slice = buf.subarray(0, bytesRead);
-    if (slice.includes(0)) return null; // binary
+    if (slice.includes(0)) {
+      return null;
+    } // binary
+
     return {
       path: spot.path,
       text: slice.toString('utf8'),
@@ -353,6 +402,7 @@ async function doc(
       };
     }
   }
+
   return {
     id,
     name,
@@ -372,6 +422,7 @@ const PLAIN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 /** The rig.yaml `culture_file`, when the spec validates and names a plain file; else the default name. */
 function cultureName(spec: SpecInfo): string {
   const c = spec.spec?.culture_file?.trim();
+
   return c && PLAIN.test(c) ? c : 'CULTURE.md';
 }
 
@@ -389,10 +440,13 @@ async function roleSpot(agentDir: string): Promise<DocSpot> {
     const hit =
       files.find((f) => f.orientation === 'role') ??
       files.find((f) => basename(f.path) === 'role.md');
-    if (hit && !hit.path.split('/').includes('..')) rel = hit.path;
+    if (hit && !hit.path.split('/').includes('..')) {
+      rel = hit.path;
+    }
   } catch {
     // no agent.yaml: the usual place
   }
+
   return { path: join(agentDir, rel), within: agentDir };
 }
 
@@ -412,6 +466,7 @@ export interface LoadoutSeat {
  */
 export function topologySeatName(seat: LoadoutSeat): string | null {
   const at = seat.id.indexOf('@');
+
   return at > 0 && seat.rig ? seat.id.slice(0, at) : null;
 }
 
@@ -423,6 +478,7 @@ export function topologySeatName(seat: LoadoutSeat): string | null {
  */
 export function topologyRootOf(env: NodeJS.ProcessEnv, home: string = homedir()): string {
   const set = (k: string) => env[k]?.trim() || null;
+
   return (
     set('APPYRIG_TOPOLOGY_ROOT') ??
     set('OPENRIG_TOPOLOGY_ROOT') ??
@@ -483,18 +539,24 @@ export async function readTopologyDocs(
   seat: LoadoutSeat,
   topologyRoot: string | null
 ): Promise<TopologyDoc[]> {
-  if (!topologyRoot || !seat.rig) return [];
+  if (!topologyRoot || !seat.rig) {
+    return [];
+  }
   const pod = seat.logicalId?.includes('.') ? seat.logicalId.split('.')[0]! : null;
   const out: TopologyDoc[] = [];
   for (const node of OpenRig.topologyTrace(seat.rig, pod, topologySeatName(seat))) {
     const dir = join(topologyRoot, OpenRig.topologyDir(node));
     for (const name of OpenRig.TOPOLOGY_CHAIN_FILES) {
-      if (name === 'RECAP.md' && node.altitude !== 'seat') continue;
+      if (name === 'RECAP.md' && node.altitude !== 'seat') {
+        continue;
+      }
       const r = await readDocFile(
         { path: join(dir, name), within: topologyRoot },
         TOPOLOGY_DOC_MAX_BYTES
       );
-      if (!r) continue;
+      if (!r) {
+        continue;
+      }
       out.push({
         altitude: node.altitude,
         name,
@@ -504,9 +566,12 @@ export async function readTopologyDocs(
         truncated: r.truncated,
         content: redactString(r.text),
       });
-      if (out.length >= TOPOLOGY_DOCS_MAX) return out;
+      if (out.length >= TOPOLOGY_DOCS_MAX) {
+        return out;
+      }
     }
   }
+
   return out;
 }
 
@@ -518,10 +583,15 @@ export function memberOf(
   const [podId, memberId] = logicalId?.split('.') ?? [];
   const pod = spec?.spec?.pods.find((p) => p.id === podId);
   const m = pod?.members.find((x) => x.id === memberId);
-  if (!pod || !m) return null;
+  if (!pod || !m) {
+    return null;
+  }
   const { env, ...rest } = m;
   const out: MemberView = { ...redactDeep(rest), pod: pod.id };
-  if (env) out.envNames = Object.keys(env).slice(0, MEMBER_ENV_NAMES_MAX);
+  if (env) {
+    out.envNames = Object.keys(env).slice(0, MEMBER_ENV_NAMES_MAX);
+  }
+
   return out;
 }
 
@@ -530,7 +600,9 @@ export async function agentSpecOf(
   agentDir: string | undefined,
   profileName: string | null
 ): Promise<AgentSpecView | null> {
-  if (!agentDir) return null;
+  if (!agentDir) {
+    return null;
+  }
   let parsed;
   try {
     parsed = OpenRig.AgentSpecSchema.safeParse(
@@ -539,8 +611,11 @@ export async function agentSpecOf(
   } catch {
     return null;
   }
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    return null;
+  }
   const { profiles, ...rest } = parsed.data;
+
   return redactDeep({
     ...rest,
     profileName,
@@ -618,7 +693,9 @@ export class LoadoutReader {
     specs: Map<string, SpecInfo>,
     agentDirs: Map<string, string>
   ): Promise<PendingLoadouts | null> {
-    if (this.now().getTime() - this.lastScan < this.ttlMs) return null;
+    if (this.now().getTime() - this.lastScan < this.ttlMs) {
+      return null;
+    }
     this.lastScan = this.now().getTime();
     const claude = seats.filter((s) => s.runtime === 'claude-code');
     const transcripts = await this.index.scan(new Set(claude.map((s) => s.id)));
@@ -635,7 +712,7 @@ export class LoadoutReader {
             (st) => st.isDirectory(),
             () => false
           );
-          if (!exists)
+          if (!exists) {
             return {
               places: {
                 cwd: new Set<string>(),
@@ -646,10 +723,12 @@ export class LoadoutReader {
               isRepo: false,
               exists,
             };
+          }
           const [dirs, git] = await Promise.all([
             skillFolders(join(cwd, '.claude', 'skills')),
             trackedSkills(this.exec, cwd),
           ]);
+
           return {
             places: { cwd: dirs, tracked: git.tracked, personal },
             isRepo: git.isRepo,
@@ -658,6 +737,7 @@ export class LoadoutReader {
         })();
         byCwd.set(cwd, p);
       }
+
       return p;
     };
 
@@ -699,8 +779,12 @@ export class LoadoutReader {
         for (const f of transcripts.get(seat.id) ?? []) {
           try {
             const r = await this.tracker.latest(f);
-            if (!r) continue;
-            if (newerSet(r.listing, best?.listing ?? null)) best = { ...r, path: f.path };
+            if (!r) {
+              continue;
+            }
+            if (newerSet(r.listing, best?.listing ?? null)) {
+              best = { ...r, path: f.path };
+            }
           } catch {
             // unreadable this round
           }
@@ -734,21 +818,27 @@ export class LoadoutReader {
         };
       }
       counts.set(seat.id, loadout.listing?.skillCount ?? null);
-      if (loadout.status === 'ok')
+      if (loadout.status === 'ok') {
         names.set(
           seat.id,
           loadout.skills.map((k) => k.name)
         );
+      }
       const sig = createHash('sha1')
         .update(JSON.stringify({ ...loadout, collectedAt: '' }))
         .digest('hex');
-      if (this.sent.get(seat.id) === sig) continue;
+      if (this.sent.get(seat.id) === sig) {
+        continue;
+      }
       out.push(loadout);
       sigs.set(seat.id, sig);
     }
     this.counts = counts;
     this.names = names;
-    if (out.length === 0) return null;
+    if (out.length === 0) {
+      return null;
+    }
+
     return {
       loadouts: out,
       markSent: () => sigs.forEach((sig, seat) => this.sent.set(seat, sig)),

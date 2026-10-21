@@ -42,7 +42,10 @@ function machine(status: string, summary: string | null = null): FleetMachine {
   const snap = fm.snapshot as unknown as {
     rigs: { name: string; status?: string; summary?: string | null }[];
   };
-  for (const r of snap.rigs) Object.assign(r, { status, summary });
+  for (const r of snap.rigs) {
+    Object.assign(r, { status, summary });
+  }
+
   return { ...fm, liveness: 'live' } as FleetMachine;
 }
 

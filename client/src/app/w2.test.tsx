@@ -16,10 +16,15 @@ import type { PageContext } from './types.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -50,6 +55,7 @@ function verbSocket(answers: Answers = {}) {
       },
     }),
   };
+
   return { socket: socket as unknown as FleetSocket, sent, raw: socket };
 }
 
@@ -61,6 +67,7 @@ function makeCtx(
   over: Partial<PageContext> = {}
 ): PageContext {
   const rigs = listRigs(machines);
+
   return {
     machines,
     allMachines: machines,

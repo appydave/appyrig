@@ -9,6 +9,7 @@ function withErrorHandler(app: ReturnType<typeof express>) {
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
     res.status(500).json({ status: 'error', error: err.message });
   });
+
   return app;
 }
 
@@ -21,6 +22,7 @@ function buildBodyApp() {
   app.post('/items', validate({ body: nameSchema }), (req, res) => {
     res.json({ received: req.body });
   });
+
   return withErrorHandler(app);
 }
 
@@ -29,6 +31,7 @@ function buildParamsApp() {
   app.get('/items/:id', validate({ params: paramsSchema }), (req, res) => {
     res.json({ id: req.params.id });
   });
+
   return withErrorHandler(app);
 }
 
@@ -43,6 +46,7 @@ function buildQueryValidationApp() {
   app.get('/items', validate({ query: querySchema }), (_req, res) => {
     res.json({ ok: true });
   });
+
   return withErrorHandler(app);
 }
 
@@ -129,6 +133,7 @@ function buildMultiSchemaApp() {
   app.post('/multi', validate({ body: multiBodySchema, query: multiQuerySchema }), (req, res) => {
     res.json({ name: req.body.name, page: req.query['page'] });
   });
+
   return withErrorHandler(app);
 }
 
@@ -193,6 +198,7 @@ function buildThrowingApp() {
   app.post('/throw', validate({ body: throwingSchema }), (_req, res) => {
     res.json({ ok: true });
   });
+
   return withErrorHandler(app);
 }
 

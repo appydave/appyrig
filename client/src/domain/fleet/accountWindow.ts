@@ -33,6 +33,7 @@ export interface WindowStory {
 const hhmm = (ms: number, now: number) => {
   const d = new Date(ms);
   const sameDay = new Date(now).toDateString() === d.toDateString();
+
   return d.toLocaleString(undefined, {
     ...(sameDay ? {} : { weekday: 'short' }),
     hour: '2-digit',
@@ -43,6 +44,7 @@ const hhmm = (ms: number, now: number) => {
 /** "1 point" / "24 points" (QA + r1 S5). */
 const points = (d: number) => {
   const n = Math.round(d);
+
   return `${n} point${n === 1 ? '' : 's'}`;
 };
 
@@ -119,6 +121,7 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
       }
       when = ` ~${hhmm(at, now)}`;
     }
+
     return { ...story, kind: 'runs-out', glyph: '■', text: `will run out${when}` };
   }
   if (w.projectedPct >= CAREFUL_PCT) {
@@ -129,6 +132,7 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
       text: `be careful · ~${Math.round(w.projectedPct)}% by reset`,
     };
   }
+
   return {
     ...story,
     kind: 'plenty',

@@ -27,9 +27,12 @@ export const OPEN_PATHS: readonly string[] = [
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
 export function sameSecret(given: unknown, expected: string): boolean {
-  if (typeof given !== 'string' || given.length === 0) return false;
+  if (typeof given !== 'string' || given.length === 0) {
+    return false;
+  }
   const a = Buffer.from(given);
   const b = Buffer.from(expected);
+
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
@@ -42,19 +45,29 @@ export function sessionCookieHeader(hubToken: string): string {
 }
 
 export function readCookie(header: string | undefined, name: string): string | undefined {
-  if (!header) return undefined;
+  if (!header) {
+    return undefined;
+  }
   for (const part of header.split(';')) {
     const eq = part.indexOf('=');
-    if (eq > 0 && part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
+    if (eq > 0 && part.slice(0, eq).trim() === name) {
+      return part.slice(eq + 1).trim();
+    }
   }
+
   return undefined;
 }
 
 /** True when the request headers carry a valid session cookie or a bearer hub token. */
 export function isAuthorised(headers: IncomingHttpHeaders, hubToken: string | undefined): boolean {
-  if (!hubToken) return false;
-  if (sameSecret(readCookie(headers.cookie, SESSION_COOKIE), sessionValue(hubToken))) return true;
+  if (!hubToken) {
+    return false;
+  }
+  if (sameSecret(readCookie(headers.cookie, SESSION_COOKIE), sessionValue(hubToken))) {
+    return true;
+  }
   const auth = headers.authorization;
+
   return typeof auth === 'string' && auth.startsWith('Bearer ')
     ? sameSecret(auth.slice('Bearer '.length).trim(), hubToken)
     : false;
@@ -83,6 +96,7 @@ export function browserAuth(opts: BrowserAuthOptions) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (OPEN_PATHS.includes(req.path)) {
       next();
+
       return;
     }
     const given = req.query[TOKEN_QUERY_PARAM];
@@ -90,13 +104,16 @@ export function browserAuth(opts: BrowserAuthOptions) {
       if (opts.hubToken && sameSecret(given, opts.hubToken)) {
         res.setHeader('Set-Cookie', sessionCookieHeader(opts.hubToken));
         res.redirect(303, opts.afterLogin); // drops the token from the address bar
+
         return;
       }
       refuse(res, 401, 'hub token invalid');
+
       return;
     }
     if (isAuthorised(req.headers, opts.hubToken)) {
       next();
+
       return;
     }
     refuse(res, 401, AUTH_ERRORS.browserSession);

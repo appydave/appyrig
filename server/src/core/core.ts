@@ -72,7 +72,9 @@ export function createCore(opts: CoreOptions): Core {
         });
       }
       const allowed = authorize(verbName, verb.contract, principal, parsed.data);
-      if (!allowed.ok) return { ok: false, error: allowed.refusal };
+      if (!allowed.ok) {
+        return { ok: false, error: allowed.refusal };
+      }
       try {
         const value = verb.handle(parsed.data, {
           store: opts.store,
@@ -88,12 +90,17 @@ export function createCore(opts: CoreOptions): Core {
         const out = verb.contract.output.safeParse(value);
         if (!out.success) {
           opts.onFault?.(verbName, out.error);
+
           return refuse('internal', `${verbName} produced an answer outside its contract.`);
         }
+
         return { ok: true, value: out.data };
       } catch (err) {
-        if (err instanceof CapabilityRefusal) return { ok: false, error: err.toRefusal() };
+        if (err instanceof CapabilityRefusal) {
+          return { ok: false, error: err.toRefusal() };
+        }
         opts.onFault?.(verbName, err);
+
         return refuse(
           'internal',
           `${verbName} failed: ${err instanceof Error ? err.message : err}`

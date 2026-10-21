@@ -9,7 +9,10 @@ import { roleWord } from '../domain/fleet/model.js';
  */
 export function RoleTag({ agentRole }: { agentRole?: string | null }) {
   const word = roleWord(agentRole);
-  if (!word) return null;
+  if (!word) {
+    return null;
+  }
+
   return (
     <span
       className="seat-role"
@@ -25,7 +28,10 @@ export function RoleTag({ agentRole }: { agentRole?: string | null }) {
 const short = (n: string) => n.slice(n.lastIndexOf(':') + 1);
 
 export function KeySkills({ skills }: { skills?: string[] }) {
-  if (!skills?.length) return null;
+  if (!skills?.length) {
+    return null;
+  }
+
   return (
     <span
       className="seat-key-skills"
@@ -46,9 +52,16 @@ export const DASH = '—';
 
 /** `119_000` → `119k`, `1_250_000` → `1.3M`, small numbers as they are; missing → `—`. */
 export function tokensText(n: number | null | undefined): string {
-  if (n === null || n === undefined || !Number.isFinite(n)) return DASH;
-  if (n >= 999_500) return `${(Math.round(n / 100_000) / 10).toString()}M`;
-  if (n >= 1000) return `${Math.round(n / 1000)}k`;
+  if (n === null || n === undefined || !Number.isFinite(n)) {
+    return DASH;
+  }
+  if (n >= 999_500) {
+    return `${(Math.round(n / 100_000) / 10).toString()}M`;
+  }
+  if (n >= 1000) {
+    return `${Math.round(n / 1000)}k`;
+  }
+
   return String(Math.round(n));
 }
 
@@ -68,7 +81,10 @@ export function harnessOf(
   if (r.startsWith('claude') || (!r && m.startsWith('claude'))) {
     return { kind: 'claude', label: 'Claude' };
   }
-  if (r === 'codex' || (!r && /^(gpt|codex|o\d)/.test(m))) return { kind: 'codex', label: 'Codex' };
+  if (r === 'codex' || (!r && /^(gpt|codex|o\d)/.test(m))) {
+    return { kind: 'codex', label: 'Codex' };
+  }
+
   return { kind: 'other', label: r && r !== 'unknown' ? r : DASH };
 }
 
@@ -81,6 +97,7 @@ export function HarnessMark({
   model?: string | null;
 }) {
   const h = harnessOf(runtime, model);
+
   return (
     <span
       className="harness-mark mono"
@@ -154,7 +171,10 @@ export function CopyAttach({ session, ssh }: { session: string; ssh: string | nu
   const [said, setSaid] = useState<'copied' | 'select' | null>(null);
   const lineEl = useRef<HTMLElement>(null);
   const line = attachLine(session, ssh);
-  if (!line) return null;
+  if (!line) {
+    return null;
+  }
+
   return (
     <>
       <button
@@ -175,7 +195,9 @@ export function CopyAttach({ session, ssh }: { session: string; ssh: string | nu
               }
             }
             setSaid(ok ? 'copied' : 'select');
-            if (ok) setTimeout(() => setSaid(null), 1500);
+            if (ok) {
+              setTimeout(() => setSaid(null), 1500);
+            }
           });
         }}
         title={line}

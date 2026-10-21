@@ -20,12 +20,14 @@ const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-cfg-'));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 const machine = (): FleetMachine => {
   const snapshot = loadSnapshot('roamy');
+
   return { machine: snapshot.machine, liveness: 'live', lastSeen: snapshot.collectedAt, snapshot };
 };
 

@@ -27,9 +27,16 @@ interface Props {
 }
 
 function hubMessage(link: HubLink, received: boolean): string | null {
-  if (link === 'unauthorised') return 'Not signed in · open this page once with ?token=<hub token>';
-  if (link === 'disconnected') return 'Hub disconnected · showing last-known state';
-  if (!received) return 'Connecting to hub…';
+  if (link === 'unauthorised') {
+    return 'Not signed in · open this page once with ?token=<hub token>';
+  }
+  if (link === 'disconnected') {
+    return 'Hub disconnected · showing last-known state';
+  }
+  if (!received) {
+    return 'Connecting to hub…';
+  }
+
   return null;
 }
 
@@ -45,6 +52,7 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
         const err = fm.snapshot.sources[src].error;
         // A machine that simply doesn't run OpenRig is a fact, not a fault.
         const absent = src === 'daemon' && !!err && NO_DAEMON.test(err);
+
         return {
           key: `${fm.machine.id}:${src}`,
           absent,
@@ -74,6 +82,7 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
       {machines.map((fm) => {
         const f = freshness(fm, now, link === 'connected');
         const n = fm.snapshot.seats.length;
+
         return (
           <span
             key={fm.machine.id}
@@ -106,6 +115,7 @@ export default function FleetStrip({ machines, now, link, received, error, onOpe
                 p.kind === 'no-data' || p.kind === 'unavailable'
                   ? `Memory pressure: ${p.word}. ${p.reason ?? ''}`
                   : `Memory: ${p.word}. ${p.basis ?? ''} Open Machines for memory, swap and processes.`;
+
               return (
                 <button
                   type="button"

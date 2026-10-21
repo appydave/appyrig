@@ -36,6 +36,7 @@ export function openReadOnly(dbPath: string): DatabaseSync {
       readOnly: true,
     });
   }
+
   return new DatabaseSync(dbPath, { readOnly: true });
 }
 
@@ -50,6 +51,7 @@ export function readTables(dbPath: string): DbTable[] {
     const fks = db.prepare(
       'SELECT "from" AS f, "table" AS t, "to" AS o FROM pragma_foreign_key_list(?)'
     );
+
     return objects.slice(0, DB_TABLES_MAX).map((o) => ({
       name: o.name,
       kind: o.type,
@@ -83,6 +85,7 @@ export async function readOpenrigVersion(run: Run, rigBin = 'rig'): Promise<stri
   try {
     const r = await run(rigBin, ['--version']);
     const line = r.stdout.split('\n')[0]?.trim();
+
     return r.code === 0 && line ? line.slice(0, 80) : null;
   } catch {
     return null;
@@ -149,11 +152,16 @@ export class SchemaReader {
 
   async next(): Promise<PendingSchema | null> {
     const now = (this.opts.now ?? (() => new Date()))().getTime();
-    if (now - this.lastSample < (this.opts.ttlMs ?? 300_000)) return null;
+    if (now - this.lastSample < (this.opts.ttlMs ?? 300_000)) {
+      return null;
+    }
     this.lastSample = now;
     const push = await sampleSchema(this.machineId, this.run, this.opts);
     const key = JSON.stringify({ ...push, collectedAt: null });
-    if (key === this.sentKey) return null;
+    if (key === this.sentKey) {
+      return null;
+    }
+
     return { push, markSent: () => (this.sentKey = key) };
   }
 }

@@ -33,6 +33,7 @@ const OUT_DIR = path.join(ROOT, 'test', 'fixtures', 'frozen');
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
+
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
@@ -53,19 +54,35 @@ const SCRUBS = [
   [/\b[0-9a-f]{48,}\b/gi, '<redacted-token>'],
 ];
 let scrubbed = 0;
+
 function scrubText(s, secrets = []) {
   let out = s;
-  for (const secret of secrets)
-    if (secret && out.includes(secret)) out = out.split(secret).join('<redacted-token>');
-  for (const [re, to] of SCRUBS) out = out.replace(re, to);
-  if (out !== s) scrubbed += 1;
+  for (const secret of secrets) {
+    if (secret && out.includes(secret)) {
+      out = out.split(secret).join('<redacted-token>');
+    }
+  }
+  for (const [re, to] of SCRUBS) {
+    out = out.replace(re, to);
+  }
+  if (out !== s) {
+    scrubbed += 1;
+  }
+
   return out;
 }
+
 function scrubDeep(v, secrets) {
-  if (typeof v === 'string') return scrubText(v, secrets);
-  if (Array.isArray(v)) return v.map((x) => scrubDeep(x, secrets));
-  if (v && typeof v === 'object')
+  if (typeof v === 'string') {
+    return scrubText(v, secrets);
+  }
+  if (Array.isArray(v)) {
+    return v.map((x) => scrubDeep(x, secrets));
+  }
+  if (v && typeof v === 'object') {
     return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scrubDeep(x, secrets)]));
+  }
+
   return v;
 }
 
@@ -117,19 +134,27 @@ const machines = new Map();
 let updates = 0;
 socket.on('fleet:update', (u) => {
   updates += 1;
-  for (const m of u.machines ?? []) machines.set(m.machine.id, m);
+  for (const m of u.machines ?? []) {
+    machines.set(m.machine.id, m);
+  }
 });
 
 const stripped = [];
+
 function cutLines(lines, what) {
-  if (!Array.isArray(lines) || lines.length <= keepTail) return lines;
+  if (!Array.isArray(lines) || lines.length <= keepTail) {
+    return lines;
+  }
   stripped.push(`${what}: ${lines.length - keepTail} older lines`);
+
   return lines.slice(-keepTail);
 }
 
 /** Cuts every `lines` array found anywhere in a verb answer (terminal text) to the last few. */
 function cutDeep(value, where) {
-  if (Array.isArray(value)) return value.map((v, i) => cutDeep(v, `${where}[${i}]`));
+  if (Array.isArray(value)) {
+    return value.map((v, i) => cutDeep(v, `${where}[${i}]`));
+  }
   if (value && typeof value === 'object') {
     const out = {};
     for (const [k, v] of Object.entries(value)) {
@@ -138,8 +163,10 @@ function cutDeep(value, where) {
           ? cutLines(v, `${where}.${k}`)
           : cutDeep(v, `${where}.${k}`);
     }
+
     return out;
   }
+
   return value;
 }
 
@@ -150,10 +177,14 @@ const FILE_MAX = 8000;
 
 /** Verb-specific cuts so the committed file stays small. Each cut is named in `stripped`. */
 function shrink(verb, a) {
-  if (!a?.ok) return a;
+  if (!a?.ok) {
+    return a;
+  }
   const v = structuredClone(a.value);
   if (verb === 'seat.history' && Array.isArray(v.events)) {
-    if (v.events.length > HISTORY_EVENTS) v.truncated = true;
+    if (v.events.length > HISTORY_EVENTS) {
+      v.truncated = true;
+    }
     v.events = v.events
       .slice(-HISTORY_EVENTS)
       .map((e) =>
@@ -179,6 +210,7 @@ function shrink(verb, a) {
       content: `${v.file.content.slice(0, FILE_MAX)}\n… (cut for the frozen snapshot)`,
     };
   }
+
   return { ok: true, value: v };
 }
 
@@ -190,16 +222,26 @@ function shrink(verb, a) {
 function dedupe(calls) {
   const seen = new Map();
   const count = (v) => {
-    if (!v || typeof v !== 'object') return;
+    if (!v || typeof v !== 'object') {
+      return;
+    }
     const s = JSON.stringify(v);
-    if (s.length > 1024) seen.set(s, (seen.get(s) ?? 0) + 1);
-    for (const x of Array.isArray(v) ? v : Object.values(v)) count(x);
+    if (s.length > 1024) {
+      seen.set(s, (seen.get(s) ?? 0) + 1);
+    }
+    for (const x of Array.isArray(v) ? v : Object.values(v)) {
+      count(x);
+    }
   };
-  for (const a of Object.values(calls)) count(a);
+  for (const a of Object.values(calls)) {
+    count(a);
+  }
   const refs = {};
   const idOf = new Map();
   const swap = (v) => {
-    if (!v || typeof v !== 'object') return v;
+    if (!v || typeof v !== 'object') {
+      return v;
+    }
     const s = JSON.stringify(v);
     if (s.length > 1024 && (seen.get(s) ?? 0) > 1) {
       if (!idOf.has(s)) {
@@ -209,13 +251,16 @@ function dedupe(calls) {
           ? v.map(swap)
           : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swap(x)]));
       }
+
       return { $frozenRef: idOf.get(s) };
     }
+
     return Array.isArray(v)
       ? v.map(swap)
       : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swap(x)]));
   };
   const out = Object.fromEntries(Object.entries(calls).map(([k, a]) => [k, swap(a)]));
+
   return { calls: out, refs };
 }
 
@@ -239,6 +284,7 @@ function callKey(verb, input) {
   const sorted = Object.fromEntries(
     Object.entries(input ?? {}).sort(([a], [b]) => a.localeCompare(b))
   );
+
   return `${verb} ${JSON.stringify(sorted)}`;
 }
 
@@ -250,7 +296,9 @@ async function main() {
   await new Promise((r) => setTimeout(r, listenMs));
   // Stop folding: the snapshot is the fleet as it stood at the end of the listen window.
   socket.off('fleet:update');
-  if (machines.size === 0) throw new Error('no fleet:update received');
+  if (machines.size === 0) {
+    throw new Error('no fleet:update received');
+  }
 
   const calls = {};
   const record = async (verb, input, cut = false) => {
@@ -259,6 +307,7 @@ async function main() {
       verb,
       cut ? cutDeep(a, `${verb} ${input.machine}/${input.seat ?? input.rig ?? ''}`) : a
     );
+
     return a;
   };
 
@@ -273,18 +322,22 @@ async function main() {
       await record('rig.waiting', { machine, rig: r });
       await record('rig.outputs', { machine, rig: r });
       if (files.ok && files.value.status === 'ok') {
-        for (const f of files.value.files)
+        for (const f of files.value.files) {
           await record('rig.file', { machine, rig: r, fileId: f.id });
+        }
       }
     }
     const running = new Set(
       (snap.rigs ?? []).filter((r) => r.status === 'running').map((r) => r.name)
     );
     for (const seat of snap.seats ?? []) {
-      if (seat.tail?.lines)
+      if (seat.tail?.lines) {
         seat.tail.lines = cutLines(seat.tail.lines, `snapshot ${machine}/${seat.id} tail`);
+      }
       // Seat verbs only for seats of running rigs: a stopped rig's seats refuse as not_in_snapshot.
-      if (!running.has(seat.rig)) continue;
+      if (!running.has(seat.rig)) {
+        continue;
+      }
       await record('seat.get', { machine, seat: seat.id }, true);
       await record('seat.loadout', { machine, seat: seat.id });
       await record('seat.history', { machine, seat: seat.id }, true);
@@ -292,11 +345,14 @@ async function main() {
     const newest = [...(snap.queue ?? [])]
       .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
       .slice(0, handoffCap);
-    if ((snap.queue ?? []).length > newest.length)
+    if ((snap.queue ?? []).length > newest.length) {
       stripped.push(
         `handoff.get on ${machine}: recorded the newest ${newest.length} of ${snap.queue.length} queue rows`
       );
-    for (const q of newest) await record('handoff.get', { machine, id: q.id });
+    }
+    for (const q of newest) {
+      await record('handoff.get', { machine, id: q.id });
+    }
   }
 
   const recordedAt = new Date().toISOString();

@@ -17,6 +17,7 @@ function buildApp() {
   app.get('/failure-404', (_req, res) => {
     apiFailure(res, 'Not found', 404);
   });
+
   return app;
 }
 

@@ -16,10 +16,15 @@ import { page as flowPage } from './index.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -31,6 +36,7 @@ const RIG = 'fliedit-team';
 
 function q(id: string, from: string, to: string, min: number, tags: string[] = []): QueueItem {
   const at = new Date(T0 + min * 60_000).toISOString();
+
   return {
     id,
     source: `${from}@${RIG}`,
@@ -62,6 +68,7 @@ function rig(withVerdicts: boolean): FleetMachine {
       q('r1-accept', 'review-r1', 'orch-lead', 25, v('accept')),
     ],
   };
+
   return fm;
 }
 
@@ -76,6 +83,7 @@ const chaptersOf = flowChapters as unknown as (
 
 const backEdges = (fm: FleetMachine, opts?: FlowOpts) => {
   const f = flowOf(fm, RIG, NOW, NOW, opts)!;
+
   return {
     rework: f.rework,
     edges: f.edges
@@ -123,6 +131,7 @@ function ctxFor(machines: FleetMachine[]): PageContext {
     }),
   };
   const rigs = listRigs(machines);
+
   return {
     machines,
     allMachines: machines,

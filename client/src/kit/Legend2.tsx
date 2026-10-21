@@ -22,11 +22,14 @@ const PRESSURE: Record<string, { glyph: string; word: string }> = {
 
 /** Draws a mark with the real component or CSS class the page uses. */
 function swatch(s: Swatch | undefined, entry: LegendMark): ReactNode {
-  if (!s || s === 'text') return null;
+  if (!s || s === 'text') {
+    return null;
+  }
   const [kind, arg = ''] = s.split(':') as [string, string?];
   switch (kind) {
     case 'pip': {
       const k = arg as PipKey;
+
       return (
         <span className="state-badge" data-pip={k}>
           {PIP[k].glyph} {PIP[k].label}
@@ -63,6 +66,7 @@ function swatch(s: Swatch | undefined, entry: LegendMark): ReactNode {
       );
     case 'pressure': {
       const p = PRESSURE[arg]!;
+
       return (
         <span className="pressure" data-kind={arg}>
           {p.glyph} {p.word}
@@ -175,6 +179,7 @@ function Section({ s }: { s: LegendSection }) {
  */
 export default function Legend2({ page, onClose }: { page: PageKey; onClose: () => void }) {
   const sections = legendSections(page);
+
   return (
     <aside className="legend2" data-testid="legend2" data-page={page} aria-label="Legend">
       <header className="legend2-top">

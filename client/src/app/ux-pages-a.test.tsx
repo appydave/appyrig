@@ -22,10 +22,15 @@ import type { PageContext } from './types.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -55,6 +60,7 @@ function verbSocket(answers: Answers = {}) {
       },
     }),
   };
+
   return { socket: socket as unknown as FleetSocket, sent, raw: socket };
 }
 
@@ -62,6 +68,7 @@ const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 
 function makeCtx(machines: FleetMachine[], socket: FleetSocket): PageContext {
   const rigs = listRigs(machines);
+
   return {
     machines,
     allMachines: machines,
@@ -100,7 +107,9 @@ beforeEach(() => {
     'ResizeObserver',
     class {
       observe() {}
+
       unobserve() {}
+
       disconnect() {}
     }
   );

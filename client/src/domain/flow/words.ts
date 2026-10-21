@@ -7,9 +7,11 @@ import type { RigEntry } from '@appydave/shared';
  * as one plain sentence. It is a median (the middle value), not a grade: there are no thresholds.
  */
 export function medianSentence(min: number | null, closed: number): string {
-  if (min === null || closed === 0)
+  if (min === null || closed === 0) {
     return 'No handoff in this rig has been closed yet, so there is no typical time to show.';
+  }
   const t = min < 1 ? `${Math.round(min * 60)} seconds` : `${min.toFixed(1)} minutes`;
+
   return closed === 1
     ? `The one handoff closed so far took ${t} from being handed over to being closed.`
     : `Of the ${closed} handoffs closed so far, half were closed within ${t} of being handed over and half took longer (the median, the middle value). It is not a grade: there are no thresholds. Handoffs still open are not counted; they show as waiting or left open.`;
@@ -20,8 +22,12 @@ export function medianSentence(min: number | null, closed: number): string {
  * which is normal, so that case reads as a fact, not an alarm.
  */
 export function entryWords(e: RigEntry): string | null {
-  if (e.status === 'unknown' || !e.entry) return null;
-  if (e.status === 'via-queue') return 'came in through the queue';
+  if (e.status === 'unknown' || !e.entry) {
+    return null;
+  }
+  if (e.status === 'via-queue') {
+    return 'came in through the queue';
+  }
   switch (e.entry.origin) {
     case 'startup':
       return 'started at launch, not via the queue';

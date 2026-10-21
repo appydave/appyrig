@@ -10,6 +10,7 @@ import './w2.css';
 /** The page the address names (`?page=`), or null when it names none or one that does not exist. */
 export function urlPage(): PageKey | null {
   const p = readUrlState().page as PageKey | null;
+
   return p && pageFor(p) ? p : null;
 }
 
@@ -42,8 +43,11 @@ export interface PageFrame {
 }
 
 function formatRecorded(iso: string | null): string {
-  if (!iso) return 'unknown time';
+  if (!iso) {
+    return 'unknown time';
+  }
   const d = new Date(iso);
+
   return Number.isNaN(d.getTime())
     ? iso
     : d.toLocaleString(undefined, {
@@ -57,6 +61,7 @@ function formatRecorded(iso: string | null): string {
 
 function panelFromUrl(): AgentPanelTarget | null {
   const u = readUrlState();
+
   return u.agent && u.page !== 'agent'
     ? { machineId: u.agent.slice(0, u.agent.indexOf('/')), seatKey: u.agent, tab: 'documents' }
     : null;
@@ -79,7 +84,9 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     writeParams({ agent: agentToParam(key) }, 'push', PANEL_ENTRY);
   }, []);
   const closePanelQuiet = useCallback(() => {
-    if (readUrlState().agent) writeParams({ agent: null }, 'replace');
+    if (readUrlState().agent) {
+      writeParams({ agent: null }, 'replace');
+    }
     setAgentPanel(null);
   }, []);
   const closeAgentPanel = useCallback(() => {
@@ -87,6 +94,7 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     if (st?.ar === PANEL_ENTRY && readUrlState().agent) {
       // the entry that opened it is the one before: go Back, and the pop handler closes it
       window.history.back();
+
       return;
     }
     writeParams({ agent: null }, 'replace');
@@ -111,6 +119,7 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     // The browser's own restore runs before the page has rendered and would fight ours.
     const prev = window.history.scrollRestoration;
     window.history.scrollRestoration = 'manual';
+
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.history.scrollRestoration = prev;
@@ -124,22 +133,28 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     curHref.current = window.location.href;
     if (firstScroll.current) {
       firstScroll.current = false;
+
       return;
     }
     const y = restoreY.current ?? 0;
     restoreY.current = null;
     window.scrollTo(0, y);
     liveY.current = window.scrollY;
-    if (y === 0) return;
+    if (y === 0) {
+      return;
+    }
     // A page that fills in after it mounts is not tall enough yet: try again for a moment.
     let tries = 0;
     let raf = 0;
     const again = () => {
-      if (Math.abs(window.scrollY - y) <= 1 || ++tries > 30) return;
+      if (Math.abs(window.scrollY - y) <= 1 || ++tries > 30) {
+        return;
+      }
       window.scrollTo(0, y);
       raf = requestAnimationFrame(again);
     };
     raf = requestAnimationFrame(again);
+
     return () => cancelAnimationFrame(raf);
   }, [page]);
 
@@ -161,8 +176,12 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     wroteOnce.current = true;
     // The old version switch kept its choice in `v` (`?v=2`, `?v=1`). There is one version now, so
     // an old link opens the same app and the parameter is dropped from the address on load.
-    if (first) writeParams({ v: null }, 'replace');
-    if (cur === page) return;
+    if (first) {
+      writeParams({ v: null }, 'replace');
+    }
+    if (cur === page) {
+      return;
+    }
     writeParams(
       { page, agent: page === 'agent' && agentKey ? agentToParam(agentKey) : null },
       first ? 'replace' : 'push'
@@ -171,7 +190,9 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
   useEffect(() => {
-    if (page !== 'agent' || !agentKey) return;
+    if (page !== 'agent' || !agentKey) {
+      return;
+    }
     writeParams({ agent: agentToParam(agentKey) }, 'replace');
   }, [page, agentKey]);
   useEffect(() => {
@@ -192,13 +213,16 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
       onUrlRig?.(u.rig);
     };
     window.addEventListener('popstate', onPop);
+
     return () => window.removeEventListener('popstate', onPop);
   }, [onUrlRig]);
 
   const openAgentPage = useCallback(
     (key: string) => {
       // A plain tmux session ("?/name") has no agent page.
-      if (key.startsWith('?/')) return;
+      if (key.startsWith('?/')) {
+        return;
+      }
       rememberScroll();
       setAgentPanel(null);
       setAgentKey(key);
@@ -211,15 +235,20 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
   const lastInGroup = useRef<Partial<Record<NavGroupKey, PageKey>>>({});
   useEffect(() => {
     const g = groupOf(page);
-    if (g) lastInGroup.current[g] = page;
+    if (g) {
+      lastInGroup.current[g] = page;
+    }
   }, [page]);
   const openGroupPage = useCallback(
     (g: NavGroupKey) => {
       const pages = navGroups().find((x) => x.key === g)?.pages ?? [];
       const last = lastInGroup.current[g];
       const target = last && pages.includes(last) ? last : pages[0];
-      if (target && target !== page) goTo(target);
-      else setOpenGroup(g);
+      if (target && target !== page) {
+        goTo(target);
+      } else {
+        setOpenGroup(g);
+      }
     },
     [goTo, page]
   );

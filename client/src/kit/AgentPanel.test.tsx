@@ -25,6 +25,7 @@ function setup(over: { tab?: AgentPanelTab } = {}) {
       ctx={{ allMachines: [m], getSocket: () => socket, now: NOW }}
     />
   );
+
   return { m, seat, onClose, onOpenPage };
 }
 

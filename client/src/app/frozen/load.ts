@@ -25,6 +25,7 @@ export function frozenNames(): string[] {
 
 export function frozenFromSearch(search: string): string | null {
   const v = new URLSearchParams(search).get(FROZEN_PARAM);
+
   return v ? v : null;
 }
 
@@ -69,6 +70,7 @@ export async function loadFrozen(
     }
   }
   const socket = createFrozenSocket(file);
+
   return {
     getSocket: () => socket,
     meta: {

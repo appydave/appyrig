@@ -21,7 +21,10 @@ export const labelClass = (state: LineFocusState): string => `hl-label-${state}`
  * It sits on the arrowhead or beside the count label; it is never a line style.
  */
 export function WaitingBadgeSvg({ x, y, n }: { x: number; y: number; n: number }) {
-  if (n <= 0) return null;
+  if (n <= 0) {
+    return null;
+  }
+
   return (
     <g className="hl-badge hl-badge-waiting" data-testid="hl-waiting" aria-hidden="true">
       <title>{`${n} still waiting`}</title>
@@ -35,7 +38,10 @@ export function WaitingBadgeSvg({ x, y, n }: { x: number; y: number; n: number }
 
 /** The clock "left open over 2 h" badge, for an SVG: a small clock face centred on (x, y). */
 export function LeftOpenBadgeSvg({ x, y, n }: { x: number; y: number; n: number }) {
-  if (n <= 0) return null;
+  if (n <= 0) {
+    return null;
+  }
+
   return (
     <g className="hl-badge hl-badge-open" data-testid="hl-left-open" aria-hidden="true">
       <title>{`${n} left open over 2 h`}</title>

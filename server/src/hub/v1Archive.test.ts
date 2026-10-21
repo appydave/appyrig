@@ -12,6 +12,7 @@ afterEach(async () => {
   await Promise.all(running.splice(0).map((h) => h.stop()));
   dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true }));
 });
+
 async function start(withFolder: boolean) {
   const dataDir = mkdtempSync(join(tmpdir(), 'appyrig-v1a-'));
   dirs.push(dataDir);
@@ -26,6 +27,7 @@ async function start(withFolder: boolean) {
   writeFileSync(join(dataDir, 'secret.png'), PNG);
   const h = await startHub({ dataDir });
   running.push(h);
+
   return h;
 }
 

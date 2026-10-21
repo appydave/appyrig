@@ -9,7 +9,9 @@ async function open(page: Page) {
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
   for (const id of ['ar-welcome-dismiss']) {
     const b = page.getByTestId(id);
-    if (await b.count()) await b.click();
+    if (await b.count()) {
+      await b.click();
+    }
   }
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
 }
@@ -19,6 +21,7 @@ const contentTop = (page: Page) =>
     const kids = [...document.querySelector('.app-main')!.children];
     const strip = document.querySelector('[data-testid="ar-strip"]')!;
     const first = kids[kids.indexOf(strip) + 1] as HTMLElement | undefined;
+
     return first ? Math.round(first.getBoundingClientRect().top) : -1;
   });
 
@@ -35,10 +38,12 @@ test.describe('v2 shell on narrow windows', () => {
       const r = await page.evaluate(() => {
         const links = [...document.querySelectorAll<HTMLElement>('.ar-nav-page')];
         const pages = document.querySelector<HTMLElement>('.ar-nav-pages')!;
+
         return {
           n: links.length,
           clipped: links.filter((l) => {
             const b = l.getBoundingClientRect();
+
             return b.right > window.innerWidth || b.width < l.scrollWidth - 1;
           }).length,
           pagesClipped: pages.scrollWidth > pages.clientWidth + 1,
@@ -96,6 +101,7 @@ test.describe('v2 shell with the agent panel open', () => {
         const main = document
           .querySelector('main[data-testid^="ar-"]')!
           .getBoundingClientRect().width;
+
         return { left, maxRight: Math.max(...rights), main };
       });
       expect(m.maxRight, JSON.stringify(m)).toBeLessThanOrEqual(m.left);

@@ -16,10 +16,12 @@ async function hookWebSocketSends(page: Page) {
     const send = WebSocket.prototype.send;
     WebSocket.prototype.send = function (data: Parameters<typeof send>[0]) {
       w.__wsSent.push(typeof data === 'string' ? data.slice(0, 120) : '(binary)');
+
       return send.call(this, data);
     };
   });
 }
+
 const sent = (page: Page) =>
   page.evaluate(() => (window as unknown as { __wsSent: string[] }).__wsSent.slice());
 
@@ -29,7 +31,9 @@ const root = (page: Page) => page.locator('main[data-testid^="ar-"]');
 async function quietIntro(page: Page) {
   // the first-visit hint can sit over the page
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
 }
 
 test.describe('v2 tour (frozen busy snapshot)', () => {
@@ -48,6 +52,7 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         } catch {
           /* the browser refuses a send on a fake socket; the hook saw it first */
         }
+
         return (window as unknown as { __wsSent: string[] }).__wsSent;
       })
     ).toContain('control');
@@ -79,8 +84,12 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         await page.getByTestId(`ar-page-${key}`).click();
         await expect(root(page), `${key} renders one page root`).toHaveCount(1);
         await expect(root(page)).toBeVisible();
-        if (key === 'graph') await expect(page.getByTestId('ar-graph')).toBeVisible();
-        if (key === 'map') await expect(page.getByTestId('ar-rigmap')).toBeVisible();
+        if (key === 'graph') {
+          await expect(page.getByTestId('ar-graph')).toBeVisible();
+        }
+        if (key === 'map') {
+          await expect(page.getByTestId('ar-rigmap')).toBeVisible();
+        }
         visited.push(`${g.replace('ar-group-', '')}/${key}`);
       }
     }

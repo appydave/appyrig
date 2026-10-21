@@ -20,10 +20,16 @@ function d10(
     seats: { id: string; rig: string; status?: string }[];
     queue: QueueItem[];
   };
-  for (const r of snap.rigs)
+  for (const r of snap.rigs) {
     r.status = r.name === 'ylo-d10' ? (over.status ?? 'running') : 'running';
-  for (const s of snap.seats) s.status = over.working?.includes(s.id) ? 'working' : 'idle';
-  if (over.queue) snap.queue = over.queue(snap.queue);
+  }
+  for (const s of snap.seats) {
+    s.status = over.working?.includes(s.id) ? 'working' : 'idle';
+  }
+  if (over.queue) {
+    snap.queue = over.queue(snap.queue);
+  }
+
   return {
     ...fm,
     liveness: (over.liveness ?? 'live') as FleetMachine['liveness'],

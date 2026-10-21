@@ -37,6 +37,7 @@ const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-lo-'));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -60,6 +61,7 @@ const listingLine = (names: string[], at = '2026-10-11T11:18:09.715Z', isInitial
 const titleLine = (seat: string) => JSON.stringify({ type: 'custom-title', customTitle: seat });
 const fileOf = (path: string) => {
   const st = statSync(path);
+
   return { path, size: st.size, mtimeMs: st.mtimeMs, lastEventMs: null };
 };
 
@@ -252,6 +254,7 @@ describe('skill folders on disk', () => {
   it('git tracking: names under .claude/skills, and "not a repo" kept apart', async () => {
     const ok: Exec = async (_b, args) => {
       expect(args).toEqual(['-C', '/w', 'ls-files', '-z', '--', '.claude/skills']);
+
       return {
         stdout:
           '.claude/skills/recipe/SKILL.md\0.claude/skills/recipe/x.md\0.claude/skills/app-idea/SKILL.md\0',
@@ -317,6 +320,7 @@ describe('seat documents', () => {
       cwd,
       logicalId: 'orch.lead',
     };
+
     return { root, team, spec, cwd, agent, seat, topo };
   }
 
@@ -468,6 +472,7 @@ describe('LoadoutReader', () => {
       { id: 'dev-build@demo', rig: 'demo', runtime: 'claude-code', cwd },
       { id: 'dev-cx@demo', rig: 'demo', runtime: 'codex', cwd },
     ];
+
     return { reader, seats, clock, transcript };
   }
 
@@ -475,7 +480,9 @@ describe('LoadoutReader', () => {
     const { reader, seats } = setup();
     const p = await reader.next(seats, new Map(), new Map());
     expect(p?.loadouts).toHaveLength(2);
-    for (const l of p!.loadouts) expect(SeatLoadoutSchema.safeParse(l).success).toBe(true);
+    for (const l of p!.loadouts) {
+      expect(SeatLoadoutSchema.safeParse(l).success).toBe(true);
+    }
     const [claude, codex] = p!.loadouts;
     expect(claude).toMatchObject({ status: 'ok', cwdIsGitRepo: true });
     expect(claude?.listing).toMatchObject({ skillCount: 5, isInitial: true, listings: 1 });
@@ -799,7 +806,9 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
       new Map([[seat.id, agent]])
     );
     const [claude, codex] = p!.loadouts;
-    for (const l of p!.loadouts) expect(SeatLoadoutSchema.parse(l)).toEqual(l);
+    for (const l of p!.loadouts) {
+      expect(SeatLoadoutSchema.parse(l)).toEqual(l);
+    }
     expect(claude).toMatchObject({
       topologyRoot: topo,
       member: { id: 'build', pod: 'dev' },

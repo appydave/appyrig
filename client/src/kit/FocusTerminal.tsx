@@ -12,6 +12,7 @@ interface Props {
 
 function cssVar(name: string, fallback: string): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
   return v || fallback;
 }
 
@@ -46,7 +47,9 @@ export default function FocusTerminal({ lines, hidden }: Props) {
         import('@xterm/addon-fit'),
       ]);
       const host = hostRef.current;
-      if (cancelled || !host) return;
+      if (cancelled || !host) {
+        return;
+      }
       term = new Terminal({
         disableStdin: true,
         convertEol: true,
@@ -91,11 +94,15 @@ export default function FocusTerminal({ lines, hidden }: Props) {
   }, []);
 
   useEffect(() => {
-    if (termRef.current) render(termRef.current, lines);
+    if (termRef.current) {
+      render(termRef.current, lines);
+    }
   }, [lines]);
 
   useEffect(() => {
-    if (!hidden) fitRef.current?.fit();
+    if (!hidden) {
+      fitRef.current?.fit();
+    }
   }, [hidden]);
 
   return (

@@ -125,7 +125,9 @@ describe('adapter: daemon nodes -> seats', () => {
     }));
     const seatsOdd = parseNodes(odd); // a bad field does not blank the rig
     expect(seatsOdd.length).toBe(raw.length);
-    for (const s of seatsOdd) expect('contextTokens' in s).toBe(false);
+    for (const s of seatsOdd) {
+      expect('contextTokens' in s).toBe(false);
+    }
   });
 
   it('a new collector seat still validates against an older hub (no contextTokens key)', () => {
@@ -136,7 +138,9 @@ describe('adapter: daemon nodes -> seats', () => {
         contextUsage: { usedPercentage: 7, totalInputTokens: null },
       }))
     );
-    for (const s of noTokens) expect(oldSeat.safeParse(s).success).toBe(true);
+    for (const s of noTokens) {
+      expect(oldSeat.safeParse(s).success).toBe(true);
+    }
     const withTokens = parseNodes(
       (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => ({
         ...n,
@@ -150,6 +154,7 @@ describe('adapter: daemon nodes -> seats', () => {
     const raw = (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => {
       const rest = { ...n };
       delete rest.activityState;
+
       return rest;
     });
     const seats2 = parseNodes(raw);
@@ -159,6 +164,7 @@ describe('adapter: daemon nodes -> seats', () => {
   it('throws naming the field when canonicalSessionName is renamed', () => {
     const raw = (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => {
       const { canonicalSessionName, ...rest } = n;
+
       return { ...rest, sessionName: canonicalSessionName };
     });
     expect(() => parseNodes(raw)).toThrow(/canonicalSessionName/);
@@ -184,10 +190,16 @@ describe('adapter: daemon queue', () => {
     const extra = ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'];
     for (const row of q) {
       const keys = Object.keys(row);
-      for (const b of base) expect(keys).toContain(b);
-      for (const k of keys) expect([...base, ...extra]).toContain(k);
+      for (const b of base) {
+        expect(keys).toContain(b);
+      }
+      for (const k of keys) {
+        expect([...base, ...extra]).toContain(k);
+      }
     }
-    for (let i = 1; i < q.length; i++) expect(q[i - 1]!.updatedAt >= q[i]!.updatedAt).toBe(true);
+    for (let i = 1; i < q.length; i++) {
+      expect(q[i - 1]!.updatedAt >= q[i]!.updatedAt).toBe(true);
+    }
   });
 
   it('falls back to the first body line when summary is null, bounded to 160 chars', () => {
@@ -232,8 +244,9 @@ describe('v2 free fields (step 1)', () => {
       { ...rawQ()[0]!, closureReason: '', closureTarget: null, blockedOn: { x: 1 }, tier: 5 },
     ]);
     expect(rows).toHaveLength(1);
-    for (const k of ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'])
+    for (const k of ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier']) {
       expect(k in rows[0]!).toBe(false);
+    }
   });
 
   it('queue: a new collector row still validates against the OLD row shape when nothing is new', () => {
@@ -261,7 +274,9 @@ describe('v2 free fields (step 1)', () => {
       }))
     );
     expect(withCmd[0]).toMatchObject({ tmuxAttachCommand: attach });
-    for (const s of withCmd) expect('resumeCommand' in s).toBe(false);
+    for (const s of withCmd) {
+      expect('resumeCommand' in s).toBe(false);
+    }
     expect(JSON.stringify(withCmd)).not.toContain('a0cf4780');
     // the builder runs redactDeep over the whole snapshot: the line must come through unchanged
     expect(redactDeep(withCmd[0]!).tmuxAttachCommand).toBe(attach);

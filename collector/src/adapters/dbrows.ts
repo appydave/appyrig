@@ -25,14 +25,22 @@ import { defaultOpenrigDb, openReadOnly } from './dbschema.js';
 const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
 export function cellOf(v: unknown): DbCell {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'number') return v;
-  if (typeof v === 'bigint')
+  if (v === null || v === undefined) {
+    return null;
+  }
+  if (typeof v === 'number') {
+    return v;
+  }
+  if (typeof v === 'bigint') {
     return v <= BigInt(Number.MAX_SAFE_INTEGER) && v >= BigInt(Number.MIN_SAFE_INTEGER)
       ? Number(v)
       : v.toString();
-  if (v instanceof Uint8Array) return `(blob ${v.byteLength} bytes)`;
+  }
+  if (v instanceof Uint8Array) {
+    return `(blob ${v.byteLength} bytes)`;
+  }
   const s = redactString(String(v));
+
   return s.length > DB_CELL_MAX
     ? `${s.slice(0, DB_CELL_MAX)}… (${s.length.toLocaleString('en-US')} chars)`
     : s;
@@ -81,7 +89,9 @@ export function readAllTableRows(
         const row = columns.map((c) => (hidden.includes(c) ? DB_HIDDEN_CELL : cellOf(r[c])));
         // The byte cap counts what is actually sent: the serialized row.
         bytes += Buffer.byteLength(JSON.stringify(row));
-        if (bytes > DB_ROWS_BYTES_MAX) break;
+        if (bytes > DB_ROWS_BYTES_MAX) {
+          break;
+        }
         rows.push(row);
       }
       out.push({
@@ -96,6 +106,7 @@ export function readAllTableRows(
         hiddenColumns: hidden,
       });
     }
+
     return out;
   } finally {
     db.close();
@@ -131,19 +142,26 @@ export class DbRowsReader {
   }
 
   async next(): Promise<PendingDbRows | null> {
-    if (this.now().getTime() - this.lastRead < this.ttlMs) return null;
+    if (this.now().getTime() - this.lastRead < this.ttlMs) {
+      return null;
+    }
     this.lastRead = this.now().getTime();
-    if (!existsSync(this.dbPath)) return null;
+    if (!existsSync(this.dbPath)) {
+      return null;
+    }
     const sigOf = async (p: string) => {
       try {
         const st = await stat(p);
+
         return `${st.size}:${st.mtimeMs}`;
       } catch {
         return '-';
       }
     };
     const fileSig = `${await sigOf(this.dbPath)}|${await sigOf(`${this.dbPath}-wal`)}`;
-    if (fileSig === this.fileSig) return null;
+    if (fileSig === this.fileSig) {
+      return null;
+    }
     let pushes: DbRowsPush[];
     try {
       pushes = readAllTableRows(this.machineId, this.dbPath, this.now().toISOString());
@@ -156,15 +174,19 @@ export class DbRowsReader {
       const sig = createHash('sha1')
         .update(JSON.stringify({ ...p, collectedAt: '' }))
         .digest('hex');
-      if (this.sent.get(p.table) === sig) continue;
+      if (this.sent.get(p.table) === sig) {
+        continue;
+      }
       changed.push(p);
       sigs.set(p.table, sig);
     }
     const thisSig = fileSig;
     if (changed.length === 0) {
       this.fileSig = thisSig;
+
       return null;
     }
+
     return {
       pushes: changed,
       markSent: () => {

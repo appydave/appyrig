@@ -16,6 +16,7 @@ interface QueueFixture {
 export function queueMachine(name: 'ylo-d10', id = 'm4'): FleetMachine {
   const file = path.resolve(__dirname, '../../../test/fixtures/queues', `${name}.json`);
   const raw = JSON.parse(readFileSync(file, 'utf8')) as QueueFixture;
+
   return {
     machine: { id, label: id.toUpperCase(), hostname: null },
     liveness: 'asleep',

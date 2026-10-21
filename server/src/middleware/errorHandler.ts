@@ -14,6 +14,7 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
       error: 'Request body too large',
       timestamp: new Date().toISOString(),
     });
+
     return;
   }
   const statusCode = err instanceof AppError ? err.statusCode : 500;

@@ -32,6 +32,7 @@ export function rigFacts(r: RigFacts): { summary: string; owner: string; spec: s
 export function rigTitle(r: RigFacts): string {
   const f = rigFacts(r);
   const name = r.displayName && r.displayName !== r.name ? `${r.displayName} (${r.name})` : r.name;
+
   return `${name}\n${f.summary}\nOwner: ${f.owner}\nSpec: ${f.spec}`;
 }
 
@@ -46,6 +47,7 @@ interface Props {
 /** S3: the panel under the rig chips: summary, owner and spec path of the hovered or chosen rig. */
 export default function RigInfo({ rig, preview, onOpenFiles }: Props) {
   const f = rigFacts(rig);
+
   return (
     <section
       className="rig-info"

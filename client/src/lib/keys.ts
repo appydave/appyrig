@@ -6,9 +6,16 @@
 const NOT_TEXT = new Set(['range', 'checkbox', 'radio', 'button', 'submit', 'reset', 'color']);
 
 export function isTextEntry(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  if (target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return true;
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  if (target.isContentEditable) {
+    return true;
+  }
+  if (target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+    return true;
+  }
+
   return target.tagName === 'INPUT' && !NOT_TEXT.has((target as HTMLInputElement).type);
 }
 

@@ -71,7 +71,9 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
   const out: DocItem[] = [];
   const add = (it: DocItem) => {
     const n = lc(it.name);
-    if (seen.has(n)) return;
+    if (seen.has(n)) {
+      return;
+    }
     seen.add(n);
     out.push(it);
   };
@@ -124,6 +126,7 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
       source: { kind: 'mission', path: p },
     });
   }
+
   return out;
 }
 
@@ -140,10 +143,19 @@ export function firstDoc(items: DocItem[]): DocItem | null {
 
 export type DocKind = 'markdown' | 'yaml' | 'html' | 'image' | 'text';
 export function docKind(name: string): DocKind {
-  if (/\.ya?ml$/i.test(name)) return 'yaml';
-  if (/\.html?$/i.test(name)) return 'html';
-  if (/\.(png|jpe?g)$/i.test(name)) return 'image';
-  if (/\.md$/i.test(name) || !/\.[a-z0-9]+$/i.test(name)) return 'markdown';
+  if (/\.ya?ml$/i.test(name)) {
+    return 'yaml';
+  }
+  if (/\.html?$/i.test(name)) {
+    return 'html';
+  }
+  if (/\.(png|jpe?g)$/i.test(name)) {
+    return 'image';
+  }
+  if (/\.md$/i.test(name) || !/\.[a-z0-9]+$/i.test(name)) {
+    return 'markdown';
+  }
+
   return 'text';
 }
 
@@ -169,7 +181,9 @@ export function groupSkills(skills: LoadoutSkill[], query: string): SkillGroup[]
   const q = lc(query.trim());
   const map = new Map<string, SkillGroup>();
   for (const s of skills) {
-    if (q && !lc(s.name).includes(q) && !lc(s.plugin ?? '').includes(q)) continue;
+    if (q && !lc(s.name).includes(q) && !lc(s.plugin ?? '').includes(q)) {
+      continue;
+    }
     const id = s.source === 'plugin' ? `plugin:${s.plugin ?? '?'}` : s.source;
     const g = map.get(id) ?? {
       id,
@@ -180,6 +194,7 @@ export function groupSkills(skills: LoadoutSkill[], query: string): SkillGroup[]
     map.set(id, g);
   }
   const top = (g: SkillGroup) => (g.id === 'role' ? 0 : g.id === 'repo' ? 1 : 2);
+
   return [...map.values()]
     .map((g) => ({ ...g, skills: [...g.skills].sort((a, b) => a.name.localeCompare(b.name)) }))
     .sort(

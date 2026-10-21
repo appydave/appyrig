@@ -22,7 +22,9 @@ test.describe('v2 ⋯ menu stacking', () => {
     for (const id of ids) {
       await page.getByTestId(id).click();
       const gotIt = page.getByRole('button', { name: /got it/i });
-      if (await gotIt.count()) await gotIt.first().click();
+      if (await gotIt.count()) {
+        await gotIt.first().click();
+      }
       await page.getByTestId('more-open').click();
       const items = page.locator('.ar-more-pop > *');
       const n = await items.count();
@@ -34,6 +36,7 @@ test.describe('v2 ⋯ menu stacking', () => {
         const hit = await item.evaluate(
           (el, [x, y]) => {
             const at = document.elementFromPoint(x!, y!);
+
             return at === el || el.contains(at)
               ? 'ok'
               : `${at?.tagName}.${at?.className} ${at?.getAttribute('data-testid')}`;

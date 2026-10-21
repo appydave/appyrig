@@ -30,6 +30,7 @@ export function mapPairs(map: RigMap): MapPair[] {
     const word = plannedWord(e.planned ?? '');
     kinds.set(k, [...new Set([...(kinds.get(k) ?? []), word])]);
   }
+
   return mergePairs(raw).map((p) => {
     const items = map.edges
       .filter(
@@ -37,6 +38,7 @@ export function mapPairs(map: RigMap): MapPair[] {
       )
       .flatMap((e) => e.items)
       .sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+
     return {
       ...p,
       plannedWords: p.planned ? (kinds.get(`${p.a}\u0000${p.b}`) ?? []).join(' · ') : null,
@@ -94,7 +96,9 @@ export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
   for (const p of pairs) {
     const ca = look.card(p.a);
     const cb = look.card(p.b);
-    if (!ca || !cb) continue;
+    if (!ca || !cb) {
+      continue;
+    }
     const pa = look.pod(p.a);
     const pb = look.pod(p.b);
     if (sameRow(ca, cb) || p.planned || !pa || !pb || pa === pb) {
@@ -155,6 +159,7 @@ export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
       items: members.flatMap((m) => m.items).sort((u, v) => u.createdAt.localeCompare(v.createdAt)),
     });
   }
+
   return out;
 }
 

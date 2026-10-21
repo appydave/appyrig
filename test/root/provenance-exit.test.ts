@@ -39,6 +39,7 @@ function run(args: string[], env: Record<string, string> = {}) {
     env: { ...process.env, ...env },
     timeout: 60_000,
   });
+
   return { status: r.status, out: `${r.stdout}\n${r.stderr}` };
 }
 
@@ -60,7 +61,9 @@ describe('provenance exit codes', () => {
     const out = join(ROOT, 'scripts/provenance/out');
     const aside = join(scratch, 'out-aside');
     const had = existsSync(out);
-    if (had) renameSync(out, aside);
+    if (had) {
+      renameSync(out, aside);
+    }
     try {
       writeFileSync(out, 'not a folder');
       const r = run(['--source', SOURCE], NO_CLI);
@@ -69,7 +72,9 @@ describe('provenance exit codes', () => {
       expect(r.out).toMatch(/provenance: could not write .*; wrote the report to /);
     } finally {
       rmSync(out, { force: true });
-      if (had) renameSync(aside, out);
+      if (had) {
+        renameSync(aside, out);
+      }
     }
   });
 });

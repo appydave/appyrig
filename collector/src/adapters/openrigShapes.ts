@@ -319,8 +319,10 @@ export function nodeStatusClass(sessionStatus: unknown): NodeStatusClass {
 export function issueMessages(error: z.ZodError): string[] {
   return error.issues.map((i) => {
     const path = i.path.join('.');
-    if (i.code === 'unrecognized_keys')
+    if (i.code === 'unrecognized_keys') {
       return `${path || '(root)'}: unrecognized key ${i.keys.join(', ')}`;
+    }
+
     return `${path || '(root)'}: ${i.message}`;
   });
 }
@@ -329,17 +331,22 @@ export function issueMessages(error: z.ZodError): string[] {
 export function nodeContractIssues(node: unknown): string[] {
   const issues: string[] = [];
   const parsed = NodeStrict.safeParse(node);
-  if (!parsed.success) issues.push(...issueMessages(parsed.error));
+  if (!parsed.success) {
+    issues.push(...issueMessages(parsed.error));
+  }
   if (node && typeof node === 'object') {
     const rec = node as Record<string, unknown>;
     const cls = nodeStatusClass(rec.sessionStatus);
     for (const key of REQUIRED_NODE_KEYS[cls]) {
-      if (!(key in rec)) issues.push(`${key}: required key missing for a ${cls} seat`);
+      if (!(key in rec)) {
+        issues.push(`${key}: required key missing for a ${cls} seat`);
+      }
     }
     if (cls === 'running' && !rec.activityState) {
       issues.push('activityState: a running seat must carry the oracle verdict');
     }
   }
+
   return issues;
 }
 

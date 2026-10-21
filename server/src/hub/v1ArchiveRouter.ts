@@ -38,11 +38,13 @@ export function v1ArchiveRouter(dataDir: string | undefined): Router {
     const name = req.params.file;
     if (!folder || !V1_ARCHIVE_NAME.test(name)) {
       res.status(404).json({ status: 'error', error: 'Not found' });
+
       return;
     }
     const full = resolve(folder, name);
     if (!full.startsWith(folder + sep) || !existsSync(full)) {
       res.status(404).json({ status: 'error', error: 'Not found' });
+
       return;
     }
     res.type('image/png').sendFile(join(folder, name), { dotfiles: 'deny' }, (err) => {

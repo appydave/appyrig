@@ -49,7 +49,9 @@ export function FakeRunner({ children, workMs = 1200 }: { children: ReactNode; w
 
   const { phase, reset } = a;
   useEffect(() => {
-    if (phase !== 'done' || !ask) return;
+    if (phase !== 'done' || !ask) {
+      return;
+    }
     const id = ++next.current;
     setToasts((t) => [...t, { id, text: ask.result }]);
     timers.current.push(setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), TOAST_MS));
@@ -126,6 +128,7 @@ export function FakeButton({
   onAsk?: () => void;
 }) {
   const run = useFake();
+
   return (
     <button
       type="button"

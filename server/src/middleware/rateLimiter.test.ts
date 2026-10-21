@@ -18,6 +18,7 @@ function buildApp(limit: number) {
   app.get('/ping', (_req, res) => {
     res.json({ ok: true });
   });
+
   return app;
 }
 

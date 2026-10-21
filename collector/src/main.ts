@@ -87,6 +87,7 @@ function main() {
       daemonData.forgetSeatsNotIn(new Set(own.map((s) => s.id)));
       daemonTargets = own.flatMap((s) => {
         const rigId = s.rig ? rigIds.get(s.rig) : undefined;
+
         return s.source === 'openrig' && s.logicalId && rigId
           ? [{ seat: s.id, rigId, logicalId: s.logicalId }]
           : [];
@@ -98,6 +99,7 @@ function main() {
         names: loadouts.skillNames(),
         config: seatConfig(),
       });
+
       return { ...snap, seats };
     },
     onConnect: () => {

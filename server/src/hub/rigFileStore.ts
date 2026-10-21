@@ -23,11 +23,15 @@ export class RigFileStore {
     const files = push.replace
       ? new Map<string, RigFile>()
       : (this.byRig.get(k) ?? new Map<string, RigFile>());
-    for (const f of push.files) files.set(f.id, f);
+    for (const f of push.files) {
+      files.set(f.id, f);
+    }
     // Each kind keeps its own cap: spec-named files (scope `rig`) never push out the allowlisted ones.
     const trim = (spec: boolean, max: number) => {
       const ids = [...files.values()].filter((f) => (f.scope === 'rig') === spec).map((f) => f.id);
-      for (const id of ids.slice(0, Math.max(0, ids.length - max))) files.delete(id);
+      for (const id of ids.slice(0, Math.max(0, ids.length - max))) {
+        files.delete(id);
+      }
     };
     trim(false, RIG_FILES_MAX);
     trim(true, RIG_SPEC_FILES_MAX);

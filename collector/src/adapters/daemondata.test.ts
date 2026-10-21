@@ -100,6 +100,7 @@ describe('v2 · seat detail (step 2)', () => {
   const reader = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) => {
     let t = 1_000_000;
     const r = new DaemonDataReader('m4', get, { now: () => t, log, kinds: ['seatdetail'] });
+
     return { r, tick: (ms: number) => (t += ms) };
   };
 
@@ -107,6 +108,7 @@ describe('v2 · seat detail (step 2)', () => {
     const paths: string[] = [];
     const { r, tick } = reader(async (p) => {
       paths.push(p);
+
       return node();
     });
     const first = await r.next([T]);
@@ -133,7 +135,10 @@ describe('v2 · seat detail (step 2)', () => {
 
   it('a 404 on ONE seat is not-found (the route exists); a 404 on the route itself is unsupported', async () => {
     const { r } = reader(async (p) => {
-      if (p.endsWith('/nodes/dev.build')) throw new Error(`GET ${p} -> HTTP 404`);
+      if (p.endsWith('/nodes/dev.build')) {
+        throw new Error(`GET ${p} -> HTTP 404`);
+      }
+
       return [];
     });
     const p = await r.next([T]);
@@ -206,7 +211,10 @@ describe('v2 · seat detail (step 2)', () => {
     let healthy = false;
     const { r, tick } = reader(
       async () => {
-        if (!healthy) throw new Error('boom');
+        if (!healthy) {
+          throw new Error('boom');
+        }
+
         return node();
       },
       (l) => lines.push(l)
@@ -226,7 +234,10 @@ describe('v2 · seat detail (step 2)', () => {
 
   it('one bad seat does not stop the others', async () => {
     const { r } = reader(async (p) => {
-      if (p.includes('bad')) throw new Error('HTTP 500');
+      if (p.includes('bad')) {
+        throw new Error('HTTP 500');
+      }
+
       return node();
     });
     const p = await r.next([
@@ -245,7 +256,9 @@ describe('v2 · old hub compatibility', () => {
     ) as Record<string, unknown>[];
     const bare = raw.map((n) => ({ ...n, tmuxAttachCommand: null }));
     const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true });
-    for (const s of parseNodes(bare)) expect(OldSeat.safeParse(s).success).toBe(true);
+    for (const s of parseNodes(bare)) {
+      expect(OldSeat.safeParse(s).success).toBe(true);
+    }
   });
 });
 
@@ -356,12 +369,18 @@ describe('v2 · library (step 3)', () => {
       async (p) => {
         seen.push(p);
         const v = routes[p];
-        if (v instanceof Error) throw v;
-        if (v === undefined) throw new Error(`GET ${p} -> HTTP 404`);
+        if (v instanceof Error) {
+          throw v;
+        }
+        if (v === undefined) {
+          throw new Error(`GET ${p} -> HTTP 404`);
+        }
+
         return v;
       },
       { now: () => 5_000_000, log, kinds: ['library'] }
     );
+
     return { r, seen };
   };
   const only = (p: Awaited<ReturnType<DaemonDataReader['next']>>, kind: string) =>
@@ -383,7 +402,9 @@ describe('v2 · library (step 3)', () => {
       '/api/specs/library',
       '/healthz',
     ]);
-    for (const p of seen) expect(p).toMatch(/^\/(api\/|healthz)/);
+    for (const p of seen) {
+      expect(p).toMatch(/^\/(api\/|healthz)/);
+    }
   });
 
   it('a list that cannot be read is null (not empty) and the others still go; logged once', async () => {
@@ -438,23 +459,30 @@ function fakeTelemetry(opts: { n: number; boot?: string }) {
     calls.push(path);
     const url = new URL(path, 'http://x');
     const limit = Number(url.searchParams.get('limit'));
-    if (!(limit >= 1 && limit <= 128)) throw new Error('GET -> HTTP 400');
+    if (!(limit >= 1 && limit <= 128)) {
+      throw new Error('GET -> HTTP 400');
+    }
     const start = url.searchParams.get('start');
     const cursor = url.searchParams.get('cursor');
-    if (start && cursor) throw new Error('GET -> HTTP 400');
+    if (start && cursor) {
+      throw new Error('GET -> HTTP 400');
+    }
     let after = 0;
     if (cursor) {
       const c = JSON.parse(Buffer.from(cursor, 'base64url').toString()) as {
         boot: string;
         last: number;
       };
-      if (c.boot !== boot) throw new Error('GET -> HTTP 400');
+      if (c.boot !== boot) {
+        throw new Error('GET -> HTTP 400');
+      }
       after = c.last;
     }
     const ids = Array.from({ length: n }, (_, i) => i + 1)
       .filter((i) => i > after)
       .slice(0, limit);
     const last = ids.length ? ids[ids.length - 1]! : after;
+
     return {
       schemaVersion: 1,
       source: { hostId: 'host-1', bootEpoch: boot },
@@ -474,17 +502,24 @@ function fakeTelemetry(opts: { n: number; boot?: string }) {
       },
     };
   };
+
   return {
     get,
     calls,
     grow: (k: number) => (n += k),
-    newBoot: (b: string) => ((boot = b), (n = 5)),
+    newBoot: (b: string) => {
+      boot = b;
+      n = 5;
+
+      return n;
+    },
   };
 }
 
 describe('v2 · queue transitions (step 4)', () => {
   const trReader = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) => {
     let t = 9_000_000;
+
     return {
       r: new DaemonDataReader('m4', get, { now: () => t, log, kinds: ['transitions'] }),
       tick: (ms = 21_000) => (t += ms),
@@ -600,6 +635,7 @@ describe('v2 · queue transitions (step 4)', () => {
     let n = 0;
     const { r } = trReader(async () => {
       n += 1;
+
       return {
         source: { hostId: 'h', bootEpoch: 'b' },
         rows: n === 1 ? [row(1), row(2)] : [row(2), row(3)],
@@ -616,7 +652,10 @@ describe('v2 · queue transitions (step 4)', () => {
     const lines: string[] = [];
     const { r, tick } = trReader(
       async (p) => {
-        if (down) throw new Error(down);
+        if (down) {
+          throw new Error(down);
+        }
+
         return d.get(p);
       },
       (l) => lines.push(l)
@@ -712,7 +751,9 @@ describe('v2 · workflows (step 5)', () => {
     const r = new DaemonDataReader(
       'm4',
       async (p) => {
-        if (p === '/api/workflow/specs') return { specs: [{ name: 'basic-loop' }] };
+        if (p === '/api/workflow/specs') {
+          return { specs: [{ name: 'basic-loop' }] };
+        }
         throw new Error('HTTP 500');
       },
       { now: () => 1, log: (l) => lines.push(l), kinds: ['workflows'] }
@@ -768,8 +809,13 @@ describe('v2 · health findings (step 5)', () => {
       'm4',
       async (p) => {
         const v = routes[p];
-        if (v instanceof Error) throw v;
-        if (v === undefined) throw new Error(`GET ${p} -> HTTP 404`);
+        if (v instanceof Error) {
+          throw v;
+        }
+        if (v === undefined) {
+          throw new Error(`GET ${p} -> HTTP 404`);
+        }
+
         return v;
       },
       { now: () => 1, log, kinds: ['health'] }
@@ -894,8 +940,9 @@ describe('v2 · settings (step 5)', () => {
       'ANTHROPIC_API_KEY',
       'openrig.sqlite',
       'Read the skill',
-    ])
+    ]) {
       expect(wire).not.toContain(bad);
+    }
   });
 
   it('every allowlisted key is forwarded, and none looks like a path, file, instruction, url or session', () => {
@@ -907,8 +954,9 @@ describe('v2 · settings (step 5)', () => {
     const s = parseSettings(all);
     expect(Object.keys(s.settings).sort()).toEqual([...SETTINGS_ALLOW].sort());
     expect(s.withheld).toBe(0);
-    for (const k of SETTINGS_ALLOW)
+    for (const k of SETTINGS_ALLOW) {
       expect(k).not.toMatch(/path|root|file|dir|instruction|inline|url|webhook|session/i);
+    }
     // and a key with such a name is withheld whatever its value, even on a list that included it
     const risky = parseSettings({
       settings: { 'agents.advisor_session': { value: 'x', source: 'default', defaultValue: 'x' } },

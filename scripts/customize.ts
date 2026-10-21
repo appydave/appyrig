@@ -25,9 +25,12 @@ async function main(): Promise<void> {
     message: 'Project name (e.g. my-app)',
     placeholder: 'my-app',
     validate(value) {
-      if (!value || value.trim().length === 0) return 'Project name is required';
-      if (!/^[a-z0-9-]+$/.test(value.trim()))
+      if (!value || value.trim().length === 0) {
+        return 'Project name is required';
+      }
+      if (!/^[a-z0-9-]+$/.test(value.trim())) {
         return 'Use lowercase letters, numbers, and hyphens only';
+      }
     },
   });
   if (isCancel(projectName)) {
@@ -39,9 +42,15 @@ async function main(): Promise<void> {
     message: 'Package scope (e.g. @myorg)',
     placeholder: '@myorg',
     validate(value) {
-      if (!value || value.trim().length === 0) return 'Package scope is required';
-      if (!value.trim().startsWith('@')) return 'Scope must start with @';
-      if (!/^@[a-z0-9-]+$/.test(value.trim())) return 'Use @lowercase-letters-numbers-hyphens only';
+      if (!value || value.trim().length === 0) {
+        return 'Package scope is required';
+      }
+      if (!value.trim().startsWith('@')) {
+        return 'Scope must start with @';
+      }
+      if (!/^@[a-z0-9-]+$/.test(value.trim())) {
+        return 'Use @lowercase-letters-numbers-hyphens only';
+      }
     },
   });
   if (isCancel(packageScope)) {
@@ -55,8 +64,9 @@ async function main(): Promise<void> {
     initialValue: '5501',
     validate(value) {
       const port = Number(value);
-      if (!Number.isInteger(port) || port < 1 || port > 65535)
+      if (!Number.isInteger(port) || port < 1 || port > 65535) {
         return 'Enter a valid port number (1–65535)';
+      }
     },
   });
   if (isCancel(serverPortInput)) {
@@ -70,8 +80,9 @@ async function main(): Promise<void> {
     initialValue: '5500',
     validate(value) {
       const port = Number(value);
-      if (!Number.isInteger(port) || port < 1 || port > 65535)
+      if (!Number.isInteger(port) || port < 1 || port > 65535) {
         return 'Enter a valid port number (1–65535)';
+      }
     },
   });
   if (isCancel(clientPortInput)) {
@@ -83,7 +94,9 @@ async function main(): Promise<void> {
     message: 'Project description',
     placeholder: 'My awesome app',
     validate(value) {
-      if (!value || value.trim().length === 0) return 'Description is required';
+      if (!value || value.trim().length === 0) {
+        return 'Description is required';
+      }
     },
   });
   if (isCancel(description)) {

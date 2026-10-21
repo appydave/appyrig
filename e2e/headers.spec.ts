@@ -8,7 +8,9 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
 }
 
 async function go(page: Page, group: string, key: string) {
@@ -18,8 +20,9 @@ async function go(page: Page, group: string, key: string) {
 }
 
 async function chooseRig(page: Page, key: string) {
-  if (await page.getByTestId('rig-drawer-panel').isHidden())
+  if (await page.getByTestId('rig-drawer-panel').isHidden()) {
     await page.getByTestId('rig-drawer-tab').click();
+  }
   await page.locator(`[data-testid="drawer-rig"][data-rig-key="${key}"]`).first().click();
 }
 

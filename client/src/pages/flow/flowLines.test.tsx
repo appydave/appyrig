@@ -16,10 +16,15 @@ import { flowPairs, pairPath } from '../../domain/flow/flowLines.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -38,11 +43,13 @@ function socket() {
         cb(null, { ok: false, error: { failureMode: 'unknown_verb', message: req.verb } }),
     }),
   };
+
   return s as unknown as FleetSocket;
 }
 
 function ctxFor(machines: FleetMachine[], rigName = 'starter'): PageContext {
   const rigs = listRigs(machines);
+
   return {
     machines,
     allMachines: machines,
@@ -177,6 +184,7 @@ describe('Handoff Flow v2 page: quiet lines', () => {
       const box = stages.find((s) => {
         const id = s.dataset.stage!;
         const mine = lines.filter((l) => l.dataset.pair!.split('|').includes(id));
+
         return mine.length > 0 && mine.length < lines.length;
       });
       if (!box) {
@@ -188,21 +196,24 @@ describe('Handoff Flow v2 page: quiet lines', () => {
       const id = box.dataset.stage!;
       const touches = (l: HTMLElement) => l.dataset.pair!.split('|').includes(id);
       fireEvent.pointerEnter(box);
-      for (const l of screen.getAllByTestId('flow-edge'))
+      for (const l of screen.getAllByTestId('flow-edge')) {
         expect(l.dataset.state).toBe(touches(l) ? 'lit' : 'dimmed');
+      }
       fireEvent.pointerLeave(box);
       expect(screen.getAllByTestId('flow-edge').every((l) => l.dataset.state === 'faint')).toBe(
         true
       );
       fireEvent.focus(box);
-      for (const l of screen.getAllByTestId('flow-edge'))
+      for (const l of screen.getAllByTestId('flow-edge')) {
         expect(l.dataset.state).toBe(touches(l) ? 'lit' : 'dimmed');
+      }
       fireEvent.blur(box);
       // hovering a line lights that line only
       const first = screen.getAllByTestId('flow-edge')[0]!;
       fireEvent.pointerEnter(first);
-      for (const l of screen.getAllByTestId('flow-edge'))
+      for (const l of screen.getAllByTestId('flow-edge')) {
         expect(l.dataset.state).toBe(l === first ? 'lit' : 'dimmed');
+      }
       unmount();
       break;
     }
