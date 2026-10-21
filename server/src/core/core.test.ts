@@ -14,7 +14,7 @@ import {
   type SeatLoadout,
 } from '@appydave/shared';
 import { createCore } from './core.js';
-import { FAILURE_CODES, VERBS, VERB_REGISTRY, WRITE_VERBS, defineVerbs } from './verbs.js';
+import { FAILURE_CODES, VERBS, VERB_REGISTRY, defineVerbs } from './verbs.js';
 import { FleetStore } from '../hub/fleetStore.js';
 import { loadSnapshot, manualClock } from '../test/hubHarness.js';
 import type { AppIdentity } from './identity.js';
@@ -33,15 +33,12 @@ function fleet() {
 
 const AGENT = 'agent:test';
 
-describe('AC 9 — exactly one write verb', () => {
+describe('AC 9 — every verb is a read-only query', () => {
   it('the registry is exactly the plan §0.2 verb list', () => {
     expect(Object.keys(VERBS).sort()).toEqual([
       'account.list',
       'db.rows',
       'db.schema',
-      'feedback.add',
-      'feedback.get',
-      'feedback.list',
       'fleet.get',
       'handoff.get',
       'handoff.list',
@@ -63,7 +60,6 @@ describe('AC 9 — exactly one write verb', () => {
       'rig.topology',
       'rig.waiting',
       'seat.detail',
-      'seat.get',
       'seat.history',
       'seat.list',
       'seat.loadout',
@@ -74,29 +70,16 @@ describe('AC 9 — exactly one write verb', () => {
     ]);
   });
 
-  it('every verb is a read-only, idempotent query that no fence hides, except exactly one named write', () => {
-    expect(WRITE_VERBS).toEqual(['feedback.add']);
-    const writes: string[] = [];
+  it('every verb is a read-only, idempotent query that no fence hides', () => {
     for (const [name, c] of Object.entries(VERBS)) {
-      if (c.sideEffects !== 'read-only') {
-        writes.push(name);
-        continue;
-      }
+      expect(c.sideEffects, name).toBe('read-only');
       expect(c.kind, name).toBe('query');
       expect(c.idempotent, name).toBe(true);
       expect(c.humanOnly, name).toBe(false);
     }
-    // the one write: a human-only command, not idempotent, and a reversible edit (a folder of notes)
-    expect(writes).toEqual(['feedback.add']);
-    expect(VERBS['feedback.add']).toMatchObject({
-      kind: 'command',
-      sideEffects: 'reversible-write',
-      humanOnly: true,
-      idempotent: false,
-    });
   });
 
-  it('the fence refuses any other write, and a second kind of the same one, at import time', async () => {
+  it('the fence refuses any write at import time', async () => {
     const { z } = await import('zod');
     const { defineCapability } = await import('./vendor/capability.js');
     const mk = (over: Record<string, unknown> = {}) => ({
@@ -114,25 +97,20 @@ describe('AC 9 — exactly one write verb', () => {
       } as never),
       handle: () => ({}),
     });
-    // a write that is not on the list
-    expect(() => defineVerbs({ 'feedback.delete': mk() })).toThrow(
-      /read-only except feedback\.add/
-    );
-    // the named write, but not human-only / idempotent / destructive: refused too
-    expect(() => defineVerbs({ 'feedback.add': mk({ humanOnly: false }) })).toThrow(
-      /feedback\.add/
-    );
-    expect(() => defineVerbs({ 'feedback.add': mk({ idempotent: true }) })).toThrow(
-      /feedback\.add/
-    );
-    expect(() => defineVerbs({ 'feedback.add': mk({ sideEffects: 'destructive' }) })).toThrow(
-      /feedback\.add/
+    expect(() => defineVerbs({ 'notes.add': mk() })).toThrow(/read-only queries; not: notes\.add/);
+    expect(() => defineVerbs({ 'notes.add': mk({ sideEffects: 'destructive' }) })).toThrow(
+      /notes\.add/
     );
     expect(() =>
-      defineVerbs({ 'feedback.add': mk({ sideEffects: 'external-side-effect' }) })
-    ).toThrow(/feedback\.add/);
-    // and exactly the right shape is accepted
-    expect(() => defineVerbs({ 'feedback.add': mk() })).not.toThrow();
+      defineVerbs({
+        'notes.add': mk({
+          kind: 'query',
+          sideEffects: 'read-only',
+          idempotent: true,
+          humanOnly: false,
+        }),
+      })
+    ).not.toThrow();
   });
 
   it('no source outside tests can send to a seat, tmux or the queue (grep)', () => {
@@ -232,11 +210,11 @@ describe('core.call — the one seam', () => {
 
   it('refusals are data with details a caller can retry from (B7)', () => {
     const { core } = fleet();
-    expect(core.call(AGENT, 'seat.get', { machine: 'm4', seat: 'x' })).toMatchObject({
+    expect(core.call(AGENT, 'seat.tail', { machine: 'm4', seat: 'x' })).toMatchObject({
       ok: false,
       error: { failureMode: 'machine-not-found', details: { known: ['m2', 'roamy'] } },
     });
-    const noSeat = core.call(AGENT, 'seat.get', { machine: 'roamy', seat: 'nope' });
+    const noSeat = core.call(AGENT, 'seat.tail', { machine: 'roamy', seat: 'nope' });
     expect(noSeat).toMatchObject({ ok: false, error: { failureMode: 'seat-not-found' } });
     if (!noSeat.ok)
       expect((noSeat.error.details as { known: string[] }).known.length).toBeGreaterThan(0);
@@ -244,7 +222,7 @@ describe('core.call — the one seam', () => {
       ok: false,
       error: {
         failureMode: 'unknown-capability',
-        details: { known: expect.arrayContaining(['seat.get']) },
+        details: { known: expect.arrayContaining(['seat.tail']) },
       },
     });
     expect(core.call(AGENT, 'seat.list', { colour: 'red' })).toMatchObject({
@@ -293,7 +271,6 @@ describe('core.call — the one seam', () => {
     const { core, store } = fleet();
     const seat = store.get('roamy')!.snapshot.seats[0]!.id;
     const inputs: Record<string, unknown> = {
-      'seat.get': { machine: 'roamy', seat },
       'seat.tail': { machine: 'roamy', seat },
       'seat.history': { machine: 'roamy', seat },
       'seat.loadout': { machine: 'roamy', seat },
@@ -334,28 +311,11 @@ describe('core.call — the one seam', () => {
       ],
     });
     for (const name of Object.keys(VERB_REGISTRY)) {
-      if ((WRITE_VERBS as readonly string[]).includes(name)) {
-        // an agent may not call the write at all
-        const valid = { verdict: 'idea', region: 'wall', note: 'x', viewState: { route: '/' } };
-        expect(core.call(AGENT, name, valid)).toMatchObject({
-          ok: false,
-          error: { failureMode: 'forbidden' },
-        });
-        continue;
-      }
       if (name === 'library.get') {
         // nothing is stored on this fixture hub: a named refusal, not a crash
         expect(core.call(AGENT, name, { machine: 'roamy', group: 'spec', id: 'x' })).toMatchObject({
           ok: false,
           error: { failureMode: 'library-item-not-found' },
-        });
-        continue;
-      }
-      if (name === 'feedback.get') {
-        // nothing is stored on this fixture hub: the answer is a named refusal, not a crash
-        expect(core.call(AGENT, name, { id: 'fb-0001' })).toMatchObject({
-          ok: false,
-          error: { failureMode: 'feedback-not-found' },
         });
         continue;
       }
@@ -372,7 +332,7 @@ describe('B14 + refusal table', () => {
     const core = createCore({ store: new FleetStore(), identity: real });
     expect(core.call(AGENT, 'system.status', {})).toMatchObject({
       ok: true,
-      value: { app: 'AppyRig', version: real.version, verbs: 35 },
+      value: { app: 'AppyRig', version: real.version, verbs: 31 },
     });
   });
 

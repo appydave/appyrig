@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { guardPortFor, isLocalDevRequest } from './src/v2/devProxy';
+import { guardPortFor, isLocalDevRequest } from './src/app/devProxy';
 
 /**
  * v2 W0 preview: APPYRIG_HUB_URL points this dev server's proxy at another hub (e.g. the M2's,

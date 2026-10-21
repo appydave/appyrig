@@ -16,7 +16,6 @@
     "test": "npm run test -w server -w client -w collector && npm run test:root",
     "test:coverage": "npm run test:coverage -w server -w client",
     "test:e2e": "playwright test",
-    "test:e2e:v2": "playwright test e2e/v2-",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "oxlint": "node scripts/oxlint-gate.mjs",

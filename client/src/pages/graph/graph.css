@@ -1,0 +1,791 @@
+/* v2 Graph: the fleet overview. AppyDave light only: tokens from styles/tokens.css, no second palette. */
+
+.g2-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* nothing here may widen the page: boxes wrap, they never push sideways */
+  min-width: 0;
+  overflow-x: clip;
+}
+.g2-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 0 16px;
+}
+.g2-tool-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.g2-mock-note {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.mono,
+.g2-graph .mono {
+  font-family: var(--ar-font-term);
+  font-variant-numeric: tabular-nums;
+}
+
+/* C22: the filters wear AppyRig's own status colours. */
+.g2-filter {
+  border-left: 4px solid var(--g2-flag);
+}
+.g2-filter[data-flag='needsMe'],
+.g2-flag[data-flag='needsMe'] {
+  --g2-flag: var(--ar-blocked);
+  --g2-flag-bg: var(--ar-blocked-bg);
+  --g2-flag-ink: var(--ar-blocked-ink);
+}
+.g2-filter[data-flag='stuck'],
+.g2-flag[data-flag='stuck'] {
+  --g2-flag: var(--ar-sequence);
+  --g2-flag-bg: var(--ar-surface);
+  --g2-flag-ink: var(--ar-ink);
+}
+.g2-filter[data-flag='failing'],
+.g2-flag[data-flag='failing'] {
+  --g2-flag: var(--ar-error);
+  --g2-flag-bg: var(--ar-error-bg);
+  --g2-flag-ink: var(--ar-error-ink);
+}
+.g2-filter[aria-pressed='true'] {
+  background: var(--g2-flag-bg);
+  color: var(--g2-flag-ink);
+  border-color: var(--g2-flag);
+}
+.g2-flag {
+  display: inline-block;
+  font-size: 11px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  background: var(--g2-flag-bg);
+  color: var(--g2-flag-ink);
+  border: 1px dashed var(--g2-flag);
+}
+.g2-flag[data-flag='needsMe'],
+.g2-flag[data-flag='failing'] {
+  border-style: solid;
+}
+
+.g2-caption {
+  margin: 0 16px;
+}
+.g2-legend {
+  margin: 0 16px 8px;
+}
+.g2-unplaced {
+  cursor: help;
+  text-decoration: underline dotted;
+}
+
+/* The canvas: one section per machine across the width (they wrap their boxes, so all fit), the
+   handoff lines drawn under the boxes in an svg that only its strokes can touch. */
+.g2-canvas {
+  position: relative;
+  padding: 8px 16px 24px;
+}
+.g2-machines {
+  display: grid;
+  /* Columns wrap onto a new row when the room runs out (the Agent panel takes about 530 px; a narrow
+     window does too), never clipped: each column is at least 320 px, or the whole width when narrower. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 0 56px;
+  align-items: start;
+}
+.g2-machine {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.g2-machine[data-liveness='asleep'] {
+  opacity: 0.65;
+}
+.g2-machine-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 2px 4px 6px;
+  border-bottom: 2px solid var(--ar-ink);
+}
+.g2-machine-head b {
+  font-family: var(--ar-font-display);
+  font-size: 26px;
+  letter-spacing: 0.04em;
+}
+.g2-machine-head i {
+  font-style: normal;
+  color: var(--ar-ink-muted);
+  font-size: 13px;
+}
+.g2-col-empty {
+  margin: 8px 4px;
+}
+.g2-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+/* A rig as one box. */
+.g2-box {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 8px 12px;
+  border: 1px solid var(--ar-line);
+  border-left: 5px solid var(--ar-idle);
+  border-radius: 10px;
+  background: var(--ar-surface-raised);
+  cursor: pointer;
+}
+.g2-box[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.g2-box[data-state='attention'] {
+  border-left-color: var(--ar-blocked);
+}
+/* Stopped is FROSTED, as on the Wall: a pale fill, a dashed edge, dimmed text. Running stays solid. */
+.g2-box[data-state='stopped'] {
+  border-style: dashed;
+  border-left-width: 5px;
+  border-left-color: var(--ar-ink-muted);
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.g2-box[data-state='stopped'] .g2-box-name,
+.g2-box[data-state='stopped'] .g2-box-last,
+.g2-box[data-state='stopped'] .g2-box-meta {
+  opacity: 0.7;
+}
+.g2-box[data-state='asleep'] {
+  border-left-style: dotted;
+}
+/* "No rig" (plain tmux sessions) is its own neutral group: grey fill and a DOTTED border, never a rig edge. */
+.g2-box[data-loose] {
+  border-style: dotted;
+  border-left-width: 1px;
+  background: var(--ar-surface);
+}
+/* The box whose menu is open sits above its neighbours (and the lines). */
+.g2-box[data-menu-open] {
+  z-index: 40;
+}
+/* The box at the end of a lit line wears its colour; a hovered box wears the ink. */
+.g2-box[data-trace] {
+  outline: 3px solid var(--g2-trace);
+  outline-offset: 1px;
+}
+.g2-box:hover {
+  border-color: var(--ar-ink);
+}
+.g2-box-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.g2-box-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ar-ink);
+  cursor: pointer;
+  text-align: left;
+}
+.g2-box-name:hover {
+  text-decoration: underline;
+}
+.g2-box-machine {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+}
+.g2-box-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
+  font-size: 12px;
+}
+.g2-box-cross {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+}
+.g2-box-last {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.g2-box-agents {
+  margin: 0;
+  font-size: 12px;
+}
+.g2-box-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--ar-ink-muted);
+  cursor: pointer;
+}
+.g2-box-names {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* Handoff lines between rigs: one per pair, in its own colour, under the boxes. */
+.g2-lines {
+  position: absolute;
+  inset: 0 auto auto 0;
+  overflow: visible;
+  pointer-events: none;
+  /* the lines run under the boxes, so a box's text is never struck through; only the counts sit above */
+  z-index: 0;
+}
+.g2-lines-labels {
+  z-index: 3;
+}
+.g2-line {
+  cursor: pointer;
+  outline: none;
+}
+/* Arrowheads follow their line's state (the line itself is styled by the kit's hl- classes). */
+.g2-head {
+  fill: var(--ar-ink);
+}
+.g2-head[data-state='faint'] {
+  fill-opacity: 0.32;
+}
+.g2-head[data-state='lit'] {
+  fill-opacity: 1;
+}
+.g2-head[data-state='dimmed'] {
+  fill-opacity: 0.1;
+}
+.g2-line:focus-visible .hl-line {
+  stroke-opacity: 1;
+}
+.g2-label {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.g2-label rect {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+  stroke-width: 1;
+}
+.g2-label-text {
+  font-family: var(--ar-font-term);
+  font-size: 11px;
+  fill: var(--ar-ink);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* One mock note per page: a rig's own badge shows only on hover, focus or inside the open menu. */
+/* Out of the layout (absolute, left of the button) so showing it never moves the button under the
+   pointer: a badge that pushed the button aside swallowed the click in a real browser. */
+.g2-menu-wrap .ar-mock-mark {
+  display: none;
+  position: absolute;
+  right: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ar-surface-raised);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.g2-menu-wrap:hover .ar-mock-mark,
+.g2-menu-wrap:focus-within .ar-mock-mark,
+.g2-menu-wrap[data-open] .ar-mock-mark {
+  display: inline-block;
+}
+
+/* "⋯": the rig's mock Start / Restore / Launch. The mock mark stays beside it, menu open or not. */
+.g2-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+.g2-menu-btn {
+  min-width: 30px;
+  padding: 0 8px;
+  font-weight: 700;
+}
+.g2-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--ar-surface);
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 14%);
+}
+/* Line drawer. */
+.g2-drawer {
+  position: fixed;
+  z-index: 35;
+  right: 16px;
+  bottom: 16px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: 50vh;
+  overflow: auto;
+  padding: 10px 14px;
+  border: 1px solid var(--ar-line);
+  border-radius: 10px;
+  background: var(--ar-surface-raised);
+  box-shadow: 0 8px 24px rgb(52 45 45 / 0.2);
+}
+:root .g2-drawer header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.g2-items {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.g2-items li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--ar-line-soft);
+}
+.g2-item-when {
+  color: var(--ar-ink-muted);
+}
+.g2-item-state {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.g2-items li[data-state='pending'] .g2-item-state,
+.g2-items li[data-state='in-progress'] .g2-item-state {
+  color: var(--ar-blocked-ink);
+}
+.g2-item-summary {
+  display: block;
+}
+
+/* Fakes: confirm, progress, toast (bottom left, clear of the line drawer). */
+.g2-fake-dock {
+  position: fixed;
+  z-index: 50;
+  left: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(440px, calc(100vw - 32px));
+}
+.g2-fake-dialog,
+.g2-toast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ar-line);
+  background: var(--ar-surface-raised);
+  box-shadow: 0 6px 18px rgb(52 45 45 / 0.2);
+  font-size: 13px;
+}
+.g2-fake-btns {
+  display: inline-flex;
+  gap: 6px;
+}
+.g2-toast {
+  border-color: var(--ar-working);
+  color: var(--ar-working-ink);
+}
+
+/* ---------- Open rigs: pods, compact cards, quiet lines, people ---------- */
+.g2-inside {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--ar-line);
+  cursor: default;
+}
+.g2-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 0 0 4px;
+  font-size: 12px;
+}
+.g2-status-last {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ar-ink-muted);
+}
+.g2-status-wait {
+  color: var(--ar-blocked-ink);
+  background: var(--ar-blocked-bg);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.g2-inside-body {
+  position: relative;
+}
+.g2-inside-lines {
+  position: absolute;
+  inset: 0 auto auto 0;
+  z-index: 1;
+  overflow: visible;
+}
+.g2-inside-lines .g2-label {
+  pointer-events: all;
+  cursor: pointer;
+}
+.g2-pods {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+/* Pods are light dashed outlines with a count, never filled slabs. */
+.g2-pod {
+  position: relative;
+  z-index: 2;
+  padding: 16px 8px 8px;
+  border: 1px dashed var(--ar-line);
+  border-radius: 8px;
+  background: transparent;
+  min-width: 0;
+}
+.g2-pod-label {
+  position: absolute;
+  top: 1px;
+  left: 8px;
+  font-family: var(--ar-font-label);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.g2-pod-label b {
+  color: var(--ar-ink);
+}
+.g2-pod-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.g2-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 2;
+}
+.g2-self {
+  font-size: 11px;
+  color: var(--ar-ink-muted);
+  font-family: var(--ar-font-term);
+}
+.g2-hover {
+  z-index: 20;
+}
+
+/* The person: a dark card in the same style as the terminal cards, a fixed size, amber badges. */
+.g2-human {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 172px;
+  height: 78px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--ar-term-bg);
+  color: var(--ar-term-fg);
+  border-top: 3px solid var(--ar-sequence);
+  font-family: var(--ar-font-term);
+}
+.g2-human .g2-card-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.g2-human-glyph {
+  color: var(--ar-sequence);
+}
+.g2-human .g2-card-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g2-human-tag {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-term-dim);
+}
+.g2-human .g2-card-addr {
+  font-size: 10.5px;
+  color: var(--ar-term-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.g2-human-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  overflow: hidden;
+}
+.g2-badge {
+  font-size: 10px;
+  line-height: 14px;
+  padding: 0 5px;
+  border-radius: 7px;
+  background: var(--ar-sequence);
+  color: var(--ar-term-bg-deep);
+  white-space: nowrap;
+}
+.g2-badge-quiet {
+  background: transparent;
+  border: 1px solid var(--ar-term-line);
+  color: var(--ar-term-meta);
+}
+
+/* An open rig takes the whole column width, so its pods and cards sit side by side. */
+.g2-box[data-expanded]:not([data-loose]) {
+  grid-column: 1 / -1;
+}
+.g2-box[data-expanded]:not([data-loose]) .g2-box-last {
+  display: none;
+}
+.g2-human .g2-card-addr {
+  display: none;
+}
+.g2-human {
+  gap: 6px;
+}
+
+/* One header line on an open rig: the box's own meta lives in the status line. */
+.g2-box[data-expanded]:not([data-loose]) .g2-box-meta {
+  display: none;
+}
+.g2-status-meta {
+  color: var(--ar-ink-muted);
+}
+/* The left channel lines between pod rows run down, clear of every card. */
+.g2-inside-body {
+  padding-left: 64px;
+}
+.g2-inside-lines {
+  z-index: 3;
+  pointer-events: none;
+}
+.g2-pod {
+  padding-top: 20px;
+}
+
+/* A rig pick landed here: outlined for a moment. */
+.g2-box[data-focus] {
+  outline: 3px solid var(--ar-cta);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgb(255 222 89 / 0.35);
+  transition: outline-color 0.3s;
+}
+
+/* The ⋯ on a compact card: always visible, never part of the card's size. */
+.g2-card-menu {
+  position: relative;
+  display: inline-flex;
+}
+.g2-card-more {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ar-term-fg);
+  font-size: 16px;
+  line-height: 14px;
+  cursor: pointer;
+}
+.g2-card-more:hover,
+.g2-card-more[aria-expanded='true'] {
+  background: rgb(255 255 255 / 0.16);
+}
+.g2-card-more:focus-visible {
+  outline: 2px solid var(--ar-cta);
+}
+.g2-card-menu-pop {
+  position: absolute;
+  top: 22px;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 110px;
+  padding: 4px;
+  border: 1px solid var(--ar-line);
+  border-radius: 6px;
+  background: var(--ar-surface-raised);
+  box-shadow: 0 6px 18px rgb(52 45 45 / 0.22);
+}
+.g2-card-menu-item {
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ar-ink);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.g2-card-menu-item:hover,
+.g2-card-menu-item:focus-visible {
+  background: var(--ar-cta);
+}
+
+/* Compact cards: the harness name drops to its icon so the context and tokens are never cut ("10% 9"). */
+.g2-inside .tcard[data-size='compact'] .harness-mark {
+  font-size: 0;
+}
+.g2-inside .tcard[data-size='compact'] .tcard-ctx {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* The filter chips stay above the Explain banner and anything floating over the page. */
+.g2-toolbar {
+  position: relative;
+  z-index: 80;
+}
+
+/* ---- fixes from the acceptance walk ---- */
+/* The Graph's header and chips stay in view after a rig pick scrolls the page (as the Wall's do). */
+.g2-sticky {
+  position: sticky;
+  top: var(--ar-bar-h, 0px);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 4px;
+  background: var(--ar-canvas);
+  box-shadow: 0 1px 0 var(--ar-line);
+}
+.g2-sticky .g2-toolbar {
+  z-index: auto;
+}
+/* room under the last rig, so a picked rig near the bottom can still scroll up under the sticky header */
+.g2-canvas {
+  padding-bottom: 45vh;
+}
+/* The box that shows a hover card rises above its neighbours, so the card's Documents button and the
+   next box's ⋯ never fight for the pointer. */
+.g2-box:has(.g2-hover) {
+  z-index: 55;
+}
+.g2-inside .g2-hover {
+  z-index: 60;
+}
+/* The card takes the pointer: on the Graph it holds the Documents and Copy attach buttons, and the
+   cards under it must not steal the hover while the pointer travels to them. */
+.g2-inside .g2-hover {
+  pointer-events: auto;
+}
+/* a rig scrolled into view stops below the shell bar and this page's sticky header */
+.g2-box {
+  scroll-margin-top: calc(var(--ar-bar-h, 0px) + 150px);
+}
+/* In-rig lines run UNDER the cards and pods (the cards cover them where they meet); only the counts
+   sit above. A pod's name is lifted over a line that passes behind it. */
+.g2-inside-lines {
+  z-index: 1;
+}
+.g2-inside-lines-labels {
+  z-index: 3;
+}
+.g2-pod-label {
+  z-index: 3;
+  padding: 0 3px;
+  background: var(--ar-surface-raised);
+  line-height: 12px;
+}
+
+/* The one-line key under the header: what the box styles mean. */
+.g2-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  margin: 0 16px;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.g2-key b {
+  color: var(--ar-ink);
+  font-family: var(--ar-font-term);
+}
+.g2-key-attn {
+  color: var(--ar-blocked-ink) !important;
+}
+.g2-key i {
+  font-style: normal;
+  padding: 0 6px;
+  border-radius: 4px;
+}
+.g2-key-frost {
+  background: var(--ar-surface);
+  border: 1px dashed var(--ar-ink-muted);
+}
+.g2-key-norig {
+  background: var(--ar-surface);
+  border: 1px dotted var(--ar-ink-muted);
+}
+.g2-flag-glyph {
+  font-size: 13px;
+  line-height: 1;
+}

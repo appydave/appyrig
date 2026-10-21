@@ -6,7 +6,6 @@ import compression from 'compression';
 import cors from 'cors';
 import {
   AUTH_ERRORS,
-  FEEDBACK_ROUTE,
   FLEET_EVENTS,
   HUB_MAX_BUFFER,
   SOCKET_NAMESPACES,
@@ -129,10 +128,6 @@ export function createHub(opts: HubOptions): Hub {
       contentSecurityPolicy: {
         directives: {
           upgradeInsecureRequests: null,
-          // v1.4 S8: the feedback screenshot (html-to-image) inlines the page's own web fonts, so it
-          // fetches the Google Fonts CSS and font files the page already loads through style-src and
-          // font-src. Nothing else is fetched from off-origin.
-          connectSrc: ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
         },
       },
       strictTransportSecurity: false,
@@ -140,17 +135,7 @@ export function createHub(opts: HubOptions): Hub {
   );
   app.use(compression());
   app.use(cors({ origin: opts.clientUrl, credentials: true }));
-  // The feedback route parses its own (5 MB) body; everything else keeps the default 100 KB limit.
-  const defaultJson = express.json();
-  // "/v1/feedback/" and "/v1/feedback//" are the same route as "/v1/feedback": one spelling, so the
-  // big-body parser below cannot be missed by a trailing slash.
-  app.use((req, _res, next) => {
-    if (req.path !== FEEDBACK_ROUTE && req.path.replace(/\/+$/, '') === FEEDBACK_ROUTE) {
-      req.url = FEEDBACK_ROUTE + req.url.slice(req.path.length);
-    }
-    next();
-  });
-  app.use((req, res, next) => (req.path === FEEDBACK_ROUTE ? next() : defaultJson(req, res, next)));
+  app.use(express.json());
   app.use(requestLogger);
   app.use(apiLimiter);
   // Auth before every route: only the open API doors pass without a session (AC 18).
@@ -163,7 +148,7 @@ export function createHub(opts: HubOptions): Hub {
   app.use(healthRouter);
   app.use(infoRouter);
   app.use(v1ArchiveRouter(opts.dataDir));
-  app.use(apiRouter(core, identity, opts.liveHosts ?? [], (id) => store.feedback.screenshot(id)));
+  app.use(apiRouter(core, identity, opts.liveHosts ?? []));
 
   if (opts.clientDist) {
     const dist = opts.clientDist;

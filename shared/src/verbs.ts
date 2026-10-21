@@ -105,9 +105,6 @@ export const SeatSummarySchema = z.strictObject({
 });
 export type SeatSummary = z.infer<typeof SeatSummarySchema>;
 
-export const SeatGetOutputSchema = z.strictObject({ ...SeatPlace, seat: SeatSchema });
-export type SeatGetOutput = z.infer<typeof SeatGetOutputSchema>;
-
 export const SeatTailOutputSchema = z.strictObject({
   ...SeatPlace,
   seat: z.string(),

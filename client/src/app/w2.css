@@ -1,0 +1,366 @@
+/* v2 wave 2: Wall, Agent page, Handoff Flow. AppyDave light only: tokens from styles/tokens.css. */
+
+/* ---------- Wall v2 ---------- */
+.ar-wall {
+  padding: 8px 16px 24px;
+}
+.ar-wall-filter b {
+  font-family: var(--ar-font-term);
+  margin-left: 4px;
+}
+.ar-wall-filter[data-filter='needs'][aria-pressed='true'] {
+  background: var(--ar-blocked-bg);
+  color: var(--ar-blocked-ink);
+  border-color: var(--ar-blocked);
+}
+.ar-wall-filter[data-filter='stuck'][aria-pressed='true'] {
+  background: var(--ar-surface);
+  color: var(--ar-unknown);
+  border-color: var(--ar-unknown);
+}
+.ar-wall-filter[data-filter='failing'][aria-pressed='true'] {
+  background: var(--ar-error-bg);
+  color: var(--ar-error-ink);
+  border-color: var(--ar-error);
+}
+/* Each group is a visible container that sizes to its cards and flows beside the next: a tinted
+   panel with an edge, a strong heading, one line of description, then its cards. Stopped and unknown groups are frosted (pale, dashed). */
+.ar-wall-group {
+  box-sizing: border-box;
+  /* sizes to its own cards and flows beside the next group, wrapping like an inline block */
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 8px 8px;
+  background: color-mix(in srgb, var(--ar-surface-raised) 70%, var(--ar-canvas));
+  border: 1px solid var(--ar-line);
+  border-left: 5px solid var(--ar-ink-muted);
+  border-radius: 8px;
+}
+.ar-wall-group[data-state='working'] {
+  border-left-color: var(--ar-working);
+}
+.ar-wall-group[data-state='blocked'] {
+  border-left-color: var(--ar-blocked);
+}
+.ar-wall-group[data-frosted] {
+  background: color-mix(in srgb, var(--ar-canvas) 80%, transparent);
+  border: 1.5px dashed var(--ar-ink-muted);
+}
+.ar-wall-group-head {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 2px 0;
+  cursor: pointer;
+  font-family: var(--ar-font-term);
+  font-size: 13px;
+}
+.ar-wall-group-head b {
+  font-family: var(--ar-font-display);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+.ar-wall-group-head:focus-visible {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 2px;
+}
+.ar-wall-machine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.ar-wall-machine-head {
+  flex: 0 0 100%;
+  margin: 8px 0 0;
+  padding-bottom: 2px;
+  border-bottom: 2px solid var(--ar-ink);
+  font-family: var(--ar-font-term);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.ar-wall-counts {
+  display: inline-flex;
+  gap: 10px;
+  margin-left: auto;
+  color: var(--ar-ink-muted);
+}
+.ar-wall-counts [data-pip='working'] {
+  color: var(--ar-working-ink);
+}
+.ar-wall-counts [data-pip='blocked'] {
+  color: var(--ar-blocked-ink);
+}
+.ar-wall-summary {
+  margin: 2px 0;
+  color: var(--ar-ink-muted);
+  font-size: 12px;
+  /* contributes no width of its own: the container is as wide as its cards, the line clips to it */
+  width: 0;
+  min-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The Wall's cards are the kit's WallCard (fixed 232 x 172), wrapped in rows inside their group. */
+.ar-wall-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+  align-items: flex-start;
+}
+/* The ⋯ sits on the dark card, so it is light-on-dark; the actions pop over the card, never in it. */
+.wcard .ar-wall-more {
+  color: var(--ar-term-meta);
+}
+.wcard .ar-wall-more:hover,
+.wcard .ar-wall-more[aria-expanded='true'] {
+  border-color: var(--ar-term-line);
+  color: var(--ar-term-fg);
+}
+.ar-wall-actions {
+  /* Opens from the card's top-right corner and may run past the card (it is not clipped): wide and
+     short, so it ends well above the next heading, on a raised layer over the neighbours. */
+  position: absolute;
+  z-index: 40;
+  top: 30px;
+  right: 4px;
+  width: max-content;
+  max-width: 320px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--ar-surface-raised);
+  color: var(--ar-ink);
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgb(52 45 45 / 0.25);
+}
+/* A rig picked in the drawer: its group is outlined, and scrolls to just under the page header. */
+.ar-wall-group {
+  scroll-margin-top: calc(var(--ar-bar-h, 0px) + 56px); /* clears the sticky bar and header */
+}
+.ar-wall-group[data-focused] {
+  outline: 2px solid var(--ar-cta);
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+.ar-wall-actions-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.ar-wall-only {
+  border-color: var(--ar-cta);
+}
+.ar-wall-groups {
+  display: block;
+}
+.ar-wall-order-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ar-wall-order-label {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.ar-wall-order,
+.ar-wall-notread {
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+/* ---------- Agent page ---------- */
+.ar-agent {
+  padding: 8px 16px 32px;
+  max-width: 1400px;
+}
+.ar-agent-head {
+  padding: 14px 18px;
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-left: 6px solid var(--ar-idle);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+.ar-agent-head[data-pip='working'] {
+  border-left-color: var(--ar-working);
+}
+.ar-agent-head[data-pip='blocked'] {
+  border-left-color: var(--ar-blocked);
+}
+.ar-agent-head[data-pip='stopped'] {
+  border-left-color: var(--ar-stopped);
+}
+.ar-agent-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.ar-agent-title h2 {
+  margin: 0;
+  font-family: var(--ar-font-display);
+  font-size: 32px;
+  letter-spacing: 0.04em;
+}
+.ar-agent-picker {
+  margin-left: auto;
+}
+.ar-agent-address {
+  margin: 4px 0 10px;
+  font-size: 14px;
+  color: var(--ar-ink-muted);
+  user-select: all;
+}
+.ar-agent-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 18px;
+  margin: 0 0 12px;
+}
+.ar-agent-facts dt {
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ar-ink-muted);
+}
+.ar-agent-facts dd {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+.ar-agent-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--ar-line);
+}
+.ar-agent-resume {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.ar-agent-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .ar-agent-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ar-agent-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.ar-agent-section {
+  padding: 12px 16px;
+  background: var(--ar-surface-raised);
+  border: 1px solid var(--ar-line);
+  border-radius: 8px;
+  min-width: 0;
+}
+.ar-agent-h {
+  margin: 0 0 8px;
+  font-family: var(--ar-font-label);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ar-agent-section .ar-sample {
+  margin: 0;
+}
+.ar-agent-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ar-agent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.ar-agent-new {
+  margin: 0 0 8px;
+}
+
+/* ---------- Handoff Flow v2 ---------- */
+.ar-lens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+}
+.ar-flow .flow-edge.structure {
+  fill: none;
+  stroke: var(--ar-ink-muted);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+}
+.ar-flow .ar-kind-pill {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+}
+.ar-flow .ar-kind {
+  fill: var(--ar-ink);
+  font-family: var(--ar-font-term);
+  font-size: 13px;
+  text-anchor: middle;
+}
+.ar-flow .ar-wait-pill {
+  fill: var(--ar-line-soft);
+}
+.ar-flow .ar-wait-pill.waiting {
+  fill: var(--ar-blocked-bg);
+  stroke: var(--ar-blocked);
+}
+.ar-flow .ar-wait-pill.stale {
+  fill: var(--ar-surface);
+  stroke: var(--ar-unknown);
+}
+.ar-flow .ar-wait {
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  fill: var(--ar-ink-muted);
+}
+.ar-flow [data-waiting]:not([data-waiting='0']) .ar-wait {
+  fill: var(--ar-blocked-ink);
+}
+
+.ar-agent-more {
+  display: inline-block;
+}
+.ar-agent-more > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ar-ink-muted, #8a8078);
+}

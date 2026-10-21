@@ -865,7 +865,10 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       seats: snap.seats.map((s) => (s.id === seat ? { ...s, skillCount: 313 } : s)),
     };
     expect(await push(c, withPill)).toMatchObject({ ok: true });
-    expect(call(h, 'seat.get', { machine: 'm2', seat }).value.seat.skillCount).toBe(313);
+    const listed: { seat: { id: string; skillCount?: number } }[] = call(h, 'seat.list', {
+      machine: 'm2',
+    }).value;
+    expect(listed.find((r) => r.seat.id === seat)!.seat.skillCount).toBe(313);
     expect(await push(c, snap)).toMatchObject({ ok: true });
     expect(await emit(c, 'collector:loadout', { ...loadout, machineId: 'roamy' })).toMatchObject({
       failureMode: 'machine_mismatch',

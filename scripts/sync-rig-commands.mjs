@@ -7,7 +7,7 @@ import { join } from 'node:path';
 
 const src =
   process.env.RIG_COMMANDS_SRC ?? join(homedir(), 'dev/ad/brains/openrig/rig-commands.json');
-const dst = new URL('../client/src/v2/pages/learn/rig-commands.json', import.meta.url);
+const dst = new URL('../client/src/domain/learn/rig-commands.json', import.meta.url);
 if (!existsSync(src)) {
   console.error(`rig-commands:sync: no file at ${src}`);
   process.exit(1);
@@ -52,5 +52,5 @@ writeFileSync(
   `${JSON.stringify(summary, null, 2)}\n`
 );
 console.log(
-  `rig-commands:sync: ${brain.commands.length} commands (OpenRig ${brain.openrig_version}) -> client/src/v2/pages/learn/rig-commands.json`
+  `rig-commands:sync: ${brain.commands.length} commands (OpenRig ${brain.openrig_version}) -> client/src/domain/learn/rig-commands.json`
 );

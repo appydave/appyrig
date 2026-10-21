@@ -1,0 +1,314 @@
+/* Documents drawer, list + reader, skills panel. AppyDave light only. */
+.docs-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(1180px, calc(100vw - 320px));
+  z-index: 25; /* under the shell's menus (30+), over the page */
+  display: flex;
+  flex-direction: column;
+  background: var(--ar-canvas, #faf5ec);
+  border-left: 1px solid var(--ar-line, #d9cfbf);
+  box-shadow: -8px 0 24px rgba(52, 45, 45, 0.22);
+  animation: docs-in 0.18s ease-out;
+}
+@keyframes docs-in {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+.docs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+}
+.docs-head h3 {
+  margin: 0;
+  font-family: var(--ar-font-label);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.docs-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+}
+.docs-list {
+  overflow-y: auto;
+  padding: 10px 8px 16px 12px;
+  border-right: 1px solid var(--ar-line, #d9cfbf);
+}
+.docs-group-h {
+  margin: 10px 4px 4px;
+  font-family: var(--ar-font-label);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.docs-group-h .quiet {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.docs-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.docs-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.docs-row:hover:not(:disabled) {
+  background: var(--ar-surface-raised, #fff);
+}
+.docs-row[aria-current='true'] {
+  background: var(--ar-surface-raised, #fff);
+  box-shadow: inset 3px 0 0 var(--ar-sequence, #c8841a);
+  font-weight: 600;
+}
+.docs-row:disabled {
+  color: var(--ar-ink-muted, #8a8078);
+  cursor: default;
+  opacity: 0.6;
+}
+.docs-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.docs-row-sub {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--ar-ink-muted, #8a8078);
+}
+.docs-reader {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.docs-reader-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+}
+.docs-reader-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 18px 24px;
+  background: var(--ar-surface-raised, #fff);
+}
+.docs-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 70vh;
+  border: 1px solid var(--ar-line, #d9cfbf);
+  background: #fff;
+}
+.docs-img {
+  max-width: 100%;
+}
+/* On the Agent page the same layout sits in the page, not in a slide-out. */
+.ar-agent-docs {
+  border: 1px solid var(--ar-line, #d9cfbf);
+  border-radius: 8px;
+  overflow: hidden;
+  height: min(78vh, 760px);
+  display: flex;
+}
+.ar-agent-docs .docs-layout {
+  flex: 1;
+}
+
+.skills-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.skills-search {
+  min-width: 220px;
+  padding: 4px 8px;
+  border: 1px solid var(--ar-line, #d9cfbf);
+  border-radius: 5px;
+  font: inherit;
+  background: var(--ar-surface-raised, #fff);
+}
+.skills-group {
+  margin: 4px 0;
+}
+.skills-group summary {
+  cursor: pointer;
+  padding: 3px 0;
+}
+
+/* Agent panel: a right-side slide-out that starts below the top bar and never covers the left drawer. */
+.apanel {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  /* a side peek: the page stays readable beside it; Expand widens it for a long document */
+  width: min(520px, calc(100vw - 320px));
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  background: var(--ar-canvas, #faf5ec);
+  border-left: 1px solid var(--ar-line, #d9cfbf);
+  box-shadow: -8px 0 24px rgba(52, 45, 45, 0.22);
+  animation: docs-in 0.18s ease-out;
+}
+.apanel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+  border-left: 6px solid var(--ar-idle, #8a8078);
+}
+.apanel[data-pip='working'] .apanel-head {
+  border-left-color: var(--ar-working, #2e8b57);
+}
+.apanel[data-pip='blocked'] .apanel-head {
+  border-left-color: var(--ar-blocked, #c0392b);
+}
+.apanel-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.apanel-head .apanel-spacer {
+  flex: 1;
+}
+.apanel-id {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  margin: 0;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+  font-size: 12px;
+}
+.apanel-id div {
+  display: flex;
+  gap: 5px;
+}
+.apanel-id dt {
+  color: var(--ar-ink-muted, #8a8078);
+}
+.apanel-id dd {
+  margin: 0;
+}
+.apanel-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 14px 0;
+  border-bottom: 1px solid var(--ar-line, #d9cfbf);
+}
+.apanel-tab {
+  padding: 5px 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  font: inherit;
+  font-family: var(--ar-font-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.apanel-tab[aria-selected='true'] {
+  background: var(--ar-surface-raised, #fff);
+  border-color: var(--ar-line, #d9cfbf);
+  margin-bottom: -1px;
+}
+.apanel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.apanel-body .docs-layout {
+  flex: 1;
+}
+.apanel-term {
+  flex: 1;
+  margin: 0;
+  padding: 12px 16px;
+  overflow: auto;
+  background: #2b2626;
+  color: #f1e9db;
+  font-family: var(--ar-font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.apanel-msgs {
+  flex: 1;
+  overflow: auto;
+  padding: 10px 16px;
+}
+.apanel-msgs ul {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+.apanel-msgs li {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--ar-line, #d9cfbf);
+}
+
+.apanel[data-wide] {
+  width: min(1040px, calc(100vw - 320px));
+}
+.apanel-head {
+  flex-wrap: wrap;
+}
+.apanel-x {
+  min-width: 32px;
+  min-height: 32px;
+  font-size: 14px;
+  border: 1px solid var(--ar-ink, #342d2d);
+}
+/* in the narrow peek the list is slimmer and the reader scrolls */
+.apanel:not([data-wide]) .docs-layout {
+  grid-template-columns: 170px minmax(0, 1fr);
+}
+.apanel:not([data-wide]) .docs-row-sub {
+  display: none;
+}
+.apanel:not([data-wide]) .docs-row[data-present='no'] .docs-row-sub {
+  display: inline;
+}
+.apanel .docs-reader-body {
+  overflow: auto;
+}
+
+/* The narrow peek takes its width from the page, not from on top of it. */
+html[data-agent-panel='peek'] main[data-testid^='ar-'] {
+  margin-right: min(520px, calc(100vw - 320px));
+}
