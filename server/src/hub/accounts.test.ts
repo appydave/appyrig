@@ -23,7 +23,7 @@ const NOW = new Date('2026-10-11T12:00:00.000Z');
 const at = (ms: number) => new Date(NOW.getTime() + ms).toISOString();
 
 const usage = (over: Partial<AccountUsage> = {}): AccountUsage => ({
-  email: 'david@ideasmen.com.au',
+  email: 'david@example.com',
   plan: 'claude_max',
   fiveHourPct: 40,
   fiveHourResetsAt: at(FIVE_HOUR_MS / 2), // half the window gone
@@ -43,7 +43,7 @@ describe('tier: reported wins, config fills the gap, else unknown', () => {
 
   it('a reported tier is not overridden by config', () => {
     const t = tierOf(usage({ rateLimitTier: 'default_claude_max_20x' }), {
-      accounts: { 'david@ideasmen.com.au': { tier: 'Max $100' } },
+      accounts: { 'david@example.com': { tier: 'Max $100' } },
     });
     expect(t).toEqual({ label: 'Max $200', source: 'reported' });
   });
@@ -201,7 +201,7 @@ describe('QA D2: one answer per account', () => {
       NOW
     );
     expect(views.size).toBe(1);
-    const d = views.get('david@ideasmen.com.au')!.derived;
+    const d = views.get('david@example.com')!.derived;
     expect(d.readingFrom).toBe('m4');
     expect(d.tier).toEqual({ label: 'Max $200', source: 'reported' });
     expect(d.fiveHour.usedPct).toBe(40);
@@ -215,9 +215,7 @@ describe('QA D2: one answer per account', () => {
       sevenDayResetsAt: null,
       sampledAt: null,
     });
-    const d = accountViews([machineWith('m2', none)], {}, NOW).get(
-      'david@ideasmen.com.au'
-    )!.derived;
+    const d = accountViews([machineWith('m2', none)], {}, NOW).get('david@example.com')!.derived;
     expect(d).toMatchObject({
       readingFrom: null,
       sampleAgeMs: null,
@@ -228,19 +226,19 @@ describe('QA D2: one answer per account', () => {
   it('a sample stamped just before the hub noticed the switch still counts (clock tolerance)', () => {
     const roamy = machineWith(
       'roamy',
-      usage({ email: 'david@ideasmen.com.au', fiveHourPct: 77, sampledAt: at(-310_000) })
+      usage({ email: 'david@example.com', fiveHourPct: 77, sampledAt: at(-310_000) })
     );
     const changedAt = (id: string) => (id === 'roamy' ? NOW.getTime() - 300_000 : undefined); // 10 s earlier than the sample
     expect(
-      accountViews([roamy], {}, NOW, changedAt).get('david@ideasmen.com.au')!.derived.readingFrom
+      accountViews([roamy], {}, NOW, changedAt).get('david@example.com')!.derived.readingFrom
     ).toBe('roamy');
     // â€¦but one well before it does not
     const old = machineWith(
       'roamy',
-      usage({ email: 'david@ideasmen.com.au', sampledAt: at(-600_000) })
+      usage({ email: 'david@example.com', sampledAt: at(-600_000) })
     );
     expect(
-      accountViews([old], {}, NOW, changedAt).get('david@ideasmen.com.au')!.derived.readingFrom
+      accountViews([old], {}, NOW, changedAt).get('david@example.com')!.derived.readingFrom
     ).toBeNull();
   });
 
@@ -255,20 +253,20 @@ describe('QA D2: one answer per account', () => {
   });
 
   it("right after a login switch, the old account's reading is not used for the new account", () => {
-    // roamy just moved to ideasmen at -5 min; its last sample (-10 min) was taken for appydave.
+    // roamy just moved to example at -5 min; its last sample (-10 min) was taken for appydave.
     const roamy = machineWith(
       'roamy',
-      usage({ email: 'david@ideasmen.com.au', fiveHourPct: 77, sampledAt: at(-600_000) })
+      usage({ email: 'david@example.com', fiveHourPct: 77, sampledAt: at(-600_000) })
     );
     const m4 = machineWith('m4', usage({ sampledAt: at(-1_200_000) }));
     const changedAt = (id: string) => (id === 'roamy' ? NOW.getTime() - 300_000 : undefined);
-    const d = accountViews([roamy, m4], {}, NOW, changedAt).get('david@ideasmen.com.au')!.derived;
+    const d = accountViews([roamy, m4], {}, NOW, changedAt).get('david@example.com')!.derived;
     expect(d.readingFrom).toBe('m4'); // older, but taken for this account
     expect(d.fiveHour.usedPct).toBe(40);
     // with no change recorded (e.g. after a hub restart) nothing is discarded
-    expect(
-      accountViews([roamy, m4], {}, NOW).get('david@ideasmen.com.au')!.derived.readingFrom
-    ).toBe('roamy');
+    expect(accountViews([roamy, m4], {}, NOW).get('david@example.com')!.derived.readingFrom).toBe(
+      'roamy'
+    );
   });
 });
 
@@ -289,7 +287,7 @@ describe('accounts over the hub', () => {
       configPath,
       JSON.stringify({
         accounts: {
-          'david@ideasmen.com.au': { tier: 'Max $200' },
+          'david@example.com': { tier: 'Max $200' },
           'david@appydave.com': { tier: 'Max $100' },
         },
       })
@@ -298,8 +296,8 @@ describe('accounts over the hub', () => {
     try {
       const c = h.collector({ token: TOKEN, machineId: 'roamy' });
       const m4 = h.collector({ token: TOKEN, machineId: 'm2' });
-      await push(m4, withAccount('m2', usage({ email: 'david@ideasmen.com.au' })));
-      await push(c, withAccount('roamy', usage({ email: 'david@ideasmen.com.au' })));
+      await push(m4, withAccount('m2', usage({ email: 'david@example.com' })));
+      await push(c, withAccount('roamy', usage({ email: 'david@example.com' })));
 
       const before = h.hub.core.call('cli', 'account.list', {});
       expect(before).toMatchObject({ ok: true, value: { configured: true, unreported: [] } });
@@ -307,7 +305,7 @@ describe('accounts over the hub', () => {
         .value.accounts;
       expect(accts).toHaveLength(1);
       expect(accts[0]).toMatchObject({
-        email: 'david@ideasmen.com.au',
+        email: 'david@example.com',
         machines: ['m2', 'roamy'],
         tier: { label: 'Max $200', source: 'config' },
         monthly: { status: 'not-reported' },
@@ -328,7 +326,7 @@ describe('accounts over the hub', () => {
       ).value.accounts;
       expect(after.map((a) => [a.email, a.machines, a.tier.label, a.tier.source])).toEqual([
         ['david@appydave.com', ['roamy'], 'Max $100', 'config'],
-        ['david@ideasmen.com.au', ['m2'], 'Max $200', 'config'],
+        ['david@example.com', ['m2'], 'Max $200', 'config'],
       ]);
     } finally {
       await h.stop();
@@ -478,7 +476,7 @@ describe('F3 (resilience case 5): a skewed machine clock cannot fake a readingâ€
     return { ...m, snapshot: { ...m.snapshot, collectedAt } };
   };
   const derived = (skew: number) =>
-    accountViews([skewed(skew)], {}, NOW).get('david@ideasmen.com.au')!.derived;
+    accountViews([skewed(skew)], {}, NOW).get('david@example.com')!.derived;
 
   it('10 min behind: 60 s old, not 10 min', () => {
     expect(derived(-10 * 60_000).sampleAgeMs).toBe(60_000);

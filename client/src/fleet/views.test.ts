@@ -744,7 +744,7 @@ describe('D0 · most headroom weighs the weekly window (usability T4-3)', () => 
   const R5 = new Date(NOW + 0.68 * H5).toISOString();
   const R7 = new Date(NOW + 0.19 * D7).toISOString();
 
-  it('T4-3: appydave (5-hour 5%, weekly "be careful") loses to ideasmen (weekly 40% left)', () => {
+  it('T4-3: appydave (5-hour 5%, weekly "be careful") loses to example (weekly 40% left)', () => {
     const appydave = withAccount(
       roamy(),
       account({
@@ -754,19 +754,19 @@ describe('D0 · most headroom weighs the weekly window (usability T4-3)', () => 
         derived: derived(win(5, 32, H5, R5), win(78, 81, D7, R7)),
       })
     );
-    const ideasmen = withAccount(
+    const example = withAccount(
       m2(),
       account({
-        email: 'david@ideasmen.com.au',
+        email: 'david@example.com',
         fiveHourPct: 11,
         sevenDayPct: 60,
         derived: derived(win(11, 32, H5, R5), win(60, 81, D7, R7)),
       })
     );
-    const { accounts } = buildAccounts([appydave, ideasmen]);
+    const { accounts } = buildAccounts([appydave, example]);
     const weekly = accounts.find((a) => a.email === 'david@appydave.com')!.derived!.sevenDay;
     expect(windowStory(weekly, NOW).kind).toBe('careful');
-    expect(mostHeadroom(accounts, NOW)?.email).toBe('david@ideasmen.com.au');
+    expect(mostHeadroom(accounts, NOW)?.email).toBe('david@example.com');
   });
 
   it('with no warning on either side, the less-used tighter window wins', () => {
