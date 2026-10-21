@@ -46,8 +46,8 @@ jobs:
       - name: No type lies (Oxlint + anti-slop, baselined)
         run: npm run oxlint
 
-      - name: Palette only in CSS (Stylelint, baselined)
-        run: npm run stylelint
+      - name: Palette only in CSS (Stylelint, baseline is a ratchet)
+        run: npm run stylelint:ratchet
 
       - name: Test
         run: npm test
