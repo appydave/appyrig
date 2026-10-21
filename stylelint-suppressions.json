@@ -1,0 +1,89 @@
+{
+  "client/src/app/app.css": {
+    "color-no-hex": {
+      "count": 11
+    }
+  },
+  "client/src/app/w2.css": {
+    "color-no-hex": {
+      "count": 1
+    },
+    "function-disallowed-list": {
+      "count": 1
+    }
+  },
+  "client/src/pages/w5b.css": {
+    "function-disallowed-list": {
+      "count": 1
+    }
+  },
+  "client/src/shell/shell.css": {
+    "function-disallowed-list": {
+      "count": 3
+    }
+  },
+  "client/src/styles/index.css": {
+    "color-no-hex": {
+      "count": 17
+    },
+    "function-disallowed-list": {
+      "count": 7
+    }
+  },
+  "client/src/kit/docs.css": {
+    "color-no-hex": {
+      "count": 31
+    },
+    "function-disallowed-list": {
+      "count": 2
+    }
+  },
+  "client/src/kit/legend2.css": {
+    "color-no-hex": {
+      "count": 9
+    }
+  },
+  "client/src/kit/terminalCard.css": {
+    "color-no-hex": {
+      "count": 2
+    }
+  },
+  "client/src/kit/v1Archive.css": {
+    "color-no-hex": {
+      "count": 11
+    },
+    "function-disallowed-list": {
+      "count": 2
+    }
+  },
+  "client/src/kit/wallCard.css": {
+    "color-no-hex": {
+      "count": 2
+    }
+  },
+  "client/src/pages/flow/flow.css": {
+    "function-disallowed-list": {
+      "count": 1
+    }
+  },
+  "client/src/pages/graph/graph.css": {
+    "function-disallowed-list": {
+      "count": 6
+    }
+  },
+  "client/src/pages/run/run.css": {
+    "color-no-hex": {
+      "count": 14
+    }
+  },
+  "client/src/pages/wall/wall.css": {
+    "function-disallowed-list": {
+      "count": 1
+    }
+  },
+  "client/src/kit/data/coverage.css": {
+    "color-no-hex": {
+      "count": 2
+    }
+  }
+}

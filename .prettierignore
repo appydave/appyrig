@@ -23,3 +23,6 @@ scripts/provenance/out
 
 # ESLint rewrites this file itself (--prune-suppressions) in its own format.
 eslint-suppressions.json
+
+# Stylelint writes this file itself (--suppress) in its own format.
+stylelint-suppressions.json

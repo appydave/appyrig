@@ -20,6 +20,9 @@
     "lint:fix": "eslint . --fix",
     "oxlint": "node scripts/oxlint-gate.mjs",
     "oxlint:baseline": "node scripts/oxlint-gate.mjs --update",
+    "stylelint": "stylelint \"client/src/**/*.css\"",
+    "stylelint:baseline": "stylelint \"client/src/**/*.css\" --suppress",
+    "stylelint:ratchet": "npm run stylelint && npm run stylelint:baseline && git diff --exit-code -- stylelint-suppressions.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run typecheck -w shared -w server -w client -w collector && tsc -p tsconfig.e2e.json",
@@ -57,6 +60,7 @@
     "oxlint": "1.66.0",
     "oxlint-plugin-anti-slop": "github:sirknigget/anti-slop#cc0382b565489d0c55a9b071784e73f00e6acb0c",
     "prettier": "^3.9.5",
+    "stylelint": "17.16.0",
     "typescript": "^5.7.3"
   },
   "lint-staged": {
