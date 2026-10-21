@@ -325,7 +325,11 @@ function askedDavidOf(fm: FleetMachine, now: number): Map<string, number> {
   return out;
 }
 
-function flagsOf(seat: Seat, pip: PipKey, rigRunning: boolean, asked: number, stale: boolean) {
+function flagsOf(
+  seat: Seat,
+  pip: PipKey,
+  { rigRunning, asked, stale }: { rigRunning: boolean; asked: number; stale: boolean }
+) {
   const down: PipKey[] = ['stopped', 'unknown'];
 
   return {
@@ -356,16 +360,20 @@ const staleSeats = (fm: FleetMachine, now: number): Set<string> =>
 
 const isActive = (pip: PipKey) => pip === 'working' || pip === 'blocked';
 
+interface BoxSpec {
+  key: GroupKey;
+  name: string;
+  ref: RigRef | null;
+  seats: Seat[];
+  last: LastHandoff | null;
+  crossOut: number;
+  crossIn: number;
+}
+
 function boxOf(
   fm: FleetMachine,
-  key: GroupKey,
-  name: string,
-  ref: RigRef | null,
-  seats: Seat[],
   now: number,
-  last: LastHandoff | null,
-  crossOut: number,
-  crossIn: number
+  { key, name, ref, seats, last, crossOut, crossIn }: BoxSpec
 ): GraphRig {
   const asked = askedDavid(fm, now);
   const stale = staleSeats(fm, now);
@@ -373,7 +381,11 @@ function boxOf(
   const pips = seats.map((s) => pipFor(s, fm));
   const flags = seats.reduce(
     (acc, s, i) => {
-      const f = flagsOf(s, pips[i]!, !!running, asked.get(s.id) ?? 0, stale.has(s.id));
+      const f = flagsOf(s, pips[i]!, {
+        rigRunning: !!running,
+        asked: asked.get(s.id) ?? 0,
+        stale: stale.has(s.id),
+      });
 
       return {
         needsMe: acc.needsMe + (f.needsMe ? 1 : 0),
@@ -469,17 +481,15 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
         fm.snapshot,
         `rig:${ref.key}:${fm.liveness}:${now}:${o}:${i}:${ref.state}`,
         () =>
-          boxOf(
-            fm,
-            ref.key,
-            ref.name,
+          boxOf(fm, now, {
+            key: ref.key,
+            name: ref.name,
             ref,
-            fm.snapshot.seats.filter((s) => s.rig === ref.name),
-            now,
-            lastHandoff(fm, ref.name),
-            o,
-            i
-          )
+            seats: fm.snapshot.seats.filter((s) => s.rig === ref.name),
+            last: lastHandoff(fm, ref.name),
+            crossOut: o,
+            crossIn: i,
+          })
       );
     });
     const loseKey = looseKey(fm.machine.id);
@@ -492,17 +502,15 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
         );
 
         return seats.length
-          ? boxOf(
-              fm,
-              loseKey,
-              'no rig',
-              null,
+          ? boxOf(fm, now, {
+              key: loseKey,
+              name: 'no rig',
+              ref: null,
               seats,
-              now,
-              null,
-              out.get(loseKey) ?? 0,
-              into.get(loseKey) ?? 0
-            )
+              last: null,
+              crossOut: out.get(loseKey) ?? 0,
+              crossIn: into.get(loseKey) ?? 0,
+            })
           : null;
       }
     );

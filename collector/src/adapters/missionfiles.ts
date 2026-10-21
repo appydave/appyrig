@@ -184,9 +184,7 @@ export async function manifestFor(al: MissionAllowlist): Promise<string[]> {
 
 /** The pushes for one listed path (a `missing`/`too_large` marker, or the text, or the image in parts). */
 export async function readMissionFile(
-  machineId: string,
-  rig: string,
-  path: string,
+  { machineId, rig, path }: { machineId: string; rig: string; path: string },
   al: MissionAllowlist,
   collectedAt: string
 ): Promise<MissionFilePush[]> {
@@ -311,7 +309,9 @@ export class MissionFilesReader {
         const at = this.now().toISOString();
         const files: MissionFilePush[] = [];
         for (const p of paths) {
-          files.push(...(await readMissionFile(this.machineId, rig, p, al, at)));
+          files.push(
+            ...(await readMissionFile({ machineId: this.machineId, rig, path: p }, al, at))
+          );
         }
         bytes += files.reduce((n, f) => n + (f.text?.length ?? 0) + (f.base64?.length ?? 0), 0);
         pushes.push({ kind: 'manifest', machineId: this.machineId, collectedAt: at, rig, paths });

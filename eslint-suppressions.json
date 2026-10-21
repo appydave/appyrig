@@ -140,9 +140,6 @@
     },
     "max-lines-per-function": {
       "count": 4
-    },
-    "max-params": {
-      "count": 2
     }
   },
   "client/src/domain/health/model.ts": {
@@ -173,7 +170,7 @@
   },
   "client/src/domain/needs-you/model.ts": {
     "max-params": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/domain/rig-map/lines.test.ts": {
@@ -422,9 +419,6 @@
   "client/src/pages/agent/useAgentData.ts": {
     "max-lines-per-function": {
       "count": 1
-    },
-    "max-params": {
-      "count": 3
     }
   },
   "client/src/pages/flow/HandoffFlow.tsx": {
@@ -752,7 +746,7 @@
       "count": 3
     },
     "max-params": {
-      "count": 2
+      "count": 1
     }
   },
   "collector/src/adapters/openrigShapes.ts": {
@@ -775,9 +769,6 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
-    },
-    "max-params": {
       "count": 2
     }
   },
@@ -895,7 +886,7 @@
       "count": 2
     },
     "max-params": {
-      "count": 2
+      "count": 1
     }
   },
   "server/src/core/rigEntry.test.ts": {

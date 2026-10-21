@@ -82,9 +82,7 @@ const isUnder = (child: string, parent: string): boolean =>
 function allowedName(
   scope: 'spec' | 'mission',
   name: string,
-  variant: string | null,
-  ownSpec: string,
-  siblings: string[]
+  { variant, ownSpec, siblings }: { variant: string | null; ownSpec: string; siblings: string[] }
 ): boolean {
   if (!EXT.test(name)) {
     return false;
@@ -147,7 +145,7 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
     }
     const siblings = names.map(specVariant).filter((v): v is string => v !== null);
     for (const name of names.sort()) {
-      if (!allowedName(scope, name, variant, ownSpec, siblings)) {
+      if (!allowedName(scope, name, { variant, ownSpec, siblings })) {
         continue;
       }
       let real: string;
@@ -292,8 +290,7 @@ export async function readRigFiles(spec: SpecInfo, withSpecFiles = false): Promi
 
 /** Splits a rig's files into messages of at most RIG_FILES_CHUNK_BYTES of content; the first replaces. */
 export function chunkRigFiles(
-  machineId: string,
-  rig: string,
+  { machineId, rig }: { machineId: string; rig: string },
   files: RigFile[],
   collectedAt: string
 ): RigFilesPush[] {
@@ -383,7 +380,9 @@ export class RigFilesReader {
       }
       const files = await readRigFiles(spec, withSpecFiles);
       bytes += files.reduce((n, f) => n + Buffer.byteLength(f.content), 0);
-      pushes.push(...chunkRigFiles(this.machineId, rig, files, this.now().toISOString()));
+      pushes.push(
+        ...chunkRigFiles({ machineId: this.machineId, rig }, files, this.now().toISOString())
+      );
       sigs.set(rig, sig);
     }
     // Only a scan that found nothing left over waits for the rescan interval.

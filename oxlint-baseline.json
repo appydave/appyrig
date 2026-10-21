@@ -151,9 +151,6 @@
     "client/src/lib/keys.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/pages/agent/useAgentData.ts": {
-      "no-unknown-parameters": 1
-    },
     "client/src/pages/flow/FlowDocsBar.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
@@ -371,7 +368,7 @@
       "no-unknown-parameters": 1
     },
     "server/src/core/doors.ts": {
-      "no-unknown-parameters": 3,
+      "no-unknown-parameters": 2,
       "require-safety-comment-for-type-assertion": 4
     },
     "server/src/core/identity.ts": {

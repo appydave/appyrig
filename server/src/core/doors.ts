@@ -158,8 +158,8 @@ export function readCallHeaders(headers: IncomingHttpHeaders): HeaderCheck {
 
 const ENVELOPE_KEYS = new Set(['jsonrpc', 'method', 'params', 'id']);
 
-function rpcError(id: unknown, code: number, message: string, data: unknown) {
-  return { jsonrpc: '2.0', id: id ?? null, error: { code, message, data } };
+function rpcError(id: unknown, error: { code: number; message: string; data: unknown }) {
+  return { jsonrpc: '2.0', id: id ?? null, error };
 }
 
 const STATUS: Record<string, number> = {
@@ -204,29 +204,25 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
     const headers = readCallHeaders(req.headers);
     if (!headers.ok) {
       res.status(400).json(
-        rpcError(
-          id,
-          FAILURE_CODES[headers.failureMode as keyof typeof FAILURE_CODES],
-          headers.message,
-          {
+        rpcError(id, {
+          code: FAILURE_CODES[headers.failureMode as keyof typeof FAILURE_CODES],
+          message: headers.message,
+          data: {
             failureMode: headers.failureMode,
             details: headers.details,
-          }
-        )
+          },
+        })
       );
 
       return;
     }
     if (Array.isArray(body)) {
       res.json(
-        rpcError(
-          null,
-          JSONRPC_CODES.invalidRequest,
-          'Batches are refused here; send one request.',
-          {
-            failureMode: 'invalid-input',
-          }
-        )
+        rpcError(null, {
+          code: JSONRPC_CODES.invalidRequest,
+          message: 'Batches are refused here; send one request.',
+          data: { failureMode: 'invalid-input' },
+        })
       );
 
       return;
@@ -235,15 +231,14 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
       const extra = Object.keys(body).filter((k) => !ENVELOPE_KEYS.has(k));
       if (extra.length > 0) {
         res.json(
-          rpcError(
-            id,
-            JSONRPC_CODES.invalidRequest,
-            `${extra.join(', ')} is not a JSON-RPC envelope key; put it inside "params". Nothing was done.`,
-            {
+          rpcError(id, {
+            code: JSONRPC_CODES.invalidRequest,
+            message: `${extra.join(', ')} is not a JSON-RPC envelope key; put it inside "params". Nothing was done.`,
+            data: {
               failureMode: 'invalid-input',
               details: { issues: extra.map((k) => ({ path: k, message: 'misplaced' })) },
-            }
-          )
+            },
+          })
         );
 
         return;
@@ -316,8 +311,10 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
 export function rpcParseError(err: unknown, req: Request, res: Response, next: NextFunction) {
   if (req.path === RPC_PATH && (err as { type?: string }).type === 'entity.parse.failed') {
     res.status(400).json(
-      rpcError(null, JSONRPC_CODES.parseError, 'Body is not JSON.', {
-        failureMode: 'invalid-input',
+      rpcError(null, {
+        code: JSONRPC_CODES.parseError,
+        message: 'Body is not JSON.',
+        data: { failureMode: 'invalid-input' },
       })
     );
 
