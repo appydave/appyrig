@@ -938,7 +938,7 @@
       "count": 8
     },
     "no-magic-numbers": {
-      "count": 102
+      "count": 17
     }
   },
   "collector/src/adapters/dbrows.ts": {
@@ -1394,7 +1394,7 @@
       "count": 1
     },
     "no-magic-numbers": {
-      "count": 88
+      "count": 14
     }
   },
   "shared/src/dbrows.ts": {
