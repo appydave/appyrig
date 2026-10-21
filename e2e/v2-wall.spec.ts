@@ -10,6 +10,36 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
   test('one fixed card size, rig headings, No-rig group, dense, triage kept', async ({ page }) => {
     test.setTimeout(60_000);
     const errors = watchErrors(page);
+    page.on('console', (m) => {
+      if (m.text().startsWith('DIAG')) console.log(m.text());
+    });
+    await page.addInitScript(() => {
+      const t0 = performance.now();
+      const log = (...a: unknown[]) =>
+        console.log('DIAG', Math.round(performance.now() - t0), ...a);
+      for (const k of ['pushState', 'replaceState'] as const) {
+        const orig = history[k].bind(history);
+        history[k] = (st: unknown, u: string, url?: string | URL | null) => {
+          log(k, String(url), JSON.stringify(st));
+          orig(st, u, url);
+        };
+      }
+      const back = history.back.bind(history);
+      history.back = () => {
+        log('back()', location.search, 'len', history.length);
+        back();
+      };
+      window.addEventListener('popstate', () => log('popstate', location.search), true);
+      window.addEventListener(
+        'keydown',
+        (e) => log('keydown', e.key, 'prevented', e.defaultPrevented),
+        true
+      );
+      window.addEventListener('keydown', (e) => log('keydown-bubble', e.key), false);
+      new MutationObserver(() =>
+        log('panel', document.querySelectorAll('[data-testid="agent-panel"]').length)
+      ).observe(document, { subtree: true, childList: true });
+    });
     await page.goto('/?frozen=busy-2026-10-18&v=2');
     const gotIt = page.getByRole('button', { name: /got it/i });
     if (await gotIt.count()) await gotIt.first().click();
