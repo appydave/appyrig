@@ -10,6 +10,34 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
   test('one fixed card size, rig headings, No-rig group, dense, triage kept', async ({ page }) => {
     test.setTimeout(60_000);
     const errors = watchErrors(page);
+    // A timeline of the address and the Escape key, attached to the report if the panel does not
+    // close (the failure has been seen on CI only, never locally), so the next one is provable.
+    const timeline: string[] = [];
+    page.on('console', (m) => {
+      if (m.text().startsWith('TIMELINE ')) timeline.push(m.text().slice(9));
+    });
+    await page.addInitScript(() => {
+      const t0 = performance.now();
+      const add = (what: string) =>
+        console.log(`TIMELINE ${Math.round(performance.now() - t0)}ms ${what}`);
+      const push = history.pushState.bind(history);
+      history.pushState = (state, title, url) => {
+        add(`pushState ${url} ${JSON.stringify(state)}`);
+        push(state, title, url);
+      };
+      const replace = history.replaceState.bind(history);
+      history.replaceState = (state, title, url) => {
+        add(`replaceState ${url}`);
+        replace(state, title, url);
+      };
+      const back = history.back.bind(history);
+      history.back = () => {
+        add(`back() from ${location.search} (entries: ${history.length})`);
+        back();
+      };
+      window.addEventListener('popstate', () => add(`popstate ${location.search}`), true);
+      window.addEventListener('keydown', (e) => add(`keydown ${e.key}`), true);
+    });
     await page.goto('/?frozen=busy-2026-10-18&v=2');
     const gotIt = page.getByRole('button', { name: /got it/i });
     if (await gotIt.count()) await gotIt.first().click();
@@ -86,7 +114,15 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     await expect(page.getByTestId('agent-panel')).toBeVisible();
     // the panel sits over the right side of the page (where the header's chips are): close it
     await page.keyboard.press('Escape');
-    await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    try {
+      await expect(page.getByTestId('agent-panel')).toHaveCount(0);
+    } catch (err) {
+      await test
+        .info()
+        .attach('panel-timeline', { body: timeline.join('\n'), contentType: 'text/plain' });
+      console.log(`Escape did not close the Agent panel. Timeline:\n${timeline.join('\n')}`);
+      throw err;
+    }
 
     // a rig pick in the drawer is never a no-op: its group is outlined, and "Only this rig" narrows
     await chooseRigInDrawer(page, 'm2:d09-crew');
