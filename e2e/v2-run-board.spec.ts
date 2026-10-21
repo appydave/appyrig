@@ -110,10 +110,6 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await expect(page.getByTestId('v2-run')).toBeVisible();
 
-    // B on a v2-only page says there is no old version
-    await page.keyboard.press('b');
-    await expect(page.getByTestId('v2-flip-note')).toContainText('no old version');
-
     expect(errors, 'no console errors or uncaught exceptions').toEqual([]);
   });
 });

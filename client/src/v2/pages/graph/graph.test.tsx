@@ -117,18 +117,12 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     activeRig: null,
     chooseRig: vi.fn(),
     pickedRig: null,
-    groupBy: 'rig',
     now: NOW,
     link: 'connected',
     hubConnected: true,
     received: true,
     getSocket: () => spy.socket,
     keys: true,
-    hidden: [],
-    onShowMachine: vi.fn(),
-    onOpenSeat: vi.fn(),
-    onOpenSkills: vi.fn(),
-    onOpenAgent: vi.fn(),
     agentKey: null,
     openAgentPage: vi.fn(),
     openAgentPanel: vi.fn(),
@@ -623,7 +617,7 @@ describe('Graph in the app', () => {
       }
     );
     const spy = spySocket();
-    history.replaceState(null, '', '/?v=2');
+    history.replaceState(null, '', '/');
     render(<App getSocket={() => spy.socket} />);
     spy.fire(
       FLEET_EVENTS.UPDATE,
@@ -631,13 +625,10 @@ describe('Graph in the app', () => {
     );
   };
 
-  it('Graph is a v2-only page in the Fleet group: B says there is no old version', () => {
+  it('Graph is a page in the Fleet group', () => {
     live();
     expect(screen.getByTestId('v2-page-graph')).toHaveTextContent('Graph');
     fireEvent.click(screen.getByTestId('v2-page-graph'));
-    expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
-    fireEvent.keyDown(document.body, { key: 'b' });
-    expect(screen.getByTestId('v2-flip-note')).toHaveTextContent('no old version');
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
   });
 
@@ -653,11 +644,8 @@ describe('Graph in the app', () => {
     expect(screen.getByTestId('v2-rigmap')).toBeInTheDocument();
     expect(screen.getByTestId('rm-body')).toHaveAttribute('data-rig-key', 'roamy:starter');
     expect(screen.getAllByTestId('g2-inside')).toHaveLength(1);
-    fireEvent.keyDown(document.body, { key: 'b' });
-    const chosen = screen
-      .getAllByTestId('rig-chip')
-      .find((c) => c.getAttribute('aria-pressed') === 'true');
-    expect(chosen?.dataset.rigKey).toBe('roamy:starter');
+    // the rig it opened on is the chosen rig, in the address too
+    expect(new URLSearchParams(location.search).get('rig')).toBe('starter@roamy');
   });
 });
 

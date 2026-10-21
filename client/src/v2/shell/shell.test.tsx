@@ -307,36 +307,31 @@ describe('the v2 frame in the app', () => {
     spy.fire(FLEET_EVENTS.UPDATE, update(fleet()));
   }
 
-  it('v2 mode has the thin bar, the badge strip and the Rigs tab; Current has none of them', () => {
+  it('the app has the thin bar, the badge strip and the Rigs tab', () => {
     renderV2();
     expect(screen.getByTestId('v2-shell')).toHaveClass('app-v2');
     expect(screen.getByTestId('rig-drawer-tab')).toBeInTheDocument();
     expect(screen.getByTestId('v2-strip')).toHaveAttribute('data-expanded', 'false');
     // the fleet strip is still drawn inside the badges, with its counts
     expect(screen.getByTestId('fleet-counts')).toBeInTheDocument();
-    fireEvent.click(screen.getByTestId('version-current'));
-    expect(screen.queryByTestId('v2-shell')).toBeNull();
-    expect(screen.queryByTestId('rig-drawer-tab')).toBeNull();
-    expect(screen.queryByTestId('v2-strip')).toBeNull();
   });
 
-  it('every helper is still reachable: Explain, Legend, Keys, Feedback, Flip, and Notes / OpenRig vs AppyRig / API behind ⋯', () => {
+  it('the helpers left: Legend in the bar, and OpenRig vs AppyRig / API / V1 archive behind ⋯', () => {
     renderV2();
     for (const id of [
-      'explain-toggle',
       'legend-toggle',
-      'keys-toggle',
-      'feedback-open',
-      'flip',
-      'notes-open',
       'compare-link',
       'api-docs-link',
+      'v1-archive-open',
       'more-open',
     ])
       expect(screen.getByTestId(id), id).toBeInTheDocument();
+    // the V1 helpers are gone (banked as future work, rebuilt on V2's code)
+    for (const id of ['explain-toggle', 'keys-toggle', 'feedback-open', 'flip', 'notes-open'])
+      expect(screen.queryByTestId(id), id).toBeNull();
     // the rarely used three live inside the ⋯ menu
     const pop = screen.getByTestId('more-open').parentElement!.querySelector('.v2-more-pop')!;
-    for (const id of ['notes-open', 'compare-link', 'api-docs-link'])
+    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open'])
       expect(pop.querySelector(`[data-testid="${id}"]`), id).not.toBeNull();
   });
 

@@ -17,10 +17,8 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
   }) => {
     const errors = watchErrors(page);
     await page.goto(FROZEN);
-    await expect(page.getByTestId('view-wall')).toBeVisible();
-    await quietIntro(page);
-    await page.keyboard.press('v');
     await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await quietIntro(page);
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-wall').click();
     // a card body opens the agent panel now; the Agent page is reached from the nav
@@ -47,10 +45,8 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
   }) => {
     const errors = watchErrors(page);
     await page.goto(FROZEN);
-    await expect(page.getByTestId('view-wall')).toBeVisible();
-    await quietIntro(page);
-    await page.keyboard.press('v');
     await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await quietIntro(page);
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-run').click();
     await expect(page.getByTestId('v2-run')).toBeVisible();
@@ -80,10 +76,8 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
     page,
   }) => {
     await page.goto(FROZEN);
-    await expect(page.getByTestId('view-wall')).toBeVisible();
-    await quietIntro(page);
-    await page.keyboard.press('v');
     await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await quietIntro(page);
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-wall').click();
     const card = page.getByTestId('v2-seat-card').first();
@@ -104,10 +98,8 @@ test.describe('v2 documents (frozen busy snapshot)', () => {
 
   test('Graph Details and Flow panel open the documents drawer', async ({ page }) => {
     await page.goto(FROZEN);
-    await expect(page.getByTestId('view-wall')).toBeVisible();
-    await quietIntro(page);
-    await page.keyboard.press('v');
     await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await quietIntro(page);
     await page.getByTestId('v2-group-fleet').click();
     await page.getByTestId('v2-page-graph').click();
     await expect(page.getByTestId('v2-graph')).toBeVisible();

@@ -37,8 +37,15 @@ describe('V1 archive viewer', () => {
       )
     );
     expect(screen.getByTestId('v1-archive-text').textContent).toContain('In V2:');
+    // the counter counts rows, like the strip, and names the picture within the row
+    expect(screen.getByTestId('v1-archive-count').textContent).toBe(
+      'V1 archive · screen 1 of 32 · picture 1 of 3'
+    );
     fireEvent.click(screen.getByTestId('v1-archive-next'));
     expect(screen.getByTestId('v1-archive-img').getAttribute('src')).toContain('by-machine');
+    expect(screen.getByTestId('v1-archive-count').textContent).toBe(
+      'V1 archive · screen 1 of 32 · picture 2 of 3'
+    );
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     // third Wall screen is not on this hub
     expect(screen.getByTestId('v1-archive-missing').textContent).toBe('screenshot not on this hub');
@@ -46,6 +53,9 @@ describe('V1 archive viewer', () => {
     expect(screen.getByTestId('v1-archive-img')).toBeTruthy();
     fireEvent.click(screen.getByTestId('v1-archive-jump-27'));
     expect(screen.getByTestId('v1-archive-title').textContent).toContain('27. Waiting on David');
+    expect(screen.getByTestId('v1-archive-count').textContent).toMatch(
+      /^V1 archive · screen 27 of 32/
+    );
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -54,6 +64,8 @@ describe('V1 archive viewer', () => {
     render(<V1Archive onClose={() => {}} />);
     fireEvent.click(screen.getByTestId('v1-archive-jump-32'));
     expect(screen.getByTestId('v1-archive-missing').textContent).toBe('screenshot not on this hub');
+    // a row with one picture (or none) has no picture count
+    expect(screen.getByTestId('v1-archive-count').textContent).toBe('V1 archive · screen 32 of 32');
     expect(screen.getByTestId('v1-archive-next').hasAttribute('disabled')).toBe(true);
   });
 });

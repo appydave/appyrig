@@ -54,7 +54,6 @@ function renderApp() {
   return spy;
 }
 
-const press = (key: string) => fireEvent.keyDown(document.body, { key });
 const pressedRig = () =>
   screen.getAllByTestId('rig-chip').find((c) => c.getAttribute('aria-pressed') === 'true')?.dataset
     .rigKey;
@@ -89,7 +88,8 @@ describe('UX nav #4: defaults land on something real', () => {
 
   it('with no rig chosen every rig page opens on the busiest rig, not the first one listed', () => {
     renderApp();
-    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(screen.getByTestId('v2-group-work'));
+    fireEvent.click(screen.getByTestId('v2-page-flow'));
     expect(pressedRig()).toBe('roamy:starter');
   });
 
@@ -108,24 +108,16 @@ describe('UX nav #4: defaults land on something real', () => {
   });
 });
 
-describe('UX nav #1: one shared rig choice, old and new', () => {
-  it('pick on Flow v2, flip with B, switch V, move to Timeline v2: always the same rig', () => {
-    history.replaceState(null, '', '/?v=2');
+describe('UX nav #1: one shared rig choice', () => {
+  it('pick on the Flow, move to the Timeline and back: always the same rig', () => {
     renderApp();
     fireEvent.click(screen.getByTestId('v2-group-work'));
     fireEvent.click(screen.getByTestId('v2-page-flow'));
     fireEvent.change(screen.getByTestId('rig-select'), { target: { value: 'roamy:kernel' } });
     expect(pressedRig()).toBe('roamy:kernel');
-    press('b'); // Current's Flow
-    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
+    fireEvent.click(screen.getByTestId('v2-page-timeline')); // the Timeline reads the same choice
     expect(pressedRig()).toBe('roamy:kernel');
-    press('b');
-    fireEvent.click(screen.getByTestId('v2-page-timeline')); // Timeline v2 reads the same choice
-    expect(pressedRig()).toBe('roamy:kernel');
-    press('b'); // Current's Timeline
-    expect(pressedRig()).toBe('roamy:kernel');
-    press('v'); // all the way to Current
-    fireEvent.click(screen.getByTestId('view-flow'));
+    fireEvent.click(screen.getByTestId('v2-page-flow'));
     expect(pressedRig()).toBe('roamy:kernel');
   });
 

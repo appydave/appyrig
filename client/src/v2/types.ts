@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import type { View } from '../App.js';
-import type { GroupBy } from '../fleet/model.js';
 import type { RigRef } from '../fleet/views.js';
 import type { FleetSocket, HubLink } from '../fleet/useFleet.js';
 
@@ -41,14 +40,14 @@ export interface AgentPanelTarget {
   tab?: AgentPanelTab;
 }
 
-/** What App lends every v2 page: the same state Current's pages read, so a flip keeps it all. */
+/** What App lends every page: the fleet, the chosen rig, and the shell's navigation. */
 export interface V2Context {
-  /** Machines the viewer has not filtered out. */
+  /** Every machine (the same list as `allMachines`; the machine filter that split them is gone). */
   machines: FleetMachine[];
-  /** Every machine, hidden ones included. */
+  /** Every machine. */
   allMachines: FleetMachine[];
   rigs: RigRef[];
-  /** The chosen rig, shared with Current's Map / Flow / Timeline. */
+  /** The chosen rig, shared by the Map, Flow, Timeline and Run board. */
   activeRig: RigRef | null;
   /**
    * Bumped on EVERY rig pick, including a repeat of the rig already chosen. A fleet page focuses the
@@ -64,7 +63,6 @@ export interface V2Context {
   chooseRig: (key: string) => void;
   /** The rig the viewer clicked (not the default first one), for the Wall's highlight. */
   pickedRig: RigRef | null;
-  groupBy: GroupBy;
   now: number;
   link: HubLink;
   hubConnected: boolean;
@@ -72,11 +70,6 @@ export interface V2Context {
   getSocket: () => FleetSocket;
   /** Screen keys are live (nothing on top). */
   keys: boolean;
-  hidden: { id: string; label: string }[];
-  onShowMachine: (id: string) => void;
-  onOpenSeat: (key: string) => void;
-  onOpenSkills: (key: string) => void;
-  onOpenAgent: (key: string) => void;
   onOpenFiles: (machineId: string, rig: string) => void;
   goTo: (page: PageKey) => void;
   /** The agent the v2 Agent page shows (a tile key, `machine/seat`), or null before one is chosen. */

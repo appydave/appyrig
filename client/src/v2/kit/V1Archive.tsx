@@ -55,6 +55,8 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
     .map((s, i) => ({ s, i }))
     // the strip has one button per row: its first screen
     .filter(({ s }) => s.part === 1);
+  // The counter counts what the strip shows (rows), and names the picture within the row.
+  const rowAt = rowSlides.findIndex(({ s }) => s.row.row === slide.row.row) + 1;
 
   return (
     <div className="v1a-scrim" data-testid="v1-archive-scrim">
@@ -67,8 +69,9 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
         data-feedback-skip=""
       >
         <header className="v1a-head">
-          <span className="label">
-            V1 archive · screen {at + 1} of {slides.length}
+          <span className="label" data-testid="v1-archive-count">
+            V1 archive · screen {rowAt} of {rowSlides.length}
+            {slide.parts > 1 ? ` · picture ${slide.part} of ${slide.parts}` : ''}
           </span>
           <button
             ref={closeRef}

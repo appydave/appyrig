@@ -296,7 +296,7 @@ function WallV2({ ctx }: V2PageProps) {
     writeJson(OPEN_KEY, next);
   };
   const freshLabel = (m: FleetMachine) => freshness(m, ctx.now, ctx.hubConnected).label;
-  const noSeats = ctx.received && teams.length === 0 && ctx.hidden.length === 0;
+  const noSeats = ctx.received && teams.length === 0;
 
   // A rig picked in the Rigs drawer is never a no-op here: its group is scrolled to and outlined,
   // and "Only this rig" narrows the Wall to it. A repeat pick (focusNonce) focuses again.
@@ -442,21 +442,6 @@ function WallV2({ ctx }: V2PageProps) {
           </>
         }
       />
-      {ctx.hidden.length > 0 && (
-        <p className="filter-note" data-testid="v2-wall-hidden">
-          Hidden by the machine filter:{' '}
-          {ctx.hidden.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              className="pill-btn"
-              onClick={() => ctx.onShowMachine(m.id)}
-            >
-              {'\u25cb'} {m.label} {'\u00b7'} show
-            </button>
-          ))}
-        </p>
-      )}
       {noSeats && (
         <p className="empty">
           No seats yet. Machines appear here as soon as their collector reports.

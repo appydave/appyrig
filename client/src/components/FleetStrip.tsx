@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import { pressureOf } from '../fleet/health.js';
 import {
@@ -23,16 +22,8 @@ interface Props {
   link: HubLink;
   received: boolean;
   error: string | null;
+  /** A blocked-seat alert opens that seat. */
   onOpen: (key: string) => void;
-  /** S3: the machine filter, drawn at the end of the strip (keeps the header to one row). */
-  filter?: ReactNode;
-  /** S6: the pressure mark opens the Machines view. */
-  onHealth?: () => void;
-  /**
-   * C3 (F30): the machines the filter leaves shown. The strip still draws every machine (a blocked
-   * seat is never hidden), but its seat counts follow the filter and name what they leave out.
-   */
-  shown?: FleetMachine[];
 }
 
 function hubMessage(link: HubLink, received: boolean): string | null {
@@ -42,19 +33,8 @@ function hubMessage(link: HubLink, received: boolean): string | null {
   return null;
 }
 
-export default function FleetStrip({
-  machines,
-  now,
-  link,
-  received,
-  error,
-  onOpen,
-  onHealth,
-  filter,
-  shown,
-}: Props) {
-  const counts = countSeats(shown ?? machines);
-  const left = shown ? machines.filter((m) => !shown.includes(m)) : [];
+export default function FleetStrip({ machines, now, link, received, error, onOpen }: Props) {
+  const counts = countSeats(machines);
   const blocked = blockedSeats(machines);
   const hub = hubMessage(link, received);
   const asleep = machines.filter((m) => m.liveness === 'asleep');
@@ -112,14 +92,15 @@ export default function FleetStrip({
               data-pulse={f.level === 'live'}
             />
             {fm.machine.label}
-            {/* S6: the per-machine seat count moved to the hover and the Machines card, so three
-                machines, their pressure marks and the filter stay on one row at 1440 px. */}
+            {/* S6: the per-machine seat count is on the hover and the Machines card, so three
+                machines and their pressure marks stay on one row at 1440 px. */}
             <span className="fresh" title={`${n} seat${n === 1 ? '' : 's'}`}>
               {f.label}
               {fm.liveness === 'asleep' ? ` · ${n} seat${n === 1 ? '' : 's'} paused` : ''}
             </span>
             {(() => {
-              // S6: memory pressure, glyph + word; the reason or detail on hover; opens Machines.
+              // S6: memory pressure, glyph + word; the reason or detail on hover. A click toggles
+              // the strip's detail in place (StripShell); it never navigates.
               const p = pressureOf(fm, now);
               const short =
                 p.kind === 'no-data' ? 'no data' : p.kind === 'unavailable' ? 'n/a' : p.word;
@@ -136,7 +117,6 @@ export default function FleetStrip({
                   data-explain={p.kind === 'no-data' ? 'health-no-data' : 'memory-pressure'}
                   title={title}
                   aria-label={`${fm.machine.label} ${title}`}
-                  onClick={onHealth}
                 >
                   {p.glyph} {short}
                 </button>
@@ -166,15 +146,8 @@ export default function FleetStrip({
               · <b>{counts.paused}</b> paused (asleep)
             </>
           )}
-          {left.length > 0 && (
-            <span className="quiet" data-testid="fleet-counts-hidden">
-              {' '}
-              · not counting {left.map((m) => m.machine.label).join(', ')} (hidden by the filter)
-            </span>
-          )}
         </span>
       )}
-      {filter}
       <span className="strip-end">
         {blocked.slice(0, MAX_BLOCKED_ALERTS).map((t: TileRef) => (
           <button

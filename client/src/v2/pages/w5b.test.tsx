@@ -86,18 +86,12 @@ function ctxFor(machines: FleetMachine[], socket: FleetSocket): V2Context {
     activeRig: null,
     chooseRig: vi.fn(),
     pickedRig: null,
-    groupBy: 'rig',
     now: NOW,
     link: 'connected',
     hubConnected: true,
     received: true,
     getSocket: () => socket,
     keys: true,
-    hidden: [],
-    onShowMachine: vi.fn(),
-    onOpenSeat: vi.fn(),
-    onOpenSkills: vi.fn(),
-    onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
     agentKey: null,
@@ -705,16 +699,13 @@ describe('Health and Settings in the app', () => {
   it.each([
     ['health', 'v2-health'],
     ['settings', 'v2-settings'],
-  ])('%s is registered under the hood and has no old version to flip to', async (key, id) => {
+  ])('%s is registered under the hood', async (key, id) => {
     history.replaceState(null, '', '/?v=2');
     const spy = spySocket();
     render(<App getSocket={() => spy.socket} />);
     spy.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy'))]));
     fireEvent.click(screen.getByTestId('v2-group-hood'));
     fireEvent.click(screen.getByTestId(`v2-page-${key}`));
-    expect(screen.getByTestId(id)).toBeInTheDocument();
-    fireEvent.keyDown(document.body, { key: 'b' });
-    expect(screen.getByTestId('v2-flip-note')).toHaveTextContent('no old version');
     expect(screen.getByTestId(id)).toBeInTheDocument();
   });
 });

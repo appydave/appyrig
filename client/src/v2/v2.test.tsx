@@ -26,7 +26,6 @@ import {
   plannedPages,
   v2PageFor,
 } from './registry.js';
-import { MODE_KEY, modeFromSearch, readMode, searchWithMode } from './version.js';
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -89,56 +88,53 @@ beforeEach(() => {
   history.replaceState(null, '', '/');
 });
 
-describe('v2 version switch', () => {
-  it('reads ?v=2 from the address before the remembered choice', () => {
-    expect(modeFromSearch('?v=2')).toBe('v2');
-    expect(modeFromSearch('?v=current')).toBe('current');
-    expect(modeFromSearch('?frozen=x')).toBeNull();
-    localStorage.setItem(MODE_KEY, 'v2');
-    expect(readMode('')).toBe('v2');
-    expect(readMode('?v=1')).toBe('current');
-    expect(searchWithMode('?frozen=a', 'v2')).toBe('?frozen=a&v=2');
-    expect(searchWithMode('?frozen=a&v=2', 'current')).toBe('?frozen=a');
-  });
-
-  it('Current renders exactly the old tab strip and no v2 nav', () => {
+describe('one version: V2 is the whole app', () => {
+  it('the plain address opens V2: the grouped nav and the Wall, no version switch', () => {
     renderLive();
-    const tabs = screen.getByRole('navigation', { name: 'Screens' });
-    expect(tabs).not.toHaveAttribute('hidden');
-    expect([...tabs.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
-      'The Wall',
-      'Rig Map',
-      'Handoff Flow',
-      'Run Timeline',
-      'Accounts',
-      'Machines',
-      'OpenRig DB',
-      'Learn',
-    ]);
-    expect(screen.queryByTestId('v2-nav')).toBeNull();
-    expect(screen.queryByTestId('v2-wall')).toBeNull();
-    expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
-  });
-
-  it('V switches to v2, writes ?v=2 and remembers it; a reload comes back in v2', () => {
-    renderLive();
-    press('v');
-    // the address now carries the page too (the URL is the state)
-    expect(location.search).toBe('?v=2&page=wall');
-    expect(localStorage.getItem(MODE_KEY)).toBe('v2');
+    expect(screen.getByTestId('v2-shell')).toHaveClass('app-v2');
     expect(screen.getByTestId('v2-nav')).toBeInTheDocument();
-    expect(document.querySelector('nav.view-tabs')).toHaveAttribute('hidden');
     expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
-    // "reload": the address is cleared, the stored choice still says v2
-    history.replaceState(null, '', '/');
-    expect(readMode()).toBe('v2');
-    press('v');
-    expect(location.search).toBe('');
-    expect(localStorage.getItem(MODE_KEY)).toBe('current');
+    expect(document.querySelector('nav.view-tabs')).toBeNull();
+    expect(screen.queryByTestId('version-current')).toBeNull();
+    expect(screen.queryByTestId('flip')).toBeNull();
+    expect(location.search).toBe('?page=wall');
   });
 
-  it("v2 nav is grouped; Fleet holds the new Graph page and Current's Rig Map until its v2 exists", () => {
-    history.replaceState(null, '', '/?v=2');
+  it('an old ?v=1 link opens V2 too, and the old switch is dropped from the address', () => {
+    history.replaceState(null, '', '/?v=1');
+    renderLive();
+    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
+    expect(location.search).toBe('?page=wall');
+  });
+
+  it('an old ?v=2 link keeps its page and loses only the switch', () => {
+    history.replaceState(null, '', '/?v=2&page=about');
+    renderLive();
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    expect(location.search).toBe('?page=about');
+  });
+
+  it('V and B are no longer keys: the page stays put', () => {
+    renderLive();
+    press('v');
+    press('b');
+    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
+    expect(location.search).toBe('?page=wall');
+  });
+
+  it('Esc never navigates', async () => {
+    renderLive();
+    fireEvent.click(screen.getByTestId('v2-group-hood'));
+    fireEvent.click(screen.getByTestId('v2-page-about'));
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    const n = history.length;
+    press('Escape');
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
+    expect(history.length).toBe(n);
+  });
+
+  it('the nav is grouped; Fleet holds the Graph, Work holds the Rig Map', () => {
     renderLive();
     // Agents holds Library and Workflows from W5 (the Agent page is W2).
     expect(screen.getAllByTestId(/^v2-group-/).map((b) => b.textContent)).toEqual([
@@ -158,7 +154,6 @@ describe('v2 version switch', () => {
     // Graph is a v2-only page (the fleet); the Rig Map opens it focused on the chosen rig
     fireEvent.click(screen.getByTestId('v2-page-graph'));
     expect(screen.getByTestId('v2-graph')).toBeInTheDocument();
-    expect(screen.queryByTestId('v2-no-v2')).toBeNull();
     // the Rig Map is its own page in the Work group, next to Handoff Flow
     fireEvent.click(screen.getByTestId('v2-group-work'));
     expect(screen.getByTestId('v2-page-map')).toBeInTheDocument();
@@ -166,50 +161,6 @@ describe('v2 version switch', () => {
     fireEvent.click(screen.getByTestId('v2-page-map'));
     expect(screen.getByTestId('v2-rigmap')).toBeInTheDocument();
     expect(screen.queryByTestId('v2-graph')).toBeNull();
-  });
-});
-
-describe('v2 per-page flip', () => {
-  it('B flips the Wall between old and new and keeps the picked rig', () => {
-    renderLive();
-    fireEvent.click(screen.getByTestId('view-flow'));
-    fireEvent.click(
-      screen.getAllByTestId('rig-chip').find((c) => c.dataset.rigKey === 'roamy:kernel')!
-    );
-    fireEvent.click(screen.getByTestId('view-wall'));
-    expect(screen.getByTestId('wall-only-rig')).toHaveTextContent('Only kernel (Roamy)');
-    press('b');
-    expect(screen.getByTestId('v2-wall')).toBeInTheDocument();
-    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'new');
-    // v2's team picker replaces the single "Only <rig>" chip (C50)
-    expect(screen.queryByTestId('wall-only-rig')).toBeNull();
-    press('b');
-    expect(screen.queryByTestId('v2-wall')).toBeNull();
-    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
-    // the flip is per page: leaving the page forgets it
-    press('b');
-    fireEvent.click(screen.getByTestId('view-flow'));
-    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
-    const chosen = screen
-      .getAllByTestId('rig-chip')
-      .find((c) => c.getAttribute('aria-pressed') === 'true');
-    expect(chosen?.dataset.rigKey).toBe('roamy:kernel');
-  });
-
-  it('on a v2-only page the flip says there is no old version and stays put; Esc never navigates', async () => {
-    history.replaceState(null, '', '/?v=2');
-    renderLive();
-    fireEvent.click(screen.getByTestId('v2-group-hood'));
-    fireEvent.click(screen.getByTestId('v2-page-about'));
-    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
-    press('b');
-    expect(screen.getByTestId('v2-flip-note')).toHaveTextContent('no old version');
-    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
-    const n = history.length;
-    press('Escape');
-    await new Promise((r) => setTimeout(r, 50));
-    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
-    expect(history.length).toBe(n);
   });
 });
 
@@ -311,63 +262,6 @@ describe('W0 fold', () => {
       expect(screen.getByTestId('machine-chip')).toHaveAttribute('data-level', 'live')
     );
     expect(screen.getByTestId('machine-chip')).toHaveTextContent('live · 2s');
-  });
-
-  it('MEDIUM-2: with the agent panel open, V and B do nothing and Esc closes only the panel', () => {
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe() {}
-        unobserve() {}
-        disconnect() {}
-      }
-    );
-    const spy = spySocket();
-    render(<App getSocket={() => spy.socket} />);
-    spy.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('m2'))]));
-    fireEvent.click(screen.getByTestId('view-map'));
-    fireEvent.click(
-      screen
-        .getByText('fliedit-team', { selector: '[data-testid="rig-chip"] *' })
-        .closest('button')!
-    );
-    fireEvent.click(screen.getAllByTestId('rig-map-node')[0]!);
-    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
-    press('v');
-    expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
-    expect(location.search).toBe('');
-    press('b');
-    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
-    expect(screen.queryByTestId('v2-no-v2')).toBeNull();
-    fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByTestId('agent-panel')).toBeNull();
-    expect(screen.getByTestId('view-body-map')).toBeInTheDocument();
-  });
-
-  it('Esc on a v2 page does not navigate: no page change, no goBack, no new history entry', async () => {
-    renderLive();
-    fireEvent.click(screen.getByTestId('view-flow')); // history now holds the Wall
-    press('v');
-    fireEvent.click(screen.getByTestId('v2-group-hood'));
-    fireEvent.click(screen.getByTestId('v2-page-about'));
-    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
-    const n = history.length;
-    press('Escape');
-    await new Promise((r) => setTimeout(r, 50));
-    expect(screen.getByTestId('v2-about')).toBeInTheDocument();
-    expect(screen.queryByTestId('v2-wall')).toBeNull();
-    expect(history.length).toBe(n);
-  });
-
-  it('V and B are ignored while typing', () => {
-    renderLive();
-    const input = document.createElement('input');
-    document.body.appendChild(input);
-    fireEvent.keyDown(input, { key: 'v' });
-    fireEvent.keyDown(input, { key: 'b' });
-    expect(screen.getByTestId('version-current')).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
-    input.remove();
   });
 
   it('MEDIUM-3: the dev proxy lends the hub token only to this dev server on this machine', () => {
