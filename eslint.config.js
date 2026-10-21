@@ -1,6 +1,7 @@
 import appyConfig from '@appydave/appystack-config/eslint/react';
 import stylistic from '@stylistic/eslint-plugin';
 import { colorSelectors } from './lint/colors.js';
+import { complexityPlugins, complexityRules } from './lint/complexity.js';
 import { limitRules, sizeSelectors } from './lint/limits.js';
 import { numericRules } from './lint/numeric.js';
 import { spacingRules } from './lint/spacing.js';
@@ -52,6 +53,12 @@ export default [
     files: ['**/*.{ts,tsx,js,mjs,cjs}'],
     ignores: testFiles,
     rules: numericRules,
+  },
+  // G06: complexity. Today's findings sit in eslint-suppressions.json; only new ones fail.
+  {
+    files: ['**/*.{ts,tsx,js,mjs,cjs}'],
+    plugins: complexityPlugins,
+    rules: complexityRules,
   },
   // A describe() callback is a list of tests, not a long function, and a test file may run to 500 lines.
   // Parameters and members still use the shared limits.

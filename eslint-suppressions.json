@@ -5,6 +5,12 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/app/App.tsx": {
@@ -19,6 +25,12 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/app/devProxy.ts": {
@@ -31,6 +43,8 @@
       "count": 1
     }
   },
+  "client/src/app/frozen/load.ts": {
+  },
   "client/src/app/usePages.tsx": {
     "max-lines": {
       "count": 1
@@ -39,6 +53,9 @@
       "count": 1
     },
     "no-magic-numbers": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -50,6 +67,17 @@
   "client/src/domain/accounts/model.ts": {
     "no-magic-numbers": {
       "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
+    }
+  },
+  "client/src/domain/agent/detail.ts": {
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/docs/model.ts": {
@@ -58,6 +86,15 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/fleet/accountWindow.ts": {
@@ -66,6 +103,15 @@
     },
     "no-magic-numbers": {
       "count": 10
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/fleet/coreCall.ts": {
@@ -87,6 +133,12 @@
     },
     "no-magic-numbers": {
       "count": 12
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/fleet/model.test.ts": {
@@ -103,6 +155,12 @@
     },
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/fleet/plan.test.ts": {
@@ -119,6 +177,20 @@
     },
     "no-magic-numbers": {
       "count": 10
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
+    }
+  },
+  "client/src/domain/fleet/runcard.test.ts": {
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/fleet/runcard.ts": {
@@ -127,6 +199,12 @@
     },
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/fleet/store.ts": {
@@ -151,6 +229,15 @@
     },
     "no-magic-numbers": {
       "count": 20
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/fleet/useFleet.ts": {
@@ -178,6 +265,15 @@
     },
     "no-magic-numbers": {
       "count": 12
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 7
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 8
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/flow/flowLines.ts": {
@@ -194,6 +290,9 @@
   "client/src/domain/flow/words.ts": {
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/graph/lineRoute.ts": {
@@ -205,6 +304,12 @@
     },
     "no-magic-numbers": {
       "count": 16
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/graph/model.ts": {
@@ -215,6 +320,15 @@
       "count": 4
     },
     "no-magic-numbers": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
+    },
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -227,11 +341,23 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/history/model.ts": {
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/learn/glossary.ts": {
@@ -245,6 +371,12 @@
     },
     "no-magic-numbers": {
       "count": 13
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/lines/handoffLines.ts": {
@@ -253,11 +385,23 @@
     },
     "no-magic-numbers": {
       "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/machines/model.ts": {
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/missions/model.ts": {
@@ -269,6 +413,12 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/needs-you/model.ts": {
@@ -290,6 +440,15 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/run/model.ts": {
@@ -304,10 +463,22 @@
     },
     "no-magic-numbers": {
       "count": 14
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 6
     }
   },
   "client/src/domain/schema/model.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -317,6 +488,15 @@
     },
     "no-magic-numbers": {
       "count": 22
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/specs/model.ts": {
@@ -324,6 +504,12 @@
       "count": 1
     },
     "no-magic-numbers": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -333,6 +519,15 @@
     },
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/wall/model.ts": {
@@ -344,6 +539,15 @@
     },
     "no-magic-numbers": {
       "count": 6
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/workflows/model.ts": {
@@ -363,6 +567,9 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/DocsDrawer.tsx": {
@@ -374,6 +581,15 @@
     },
     "max-params": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 7
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/FakeControl.tsx": {
@@ -387,6 +603,12 @@
   "client/src/kit/FleetStrip.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/FocusTerminal.tsx": {
@@ -403,6 +625,9 @@
   "client/src/kit/FollowWork.tsx": {
     "max-lines-per-function": {
       "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/HandoffLineMarks.tsx": {
@@ -411,6 +636,9 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/HandoffPanel.tsx": {
@@ -418,6 +646,12 @@
       "count": 1
     },
     "max-lines-per-function": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 2
     }
   },
@@ -427,11 +661,23 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/Legend2.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/MarkdownView.tsx": {
@@ -439,6 +685,9 @@
       "count": 2
     },
     "no-magic-numbers": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -450,6 +699,12 @@
   "client/src/kit/PlanStrip.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/RigFiles.tsx": {
@@ -461,6 +716,15 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/RigFilesSchema.test.tsx": {
@@ -471,10 +735,16 @@
   "client/src/kit/RigInfo.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/RigPicker.tsx": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -487,11 +757,26 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/RunOutputs.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 3
     }
   },
   "client/src/kit/SchemaRows.tsx": {
@@ -499,6 +784,9 @@
       "count": 1
     },
     "no-magic-numbers": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -511,6 +799,15 @@
     },
     "no-magic-numbers": {
       "count": 6
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/SeatCardLines.tsx": {
@@ -519,6 +816,9 @@
     },
     "no-magic-numbers": {
       "count": 6
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/SkillsPanel.tsx": {
@@ -529,11 +829,20 @@
   "client/src/kit/TerminalCard.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/V1Archive.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/WaitingOnDavid.tsx": {
@@ -542,16 +851,34 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/WallCard.tsx": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
   "client/src/kit/YamlView.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/data/index.tsx": {
@@ -560,6 +887,9 @@
     },
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/legendData.ts": {
@@ -581,6 +911,15 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/lib/stableOrder.ts": {
@@ -596,6 +935,12 @@
   },
   "client/src/lib/yamlLines.ts": {
     "max-lines-per-function": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 3
     }
   },
@@ -613,6 +958,12 @@
     },
     "no-magic-numbers": {
       "count": 6
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/agent/index.tsx": {
@@ -624,11 +975,23 @@
     },
     "no-magic-numbers": {
       "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 6
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/agent/useAgentData.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/flow/HandoffFlow.tsx": {
@@ -643,11 +1006,26 @@
     },
     "no-magic-numbers": {
       "count": 38
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 7
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/flow/ReplayConsoles.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/flow/clean.test.tsx": {
@@ -658,10 +1036,19 @@
   "client/src/pages/flow/flowLines.test.tsx": {
     "max-params": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/flow/index.tsx": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -676,6 +1063,9 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/graph/RigBox.tsx": {
@@ -684,6 +1074,12 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/graph/RigInside.tsx": {
@@ -695,6 +1091,15 @@
     },
     "no-magic-numbers": {
       "count": 42
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/graph/graph.test.tsx": {
@@ -717,6 +1122,15 @@
     },
     "no-magic-numbers": {
       "count": 25
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/health/index.tsx": {
@@ -724,6 +1138,15 @@
       "count": 1
     },
     "max-lines-per-function": {
+      "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
       "count": 2
     }
   },
@@ -733,6 +1156,15 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 4
     }
   },
   "client/src/pages/learn/index.tsx": {
@@ -741,6 +1173,9 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/library/index.tsx": {
@@ -748,6 +1183,15 @@
       "count": 2
     },
     "no-magic-numbers": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -757,6 +1201,9 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/missions/index.tsx": {
@@ -768,6 +1215,12 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
     }
   },
   "client/src/pages/missions/machines.test.tsx": {
@@ -786,6 +1239,15 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/needs-you/needs-you.test.tsx": {
@@ -818,6 +1280,15 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 3
     }
   },
   "client/src/pages/run/run.test.tsx": {
@@ -831,6 +1302,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/run/useRigDoc.ts": {
@@ -839,10 +1313,16 @@
     },
     "max-params": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/schema/index.tsx": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -855,6 +1335,9 @@
     },
     "no-magic-numbers": {
       "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/specs/index.tsx": {
@@ -863,6 +1346,15 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/timeline/index.tsx": {
@@ -871,6 +1363,9 @@
     },
     "no-magic-numbers": {
       "count": 17
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/w4.test.tsx": {
@@ -902,10 +1397,25 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/workflows/index.tsx": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -923,10 +1433,21 @@
     },
     "no-magic-numbers": {
       "count": 9
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
     }
   },
   "client/src/shell/StripShell.tsx": {
     "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "client/src/shell/urlState.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -948,16 +1469,30 @@
       "count": 6
     }
   },
+  "collector/src/adapters/contract.test.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
   "collector/src/adapters/daemon.ts": {
     "max-lines-per-function": {
       "count": 1
     },
     "no-magic-numbers": {
       "count": 5
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 4
     }
   },
   "collector/src/adapters/daemondata.test.ts": {
     "max-lines": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -970,6 +1505,15 @@
     },
     "no-magic-numbers": {
       "count": 17
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 12
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "collector/src/adapters/dbrows.ts": {
@@ -981,6 +1525,9 @@
     },
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "collector/src/adapters/dbschema.ts": {
@@ -1000,6 +1547,15 @@
     },
     "no-magic-numbers": {
       "count": 15
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/history.ts": {
@@ -1010,6 +1566,12 @@
       "count": 3
     },
     "no-magic-numbers": {
+      "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 4
     }
   },
@@ -1030,6 +1592,12 @@
     },
     "no-magic-numbers": {
       "count": 6
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
     }
   },
   "collector/src/adapters/missionfiles.ts": {
@@ -1044,10 +1612,25 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/openrigShapes.ts": {
     "max-lines": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -1057,6 +1640,12 @@
     },
     "no-magic-numbers": {
       "count": 9
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/rigfiles.test.ts": {
@@ -1073,6 +1662,15 @@
     },
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/rigspecs.ts": {
@@ -1081,11 +1679,20 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
     }
   },
   "collector/src/adapters/seatcard.ts": {
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "collector/src/adapters/sources.ts": {
@@ -1097,16 +1704,34 @@
     },
     "no-magic-numbers": {
       "count": 8
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/specView.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
   "collector/src/adapters/specs.ts": {
     "no-magic-numbers": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "collector/src/adapters/tmux.ts": {
@@ -1115,6 +1740,12 @@
     },
     "no-magic-numbers": {
       "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "collector/src/builder.test.ts": {
@@ -1134,10 +1765,19 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
     }
   },
   "collector/src/config.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -1151,6 +1791,12 @@
   },
   "collector/src/pusher.test.ts": {
     "max-lines": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
@@ -1166,6 +1812,15 @@
     },
     "no-magic-numbers": {
       "count": 19
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/redact.ts": {
@@ -1174,10 +1829,24 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "collector/vitest.config.ts": {
     "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "e2e/tour.spec.ts": {
+    "sonarjs/cognitive-complexity": {
       "count": 1
     }
   },
@@ -1208,6 +1877,12 @@
     },
     "no-magic-numbers": {
       "count": 9
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 3
     }
   },
   "scripts/provenance/check.ts": {
@@ -1216,6 +1891,17 @@
     },
     "no-magic-numbers": {
       "count": 10
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    }
+  },
+  "scripts/provenance/extract.ts": {
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "scripts/record-frozen.mjs": {
@@ -1227,6 +1913,12 @@
     },
     "no-magic-numbers": {
       "count": 7
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 5
     }
   },
   "server/scripts/fake-collector.mjs": {
@@ -1235,6 +1927,9 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "server/scripts/hub-ui-probe.mjs": {
@@ -1258,6 +1953,12 @@
     },
     "max-params": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "server/src/core/doors.ts": {
@@ -1272,6 +1973,12 @@
     },
     "no-magic-numbers": {
       "count": 16
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "server/src/core/rigEntry.test.ts": {
@@ -1281,6 +1988,17 @@
   },
   "server/src/core/rigEntry.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    }
+  },
+  "server/src/core/schemaDiff.ts": {
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -1296,6 +2014,12 @@
     },
     "no-magic-numbers": {
       "count": 26
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 4
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 6
     }
   },
   "server/src/helpers/response.ts": {
@@ -1317,11 +2041,22 @@
     },
     "no-magic-numbers": {
       "count": 5
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    }
+  },
+  "server/src/hub/appConfig.ts": {
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/browserAuth.ts": {
     "no-magic-numbers": {
       "count": 7
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/collectorIngest.ts": {
@@ -1338,6 +2073,9 @@
     },
     "no-magic-numbers": {
       "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/daemonDataStore.ts": {
@@ -1346,6 +2084,9 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/fleetStore.ts": {
@@ -1360,6 +2101,15 @@
     },
     "no-restricted-syntax": {
       "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/hub.test.ts": {
@@ -1370,6 +2120,12 @@
   "server/src/hub/missionFileStore.ts": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "server/src/hub/schemaStore.ts": {
@@ -1378,6 +2134,12 @@
     },
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/v1ArchiveRouter.ts": {
@@ -1448,6 +2210,12 @@
     },
     "no-magic-numbers": {
       "count": 14
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "shared/src/dbrows.ts": {
@@ -1471,10 +2239,22 @@
     },
     "no-magic-numbers": {
       "count": 16
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
     }
   },
   "shared/src/missionJobs.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
       "count": 1
     }
   },
