@@ -10,6 +10,7 @@ export function medianSentence(min: number | null, closed: number): string {
   if (min === null || closed === 0) {
     return 'No handoff in this rig has been closed yet, so there is no typical time to show.';
   }
+
   const t = min < 1 ? `${Math.round(min * 60)} seconds` : `${min.toFixed(1)} minutes`;
 
   return closed === 1
@@ -25,9 +26,11 @@ export function entryWords(e: RigEntry): string | null {
   if (e.status === 'unknown' || !e.entry) {
     return null;
   }
+
   if (e.status === 'via-queue') {
     return 'came in through the queue';
   }
+
   switch (e.entry.origin) {
     case 'startup':
       return 'started at launch, not via the queue';

@@ -24,40 +24,51 @@ export function useRigDoc(
   enabled: boolean
 ): RigDoc {
   const [doc, setDoc] = useState<RigDoc>({ status: 'loading' });
+
   useEffect(() => {
     if (!enabled) {
       return;
     }
+
     let live = true;
+
     setDoc({ status: 'loading' });
     void (async () => {
       const files = await callVerb<RigFilesOutput>(getSocket(), 'rig.files', { machine, rig });
+
       if (!live) {
         return;
       }
+
       if (!files.ok) {
         return setDoc({ status: 'unread', why: files.error.message });
       }
+
       if (files.value.status !== 'ok') {
         return setDoc({
           status: 'unread',
           why: files.value.reason ?? `the rig's files are ${files.value.status}`,
         });
       }
+
       const f =
         files.value.files.find((x) => x.name === name && x.scope === 'spec') ??
         files.value.files.find((x) => x.name === name);
+
       if (!f) {
         return setDoc({ status: 'missing', why: `${name} is not in this rig's folders` });
       }
+
       const got = await callVerb<RigFileOutput>(getSocket(), 'rig.file', {
         machine,
         rig,
         fileId: f.id,
       });
+
       if (!live) {
         return;
       }
+
       setDoc(
         got.ok
           ? { status: 'ok', text: got.value.file.content }

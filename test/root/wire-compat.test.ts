@@ -118,6 +118,7 @@ const BASE = {
 };
 
 type Obj = z.ZodObject<z.ZodRawShape>;
+
 const keys = (s: Obj) => Object.keys(s.shape).sort();
 const added = (s: Obj, base: string[]) => keys(s).filter((k) => !base.includes(k));
 
@@ -146,6 +147,7 @@ describe('wire contract vs the 37947da base', () => {
 
   it('every base hub capability is still advertised by name (new ones only add)', () => {
     const caps = Object.values(HUB_CAPS) as string[];
+
     expect(BASE.caps.filter((c) => !caps.includes(c))).toEqual([]);
   });
 
@@ -175,9 +177,11 @@ describe('wire contract vs the 37947da base', () => {
       rigSpec: { version: '0.2' },
     };
     const snap = { rigs: [rig] } as unknown as MachineSnapshot;
+
     expect(
       Object.keys(stripSpecFields(snap).rigs[0]!).filter((k) => !BASE.rig.includes(k))
     ).toEqual([]);
+
     const loadout = {
       machineId: 'm4',
       seat: 's@r',
@@ -195,6 +199,7 @@ describe('wire contract vs the 37947da base', () => {
       member: null,
       agentSpec: null,
     } as SeatLoadout;
+
     expect(Object.keys(stripSeatSpec(loadout)).filter((k) => !BASE.loadout.includes(k))).toEqual(
       []
     );

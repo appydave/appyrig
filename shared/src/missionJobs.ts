@@ -42,10 +42,12 @@ function cells(line: string): string[] {
   let cur = '';
   let tick = false;
   const body = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+
   for (const ch of body) {
     if (ch === '`') {
       tick = !tick;
     }
+
     if (ch === '|' && !tick) {
       out.push(cur.trim());
       cur = '';
@@ -53,6 +55,7 @@ function cells(line: string): string[] {
       cur += ch;
     }
   }
+
   out.push(cur.trim());
 
   return out;
@@ -70,6 +73,7 @@ function specOf(cell: string): { paths: string[]; note: string } {
   const paths: string[] = [];
   const unresolved: string[] = [];
   let lastAbs: string | null = null;
+
   for (const t of ticks(cell)) {
     if (t.startsWith('/')) {
       paths.push(t);
@@ -80,6 +84,7 @@ function specOf(cell: string): { paths: string[]; note: string } {
       unresolved.push(t);
     }
   }
+
   const outside = cell
     .replace(/`[^`]*`/g, ' ')
     .replace(/\s+/g, ' ')
@@ -100,30 +105,39 @@ function specOf(cell: string): { paths: string[]; note: string } {
  */
 export function parseMissionJobs(markdown: string): MissionJob[] {
   const lines = markdown.split(/\r?\n/);
+
   for (let i = 0; i < lines.length - 1; i++) {
     const head = lines[i]!;
+
     if (!head.trim().startsWith('|') || !isSeparator(lines[i + 1]!)) {
       continue;
     }
+
     const names = cells(head).map((c) => noTicks(c).toLowerCase());
+
     if (!(names[0] === 'slice' || names[0] === '#')) {
       continue;
     }
+
     const col = (...keys: string[]) => names.findIndex((n) => keys.some((k) => n.startsWith(k)));
     const iRepo = col('repo');
     const iTree = col('worktree');
     const iBranch = col('branch');
     const iSpec = col('spec');
     const jobs: MissionJob[] = [];
+
     for (let j = i + 2; j < lines.length && lines[j]!.trim().startsWith('|'); j++) {
       const row = cells(lines[j]!);
       const at = (k: number) => (k >= 0 ? (row[k] ?? '') : '');
       const slice = noTicks(row[0] ?? '');
+
       if (!slice) {
         continue;
       }
+
       const repoCell = noTicks(at(iRepo));
       const spec = specOf(at(iSpec));
+
       jobs.push({
         slice,
         repo: repoCell

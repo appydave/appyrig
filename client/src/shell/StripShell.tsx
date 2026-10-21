@@ -23,10 +23,12 @@ export default function StripShell({
   const [expanded, setExpanded] = useState(false);
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
+
     // A badge (or its health mark) toggles; any other button, link or alert keeps its own meaning.
     if (t.closest('button:not(.health-mark), a, .alert, .machine-filter, .counts')) {
       return;
     }
+
     if (t.closest('.machine')) {
       setExpanded((x) => !x);
     }

@@ -10,6 +10,7 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
+
   if (await gotIt.count()) {
     await gotIt.first().click();
   }
@@ -42,8 +43,10 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
     page,
   }) => {
     const errors = watchErrors(page);
+
     await openFlow(page);
     await page.getByTestId('flow-next').click();
+
     const first = {
       bar: await box(page, 'flow-replay'),
       next: await box(page, 'flow-next'),
@@ -52,13 +55,17 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
       narration: await box(page, 'flow-narration'),
     };
     const messages = new Set<string>();
+
     for (let step = 1; step <= 5; step++) {
       if (step > 1) {
         await page.getByTestId('flow-next').click();
       }
+
       await expect(page.getByTestId('flow-step-count')).toHaveText(new RegExp(`^${step} / \\d+$`));
+
       // the message itself lives in the panel; its length differs from step to step
       const panel = (await page.locator('.handoff-panel').first().textContent()) ?? '';
+
       messages.add(String(panel.length));
       expect(await box(page, 'flow-replay'), `bar at step ${step}`).toEqual(first.bar);
       expect(await box(page, 'flow-next'), `▶ at step ${step}`).toEqual(first.next);
@@ -68,6 +75,7 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
         first.narration
       );
     }
+
     expect(messages.size, 'the steps carry messages of different lengths').toBeGreaterThan(1);
     expect(errors).toEqual([]);
   });
@@ -81,14 +89,19 @@ test.describe('v2 Handoff Flow: nothing moves under the cursor', () => {
     await page.getByTestId('flow-next').click();
     await expect(page.getByTestId('handoff-flow')).toHaveAttribute('data-lens', 'traffic');
     await expect(page.locator('[data-testid="flow-edge"][data-current]')).toHaveCount(1);
+
     const dots = page.locator('[data-testid="flow-edge"][data-current] [data-testid="flow-pulse"]');
+
     await expect(dots.first()).toBeVisible();
+
     const at = async () => {
       const b = await dots.first().boundingBox();
 
       return `${Math.round(b!.x)},${Math.round(b!.y)}`;
     };
+
     const a = await at();
+
     await expect.poll(at, { message: 'the dot travels along its line' }).not.toEqual(a);
     // the panel follows the step, and the consoles say what they show
     await expect(page.locator('.handoff-panel').first()).not.toContainText('Click a line');

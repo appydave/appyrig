@@ -51,10 +51,14 @@ export class MissionFileStore {
 
   put(push: MissionFilesPush): void {
     const k = this.key(push.machineId, push.rig);
+
     if (push.kind === 'manifest') {
       const list = new Set(push.paths);
+
       this.lists.set(k, list);
+
       const held = this.files.get(k);
+
       if (held) {
         for (const p of [...held.keys()]) {
           if (!list.has(p)) {
@@ -65,13 +69,18 @@ export class MissionFileStore {
 
       return;
     }
+
     // A file for a path the collector did not list is ignored: the list is the allowlist.
     if (!this.lists.get(k)?.has(push.path)) {
       return;
     }
+
     const held = this.files.get(k) ?? new Map<string, Held>();
+
     this.files.set(k, held);
+
     const pk = `${k}\u0000${push.path}`;
+
     if (push.status !== 'ok') {
       held.delete(push.path);
       held.set(push.path, {
@@ -86,28 +95,37 @@ export class MissionFileStore {
 
       return;
     }
+
     let chunk: string;
+
     if (push.text !== undefined) {
       chunk = push.text;
     } else {
       chunk = push.base64 ?? '';
     }
+
     if (push.part === 0) {
       this.partial.set(pk, { parts: push.parts, next: 0, chunks: [], head: push });
     }
+
     const p = this.partial.get(pk);
+
     if (!p || p.next !== push.part || p.parts !== push.parts) {
       this.partial.delete(pk); // out of order: drop it, the collector re-sends on its next change
 
       return;
     }
+
     p.chunks.push(chunk);
     p.next += 1;
     if (p.next < p.parts) {
       return;
     }
+
     this.partial.delete(pk);
+
     const joined = p.chunks.join('');
+
     held.delete(push.path); // re-insert at the end: newest arrival
     held.set(push.path, {
       status: 'ok',
@@ -117,15 +135,20 @@ export class MissionFileStore {
       text: p.head.text !== undefined ? joined : null,
       base64: p.head.text === undefined ? joined : null,
     });
+
     let total = 0;
+
     for (const h of held.values()) {
       total += (h.text?.length ?? 0) + (h.base64?.length ?? 0);
     }
+
     for (const path of held.keys()) {
       if (total <= MISSION_STORE_MAX_BYTES) {
         break;
       }
+
       const h = held.get(path)!;
+
       total -= (h.text?.length ?? 0) + (h.base64?.length ?? 0);
       held.delete(path);
     }
@@ -141,26 +164,35 @@ export class MissionFileStore {
   get(machine: string, rig: string, path: string): MissionFileOutput {
     const k = this.key(machine, rig);
     const list = this.lists.get(k);
+
     if (!list) {
       return { ...empty(machine, rig, path), status: 'no-data' };
     }
+
     let real = path;
+
     if (!path.startsWith('/')) {
       // Rig-relative form: only qa/<name> and shots/<name>, matched against the pushed list. A name
       // the collector did not list is a file not written yet; anything else is not a name at all.
       if (!/^(qa|shots)\/[^/\0]+$/.test(path) || path.includes('..')) {
         return { ...empty(machine, rig, path), status: 'refused' };
       }
+
       const hit = [...list].find((p) => p.endsWith(`/${path}`));
+
       if (!hit) {
         return { ...empty(machine, rig, path), status: 'missing' };
       }
+
       real = hit;
     }
+
     if (!list.has(real)) {
       return { ...empty(machine, rig, path), status: 'refused' };
     }
+
     const h = this.files.get(k)?.get(real);
+
     if (!h) {
       return { ...empty(machine, rig, path), status: 'pending' };
     }

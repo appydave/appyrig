@@ -235,6 +235,7 @@ function rigWaiting(
   const newest = new Map<string, { gate: RigGate; open: boolean }>();
   const links = new Map<string, string[]>();
   let bodiesMissing = 0;
+
   for (const q of items) {
     // QA R2 MEDIUM-2: a gate is the rig's when one of its seats announces it to another rig's
     // seat (ylo-lead → the desk). Handoffs inside the rig, or reports to David's mailbox, often
@@ -242,19 +243,25 @@ function rigWaiting(
     const announces =
       inRig(q.source) && !inRig(q.destination) && (q.destination ?? '').split('@')[0] !== 'human';
     const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
+
     if (body === null) {
       bodiesMissing += 1;
     }
+
     const text = `${q.summary ?? ''}\n${body ?? ''}`;
+
     for (const url of text.match(/https?:\/\/[^\s"'<>)\]]*gate=g_[0-9a-f]{10}[^\s"'<>)\]]*/g) ??
       []) {
       const id = /gate=(g_[0-9a-f]{10})/.exec(url)![1]!;
+
       // Stored bodies can hold a literal backslash-n right after a link ("…#packaging\\n(on").
       links.set(id, [...(links.get(id) ?? []), url.replace(/\\n.*$/, '')]);
     }
+
     // One handoff decides as a whole: open when some mention in it reads open and none reads
     // closed (a gate is often named twice, once in words and once inside its link).
     const here = new Map<string, { open: boolean; shut: boolean; context: string }>();
+
     for (const hit of text.matchAll(GATE)) {
       const at = hit.index ?? 0;
       const near = text
@@ -262,17 +269,22 @@ function rigWaiting(
         .replace(/\s+/g, ' ')
         .trim();
       const h = here.get(hit[0]) ?? { open: false, shut: false, context: near };
+
       if (SAYS_OPEN.test(near) && !h.open) {
         Object.assign(h, { open: true, context: near });
       }
+
       // r1 R2 LOW-1: a closing word must sit close to the id ("g_… approved", "gate g_… leave
       // it"), so "gate g_… OPEN: rule check PASSED" still reads open.
       const close = text.slice(Math.max(0, at - 30), at + 42).replace(/\s+/g, ' ');
+
       if (SAYS_SHUT.test(close)) {
         h.shut = true;
       }
+
       here.set(hit[0], h);
     }
+
     // A mention that says neither (a list of ids, a link alone) leaves the gate as it was.
     for (const [gate, h] of here) {
       if ((h.open && announces) || h.shut) {
@@ -291,6 +303,7 @@ function rigWaiting(
       }
     }
   }
+
   const pick = (urls: string[] = []) =>
     urls.find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? urls[0] ?? null;
   const gates = [...newest.values()]
@@ -326,6 +339,7 @@ const FLI_ID = /(?<![\w-])([rg]_[0-9a-f]{10})(?![\w-])/g;
 /** Run card R4: commits and FliStudio ids named in the rig's handoffs (see 'rig.outputs'). */
 function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputsOutput {
   const items = rigItems(m, rig);
+
   type Named = {
     itemId: string;
     at: string;
@@ -334,14 +348,18 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
     context: string;
     mentions: number;
   };
+
   const commits = new Map<string, Named>();
   const fli = new Map<string, Named & { link: string | null }>();
   let bodiesMissing = 0;
+
   for (const q of items) {
     const body = store.getHandoff(m.machine.id, q.id)?.body ?? null;
+
     if (body === null) {
       bodiesMissing += 1;
     }
+
     const text = `${q.summary ?? ''}\n${body ?? ''}`;
     const near = (at: number) =>
       text
@@ -353,8 +371,11 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
       if (seen.has(key)) {
         return;
       }
+
       seen.add(key);
+
       const prev = map.get(key);
+
       map.set(key, {
         ...(prev ?? {}),
         itemId: q.id,
@@ -365,20 +386,26 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
         mentions: (prev?.mentions ?? 0) + 1,
       } as Named);
     };
+
     for (const hit of text.matchAll(SHA)) {
       const sha = hit[1]!;
+
       if (/\d/.test(sha) && /[a-f]/.test(sha)) {
         note(commits, sha, hit.index ?? 0);
       }
     }
+
     for (const hit of text.matchAll(FLI_ID)) {
       const id = hit[1]!;
+
       note(fli as Map<string, Named>, id, hit.index ?? 0);
+
       const url = text.match(
         new RegExp(`https?:\\/\\/[^\\s"'<>)\\]]*(?:gate|resource)=${id}[^\\s"'<>)\\]]*`, 'g')
       );
       const f = fli.get(id)!;
       const pick = (url ?? []).find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? url?.[0];
+
       if (pick) {
         f.link = pick.replace(/\\n.*$/, '');
       } else {
@@ -386,6 +413,7 @@ function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputs
       }
     }
   }
+
   // Newest first; in one handoff, the most-named first.
   const newest = <T extends { at: string; mentions: number }>(xs: T[]) =>
     xs.sort((a, b) => b.at.localeCompare(a.at) || b.mentions - a.mentions);
@@ -411,7 +439,9 @@ function machinesOf(ctx: VerbContext, id?: string): FleetMachine[] {
   if (id === undefined) {
     return ctx.store.list();
   }
+
   const found = ctx.store.get(id);
+
   if (!found) {
     throw new CapabilityRefusal('machine-not-found', `No machine "${id}" has reported.`, {
       machine: id,
@@ -425,6 +455,7 @@ function machinesOf(ctx: VerbContext, id?: string): FleetMachine[] {
 function seatOf(ctx: VerbContext, machine: string, seat: string) {
   const [m] = machinesOf(ctx, machine);
   const found = m!.snapshot.seats.find((s) => s.id === seat);
+
   if (!found) {
     throw new CapabilityRefusal('seat-not-found', `Machine "${machine}" has no seat "${seat}".`, {
       machine,
@@ -486,6 +517,7 @@ export function assess(data: DaemonDataFor<'health'> | null): {
   if (!data) {
     return { assessment: 'unknown', caveats: [] };
   }
+
   if (data.findings === null) {
     return {
       assessment: 'unknown',
@@ -494,6 +526,7 @@ export function assess(data: DaemonDataFor<'health'> | null): {
       ],
     };
   }
+
   if (data.findings.length > 0) {
     return { assessment: 'findings', caveats: [] };
   }
@@ -503,6 +536,7 @@ export function assess(data: DaemonDataFor<'health'> | null): {
 }
 
 type RowKey = Pick<HistoryTransitionRow, 'at' | 'machine' | 'id'>;
+
 const numId = (id: string) => (/^\d+$/.test(id) ? Number(id) : -1);
 /** Newest first; ties by machine, then id (numeric when both are). Total order, so a keyset is exact. */
 const compareRows = (a: RowKey, b: RowKey): number =>
@@ -516,6 +550,7 @@ const encodeCursor = (r: RowKey): string =>
 function decodeCursor(c: string): RowKey {
   try {
     const v = JSON.parse(Buffer.from(c, 'base64url').toString('utf8')) as unknown;
+
     if (
       Array.isArray(v) &&
       v.length === 3 &&
@@ -526,6 +561,7 @@ function decodeCursor(c: string): RowKey {
   } catch {
     // falls through to the refusal
   }
+
   throw new CapabilityRefusal('invalid-input', 'before is not a cursor this verb returned.', {
     issues: [{ path: 'before', message: 'not a cursor from a previous page' }],
   });
@@ -545,6 +581,7 @@ function libraryRows(data: DaemonDataFor<'library'>): { row: LibraryRow; group: 
 
 const toItem = (machine: string, group: LibraryGroup, row: LibraryRow): LibraryItem => {
   const item: Partial<LibraryRow> = { ...row };
+
   delete item.files;
 
   return { ...(item as Omit<LibraryRow, 'files'>), machine, group };
@@ -571,6 +608,7 @@ const VERB_SET = {
         const seatsByStatus = Object.fromEntries(
           SeatStatusSchema.options.map((s) => [s, 0])
         ) as Record<SeatStatus, number>;
+
         for (const seat of m.snapshot.seats) {
           seatsByStatus[seat.status] += 1;
         }
@@ -629,6 +667,7 @@ const VERB_SET = {
     NOT_FOUND,
     (input, ctx) => {
       machinesOf(ctx, input.machine);
+
       const h = ctx.store.getHistory(input.machine, input.seat);
 
       return {
@@ -649,9 +688,11 @@ const VERB_SET = {
     NOT_FOUND,
     (input, ctx): DbRowsOutput => {
       machinesOf(ctx, input.machine);
+
       const p = ctx.store.dbRows.get(input.machine, input.table);
       const offset = input.offset ?? 0;
       const limit = input.limit ?? 50;
+
       if (!p) {
         return {
           machine: input.machine,
@@ -704,6 +745,7 @@ const VERB_SET = {
         reason,
         loadout,
       });
+
       if (seat.runtime !== 'claude-code') {
         return out(
           'not-claude',
@@ -712,12 +754,14 @@ const VERB_SET = {
             : `not read for ${seat.runtime ?? 'unknown-runtime'} seats yet.`
         );
       }
+
       if (!loadout) {
         return out(
           'pending',
           "no loadout from this machine's collector for this seat yet: it predates v1.5, or has not sent one (it rescans every 30 s)"
         );
       }
+
       if (loadout.status === 'no-listing') {
         return out('no-listing', 'no transcript with a skill listing was found for this seat');
       }
@@ -745,19 +789,24 @@ const VERB_SET = {
         collectedAt: p?.collectedAt ?? null,
         detail: p?.data ?? null,
       });
+
       if (seat.source !== 'openrig') {
         return out('not-openrig', 'a plain terminal seat has no OpenRig node record');
       }
+
       const p = ctx.store.daemonData.get(input.machine, 'seatdetail', input.seat);
+
       if (!p) {
         return out(
           'pending',
           "no seat detail from this machine's collector for this seat yet: it predates v2, has not sent one (it re-reads every minute), or the daemon read failed"
         );
       }
+
       if (p.status === 'unsupported') {
         return out('unsupported', p.reason);
       }
+
       if (p.status === 'not-found') {
         return out('seat-not-found', p.reason);
       }
@@ -774,9 +823,11 @@ const VERB_SET = {
     (input, ctx): LibraryListOutput => {
       const machines: LibraryListOutput['machines'] = [];
       const all: LibraryItem[] = [];
+
       for (const m of machinesOf(ctx, input.machine)) {
         const { header, data } = dataOf(ctx, m.machine.id, 'library', 'library');
         const count = (k: 'specs' | 'skills' | 'contextPacks') => data?.[k]?.length ?? null;
+
         machines.push({
           ...header,
           openrigVersion: data?.openrigVersion ?? null,
@@ -792,6 +843,7 @@ const VERB_SET = {
           }
         }
       }
+
       const text = input.text?.toLowerCase();
       const items = all
         .filter((i) => input.group === undefined || i.group === input.group)
@@ -832,6 +884,7 @@ const VERB_SET = {
       const hit = data
         ? libraryRows(data).find((r) => r.group === input.group && r.row.id === input.id)
         : undefined;
+
       if (!hit) {
         throw new CapabilityRefusal(
           'library-item-not-found',
@@ -859,9 +912,11 @@ const VERB_SET = {
       const text = input.text?.toLowerCase();
       const inRig = (v: string | null) =>
         v !== null && input.rig !== undefined && v.endsWith(`@${input.rig}`);
+
       for (const m of machinesOf(ctx, input.machine)) {
         const { header, data } = dataOf(ctx, m.machine.id, 'transitions', 'queue transitions');
         const rows = data?.rows ?? [];
+
         machines.push({
           ...header,
           held: rows.length,
@@ -872,7 +927,9 @@ const VERB_SET = {
             null
           ),
         });
+
         const queue = new Map(m.snapshot.queue.map((q) => [q.id, q]));
+
         for (const r of rows) {
           const q = queue.get(r.qitemId);
           const row: HistoryTransitionRow = {
@@ -882,24 +939,30 @@ const VERB_SET = {
             destination: q?.destination ?? null,
             summary: q?.summary?.slice(0, 200) ?? null,
           };
+
           if (input.qitemId !== undefined && r.qitemId !== input.qitemId) {
             continue;
           }
+
           if (input.state !== undefined && r.state !== input.state) {
             continue;
           }
+
           if (input.closureReason !== undefined && r.closureReason !== input.closureReason) {
             continue;
           }
+
           if (
             input.seat !== undefined &&
             ![row.actor, row.source, row.destination].includes(input.seat)
           ) {
             continue;
           }
+
           if (input.rig !== undefined && ![row.actor, row.source, row.destination].some(inRig)) {
             continue;
           }
+
           if (
             text !== undefined &&
             ![
@@ -914,21 +977,27 @@ const VERB_SET = {
           ) {
             continue;
           }
+
           all.push(row);
         }
       }
+
       // newest first; ids are per-daemon decimal strings, compared as numbers when both are
       all.sort(compareRows);
+
       const limit = input.limit ?? 50;
       let from = 0;
+
       if (input.before !== undefined) {
         const key = decodeCursor(input.before);
+
         // keyset: the first row strictly after the cursor's row in this order
         from = all.findIndex((r) => compareRows(r, key) > 0);
         if (from === -1) {
           from = all.length;
         }
       }
+
       const page = all.slice(from, from + limit);
 
       return {
@@ -947,8 +1016,10 @@ const VERB_SET = {
     NOT_FOUND,
     (input, ctx): WorkflowListOutput => {
       const out: WorkflowListOutput = { machines: [], specs: [], instances: [] };
+
       for (const m of machinesOf(ctx, input.machine)) {
         const { header, data } = dataOf(ctx, m.machine.id, 'workflows', 'workflows');
+
         out.machines.push({
           ...header,
           specsRead: data?.specs != null,
@@ -957,12 +1028,14 @@ const VERB_SET = {
         for (const s of data?.specs ?? []) {
           out.specs.push({ ...s, machine: m.machine.id });
         }
+
         for (const i of data?.instances ?? []) {
           if (input.status === undefined || i.status === input.status) {
             out.instances.push({ ...i, machine: m.machine.id });
           }
         }
       }
+
       out.specs.sort((a, b) => a.machine.localeCompare(b.machine) || a.name.localeCompare(b.name));
       out.instances.sort(
         (a, b) =>
@@ -1094,6 +1167,7 @@ const VERB_SET = {
     (input, ctx): HandoffGetOutput => {
       const [m] = machinesOf(ctx, input.machine);
       const q = m!.snapshot.queue.find((x) => x.id === input.id);
+
       if (!q) {
         throw new CapabilityRefusal(
           'handoff-not-found',
@@ -1101,6 +1175,7 @@ const VERB_SET = {
           { machine: input.machine, id: input.id }
         );
       }
+
       const stored = ctx.store.getHandoff(input.machine, input.id);
 
       return {
@@ -1128,6 +1203,7 @@ const VERB_SET = {
     (input, ctx): RigFilesOutput => {
       const [m] = machinesOf(ctx, input.machine);
       const rig = m!.snapshot.rigs.find((r) => r.name === input.rig);
+
       if (!rig) {
         throw new CapabilityRefusal(
           'rig-not-found',
@@ -1139,6 +1215,7 @@ const VERB_SET = {
           }
         );
       }
+
       const out = (status: RigFilesOutput['status'], reason: string | null): RigFilesOutput => {
         const specFiles = ctx.store.rigFiles.listSpecNamed(input.machine, input.rig);
 
@@ -1151,12 +1228,14 @@ const VERB_SET = {
           ...(specFiles.length > 0 ? { specFiles } : {}),
         };
       };
+
       if (rig.specStatus === undefined) {
         return out(
           'no-data',
           "this machine's collector does not report rig specs yet (it predates v1.4)"
         );
       }
+
       if (rig.specStatus === 'not-found') {
         return out('no-spec', 'no rig.yaml for this rig was found in the configured spec folders');
       }
@@ -1177,6 +1256,7 @@ const VERB_SET = {
     FILE_NOT_FOUND,
     (input, ctx) => {
       const [m] = machinesOf(ctx, input.machine);
+
       if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
         throw new CapabilityRefusal(
           'rig-not-found',
@@ -1188,7 +1268,9 @@ const VERB_SET = {
           }
         );
       }
+
       const file = ctx.store.rigFiles.get(input.machine, input.rig, input.fileId);
+
       if (!file) {
         throw new CapabilityRefusal(
           'file-not-found',
@@ -1219,8 +1301,10 @@ const VERB_SET = {
             .filter((r) => r.name === name)
             .map((r) => ({ machine: fm.machine.id, status: r.status }))
         );
+
       for (const m of machinesOf(ctx, input.machine)) {
         const p = ctx.store.rigSpecs.get(m.machine.id);
+
         out.machines.push(
           p
             ? { machine: m.machine.id, status: 'ok', reason: null, collectedAt: p.collectedAt }
@@ -1234,6 +1318,7 @@ const VERB_SET = {
         );
         for (const spec of p?.specs ?? []) {
           const rig = m.snapshot.rigs.find((r) => r.name === spec.name);
+
           out.specs.push({
             ...spec,
             machine: m.machine.id,
@@ -1243,6 +1328,7 @@ const VERB_SET = {
           });
         }
       }
+
       out.specs.sort((a, b) => a.name.localeCompare(b.name) || a.machine.localeCompare(b.machine));
 
       return out;
@@ -1256,8 +1342,10 @@ const VERB_SET = {
     NOT_FOUND,
     (input, ctx): RigCommandsOutput => {
       const out: RigCommandsOutput = { machines: [], commands: [] };
+
       for (const m of machinesOf(ctx, input.machine)) {
         const p = ctx.store.rigCommands.get(m.machine.id);
+
         out.machines.push(
           p
             ? {
@@ -1282,6 +1370,7 @@ const VERB_SET = {
           }
         }
       }
+
       out.commands.sort((a, b) => b.ts.localeCompare(a.ts) || a.machine.localeCompare(b.machine));
       out.commands = out.commands.slice(0, input.limit ?? RIG_COMMANDS_MAX);
 
@@ -1296,6 +1385,7 @@ const VERB_SET = {
     RIG_NOT_FOUND,
     (input, ctx) => {
       const [m] = machinesOf(ctx, input.machine);
+
       if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
         throw new CapabilityRefusal(
           'rig-not-found',
@@ -1331,6 +1421,7 @@ const VERB_SET = {
     RIG_NOT_FOUND,
     (input, ctx): RigWaitingOutput => {
       const [m] = machinesOf(ctx, input.machine);
+
       if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
         throw new CapabilityRefusal(
           'rig-not-found',
@@ -1350,6 +1441,7 @@ const VERB_SET = {
     RIG_NOT_FOUND,
     (input, ctx): RigOutputsOutput => {
       const [m] = machinesOf(ctx, input.machine);
+
       if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
         throw new CapabilityRefusal(
           'rig-not-found',
@@ -1369,6 +1461,7 @@ const VERB_SET = {
     RIG_NOT_FOUND,
     (input, ctx) => {
       const [m] = machinesOf(ctx, input.machine);
+
       if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
         throw new CapabilityRefusal(
           'rig-not-found',
@@ -1376,6 +1469,7 @@ const VERB_SET = {
           { machine: input.machine, rig: input.rig, known: m!.snapshot.rigs.map((r) => r.name) }
         );
       }
+
       const seats = m!.snapshot.seats.filter((s) => s.rig === input.rig).map((s) => s.id);
 
       return {
@@ -1397,8 +1491,10 @@ const VERB_SET = {
           .filter((r) => input.rig === undefined || r.name === input.rig)
           .map((rig) => {
             const pods = new Map<string | null, RigTopology['pods'][number]['seats']>();
+
             for (const s of m.snapshot.seats.filter((x) => x.rig === rig.name)) {
               const list = pods.get(s.pod) ?? [];
+
               list.push({ id: s.id, logicalId: s.logicalId, runtime: s.runtime, status: s.status });
               pods.set(s.pod, list);
             }
@@ -1421,15 +1517,20 @@ const VERB_SET = {
     (_input, ctx): AccountListOutput => {
       const byEmail = new Map<string, FleetMachine[]>();
       const unreported: string[] = [];
+
       for (const m of ctx.store.list()) {
         const email = m.snapshot.account?.email;
+
         if (!email || !m.snapshot.account?.derived) {
           unreported.push(m.machine.id);
           continue;
         }
+
         const key = email.toLowerCase();
+
         byEmail.set(key, [...(byEmail.get(key) ?? []), m]);
       }
+
       // The derived part is already account-level (the same answer on every machine of the account).
       const accounts = [...byEmail.values()].map((ms) => {
         const acct = ms[0]!.snapshot.account!;
@@ -1485,9 +1586,11 @@ export function defineVerbs<S extends Record<string, Verb<z.ZodType, z.ZodType>>
   const writes = Object.entries(set)
     .filter(([, v]) => !(v.contract.sideEffects === 'read-only' && v.contract.kind === 'query'))
     .map(([name]) => name);
+
   if (writes.length > 0) {
     throw new Error(`verbs are read-only queries; not: ${writes.join(', ')}`);
   }
+
   defineCapabilities(Object.fromEntries(Object.entries(set).map(([k, v]) => [k, v.contract])));
 
   return set;

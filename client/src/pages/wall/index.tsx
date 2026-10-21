@@ -97,8 +97,10 @@ const PIP_ORDER: PipKey[] = ['blocked', 'working', 'idle', 'unknown', 'stopped',
 
 function statusCounts(g: WallGroup): { pip: PipKey; n: number }[] {
   const n = new Map<PipKey, number>();
+
   for (const t of g.tiles) {
     const pip = pipFor(t.seat, t.machine);
+
     n.set(pip, (n.get(pip) ?? 0) + 1);
   }
 
@@ -136,17 +138,21 @@ const SeatCard = memo(function SeatCard({
   onDocs,
 }: CardProps) {
   const [more, setMore] = useState(false);
+
   // The ⋯ popover closes on Escape or a click anywhere else, so it (and its tooltip) never lingers.
   useEffect(() => {
     if (!more) {
       return;
     }
+
     const away = (e: PointerEvent) => {
       if (!(e.target as HTMLElement).closest(`[data-owner="${tileKey}"]`)) {
         setMore(false);
       }
     };
+
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMore(false);
+
     window.addEventListener('pointerdown', away);
     window.addEventListener('keydown', esc);
 
@@ -155,6 +161,7 @@ const SeatCard = memo(function SeatCard({
       window.removeEventListener('keydown', esc);
     };
   }, [more, tileKey]);
+
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
   const name = seatName(seat);
@@ -274,6 +281,7 @@ function WallPage({ ctx }: PageProps) {
     if (busyFirst) {
       return [{ machineId: '', label: '', groups }];
     }
+
     const label = new Map(view.machines.map((m) => [m.machine.id, m.machine.label]));
 
     return orderByMachine(
@@ -285,18 +293,23 @@ function WallPage({ ctx }: PageProps) {
 
   const toggleTeam = (key: string) => {
     const next = new Set(hiddenTeams);
+
     if (!next.delete(key)) {
       next.add(key);
     }
+
     setHiddenTeams(next);
     writeJson(TEAMS_KEY, [...next]);
   };
+
   const setTeams = (keys: string[]) => {
     setHiddenTeams(new Set(keys));
     writeJson(TEAMS_KEY, keys);
   };
+
   const toggleStopped = () => {
     const next = !hideStopped;
+
     setHideStopped(next);
     try {
       localStorage.setItem(STOPPED_KEY, next ? 'on' : 'off');
@@ -304,14 +317,17 @@ function WallPage({ ctx }: PageProps) {
       // per-viewer convenience only
     }
   };
+
   // A filtered Wall opens every group (the viewer asked to see them); otherwise quiet teams start closed.
   const isOpen = (g: WallGroup) =>
     openAt[g.key] ?? (filter !== 'all' || !['stopped', 'asleep'].includes(groupState(g)));
   const toggleGroup = (g: WallGroup) => {
     const next = { ...openAt, [g.key]: !isOpen(g) };
+
     setOpenAt(next);
     writeJson(OPEN_KEY, next);
   };
+
   const freshLabel = (m: FleetMachine) => freshness(m, ctx.now, ctx.hubConnected).label;
   const noSeats = ctx.received && teams.length === 0;
 
@@ -321,29 +337,38 @@ function WallPage({ ctx }: PageProps) {
   const picked = ctx.pickedRig;
   const focusKey = picked?.key ?? null;
   const [only, setOnly] = useState(false);
+
   useEffect(() => setOnly(false), [focusKey]);
+
   const present = focusKey !== null && groups.some((g) => g.key === focusKey);
+
   useEffect(() => {
     if (!focusKey) {
       return;
     }
+
     setOpenAt((o) => (o[focusKey] === true ? o : { ...o, [focusKey]: true }));
+
     const go = () => {
       const el = root.current?.querySelector(
         `[data-group-key="${focusKey}"]`
       ) as HTMLElement | null;
+
       if (!el) {
         return;
       }
+
       // Leave room for what is stuck above the content: the shell's bar plus THIS page's header, whose
       // height changes (it wraps to two rows when the agent panel narrows the page). Measured now.
       const bar = document.querySelector('.app-header')?.getBoundingClientRect().height ?? 0;
       const head =
         root.current?.querySelector('[data-testid="ar-page-head"]')?.getBoundingClientRect()
           .height ?? 0;
+
       el.style.scrollMarginTop = `${Math.round(bar + head + 12)}px`;
       el.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
     };
+
     // once the open group has laid out, and again after the page settles (the drawer closing reflows it)
     const id = requestAnimationFrame(() => requestAnimationFrame(go));
     const again = setTimeout(go, 500);
@@ -353,6 +378,7 @@ function WallPage({ ctx }: PageProps) {
       clearTimeout(again);
     };
   }, [focusKey, ctx.focusNonce]);
+
   const shownSections = (
     only && present
       ? sections.map((sec) => ({ ...sec, groups: sec.groups.filter((g) => g.key === focusKey) }))

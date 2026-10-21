@@ -34,6 +34,7 @@ describe('tokenizeYaml', () => {
   it('a block scalar body is plain text, not mistaken for keys or comments', () => {
     const src = 'summary: >\n  Launch with: no --cwd.\n  # not a comment here\n\nnext: 1';
     const lines = tokenizeYaml(src);
+
     expect(lines[0]!.tokens.some((t) => t.kind === 'indicator')).toBe(true);
     expect(lines[1]!.tokens.map((t) => t.kind)).toEqual(['indent', 'block']);
     expect(lines[2]!.tokens.map((t) => t.kind)).toEqual(['indent', 'block']);
@@ -62,6 +63,7 @@ describe('tokenizeYaml', () => {
       'end: 1',
     ].join('\n');
     const l = tokenizeYaml(src);
+
     expect(l[0]!.foldTo).toBe(5); // pods: … through "- id: dev"
     expect(l[1]!.foldTo).toBe(4); // - id: orch … through the member
     expect(l[2]!.foldTo).toBe(4);
@@ -86,6 +88,7 @@ describe('tokenizeYaml', () => {
     ]) {
       expect(() => tokenizeYaml(s)).not.toThrow();
     }
+
     expect(tokenizeYaml('a: 1\nb: 2\n')).toHaveLength(2);
     expect(tokenizeYaml('a: 1\r\nb: 2\r\n')).toHaveLength(2);
   });

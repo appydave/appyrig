@@ -27,14 +27,18 @@ interface VerbRequest {
 
 function useVerb<T>(socket: FleetSocket, { verb, input, dep }: VerbRequest): Loaded<T> {
   const [got, setGot] = useState<Loaded<T>>({ state: 'loading' });
+
   useEffect(() => {
     if (input === null) {
       setGot({ state: 'na' });
 
       return;
     }
+
     setGot({ state: 'loading' });
+
     let current = true;
+
     void callVerb<T>(socket, verb, input).then((a) => {
       if (current) {
         setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
@@ -87,6 +91,7 @@ export function useAgentData(
     dep,
   });
   let detail: DetailState;
+
   if (raw.state === 'loading') {
     detail = { state: 'loading' };
   } else if (raw.state === 'na') {
@@ -97,6 +102,7 @@ export function useAgentData(
     detail = { state: 'sample', why: `seat.detail refused: ${raw.error.failureMode}` };
   } else {
     const view = parseSeatDetail(raw.value);
+
     detail = view
       ? { state: 'ok', view }
       : { state: 'sample', why: 'seat.detail sent nothing for this seat yet' };
@@ -120,15 +126,19 @@ export function useRigFile(
     input: rig && fileId ? { machine: machineId, rig, fileId } : null,
     dep: `${machineId}/${rig}/${fileId}`,
   });
+
   if (!rig || !fileId || loaded.state === 'na') {
     return null;
   }
+
   if (loaded.state === 'loading') {
     return { state: 'loading' };
   }
+
   if (loaded.state === 'refused') {
     return { state: 'refused', error: loaded.error };
   }
+
   const f = loaded.value.file;
 
   return { state: 'ok', name: f.name, bytes: f.bytes, truncated: f.truncated, content: f.content };

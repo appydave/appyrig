@@ -79,6 +79,7 @@ export function LineMarksChips({ waiting, leftOpen }: { waiting: number; leftOpe
 
 function Sample({ entry }: { entry: LegendEntry }): ReactNode {
   const w = (k: 'thin' | 'medium' | 'heavy') => LINE_WIDTH[k];
+
   switch (entry.key) {
     case 'thin':
     case 'medium':

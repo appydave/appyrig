@@ -9,16 +9,19 @@ import type { Run } from './health.js';
 const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-db-'));
+
   dirs.push(d);
 
   return d;
 };
+
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 /** A stand-in OpenRig database: WAL mode, a link between two tables, a view, rows that must never be read. */
 function makeDb(extra = '') {
   const path = join(tmp(), 'openrig.sqlite');
   const db = new DatabaseSync(path);
+
   db.exec(`
     PRAGMA journal_mode = WAL;
     CREATE TABLE rigs (id TEXT PRIMARY KEY, name TEXT NOT NULL, status TEXT DEFAULT 'running');
@@ -39,12 +42,15 @@ const rigRun =
 describe('readTables (read-only)', () => {
   it('lists tables and views with columns, types, nullability, primary key, defaults and foreign keys', () => {
     const t = readTables(makeDb());
+
     expect(t.map((x) => [x.name, x.kind])).toEqual([
       ['nodes', 'table'],
       ['rigs', 'table'],
       ['running_nodes', 'view'],
     ]);
+
     const rigs = t.find((x) => x.name === 'rigs')!;
+
     expect(rigs.columns).toEqual([
       { name: 'id', type: 'TEXT', notNull: false, pk: 1, default: null },
       { name: 'name', type: 'TEXT', notNull: true, pk: 0, default: null },
@@ -64,8 +70,11 @@ describe('readTables (read-only)', () => {
   it('QA D2: with OpenRig STOPPED (no -wal, no -shm) a read creates nothing beside the database', async () => {
     const path = makeDb(); // closed cleanly: only the .sqlite file is left
     const dir = join(path, '..');
+
     expect(readdirSync(dir)).toEqual(['openrig.sqlite']);
+
     const before = listing(dir);
+
     readTables(path);
     readTables(path);
     await sampleSchema('m2', rigRun(), { dbPath: path });
@@ -79,14 +88,17 @@ describe('readTables (read-only)', () => {
     const path = makeDb();
     const dir = join(path, '..');
     const writer = new DatabaseSync(path);
+
     writer.exec('ALTER TABLE rigs ADD COLUMN in_the_wal TEXT'); // committed to the -wal, not yet checkpointed
     expect(readdirSync(dir).sort()).toEqual([
       'openrig.sqlite',
       'openrig.sqlite-shm',
       'openrig.sqlite-wal',
     ]);
+
     const before = listing(dir);
     const t = readTables(path);
+
     expect(listing(dir)).toEqual(before);
     expect(t.find((x) => x.name === 'rigs')!.columns.map((c) => c.name)).toContain('in_the_wal');
     writer.close();
@@ -95,6 +107,7 @@ describe('readTables (read-only)', () => {
   it('a path with spaces and odd characters opens (the immutable form is a file: URL)', () => {
     const path = makeDb();
     const odd = join(path, '..', 'my openrig #1 %20.sqlite');
+
     copyFileSync(path, odd);
     expect(readTables(odd).map((t) => t.name)).toContain('rigs');
     expect(readdirSync(join(path, '..')).sort()).toEqual([
@@ -112,22 +125,29 @@ describe('readTables (read-only)', () => {
     const dir = join(path, '..');
     // keep a writer open so the -wal file is live while we read, as OpenRig's daemon does
     const writer = new DatabaseSync(path);
+
     writer.exec("INSERT INTO rigs VALUES ('r2', 'x', 'y')");
+
     const before = readdirSync(dir).map((n) => [
       n,
       statSync(join(dir, n)).size,
       statSync(join(dir, n)).mtimeMs,
     ]);
+
     readTables(path);
     readTables(path);
+
     const after = readdirSync(dir).map((n) => [
       n,
       statSync(join(dir, n)).size,
       statSync(join(dir, n)).mtimeMs,
     ]);
+
     writer.close();
     expect(after).toEqual(before);
+
     const check = new DatabaseSync(path, { readOnly: true });
+
     expect((check.prepare('SELECT count(*) AS n FROM rigs').get() as { n: number }).n).toBe(2);
     check.close();
   });
@@ -135,6 +155,7 @@ describe('readTables (read-only)', () => {
   it('a read-only connection cannot be written through (the flag itself is enforced)', () => {
     const path = makeDb();
     const ro = new DatabaseSync(path, { readOnly: true });
+
     expect(() => ro.exec("INSERT INTO rigs VALUES ('r9', 'x', 'y')")).toThrow(
       /readonly|read-only/i
     );
@@ -145,8 +166,10 @@ describe('readTables (read-only)', () => {
 
 describe('sampleSchema', () => {
   const now = () => new Date('2026-10-11T12:00:00.000Z');
+
   it('ok: the tables and the version `rig --version` named', async () => {
     const s = await sampleSchema('m2', rigRun(), { dbPath: makeDb(), now });
+
     expect(s).toMatchObject({
       machineId: 'm2',
       status: 'ok',
@@ -162,6 +185,7 @@ describe('sampleSchema', () => {
       dbPath: join(dir, '.openrig', 'openrig.sqlite'),
       now,
     });
+
     expect(s).toMatchObject({ status: 'no-openrig', openrigVersion: null, tables: [] });
     expect(s.reason).toMatch(/no OpenRig database/);
     expect(existsSync(join(dir, '.openrig'))).toBe(false);
@@ -169,15 +193,21 @@ describe('sampleSchema', () => {
   it('a file that is not a database is unreadable with a reason, not a crash', async () => {
     const dir = tmp();
     const bad = join(dir, 'openrig.sqlite');
+
     new DatabaseSync(bad).close();
+
     const { writeFileSync } = await import('node:fs');
+
     writeFileSync(bad, 'this is not sqlite at all, just text '.repeat(40));
+
     const s = await sampleSchema('m2', rigRun(), { dbPath: bad, now });
+
     expect(s.status).toBe('unreadable');
     expect(s.reason).toMatch(/could not read the OpenRig database/);
   });
   it('a version that cannot be read is null, and the tables still come back', async () => {
     const s = await sampleSchema('m2', rigRun('', 1), { dbPath: makeDb(), now });
+
     expect(s.status).toBe('ok');
     expect(s.openrigVersion).toBeNull();
     expect(
@@ -194,6 +224,7 @@ describe('SchemaReader', () => {
     let t = 1_000_000;
     const r = new SchemaReader('m2', rigRun(), { dbPath, now: () => new Date(t), ttlMs: 300_000 });
     const first = await r.next();
+
     expect(first?.push.status).toBe('ok');
     expect(await r.next()).toBeNull(); // inside the ttl
     t += 301_000;
@@ -201,11 +232,15 @@ describe('SchemaReader', () => {
     first!.markSent();
     t += 301_000;
     expect(await r.next()).toBeNull(); // unchanged since accepted (timestamp aside)
+
     const db = new DatabaseSync(dbPath);
+
     db.exec('ALTER TABLE rigs ADD COLUMN owner TEXT');
     db.close();
     t += 301_000;
+
     const changed = await r.next();
+
     expect(
       changed?.push.tables.find((x) => x.name === 'rigs')?.columns.map((c) => c.name)
     ).toContain('owner');

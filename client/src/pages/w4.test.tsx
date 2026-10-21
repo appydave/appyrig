@@ -63,6 +63,7 @@ function spySocket(answers: Record<string, unknown> = {}) {
       if (!handlers.has(ev)) {
         handlers.set(ev, new Set());
       }
+
       handlers.get(ev)!.add(h);
 
       return s;
@@ -80,7 +81,9 @@ function spySocket(answers: Record<string, unknown> = {}) {
         cb: (err: unknown, a: unknown) => void
       ) => {
         sent.push(req);
+
         const a = answers[req.verb];
+
         if (a !== undefined) {
           queueMicrotask(() => cb(null, a));
         }
@@ -191,6 +194,7 @@ beforeEach(() => {
   } catch {
     /* ignore */
   }
+
   history.replaceState(null, '', '/');
 });
 afterEach(() => {
@@ -201,10 +205,13 @@ afterEach(() => {
 describe('v2 Run Timeline', () => {
   it('reads the run: outcome, phases, who waited on whom', () => {
     const run = buildRun(runMachine(), 'starter', NOW)!;
+
     expect(run.outcome).toBe('running');
     expect(run.phases.map((p) => p.count)).toEqual([3, 1]);
     expect(run.phases[0]!.senders[0]).toEqual({ name: 'dev-build', count: 2 });
+
     const w = run.waits.find((x) => x.from === 'dev-build' && x.to === 'dev-review')!;
+
     // closed waits 4 and 10 min (median 7), one open for 60 min
     expect(w).toMatchObject({ count: 3, open: 1, medianMs: 7 * 60_000, longestMs: 60 * 60_000 });
     expect(buildRun(runMachine({ state: 'done' }), 'starter', NOW)!.outcome).toBe('finished');
@@ -225,6 +232,7 @@ describe('v2 Run Timeline', () => {
     const rigs = listRigs([fm]);
     const ctx = ctxFor([fm], { activeRig: rigs.find((r) => r.name === 'starter')! });
     const Page = timelinePage.component;
+
     render(<Page ctx={ctx} />);
     expect(screen.getByTestId('tl2-outcome')).toHaveAttribute('data-outcome', 'running');
     expect(screen.getByTestId('tl2-total')).toHaveTextContent('4');
@@ -238,6 +246,7 @@ describe('v2 Run Timeline', () => {
     const fm = { ...runMachine(), snapshot: { ...runMachine().snapshot, queue: [] } };
     const ctx = ctxFor([fm], { activeRig: listRigs([fm])[0]! });
     const Page = timelinePage.component;
+
     render(<Page ctx={ctx} />);
     expect(screen.getByTestId('tl2-empty')).toBeInTheDocument();
   });
@@ -266,9 +275,11 @@ describe('v2 Accounts', () => {
 
   it('shows each account’s two windows and every machine, with a mock switch that sends nothing', () => {
     vi.useFakeTimers();
+
     const { machines, now } = busy();
     const spy = spySocket();
     const Page = accountsPage.component;
+
     render(<Page ctx={ctxFor(machines, { now, getSocket: () => spy.socket })} />);
     expect(screen.getAllByTestId('ac2-account')).toHaveLength(1);
     expect(screen.getAllByTestId('ac2-window')).toHaveLength(2);
@@ -276,7 +287,9 @@ describe('v2 Accounts', () => {
     expect(screen.getAllByTestId('ac2-burn')[0]).toHaveTextContent('%/h');
     expect(screen.getAllByTestId('ac2-burn')[1]).toHaveTextContent('%/day');
     expect(screen.getAllByTestId('ac2-machine')).toHaveLength(3);
+
     const row = screen.getAllByTestId('ac2-machine')[1]!;
+
     fireEvent.click(within(row).getByRole('button', { name: 'Switch account' }));
     fireEvent.click(within(row).getByTestId('fake-confirm'));
     act(() => vi.advanceTimersByTime(1500));
@@ -296,6 +309,7 @@ describe('v2 Machines', () => {
 
   it('a card per machine: memory, swap, pressure, OpenRig and collector versions, mock upgrade', () => {
     const { machines, now } = busy();
+
     expect(machineView(machines[1]!, now, '0.6.13')).toMatchObject({
       openrig: '0.6.6',
       collector: '0.1.0',
@@ -303,9 +317,13 @@ describe('v2 Machines', () => {
     });
     // one machine on a newer OpenRig makes the others "behind" it (and nothing else can)
     machines[2]!.snapshot.sources.daemon.version = '0.6.13';
+
     const Page = machinesPage.component;
+
     render(<Page ctx={ctxFor(machines, { now })} />);
+
     const cards = screen.getAllByTestId('mc2-machine');
+
     expect(cards).toHaveLength(3);
     expect(within(cards[0]!).getByTestId('mc2-mem')).toHaveTextContent('32 GB');
     expect(within(cards[0]!).getByTestId('mc2-openrig')).toHaveTextContent('0.6.6');
@@ -358,11 +376,14 @@ describe('v2 OpenRig DB', () => {
     };
     const spy = spySocket({ 'db.schema': out('roamy', changed) });
     const Page = schemaPage.component;
+
     render(
       <Page ctx={ctxFor([fleetMachine(snapshot('roamy'))], { getSocket: () => spy.socket })} />
     );
     await waitFor(() => expect(screen.getByTestId('db2-diff')).toBeInTheDocument());
+
     const diff = screen.getByTestId('db2-diff');
+
     expect(diff).toHaveTextContent('+ table bindings');
     expect(diff).toHaveTextContent('− table old_thing');
     expect(diff).toHaveTextContent('~ status: TEXT → TEXT NOT NULL');
@@ -382,6 +403,7 @@ describe('v2 OpenRig DB', () => {
       }),
     });
     const Page = schemaPage.component;
+
     render(
       <Page ctx={ctxFor([fleetMachine(snapshot('roamy'))], { getSocket: () => spy.socket })} />
     );
@@ -485,10 +507,14 @@ describe('v2 Learn: commands panel (C19)', () => {
       screen.getAllByTestId('lr2-group').find((g) => g.dataset.group === 'daemon & install')!
     );
     expect(screen.getAllByTestId('lr2-command')).toHaveLength(3);
+
     const writeText = vi.fn(() => Promise.resolve());
+
     vi.stubGlobal('isSecureContext', true);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
     const ps = screen.getAllByTestId('lr2-command').find((c) => c.textContent?.includes('rig ps'))!;
+
     fireEvent.click(within(ps).getByTestId('lr2-copy'));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('rig ps --nodes'));
   });
@@ -496,6 +522,7 @@ describe('v2 Learn: commands panel (C19)', () => {
   it('the real list loads: 371 commands, 51 in plain words', async () => {
     const { loadCommands } = await import('../domain/learn/commands.js');
     const d = await loadCommands();
+
     expect(d.commands).toHaveLength(371);
     expect(d.commands.filter((c) => c.curated)).toHaveLength(51);
   });
@@ -518,7 +545,9 @@ describe('W4 pages in the app: registered in their groups', () => {
       }
     );
     history.replaceState(null, '', '/');
+
     const spy = spySocket();
+
     render(<App getSocket={() => spy.socket} />);
     spy.fire(
       FLEET_EVENTS.UPDATE,
@@ -534,28 +563,34 @@ describe('W4 pages in the app: registered in their groups', () => {
 describe('W4 fold: accounts burn never contradicts the verdict (MEDIUM-1/3)', () => {
   it('too early to tell, or under 3% of the window gone: no burn, no time to empty', () => {
     const early = win({ projectedPct: null, elapsedPct: 1, usedPct: 4 });
+
     expect(burnPerHour(early)).toBeNull();
     expect(hoursToEmpty(early)).toBeNull();
+
     // a projection but under 3% elapsed: still noise
     const tiny = win({ projectedPct: 300, elapsedPct: 2.9, usedPct: 10 });
+
     expect(burnPerHour(tiny)).toBeNull();
     expect(burnPerHour(win({ elapsedPct: 3, usedPct: 6 }))).not.toBeNull();
   });
 
   it('0 use burns nothing and never empties', () => {
     const zero = win({ usedPct: 0, projectedPct: 0 });
+
     expect(burnPerHour(zero)).toBe(0);
     expect(hoursToEmpty(zero)).toBeNull();
   });
 
   it('just reset (window ended, no reading) has no burn', () => {
     const ended = win({ status: 'window-ended', usedPct: null, elapsedPct: null });
+
     expect(burnPerHour(ended)).toBeNull();
     expect(hoursToEmpty(ended)).toBeNull();
   });
 
   it('100% or more used is spent, not "empty in 0 min"', () => {
     const spent = win({ usedPct: 104, projectedPct: 260 });
+
     expect(burnPerHour(spent)).toBeGreaterThan(0);
     expect(hoursToEmpty(spent)).toBeNull();
   });
@@ -567,6 +602,7 @@ describe('W4 fold: accounts burn never contradicts the verdict (MEDIUM-1/3)', ()
   it('the page shows a dash for burn beside "too early to tell"', () => {
     const w = win({ projectedPct: null, elapsedPct: 1, usedPct: 4 });
     const fm = fleetMachine(snapshot('roamy'));
+
     fm.snapshot.account = {
       email: 'a@x.test',
       plan: 'claude_max',
@@ -585,9 +621,13 @@ describe('W4 fold: accounts burn never contradicts the verdict (MEDIUM-1/3)', ()
         monthly: { status: 'not-reported' },
       } as never,
     };
+
     const Page = accountsPage.component;
+
     render(<Page ctx={ctxFor([fm])} />);
+
     const first = screen.getAllByTestId('ac2-window')[0]!;
+
     expect(first).toHaveAttribute('data-kind', 'early');
     expect(within(first).getByTestId('ac2-burn')).toHaveTextContent('—');
   });
@@ -598,6 +638,7 @@ describe('W4 fold: timeline (MEDIUM-2, LOW)', () => {
     const fm = runMachine();
     const ctx = ctxFor([fm], { activeRig: listRigs([fm]).find((r) => r.name === 'starter')! });
     const Page = timelinePage.component;
+
     render(<Page ctx={ctx} />);
     expect(screen.getByTestId('tl2-waits')).toHaveTextContent('created → last update');
   });
@@ -606,10 +647,13 @@ describe('W4 fold: timeline (MEDIUM-2, LOW)', () => {
     const fm = runMachine();
     const rigs = listRigs([fm]);
     const empty = rigs.find((r) => r.name !== 'starter' && r.handoffs === 0)!;
+
     expect(empty).toBeTruthy();
+
     // the shared choice is an empty rig: the page shows exactly that, and picking calls the shared chooseRig
     const ctx = ctxFor([fm], { activeRig: empty });
     const Page = timelinePage.component;
+
     render(<Page ctx={ctx} />);
     expect(screen.getByTestId('tl2-empty')).toHaveTextContent(empty.name);
     fireEvent.change(screen.getByTestId('rig-select'), { target: { value: 'roamy:starter' } });
@@ -643,7 +687,9 @@ describe('W4 fold: machines version watch (MEDIUM-3, LOW)', () => {
   it('the newest version is the highest one the fleet reports, never an invented number', () => {
     expect(newestVersion(['0.6.6', '0.6.13 (9eeb2e42)', null, '0.6.11'])).toBe('0.6.13 (9eeb2e42)');
     expect(newestVersion([null, undefined])).toBeNull();
+
     const fm = fleetMachine(snapshot('roamy'));
+
     fm.snapshot.sources.daemon.version = '0.6.1';
     expect(machineView(fm, 0, '0.6.13').version).toBe('behind');
     expect(machineView(fm, 0, null).version).toBe('unknown');
@@ -651,10 +697,15 @@ describe('W4 fold: machines version watch (MEDIUM-3, LOW)', () => {
 
   it('the panel compares machines with each other, not with a made-up latest', () => {
     const a = fleetMachine(snapshot('roamy'));
+
     a.snapshot.sources.daemon.version = '0.6.1';
+
     const b = fleetMachine(snapshot('m2'));
+
     b.snapshot.sources.daemon.version = '0.6.13';
+
     const Page = machinesPage.component;
+
     render(<Page ctx={ctxFor([a, b], { now: 0 })} />);
     expect(screen.getByTestId('mc2-watch')).toHaveTextContent('1 of 2 behind the newest (0.6.13)');
     expect(screen.getByTestId('mc2-watch')).not.toHaveTextContent('sample');
@@ -668,6 +719,7 @@ describe('W4 fold: the Learn command list matches the brain copy', () => {
     __dirname,
     '../../../test/fixtures/brain/rig-commands-summary.json'
   );
+
   it('version, count and curated count agree with the brain file', () => {
     const brain = JSON.parse(readFileSync(brainPath, 'utf8')) as {
       openrig_version: string;
@@ -676,6 +728,7 @@ describe('W4 fold: the Learn command list matches the brain copy', () => {
     const copy = JSON.parse(
       readFileSync(path.resolve(__dirname, '../domain/learn/rig-commands.json'), 'utf8')
     ) as RigCommands;
+
     expect(copy.openrig_version).toBe(brain.openrig_version);
     expect(copy.commands.length).toBe(brain.commands.length);
     expect(copy.commands.filter((c) => c.curated).length).toBe(

@@ -39,10 +39,12 @@ function FakeEdit({
   const [draft, setDraft] = useState(show(first?.value));
   const done = useRef(false);
   const { phase, reset } = a;
+
   useEffect(() => {
     if (phase !== 'done' || done.current) {
       return;
     }
+
     done.current = true;
     onToast(`${line.key} = ${draft} on ${machineLabel} (pretend): nothing changed`);
     setEditing(false);
@@ -120,12 +122,15 @@ function SettingsPage({ ctx }: PageProps) {
   const [changedOnly, setChangedOnly] = useState(false);
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
   const next = useRef(0);
+
   useEffect(() => {
     let live = true;
+
     void callVerb<SettingsGetOutput>(ctx.getSocket(), 'settings.get', {}).then((a) => {
       if (!live) {
         return;
       }
+
       setLoaded(a.ok ? { state: 'ok', out: a.value } : { state: 'refused', why: a.error.message });
     });
 
@@ -135,8 +140,10 @@ function SettingsPage({ ctx }: PageProps) {
     // once per visit
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const toast = useCallback<Toast>((text) => {
     const id = ++next.current;
+
     setToasts((t) => [...t, { id, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 4000);
   }, []);
@@ -327,10 +334,12 @@ function SettingsPage({ ctx }: PageProps) {
 function ScheduleRun({ what, onToast }: { what: string; onToast: Toast }) {
   const a = useFakeAction(900);
   const { phase, reset } = a;
+
   useEffect(() => {
     if (phase !== 'done') {
       return;
     }
+
     onToast(`ran "${what}" (pretend): nothing ran`);
     reset();
   }, [phase, reset, onToast, what]);
@@ -352,6 +361,7 @@ function ScheduleRun({ what, onToast }: { what: string; onToast: Toast }) {
       </span>
     );
   }
+
   if (phase === 'working') {
     return <span className="ar-fake-bar" aria-label="running" />;
   }

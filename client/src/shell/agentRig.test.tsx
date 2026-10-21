@@ -34,6 +34,7 @@ function spySocket() {
       if (!handlers.has(ev)) {
         handlers.set(ev, new Set());
       }
+
       handlers.get(ev)!.add(h);
 
       return s;
@@ -56,7 +57,9 @@ const fleet = () => [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snap
 
 function renderAt(search: string) {
   history.replaceState(null, '', `/${search}`);
+
   const spy = spySocket();
+
   render(<App getSocket={() => spy.socket} />);
   spy.fire(FLEET_EVENTS.UPDATE, update(fleet()));
 }
@@ -85,6 +88,7 @@ describe('opening an agent never changes the focused rig', () => {
     const seat = ms
       .find((m) => m.machine.id === b.machineId)!
       .snapshot.seats.find((s) => s.rig === b.name)!;
+
     renderAt(`?v=2&page=wall&rig=${encodeURIComponent(rigToParam(a.key))}`);
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
     expect(pressedRigs()).toEqual([a.key]);
@@ -95,7 +99,9 @@ describe('opening an agent never changes the focused rig', () => {
         .closest('.rd-rig-row')!
         .querySelector('.rd-caret')!
     );
+
     const tile = `${b.machineId}/${seat.id}`;
+
     fireEvent.click(
       screen.getAllByTestId('drawer-agent').find((x) => x.dataset.agentKey === tile)!
     );
@@ -117,10 +123,13 @@ describe('opening an agent never changes the focused rig', () => {
     const loose = ms
       .flatMap((m) => m.snapshot.seats.map((s) => ({ m, s })))
       .find((x) => x.s.rig === null);
+
     expect(loose, 'fixture has a plain tmux seat').toBeTruthy();
     renderAt(`?v=2&page=wall&rig=${encodeURIComponent(rigToParam(a.key))}`);
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const tile = `${loose!.m.machine.id}/${loose!.s.id}`;
+
     fireEvent.click(
       screen.getAllByTestId('drawer-agent').find((x) => x.dataset.agentKey === tile)!
     );
@@ -138,11 +147,16 @@ describe('O4 on the rig pages: a Flow seat and a Run board station Docs also nam
 
   it('Handoff Flow: a seat chip opens the panel on that agent and rig= / the drawer / the scope line agree', () => {
     const rig = rigWithTraffic();
+
     renderAt(`?v=2&page=flow&rig=${encodeURIComponent(rigToParam(rig.key))}`);
+
     const chip = screen.getAllByTestId('flow-agent-chip')[0]!;
+
     fireEvent.click(chip);
     expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+
     const p = new URLSearchParams(location.search);
+
     expect(p.get('page')).toBe('flow'); // never changes page
     expect(p.get('agent')).toContain(`@${rig.name}@`);
     expect(p.get('rig')).toBe(rigToParam(rig.key));
@@ -153,11 +167,16 @@ describe('O4 on the rig pages: a Flow seat and a Run board station Docs also nam
 
   it('Run board: a station Docs opens the panel on that agent, and the rig stays the agent’s rig', () => {
     const rig = rigWithTraffic();
+
     renderAt(`?v=2&page=run&rig=${encodeURIComponent(rigToParam(rig.key))}`);
+
     const docs = screen.queryAllByTestId('run-station-docs');
+
     expect(docs.length, 'the Run board draws station Docs buttons').toBeGreaterThan(0);
     fireEvent.click(docs[0]!);
+
     const p = new URLSearchParams(location.search);
+
     expect(p.get('page')).toBe('run');
     expect(p.get('agent'), 'the station Docs opened an agent').toBeTruthy();
     expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
@@ -172,7 +191,9 @@ describe('Esc closes the Legend', () => {
     expect(screen.queryByTestId('legend2')).toBeNull();
     fireEvent.keyDown(window, { key: 'l' });
     expect(screen.getByTestId('legend2')).toBeInTheDocument();
+
     const before = location.search;
+
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByTestId('legend2')).toBeNull();
     expect(location.search).toBe(before);

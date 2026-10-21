@@ -9,6 +9,7 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
+
   if (await gotIt.count()) {
     await gotIt.first().click();
   }
@@ -24,7 +25,9 @@ test.describe('Graph: open rigs and zoom', () => {
     page,
   }) => {
     test.setTimeout(60_000);
+
     const errors = watchErrors(page);
+
     await page.goto(FROZEN);
     await quietIntro(page);
     await page.getByTestId('ar-group-fleet').click();
@@ -46,6 +49,7 @@ test.describe('Graph: open rigs and zoom', () => {
             `${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`
         )
       );
+
     expect(sizes.length).toBeGreaterThan(3);
     expect(new Set(sizes).size, `one card size (${[...new Set(sizes)].join(', ')})`).toBe(1);
 
@@ -65,6 +69,7 @@ test.describe('Graph: open rigs and zoom', () => {
     // a rig's ⋯ menu has "Open in Rig Map": the Rig Map page shows that rig, open, full width
     const first = page.getByTestId('g2-rig').first();
     const key = await first.getAttribute('data-rig-key');
+
     await first.getByTestId('g2-rig-menu').click();
     await page.getByTestId('g2-open-map').click();
     await expect(page.getByTestId('ar-rigmap')).toBeVisible();

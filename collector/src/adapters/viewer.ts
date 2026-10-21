@@ -16,8 +16,10 @@ const KNOWN: Record<string, ViewerStatus> = {
 export function parseAgentList(raw: unknown): ViewerAgent[] {
   const env = raw as { result?: { agents?: unknown } } | null;
   const rows = env?.result?.agents;
+
   if (!Array.isArray(rows)) {
     const r = HerdrAgentListStrict.safeParse(raw);
+
     throw new Error(
       `agent list: ${r.success ? 'no agents array' : issueMessages(r.error).join('; ')}`
     );
@@ -25,6 +27,7 @@ export function parseAgentList(raw: unknown): ViewerAgent[] {
 
   return rows.map((row, i) => {
     const r = LenientHerdrAgent.safeParse(row);
+
     if (!r.success) {
       throw new Error(`agent list[${i}]: ${issueMessages(r.error).join('; ')}`);
     }

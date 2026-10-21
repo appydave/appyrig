@@ -48,10 +48,12 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
   // the mission touches may re-read its files.
   const rigsKey = mission.rigs.map((r) => `${r.machineId}:${r.rig}`).join('|');
   const rigsRef = useRef(mission.rigs);
+
   rigsRef.current = mission.rigs;
   useEffect(() => {
     let live = true;
     const socket = getSocket();
+
     void (async () => {
       for (const r of rigsRef.current) {
         const files = await callVerb<RigFilesOutput>(socket, 'rig.files', {
@@ -59,14 +61,17 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
           rig: r.rig,
         });
         const f = files.ok ? files.value.files.find((x) => /^MISSION.*\.md$/i.test(x.name)) : null;
+
         if (!f) {
           continue;
         }
+
         const got = await callVerb<RigFileOutput>(socket, 'rig.file', {
           machine: r.machineId,
           rig: r.rig,
           fileId: f.id,
         });
+
         if (got.ok) {
           if (live) {
             setDoc({ rig: r.rig, machineId: r.machineId, text: got.value.file.content });
@@ -75,6 +80,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
           return;
         }
       }
+
       if (live) {
         setDoc('none');
       }
@@ -87,6 +93,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
   if (doc === null) {
     return <p className="quiet">Looking for a MISSION.md in its rigs…</p>;
   }
+
   if (doc === 'none') {
     return (
       <p className="quiet" data-testid="ms-nodoc">
@@ -95,6 +102,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
       </p>
     );
   }
+
   const { title } = missionDocSummary(doc.text);
 
   return (
@@ -258,8 +266,10 @@ function Missions({ ctx }: PageProps) {
   // asks for "× all rigs" (remembered for that pick only: a new pick filters again).
   const pick = ctx.pickedRig;
   const [allFor, setAllFor] = useState<string | null>(null);
+
   // Every pick in the drawer filters again, the same rig picked twice included (focusNonce).
   useEffect(() => setAllFor(null), [ctx.focusNonce]);
+
   const scoped = !!pick && allFor !== pick.key;
   const inPick = (m: { machineId: string; rig: string }) =>
     !!pick && m.machineId === pick.machineId && m.rig === pick.name;

@@ -52,6 +52,7 @@ const node = (over: Record<string, unknown> = {}) => ({
 describe('v2 · seat detail (step 2)', () => {
   it('reduces the node record to the Agent page fields and drops the token, command, events', () => {
     const d = parseSeatDetail(node());
+
     expect(d.spec).toEqual({
       name: 'implementer',
       version: '1.0',
@@ -70,7 +71,9 @@ describe('v2 · seat detail (step 2)', () => {
     expect(d.peers).toEqual([{ logicalId: 'dev.qa', session: 'dev-qa@r', runtime: 'claude-code' }]);
     expect(d.recoveryNotes).toEqual(['Try native Claude resume first.', 'fall back to the picker']);
     expect(d.installedResources).toEqual([{ id: 'shared:openrig-core', category: 'plugin' }]);
+
     const wire = JSON.stringify(d);
+
     expect(wire).not.toContain('a0cf4780');
     expect(wire).not.toContain('transcripts');
     expect(wire).not.toContain('big');
@@ -86,6 +89,7 @@ describe('v2 · seat detail (step 2)', () => {
         installedResources: [null, { id: 3 }],
       })
     );
+
     expect(d.startupFiles).toEqual([
       { path: 'ok.md', deliveryHint: null, required: null, appliesOn: [] },
     ]);
@@ -112,6 +116,7 @@ describe('v2 · seat detail (step 2)', () => {
       return node();
     });
     const first = await r.next([T]);
+
     expect(paths).toEqual(['/api/rigs/RIG1/nodes/dev.build']);
     expect(first!.pushes).toHaveLength(1);
     expect(DaemonDataPushSchema.safeParse(first!.pushes[0]).success).toBe(true);
@@ -123,7 +128,9 @@ describe('v2 · seat detail (step 2)', () => {
     });
     // not accepted yet: it is offered again after the interval
     tick(61_000);
+
     const again = await r.next([T]);
+
     expect(again!.pushes).toHaveLength(1);
     again!.markSent();
     tick(61_000);
@@ -142,6 +149,7 @@ describe('v2 · seat detail (step 2)', () => {
       return [];
     });
     const p = await r.next([T]);
+
     expect(p!.pushes[0]).toMatchObject({ status: 'not-found', data: null, key: 'dev-build@r' });
     expect(DaemonDataPushSchema.safeParse(p!.pushes[0]).success).toBe(true);
   });
@@ -149,13 +157,16 @@ describe('v2 · seat detail (step 2)', () => {
   it('a seat dropped from one snapshot is sent again when it returns, with no reconnect', async () => {
     const { r, tick } = reader(async () => node());
     const p = await r.next([T]);
+
     p!.markSent();
     tick(61_000);
     expect(await r.next([T])).toBeNull(); // unchanged since the hub accepted it
     // the build that drops the rig (a partial daemon read) also forgets what was sent for it
     r.forgetSeatsNotIn(new Set());
     tick(61_000);
+
     const back = await r.next([T]); // the rig is back in the next snapshot
+
     expect(back!.pushes[0]).toMatchObject({ kind: 'seatdetail', key: 'dev-build@r' });
     back!.markSent();
     // seats still listed are left alone
@@ -167,6 +178,7 @@ describe('v2 · seat detail (step 2)', () => {
   it('a payload the pusher skipped is not recorded as sent, so it is offered again', async () => {
     const { r, tick } = reader(async () => node());
     const p = await r.next([T]);
+
     p!.markSkipped!(p!.pushes[0]!);
     p!.markSent();
     tick(61_000);
@@ -183,6 +195,7 @@ describe('v2 · seat detail (step 2)', () => {
       key: '',
       data: { settings: {}, withheld: 0, pathsHidden: 0 },
     };
+
     expect(DaemonDataPushSchema.safeParse(settings).success).toBe(true);
     expect(DaemonDataPushSchema.safeParse({ ...settings, key: 'dev-build@r' }).success).toBe(false);
     expect(
@@ -203,6 +216,7 @@ describe('v2 · seat detail (step 2)', () => {
       throw new Error('GET /api/rigs/RIG1/nodes/dev.build -> HTTP 404');
     });
     const p = await r.next([T]);
+
     expect(p!.pushes[0]).toMatchObject({ status: 'unsupported', data: null });
   });
 
@@ -219,6 +233,7 @@ describe('v2 · seat detail (step 2)', () => {
       },
       (l) => lines.push(l)
     );
+
     expect(await r.next([T])).toBeNull();
     tick(61_000);
     expect(await r.next([T])).toBeNull();
@@ -245,6 +260,7 @@ describe('v2 · seat detail (step 2)', () => {
       { seat: 'bad@r', rigId: 'R', logicalId: 'bad' },
       { seat: 'c@r', rigId: 'R', logicalId: 'c' },
     ]);
+
     expect(p!.pushes.map((x) => x.key)).toEqual(['a@r', 'c@r']);
   });
 });
@@ -256,6 +272,7 @@ describe('v2 · old hub compatibility', () => {
     ) as Record<string, unknown>[];
     const bare = raw.map((n) => ({ ...n, tmuxAttachCommand: null }));
     const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true });
+
     for (const s of parseNodes(bare)) {
       expect(OldSeat.safeParse(s).success).toBe(true);
     }
@@ -321,6 +338,7 @@ const packRows = [
 describe('v2 · library (step 3)', () => {
   it('maps specs, skills and packs to rows; facts are primitives only; file text is never read', () => {
     const specs = parseLibrarySpecs(specRows);
+
     expect(specs[1]).toMatchObject({
       id: 'workflow:basic-loop:1',
       kind: 'workflow',
@@ -336,7 +354,9 @@ describe('v2 · library (step 3)', () => {
       path: '/opt/openrig/agents/apps/vault-specialist/agent.yaml',
       facts: {},
     });
+
     const skills = parseLibrarySkills(skillRows);
+
     expect(skills[0]).toMatchObject({
       kind: 'skill',
       sourceType: 'openrig-managed',
@@ -358,7 +378,9 @@ describe('v2 · library (step 3)', () => {
     ).toHaveLength(1);
     expect(parseLibrarySpecs({ specs: specRows })).toHaveLength(2);
     expect(() => parseLibrarySpecs('nope')).toThrow(/array/);
+
     const many = Array.from({ length: 500 }, (_, i) => ({ id: `i${i}`, name: `n${i}` }));
+
     expect(parseLibrarySpecs(many)).toHaveLength(300);
   });
 
@@ -368,10 +390,13 @@ describe('v2 · library (step 3)', () => {
       'm4',
       async (p) => {
         seen.push(p);
+
         const v = routes[p];
+
         if (v instanceof Error) {
           throw v;
         }
+
         if (v === undefined) {
           throw new Error(`GET ${p} -> HTTP 404`);
         }
@@ -383,6 +408,7 @@ describe('v2 · library (step 3)', () => {
 
     return { r, seen };
   };
+
   const only = (p: Awaited<ReturnType<DaemonDataReader['next']>>, kind: string) =>
     p?.pushes.find((x) => x.kind === kind);
 
@@ -394,6 +420,7 @@ describe('v2 · library (step 3)', () => {
       '/healthz': { semver: '0.6.6' },
     });
     const push = only(await r.next([]), 'library');
+
     expect(DaemonDataPushSchema.safeParse(push).success).toBe(true);
     expect(push).toMatchObject({ status: 'ok', key: '', data: { openrigVersion: '0.6.6' } });
     expect(seen.sort()).toEqual([
@@ -420,6 +447,7 @@ describe('v2 · library (step 3)', () => {
     const push = only(await r.next([]), 'library') as {
       data: { specs: unknown[]; skills: unknown; contextPacks: unknown };
     };
+
     expect(push.data.specs).toHaveLength(2);
     expect(push.data.skills).toBeNull();
     expect(push.data.contextPacks).toBeNull();
@@ -428,10 +456,12 @@ describe('v2 · library (step 3)', () => {
 
   it('all routes 404 = unsupported; all failing otherwise = nothing sent, logged once', async () => {
     const a = libraryReader({});
+
     expect(only(await a.r.next([]), 'library')).toMatchObject({
       status: 'unsupported',
       data: null,
     });
+
     const lines: string[] = [];
     const b = libraryReader(
       {
@@ -441,6 +471,7 @@ describe('v2 · library (step 3)', () => {
       },
       (l) => lines.push(l)
     );
+
     expect(await b.r.next([])).toBeNull();
     expect(lines).toEqual([expect.stringMatching(/library unreadable/)]);
   });
@@ -457,27 +488,36 @@ function fakeTelemetry(opts: { n: number; boot?: string }) {
     Buffer.from(JSON.stringify({ boot, last })).toString('base64url');
   const get = async (path: string) => {
     calls.push(path);
+
     const url = new URL(path, 'http://x');
     const limit = Number(url.searchParams.get('limit'));
+
     if (!(limit >= 1 && limit <= 128)) {
       throw new Error('GET -> HTTP 400');
     }
+
     const start = url.searchParams.get('start');
     const cursor = url.searchParams.get('cursor');
+
     if (start && cursor) {
       throw new Error('GET -> HTTP 400');
     }
+
     let after = 0;
+
     if (cursor) {
       const c = JSON.parse(Buffer.from(cursor, 'base64url').toString()) as {
         boot: string;
         last: number;
       };
+
       if (c.boot !== boot) {
         throw new Error('GET -> HTTP 400');
       }
+
       after = c.last;
     }
+
     const ids = Array.from({ length: n }, (_, i) => i + 1)
       .filter((i) => i > after)
       .slice(0, limit);
@@ -525,6 +565,7 @@ describe('v2 · queue transitions (step 4)', () => {
       tick: (ms = 21_000) => (t += ms),
     };
   };
+
   const data = (p: Awaited<ReturnType<DaemonDataReader['next']>>) =>
     (p!.pushes[0] as { data: { rows: { id: string }[]; retained: number; truncated: boolean } })
       .data;
@@ -554,6 +595,7 @@ describe('v2 · queue transitions (step 4)', () => {
     const d = fakeTelemetry({ n: 300 });
     const { r, tick } = trReader(d.get);
     const first = await r.next([]);
+
     expect(data(first).rows).toHaveLength(300);
     expect(data(first).retained).toBe(300);
     expect(DaemonDataPushSchema.safeParse(first!.pushes[0]).success).toBe(true);
@@ -565,7 +607,9 @@ describe('v2 · queue transitions (step 4)', () => {
     first!.markSent();
     d.grow(3);
     tick();
+
     const second = await r.next([]);
+
     expect(data(second).rows).toHaveLength(303);
     expect(data(second).rows.at(-1)!.id).toBe('303');
     expect(d.calls.at(-1)).not.toContain('start=');
@@ -578,6 +622,7 @@ describe('v2 · queue transitions (step 4)', () => {
     const d = fakeTelemetry({ n: 1300 });
     const { r } = trReader(d.get);
     const p = await r.next([]); // 11 pages of 128 in one round
+
     expect(data(p).rows).toHaveLength(1000);
     expect(data(p).rows[0]!.id).toBe('301');
     expect(data(p).rows.at(-1)!.id).toBe('1300');
@@ -589,13 +634,16 @@ describe('v2 · queue transitions (step 4)', () => {
     const d = fakeTelemetry({ n: 10 });
     const lines: string[] = [];
     const { r, tick } = trReader(d.get, (l) => lines.push(l));
+
     (await r.next([]))!.markSent();
     d.newBoot('boot-2');
     tick();
     expect(await r.next([])).toBeNull(); // the old cursor is refused: nothing sent, state dropped
     expect(lines).toHaveLength(1);
     tick();
+
     const p = await r.next([]);
+
     expect(data(p).rows).toHaveLength(5); // the new history only, not appended to the old
     expect(d.calls.at(-1)).toContain('start=retained'); // the restart read
     expect(lines).toHaveLength(1);
@@ -605,6 +653,7 @@ describe('v2 · queue transitions (step 4)', () => {
     const d = fakeTelemetry({ n: 300 });
     const { r } = trReader(d.get);
     const p = await r.next([]);
+
     expect(data(p).retained).toBe(300);
   });
 
@@ -621,6 +670,7 @@ describe('v2 · queue transitions (step 4)', () => {
       page: { hasMore: false, nextCursor: 'c', retainedHighWatermark: '900' },
     }));
     const p = await r.next([]);
+
     expect(data(p)).toMatchObject({ retained: 900, truncated: false });
     expect(data(p).rows).toHaveLength(10);
   });
@@ -643,6 +693,7 @@ describe('v2 · queue transitions (step 4)', () => {
       };
     });
     const p = await r.next([]);
+
     expect(data(p).rows.map((x) => x.id)).toEqual(['1', '2', '3']);
   });
 
@@ -660,6 +711,7 @@ describe('v2 · queue transitions (step 4)', () => {
       },
       (l) => lines.push(l)
     );
+
     (await r.next([]))!.markSent();
     d.grow(2);
     for (const err of ['GET x -> HTTP 503', 'daemon timed out after 8000ms', 'GET x -> HTTP 500']) {
@@ -667,10 +719,13 @@ describe('v2 · queue transitions (step 4)', () => {
       tick();
       expect(await r.next([])).toBeNull();
     }
+
     expect(lines).toHaveLength(1); // logged once
     down = null;
     tick();
+
     const p = await r.next([]);
+
     expect(data(p).rows).toHaveLength(12); // nothing was thrown away, and it continued from the cursor
     expect(d.calls.at(-1)).toContain('cursor=');
     expect(d.calls.filter((c) => c.includes('start=retained'))).toHaveLength(1);
@@ -680,7 +735,9 @@ describe('v2 · queue transitions (step 4)', () => {
     expect(await r.next([])).toBeNull();
     down = null;
     tick();
+
     const again = await r.next([]);
+
     expect(d.calls.at(-1)).toContain('start=retained');
     expect(data(again).rows).toHaveLength(12);
   });
@@ -689,6 +746,7 @@ describe('v2 · queue transitions (step 4)', () => {
     const { r } = trReader(async () => {
       throw new Error('GET /api/telemetry/v1/queue-transitions -> HTTP 404');
     });
+
     expect((await r.next([]))!.pushes[0]).toMatchObject({
       kind: 'transitions',
       status: 'unsupported',
@@ -754,18 +812,22 @@ describe('v2 · workflows (step 5)', () => {
         if (p === '/api/workflow/specs') {
           return { specs: [{ name: 'basic-loop' }] };
         }
+
         throw new Error('HTTP 500');
       },
       { now: () => 1, log: (l) => lines.push(l), kinds: ['workflows'] }
     );
     const a = (await r.next([]))!.pushes[0] as { data: { specs: unknown[]; instances: unknown } };
+
     expect(a.data.specs).toHaveLength(1);
     expect(a.data.instances).toBeNull();
+
     const b = new DaemonDataReader(
       'm4',
       async (p) => (p === '/api/workflow/specs' ? { specs: [] } : []),
       { now: () => 1, kinds: ['workflows'] }
     );
+
     expect((await b.next([]))!.pushes[0]).toMatchObject({ data: { specs: [], instances: [] } });
   });
 });
@@ -809,9 +871,11 @@ describe('v2 · health findings (step 5)', () => {
       'm4',
       async (p) => {
         const v = routes[p];
+
         if (v instanceof Error) {
           throw v;
         }
+
         if (v === undefined) {
           throw new Error(`GET ${p} -> HTTP 404`);
         }
@@ -823,6 +887,7 @@ describe('v2 · health findings (step 5)', () => {
 
   it('carries findings with coverage and policy, so empty is not read as healthy', async () => {
     const push = (await healthReader(live).next([]))!.pushes[0]!;
+
     expect(DaemonDataPushSchema.safeParse(push).success).toBe(true);
     expect(push).toMatchObject({
       kind: 'health',
@@ -845,6 +910,7 @@ describe('v2 · health findings (step 5)', () => {
       { ...live, '/api/health': new Error('HTTP 500'), '/api/restore-check': { weird: 1 } },
       (l) => lines.push(l)
     ).next([]))!.pushes[0] as { data: Record<string, unknown> };
+
     expect(push.data.findings).toBeNull();
     expect(push.data.coverage).toEqual([]);
     expect(push.data.restore).toMatchObject({ verdict: null, red: null });
@@ -869,6 +935,7 @@ describe('v2 · health findings (step 5)', () => {
         {},
       ],
     });
+
     expect(f.findings!.map((x) => [x.id, x.detector, x.summary])).toEqual([
       ['f1', 'context.pressure', 'high'],
       ['f2', null, 'T'],
@@ -920,6 +987,7 @@ describe('v2 · settings (step 5)', () => {
 
   it('forwards only exact allowlisted keys, hides path-like values, withholds the rest', () => {
     const s = parseSettings(config);
+
     expect(Object.keys(s.settings).sort()).toEqual([
       'daemon.port',
       'feed.subscriptions.approvals',
@@ -933,7 +1001,9 @@ describe('v2 · settings (step 5)', () => {
     // db.path, workspace.root, files.allowlist, recovery.*, api_key_hint, brand_new_thing, message_inline
     expect(s.withheld).toBe(7);
     expect(s.pathsHidden).toBe(1);
+
     const wire = JSON.stringify(s);
+
     for (const bad of [
       '/Users/x',
       'sk-secret',
@@ -952,15 +1022,18 @@ describe('v2 · settings (step 5)', () => {
       ),
     };
     const s = parseSettings(all);
+
     expect(Object.keys(s.settings).sort()).toEqual([...SETTINGS_ALLOW].sort());
     expect(s.withheld).toBe(0);
     for (const k of SETTINGS_ALLOW) {
       expect(k).not.toMatch(/path|root|file|dir|instruction|inline|url|webhook|session/i);
     }
+
     // and a key with such a name is withheld whatever its value, even on a list that included it
     const risky = parseSettings({
       settings: { 'agents.advisor_session': { value: 'x', source: 'default', defaultValue: 'x' } },
     });
+
     expect(risky.settings).toEqual({});
   });
 
@@ -968,6 +1041,7 @@ describe('v2 · settings (step 5)', () => {
     const mk = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) =>
       new DaemonDataReader('m4', get, { now: () => 1, log, kinds: ['settings'] });
     const ok = (await mk(async () => config).next([]))!.pushes[0]!;
+
     expect(DaemonDataPushSchema.safeParse(ok).success).toBe(true);
     expect(ok).toMatchObject({ kind: 'settings', status: 'ok' });
     expect(
@@ -975,7 +1049,9 @@ describe('v2 · settings (step 5)', () => {
         throw new Error('GET -> HTTP 404');
       }).next([]))!.pushes[0]
     ).toMatchObject({ status: 'unsupported' });
+
     const lines: string[] = [];
+
     expect(
       await mk(
         async () => ({ nope: 1 }),

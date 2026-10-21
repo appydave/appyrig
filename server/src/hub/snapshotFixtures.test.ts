@@ -10,6 +10,7 @@ describe('snapshot fixtures satisfy the shared contract', () => {
       const result = MachineSnapshotSchema.safeParse(
         JSON.parse(readFileSync(resolve(SNAPSHOTS, file), 'utf8'))
       );
+
       expect(result.success, JSON.stringify(result.error?.issues.slice(0, 3))).toBe(true);
     });
   }
@@ -17,17 +18,20 @@ describe('snapshot fixtures satisfy the shared contract', () => {
   it('rejects a tail longer than TAIL_MAX_LINES', () => {
     const snap = load('roamy');
     const seat = snap.seats.find((s) => s.tail)!;
+
     seat.tail!.lines = Array.from({ length: TAIL_MAX_LINES + 1 }, () => 'x');
     expect(MachineSnapshotSchema.safeParse(snap).success).toBe(false);
   });
 
   it('rejects unknown keys (strict)', () => {
     const snap = { ...load('m2'), extra: true };
+
     expect(MachineSnapshotSchema.safeParse(snap).success).toBe(false);
   });
 
   it('accepts a stopped seat with no activity key', () => {
     const seat = load('m2').seats[0];
+
     expect(seat.status).toBe('stopped');
     expect('activity' in seat).toBe(false);
   });

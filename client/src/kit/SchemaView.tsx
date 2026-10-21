@@ -27,10 +27,13 @@ type Loaded =
 /** How long ago, in words a person reads. */
 export const ago = (ms: number): string => {
   const s = Math.max(0, Math.round(ms / 1000));
+
   if (s < 90) {
     return `${s} s ago`;
   }
+
   const m = Math.round(s / 60);
+
   if (m < 90) {
     return `${m} min ago`;
   }
@@ -43,12 +46,15 @@ export function changeSummary(c: SchemaChanges | null, version: string | null): 
   if (!c) {
     return 'No comparison available.';
   }
+
   if (c.status === 'baseline') {
     return 'Baseline: this is the first OpenRig version seen on this machine, so there is nothing to compare yet.';
   }
+
   if (c.status === 'unchanged') {
     return `Same tables and columns as the previous version (${c.comparedTo}).`;
   }
+
   const bits = [
     c.addedTables.length
       ? `${c.addedTables.length} table${c.addedTables.length === 1 ? '' : 's'} added`
@@ -99,12 +105,15 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
     },
     [socket]
   );
+
   useEffect(() => {
     const list = ids ? ids.split(',') : [];
+
     list.forEach((id) =>
       setLoaded((cur) => (cur[id] ? cur : { ...cur, [id]: { state: 'loading' } }))
     );
     list.forEach(load);
+
     const t = setInterval(() => list.forEach(load), 30_000);
 
     return () => clearInterval(t);
@@ -113,11 +122,13 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
     if (chosen.current) {
       return;
     }
+
     const withDb = machines.find((m) => {
       const l = loaded[m.id];
 
       return l?.state === 'ok' && l.out.status === 'ok';
     });
+
     if (withDb && withDb.id !== machineId) {
       setMachineId(withDb.id);
     } else if (!machineId && machines[0]) {
@@ -129,6 +140,7 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
     if (!keys) {
       return;
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTextEntry(e.target)) {
         e.preventDefault();
@@ -142,6 +154,7 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
         }
       }
     };
+
     window.addEventListener('keydown', onKey);
 
     return () => window.removeEventListener('keydown', onKey);

@@ -7,13 +7,16 @@ import path from 'node:path';
  */
 export default function globalTeardown(): void {
   const dir = process.env.E2E_DATA_DIR;
+
   if (!dir) {
     throw new Error('E2E_DATA_DIR unset: the e2e hub had no isolated data dir.');
   }
+
   const snapshots = path.join(dir, 'snapshots');
   const written = existsSync(snapshots)
     ? readdirSync(snapshots).filter((f) => f.endsWith('.json'))
     : [];
+
   try {
     if (written.length === 0) {
       throw new Error(

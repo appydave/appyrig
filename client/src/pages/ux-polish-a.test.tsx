@@ -11,6 +11,7 @@ describe('Needs You: one mock note, badges only on hover or focus', () => {
   it("has a single page MockNote, and each row's badge sits in an idle fake wrapper", () => {
     const m2: FleetMachine = fleetMachine(snapshot('m2'));
     const T = new Date(NOW - 3_600_000).toISOString();
+
     m2.snapshot = {
       ...m2.snapshot,
       queue: [
@@ -27,13 +28,17 @@ describe('Needs You: one mock note, badges only on hover or focus', () => {
         },
       ],
     };
+
     const { socket } = answeringSocket({});
+
     render(<needsYou.component ctx={pageCtx([m2], socket, NOW)} />);
     expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
+
     const row = screen
       .getAllByTestId('ny-card')
       .find((c) => c.querySelector('[data-testid="ny-approve"]'))!;
     const wrap = row.querySelector('.ny-actions')!;
+
     expect(wrap).toHaveClass('ar-fake');
     expect(wrap).toHaveAttribute('data-phase', 'idle');
     // the badge is a direct child of the idle wrapper, so kit.css hides it until hover or focus

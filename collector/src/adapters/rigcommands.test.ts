@@ -14,10 +14,12 @@ import {
 const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-rigcmds-'));
+
   dirs.push(d);
 
   return d;
 };
+
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 /** One line with the hook's real keys (as in ~/.appyrig/rig-commands.jsonl on the M4). */
@@ -44,6 +46,7 @@ const line = (over: Record<string, unknown> = {}) =>
 
 describe('N10b: redaction before a command leaves the collector', () => {
   const secret = 'Zx9kQ2mV7pL4rT8w';
+
   it.each([
     [`rig send --token ${secret} dev@x "hi"`, '--token <REDACTED>'],
     [`rig whoami --password=${secret}`, 'rig whoami --<REDACTED>'],
@@ -56,6 +59,7 @@ describe('N10b: redaction before a command leaves the collector', () => {
     [`echo ghp_${secret}abcdEFGH`, '<REDACTED>'],
   ])('masks %s', (input, shows) => {
     const out = redactCommandText(input);
+
     expect(out).not.toContain(secret);
     expect(out).toContain(shows);
   });
@@ -83,6 +87,7 @@ describe('N10b: redaction before a command leaves the collector', () => {
       })
     );
     const text = JSON.stringify(c);
+
     expect(text).not.toContain(tok);
     expect(text).not.toContain('hunter2hunter2');
     expect(text).not.toContain('38535fc7');
@@ -123,6 +128,7 @@ describe('N10b: reading the command log', () => {
       '',
     ].join('\n');
     const rows = parseRigCommands(body);
+
     expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual({
       ts: '2026-10-20T01:00:01.000Z',
@@ -152,6 +158,7 @@ describe('N10b: reading the command log', () => {
       })
     ).join('\n');
     const rows = parseRigCommands(many);
+
     expect(rows).toHaveLength(RIG_COMMANDS_MAX);
     expect(rows[0]!.ts).toBe(new Date(Date.UTC(2026, 9, 20, 0, 0, 30)).toISOString());
     expect(rows[0]!.stdoutHead!.length).toBeLessThanOrEqual(600);
@@ -169,12 +176,15 @@ describe('N10b: reading the command log', () => {
   it('reads only the tail of a big file, starting at a whole line', async () => {
     const d = tmp();
     const f = join(d, 'rig-commands.jsonl');
+
     writeFileSync(
       f,
       `${line({ ts: '2026-10-20T00:00:00.000Z' })}\n${line({ ts: '2026-10-20T00:00:01.000Z' })}\n`
     );
+
     const body = await readTail(f, 500);
     const rows = parseRigCommands(body!);
+
     expect(rows.map((r) => r.ts)).toEqual(['2026-10-20T00:00:01.000Z']);
     expect(await readTail(join(d, 'none.jsonl'))).toBeNull();
   });
@@ -188,17 +198,22 @@ describe('N10b: reading the command log', () => {
     const f = join(d, 'rig-commands.jsonl');
     const reader = new RigCommandsReader('m4', f);
     const none = await reader.next();
+
     expect(none!.push).toMatchObject({ fileFound: false, entries: [] });
     none!.markSent();
     expect(await reader.next()).toBeNull();
     writeFileSync(f, `${line()}\n`);
+
     const one = await reader.next();
+
     expect(one!.push.fileFound).toBe(true);
     expect(one!.push.entries).toHaveLength(1);
     one!.markSent();
     expect(await reader.next()).toBeNull();
     appendFileSync(f, `${line({ ts: '2026-10-20T03:00:00.000Z', tool_use_id: 'toolu_new' })}\n`);
+
     const two = await reader.next();
+
     expect(two!.push.entries.map((e) => e.ts)).toEqual([
       '2026-10-20T02:36:14.907Z',
       '2026-10-20T03:00:00.000Z',

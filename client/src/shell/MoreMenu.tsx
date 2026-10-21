@@ -7,15 +7,18 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 export default function MoreMenu({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
     if (!open) {
       return;
     }
+
     const away = (e: PointerEvent) => {
       if (!box.current?.contains(e.target as Node)) {
         setOpen(false);
       }
     };
+
     const esc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -23,6 +26,7 @@ export default function MoreMenu({ children }: { children: ReactNode }) {
         setOpen(false);
       }
     };
+
     window.addEventListener('pointerdown', away);
     window.addEventListener('keydown', esc, true);
 

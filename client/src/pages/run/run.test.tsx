@@ -12,6 +12,7 @@ import { parseMissionJobs } from '../../domain/run/jobs.js';
 const files = vi.hoisted(() => ({
   result: (path: string): MissionFileResult => ({ status: 'missing', path }),
 }));
+
 vi.mock('./useMissionFile.js', async (orig) => ({
   ...(await orig<typeof import('./useMissionFile.js')>()),
   useMissionFile: (_g: unknown, _m: string, _r: string, path: string) => files.result(path),
@@ -58,6 +59,7 @@ function item(
 
 function machineWith(queue: QueueItem[]): FleetMachine {
   const m = fleetMachine(snapshot('m2'));
+
   m.snapshot = { ...m.snapshot, queue };
 
   return m;
@@ -109,10 +111,12 @@ beforeEach(() => {
 
 describe('the job list comes from the mission file, whatever its size', () => {
   const Page = run.component;
+
   it.each([3, 8, 11])(
     'shows one tile per row of a %i-row table, and "Waiting for GO" with that count',
     async (n) => {
       const { ctx } = ctxFor(machineWith([]), missionAnswers(table(n)));
+
       render(<Page ctx={ctx} />);
       await waitFor(() => expect(screen.getAllByTestId('run-job')).toHaveLength(n));
       expect(screen.getByTestId('run-topline')).toHaveTextContent(
@@ -129,11 +133,14 @@ describe('the job list comes from the mission file, whatever its size', () => {
   it('says so, not an error, when the file has no jobs table; and says unread is not "no jobs"', async () => {
     const a = ctxFor(machineWith([]), missionAnswers('# Mission\n\nno table here'));
     const { unmount } = render(<Page ctx={a.ctx} />);
+
     await waitFor(() =>
       expect(screen.getByTestId('run-no-jobs')).toHaveTextContent('has no jobs table')
     );
     unmount();
+
     const b = ctxFor(machineWith([]), {});
+
     render(<Page ctx={b.ctx} />);
     await waitFor(() =>
       expect(screen.getByTestId('run-mission-unread')).toHaveTextContent('not the same as no jobs')
@@ -158,6 +165,7 @@ describe('a run in progress', () => {
   it('model: job 2 of 3 is current, with one rework; an ACCEPT to the builder is not sent back', () => {
     const jobs = parseMissionJobs(table(3));
     const r = buildRun(machineWith(queue), RIG, jobs, NOW, 'm1');
+
     expect(r.phase).toBe('running');
     expect(r.jobs.map((j) => j.status)).toEqual(['done', 'current', 'waiting']);
     expect(r.jobs[0]).toMatchObject({ rounds: 1, rework: 0 });
@@ -175,6 +183,7 @@ describe('a run in progress', () => {
       tags: q.tags.filter((t) => !t.startsWith('verdict:')),
     }));
     const r = buildRun(machineWith(plain), RIG, parseMissionJobs(table(3)), NOW, 'm1');
+
     expect(r.verdictTagged).toBe(false);
     expect(r.reworkTotal).toBe(0);
     expect(r.sentBack).toEqual([]);
@@ -183,11 +192,14 @@ describe('a run in progress', () => {
 
   it('colours verdict chips per handoff and draws the amber arc only for changes', async () => {
     const { ctx } = ctxFor(machineWith(queue), missionAnswers(table(3)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getAllByTestId('run-job')).toHaveLength(3));
     await waitFor(() => expect(screen.getAllByTestId('run-ledger-row').length).toBeGreaterThan(0));
+
     const chips = screen.getAllByTestId('run-verdict');
     const by = (v: string) => chips.filter((c) => c.dataset.verdict === v);
+
     expect(by('accept')[0]!.className).toContain('run-chip-accept');
     expect(by('changes')[0]!.className).toContain('run-chip-changes');
     expect(by('changes')).toHaveLength(1);
@@ -197,15 +209,20 @@ describe('a run in progress', () => {
   it('"How the run went" appears once a job is accepted, with a row per job, and not before', async () => {
     const early = ctxFor(machineWith([]), missionAnswers(table(3)));
     const first = render(<Page ctx={early.ctx} />);
+
     await waitFor(() => expect(screen.getAllByTestId('run-job')).toHaveLength(3));
     expect(screen.queryByTestId('run-after')).toBeNull();
     first.unmount();
+
     const { ctx } = ctxFor(machineWith(queue), missionAnswers(table(3)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('run-after')).toBeInTheDocument());
     expect(screen.getByTestId('run-after-verdict')).toBeInTheDocument();
     expect(screen.getByTestId('run-after-stats')).toHaveTextContent('handoffs');
+
     const rows = screen.getAllByTestId('run-after-job');
+
     expect(rows).toHaveLength(3);
     expect(rows[1]).toHaveTextContent('2 rounds');
     expect(rows[1]).toHaveTextContent('1 sent back');
@@ -214,17 +231,24 @@ describe('a run in progress', () => {
 
   it('a station card opens the Agent panel on Documents, not the full-screen overlay', async () => {
     const { ctx } = ctxFor(machineWith(queue), missionAnswers(table(3)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() =>
       expect(screen.getAllByTestId('run-station-docs').length).toBeGreaterThan(0)
     );
+
     const first = screen.getAllByTestId('run-station')[0]!;
+
     fireEvent.click(within(first).getByTestId('run-station-docs'));
     expect(screen.queryByTestId('docs-drawer')).toBeNull();
     expect(ctx.openAgentPanel).toHaveBeenCalledOnce();
+
     const arg = vi.mocked(ctx.openAgentPanel).mock.calls[0]![0];
+
     expect(arg).toMatchObject({ machineId: 'm2', tab: 'documents' });
+
     const seatIds = ctx.machines[0]!.snapshot.seats.map((x) => `m2/${x.id}`);
+
     expect(seatIds).toContain(arg.seatKey);
     expect(ctx.openAgentPage).not.toHaveBeenCalled();
   });
@@ -241,18 +265,24 @@ describe('the job panel and its documents', () => {
 
   it('document tabs beside before / after: Spec at load, one document at a time', async () => {
     expect(DOC_DEFAULT_TAB).toBe('spec');
+
     const { ctx } = ctxFor(machineWith([]), missionAnswers(table(2)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('run-detail')).toBeInTheDocument());
+
     const on = (k: string) => screen.getByTestId(`run-tog-${k}`).getAttribute('aria-selected');
+
     expect([on('spec'), on('rig'), on('culture'), on('mission')]).toEqual([
       'true',
       'false',
       'false',
       'false',
     ]);
+
     // the tabs sit in the document column, beside before / after
     const col = screen.getByTestId('run-docs');
+
     expect(within(col).getByRole('tablist')).toBeInTheDocument();
     expect(within(col).getByTestId('run-doc-spec')).toBeInTheDocument();
     expect(screen.queryByTestId('run-doc-rig')).toBeNull();
@@ -273,6 +303,7 @@ describe('the job panel and its documents', () => {
 
   it('clicking a tile selects that job; a missing spec or shot says "not written yet"', async () => {
     const { ctx } = ctxFor(machineWith([]), missionAnswers(table(3)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getAllByTestId('run-job')).toHaveLength(3));
     fireEvent.click(screen.getAllByTestId('run-job')[2]!);
@@ -289,6 +320,7 @@ describe('the job panel and its documents', () => {
       path: '/p.md',
       machine: 'm4',
     });
+
     expect(whyNot(r('pending'), 'spec')).toBe('loading from m4');
     expect(whyNot(r('loading'), 'shot')).toBe('loading from m4');
     expect(whyNot(r('no-data'), 'spec')).toBe(
@@ -313,8 +345,10 @@ describe('the job panel and its documents', () => {
 
   it('the panel shows the words for the status the hub gave: no-data for a spec, missing for a spec', async () => {
     files.result = (path) => ({ status: 'no-data', path, machine: 'm2' });
+
     const { ctx } = ctxFor(machineWith([]), missionAnswers(table(1)));
     const { unmount } = render(<Page ctx={ctx} />);
+
     await waitFor(() => expect(screen.getByTestId('run-doc-spec')).toBeInTheDocument());
     expect(
       within(screen.getByTestId('run-doc-spec')).getByTestId('run-doc-missing')
@@ -323,7 +357,9 @@ describe('the job panel and its documents', () => {
     files.result = (path) => ({ status: 'missing', path, machine: 'm2' });
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('run-doc-spec')).toBeInTheDocument());
+
     const spec = within(screen.getByTestId('run-doc-spec')).getByTestId('run-doc-missing');
+
     expect(spec).toHaveTextContent('spec file not found on m2');
     expect(spec).not.toHaveTextContent('not written yet');
   });
@@ -331,6 +367,7 @@ describe('the job panel and its documents', () => {
   it('more than one spec path gives a picker', async () => {
     const md = table(1, () => '`/specs/a.md` + `b-spec.html`');
     const { ctx } = ctxFor(machineWith([]), missionAnswers(md));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getAllByTestId('run-spec-tab')).toHaveLength(2));
     expect(screen.getAllByTestId('run-spec-tab').map((t) => t.textContent)).toEqual([
@@ -341,17 +378,22 @@ describe('the job panel and its documents', () => {
 
   it('renders a markdown spec as markdown and an html spec in a script-less sandbox', async () => {
     const md = table(1, () => '`/specs/a.md` + `b-spec.html`');
+
     files.result = (path) =>
       path.endsWith('.html')
         ? { status: 'ok', path, mime: 'text/html', text: '<h1>hi</h1><script>1</script>' }
         : { status: 'ok', path, mime: 'text/markdown', text: '# Title\n\n**bold**' };
+
     const { ctx } = ctxFor(machineWith([]), missionAnswers(md));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('run-doc-md')).toBeInTheDocument());
     expect(screen.getByTestId('run-doc-md').querySelector('strong')).not.toBeNull();
     expect(screen.getByTestId('run-doc-md').textContent).not.toContain('**');
     fireEvent.click(screen.getAllByTestId('run-spec-tab')[1]!);
+
     const frame = screen.getByTestId('run-doc-html');
+
     expect(frame.getAttribute('sandbox')).toBe('');
   });
 
@@ -359,6 +401,7 @@ describe('the job panel and its documents', () => {
     const d = parseDoneCheck(
       '## proof\nrenders ok\n\n- test_audit: passes\n| duration | 31 min |\n'
     );
+
     expect(d).toEqual({
       proof: 'renders ok',
       test_audit: 'passes',
@@ -370,8 +413,10 @@ describe('the job panel and its documents', () => {
 
 describe('the sample preview is labelled and the page sends nothing', () => {
   const Page = run.component;
+
   it('Preview carries a MockMark, names itself sample, and makes no socket call but reads', async () => {
     const { ctx, sent, emitted } = ctxFor(machineWith([]), missionAnswers(table(5)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('run-preview')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('run-preview'));
@@ -388,6 +433,7 @@ describe('the sample preview is labelled and the page sends nothing', () => {
 
   it("keeps two machines apart: it reads the chosen machine's rig only", async () => {
     const { ctx, sent } = ctxFor(machineWith([]), missionAnswers(table(2)));
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(sent).toContain('rig.files'));
     expect(ctx.activeRig?.machineId).toBe('m2');

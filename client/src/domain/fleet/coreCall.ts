@@ -33,6 +33,7 @@ export function callVerb<T>(
 
           return;
         }
+
         resolve(answer as CallAnswer<T>);
       });
   });

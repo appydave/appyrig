@@ -39,6 +39,7 @@ export function usePolledVerb<T>(
 ): Polled<T> {
   const [state, setState] = useState<Polled<T>>({ phase: 'loading' });
   const last = useRef<T | null>(null);
+
   useEffect(() => {
     let live = true;
     let timer: number | undefined;
@@ -47,15 +48,18 @@ export function usePolledVerb<T>(
         if (!live) {
           return;
         }
+
         if (a.ok) {
           last.current = a.value;
           setState({ phase: 'ok', value: a.value });
         } else {
           setState({ phase: 'refused', message: a.error.message, last: last.current });
         }
+
         timer = window.setTimeout(ask, everyMs);
       });
     };
+
     ask();
 
     return () => {
@@ -102,6 +106,7 @@ function SpecDetail({
     ctx.chooseRig(liveKey);
     ctx.goTo(page);
   };
+
   const seatCount = spec.pods?.reduce((n, p) => n + p.seats.length, 0) ?? 0;
 
   return (

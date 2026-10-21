@@ -89,19 +89,25 @@ export default function HandoffPanel({
   // Only while a handoff is shown, never while typing (isShortcutBlocked), and the list row and
   // the message move together because both follow selection.itemId.
   const items = selection?.items;
+
   useEffect(() => {
     if (!keys || !items?.length || !itemId) {
       return;
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || isShortcutBlocked(e)) {
         return;
       }
+
       const k = e.key.toLowerCase();
+
       if (k === 'j' || k === 'k') {
         e.preventDefault();
+
         const i = items.findIndex((q) => q.id === itemId);
         const next = items[Math.max(0, Math.min(items.length - 1, i + (k === 'j' ? -1 : 1)))];
+
         if (next && next.id !== itemId) {
           onPick(next.id);
         }
@@ -110,6 +116,7 @@ export default function HandoffPanel({
         onLine(e.key === ']' ? 1 : -1);
       }
     };
+
     window.addEventListener('keydown', onKey);
 
     return () => window.removeEventListener('keydown', onKey);
@@ -124,12 +131,15 @@ export default function HandoffPanel({
     if (!itemId) {
       return;
     }
+
     const cached = cache.get(itemId);
+
     if (cached && cached.bodyStatus === 'present') {
       setGot({ state: 'ok', value: cached });
 
       return;
     }
+
     if (!socket) {
       setGot({
         state: 'refused',
@@ -138,17 +148,21 @@ export default function HandoffPanel({
 
       return;
     }
+
     let current = true;
+
     setGot({ state: 'loading' });
     void callVerb<HandoffGetOutput>(socket, 'handoff.get', { machine: machineId, id: itemId }).then(
       (a) => {
         if (!current) {
           return;
         }
+
         if (a.ok) {
           if (a.value.bodyStatus === 'present') {
             cache.set(itemId, a.value);
           }
+
           setGot({ state: 'ok', value: a.value });
         } else {
           setGot({ state: 'refused', error: a.error });

@@ -81,12 +81,15 @@ function LiveExample({
   now: number;
 }) {
   const rigs = listRigs(machines);
+
   if (lesson.live === 'seats') {
     const rig = rigs.find((r) => r.handoffs > 0) ?? rigs[0];
     const fm = machines.find((m) => m.machine.id === rig?.machineId);
+
     if (!rig || !fm) {
       return <p className="quiet">No rigs reported yet.</p>;
     }
+
     const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
 
     return (
@@ -123,6 +126,7 @@ function LiveExample({
       </>
     );
   }
+
   if (lesson.live === 'rigs') {
     return (
       <table className="learn-table">
@@ -156,6 +160,7 @@ function LiveExample({
       </table>
     );
   }
+
   if (lesson.live === 'queue') {
     const rows = rigs
       .filter((r) => r.handoffs > 0)
@@ -165,6 +170,7 @@ function LiveExample({
 
         return { r, open: sum('open'), stale: sum('stale') };
       });
+
     if (!rows.length) {
       return <p className="quiet">No handoffs on any rig yet.</p>;
     }
@@ -196,6 +202,7 @@ function LiveExample({
       </table>
     );
   }
+
   if (lesson.live === 'health') {
     const blocked = blockedSeats(machines);
     const stale = rigs.reduce((n, r) => {
@@ -222,8 +229,10 @@ function LiveExample({
       </ul>
     );
   }
+
   if (lesson.live === 'accounts') {
     const { accounts } = buildAccounts(machines);
+
     if (!accounts.length) {
       return <p className="quiet">No machine reports its account yet.</p>;
     }
@@ -259,6 +268,7 @@ export default function Learn({ machines, now, onGoTo }: Props) {
       // per-viewer convenience only
     }
   };
+
   const lesson = LESSONS.find((l) => l.id === id);
   const terms = Object.entries(GLOSSARY).sort((a, b) => a[1].term.localeCompare(b[1].term));
 

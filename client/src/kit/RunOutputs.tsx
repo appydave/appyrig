@@ -25,6 +25,7 @@ const where = (scope: string) => (scope === 'mission' ? 'mission folder' : 'next
  */
 export default function RunOutputs({ machineId, rig, files, socket }: Props) {
   const [out, setOut] = useState<RigOutputsOutput | null | 'loading'>('loading');
+
   useEffect(() => {
     setOut('loading');
     if (!socket) {
@@ -32,7 +33,9 @@ export default function RunOutputs({ machineId, rig, files, socket }: Props) {
 
       return;
     }
+
     let live = true;
+
     void callVerb<RigOutputsOutput>(socket, 'rig.outputs', { machine: machineId, rig }).then(
       (a) => live && setOut(a.ok ? a.value : null)
     );

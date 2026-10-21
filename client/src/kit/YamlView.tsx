@@ -19,6 +19,7 @@ export default function YamlView({ source, plain = false }: Props) {
   const toggle = (n: number) =>
     setFolded((cur) => {
       const next = new Set(cur);
+
       if (next.has(n)) {
         next.delete(n);
       } else {
@@ -32,6 +33,7 @@ export default function YamlView({ source, plain = false }: Props) {
   // A line is hidden when an enclosing folded line covers it.
   const hiddenUntil = (() => {
     const hide = new Set<number>();
+
     for (const l of lines) {
       if (folded.has(l.n) && l.foldTo !== null && !hide.has(l.n)) {
         for (let n = l.n + 1; n <= l.foldTo; n++) {
@@ -66,6 +68,7 @@ export default function YamlView({ source, plain = false }: Props) {
           if (hiddenUntil.has(l.n)) {
             return null;
           }
+
           const isFolded = folded.has(l.n);
 
           return (

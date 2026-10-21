@@ -20,6 +20,7 @@ const at = (pct: number) => START + (pct / 100) * FIVE_HOUR_MS;
 describe('windowStory (S5)', () => {
   it('plenty of room under 80% at reset, with % left and pace in words', () => {
     const s = windowStory(w({}), at(50));
+
     expect(s.kind).toBe('plenty');
     expect(s.text).toBe('plenty of room · ~40% by reset');
     expect(s.glyph).toBe('●');
@@ -32,17 +33,21 @@ describe('windowStory (S5)', () => {
     expect(windowStory(w({ usedPct: 45, paceDeltaPct: -5, projectedPct: 90 }), at(50)).kind).toBe(
       'careful'
     );
+
     // 60% used at 30% of the window: 100% is reached at 50% of the window = 11:00Z.
     const s = windowStory(
       w({ usedPct: 60, elapsedPct: 30, paceDeltaPct: 30, projectedPct: 200 }),
       at(31)
     );
+
     expect(s.kind).toBe('runs-out');
     expect(s.glyph).toBe('■');
+
     const expected = new Date(START + 0.5 * FIVE_HOUR_MS).toLocaleString(undefined, {
       hour: '2-digit',
       minute: '2-digit',
     });
+
     expect(s.text).toBe(`will run out ~${expected}`);
     expect(s.projectedPct).toBe(100);
   });
@@ -53,6 +58,7 @@ describe('windowStory (S5)', () => {
       w({ usedPct: 60, elapsedPct: 30, paceDeltaPct: 30, projectedPct: 200 }),
       at(70)
     );
+
     expect(s.kind).toBe('runs-out');
     expect(s.text).toMatch(/^likely ran out ~.* \(reading is older than that\)$/);
   });
@@ -62,7 +68,9 @@ describe('windowStory (S5)', () => {
     expect(windowStory(w({ projectedPct: null, elapsedPct: 2 }), at(2)).text).toBe(
       'too early to tell · 20% used'
     );
+
     const ended = windowStory(w({ status: 'window-ended', elapsedPct: null }), at(120));
+
     expect(ended.kind).toBe('ended');
     expect(ended.nowPct).toBeNull();
     expect(windowStory(w({ status: 'no-reading', usedPct: null }), at(10)).text).toBe('no reading');

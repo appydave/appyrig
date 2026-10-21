@@ -16,10 +16,12 @@ import {
 const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-specs-'));
+
   dirs.push(d);
 
   return d;
 };
+
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 const write = (file: string, text: string) => {
@@ -51,11 +53,14 @@ describe('parseSpec', () => {
       '',
     ].join('\n');
     const ok = parseSpec(yaml)!;
+
     expect(ok.spec?.culture_file).toBe('CULTURE.md');
     expect(ok.spec?.pods[0]).toMatchObject({ id: 'dev', label: 'Development' });
     expect(ok.spec?.pods[0]?.edges).toEqual([{ kind: 'delegates_to', from: 'build', to: 'qa' }]);
+
     // an unknown top-level key: OpenRig refuses the spec, so nothing in it is trusted; still matched by name
     const bad = parseSpec(`${yaml}mission_board: yes\n`)!;
+
     expect(bad).toMatchObject({ name: 'demo', spec: null });
   });
   it('has no summary when none is written, and is null for non-specs', () => {
@@ -66,6 +71,7 @@ describe('parseSpec', () => {
   });
   it('redacts secrets and cuts a very long summary', () => {
     const long = parseSpec(`name: x\nsummary: ${'word '.repeat(400)}\n`);
+
     expect(long!.summary!.length).toBeLessThanOrEqual(600);
   });
 });
@@ -73,11 +79,14 @@ describe('parseSpec', () => {
 describe('scanSpecs', () => {
   it('run card R3: finds a variant rig-<v>.yaml by its name:, beside the base rig.yaml', async () => {
     const a = tmp();
+
     write(join(a, 'ylo-thumbs', 'rig.yaml'), 'name: ylo-thumbs\n');
     write(join(a, 'ylo-thumbs', 'rig-d10.yaml'), 'name: ylo-d10\nsummary: D10 launch\n');
     write(join(a, 'ylo-thumbs', 'rig-notes.txt'), 'name: nope\n');
     write(join(a, 'ylo-thumbs', 'prig.yaml'), 'name: nope2\n');
+
     const found = await scanSpecs([a]);
+
     expect([...found.keys()].sort()).toEqual(['ylo-d10', 'ylo-thumbs']);
     expect(found.get('ylo-d10')).toMatchObject({
       path: join(a, 'ylo-thumbs', 'rig-d10.yaml'),
@@ -88,11 +97,14 @@ describe('scanSpecs', () => {
   it('matches on name: not on the folder name, searches subfolders, first folder wins a clash', async () => {
     const a = tmp();
     const b = tmp();
+
     write(join(a, 'deep', 'team', 'rig.yaml'), 'name: alpha\nsummary: from a\n');
     write(join(b, 'alpha', 'rig.yaml'), 'name: alpha\nsummary: from b\n');
     write(join(b, 'folder-called-x', 'rig.yaml'), 'name: beta\n');
     write(join(b, 'node_modules', 'pkg', 'rig.yaml'), 'name: skipped\n');
+
     const found = await scanSpecs([a, b, join(b, 'does-not-exist')]);
+
     expect([...found.keys()].sort()).toEqual(['alpha', 'beta']);
     expect(found.get('alpha')).toEqual({
       path: join(a, 'deep', 'team', 'rig.yaml'),
@@ -105,9 +117,12 @@ describe('scanSpecs', () => {
 
   it('reuses a scan inside the ttl, and rescans after it', async () => {
     const d = tmp();
+
     write(join(d, 'rig.yaml'), 'name: one\n');
+
     let t = 0;
     const index = createSpecIndex([d], 1000, () => t);
+
     expect((await index()).has('one')).toBe(true);
     write(join(d, 'two', 'rig.yaml'), 'name: two\n');
     t = 500;
@@ -120,11 +135,14 @@ describe('scanSpecs', () => {
 describe('specFoldersOf', () => {
   it('uses the config file, else the seeded defaults (missing, broken or empty file)', () => {
     const env = { APPYRIG_CONFIG: '/x/config.json' };
+
     expect(specFoldersOf(env, () => JSON.stringify({ specFolders: ['/a', '/b'] }))).toEqual([
       '/a',
       '/b',
     ]);
+
     const defaults = [...DEFAULT_SPEC_FOLDERS];
+
     expect(
       specFoldersOf(env, () => {
         throw new Error('ENOENT');
@@ -160,6 +178,7 @@ describe('enrichRigs', () => {
       ],
       undefined
     );
+
     expect(out.map((r) => r.recentAt)).toEqual([
       '2026-10-11T11:00:00.000Z',
       '2026-10-11T09:00:00.000Z',
@@ -169,6 +188,7 @@ describe('enrichRigs', () => {
 
   it('no spec scan → the spec fields are left out, never "not-found"', () => {
     const [r] = enrichRigs([rig('a')], [], [], undefined);
+
     expect(r).not.toHaveProperty('specStatus');
     expect(r).not.toHaveProperty('summary');
   });
@@ -178,6 +198,7 @@ describe('enrichRigs', () => {
       ['a', { path: '/p/rig.yaml', root: '/p', summary: 'about a', spec: null }],
     ]);
     const [a, b] = enrichRigs([rig('a'), rig('b')], [], [], specs);
+
     expect(a).toMatchObject({ specStatus: 'found', specPath: '/p/rig.yaml', summary: 'about a' });
     expect(b).toMatchObject({ specStatus: 'not-found', specPath: null, summary: null });
   });
@@ -209,6 +230,7 @@ describe('enrichRigs', () => {
       ['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: parseSpec(yaml)!.spec }],
     ]);
     const [a] = enrichRigs([rig('a')], [], [], specs);
+
     expect(RigSummarySchema.parse(a)).toEqual(a);
     expect(a).toMatchObject({ specValid: true });
     expect(a!.pods).toEqual([
@@ -250,6 +272,7 @@ describe('enrichRigs', () => {
       ['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: parseSpec(yaml)!.spec }],
     ]);
     const [a] = enrichRigs([rig('a')], [], [], specs);
+
     expect(RigSummarySchema.parse(a)).toEqual(a);
     expect(a!.rigSpec).toEqual({
       version: '0.2',
@@ -279,6 +302,7 @@ describe('enrichRigs', () => {
   it('a rig.yaml OpenRig would refuse: specValid false, and no pods or spec edges read from it', () => {
     const specs = new Map([['a', { path: '/p/rig.yaml', root: '/p', summary: null, spec: null }]]);
     const [a] = enrichRigs([rig('a')], [], [], specs);
+
     expect(a).toMatchObject({ specStatus: 'found', specValid: false });
     expect(a).not.toHaveProperty('pods');
     expect(a).not.toHaveProperty('specEdges');

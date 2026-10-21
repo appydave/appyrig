@@ -60,6 +60,7 @@ function spySocket(answers: Record<string, unknown> = {}) {
       if (!handlers.has(ev)) {
         handlers.set(ev, new Set());
       }
+
       handlers.get(ev)!.add(h);
 
       return s;
@@ -73,10 +74,12 @@ function spySocket(answers: Record<string, unknown> = {}) {
     timeout: vi.fn(() => ({
       emit: (_ev: string, req: { verb: string }, cb: (err: unknown, a: unknown) => void) => {
         sent.push(req.verb);
+
         const a = answers[req.verb] ?? {
           ok: false,
           error: { failureMode: 'unknown_verb', message: `unknown verb ${req.verb}` },
         };
+
         queueMicrotask(() => cb(null, a));
       },
     })),
@@ -159,6 +162,7 @@ beforeEach(() => {
   } catch {
     /* ignore */
   }
+
   history.replaceState(null, '', '/');
 });
 afterEach(() => {
@@ -212,6 +216,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         }),
       })
     );
+
     expect(off.kind).toBe('not-all-clear');
     expect(off.headline).toBe('No findings — but that is not all-clear');
     expect(off.reasons).toEqual([
@@ -224,7 +229,9 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
       off.reasons[0],
       'the health policy could not be read: cannot tell whether detectors run',
     ]);
+
     const reasons = (d: Partial<HealthData>) => verdictFor(row({ data: data(d) })).reasons;
+
     expect(
       reasons({
         policy: { diagnosisEnabled: true, disabledDetectors: [], detectors: [], thresholds: {} },
@@ -240,6 +247,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         },
       })
     ).toEqual(['every detector the policy lists is disabled']);
+
     const cov = (evaluated: number | null, total: number | null, partial: boolean | null) => ({
       coverage: [
         {
@@ -253,6 +261,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         },
       ],
     });
+
     expect(reasons(cov(null, 12, false))).toEqual([
       'coverage of scheduler did not say how much was evaluated',
     ]);
@@ -263,8 +272,10 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
     expect(reasons({ coverage: [] })).toEqual([
       'no coverage was reported: cannot tell what was evaluated',
     ]);
+
     // all clear says only what ran, never more
     const clean = verdictFor(row());
+
     expect(clean.kind).toBe('none-found');
     expect(`${clean.headline} ${clean.reasons.join(' ')}`.toLowerCase()).not.toMatch(
       /healthy|all-clear|all clear/
@@ -275,8 +286,11 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
   it('M3: a machine asleep reads as its last reading, in the verdict', () => {
     const fm = fleetMachine(snapshot('roamy'), { liveness: 'asleep' });
     const stale = staleWords(fm, NOW, true);
+
     expect(stale).toBe('last reading, machine asleep');
+
     const v = verdictFor(row(), { stale });
+
     expect(v.headline).toBe(
       'No findings from the detectors that ran · last reading, machine asleep'
     );
@@ -301,10 +315,13 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
   it('M4/M5: context pressure: boundaries, not measured, thresholds from policy, settings or assumed', () => {
     // 80 is critical, 79.9 and 60 are warning, 59.9 is neither
     const r = contextRollup(withPct([80, 79.9, 60, 59.9]));
+
     expect(r).toMatchObject({ critical: 1, warning: 2, read: 4, level: 'critical' });
     expect(r.unread).toBe(r.live - 4);
+
     // no seat reports its context: not measured, never ok
     const none = contextRollup(withPct([]));
+
     expect(none).toMatchObject({ read: 0, level: 'unmeasured', critical: 0, warning: 0 });
     // thresholds: the policy first, then settings, then assumed defaults
     expect(thresholdsFor(data(), undefined)).toEqual({
@@ -325,6 +342,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         undefined
       )
     ).toEqual({ critical: 90, warning: 70, source: 'policy' });
+
     const policy = (thresholds: Record<string, number>) =>
       data({
         policy: { diagnosisEnabled: true, disabledDetectors: [], detectors: ['x'], thresholds },
@@ -338,9 +356,11 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
       { contextCriticalPercent: 70, contextWarningPercent: 90 },
       { contextCriticalPercent: 120, contextWarningPercent: 70 },
     ];
+
     for (const th of ignored) {
       expect(thresholdsFor(policy(th), undefined).source).toBe('assumed');
     }
+
     // a count beside valid context keys does not win
     expect(
       thresholdsFor(
@@ -362,6 +382,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         ])
       ).source
     ).toBe('settings');
+
     const t = thresholdsFor(
       data(),
       settingsRow('roamy', [
@@ -369,6 +390,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         ['health.context_pressure.warning_percent', 65, 'file', 60],
       ])
     );
+
     expect(t).toEqual({ critical: 85, warning: 65, source: 'settings' });
     expect(contextRollup(withPct([84, 66]), t)).toMatchObject({ critical: 0, warning: 2 });
     // OpenRig's own count beside AppyRig's
@@ -382,7 +404,9 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
 
   it('daemon reachability comes from the snapshot', () => {
     const fm = fleetMachine(snapshot('roamy'));
+
     expect(daemonReach(fm).ok).toBe(fm.snapshot.sources.daemon.ok);
+
     const down = {
       ...fm,
       snapshot: {
@@ -393,11 +417,13 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
         },
       },
     };
+
     expect(daemonReach(down)).toEqual({ ok: false, words: 'not answering: ECONNREFUSED' });
   });
 
   it('page: findings, not-all-clear and left-out cards from real-shaped data; as-of; mock Enable diagnosis sends nothing; asks again every minute', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+
     const machines = [
       fleetMachine(snapshot('roamy')),
       fleetMachine(snapshot('m2')),
@@ -448,11 +474,14 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
       },
     });
     const Page = healthPage.component;
+
     render(<Page ctx={ctxFor(machines, spy.socket)} />);
     // L7: before the answer, no sample findings flash
     expect(screen.queryByTestId('hl2-sample')).toBeNull();
     await waitFor(() => expect(screen.getByTestId('hl2-findings')).toBeInTheDocument());
+
     const [r, m, four] = screen.getAllByTestId('hl2-machine');
+
     expect(within(r!).getByTestId('hl2-verdict')).toHaveTextContent('1 finding');
     expect(within(r!).getByTestId('hl2-asof')).toHaveTextContent('as of');
     expect(within(r!).getByTestId('hl2-restore')).toHaveTextContent('ready');
@@ -467,6 +496,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
     for (const card of [r!, m!, four!]) {
       expect(card.textContent?.toLowerCase()).not.toContain('healthy');
     }
+
     fireEvent.click(within(r!).getByRole('button', { name: 'Enable diagnosis' }));
     fireEvent.click(within(r!).getByTestId('fake-confirm'));
     act(() => vi.advanceTimersByTime(1500));
@@ -485,6 +515,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
   it('page: a clean, fully covered machine reads none-found, with what ran', async () => {
     const spy = spySocket({ 'health.findings': { ok: true, value: { machines: [row()] } } });
     const Page = healthPage.component;
+
     render(<Page ctx={ctxFor([fleetMachine(snapshot('roamy'))], spy.socket)} />);
     await waitFor(() =>
       expect(screen.getByTestId('hl2-machine')).toHaveAttribute('data-verdict', 'none-found')
@@ -498,6 +529,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
   it('page: a hub without the verb gives can’t-tell on every machine; an asleep machine says so', async () => {
     const spy = spySocket();
     const Page = healthPage.component;
+
     render(
       <Page ctx={ctxFor([fleetMachine(snapshot('roamy'), { liveness: 'asleep' })], spy.socket)} />
     );
@@ -546,8 +578,11 @@ describe('v2 Settings', () => {
       ],
       false
     );
+
     expect(g.map((x) => x.name)).toEqual(['daemon', 'queue', 'ui']);
+
     const q = g.find((x) => x.name === 'queue')!.lines[0]!;
+
     expect(q).toMatchObject({ changed: true, differs: true });
     expect(g.find((x) => x.name === 'daemon')!.lines[0]).toMatchObject({
       changed: false,
@@ -573,6 +608,7 @@ describe('v2 Settings', () => {
       false
     );
     const lines = g.flatMap((x) => x.lines);
+
     expect(lines.find((l) => l.key === 'queue.wake_retry_cap')).toMatchObject({
       changed: false,
       differs: false,
@@ -597,9 +633,11 @@ describe('v2 Settings', () => {
     ]) {
       expect(show(v)).toBe('(path hidden)');
     }
+
     for (const v of ['127.0.0.1', 'Australia/Brisbane', 'light', 'UTC', '12:30', 'UTC / local']) {
       expect(show(v)).toBe(v);
     }
+
     expect(showSource('/etc/openrig.yaml')).toBe('(path hidden)');
     expect(showSource('file')).toBe('file');
     expect(looksLikePath('a/b')).toBe(false);
@@ -621,13 +659,16 @@ describe('v2 Settings', () => {
       },
     });
     const Page = settingsPage.component;
+
     render(
       <Page
         ctx={ctxFor([fleetMachine(snapshot('roamy')), fleetMachine(snapshot('m2'))], spy.socket)}
       />
     );
     await waitFor(() => expect(screen.getAllByTestId('st2-row')).toHaveLength(2));
+
     const tz = screen.getAllByTestId('st2-row').find((r) => r.dataset.key === 'ui.timezone')!;
+
     expect(tz).toHaveTextContent('(path hidden)');
     expect(tz).not.toHaveTextContent('/Users/');
     expect(tz).toHaveAttribute('data-differs', 'true');
@@ -643,6 +684,7 @@ describe('v2 Settings', () => {
       src.indexOf('SETTINGS_ALLOW'),
       src.indexOf('];', src.indexOf('SETTINGS_ALLOW'))
     );
+
     for (const s of sampleSettings([fleetMachine(snapshot('m2'))])[0]!.settings) {
       expect(allow).toContain(`'${s.key}'`);
     }
@@ -650,12 +692,14 @@ describe('v2 Settings', () => {
 
   it('schedules are built from real names', () => {
     const rows = sampleSchedules([fleetMachine(snapshot('m2'))]);
+
     expect(rows[0]!.what).toMatch(/^Wake rig /);
     expect(rows.some((r) => r.result === 'fail')).toBe(true);
   });
 
   it('page with real settings: values per machine, changed highlighted; a fake edit confirms, saves and toasts, sending nothing', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+
     const spy = spySocket({
       'settings.get': {
         ok: true,
@@ -670,12 +714,15 @@ describe('v2 Settings', () => {
       },
     });
     const Page = settingsPage.component;
+
     render(<Page ctx={ctxFor([fleetMachine(snapshot('roamy'))], spy.socket)} />);
     await waitFor(() => expect(screen.getAllByTestId('st2-row')).toHaveLength(2));
     expect(screen.queryByTestId('sample-data')).toBeNull();
+
     const q = screen
       .getAllByTestId('st2-row')
       .find((r) => r.dataset.key === 'queue.wake_retry_cap')!;
+
     expect(q).toHaveAttribute('data-changed', 'true');
     fireEvent.click(screen.getByTestId('st2-changed-only'));
     expect(screen.getAllByTestId('st2-row')).toHaveLength(1);
@@ -700,6 +747,7 @@ describe('v2 Settings', () => {
   it('page with a hub that lacks the verb: labelled sample settings for the real machines', async () => {
     const spy = spySocket();
     const Page = settingsPage.component;
+
     render(
       <Page
         ctx={ctxFor([fleetMachine(snapshot('roamy')), fleetMachine(snapshot('m2'))], spy.socket)}
@@ -719,7 +767,9 @@ describe('Health and Settings in the app', () => {
     ['settings', 'ar-settings'],
   ])('%s is registered under the hood', async (key, id) => {
     history.replaceState(null, '', '/?v=2');
+
     const spy = spySocket();
+
     render(<App getSocket={() => spy.socket} />);
     spy.fire(FLEET_EVENTS.UPDATE, update([fleetMachine(snapshot('roamy'))]));
     fireEvent.click(screen.getByTestId('ar-group-hood'));

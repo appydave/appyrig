@@ -11,6 +11,7 @@ import { z } from 'zod';
 // The launchd job (server/scripts/hub-service.sh) sets HUB_IGNORE_DOTENV=1: its plist is the whole
 // configuration, and a repo .env (dev ports, dev NODE_ENV) must not override it.
 const underTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test';
+
 if (!underTest && process.env.HUB_IGNORE_DOTENV !== '1') {
   dotenv.config({ path: path.resolve(process.cwd(), '..', '.env'), override: true });
 }
@@ -23,14 +24,17 @@ if (process.env.HUB_TOKEN_FILE) {
     console.error('Set HUB_TOKEN or HUB_TOKEN_FILE, not both.');
     process.exit(1);
   }
+
   try {
     const mode = statSync(process.env.HUB_TOKEN_FILE).mode & 0o777;
+
     if (mode & 0o077) {
       console.error(
         `HUB_TOKEN_FILE ${process.env.HUB_TOKEN_FILE} is mode ${mode.toString(8)}; chmod 600 it.`
       );
       process.exit(1);
     }
+
     process.env.HUB_TOKEN = readFileSync(process.env.HUB_TOKEN_FILE, 'utf8').trim();
   } catch (err) {
     console.error(

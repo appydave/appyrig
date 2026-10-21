@@ -23,6 +23,7 @@ export interface FakeAction {
 export function useFakeAction(workMs = 1200): FakeAction {
   const [phase, setPhase] = useState<FakePhase>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(
     () => () => {
       if (timer.current) {
@@ -31,6 +32,7 @@ export function useFakeAction(workMs = 1200): FakeAction {
     },
     []
   );
+
   const confirm = useCallback(() => {
     setPhase('working');
     timer.current = setTimeout(() => setPhase('done'), workMs);
@@ -59,6 +61,7 @@ interface Props {
 export default function FakeControl({ label, question, result, workMs }: Props) {
   const a = useFakeAction(workMs);
   const box = useRef<HTMLSpanElement>(null);
+
   // walk #8: the page carries one "mocks" note; this control's own badge shows on hover / focus.
   useMockNote(box);
 

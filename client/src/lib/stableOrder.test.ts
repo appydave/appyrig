@@ -6,6 +6,7 @@ describe('nextOrder (B1 fb-0004: nothing re-sorts under the pointer)', () => {
 
   it('holds the order between re-sorts, even when the live sort swaps two busy rigs', () => {
     const first = nextOrder([], ['kernel', 'loadout', 'ylo'], opts);
+
     expect(first).toEqual({ order: ['kernel', 'loadout', 'ylo'], resorted: true });
     // the next push has loadout busier than kernel: no swap yet
     expect(nextOrder(first.order, ['loadout', 'kernel', 'ylo'], opts).order).toEqual([
@@ -17,6 +18,7 @@ describe('nextOrder (B1 fb-0004: nothing re-sorts under the pointer)', () => {
 
   it('re-sorts when the interval allows, or at once when a rig starts or stops', () => {
     const prev = ['kernel', 'loadout'];
+
     expect(nextOrder(prev, ['loadout', 'kernel'], { ...opts, allowResort: true }).order).toEqual([
       'loadout',
       'kernel',
@@ -33,6 +35,7 @@ describe('nextOrder (B1 fb-0004: nothing re-sorts under the pointer)', () => {
       groupChanged: true,
       frozen: true,
     });
+
     expect(r).toEqual({ order: ['a', 'b'], resorted: false });
   });
 

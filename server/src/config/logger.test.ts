@@ -11,12 +11,15 @@ describe('logger', () => {
 
   it('exposes a child() method for creating child loggers', () => {
     expect(typeof logger.child).toBe('function');
+
     const child = logger.child({ requestId: 'test-123' });
+
     expect(typeof child.info).toBe('function');
   });
 
   it('calling logger.info() does not throw', () => {
     const spy = vi.spyOn(logger, 'info').mockImplementation(() => undefined as never);
+
     expect(() => logger.info('test message')).not.toThrow();
     spy.mockRestore();
   });

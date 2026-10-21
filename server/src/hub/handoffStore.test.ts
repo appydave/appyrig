@@ -34,10 +34,12 @@ describe('queue body store cap (QA D1)', () => {
     });
     const snapshot = { ...loadSnapshot('roamy'), queue: rows } as MachineSnapshot;
     const store = new FleetStore();
+
     store.put(snapshot);
 
     // the collector sends newest first, in batches of 100
     const newestFirst = [...ids].reverse();
+
     for (let i = 0; i < newestFirst.length; i += 100) {
       store.putHandoffs(bodies(newestFirst.slice(i, i + 100)));
     }
@@ -46,6 +48,7 @@ describe('queue body store cap (QA D1)', () => {
     for (const row of rows) {
       expect(store.getHandoff('roamy', row.id), row.id).toBeDefined();
     }
+
     // and what went was the oldest
     expect(store.getHandoff('roamy', ids[0]!)).toBeUndefined();
     expect(store.getHandoff('roamy', ids[99]!)).toBeUndefined();
@@ -57,10 +60,13 @@ describe('queue body store cap (QA D1)', () => {
       { length: HANDOFF_STORE_MAX + 5 },
       (_, i) => `q${String(i).padStart(5, '0')}`
     );
+
     for (let i = 0; i < ids.length; i += 100) {
       store.putHandoffs(bodies(ids.slice(i, i + 100)));
     }
+
     const kept = ids.filter((id) => store.getHandoff('roamy', id));
+
     expect(kept).toHaveLength(HANDOFF_STORE_MAX);
   });
 });

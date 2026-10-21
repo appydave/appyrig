@@ -28,14 +28,17 @@ export function useMissionFile(
   path: string
 ): MissionFileResult {
   const [r, setR] = useState<MissionFileResult>({ status: 'loading', path, machine });
+
   useEffect(() => {
     let live = true;
+
     setR({ status: 'loading', path, machine });
     void callVerb<MissionFileOutput>(getSocket(), 'mission.file', { machine, rig, path }).then(
       (a) => {
         if (!live) {
           return;
         }
+
         if (!a.ok) {
           return setR({
             status: a.error.failureMode === 'unknown-capability' ? 'old-hub' : 'unread',
@@ -43,7 +46,9 @@ export function useMissionFile(
             machine,
           });
         }
+
         const v = a.value;
+
         setR({
           status: v.status,
           path,
@@ -70,6 +75,7 @@ export type MissionFileKind = 'spec' | 'qa' | 'shot';
 /** Why a result is not `ok`, in words. "not written yet" is only ever said for qa and shots. */
 export function whyNot(r: MissionFileResult, kind: MissionFileKind): string {
   const m = r.machine ?? 'that machine';
+
   switch (r.status) {
     case 'loading':
     case 'pending':

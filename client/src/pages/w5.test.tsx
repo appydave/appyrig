@@ -40,6 +40,7 @@ describe('Library', () => {
 
   it('a refused verb shows labelled sample data, never a blank', async () => {
     const { socket } = refused();
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await sampleShown();
     expect(screen.getAllByTestId('lib-item').length).toBeGreaterThan(5);
@@ -68,6 +69,7 @@ describe('Library', () => {
         truncated: false,
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getAllByTestId('lib-item')).toHaveLength(3));
     expect(screen.queryByTestId('sample-why')).toBeNull();
@@ -84,6 +86,7 @@ describe('Library', () => {
 
   it('Install and Edit spec are pretends: no write, no socket event', async () => {
     const { socket, sent, emitted } = refused();
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await sampleShown();
     fireEvent.click(screen.getByText('Install'));
@@ -98,6 +101,7 @@ describe('Library', () => {
 
   it('model: kinds and filters', () => {
     const items = sampleLibrary(machines());
+
     expect(items.map(kindOf)).toEqual(
       expect.arrayContaining(['workflow', 'agent', 'rig', 'skill', 'context pack'])
     );
@@ -111,6 +115,7 @@ describe('Workflows', () => {
 
   it('a refused verb shows the built-in specs and an example run, labelled sample', async () => {
     const { socket } = refused();
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await sampleShown();
     expect(screen.getAllByTestId('wf-spec')).toHaveLength(6);
@@ -135,6 +140,7 @@ describe('Workflows', () => {
         instances: [],
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() =>
       expect(screen.getByTestId('wf-no-runs')).toHaveTextContent('No workflow has been run')
@@ -152,6 +158,7 @@ describe('Workflows', () => {
         instances: [],
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('wf-unread')).toBeInTheDocument());
     expect(screen.queryByTestId('wf-no-runs')).toBeNull();
@@ -159,12 +166,14 @@ describe('Workflows', () => {
 
   it('Instantiate, Route, Resume and Abort are pretends', async () => {
     const { socket, sent, emitted } = refused();
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await sampleShown();
     for (const name of ['Route', 'Resume', 'Abort']) {
       fireEvent.click(screen.getByText(name));
       fireEvent.click(screen.getAllByTestId('fake-confirm')[0]!);
     }
+
     fireEvent.click(screen.getAllByText('Instantiate')[0]!);
     expect(emitted).toEqual([]);
     expect(sent.every((v) => v === 'workflow.list')).toBe(true);
@@ -190,6 +199,7 @@ describe('History', () => {
 
   it('a refused verb falls back to real snapshot rows plus a labelled sample event lane', async () => {
     const { socket } = refused();
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await sampleShown();
     expect(screen.getByTestId('hist-fallback')).toBeInTheDocument();
@@ -218,6 +228,7 @@ describe('History', () => {
         nextCursor: null,
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(3));
     expect(screen.queryByTestId('sample-why')).toBeNull();
@@ -251,6 +262,7 @@ describe('History', () => {
         return input.before ? page([t('1', 'done')], null) : page([t('2', 'pending')], 'cur_abc');
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(1));
     fireEvent.click(screen.getByTestId('hist-older'));
@@ -271,6 +283,7 @@ describe('History', () => {
       },
     });
     const ctx = pageCtx(ms, socket, NOW);
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getByTestId('hist-open-agent')).toBeInTheDocument());
     fireEvent.click(screen.getByTestId('hist-open-agent'));
@@ -282,6 +295,7 @@ describe('History', () => {
       t('1', 'done') as never,
       t('2', 'pending', { summary: 'needle' }) as never,
     ]);
+
     expect(filterHistory(rows, { text: 'fliedit-team', state: '', machine: '' })).toHaveLength(2);
     expect(filterHistory(rows, { text: 'needle', state: '', machine: '' })).toHaveLength(1);
     expect(filterHistory(rows, { text: 'no-follow', state: '', machine: '' })).toHaveLength(1);

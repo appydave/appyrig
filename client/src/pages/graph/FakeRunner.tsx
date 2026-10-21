@@ -24,7 +24,9 @@ export interface FakeAsk {
 }
 
 type Run = (ask: FakeAsk) => void;
+
 const FakeCtx = createContext<Run>(() => {});
+
 export const useFake = () => useContext(FakeCtx);
 
 const TOAST_MS = 4000;
@@ -35,6 +37,7 @@ export function FakeRunner({ children, workMs = 1200 }: { children: ReactNode; w
   const [toasts, setToasts] = useState<{ id: number; text: string }[]>([]);
   const next = useRef(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   const run = useCallback<Run>(
@@ -48,11 +51,14 @@ export function FakeRunner({ children, workMs = 1200 }: { children: ReactNode; w
   );
 
   const { phase, reset } = a;
+
   useEffect(() => {
     if (phase !== 'done' || !ask) {
       return;
     }
+
     const id = ++next.current;
+
     setToasts((t) => [...t, { id, text: ask.result }]);
     timers.current.push(setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), TOAST_MS));
     setAsk(null);

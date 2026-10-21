@@ -32,12 +32,14 @@ describe('pipFor', () => {
   it('shows the seat status on a live machine', () => {
     const fm = fleetMachine(snapshot('roamy--blocked'));
     const blocked = fm.snapshot.seats.find((s) => s.status === 'blocked')!;
+
     expect(pipFor(blocked, fm)).toBe('blocked');
   });
 
   it('never shows idle (or any last status) on an asleep machine', () => {
     const fm = fleetMachine(snapshot('roamy'), { liveness: 'asleep' });
     const idle = fm.snapshot.seats.find((s) => s.status === 'idle')!;
+
     expect(pipFor(idle, fm)).toBe('asleep');
     expect(fm.snapshot.seats.every((s) => pipFor(s, fm) === 'asleep')).toBe(true);
   });
@@ -46,11 +48,13 @@ describe('pipFor', () => {
 describe('freshness', () => {
   it('is live with the age of the last push', () => {
     const fm = fleetMachine(snapshot('roamy'), { lastSeen: at(2_000) });
+
     expect(freshness(fm, NOW, true)).toEqual({ level: 'live', label: 'live · 2s' });
   });
 
   it('is asleep with "last seen" when the hub says so', () => {
     const fm = fleetMachine(snapshot('roamy'), { liveness: 'asleep', lastSeen: at(4 * 60_000) });
+
     expect(freshness(fm, NOW, true)).toEqual({
       level: 'asleep',
       label: 'asleep · last seen 4m ago',
@@ -59,11 +63,13 @@ describe('freshness', () => {
 
   it('turns stale, not live, when the push is older than the asleep threshold', () => {
     const fm = fleetMachine(snapshot('roamy'), { lastSeen: at(ASLEEP_AFTER_MS + 5_000) });
+
     expect(freshness(fm, NOW, true).level).toBe('stale');
   });
 
   it('turns stale when the hub connection is lost, however recent the push', () => {
     const fm = fleetMachine(snapshot('roamy'), { lastSeen: at(1_000) });
+
     expect(freshness(fm, NOW, false)).toEqual({
       level: 'stale',
       label: 'stale · hub offline · 1s',
@@ -83,6 +89,7 @@ describe('ago', () => {
 
 describe('modelChip', () => {
   const seat = (model: string | null, runtime: string | null) => ({ model, runtime }) as Seat;
+
   it('shortens Claude model ids', () => {
     expect(modelChip(seat('claude-opus-5-5', 'claude-code'))).toEqual({
       text: 'opus 5.5',
@@ -108,6 +115,7 @@ describe('groupSeats', () => {
   it('by rig scopes a rig name to its machine', () => {
     const groups = groupSeats(machines, 'rig');
     const kernels = groups.filter((g) => g.name === 'kernel');
+
     expect(kernels.map((g) => g.where).sort()).toEqual(['M2', 'Roamy'].sort());
     expect(groups.find((g) => g.name === 'tmux sessions')?.tiles.map((t) => t.seat.id)).toEqual([
       'openrig-orch',
@@ -125,6 +133,7 @@ describe('groupSeats', () => {
       },
     ];
     const ranks = groupSeats(fleet, 'rig').map((g) => `${g.where}:${g.name}`);
+
     expect(ranks[0]).toBe('Roamy:starter');
     expect(ranks.indexOf('Roamy:kernel')).toBeLessThan(ranks.indexOf('M2:control'));
     expect(ranks.slice(-3).every((r) => r.startsWith('ZZ:'))).toBe(true);
@@ -156,6 +165,7 @@ describe('groupSeats', () => {
       },
     ];
     const groups = groupSeats(fleet, 'rig');
+
     expect(groups.map((g) => g.name)).toEqual(['busy', 'fresh', 'quiet', 'tmuxy', 'old']);
     expect(groups.map(groupState)).toEqual(['working', 'idle', 'idle', 'unknown', 'stopped']);
     // S3 rework (variant C): idle-only teams start as cards in the idle strip.
@@ -174,6 +184,7 @@ describe('groupSeats', () => {
       },
     };
     const g = groupSeats([named], 'rig').find((x) => x.name === 'fliedit-team')!;
+
     expect(g.rig?.displayName).toBe('FliEdit');
     expect(g.rig?.summary).toBe('Edits videos.');
     expect(g.key).toBe('m2:fliedit-team');
@@ -182,8 +193,10 @@ describe('groupSeats', () => {
 
   it('keeps every seat exactly once, whichever grouping', () => {
     const total = machines.reduce((n, m) => n + m.snapshot.seats.length, 0);
+
     for (const by of ['rig', 'machine'] as const) {
       const keys = groupSeats(machines, by).flatMap((g) => g.tiles.map((t) => t.key));
+
       expect(keys).toHaveLength(total);
       expect(new Set(keys).size).toBe(total);
     }
@@ -195,6 +208,7 @@ describe('counts and blocked', () => {
     const live = fleetMachine(snapshot('roamy--blocked'));
     const asleep = fleetMachine(snapshot('m2'), { liveness: 'asleep' });
     const c = countSeats([live, asleep]);
+
     expect(c.seats).toBe(25);
     expect(c.paused).toBe(18);
     expect(c.byStatus.blocked).toBe(1);
@@ -204,6 +218,7 @@ describe('counts and blocked', () => {
   it('lists blocked seats on live machines only, with a plain reason', () => {
     const live = fleetMachine(snapshot('roamy--blocked'));
     const b = blockedSeats([live]);
+
     expect(b.map((t) => t.key)).toEqual(['roamy/dev-build@starter']);
     expect(blockedBecause(b[0].seat)).toBe('permission prompt');
     expect(blockedSeats([{ ...live, liveness: 'asleep' }])).toEqual([]);
@@ -211,6 +226,7 @@ describe('counts and blocked', () => {
 
   it('finds a seat by its fleet key', () => {
     const fm = fleetMachine(snapshot('roamy'));
+
     expect(findSeat({ roamy: fm }, 'roamy/dev-build@starter')?.seat.id).toBe('dev-build@starter');
     expect(findSeat({ roamy: fm }, 'm2/dev-build@starter')).toBeNull();
   });
@@ -219,8 +235,10 @@ describe('counts and blocked', () => {
 describe('blocked detail (S4)', () => {
   const seat = (blockedDetail: string | null | undefined) =>
     ({ blockedReason: 'permission prompt', blockedDetail }) as Seat;
+
   it('joins reason and the terminal question', () => {
     const s = seat('Allow this read outside the working directories?');
+
     expect(blockedDetail(s)).toBe('Allow this read outside the working directories?');
     expect(blockedLine(s)).toBe(
       'permission prompt — Allow this read outside the working directories?'
@@ -228,8 +246,11 @@ describe('blocked detail (S4)', () => {
   });
   it('r1 L2: strips escape sequences and stray control bytes', () => {
     const s = seat('\u001b[33mAllow this read\u001b[0m\u0007 outside\r\n the \u001bworking dirs?');
+
     expect(blockedDetail(s)).toBe('Allow this read outside the working dirs?');
+
     const controls = [...blockedDetail(s)!].filter((c) => c.charCodeAt(0) < 32 || c === '\u007f');
+
     expect(controls).toEqual([]);
   });
   it.each([null, undefined, '   ', '\u001b[0m\u0007'])(
@@ -285,6 +306,7 @@ describe('contentTail: no ghost text (D09 W3)', () => {
       '────────────────────────────────────────────────',
       '  ⏵⏵ auto mode on (shift+tab to cycle)',
     ];
+
     for (const sep of ['\u00a0', ' ']) {
       expect(plain(contentTail(typed(sep), 2))).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
     }
@@ -301,19 +323,23 @@ describe('contentTail: a draft of any shape is never activity (QA W3 MEDIUM-2)',
     '────────────────────────────────────────────────────────────',
     '  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents',
   ];
+
   it('a typed draft that wraps to two lines', () => {
     const lines = box([
       'please run the full suite and',
       '  also check the hub logs before you merge',
     ]);
+
     expect(contentTail(lines, 3).map(stripAnsi)).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
   });
   it('a shift+enter draft with a second line', () => {
     const lines = box(['first line of my note', '  second line of my note']);
+
     expect(contentTail(lines, 3).map(stripAnsi)).toEqual(['✻ Brewed for 1m 19s · done 9:39 AM']);
   });
   it('"> quoted" between two long rules in a plain pane is not a box: the output after it stays (r1 W3 LOW-2)', () => {
     const rule = '─'.repeat(40);
+
     // Before the fix this gave ['work line']: the box cut swallowed everything from the first rule.
     expect(contentTail(['work line', rule, '> quoted', 'more', rule, 'after'], 3)).toEqual([
       'more',
@@ -355,6 +381,7 @@ describe('contentTail (S3)', () => {
       '  ⏵⏵ auto mode on (shift+tab to cycle) · ← for agents',
       '',
     ];
+
     expect(contentTail(lines, 2)).toEqual([
       '⏺ Ran the tests: 147 passed.',
       '✻ Percolating… (7m 36s · ↓ 34.5k tokens)',
@@ -368,6 +395,7 @@ describe('contentTail (S3)', () => {
       '    current work',
       '✻ Flowing… (1m 6s · ↓ 2.0k tokens)',
     ];
+
     expect(contentTail(lines, 3)).toEqual([
       'Bash(npx playwright test)',
       '✻ Flowing… (1m 6s · ↓ 2.0k tokens)',

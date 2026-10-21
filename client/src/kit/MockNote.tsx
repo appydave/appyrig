@@ -28,11 +28,14 @@ const auto = new WeakMap<Element, { el: HTMLElement; users: number }>();
 
 function noteElement(): HTMLElement {
   const p = document.createElement('p');
+
   p.className = 'ar-mock-note';
   p.dataset.testid = 'mock-note';
   p.dataset.mockNote = 'auto';
   p.setAttribute('role', 'note');
+
   const tag = document.createElement('span');
+
   tag.className = 'ar-mock-note-tag';
   tag.setAttribute('aria-hidden', 'true');
   tag.textContent = 'mock';
@@ -47,22 +50,30 @@ export function useMockNote(ref: RefObject<HTMLElement | null>) {
     if (ref.current?.closest('.ar-mock-menu')) {
       return;
     }
+
     const main = ref.current?.closest('main');
+
     if (!main) {
       return;
     }
+
     let h = auto.get(main);
+
     if (!h) {
       // The page drew its own note: nothing to add.
       if (main.querySelector('[data-mock-note]')) {
         return;
       }
+
       const el = noteElement();
+
       main.insertBefore(el, main.firstChild);
       h = { el, users: 0 };
       auto.set(main, h);
     }
+
     h.users += 1;
+
     const mine = h;
 
     return () => {

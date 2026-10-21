@@ -69,6 +69,7 @@ function after() { return raw["not_this"]; }
   it('reads backticked chain names between two doc markers', () => {
     const doc =
       'intro `X.md`\nEstablished names:\n- `LEARNED.md` and `CRAFT.md`\n### Next\n`SPEC.md`';
+
     expect(docMdNames(doc, 'Established names', '### Next')).toEqual(['LEARNED.md', 'CRAFT.md']);
   });
 
@@ -76,6 +77,7 @@ function after() { return raw["not_this"]; }
     const file = JSON.parse(
       readFileSync(new URL('../../scripts/provenance/ignore.json', import.meta.url), 'utf8')
     ) as Record<'unmapped' | 'oursOnly', Array<{ probe: string; value: string; reason: string }>>;
+
     for (const e of [...file.unmapped, ...file.oursOnly]) {
       expect(e.reason.length, `${e.probe}:${e.value}`).toBeGreaterThan(20);
     }

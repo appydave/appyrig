@@ -8,6 +8,7 @@ const ctx = await browser.newContext();
 const page = await ctx.newPage();
 const problems = [];
 const sockets = [];
+
 page.on('console', (m) => {
   if (m.type() === 'error') {
     problems.push(m.text());

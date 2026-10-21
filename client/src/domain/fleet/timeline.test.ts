@@ -38,15 +38,21 @@ describe('V1 · buildTimeline on ylo-d10 (the hub’s saved M4 copy)', () => {
     expect(tl.marks.filter((m) => m.flag === null)).toHaveLength(89);
     expect(tl.marks.filter((m) => m.flag === 'in')).toHaveLength(11);
     expect(tl.marks.filter((m) => m.flag === 'out')).toHaveLength(10);
+
     const start = q('Start the D10 launch');
+
     expect(tl.marks.filter((m) => m.item.id === start.id).map((m) => m.flag)).toEqual(['in']);
+
     const report = q('step 12: D10 Launch REPORT');
+
     expect(tl.marks.filter((m) => m.item.id === report.id).map((m) => [m.lane, m.flag])).toEqual([
       ['ylo-lead', null],
       [OUTSIDE_LANE, 'out'],
     ]);
+
     // The panel's list for a lane is that lane's marks, oldest first.
     const lead = tl.lanes.find((l) => l.id === 'ylo-lead')!;
+
     expect(lead.items.map((i) => i.createdAt)).toEqual(
       [...lead.items.map((i) => i.createdAt)].sort()
     );
@@ -76,6 +82,7 @@ describe('V1 · scale and stacking', () => {
       .map((m) => m.at)
       .sort((a, b) => a - b)
       .map(s.x);
+
     expect(xs).toEqual([...xs].sort((a, b) => a - b));
     expect(s.spans[1]!.x0 - s.spans[0]!.x1).toBe(BREAK_PX);
     expect(s.breaks).toHaveLength(1);
@@ -85,12 +92,15 @@ describe('V1 · scale and stacking', () => {
     const s = timeScale(tl.phases, 2);
     const { rows, perLane } = stackRows(tl.marks, s.x);
     const seen = new Map<string, number[]>();
+
     tl.marks.forEach((m, i) => {
       const k = `${m.lane}#${rows[i]}`;
       const x = s.x(m.at);
+
       for (const other of seen.get(k) ?? []) {
         expect(Math.abs(x - other)).toBeGreaterThanOrEqual(13);
       }
+
       seen.set(k, [...(seen.get(k) ?? []), x]);
     });
     // ylo-lead sent four at 04:43:43: four rows.
@@ -107,6 +117,7 @@ describe('V1 · scale and stacking', () => {
 describe('V2 · followWork', () => {
   it('pair A on ylo-d10: brief → render → done → check → FIX LIST → fix → PASS → back to David', () => {
     const chain = followWork(d10, 'ylo-d10', q('pair A: render').id)!;
+
     expect(chain.rule).toBe('tag');
     expect(chain.key).toEqual(['pair-a']);
     expect(
@@ -131,6 +142,7 @@ describe('V2 · followWork', () => {
 
   it('the same chain from any of its steps, the pair-a-alt ones included (r1 MEDIUM-1)', () => {
     const a = followWork(d10, 'ylo-d10', q('pair A: render').id)!;
+
     for (const from of [
       'check: pair A FIX LIST',
       'pair A-alt: check',
@@ -138,6 +150,7 @@ describe('V2 · followWork', () => {
       'Pair A render is done',
     ]) {
       const b = followWork(d10, 'ylo-d10', q(from).id)!;
+
       expect(b.key, from).toEqual(['pair-a']);
       expect(
         b.steps.map((s) => s.item.id),
@@ -148,6 +161,7 @@ describe('V2 · followWork', () => {
 
   it('names the real variants it linked, never an invented “-alt-alt” (r1 LOW-4)', () => {
     const t = followWork(d10, 'ylo-d10', q('pair A-alt: check').id)!.ruleText;
+
     expect(t).toMatch(/shared tag “pair-a”, with “pair-a-alt”/);
     expect(t).not.toMatch(/alt-alt/);
     expect(followWork(d10, 'ylo-d10', q('pair B: render').id)!.ruleText).not.toMatch(/with “/);
@@ -156,6 +170,7 @@ describe('V2 · followWork', () => {
   it('equally rare tags are both used, so each copy-batch-2 step gives one chain (r1 LOW-1)', () => {
     const a = followWork(d10, 'ylo-d10', q('copy batch 2: description').id)!;
     const b = followWork(d10, 'ylo-d10', q('check: copy batch 2').id)!;
+
     expect(a.key).toEqual(['batch2', 'step-7']);
     expect(b.key).toEqual(['batch2', 'step-7']);
     expect(b.steps.map((s) => s.item.id)).toEqual(a.steps.map((s) => s.item.id));
@@ -166,31 +181,38 @@ describe('V2 · followWork', () => {
 
   it('no chain is longer than a quarter of the run, merged ties included (r1 MEDIUM-3)', () => {
     const limit = Math.max(12, Math.ceil(d10.snapshot.queue.length / 4));
+
     for (const x of d10.snapshot.queue) {
       const c = followWork(d10, 'ylo-d10', x.id)!;
+
       expect(
         c.steps.filter((s) => s.role === 'step').length,
         x.summary ?? x.id
       ).toBeLessThanOrEqual(limit);
     }
+
     const refocus = followWork(d10, 'ylo-d10', q('D10 change: refocus').id)!;
+
     expect(refocus.key).toEqual(['change-01']);
     expect(refocus.steps).toHaveLength(22);
   });
 
   it('a parent covering exactly the same items never replaces the specific tag (group-3)', () => {
     const c = followWork(d10, 'ylo-d10', q('D10 change 02: group 3').id)!;
+
     expect(c.key).not.toContain('group');
   });
 
   it('never links by a tag the whole run carries (mission:d10-launch on 98 of 100)', () => {
     const chain = followWork(d10, 'ylo-d10', q('Ruling: transcript only').id)!;
+
     expect(chain.key).not.toContain('mission:d10-launch');
     expect(chain.steps.length).toBeLessThan(10);
   });
 
   it('never links by a fan-out tag (step-6 = pairs A, B and C sent at once)', () => {
     const chain = followWork(d10, 'ylo-d10', q('pair B: render').id)!;
+
     expect(chain.key).toEqual(['pair-b']);
   });
 
@@ -221,10 +243,13 @@ describe('V2 · followWork', () => {
       snapshot: { seats: [], rigs: [{ name: 'r' }], queue },
     } as unknown as FleetMachine;
     const chain = followWork(fm, 'r', 'b')!;
+
     expect(chain.rule).toBe('words');
     expect(chain.steps.map((s) => s.item.id)).toEqual(['a', 'b', 'd']);
     expect(chain.ruleText).toMatch(/uncommon words in the title/);
+
     const alone = followWork(fm, 'r', 'c')!;
+
     expect(alone.rule).toBe('alone');
     expect(alone.ruleText).toMatch(/stands alone/);
   });

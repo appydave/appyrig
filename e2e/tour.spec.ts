@@ -12,8 +12,11 @@ const FROZEN = '/?frozen=busy-2026-10-18';
 async function hookWebSocketSends(page: Page) {
   await page.addInitScript(() => {
     const w = window as unknown as { __wsSent: string[] };
+
     w.__wsSent = [];
+
     const send = WebSocket.prototype.send;
+
     WebSocket.prototype.send = function (data: Parameters<typeof send>[0]) {
       w.__wsSent.push(typeof data === 'string' ? data.slice(0, 120) : '(binary)');
 
@@ -31,6 +34,7 @@ const root = (page: Page) => page.locator('main[data-testid^="ar-"]');
 async function quietIntro(page: Page) {
   // the first-visit hint can sit over the page
   const gotIt = page.getByRole('button', { name: /got it/i });
+
   if (await gotIt.count()) {
     await gotIt.first().click();
   }
@@ -39,7 +43,9 @@ async function quietIntro(page: Page) {
 test.describe('v2 tour (frozen busy snapshot)', () => {
   test('one version, every page, an agent click, and a mock control', async ({ page }) => {
     test.setTimeout(60_000);
+
     const errors = watchErrors(page);
+
     await hookWebSocketSends(page);
 
     // 1. an old `?v=1` link (it used to open the first client) opens V2, and the switch is dropped
@@ -69,10 +75,14 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     const groups = await page
       .locator('[data-testid^="ar-group-"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
+
     expect(groups.length).toBeGreaterThanOrEqual(4);
+
     const visited: string[] = [];
+
     for (const g of groups) {
       await page.getByTestId(g).click();
+
       // the nav's page links only (a page's own header is `ar-page-head`)
       const pages = await page
         .getByTestId('ar-nav')
@@ -80,6 +90,7 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         .evaluateAll((els) =>
           els.map((e) => e.getAttribute('data-testid')!.slice('ar-page-'.length))
         );
+
       for (const key of pages) {
         await page.getByTestId(`ar-page-${key}`).click();
         await expect(root(page), `${key} renders one page root`).toHaveCount(1);
@@ -87,12 +98,15 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         if (key === 'graph') {
           await expect(page.getByTestId('ar-graph')).toBeVisible();
         }
+
         if (key === 'map') {
           await expect(page.getByTestId('ar-rigmap')).toBeVisible();
         }
+
         visited.push(`${g.replace('ar-group-', '')}/${key}`);
       }
     }
+
     test.info().annotations.push({ type: 'pages visited', description: visited.join(', ') });
     console.log(`tour visited ${visited.length} pages: ${visited.join(', ')}`);
     expect(visited.length).toBeGreaterThanOrEqual(10);
@@ -116,15 +130,19 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     await page.getByTestId('ar-group-fleet').click();
     await page.getByTestId('ar-page-graph').click();
     await expect(page.getByTestId('ar-graph')).toBeVisible();
+
     const before = await sent(page);
     // a rig frame (not a machine's no-rig group); stopped rigs are hidden by default
     const frame = page
       .getByTestId('g2-rig')
       .filter({ has: page.getByTestId('g2-rig-menu') })
       .first();
+
     await frame.scrollIntoViewIfNeeded();
     await frame.getByTestId('g2-rig-menu').click();
+
     const restore = frame.getByTestId('g2-fake-restore');
+
     await restore.scrollIntoViewIfNeeded();
     await restore.click();
     await expect(page.getByTestId('g2-fake-dialog')).toContainText('Restore');
@@ -132,7 +150,9 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
     await expect(page.getByTestId('g2-toast').first()).toContainText('(pretend)', {
       timeout: 5_000,
     });
+
     const after = await sent(page);
+
     expect(after.slice(before.length), 'no socket frame was sent by the mock control').toEqual([]);
 
     expect(errors, 'no console errors or uncaught exceptions').toEqual([]);

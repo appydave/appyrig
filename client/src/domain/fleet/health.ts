@@ -45,14 +45,18 @@ const GLYPH = { normal: '●', warn: '▲', critical: '■' } as const;
 export function pressureOf(fm: FleetMachine, now: number = Date.now()): PressureView {
   const v = verdictOf(fm);
   const h = fm.snapshot.health;
+
   if (!h || (v.kind !== 'normal' && v.kind !== 'warn' && v.kind !== 'critical')) {
     return v;
   }
+
   const asleep = fm.liveness === 'asleep';
   const age = healthAge(fm, h, now).ageMs;
+
   if (!asleep && age <= HEALTH_STALE_MS) {
     return v;
   }
+
   const when = ago(age);
 
   return {
@@ -69,9 +73,11 @@ export function pressureOf(fm: FleetMachine, now: number = Date.now()): Pressure
 
 const ago = (ms: number) => {
   const s = Math.round(ms / 1000);
+
   if (s < 90) {
     return `${s}s`;
   }
+
   const m = Math.round(s / 60);
 
   return m < 90 ? `${m} min` : `${Math.round(m / 60)} h`;
@@ -79,6 +85,7 @@ const ago = (ms: number) => {
 
 function verdictOf(fm: FleetMachine): PressureView {
   const h = fm.snapshot.health;
+
   if (!h) {
     return {
       kind: 'no-data',
@@ -88,7 +95,9 @@ function verdictOf(fm: FleetMachine): PressureView {
       basis: null,
     };
   }
+
   const p = h.memory.pressureLevel;
+
   if (p.status === 'unavailable') {
     return {
       kind: 'unavailable',
@@ -98,6 +107,7 @@ function verdictOf(fm: FleetMachine): PressureView {
       basis: null,
     };
   }
+
   // Batch 2 · C2 (F26): macOS's own pressure level said "normal" for a Mac with swap 91% full,
   // shown in green beside "59% free". The verdict now takes the worse of the kernel's level and
   // swap use, so a machine swapping above half its swap can never read "normal".

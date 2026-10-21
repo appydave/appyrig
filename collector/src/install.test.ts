@@ -31,8 +31,10 @@ const SCRIPTS = resolve(import.meta.dirname, '../scripts');
 function install(extra: string[] = []) {
   const dir = mkdtempSync(join(tmpdir(), 'appyrig-install-'));
   const token = join(dir, 'token');
+
   writeFileSync(token, 'hubtoken-0123456789abcdef\n');
   chmodSync(token, 0o600);
+
   const out = execFileSync(
     join(SCRIPTS, 'install.sh'),
     [
@@ -57,12 +59,15 @@ describe('launchd install script', () => {
   it('writes a valid plist with absolute paths, a PATH, RunAtLoad and KeepAlive', () => {
     const { dir, token } = install(['--label', 'com.appydave.appyrig.collector.unittest']);
     const plist = join(dir, 'com.appydave.appyrig.collector.unittest.plist');
+
     if (hasPlutil) {
       execFileSync('plutil', ['-lint', plist]);
     } else {
       expect(readFileSync(plist, 'utf8')).toMatch(/^<\?xml[^>]*\?>\s*<!DOCTYPE plist/);
     }
+
     const xml = readFileSync(plist, 'utf8');
+
     expect(xml).toContain('<key>RunAtLoad</key><true/>');
     // launchd sets no locale; tmux mangles control characters without a UTF-8 one
     expect(xml).toContain('<key>LC_ALL</key><string>en_US.UTF-8</string>');
@@ -86,6 +91,7 @@ describe('launchd install script', () => {
   it('the default label is the real one and keeps the real log name', () => {
     const { dir } = install();
     const xml = readFileSync(join(dir, 'com.appydave.appyrig.collector.plist'), 'utf8');
+
     expect(xml).toContain('<key>Label</key><string>com.appydave.appyrig.collector</string>');
     expect(xml).toContain('Logs/appyrig-collector.log');
   });
@@ -93,6 +99,7 @@ describe('launchd install script', () => {
   it('refuses a missing token file and a missing hub', () => {
     const run = (args: string[]) => () =>
       execFileSync(join(SCRIPTS, 'install.sh'), [...args, '--no-load'], { stdio: 'pipe' });
+
     expect(run(['--hub', 'http://x:1', '--token-file', '/nonexistent/token'])).toThrow();
     expect(run(['--token-file', '/nonexistent/token'])).toThrow();
   });

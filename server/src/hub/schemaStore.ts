@@ -33,6 +33,7 @@ const StoredSchema = z.strictObject({
     )
     .max(DB_VERSIONS_KEPT),
 });
+
 type Stored = z.infer<typeof StoredSchema>;
 
 export class SchemaStore {
@@ -47,9 +48,11 @@ export class SchemaStore {
   put(push: SchemaPush): void {
     const prev = this.byMachine.get(push.machineId);
     const versions = [...(prev?.versions ?? [])];
+
     // Only a readable schema under a known version becomes history.
     if (push.status === 'ok' && push.openrigVersion) {
       const at = versions.findIndex((v) => v.version === push.openrigVersion);
+
       if (at >= 0) {
         versions[at] = { ...versions[at]!, tables: push.tables };
       } else {
@@ -60,6 +63,7 @@ export class SchemaStore {
         });
       }
     }
+
     const next: Stored = {
       machineId: push.machineId,
       latest: {
@@ -70,6 +74,7 @@ export class SchemaStore {
       },
       versions: versions.slice(-DB_VERSIONS_KEPT),
     };
+
     this.byMachine.set(push.machineId, next);
     this.persist(next);
   }
@@ -77,6 +82,7 @@ export class SchemaStore {
   /** The db.schema answer for a machine; `no-data` when its collector never sent one. */
   get(machineId: string, now: Date): DbSchemaOutput {
     const s = this.byMachine.get(machineId);
+
     if (!s) {
       return {
         machine: machineId,
@@ -91,6 +97,7 @@ export class SchemaStore {
         versionsSeen: [],
       };
     }
+
     const versionsSeen = s.versions.map((v) => ({
       version: v.version,
       firstSeenAt: v.firstSeenAt,
@@ -102,6 +109,7 @@ export class SchemaStore {
       sampleAgeMs: Math.max(0, now.getTime() - Date.parse(s.latest.sampledAt)),
       versionsSeen,
     };
+
     if (s.latest.status !== 'ok') {
       return {
         ...base,
@@ -111,6 +119,7 @@ export class SchemaStore {
         changes: null,
       };
     }
+
     // The current version's schema, and the one seen just before it.
     const idx = s.versions.findIndex((v) => v.version === s.latest.openrigVersion);
     const current = idx >= 0 ? s.versions[idx]! : s.versions[s.versions.length - 1];
@@ -135,11 +144,13 @@ export class SchemaStore {
     if (!this.dir) {
       return;
     }
+
     const dir = this.dir;
     const file = join(dir, `${encodeURIComponent(s.machineId)}.json`);
     const prev = this.writes.get(s.machineId) ?? Promise.resolve();
     const run = prev.then(async () => {
       const tmp = `${file}.${process.pid}.tmp`;
+
       try {
         await mkdir(dir, { recursive: true, mode: 0o700 });
         await writeFile(tmp, JSON.stringify(this.byMachine.get(s.machineId)), { mode: 0o600 });
@@ -148,6 +159,7 @@ export class SchemaStore {
         this.onDiskError(`cannot write ${file}`, err);
       }
     });
+
     this.writes.set(s.machineId, run);
     void run.then(() => {
       if (this.writes.get(s.machineId) === run) {
@@ -166,7 +178,9 @@ export class SchemaStore {
     if (!this.dir) {
       return 0;
     }
+
     let names: string[];
+
     try {
       names = (await readdir(this.dir)).filter((n) => n.endsWith('.json'));
     } catch (err) {
@@ -176,14 +190,18 @@ export class SchemaStore {
 
       return 0;
     }
+
     for (const name of names) {
       const file = join(this.dir, name);
+
       try {
         const parsed = StoredSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+
         if (!parsed.success) {
           this.onDiskError(`${file} is not a stored schema; skipped`, parsed.error);
           continue;
         }
+
         if (!this.byMachine.has(parsed.data.machineId)) {
           this.byMachine.set(parsed.data.machineId, parsed.data);
         }

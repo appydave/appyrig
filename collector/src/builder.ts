@@ -53,9 +53,11 @@ async function pool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
   const worker = async () => {
     while (next < items.length) {
       const i = next++;
+
       out[i] = await fn(items[i]!);
     }
   };
+
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 
   return out;
@@ -70,6 +72,7 @@ export function blockedDetailOf(lines: string[]): string | null {
       .replace(/^[\s│┃|>❯⏺*·-]+/, '')
       .replace(/[\s│┃|]+$/, '')
       .trim();
+
     // Redact before cutting, so a secret straddling the cut cannot leave a recognisable fragment.
     if (QUESTION.test(text)) {
       return redactString(text).slice(0, 200);
@@ -95,28 +98,38 @@ export function mergeViewer(seats: Seat[], agents: ViewerAgent[]): void {
 
     return a && s.cwd ? key(a, s.cwd) : null;
   };
+
   for (const s of seats) {
     const k = seatKey(s);
+
     if (k) {
       seatCount.set(k, (seatCount.get(k) ?? 0) + 1);
     }
   }
+
   for (const a of agents) {
     if (!a.cwd) {
       continue;
     }
+
     const k = key(a.agent, a.cwd);
+
     agentCount.set(k, (agentCount.get(k) ?? 0) + 1);
   }
+
   for (const s of seats) {
     const k = seatKey(s);
+
     if (!k || s.status === 'stopped') {
       continue;
     }
+
     if (seatCount.get(k) !== 1 || agentCount.get(k) !== 1) {
       continue;
     }
+
     const agent = agents.find((a) => a.cwd && key(a.agent, a.cwd) === k)!;
+
     s.viewerStatus = agent.status;
     if (agent.status === 'blocked' && s.status !== 'blocked') {
       s.status = 'blocked';
@@ -181,20 +194,25 @@ export function enrichRigs(
         recent = iso;
       }
     };
+
     // F3: the agent's activity, not the terminal's (an older path without it keeps lastActivityAt).
     for (const s of seats) {
       if (mine.has(s.id)) {
         consider(s.agentActivityAt !== undefined ? s.agentActivityAt : s.lastActivityAt);
       }
     }
+
     for (const q of queue) {
       if ((q.source && mine.has(q.source)) || (q.destination && mine.has(q.destination))) {
         consider(q.updatedAt);
       }
     }
+
     const out: RigSummary = { ...rig, recentAt: recent };
+
     if (specs) {
       const spec = specs.get(rig.name);
+
       out.specStatus = spec ? 'found' : 'not-found';
       out.specPath = spec?.path ?? null;
       out.summary = spec?.summary ?? null;
@@ -237,10 +255,12 @@ export async function buildSnapshot(
   const seats: Seat[] = daemon ? daemon.seats.map((s) => ({ ...s })) : [];
   const known = new Set(seats.map((s) => s.id));
   const paneOf = new Map(panes.map((p) => [p.session, p]));
+
   for (const p of [...panes].sort((a, b) => a.session.localeCompare(b.session))) {
     if (known.has(p.session)) {
       continue;
     }
+
     seats.push({
       id: p.session,
       source: 'tmux',
@@ -265,13 +285,17 @@ export async function buildSnapshot(
 
   // Terminal text: one bounded capture per seat that has a pane.
   const captureFailures: string[] = [];
+
   await pool(seats, CAPTURE_CONCURRENCY, async (seat) => {
     const pane = paneOf.get(seat.id);
+
     if (!pane) {
       return;
     }
+
     try {
       const raw = await sources.capture(pane.paneId);
+
       // F2 (QA HIGH-1): secrets a Claude pane hard-wrapped across rows, before the per-row redaction.
       seat.tail = { lines: redactWrapped(tailLines(raw), pane.width), ansi: true, capturedAt };
     } catch {
@@ -285,12 +309,15 @@ export async function buildSnapshot(
 
   // F3: agent activity from the transcripts, on OpenRig seats only (a plain tmux session has none).
   const transcripts = sources.agentActivity?.() ?? null;
+
   if (transcripts) {
     for (const seat of seats) {
       if (seat.rig === null) {
         continue;
       }
+
       const at = transcripts.get(seat.id);
+
       seat.agentActivityAt = at === undefined ? null : new Date(at).toISOString();
     }
   }
@@ -299,7 +326,9 @@ export async function buildSnapshot(
     if (seat.status !== 'blocked' || !seat.tail) {
       continue;
     }
+
     const detail = blockedDetailOf(seat.tail.lines);
+
     if (detail) {
       seat.blockedDetail = detail;
     }

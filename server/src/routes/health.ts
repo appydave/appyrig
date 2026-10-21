@@ -6,6 +6,7 @@ const router = Router();
 
 router.get('/health', (_req, res) => {
   const data: HealthResponse = { status: 'ok' };
+
   apiSuccess(res, data);
 });
 

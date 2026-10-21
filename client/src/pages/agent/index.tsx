@@ -80,8 +80,10 @@ function Picker({ ctx, current }: { ctx: PageContext; current: string }) {
   const tiles = useMemo(() => allTiles(ctx.allMachines), [ctx.allMachines]);
   const groups = useMemo(() => {
     const m = new Map<string, TileRef[]>();
+
     for (const t of tiles) {
       const k = `${t.machine.machine.label} · ${t.seat.rig ?? 'tmux sessions'}`;
+
       m.set(k, [...(m.get(k) ?? []), t]);
     }
 
@@ -485,6 +487,7 @@ export function defaultAgent(machines: FleetMachine[], rigName: string | null): 
       (q) => mine.has(q.destination ?? '') || mine.has(q.source ?? '')
     ).length;
   };
+
   const rank = (t: TileRef) => {
     const pip = pipFor(t.seat, t.machine);
 
@@ -494,6 +497,7 @@ export function defaultAgent(machines: FleetMachine[], rigName: string | null): 
       ((t.seat.contextUsedPct ?? 0) > 0 ? 0 : 1)
     );
   };
+
   const best = (list: TileRef[]) =>
     [...list].sort(
       (a, b) =>
@@ -522,12 +526,14 @@ function AgentPage({ ctx }: PageProps) {
   // agent as states change underneath it.
   const [auto, setAuto] = useState<string | null>(null);
   const { agentKey, openAgentPage } = ctx;
+
   useEffect(() => {
     if (!agentKey && !auto && fallback) {
       setAuto(fallback.key);
       openAgentPage(fallback.key);
     }
   }, [agentKey, auto, fallback, openAgentPage]);
+
   const missing = !!agentKey && !found;
   const tile = found ?? findTile(ctx.allMachines, auto) ?? fallback;
   const defaulted = !!tile && !!auto && tile.key === auto && !missing;

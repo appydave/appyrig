@@ -33,6 +33,7 @@ export function parseSeatDetail(
   if (!value || value.status !== 'ok' || !value.detail) {
     return null;
   }
+
   const d: SeatDetailData = value.detail;
   const view: SeatDetailView = {
     spec: d.spec ? { name: d.spec.name, version: d.spec.version, profile: d.spec.profile } : null,

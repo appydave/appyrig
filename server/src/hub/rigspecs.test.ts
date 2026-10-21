@@ -8,11 +8,14 @@ import { TOKEN, loadSnapshot, push, startHub, type RunningHub } from '../test/hu
  */
 
 const running: RunningHub[] = [];
+
 afterEach(async () => {
   await Promise.all(running.splice(0).map((h) => h.stop()));
 });
+
 const start = async () => {
   const h = await startHub();
+
   running.push(h);
 
   return h;
@@ -26,8 +29,10 @@ const emit = (s: Parameters<typeof push>[0], event: string, payload: unknown) =>
         resolve(err ? { ok: false, failureMode: 'timeout' } : ack)
       )
   );
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Answer<T = any> = { ok: boolean; value?: T; error?: { failureMode: string } };
+
 const call = <T>(h: RunningHub, verb: string, input: unknown) =>
   h.hub.core.call('cli', verb, input) as Answer<T>;
 
@@ -97,24 +102,31 @@ describe('N10: rig specs over the hub', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const snap = loadSnapshot('m2');
+
     await push(c, snap);
     // before any push: pending, never "none"
     expect(call<RigSpecsOutput>(h, 'rig.specs', {}).value).toEqual({
       machines: [expect.objectContaining({ machine: 'm2', status: 'pending', collectedAt: null })],
       specs: [],
     });
+
     const known = snap.rigs[0]!;
     const body = {
       machineId: 'm2',
       collectedAt: '2026-10-20T00:00:00.000Z',
       specs: [specEntry('spaghetti'), specEntry(known.name)],
     };
+
     expect(await emit(c, 'collector:rigspecs', body)).toMatchObject({ ok: true });
+
     const out = call<RigSpecsOutput>(h, 'rig.specs', {}).value!;
+
     expect(out.machines).toEqual([
       { machine: 'm2', status: 'ok', reason: null, collectedAt: '2026-10-20T00:00:00.000Z' },
     ]);
+
     const by = Object.fromEntries(out.specs.map((s) => [s.name, s]));
+
     expect(by.spaghetti).toMatchObject({
       machine: 'm2',
       launched: false,
@@ -136,9 +148,12 @@ describe('N10: rig specs over the hub', () => {
     const m2 = h.collector({ token: TOKEN, machineId: 'm2' });
     const roamy = h.collector({ token: TOKEN, machineId: 'roamy' });
     const m2snap = loadSnapshot('m2');
+
     await push(m2, m2snap);
     await push(roamy, loadSnapshot('roamy'));
+
     const name = m2snap.rigs[0]!.name;
+
     expect(
       await emit(roamy, 'collector:rigspecs', {
         machineId: 'roamy',
@@ -146,7 +161,9 @@ describe('N10: rig specs over the hub', () => {
         specs: [specEntry(name)],
       })
     ).toMatchObject({ ok: true });
+
     const s = call<RigSpecsOutput>(h, 'rig.specs', { machine: 'roamy' }).value!.specs[0]!;
+
     expect(s).toMatchObject({
       machine: 'roamy',
       launched: (loadSnapshot('roamy').rigs ?? []).some((r) => r.name === name),
@@ -157,12 +174,17 @@ describe('N10: rig specs over the hub', () => {
   it('refuses a push for another machine, and a malformed one, storing neither', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
+
     const body = { machineId: 'm2', collectedAt: '2026-10-20T00:00:00.000Z', specs: [] };
+
     expect(await emit(c, 'collector:rigspecs', { ...body, machineId: 'roamy' })).toMatchObject({
       failureMode: 'machine_mismatch',
     });
+
     const bad = { ...specEntry('x'), extra: 1 };
+
     expect(await emit(c, 'collector:rigspecs', { ...body, specs: [bad] })).toMatchObject({
       failureMode: 'invalid_snapshot',
     });
@@ -174,11 +196,13 @@ describe('N10b: rig commands over the hub', () => {
   it('newest first, filtered by rig (its own or any of its commands), with per-machine status', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
     expect(call<RigCommandsOutput>(h, 'rig.commands', {}).value!.machines[0]).toMatchObject({
       status: 'pending',
       fileFound: null,
     });
+
     const body = {
       machineId: 'm2',
       collectedAt: '2026-10-20T00:00:00.000Z',
@@ -189,15 +213,20 @@ describe('N10b: rig commands over the hub', () => {
         command('2026-10-20T03:00:00.000Z', { rigs: ['spaghetti'], phase: 'failed', exitCode: 1 }),
       ],
     };
+
     expect(await emit(c, 'collector:rigcommands', body)).toMatchObject({ ok: true });
+
     const all = call<RigCommandsOutput>(h, 'rig.commands', {}).value!;
+
     expect(all.commands.map((x) => x.ts)).toEqual([
       '2026-10-20T03:00:00.000Z',
       '2026-10-20T02:00:00.000Z',
       '2026-10-20T01:00:00.000Z',
     ]);
     expect(all.commands[0]).toMatchObject({ machine: 'm2', phase: 'failed', exitCode: 1 });
+
     const mine = call<RigCommandsOutput>(h, 'rig.commands', { rig: 'spaghetti' }).value!;
+
     expect(mine.commands.map((x) => x.ts)).toEqual([
       '2026-10-20T03:00:00.000Z',
       '2026-10-20T01:00:00.000Z',
@@ -216,9 +245,12 @@ describe('N10b: rig commands over the hub', () => {
   it('refuses an entry carrying a session id or an over-long output (the collector must cut and drop them)', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
+
     const body = { machineId: 'm2', collectedAt: '2026-10-20T00:00:00.000Z', fileFound: true };
     const t = '2026-10-20T01:00:00.000Z';
+
     expect(
       await emit(c, 'collector:rigcommands', {
         ...body,

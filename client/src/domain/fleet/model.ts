@@ -42,14 +42,19 @@ export interface Freshness {
 /** "4s", "3m", "2h", "5d". Negative ages (clock skew) read as 0s. */
 export function ago(ms: number): string {
   const s = Math.max(0, Math.floor(ms / 1000));
+
   if (s < 60) {
     return `${s}s`;
   }
+
   const m = Math.floor(s / 60);
+
   if (m < 60) {
     return `${m}m`;
   }
+
   const h = Math.floor(m / 60);
+
   if (h < 48) {
     return `${h}h`;
   }
@@ -64,12 +69,15 @@ export function ago(ms: number): string {
  */
 export function freshness(machine: FleetMachine, now: number, hubConnected: boolean): Freshness {
   const age = now - Date.parse(machine.lastSeen);
+
   if (machine.liveness === 'asleep') {
     return { level: 'asleep', label: `asleep · last seen ${ago(age)} ago` };
   }
+
   if (!hubConnected) {
     return { level: 'stale', label: `stale · hub offline · ${ago(age)}` };
   }
+
   if (age > ASLEEP_AFTER_MS) {
     return { level: 'stale', label: `stale · ${ago(age)}` };
   }
@@ -95,17 +103,21 @@ export type ModelFamily = 'opus' | 'sonnet' | 'fable' | 'haiku' | 'codex' | 'oth
  */
 export function modelChip(seat: Seat): { text: string; family: ModelFamily } {
   const raw = seat.model;
+
   if (raw) {
     const m = /^claude-(opus|sonnet|fable|haiku)-(\d+)-(\d+)/.exec(raw);
+
     if (m) {
       return { text: `${m[1]} ${m[2]}.${m[3]}`, family: m[1] as ModelFamily };
     }
+
     if (/^(gpt|codex|o\d)/.test(raw)) {
       return { text: raw, family: 'codex' };
     }
 
     return { text: raw, family: 'other' };
   }
+
   const runtime = seat.runtime ?? 'unknown';
 
   return { text: runtime, family: runtime === 'codex' ? 'codex' : 'other' };
@@ -149,16 +161,21 @@ export function groupState(g: WallGroup): GroupState {
   if (g.asleep) {
     return 'asleep';
   }
+
   const has = (st: SeatStatus) => g.tiles.some((t) => t.seat.status === st);
+
   if (has('blocked')) {
     return 'blocked';
   }
+
   if (has('working')) {
     return 'working';
   }
+
   if (has('idle')) {
     return 'idle';
   }
+
   if (has('unknown')) {
     return 'unknown';
   }
@@ -220,9 +237,11 @@ export function groupSeats(machines: FleetMachine[], by: GroupBy): WallGroup[] {
 
 function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
   const groups: WallGroup[] = [];
+
   for (const fm of machines) {
     const asleep = fm.liveness === 'asleep';
     const seats = fm.snapshot.seats;
+
     if (by === 'machine') {
       groups.push({
         key: fm.machine.id,
@@ -233,11 +252,14 @@ function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
       });
       continue;
     }
+
     const byRig = new Map<string, WallGroup>();
+
     for (const seat of seats) {
       const rig = seat.rig ?? null;
       const key = `${fm.machine.id}:${rig ?? '~tmux'}`;
       let g = byRig.get(key);
+
       if (!g) {
         g = {
           key,
@@ -250,6 +272,7 @@ function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
         byRig.set(key, g);
         groups.push(g);
       }
+
       g.tiles.push({ key: seatKey(fm.machine.id, seat.id), machine: fm, seat });
     }
   }
@@ -274,6 +297,7 @@ export function countSeats(machines: FleetMachine[]): FleetCounts {
   };
   let seats = 0;
   let paused = 0;
+
   for (const fm of machines) {
     for (const seat of fm.snapshot.seats) {
       seats += 1;
@@ -291,10 +315,12 @@ export function countSeats(machines: FleetMachine[]): FleetCounts {
 /** Blocked seats on live machines, the thing S1 has to surface in under 5 s. */
 export function blockedSeats(machines: FleetMachine[]): TileRef[] {
   const out: TileRef[] = [];
+
   for (const fm of machines) {
     if (fm.liveness === 'asleep') {
       continue;
     }
+
     for (const seat of fm.snapshot.seats) {
       if (seat.status === 'blocked') {
         out.push({ key: seatKey(fm.machine.id, seat.id), machine: fm, seat });
@@ -396,6 +422,7 @@ const ROLE_WORD: Record<string, string> = {
   'product-designer': 'lead',
   synthesizer: 'writer',
 };
+
 export function roleWord(agentRole: string | null | undefined): string | null {
   if (!agentRole) {
     return null;
@@ -417,13 +444,17 @@ function inputBoxStart(lines: string[]): number {
     if (!PROMPT_LINE.test(stripAnsi(lines[i]!))) {
       continue;
     }
+
     if (!RULE.test(stripAnsi(lines[i - 1]!))) {
       continue;
     }
+
     const lower = lines.findIndex((l, k) => k > i && RULE.test(stripAnsi(l)));
+
     if (lower === -1) {
       continue;
     }
+
     // r1 W3 LOW-2: only the box when what follows its lower rule is footer chrome (or blank), so a
     // plain pane with "> quoted" between two long rules keeps the output after it.
     if (lines.slice(lower + 1).every(isChrome)) {
@@ -438,12 +469,15 @@ export function contentTail(all: string[], n: number): string[] {
   const box = inputBoxStart(all);
   const lines = box >= 0 ? all.slice(0, box) : all;
   let end = lines.length;
+
   while (end > 0 && isChrome(lines[end - 1]!)) {
     end -= 1;
   }
+
   if (end === 0) {
     return visibleTail(lines, n);
   }
+
   // Blank lines and Claude Code's tips carry nothing on a small tile; keep the n last lines that
   // say something.
   const said = lines
@@ -455,6 +489,7 @@ export function contentTail(all: string[], n: number): string[] {
 
 export function visibleTail(lines: string[], n: number): string[] {
   let end = lines.length;
+
   while (end > 0 && stripAnsi(lines[end - 1]).trim() === '') {
     end -= 1;
   }

@@ -12,6 +12,7 @@ const byId = (seats: ReturnType<typeof parseNodes>, id: string) => seats.find((s
 describe('adapter: daemon /api/ps', () => {
   it('maps a running machine to rig summaries', () => {
     const rigs = parsePs(readFixtureJson('roamy--api-ps.json'));
+
     expect(
       rigs.map((r) => [r.name, r.status, r.nodeCount, r.runningCount, r.attentionCount])
     ).toEqual([
@@ -22,6 +23,7 @@ describe('adapter: daemon /api/ps', () => {
 
   it('keeps stopped rigs (the M2 has six, none running)', () => {
     const rigs = parsePs(readFixtureJson('m2--api-ps.json'));
+
     expect(rigs).toHaveLength(6);
     expect(rigs.every((r) => r.status === 'stopped' && r.runningCount === 0)).toBe(true);
   });
@@ -33,6 +35,7 @@ describe('adapter: daemon /api/ps', () => {
   it('throws naming the field when a key we read is gone', () => {
     const raw = readFixtureJson('roamy--api-ps.json') as Record<string, unknown>[];
     const renamed: Record<string, unknown> = { ...raw[0]!, nameX: 'kernel' };
+
     delete renamed.name;
     expect(() => parsePs([renamed])).toThrow(/name/);
   });
@@ -53,6 +56,7 @@ describe('adapter: daemon nodes -> seats', () => {
 
   it('carries the lifecycle fact separately from the pip', () => {
     const s = byId(seats, 'advisor-lead@kernel');
+
     expect(s.status).toBe('idle');
     expect(s.lifecycleState).toBe('attention_required');
     expect(s).toMatchObject({
@@ -67,6 +71,7 @@ describe('adapter: daemon nodes -> seats', () => {
 
   it('blocked when needsInput.count > 0, with the reason', () => {
     const s = byId(parseNodes(readFixtureJson(syn('blocked-permission'))), 'dev-build@starter');
+
     expect(s.status).toBe('blocked');
     expect(s.blockedReason).toBe('permission prompt');
     expect(s.activity?.needsInputCount).toBe(1);
@@ -77,12 +82,14 @@ describe('adapter: daemon nodes -> seats', () => {
       parseNodes(readFixtureJson(syn('needs-input-usage-limit'))),
       'dev-review@starter'
     );
+
     expect(s.status).toBe('blocked');
     expect(s.blockedReason).toBe('usage limit');
   });
 
   it('working mid tool call', () => {
     const s = byId(parseNodes(readFixtureJson(syn('working-mid-tool-call'))), 'dev-build@starter');
+
     expect(s.status).toBe('working');
   });
 
@@ -91,6 +98,7 @@ describe('adapter: daemon nodes -> seats', () => {
       parseNodes(readFixtureJson(syn('attention-required-with-guidance'))),
       'dev-review@starter'
     );
+
     expect(s.lifecycleState).toBe('attention_required');
     expect(typeof s.recoveryGuidance).toBe('string');
     expect(s.recoveryGuidance!.length).toBeGreaterThan(0);
@@ -101,8 +109,10 @@ describe('adapter: daemon nodes -> seats', () => {
       'm2--api-rig-kernel-01M4DZNH353R95ADJ00CFZQZXC-nodes.json',
       'm2--api-rig-fliedit-team-01M4G3N3DZG0PKJ1PPF401NH0A-nodes.json',
     ];
+
     for (const f of files) {
       const stopped = parseNodes(readFixtureJson(f));
+
       expect(stopped.length).toBeGreaterThan(0);
       for (const s of stopped) {
         expect(s.status).toBe('stopped');
@@ -118,12 +128,15 @@ describe('adapter: daemon nodes -> seats', () => {
       ...n,
       contextUsage: { usedPercentage: 7, totalInputTokens: 119_400 },
     }));
+
     expect(parseNodes(withTokens)[0]!.contextTokens).toBe(119_400);
+
     const odd = raw.map((n) => ({
       ...n,
       contextUsage: { usedPercentage: 7, totalInputTokens: 'lots' },
     }));
     const seatsOdd = parseNodes(odd); // a bad field does not blank the rig
+
     expect(seatsOdd.length).toBe(raw.length);
     for (const s of seatsOdd) {
       expect('contextTokens' in s).toBe(false);
@@ -138,26 +151,31 @@ describe('adapter: daemon nodes -> seats', () => {
         contextUsage: { usedPercentage: 7, totalInputTokens: null },
       }))
     );
+
     for (const s of noTokens) {
       expect(oldSeat.safeParse(s).success).toBe(true);
     }
+
     const withTokens = parseNodes(
       (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => ({
         ...n,
         contextUsage: { usedPercentage: 7, totalInputTokens: 5 },
       }))
     );
+
     expect(oldSeat.safeParse(withTokens[0]).success).toBe(false); // only a seat WITH the key is refused
   });
 
   it('a missing activityState key (not just null) does not crash', () => {
     const raw = (readFixtureJson(KERNEL) as Record<string, unknown>[]).map((n) => {
       const rest = { ...n };
+
       delete rest.activityState;
 
       return rest;
     });
     const seats2 = parseNodes(raw);
+
     expect(seats2.every((s) => s.status === 'unknown')).toBe(true);
   });
 
@@ -167,6 +185,7 @@ describe('adapter: daemon nodes -> seats', () => {
 
       return { ...rest, sessionName: canonicalSessionName };
     });
+
     expect(() => parseNodes(raw)).toThrow(/canonicalSessionName/);
   });
 });
@@ -174,7 +193,9 @@ describe('adapter: daemon nodes -> seats', () => {
 describe('adapter: daemon queue', () => {
   it('returns body-free rows, newest first', () => {
     const q = parseQueue(readFixtureJson('m2--cli-queue-list-all.json'));
+
     expect(q.length).toBe(113);
+
     const base = [
       'createdAt',
       'destination',
@@ -188,15 +209,19 @@ describe('adapter: daemon queue', () => {
     ];
     // v2 note fields are optional: only these may appear beyond the original keys.
     const extra = ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'];
+
     for (const row of q) {
       const keys = Object.keys(row);
+
       for (const b of base) {
         expect(keys).toContain(b);
       }
+
       for (const k of keys) {
         expect([...base, ...extra]).toContain(k);
       }
     }
+
     for (let i = 1; i < q.length; i++) {
       expect(q[i - 1]!.updatedAt >= q[i]!.updatedAt).toBe(true);
     }
@@ -206,12 +231,14 @@ describe('adapter: daemon queue', () => {
     const raw = readFixtureJson('roamy--cli-queue-list.json') as Record<string, unknown>[];
     const row = { ...raw[0]!, summary: null, body: `\n\n${'x'.repeat(400)}\nsecond line` };
     const [q] = parseQueue([row]);
+
     expect(q!.summary).toBe('x'.repeat(160));
   });
 
   it('caps at 500 rows', () => {
     const raw = readFixtureJson('roamy--cli-queue-list.json') as Record<string, unknown>[];
     const many = Array.from({ length: 600 }, (_, i) => ({ ...raw[0]!, qitemId: `q-${i}` }));
+
     expect(parseQueue(many)).toHaveLength(500);
   });
 });
@@ -230,6 +257,7 @@ describe('v2 free fields (step 1)', () => {
         tier: 'fast',
       },
     ]);
+
     expect(q).toMatchObject({
       closureReason: 'no-follow-on',
       closureTarget: 'review.r1@x',
@@ -243,6 +271,7 @@ describe('v2 free fields (step 1)', () => {
     const rows = parseQueue([
       { ...rawQ()[0]!, closureReason: '', closureTarget: null, blockedOn: { x: 1 }, tier: 5 },
     ]);
+
     expect(rows).toHaveLength(1);
     for (const k of ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier']) {
       expect(k in rows[0]!).toBe(false);
@@ -260,6 +289,7 @@ describe('v2 free fields (step 1)', () => {
     const [q] = parseQueue([
       { ...rawQ()[0]!, closureReason: '', closureTarget: null, blockedOn: null, tier: null },
     ]);
+
     expect(OldRow.safeParse(q).success).toBe(true);
   });
 
@@ -273,16 +303,22 @@ describe('v2 free fields (step 1)', () => {
         resumeCommand: "claude --resume 'a0cf4780-db84-44cf-9ec1-97d959480d41'",
       }))
     );
+
     expect(withCmd[0]).toMatchObject({ tmuxAttachCommand: attach });
     for (const s of withCmd) {
       expect('resumeCommand' in s).toBe(false);
     }
+
     expect(JSON.stringify(withCmd)).not.toContain('a0cf4780');
     // the builder runs redactDeep over the whole snapshot: the line must come through unchanged
     expect(redactDeep(withCmd[0]!).tmuxAttachCommand).toBe(attach);
+
     const bad = parseNodes(raw.map((n) => ({ ...n, tmuxAttachCommand: 12 })));
+
     expect(bad.length).toBe(raw.length);
+
     const OldSeat = SeatSchema.omit({ tmuxAttachCommand: true });
+
     for (const s of bad) {
       expect('tmuxAttachCommand' in s).toBe(false);
       expect(OldSeat.safeParse(s).success).toBe(true);
@@ -311,6 +347,7 @@ describe('parseGraphEdges (D09 W2)', () => {
         { id: 'e3', source: 'a', target: 'zz', label: 'delegates_to' },
       ],
     };
+
     expect(parseGraphEdges(raw)).toEqual([{ from: 'a@r', to: 'a@r', kind: 'can_observe' }]);
   });
 

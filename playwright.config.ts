@@ -19,6 +19,7 @@ const dotenv: Record<string, string | undefined> = existsSync(envFile)
 const get = (key: string) => {
   const fromFile = dotenv[key];
   const fromShell = process.env[key];
+
   if (fromFile !== undefined && fromShell !== undefined && fromFile !== fromShell) {
     throw new Error(
       `${key} is ${fromShell} in the environment but ${fromFile} in .env; the hub would use .env ` +
@@ -37,12 +38,14 @@ const hubToken = get('HUB_TOKEN');
 
 // Fail loudly rather than test against another tree's hub.
 const socketUrl = get('VITE_SOCKET_URL');
+
 if (socketUrl && Number(new URL(socketUrl).port) !== hubPort) {
   throw new Error(
     `.env VITE_SOCKET_URL (${socketUrl}) does not point at this tree's hub (PORT=${hubPort}). ` +
       `Fix .env so the browser talks to the hub Playwright starts.`
   );
 }
+
 if (!hubToken || hubToken.length < 16) {
   throw new Error('HUB_TOKEN (16+ chars) must be set in .env or the environment for the e2e hub.');
 }
@@ -57,7 +60,9 @@ if ('DATA_DIR' in dotenv) {
       "e2e temp data dir and the run could touch real state. Remove DATA_DIR from this tree's .env."
   );
 }
+
 process.env.E2E_DATA_DIR ??= mkdtempSync(path.join(tmpdir(), 'appyrig-e2e-data-'));
+
 const e2eDataDir = process.env.E2E_DATA_DIR;
 
 // Read by specs (e2e/support/fleet.ts) so they know where the hub is and how to log in.

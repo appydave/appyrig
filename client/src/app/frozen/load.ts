@@ -52,6 +52,7 @@ export async function loadFrozen(
   const entry = Object.entries(files).find(([p]) => p.endsWith(`/${name}.json`));
   let file: FrozenFile;
   let problem: string | undefined;
+
   if (!entry) {
     const known = Object.keys(files).map((p) =>
       p
@@ -59,6 +60,7 @@ export async function loadFrozen(
         .pop()!
         .replace(/\.json$/, '')
     );
+
     problem = `no snapshot named "${name}"${known.length ? ` (have: ${known.join(', ')})` : ''}`;
     file = emptyFile(name);
   } else {
@@ -69,6 +71,7 @@ export async function loadFrozen(
       file = emptyFile(name);
     }
   }
+
   const socket = createFrozenSocket(file);
 
   return {

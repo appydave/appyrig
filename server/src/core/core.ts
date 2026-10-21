@@ -57,24 +57,31 @@ export function createCore(opts: CoreOptions): Core {
     verbs: () => [...names],
     call(principal, verbName, input, callOpts = {}) {
       const verb = Object.hasOwn(VERB_REGISTRY, verbName) ? VERB_REGISTRY[verbName] : undefined;
+
       if (!verb) {
         return refuse('unknown-capability', `No verb "${verbName}".`, { known: names });
       }
+
       if (callOpts.dryRun !== undefined && typeof callOpts.dryRun !== 'boolean') {
         return refuse('invalid-input', 'dryRun must be true, false or absent.', {
           issues: [{ path: 'dryRun', message: `expected boolean, got ${typeof callOpts.dryRun}` }],
         });
       }
+
       const parsed = verb.contract.input.safeParse(input ?? {});
+
       if (!parsed.success) {
         return refuse('invalid-input', `${verbName}: input does not match.`, {
           issues: issuesOf(parsed.error),
         });
       }
+
       const allowed = authorize(verbName, verb.contract, principal, parsed.data);
+
       if (!allowed.ok) {
         return { ok: false, error: allowed.refusal };
       }
+
       try {
         const value = verb.handle(parsed.data, {
           store: opts.store,
@@ -88,6 +95,7 @@ export function createCore(opts: CoreOptions): Core {
           config: opts.config,
         });
         const out = verb.contract.output.safeParse(value);
+
         if (!out.success) {
           opts.onFault?.(verbName, out.error);
 
@@ -99,6 +107,7 @@ export function createCore(opts: CoreOptions): Core {
         if (err instanceof CapabilityRefusal) {
           return { ok: false, error: err.toRefusal() };
         }
+
         opts.onFault?.(verbName, err);
 
         return refuse(

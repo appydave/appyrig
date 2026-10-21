@@ -35,6 +35,7 @@ describe('Feature: findings are counted per file and per rule', () => {
         finding('b.ts', 'no-module-mocking'),
       ],
     });
+
     expect(counts).toEqual({
       'a.ts': { 'no-unknown-parameters': 2 },
       'b.ts': { 'no-module-mocking': 1 },
@@ -58,21 +59,25 @@ describe('Feature: the baseline can shrink but never grow', () => {
 
   it('Scenario: given one more finding in a baselined file, then it has grown', () => {
     const r = compare({ 'a.ts': { 'no-unknown-parameters': 3 } }, baseline);
+
     expect(r.grown).toEqual([{ file: 'a.ts', rule: 'no-unknown-parameters', now: 3, was: 2 }]);
   });
 
   it('Scenario: given a finding in a file the baseline does not list, then it has grown from zero', () => {
     const r = compare({ ...baseline, 'new.ts': { 'no-module-mocking': 1 } }, baseline);
+
     expect(r.grown).toEqual([{ file: 'new.ts', rule: 'no-module-mocking', now: 1, was: 0 }]);
   });
 
   it('Scenario: given a different rule in a baselined file, then it has grown from zero', () => {
     const r = compare({ 'a.ts': { 'no-unknown-parameters': 2, 'no-module-mocking': 1 } }, baseline);
+
     expect(r.grown.map((g) => g.rule)).toEqual(['no-module-mocking']);
   });
 
   it('Scenario: given fewer findings than the baseline, then the baseline is stale', () => {
     const r = compare({ 'a.ts': { 'no-unknown-parameters': 1 } }, baseline);
+
     expect(r.shrunk).toEqual([{ file: 'a.ts', rule: 'no-unknown-parameters', now: 1, was: 2 }]);
     expect(r.grown).toEqual([]);
   });
@@ -85,6 +90,7 @@ describe('Feature: the baseline can shrink but never grow', () => {
 
   it('Scenario: given a fix in one file and a new finding in another, then both are reported', () => {
     const r = compare({ 'b.ts': { 'no-module-mocking': 1 } }, baseline);
+
     expect(r.grown).toHaveLength(1);
     expect(r.shrunk).toHaveLength(1);
   });
@@ -95,6 +101,7 @@ describe('Feature: moving a file is not growing the baseline', () => {
 
   it('Scenario: given the same findings under a new path, then no rule grew', () => {
     const moved = { 'new.ts': { 'no-unknown-parameters': 2 }, 'x.ts': { 'no-module-mocking': 1 } };
+
     expect(rulesThatGrew(baseline, moved)).toEqual([]);
   });
 
@@ -103,11 +110,13 @@ describe('Feature: moving a file is not growing the baseline', () => {
       'old.ts': { 'no-unknown-parameters': 1 },
       'z.ts': { 'no-unknown-parameters': 1 },
     };
+
     expect(rulesThatGrew(baseline, swapped)).toEqual([]);
   });
 
   it('Scenario: given a new finding with nothing fixed, then that rule grew', () => {
     const worse = { ...baseline, 'new.ts': { 'no-unknown-parameters': 1 } };
+
     expect(rulesThatGrew(baseline, worse)).toEqual(['no-unknown-parameters']);
   });
 
@@ -119,6 +128,7 @@ describe('Feature: moving a file is not growing the baseline', () => {
 describe('Feature: a disable comment cannot hide a finding', () => {
   it('Scenario: given a comment that disables an anti-slop rule, then it is found with its line', () => {
     const text = `const a = 1;\n// ${OX}-next-line anti-slop/no-unknown-parameters\nfn(x);\n`;
+
     expect(findDisableDirectives(text)).toEqual([
       { line: 2, text: `${OX}-next-line anti-slop/no-unknown-parameters` },
     ]);
@@ -156,6 +166,7 @@ describe('Feature: a disable comment cannot hide a finding', () => {
 
   it('Scenario: given the folders the scan skips, then each is also ignored by oxlint.config.ts', () => {
     const config = readFileSync(join(ROOT, 'oxlint.config.ts'), 'utf8');
+
     for (const prefix of NOT_SCANNED) {
       expect(config, prefix).toContain(`'${prefix}**'`);
     }
@@ -167,6 +178,7 @@ describe('Feature: the count of type casts in production code can only go down',
 
   it('Scenario: given a comment that uses the exemption marker, then it is found with its line', () => {
     const text = `const a = 1;\n// ${CAST_MARKER}: trust me\nconst b = x as Foo;\n`;
+
     expect(findCastExemptions(text)).toEqual([{ line: 2, text: `// ${CAST_MARKER}: trust me` }]);
   });
 
@@ -176,6 +188,7 @@ describe('Feature: the count of type casts in production code can only go down',
 
   it('Scenario: given the cast rule fails, then the message says no comment exempts a cast', () => {
     const msg = messageFor(CAST_RULE, 'This type assertion has no `SAFETY:` justification.');
+
     expect(msg).toContain('no comment exempts one');
     expect(msg).not.toContain('SAFETY');
     expect(msg).not.toContain(CAST_MARKER);
@@ -202,6 +215,7 @@ describe('Feature: the count of type casts in production code can only go down',
     for (const glob of ['**/*.test.', '**/*.spec.', "'e2e/**'", "'test/**'", "'**/test/**'"]) {
       expect(config, glob).toContain(glob);
     }
+
     expect(config).toMatch(new RegExp(`anti-slop/${CAST_RULE}': 'off'`));
   });
 
@@ -209,6 +223,7 @@ describe('Feature: the count of type casts in production code can only go down',
     const { findings } = JSON.parse(readFileSync(join(ROOT, 'oxlint-baseline.json'), 'utf8'));
     const files = Object.keys(findings).filter((f) => findings[f][CAST_RULE]);
     const testLike = /\.(test|spec)\.|(^|\/)(e2e|test)\/|test-kit/;
+
     expect(files.length).toBeGreaterThan(0);
     expect(files.filter((f) => testLike.test(f))).toEqual([]);
   });
@@ -220,6 +235,7 @@ describe('Feature: the scan applies both checks to every file it is given', () =
 
   it('Scenario: given a file using the exemption marker, then it is reported as a cast-exemption-comment', () => {
     const d = scanTexts([{ name: 'server/src/a.ts', text: marker }]);
+
     expect(d.map((x) => [x.filename, x.code, x.labels[0]!.span.line])).toEqual([
       ['server/src/a.ts', 'anti-slop(cast-exemption-comment)', 1],
     ]);
@@ -227,6 +243,7 @@ describe('Feature: the scan applies both checks to every file it is given', () =
 
   it('Scenario: given a file with a disable comment, then it is reported as an inline-disable', () => {
     const d = scanTexts([{ name: 'server/src/b.ts', text: disable }]);
+
     expect(d.map((x) => x.code)).toEqual(['anti-slop(inline-disable)']);
   });
 
@@ -236,6 +253,7 @@ describe('Feature: the scan applies both checks to every file it is given', () =
 
   it('Scenario: given the files that define the marker, then using it there is not a finding', () => {
     const d = scanTexts(MARKER_HOMES.map((name) => ({ name, text: marker })));
+
     expect(d).toEqual([]);
   });
 
@@ -248,6 +266,7 @@ describe('Feature: the scan applies both checks to every file it is given', () =
       { name: 'client/src/x.ts', text: marker },
       { name: 'server/src/y.ts', text: disable },
     ]);
+
     expect(d.map((x) => x.filename)).toEqual(['client/src/x.ts', 'server/src/y.ts']);
   });
 });
@@ -277,6 +296,7 @@ describe('Feature: the gate runs in CI and the baseline is well formed', () => {
   it('Scenario: given every CI job that installs, then pnpm is there first (the plugin builds with it)', () => {
     const installs = ci.match(/run: npm install\s*$/gm)?.length ?? 0;
     const pnpm = ci.match(/run: npm install -g pnpm\s*$/gm)?.length ?? 0;
+
     expect(installs).toBeGreaterThan(0);
     expect(pnpm).toBe(installs);
   });
@@ -291,6 +311,7 @@ describe('Feature: the gate runs in CI and the baseline is well formed', () => {
   it('Scenario: given the baseline file, then every count is a positive whole number', () => {
     const { findings } = JSON.parse(readFileSync(join(ROOT, 'oxlint-baseline.json'), 'utf8'));
     const counts = Object.values(findings).flatMap((rules) => Object.values(rules as object));
+
     expect(counts.length).toBeGreaterThan(0);
     expect(counts.every((n) => Number.isInteger(n) && (n as number) > 0)).toBe(true);
   });

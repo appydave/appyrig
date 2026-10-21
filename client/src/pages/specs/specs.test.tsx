@@ -136,6 +136,7 @@ function setup(commands: () => RigCommandsOutput) {
     'rig.commands': () => commands(),
   });
   const ctx = pageCtx([m2], socket, NOW);
+
   render(<specsPage.component ctx={ctx} />);
 
   return { ctx, sent, launched };
@@ -146,6 +147,7 @@ afterEach(() => vi.useRealTimers());
 describe('N10: the Rig specs page', () => {
   it('sits in the Fleet group right after the Graph, with a Legend purpose and title', () => {
     const fleet = NAV_GROUPS.find((g) => g.key === 'fleet')!.pages;
+
     expect(fleet.indexOf('specs')).toBe(fleet.indexOf('graph') + 1);
     expect(pageFor('specs')).toMatchObject({ label: 'Rig specs', group: 'fleet' });
     expect(PAGE_PURPOSE.specs).toMatch(/launched or not/);
@@ -154,8 +156,11 @@ describe('N10: the Rig specs page', () => {
 
   it('lists every spec, marked draft or running; a draft shows its pods, seats, profiles and edges', async () => {
     const { launched } = setup(() => ({ machines: [], commands: [] }));
+
     await waitFor(() => expect(screen.getAllByTestId('rs-item')).toHaveLength(2));
+
     const items = screen.getAllByTestId('rs-item');
+
     // drafts first
     expect(items[0]).toHaveTextContent('spaghetti');
     expect(items[0]).toHaveTextContent('draft (not launched)');
@@ -166,16 +171,21 @@ describe('N10: the Rig specs page', () => {
     );
 
     const detail = screen.getByTestId('rs-detail');
+
     expect(within(detail).getByTestId('rs-detail-name')).toHaveTextContent('spaghetti');
     expect(within(detail).getByTestId('rs-draft-note')).toBeInTheDocument();
     expect(within(detail).queryByTestId('rs-links')).toBeNull();
     expect(within(detail).getByTestId('rs-docs')).toHaveTextContent('CULTURE.md');
     expect(within(detail).getByTestId('rs-docs')).toHaveTextContent('RUNBOOK.md');
+
     const pods = within(detail).getAllByTestId('rs-pod');
+
     expect(pods.map((p) => p.getAttribute('data-pod'))).toEqual(['orch', 'gates', 'review']);
     expect(within(pods[0]!).getByText('Orchestration')).toBeInTheDocument();
     expect(within(pods[0]!).getByText('Hands each gate to its desk.')).toBeInTheDocument();
+
     const lead = within(pods[0]!).getByTestId('rs-seat');
+
     expect(lead).toHaveTextContent('orch-lead@spaghetti');
     expect(within(lead).getByTestId('rs-seat-profile')).toHaveTextContent('lead');
     expect(lead).toHaveTextContent('Hands each gate slice to its desk.');
@@ -184,12 +194,16 @@ describe('N10: the Rig specs page', () => {
     // pod-level and rig-level edges, with their kinds
     expect(within(pods[1]!).getByTestId('rs-pod-edges')).toHaveTextContent('foundation');
     expect(within(pods[1]!).getByTestId('rs-pod-edges')).toHaveTextContent('collaborates_with');
+
     const rigEdges = within(detail).getByTestId('rs-rig-edges');
+
     expect(within(rigEdges).getAllByTestId('rs-edge')).toHaveLength(2);
     expect(rigEdges).toHaveTextContent('orch.lead');
     expect(rigEdges).toHaveTextContent('delegates_to');
+
     // the AgentSpec and every profile
     const profiles = within(detail).getAllByTestId('rs-profile');
+
     expect(profiles.map((p) => p.firstChild!.textContent)).toEqual([
       'lead',
       'foundation',
@@ -200,9 +214,12 @@ describe('N10: the Rig specs page', () => {
 
   it('a launched rig links to its live views', async () => {
     const { ctx, launched } = setup(() => ({ machines: [], commands: [] }));
+
     await waitFor(() => expect(screen.getAllByTestId('rs-item')).toHaveLength(2));
     fireEvent.click(screen.getAllByTestId('rs-item')[1]!);
+
     const links = screen.getByTestId('rs-links');
+
     fireEvent.click(within(links).getByRole('button', { name: 'Rig Map' }));
     expect(ctx.chooseRig).toHaveBeenCalledWith(`m2:${launched.name}`);
     expect(ctx.goTo).toHaveBeenCalledWith('map');
@@ -210,6 +227,7 @@ describe('N10: the Rig specs page', () => {
 
   it('Commands: the selected rig only, "All rigs" shows the rest, and new lines appear without a reload', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
+
     let rows = [
       cmd('2026-10-20T11:00:00.000Z', { command: 'rig ps' }),
       cmd('2026-10-20T11:01:00.000Z', {
@@ -226,9 +244,12 @@ describe('N10: the Rig specs page', () => {
       ],
       commands: [...rows].reverse(),
     });
+
     setup(answer);
     await waitFor(() => expect(screen.getAllByTestId('rs-cmd')).toHaveLength(1));
+
     const one = screen.getByTestId('rs-cmd');
+
     expect(one).toHaveTextContent('rig up ~/dev/appyrigs/rigs/spaghetti');
     expect(one).toHaveTextContent('claude');
     expect(one).toHaveTextContent('failed · exit 1');
@@ -257,6 +278,7 @@ describe('N10: the Rig specs page', () => {
   it('an older hub (no rig.specs) still lists the launched rigs from their records, and says why', async () => {
     const m2 = fleetMachine(snapshot('m2'));
     const rig = m2.snapshot.rigs[0]!;
+
     m2.snapshot.rigs[0] = {
       ...rig,
       specStatus: 'found',
@@ -265,7 +287,9 @@ describe('N10: the Rig specs page', () => {
       pods: [{ id: 'dev', label: 'Development', members: ['build'] }],
       specEdges: [],
     };
+
     const { socket } = answeringSocket({});
+
     render(<specsPage.component ctx={pageCtx([m2], socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('rs-specs-old-hub')).toBeInTheDocument());
     expect(screen.getAllByTestId('rs-item')).toHaveLength(1);
@@ -283,21 +307,25 @@ describe('N10: the Rig specs model', () => {
     const m2 = fleetMachine(snapshot('m2'));
     const answer = specsAnswer('m2', 'x', 'running');
     const rows = shownSpecs(answer, [m2]);
+
     expect(rows.map((r) => [r.name, r.state, r.source])).toEqual([
       ['spaghetti', 'draft', 'spec-scan'],
       ['x', 'running', 'spec-scan'],
     ]);
+
     // the machine is pending in the verb: its snapshot rigs with a found spec are used instead
     const pending = {
       ...answer,
       machines: [{ ...answer.machines[0]!, status: 'pending' as const }],
     };
+
     expect(shownSpecs(pending, [m2]).every((r) => r.source === 'live-record')).toBe(true);
   });
 
   it('a spec found on one machine but launched on another is not a draft, and points at the machine running it', () => {
     const m2 = fleetMachine(snapshot('m2'));
     const answer = specsAnswer('m4', 'x', 'running');
+
     answer.specs[0] = {
       ...answer.specs[0]!,
       launchedOn: [
@@ -306,12 +334,18 @@ describe('N10: the Rig specs model', () => {
       ],
     };
     answer.machines.push({ ...answer.machines[0]!, machine: 'm2', status: 'pending' });
+
     const row = shownSpecs(answer, [m2]).find((r) => r.name === 'spaghetti')!;
+
     expect(row).toMatchObject({ machine: 'm4', state: 'running', liveMachine: 'm2' });
+
     // an older hub (no launchedOn): its own machine only
     const old: Partial<(typeof answer.specs)[number]> = { ...answer.specs[0]! };
+
     delete old.launchedOn;
+
     const legacy = { ...answer, specs: [old as (typeof answer.specs)[number]] };
+
     expect(shownSpecs(legacy, [])[0]).toMatchObject({ state: 'draft', liveMachine: null });
   });
 
@@ -321,6 +355,7 @@ describe('N10: the Rig specs model', () => {
       cmd('2026-10-20T11:00:01.000Z', { rigs: ['b', 'a'] }),
       cmd('2026-10-20T11:00:02.000Z'),
     ];
+
     expect(shownCommands(rows, 'a', false)).toHaveLength(2);
     expect(shownCommands(rows, 'a', true)).toHaveLength(3);
     expect(shownCommands(rows, null, false)).toHaveLength(3);

@@ -49,6 +49,7 @@ const intervalMs = Number(values.interval);
 
 function load(scenario) {
   const snap = JSON.parse(readFileSync(resolve(snapshotsDir, `${scenario}.json`), 'utf8'));
+
   if (scenario === 'm2') {
     // v1.4 rig fields: one rig has a spec (its files are replayed below), the rest were looked for and not found.
     snap.rigs = snap.rigs.map((r) =>
@@ -99,10 +100,14 @@ function rigFilesPush(machineId) {
 function schemaPushes(machineId) {
   const real = JSON.parse(readFileSync(resolve(fixturesDir, 'openrig-schema-0.6.6.json'), 'utf8'));
   const older = structuredClone(real.tables);
+
   older.pop();
+
   const first = older.find((t) => t.columns.length > 2);
+
   first.columns.pop();
   first.columns[0].type = 'INTEGER';
+
   const mk = (version, tables) => ({
     machineId,
     collectedAt: new Date().toISOString(),
@@ -128,8 +133,10 @@ function run(scenario) {
     let timer;
     const push = () => {
       const snapshot = { ...base, collectedAt: new Date().toISOString() };
+
       socket.timeout(5000).emit('collector:snapshot', snapshot, (err, ack) => {
         const result = err ? { ok: false, failureMode: 'timeout', message: String(err) } : ack;
+
         console.log(`[${scenario}] ${JSON.stringify(result)}`);
         if (values.once) {
           socket.close();
@@ -137,12 +144,14 @@ function run(scenario) {
         }
       });
     };
+
     const emitAcked = (event, payload) =>
       new Promise((r) =>
         socket
           .timeout(5000)
           .emit(event, payload, (err, ack) => r(err ? { ok: false, failureMode: 'timeout' } : ack))
       );
+
     socket.on('connect', () => {
       console.log(`[${scenario}] connected to ${values.hub}/collector as ${machineId}`);
       push();
@@ -159,6 +168,7 @@ function run(scenario) {
           }
         })();
       }
+
       if (!values.once) {
         timer = setInterval(push, intervalMs);
       }
@@ -175,6 +185,7 @@ function run(scenario) {
 }
 
 const results = await Promise.all(scenarios.map(run));
+
 if (values.once) {
   process.exit(results.every(Boolean) ? 0 : 1);
 }

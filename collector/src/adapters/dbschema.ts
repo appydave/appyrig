@@ -42,8 +42,10 @@ export function openReadOnly(dbPath: string): DatabaseSync {
 
 export function readTables(dbPath: string): DbTable[] {
   const db = openReadOnly(dbPath);
+
   try {
     db.exec('PRAGMA query_only = ON');
+
     const objects = db.prepare(SELECT_OBJECTS).all() as { name: string; type: 'table' | 'view' }[];
     const cols = db.prepare(
       'SELECT name, type, "notnull" AS nn, dflt_value, pk FROM pragma_table_info(?)'
@@ -100,6 +102,7 @@ export async function sampleSchema(
   const dbPath = opts.dbPath ?? defaultOpenrigDb();
   const collectedAt = (opts.now ?? (() => new Date()))().toISOString();
   const base = { machineId, collectedAt, tables: [] as DbTable[] };
+
   if (!existsSync(dbPath)) {
     return {
       ...base,
@@ -108,7 +111,9 @@ export async function sampleSchema(
       openrigVersion: null,
     };
   }
+
   const openrigVersion = await readOpenrigVersion(run, opts.rigBin);
+
   try {
     return { ...base, status: 'ok', reason: null, openrigVersion, tables: readTables(dbPath) };
   } catch (e) {
@@ -152,12 +157,16 @@ export class SchemaReader {
 
   async next(): Promise<PendingSchema | null> {
     const now = (this.opts.now ?? (() => new Date()))().getTime();
+
     if (now - this.lastSample < (this.opts.ttlMs ?? 300_000)) {
       return null;
     }
+
     this.lastSample = now;
+
     const push = await sampleSchema(this.machineId, this.run, this.opts);
     const key = JSON.stringify({ ...push, collectedAt: null });
+
     if (key === this.sentKey) {
       return null;
     }

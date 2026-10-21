@@ -17,7 +17,9 @@ test.use({ viewport: { width: 1440, height: 900 } });
 async function open(page: Page) {
   await page.goto(FROZEN);
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
+
   const gotIt = page.getByRole('button', { name: /got it/i });
+
   if (await gotIt.count()) {
     await gotIt.first().click();
   }
@@ -42,15 +44,20 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
     page,
   }) => {
     test.setTimeout(90_000);
+
     const errors = watchErrors(page);
+
     await open(page);
+
     const tops: Record<string, number> = {};
+
     await page.getByTestId('ar-group-fleet').click();
     for (const key of FLEET_PAGES) {
       await page.getByTestId(`ar-page-${key}`).click();
       await expect(page.getByTestId('ar-strip')).toBeVisible();
       tops[key] = await contentTop(page);
     }
+
     await page.getByTestId('ar-group-work').click();
     await page.getByTestId(`ar-page-${FLOW}`).click();
     tops[FLOW] = await contentTop(page);
@@ -58,6 +65,7 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
       expect(y, `${k} content starts at y=${y}`).toBeGreaterThan(0);
       expect(y, `${k} content starts at y=${y}`).toBeLessThanOrEqual(MAX_CONTENT_Y);
     }
+
     // the bar and the badge row are one height on every page, so nothing moves between pages
     expect(new Set(Object.values(tops)).size, JSON.stringify(tops)).toBeLessThanOrEqual(2);
     expect(errors).toEqual([]);
@@ -65,7 +73,9 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
 
   test('machine badges start collapsed and open to the full strip on a click', async ({ page }) => {
     await open(page);
+
     const strip = page.getByTestId('ar-strip');
+
     await expect(strip).toHaveAttribute('data-expanded', 'false');
     await expect(page.getByTestId('fleet-counts')).toBeHidden();
     await page.locator('[data-testid="machine-chip"]').first().click();
@@ -82,20 +92,30 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
     await open(page);
     await page.getByTestId('ar-group-fleet').click();
     await page.getByTestId('ar-page-run').click();
+
     const tab = page.getByTestId('rig-drawer-tab');
+
     await expect(tab).toBeVisible();
+
     const main = page.locator('.app-main');
     const before = await main.boundingBox();
+
     await tab.click();
+
     const panel = page.getByTestId('rig-drawer-panel');
+
     await expect(panel).toBeVisible();
+
     const after = await main.boundingBox();
+
     expect(after!.x, 'the page moved right').toBeGreaterThan(before!.x + 200);
     expect(after!.x + after!.width, 'and ends where it did: shrunk, not covered').toBeCloseTo(
       before!.x + before!.width,
       0
     );
+
     const drawer = await panel.boundingBox();
+
     expect(drawer!.x + drawer!.width, 'the drawer does not overlap the page').toBeLessThanOrEqual(
       after!.x + 1
     );
@@ -115,15 +135,19 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
     for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open']) {
       await expect(page.getByTestId(id), id).toBeHidden();
     }
+
     await page.getByTestId('more-open').click();
     for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open']) {
       await expect(page.getByTestId(id), id).toBeVisible();
     }
+
     // the explainer and legend on the diagram pages sit behind Legend · L
     await page.keyboard.press('Escape');
     await page.getByTestId('ar-group-fleet').click();
     await page.getByTestId('ar-page-graph').click();
+
     const shown = page.locator('[data-testid="hl-legend"]:visible');
+
     await expect(shown).toHaveCount(0);
     await page.getByTestId('legend-toggle').click();
     await expect(shown).toHaveCount(1);

@@ -47,7 +47,9 @@ describe('<RigPicker> with S3 fields', () => {
 
   it('chips show the display name and machine; the summary floats in the tooltip (C5); the rig id stays the key', () => {
     render(<RigPicker rigs={rigs} selected="m2:appyrig-v14" onSelect={() => {}} />);
+
     const chip = screen.getAllByTestId('rig-chip')[0]!;
+
     expect(chip).toHaveAttribute('data-rig-key', 'm2:appyrig-v14');
     expect(within(chip).getByTestId('rig-chip-name')).toHaveTextContent('AppyRig v1.4 team');
     expect(chip).toHaveTextContent('· m2');
@@ -65,12 +67,17 @@ describe('<RigPicker> with S3 fields', () => {
       })
     );
     let picked = '';
+
     render(<RigPicker rigs={kernels} selected="m2:kernel" onSelect={(k) => (picked = k)} />);
+
     const chipTexts = screen.getAllByTestId('rig-chip').map((c) => c.textContent);
+
     expect(new Set(chipTexts).size).toBe(3);
+
     const options = [...screen.getByTestId('rig-select').querySelectorAll('option')].map(
       (o) => o.textContent
     );
+
     expect(new Set(options).size).toBe(3);
     expect(options.join('|')).toMatch(/kernel · m4/);
     fireEvent.change(screen.getByTestId('rig-select'), { target: { value: 'roamy:kernel' } });
@@ -79,12 +86,16 @@ describe('<RigPicker> with S3 fields', () => {
 
   it('the chosen rig shows summary, owner and spec path; hovering another never swaps the panel (B1 fb-0002)', () => {
     render(<RigPicker rigs={rigs} selected="m2:appyrig-v14" onSelect={() => {}} />);
+
     const info = () => screen.getByTestId('rig-info');
+
     expect(info()).toHaveAttribute('data-rig-key', 'm2:appyrig-v14');
     expect(screen.getByTestId('rig-info-id')).toHaveTextContent('appyrig-v14');
     expect(screen.getByTestId('rig-info-owner')).toHaveTextContent('openrig-orch-m4');
     expect(screen.getByTestId('rig-info-spec')).toHaveTextContent('appyrig-v1.4/team/rig.yaml');
+
     const other = screen.getAllByTestId('rig-chip')[1]!;
+
     fireEvent.pointerEnter(screen.getByTestId('rig-picker'));
     fireEvent.pointerEnter(other);
     // The panel stays on the chosen rig; the hovered rig's facts float in the chip's own tooltip.
@@ -109,9 +120,13 @@ describe('B2 (fb-0001): every rig chip shows its state as glyph + word + colour'
         onSelect={() => {}}
       />
     );
+
     const states = screen.getAllByTestId('rig-state').map((e) => e.textContent);
+
     expect(states).toEqual(['● working', '▲ needs attention', '✕ stopped']);
+
     const chip = screen.getAllByTestId('rig-chip')[1]!;
+
     expect(chip).toHaveAttribute('data-state', 'attention');
     expect(chip.getAttribute('title')).toMatch(/^▲ needs attention/);
   });

@@ -37,6 +37,7 @@ function spySocket() {
       if (!handlers.has(ev)) {
         handlers.set(ev, new Set());
       }
+
       handlers.get(ev)!.add(h);
 
       return s;
@@ -63,6 +64,7 @@ beforeEach(() => {
   } catch {
     /* ignore */
   }
+
   history.replaceState(null, '', '/');
 });
 
@@ -72,6 +74,7 @@ describe('Rigs drawer', () => {
     const rigs = listRigs(machines);
     const choose = vi.fn();
     const agent = vi.fn();
+
     render(
       <RigDrawer
         machines={machines}
@@ -83,7 +86,9 @@ describe('Rigs drawer', () => {
         onOpenAgent={agent}
       />
     );
+
     const tab = screen.getByTestId('rig-drawer-tab');
+
     expect(tab).toHaveTextContent('Rigs');
     expect(screen.getByTestId('rig-drawer-panel')).toHaveAttribute('hidden');
     fireEvent.click(tab);
@@ -91,15 +96,19 @@ describe('Rigs drawer', () => {
     for (const f of screen.queryAllByTestId('drawer-stopped')) {
       fireEvent.click(f);
     }
+
     // every rig of every machine is a row, machine headings carry the machine label
     const rows = screen.getAllByTestId('drawer-rig');
+
     expect(rows.map((r) => r.getAttribute('data-rig-key')).sort()).toEqual(
       rigs.map((r) => r.key).sort()
     );
     fireEvent.click(rows[1]!);
     expect(choose).toHaveBeenCalledWith(rows[1]!.getAttribute('data-rig-key'));
+
     // the chosen rig is open: its agents are rows, and one click goes to that agent
     const agents = screen.getAllByTestId('drawer-agent');
+
     expect(agents.length).toBeGreaterThan(0);
     fireEvent.click(agents[0]!);
     expect(agent).toHaveBeenCalledWith(agents[0]!.getAttribute('data-agent-key'));
@@ -121,19 +130,28 @@ describe('Rigs drawer', () => {
       onOpenAgent: () => {},
     };
     const { unmount } = render(<RigDrawer {...props} />);
+
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const stoppedKey = rigs[0]!.key;
+
     // folded: the stopped rig is not a row until its fold is opened
     expect(document.querySelector(`[data-rig-key="${stoppedKey}"]`)).toBeNull();
+
     const fold = screen.getAllByTestId('drawer-stopped')[0]!;
+
     expect(fold).toHaveTextContent(/Stopped \(\d+\)/);
     fireEvent.click(fold);
+
     const stoppedRow = document.querySelector(`[data-rig-key="${stoppedKey}"]`)!;
+
     expect(stoppedRow.closest('.rd-rig')).toHaveAttribute('data-state', 'stopped');
+
     // within its machine, the stopped rig comes after every live one
     const order = [
       ...stoppedRow.closest('.rd-machine')!.querySelectorAll('[data-testid="drawer-rig"]'),
     ].map((e) => e.getAttribute('data-state'));
+
     expect(order.slice(order.indexOf('stopped')).every((x) => x === 'stopped')).toBe(true);
     unmount();
     render(<RigDrawer {...props} />);
@@ -148,6 +166,7 @@ describe('Rigs drawer', () => {
     const seat = machines[0]!.snapshot.seats.find(
       (s) => s.rig === rigs[0]!.name && rigs[0]!.machineId === machines[0]!.machine.id
     );
+
     render(
       <RigDrawer
         machines={machines}
@@ -159,7 +178,9 @@ describe('Rigs drawer', () => {
         onOpenAgent={() => {}}
       />
     );
+
     const drawer = screen.getByTestId('rig-drawer');
+
     fireEvent.pointerEnter(drawer);
     expect(drawer).toHaveAttribute('data-open', 'true');
     expect(drawer).toHaveAttribute('data-pinned', 'false'); // overlay: the page does not move
@@ -177,6 +198,7 @@ describe('Rigs drawer', () => {
     const machines = fleet();
     const base = listRigs(machines)[0]!;
     const rigs = [base, { ...base, key: `x:${base.name}`, machineId: 'x', machineLabel: 'X' }];
+
     render(
       <RigDrawer
         machines={machines}
@@ -194,6 +216,7 @@ describe('Rigs drawer', () => {
 
   it('sessions with no rig sit under "No rig" for their machine', () => {
     const machines = fleet();
+
     render(
       <RigDrawer
         machines={machines}
@@ -206,7 +229,9 @@ describe('Rigs drawer', () => {
       />
     );
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const loose = machines.flatMap((m) => m.snapshot.seats).filter((s) => s.rig === null);
+
     if (loose.length > 0) {
       expect(screen.getAllByText(/No rig · plain tmux/).length).toBeGreaterThan(0);
     }
@@ -227,10 +252,13 @@ describe('the pinned drawer gives way to an open panel in a narrow window', () =
       onOpenAgent: () => {},
     };
   };
+
   it('shows the tab only while the panel is open and the page would be under 640 px; the pin is kept', () => {
     localStorage.setItem('appyrig.rigDrawerPinned', '1');
     Object.defineProperty(window, 'innerWidth', { value: 1100, configurable: true });
+
     const { rerender } = render(<RigDrawer {...props()} panelOpen={false} />);
+
     expect(screen.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'true');
     rerender(<RigDrawer {...props()} panelOpen />);
     expect(screen.getByTestId('rig-drawer')).toHaveAttribute('data-pinned', 'false');
@@ -251,6 +279,7 @@ describe('the pinned drawer gives way to an open panel in a narrow window', () =
 describe('machine badges', () => {
   it('start collapsed with no MACHINES label; a badge or its health mark toggles in place; Machines → is explicit', () => {
     const toMachines = vi.fn();
+
     render(
       <StripShell summary="88 seats · 3 machines" onMachines={toMachines}>
         <section className="strip">
@@ -264,7 +293,9 @@ describe('machine badges', () => {
         </section>
       </StripShell>
     );
+
     const wrap = screen.getByTestId('ar-strip');
+
     expect(wrap).toHaveAttribute('data-expanded', 'false');
     expect(screen.queryByText(/^[▸▾]? ?Machines$/i)).toBeNull();
     expect(screen.queryByTestId('strip-machines-link')).toBeNull();
@@ -302,7 +333,9 @@ describe('the ⋯ menu and the page header kit', () => {
         mocks={<span>Start</span>}
       />
     );
+
     const head = screen.getByTestId('ar-page-head');
+
     expect(within(head).getByText('Run board')).toBeInTheDocument();
     expect(within(head).getByText('8 jobs')).toBeInTheDocument();
     expect(within(head).getByTestId('mock-mark')).toBeInTheDocument();
@@ -318,7 +351,9 @@ describe('the ⋯ menu and the page header kit', () => {
 describe('the v2 frame in the app', () => {
   function renderShell() {
     history.replaceState(null, '', '/?v=2');
+
     const spy = spySocket();
+
     render(<App getSocket={() => spy.socket} />);
     spy.fire(FLEET_EVENTS.UPDATE, update(fleet()));
   }
@@ -343,12 +378,15 @@ describe('the v2 frame in the app', () => {
     ]) {
       expect(screen.getByTestId(id), id).toBeInTheDocument();
     }
+
     // the V1 helpers are gone (banked as future work, rebuilt on V2's code)
     for (const id of ['explain-toggle', 'keys-toggle', 'feedback-open', 'flip', 'notes-open']) {
       expect(screen.queryByTestId(id), id).toBeNull();
     }
+
     // the rarely used three live inside the ⋯ menu
     const pop = screen.getByTestId('more-open').parentElement!.querySelector('.ar-more-pop')!;
+
     for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open']) {
       expect(pop.querySelector(`[data-testid="${id}"]`), id).not.toBeNull();
     }
@@ -364,9 +402,11 @@ describe('the v2 frame in the app', () => {
   it('choosing a rig in the drawer is the shared rig choice the pages read', () => {
     renderShell();
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const row = screen
       .getAllByTestId('drawer-rig')
       .find((r) => r.getAttribute('aria-pressed') === 'false')!;
+
     fireEvent.click(row);
     expect(
       screen.getAllByTestId('drawer-rig').find((r) => r.getAttribute('aria-pressed') === 'true')

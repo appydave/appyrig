@@ -10,6 +10,7 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function box(l: Locator) {
   const b = await l.boundingBox();
+
   expect(b, 'drawn').not.toBeNull();
 
   return b!;
@@ -22,10 +23,13 @@ const overlaps = (
 
 async function open(page: Page, group: string, pageKey: string) {
   await page.goto(FROZEN);
+
   const gotIt = page.getByRole('button', { name: /got it/i });
+
   if (await gotIt.count()) {
     await gotIt.first().click();
   }
+
   await page.getByTestId(`ar-group-${group}`).click();
   await page.getByTestId(`ar-page-${pageKey}`).click();
 }
@@ -38,6 +42,7 @@ for (const width of [1440, 1100]) {
       page,
     }) => {
       const errors = watchErrors(page);
+
       await open(page, 'fleet', 'run');
       await chooseRigInDrawer(page, 'm2:d09-crew');
       await expect(page.getByTestId('run-topline')).toContainText('Waiting for GO');
@@ -48,6 +53,7 @@ for (const width of [1440, 1100]) {
       const job = await box(page.locator('.run-lower > :first-child'));
       const ledger = await box(page.locator('.run-lower > :nth-child(2)'));
       const tabs = await box(page.locator('.run-tabs'));
+
       expect(ledger.y, 'the ledger sits below the job panel').toBeGreaterThanOrEqual(
         job.y + job.height - 1
       );
@@ -56,8 +62,10 @@ for (const width of [1440, 1100]) {
       expect(job.x + job.width, 'the job panel is not under the Agent panel').toBeLessThanOrEqual(
         panel.x + 1
       );
+
       const preview = page.getByTestId('run-preview');
       const pb = await box(preview);
+
       expect(pb.x + pb.width, 'the header action is not under the panel').toBeLessThanOrEqual(
         panel.x + 1
       );
@@ -73,6 +81,7 @@ for (const width of [1440, 1100]) {
       page,
     }) => {
       const errors = watchErrors(page);
+
       // a deep link: Flow on d09-crew with dev-qa's panel open
       // (the welcome banners' "Got it" can sit under the panel here, so it is left alone)
       await page.goto(`${FROZEN}&page=flow&rig=d09-crew%40m2&agent=dev-qa%40d09-crew%40m2`);
@@ -82,14 +91,19 @@ for (const width of [1440, 1100]) {
       const panel = await box(page.getByTestId('agent-panel'));
       const scroller = page.getByTestId('flow-diagram-scroll');
       const sb = await box(scroller);
+
       expect(sb.x + sb.width, 'the diagram box is not under the panel').toBeLessThanOrEqual(
         panel.x + 1
       );
+
       const svgWidth = await scroller.evaluate(
         (el) => el.querySelector('svg')!.getBoundingClientRect().width
       );
+
       expect(svgWidth, 'the drawing never shrinks below 760 px').toBeGreaterThanOrEqual(759);
+
       const [sw, cw] = await scroller.evaluate((el) => [el.scrollWidth, el.clientWidth]);
+
       expect(sw, 'the drawing scrolls sideways inside its box').toBeGreaterThan(cw);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
       expect(errors).toEqual([]);

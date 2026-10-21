@@ -21,8 +21,10 @@ const unavailable = <T>(reason: string): Reading<T> => ({
 
 export function parseSysctl(text: string): Map<string, string> {
   const out = new Map<string, string>();
+
   for (const line of text.split('\n')) {
     const i = line.indexOf(':');
+
     if (i > 0) {
       out.set(line.slice(0, i).trim(), line.slice(i + 1).trim());
     }
@@ -62,10 +64,12 @@ export function parseVmStat(text: string): { used: number } | null {
 
     return m ? Number(m[1]) : null;
   };
+
   const anon = pages('Anonymous pages');
   const purgeable = pages('Pages purgeable');
   const wired = pages('Pages wired down');
   const compressor = pages('Pages occupied by compressor');
+
   if (!size || anon === null || purgeable === null || wired === null || compressor === null) {
     return null;
   }
@@ -110,29 +114,39 @@ export function parsePs(text: string): ProcessSummary | null {
   let shells = 0;
   let rows = 0;
   const apps = new Map<string, TerminalApp>();
+
   for (const line of text.split('\n')) {
     const m = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.+)$/.exec(line);
+
     if (!m) {
       continue;
     }
+
     rows++;
+
     const rssKb = Number(m[2]);
     const tty = m[3]!;
     const comm = m[4]!.trim();
+
     if (CLAUDE.test(comm)) {
       claude++;
     }
+
     if (tty !== '??' && SHELL.test(comm.replace(/^.*\//, ''))) {
       shells++;
     }
+
     const app = TERMINAL_APPS.find(([re]) => re.test(comm))?.[1];
+
     if (app) {
       const cur = apps.get(app) ?? { app, processes: 0, rssBytes: 0 };
+
       cur.processes++;
       cur.rssBytes += rssKb * 1024;
       apps.set(app, cur);
     }
   }
+
   if (rows === 0) {
     return null;
   } // an empty ps is a failure to read, not "nothing is running"
@@ -189,6 +203,7 @@ export async function sampleHealth(
       },
     };
   }
+
   const [sysctl, vm, pressure, ps] = await Promise.all([
     attempt('sysctl', async () => parseSysctl((await run('sysctl', SYSCTL_KEYS)).stdout)),
     attempt('vm_stat', async () => parseVmStat((await run('vm_stat', [])).stdout)),

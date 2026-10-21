@@ -42,6 +42,7 @@ export const DOC_DEFAULTS: Record<DocKey, boolean> = {
   culture: false,
   mission: false,
 };
+
 const DOC_LABEL: Record<DocKey, string> = {
   spec: 'Spec',
   rig: 'rig.yaml',
@@ -127,6 +128,7 @@ function Stations({ run, onDocs }: { run: RunModel; onDocs?: (seatId: string) =>
   if (run.stations.length === 0) {
     return <p className="quiet">This rig has no seats the machine reports.</p>;
   }
+
   const arrow = (a: string, b: string) => run.forward.find((x) => x.from === a && x.to === b);
 
   return (
@@ -197,7 +199,9 @@ function FileView({ r, kind }: { r: MissionFileResult; kind: MissionFileKind }) 
       </p>
     );
   }
+
   const isHtml = (r.mime ?? '').includes('html') || /\.html?$/i.test(r.path);
+
   if (isHtml) {
     return (
       <iframe
@@ -538,6 +542,7 @@ function Ledger({
     }));
   }, [t, items, byId]);
   const sorted = [...rows].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60);
+
   void fm;
 
   return (
@@ -726,6 +731,7 @@ function RunBoard({ ctx }: PageProps) {
                   tab: 'documents',
                 });
               }
+
               // No agent behind the station: the rig-level overlay (Rig + Mission files).
               openDocs({
                 machineId: machine,

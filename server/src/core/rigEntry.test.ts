@@ -29,6 +29,7 @@ describe('rigEntryOf', () => {
       ]),
       hist('dev-qa@r', [ev('09:48:49', 'prompt', 'startup'), ev('09:48:52', 'tool')]),
     ]);
+
     expect(out.status).toBe('outside-queue');
     expect(out.entry).toEqual({
       seat: 'dev-build@r',
@@ -47,10 +48,13 @@ describe('rigEntryOf', () => {
         ev('09:00:09', 'tool'),
       ]),
     ]);
+
     expect(typed.entry).toMatchObject({ origin: 'typed', excerpt: 'fix it' });
+
     const sent = of([
       hist('a@r', [ev('09:00:05', 'prompt', 'send', 'From: x'), ev('09:00:09', 'reply')]),
     ]);
+
     expect(sent.entry).toMatchObject({ origin: 'send' });
     expect(sent.status).toBe('outside-queue');
   });
@@ -59,6 +63,7 @@ describe('rigEntryOf', () => {
     const out = of([
       hist('dev@r', [ev('09:30:00', 'prompt', 'queue', 'From: …'), ev('09:30:03', 'tool')]),
     ]);
+
     expect(out.status).toBe('via-queue');
   });
 
@@ -67,6 +72,7 @@ describe('rigEntryOf', () => {
       hist('a@r', [ev('10:00:00', 'prompt', 'startup'), ev('10:00:03', 'tool')]),
       hist('b@r', [ev('09:00:00', 'prompt', 'startup'), ev('09:00:03', 'tool')]),
     ]);
+
     expect(out.entry?.seat).toBe('b@r');
   });
 
@@ -79,15 +85,20 @@ describe('rigEntryOf', () => {
         ev('09:00:03', 'tool'),
       ]),
     ]);
+
     expect(out.status).toBe('via-queue');
   });
 
   it('says unknown, with a reason, when there is nothing to go on', () => {
     expect(of([], ['a@r'])).toMatchObject({ status: 'unknown', seatsWithoutHistory: ['a@r'] });
+
     const oldCollector = of([hist('a@r', [ev('09:00:00', 'prompt'), ev('09:01:00', 'tool')])]);
+
     expect(oldCollector.status).toBe('unknown');
     expect(oldCollector.reason).toMatch(/older than v1\.4/);
+
     const notActed = of([hist('a@r', [ev('09:00:00', 'prompt', 'startup')])]);
+
     expect(notActed.status).toBe('unknown');
   });
 
@@ -96,6 +107,7 @@ describe('rigEntryOf', () => {
       hist('a@r', [ev('10:00:00', 'prompt', 'typed', 'late'), ev('10:00:02', 'tool')]),
       hist('b@r', [ev('10:30:00', 'tool')], true),
     ]);
+
     expect(out.status).toBe('unknown');
     expect(out.reason).toMatch(/b@r.*dropped/);
   });
@@ -109,6 +121,7 @@ describe('rigEntryOf', () => {
         true
       ),
     ]);
+
     expect(out.status).toBe('unknown');
     expect(out.entry).toBeNull();
     expect(out.reason).toMatch(/b@r/);
@@ -119,6 +132,7 @@ describe('rigEntryOf', () => {
       hist('a@r', [ev('10:00:00', 'prompt', 'startup'), ev('10:05:00', 'reply')]),
       hist('b@r', [ev('09:00:00', 'prompt', 'system'), ev('09:00:05', 'reply')]),
     ]);
+
     expect(out.status).toBe('unknown');
     expect(out.reason).toMatch(/b@r acted first/);
   });
@@ -130,6 +144,7 @@ describe('rigEntryOf', () => {
         hist('a@r', [ev('10:00:00', 'prompt', 'typed', 'x'), ev('10:00:02', 'tool')]),
         hist('b@r', [ev(bStart, 'prompt', 'queue'), ev('10:31:00', 'tool')], true),
       ]);
+
       expect(out.status, bStart).toBe('unknown');
     }
   });
@@ -139,6 +154,7 @@ describe('rigEntryOf', () => {
       [hist('a@r', [ev('09:00:00', 'prompt', 'typed', 'x'), ev('09:00:02', 'tool')])],
       ['a@r', 'codex@r']
     );
+
     expect(out.status).toBe('outside-queue');
     expect(out.seatsWithoutHistory).toEqual(['codex@r']);
   });

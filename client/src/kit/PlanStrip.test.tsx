@@ -41,6 +41,7 @@ function hub(files: Record<string, string> | 'no-spec') {
             },
           };
     }
+
     if (r.verb === 'rig.file' && files !== 'no-spec') {
       const id = String(r.input?.fileId);
 
@@ -79,7 +80,9 @@ describe('Run card R3 · the plan strip', () => {
     expect(screen.getByTestId('run-mission')).toHaveTextContent(
       "D10 Launch, David's take first (2026-10-13) from MISSION-d10.md"
     );
+
     const steps = screen.getAllByTestId('run-plan-step');
+
     expect(steps.map((s) => s.getAttribute('data-id'))).toEqual([
       'mission',
       'change 01',

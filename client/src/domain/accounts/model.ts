@@ -13,9 +13,11 @@ export function burnPerHour(w: AccountWindow | undefined | null): number | null 
   if (!w || w.status !== 'reading' || w.usedPct === null || w.elapsedPct === null) {
     return null;
   }
+
   if (w.projectedPct === null || w.elapsedPct < MIN_ELAPSED_PCT || w.elapsedPct > 100) {
     return null;
   }
+
   const hours = (w.elapsedPct / 100) * (w.windowMs / 3_600_000);
 
   return hours > 0 ? w.usedPct / hours : null;
@@ -24,6 +26,7 @@ export function burnPerHour(w: AccountWindow | undefined | null): number | null 
 /** Hours until the window is spent at that burn; null when it never is, it is spent already, or no honest burn. */
 export function hoursToEmpty(w: AccountWindow | undefined | null): number | null {
   const b = burnPerHour(w);
+
   if (b === null || b <= 0 || !w || w.usedPct === null || w.usedPct >= 100) {
     return null;
   }

@@ -56,16 +56,20 @@ const RULES = [
 
 function* walk(dir) {
   let names;
+
   try {
     names = readdirSync(dir);
   } catch {
     return;
   }
+
   for (const name of names) {
     if (SKIP_DIRS.has(name)) {
       continue;
     }
+
     const p = join(dir, name);
+
     if (statSync(p).isDirectory()) {
       yield* walk(p);
     } else if (TEST_FILE.test(name)) {
@@ -75,17 +79,22 @@ function* walk(dir) {
 }
 
 const hits = [];
+
 for (const d of DIRS) {
   for (const file of walk(join(root, d))) {
     const rel = relative(root, file);
     const text = readFileSync(file, 'utf8');
+
     for (const rule of RULES) {
       if (rule.only && !rule.only.test(rel)) {
         continue;
       }
+
       const g = new RegExp(rule.re.source, 'g');
+
       for (const m of text.matchAll(g)) {
         const line = text.slice(0, m.index).split('\n').length;
+
         hits.push(`${rel}:${line} [${rule.id}] ${m[0].trim()}`);
       }
     }
@@ -95,6 +104,7 @@ for (const d of DIRS) {
 // A rewrite flag on a test command in package.json.
 try {
   const scripts = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts ?? {};
+
   for (const [name, cmd] of Object.entries(scripts)) {
     if (/\b(?:vitest|playwright)\b.*(?:\s-u\b|--update)/.test(cmd)) {
       hits.push(`package.json scripts.${name} [snapshot] ${cmd}`);
@@ -113,4 +123,5 @@ if (hits.length) {
   );
   process.exit(1);
 }
+
 console.log('test-trust ok: no skipped, CI-only, snapshot-rewriting, env-gated or sleeping tests');

@@ -92,28 +92,34 @@ function walk(dir: string): string[] {
 
 let resolvedRef = 'WORKTREE';
 let allFiles: string[];
+
 if (sourceDir) {
   if (!existsSync(sourceDir)) {
     fail(`--source ${sourceDir} does not exist`);
   }
+
   allFiles = walk(sourceDir).map((p) => relative(sourceDir, p));
 } else {
   if (!existsSync(repo)) {
     fail(`OpenRig clone not found at ${repo} (set OPENRIG_SRC)`);
   }
+
   try {
     resolvedRef = git(['rev-parse', '--verify', `${ref}^{commit}`]).trim();
   } catch {
     fail(`ref ${ref} is not a commit in ${repo} (git fetch in the clone first?)`);
   }
+
   allFiles = git(['ls-tree', '-r', '--name-only', resolvedRef]).split('\n').filter(Boolean);
 }
+
 const fileSet = new Set(allFiles);
 
 function read(path: string): string | null {
   if (!fileSet.has(path)) {
     return null;
   }
+
   if (sourceDir) {
     return readFileSync(join(sourceDir, path), 'utf8');
   }
@@ -342,6 +348,7 @@ const probes: Probe[] = [
       );
       const recap = read(`${DOMAIN}/context-packs/seat-recap-store.ts`);
       const recapName = recap === null ? null : stringConst(recap, 'RECAP_FILENAME');
+
       if (doc === null || recapName === null) {
         return null;
       }
@@ -392,9 +399,11 @@ function compare(p: Probe): ProbeResult {
     ignored: [] as string[],
     oursOnly: [] as string[],
   };
+
   if (p.theirs === null || p.theirs.length === 0) {
     return { ...base, status: 'anchor-missing' };
   }
+
   const theirs = new Set(p.theirs);
   const ours = new Set(p.ours);
   const onlyTheirs = p.theirs.filter((x) => !ours.has(x));
@@ -427,10 +436,12 @@ interface SpecValidation {
   validateRigSpecImport(yaml: string): { valid: boolean; errors: string[] };
   validateAgentSpecFromYaml(yaml: string): { valid: boolean; errors: string[] };
 }
+
 let openrigValidator: SpecValidation | null = null;
 let validatorNote: string;
 const surface = join(cliPath, 'daemon/dist/spec-validation-surface.js');
 let cliVersion: string | null = null;
+
 try {
   cliVersion = (
     JSON.parse(readFileSync(join(cliPath, 'package.json'), 'utf8')) as { version: string }
@@ -459,15 +470,18 @@ const examples: ExampleResult[] = exampleFiles.map((file) => {
   const schema = kind === 'agent' ? OpenRig.AgentSpecSchema : OpenRig.RigSpecSchema;
   const r = schema.safeParse(parse(text));
   const out: ExampleResult = { file: file.slice(SPECS.length + 1), kind, ours: r.success };
+
   if (!r.success) {
     out.oursError = JSON.stringify(r.error.issues).slice(0, 300);
   }
+
   if (openrigValidator) {
     try {
       const v =
         kind === 'agent'
           ? openrigValidator.validateAgentSpecFromYaml(text)
           : openrigValidator.validateRigSpecImport(text);
+
       out.openrig = v.valid;
       if (!v.valid) {
         out.openrigErrors = v.errors.slice(0, 3);
@@ -511,22 +525,30 @@ const citeDrift = citeResults.filter((c) => !c.found);
 
 const clientCites: Array<{ where: string; cite: string; status: string; line?: string }> = [];
 const clientDir = join(root, 'client/src');
+
 if (existsSync(clientDir)) {
   const lineCite = /\b([a-z][\w-]*\.ts):(\d+)/g;
+
   for (const f of walk(clientDir).filter((p) => /\.(tsx?|json)$/.test(p))) {
     const text = readFileSync(f, 'utf8');
+
     for (const m of text.matchAll(lineCite)) {
       const [cite, name, n] = [m[0], m[1]!, Number(m[2])];
       const hits = allFiles.filter((p) => p.endsWith(`/${name}`) && p.startsWith('packages/'));
+
       if (hits.length === 0) {
         continue;
       } // not an OpenRig file
+
       const where = relative(root, f);
+
       if (hits.length > 1) {
         clientCites.push({ where, cite, status: 'ambiguous' });
         continue;
       }
+
       const lines = (read(hits[0]!) ?? '').split('\n');
+
       clientCites.push({
         where,
         cite,
@@ -584,9 +606,11 @@ function writeReport(name: string, text: string): void {
     writeFileSync(join(outDir, name), text);
   } catch (e) {
     const fallback = join(tmpdir(), 'appyrig-provenance');
+
     if (outDir === fallback) {
       throw e;
     }
+
     console.error(
       `provenance: could not write ${relative(root, outDir) || outDir} (${(e as NodeJS.ErrnoException).code ?? (e as Error).message}); wrote the report to ${fallback}`
     );
@@ -630,6 +654,7 @@ const md: string[] = [
   `**UI cites (report only):** ${clientCites.length} OpenRig file:line cites in client/; ${clientCites.filter((c) => c.status !== 'line exists (symbol unchecked)').length} point past the end of their file or are ambiguous. Lines are shown in report.json; whether the right symbol is still there is not checked.`,
   '',
 ];
+
 writeReport('report.md', md.join('\n'));
 console.log(md.join('\n'));
 
@@ -641,10 +666,13 @@ if (process.argv.includes('--update-pin')) {
     pin.openrig.commit = resolvedRef;
     pin.openrig.describe = git(['describe', '--tags', resolvedRef]).trim();
     pin.openrig.commitDate = git(['log', '-1', '--format=%cI', resolvedRef]).trim();
+
     const pkg = read('packages/cli/package.json');
+
     if (pkg) {
       pin.openrig.version = (JSON.parse(pkg) as { version: string }).version;
     }
+
     pin.checked = new Date().toISOString().slice(0, 10);
     writeFileSync(PIN_FILE, `${JSON.stringify(pin, null, 2)}\n`);
     console.log(`provenance: pin moved to ${resolvedRef.slice(0, 10)}`);

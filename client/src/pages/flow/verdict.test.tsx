@@ -54,6 +54,7 @@ function q(id: string, from: string, to: string, min: number, tags: string[] = [
 function rig(withVerdicts: boolean): FleetMachine {
   const fm = fleetMachine(snapshot('m2'));
   const v = (tag: string) => (withVerdicts ? [`verdict:${tag}`] : []);
+
   fm.snapshot = {
     ...fm.snapshot,
     queue: [
@@ -73,6 +74,7 @@ function rig(withVerdicts: boolean): FleetMachine {
 }
 
 type FlowOpts = { sentBack?: 'stage' | 'verdict-or-stage' };
+
 // The option is new: called through a loose signature so this file also runs against the old code.
 const flowOf = buildFlow as unknown as (
   ...a: [FleetMachine, string, number, number, FlowOpts?]
@@ -113,6 +115,7 @@ describe('buildFlow: sent back by verdict', () => {
   it('the chapters follow the same rule when asked', () => {
     const first = (opts?: FlowOpts) =>
       chaptersOf(rig(true), RIG, NOW, opts).find((c) => c.kind === 'first-rework')?.at;
+
     // the stage rule finds the qa PASS at minute 10; the verdict rule waits for the CHANGES at 15
     expect(first()).toBe(T0 + 10 * 60_000);
     expect(first({ sentBack: 'verdict-or-stage' })).toBe(T0 + 15 * 60_000);

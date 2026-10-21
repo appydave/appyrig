@@ -8,10 +8,12 @@ import { join } from 'node:path';
 const src =
   process.env.RIG_COMMANDS_SRC ?? join(homedir(), 'dev/ad/brains/openrig/rig-commands.json');
 const dst = new URL('../client/src/domain/learn/rig-commands.json', import.meta.url);
+
 if (!existsSync(src)) {
   console.error(`rig-commands:sync: no file at ${src}`);
   process.exit(1);
 }
+
 const brain = JSON.parse(readFileSync(src, 'utf8'));
 
 const FIELDS = [
@@ -39,7 +41,9 @@ const out = {
   effects: brain.effects,
   commands: brain.commands.map(trim),
 };
+
 writeFileSync(dst, `${JSON.stringify(out, null, 2)}\n`);
+
 // What the w4 test compares the copy against, so the test needs no brain checkout on the machine.
 const summary = {
   about:
@@ -47,6 +51,7 @@ const summary = {
   openrig_version: brain.openrig_version,
   commands: brain.commands.map((c) => ({ curated: Boolean(c.curated) })),
 };
+
 writeFileSync(
   new URL('../test/fixtures/brain/rig-commands-summary.json', import.meta.url),
   `${JSON.stringify(summary, null, 2)}\n`

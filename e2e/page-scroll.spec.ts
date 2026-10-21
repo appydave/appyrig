@@ -6,7 +6,9 @@ test.use({ viewport: { width: 1280, height: 420 } });
 test('a new page opens at the top and Back restores the old scroll', async ({ page }) => {
   await page.goto('/?frozen=busy-2026-10-18&v=2');
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
+
   const dismiss = page.getByTestId('ar-welcome-dismiss');
+
   if (await dismiss.count()) {
     await dismiss.click();
   }
@@ -17,6 +19,7 @@ test('a new page opens at the top and Back restores the old scroll', async ({ pa
 
     return window.scrollY;
   });
+
   expect(scrolled).toBeGreaterThan(100);
 
   await page.getByTestId('ar-group-work').click();

@@ -23,6 +23,7 @@ const q = (id: string, tags: string[], dest: string): QueueItem => ({
 
 function fleet(): FleetMachine[] {
   const m2 = fleetMachine(snapshot('m2'));
+
   m2.snapshot = {
     ...m2.snapshot,
     queue: [
@@ -42,11 +43,13 @@ describe('Missions follows the rig pick', () => {
     const { socket } = answeringSocket();
     const ctx = pageCtx(machines, socket, Date.parse(T));
     const { rerender } = render(<missions.component ctx={ctx} />);
+
     expect(cards().sort()).toEqual(['alpha', 'beta']);
     expect(screen.queryByTestId('ms-scope')).toBeNull();
 
     const starter = listRigs(machines).find((r) => r.key === 'm2:starter')!;
     const picked = { ...ctx, pickedRig: starter, activeRig: starter, focusNonce: 1 };
+
     rerender(<missions.component ctx={picked} />);
     expect(cards()).toEqual(['alpha']);
     expect(screen.getByTestId('ms-scope-chip')).toHaveTextContent('Only starter · M2');
@@ -65,6 +68,7 @@ describe('Missions follows the rig pick', () => {
     const { socket } = answeringSocket();
     const ctx = pageCtx(machines, socket, Date.parse(T));
     const kernel = listRigs(machines).find((r) => r.key === 'm2:kernel')!;
+
     render(<missions.component ctx={{ ...ctx, pickedRig: kernel, activeRig: kernel }} />);
     expect(screen.getByTestId('ms-none')).toHaveTextContent('No mission in kernel on M2');
   });

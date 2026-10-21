@@ -10,6 +10,7 @@ import { stripOsc } from '../domain/fleet/model.js';
  */
 export function ansiToHtml(lines: string[]): string {
   const au = new AnsiUp();
+
   au.escape_html = true;
   au.use_classes = false;
   // r1 L1: no live links. OSC 8 wrappers are stripped first (keeping the link text); the empty
@@ -28,6 +29,7 @@ interface Props {
 
 export default function AnsiText({ lines, ansi, className, testId }: Props) {
   const html = useMemo(() => (ansi ? ansiToHtml(lines) : null), [lines, ansi]);
+
   if (html === null) {
     return (
       <div className={className} data-testid={testId}>

@@ -38,12 +38,15 @@ describe('one-line page headers', () => {
     const { socket, emitted } = answeringSocket();
     const ctx = pageCtx(machines, socket, NOW);
     const rigs = listRigs(machines);
+
     ctx.activeRig = rigs.find((r) => r.name === 'starter') ?? null;
     ctx.agentKey = 'roamy/dev-build@starter';
+
     const Page = pageFor(key)!.component;
     const { container } = render(<Page ctx={ctx} />);
     const main = container.querySelector('main')!;
     const heads = main.querySelectorAll('[data-testid="ar-page-head"]');
+
     expect(heads.length, `${key} has one page header`).toBe(1);
     // no other heading of the old kind above the content
     expect(main.querySelectorAll('h2:not(.ar-page-title)').length, `${key}: no loose h2`).toBe(0);
@@ -51,6 +54,7 @@ describe('one-line page headers', () => {
     for (const f of heads[0]!.querySelectorAll('[data-testid="fake-control"]')) {
       expect(f.closest('.ar-mock-menu-pop'), `${key}: a header mock outside the ⋯`).not.toBeNull();
     }
+
     expect(emitted).toEqual([]);
   });
 
@@ -58,6 +62,7 @@ describe('one-line page headers', () => {
     const machines = [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
     const { socket } = answeringSocket();
     const ctx = pageCtx(machines, socket, NOW);
+
     for (const [key, text] of [
       ['missions', 'not OpenRig'],
       ['needs-you', 'Everything waiting on David'],
@@ -66,6 +71,7 @@ describe('one-line page headers', () => {
       const Page = pageFor(key)!.component;
       const { container, unmount } = render(<Page ctx={ctx} />);
       const hit = [...container.querySelectorAll('p')].find((p) => p.textContent?.includes(text))!;
+
       expect(hit.closest('.ar-explainer, .hl-legend'), `${key}: "${text}"`).not.toBeNull();
       unmount();
     }
@@ -75,9 +81,12 @@ describe('one-line page headers', () => {
     const machines = [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
     const { socket } = answeringSocket();
     const ctx = pageCtx(machines, socket, NOW);
+
     ctx.activeRig = listRigs(machines).find((r) => r.name === 'starter') ?? null;
+
     const Page = pageFor('flow')!.component;
     const { container } = render(<Page ctx={ctx} />);
+
     // starter has no QA or review seat: seats mode, which used to drop the line
     expect(container.querySelectorAll('.flow-legend')).toHaveLength(1);
   });

@@ -22,6 +22,7 @@ describe('adapter: tmux stripAnsi', () => {
 describe('adapter: tmux', () => {
   it('capture is read-only and asks for ANSI text of one pane', () => {
     const args = capturePaneArgs('%3');
+
     expect(args.slice(0, 4)).toEqual(['capture-pane', '-p', '-e', '-J']);
     expect(args).toContain('%3');
     expect(args.join(' ')).not.toMatch(/send-keys/);
@@ -36,6 +37,7 @@ describe('adapter: tmux', () => {
       row('b', '%4', '1', '1', 'node', '/y'),
       '',
     ].join('\n');
+
     expect(parsePanes(out)).toEqual([
       { session: 'a', paneId: '%3', command: 'claude', cwd: '/work', width: null },
       { session: 'b', paneId: '%4', command: 'node', cwd: '/y', width: null },
@@ -44,6 +46,7 @@ describe('adapter: tmux', () => {
 
   it('F2 (r1 HIGH): reads the pane width when tmux gives it (7th field); 6 fields = unknown', () => {
     const row = (...f: string[]) => f.join(FIELD_SEP);
+
     expect(LIST_PANES_ARGS.at(-1)).toMatch(/#\{pane_width\}$/);
     expect(
       parsePanes(
@@ -65,6 +68,7 @@ describe('adapter: tmux', () => {
   it('output that tmux mangled (TAB -> _, as under launchd) is an error, never zero sessions', () => {
     const mangled =
       'dev-collector@appyrig-build_%2_1_1_bash_/Users/me/dev\nopenrig-orch_%5_1_1_2.1.200_/Users/me';
+
     expect(() => parsePanes(mangled)).toThrow(/unparseable list-panes output/);
   });
 
@@ -82,6 +86,7 @@ describe('adapter: tmux', () => {
   it('bounds a tail to TAIL_MAX_LINES and drops trailing blank lines', () => {
     const raw = Array.from({ length: 500 }, (_, i) => `line ${i}`).join('\n') + '\n\n\x1b[0m  \n';
     const lines = tailLines(raw);
+
     expect(lines).toHaveLength(TAIL_MAX_LINES);
     expect(lines[lines.length - 1]).toBe('line 499');
     expect(lines[0]).toBe('line 300');
@@ -90,6 +95,7 @@ describe('adapter: tmux', () => {
   it('keeps ANSI escapes in the text it returns', () => {
     const raw = readFixtureText(ROAMY_PANES['advisor-lead@kernel']!);
     const lines = tailLines(raw);
+
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.length).toBeLessThanOrEqual(TAIL_MAX_LINES);
     expect(lines.some((l) => l.includes('\u001b['))).toBe(true);
@@ -97,6 +103,7 @@ describe('adapter: tmux', () => {
 
   it('F2: drops the end-of-line padding a joined (-J) capture keeps, colours included', () => {
     const raw = 'prompt >      \n\x1b[32mok\x1b[0m    \x1b[0m\n  indented stays';
+
     expect(tailLines(raw)).toEqual(['prompt >', '\x1b[32mok\x1b[0m\x1b[0m', '  indented stays']);
   });
 

@@ -8,6 +8,7 @@ import { SNAPSHOT_CASES } from '../collector/src/snapshotCases.js';
 
 for (const [name, build] of SNAPSHOT_CASES) {
   const file = join(FIXTURES, 'snapshots', `${name}.json`);
+
   writeFileSync(file, JSON.stringify(await build(), null, 2) + '\n');
   console.log(`snapshots:update: wrote ${file}`);
 }

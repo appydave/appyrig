@@ -30,6 +30,7 @@ export function sameSecret(given: unknown, expected: string): boolean {
   if (typeof given !== 'string' || given.length === 0) {
     return false;
   }
+
   const a = Buffer.from(given);
   const b = Buffer.from(expected);
 
@@ -48,8 +49,10 @@ export function readCookie(header: string | undefined, name: string): string | u
   if (!header) {
     return undefined;
   }
+
   for (const part of header.split(';')) {
     const eq = part.indexOf('=');
+
     if (eq > 0 && part.slice(0, eq).trim() === name) {
       return part.slice(eq + 1).trim();
     }
@@ -63,9 +66,11 @@ export function isAuthorised(headers: IncomingHttpHeaders, hubToken: string | un
   if (!hubToken) {
     return false;
   }
+
   if (sameSecret(readCookie(headers.cookie, SESSION_COOKIE), sessionValue(hubToken))) {
     return true;
   }
+
   const auth = headers.authorization;
 
   return typeof auth === 'string' && auth.startsWith('Bearer ')
@@ -99,7 +104,9 @@ export function browserAuth(opts: BrowserAuthOptions) {
 
       return;
     }
+
     const given = req.query[TOKEN_QUERY_PARAM];
+
     if (req.method === 'GET' && req.path === '/' && given !== undefined) {
       if (opts.hubToken && sameSecret(given, opts.hubToken)) {
         res.setHeader('Set-Cookie', sessionCookieHeader(opts.hubToken));
@@ -107,15 +114,18 @@ export function browserAuth(opts: BrowserAuthOptions) {
 
         return;
       }
+
       refuse(res, 401, 'hub token invalid');
 
       return;
     }
+
     if (isAuthorised(req.headers, opts.hubToken)) {
       next();
 
       return;
     }
+
     refuse(res, 401, AUTH_ERRORS.browserSession);
   };
 }

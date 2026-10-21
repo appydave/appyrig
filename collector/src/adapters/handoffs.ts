@@ -37,9 +37,11 @@ export class HandoffReader {
     const ids = order
       .filter((id) => !this.sent.has(id) && bodies.has(id))
       .slice(0, HANDOFF_BATCH_MAX);
+
     if (ids.length === 0) {
       return null;
     }
+
     const items = ids.map((id) => {
       const redacted = redactString(bodies.get(id)!);
       const truncated = redacted.length > HANDOFF_BODY_MAX;

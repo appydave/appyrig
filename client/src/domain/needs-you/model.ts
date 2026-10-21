@@ -133,6 +133,7 @@ export function gateItems(
 ): NeedItem[] {
   // Gates named by the same handoff are one card (one ask, several gate ids).
   const byItem = new Map<string, RigGate[]>();
+
   for (const g of gates) {
     byItem.set(g.itemId, [...(byItem.get(g.itemId) ?? []), g]);
   }
@@ -161,6 +162,7 @@ export function gateItems(
 /** OpenRig's own stuck-sweep notices addressed to David that the list leaves out (counted, not shown). */
 export function sweepCount(machines: FleetMachine[]): number {
   let n = 0;
+
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
       if (isOpen(q) && bare(q.destination) === 'human' && isSweep(q)) {
@@ -177,10 +179,12 @@ export type GatesByRig = Record<string, RigGate[]>; // key: `${machineId}:${rig}
 /** Every real item on every machine: the longest fresh wait first, stale ones last. */
 export function buildNeeds(machines: FleetMachine[], gates: GatesByRig, now: number): NeedItem[] {
   const out: NeedItem[] = [];
+
   for (const fm of machines) {
     out.push(...actionItems(fm, now), ...blockedItems(fm, now));
     for (const r of fm.snapshot.rigs) {
       const g = gates[`${fm.machine.id}:${r.name}`];
+
       if (g?.length) {
         out.push(...gateItems(fm, { rig: r.name, gates: g }, now));
       }
@@ -202,6 +206,7 @@ export function matches(i: NeedItem, f: NeedFilter): boolean {
   if (f === 'all') {
     return true;
   }
+
   if (f === 'action') {
     return i.kind === 'action' || i.kind === 'gate';
   }
@@ -211,6 +216,7 @@ export function matches(i: NeedItem, f: NeedFilter): boolean {
 
 export function countsByFilter(real: NeedItem[]): Record<NeedFilter, number> {
   const c = {} as Record<NeedFilter, number>;
+
   for (const f of FILTERS) {
     c[f.key] = real.filter((i) => matches(i, f.key)).length;
   }
@@ -221,14 +227,18 @@ export function countsByFilter(real: NeedItem[]): Record<NeedFilter, number> {
 /** "3d 4h", "2h 10m", "5m": how long, in the two largest units. */
 export function waited(ms: number): string {
   const m = Math.floor(ms / 60_000);
+
   if (m < 1) {
     return 'just now';
   }
+
   const d = Math.floor(m / 1440);
   const h = Math.floor((m % 1440) / 60);
+
   if (d > 0) {
     return `${d}d ${h}h`;
   }
+
   if (h > 0) {
     return `${h}h ${m % 60}m`;
   }

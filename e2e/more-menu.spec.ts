@@ -8,30 +8,42 @@ import { signIn, watchErrors } from './support/fleet';
 test.describe('v2 ⋯ menu stacking', () => {
   test('every menu item is on top and clickable on every v2 page', async ({ page }) => {
     const errors = watchErrors(page);
+
     await signIn(page);
     await page.goto('/?v=2');
+
     const nav = page.locator('button[data-testid^="ar-page-"]');
+
     await expect(nav.first()).toBeVisible({ timeout: 20_000 });
+
     const ids = await nav.evaluateAll((els) =>
       els.map((el) => el.getAttribute('data-testid') ?? '')
     );
+
     expect(ids).toEqual(
       expect.arrayContaining(['ar-page-graph', 'ar-page-wall', 'ar-page-machines'])
     );
 
     for (const id of ids) {
       await page.getByTestId(id).click();
+
       const gotIt = page.getByRole('button', { name: /got it/i });
+
       if (await gotIt.count()) {
         await gotIt.first().click();
       }
+
       await page.getByTestId('more-open').click();
+
       const items = page.locator('.ar-more-pop > *');
       const n = await items.count();
+
       expect(n, `${id}: menu has items`).toBeGreaterThan(0);
       for (let i = 0; i < n; i++) {
         const item = items.nth(i);
+
         await expect(item, `${id} item ${i} visible`).toBeVisible();
+
         const box = (await item.boundingBox())!;
         const hit = await item.evaluate(
           (el, [x, y]) => {
@@ -43,11 +55,14 @@ test.describe('v2 ⋯ menu stacking', () => {
           },
           [box.x + box.width / 2, box.y + box.height / 2]
         );
+
         expect(hit, `${id} item ${i} is on top`).toBe('ok');
       }
+
       await page.keyboard.press('Escape');
       await expect(page.locator('.ar-more-pop')).toBeHidden();
     }
+
     expect(errors, 'no console errors').toEqual([]);
   });
 });

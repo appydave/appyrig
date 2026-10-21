@@ -57,14 +57,17 @@ let scrubbed = 0;
 
 function scrubText(s, secrets = []) {
   let out = s;
+
   for (const secret of secrets) {
     if (secret && out.includes(secret)) {
       out = out.split(secret).join('<redacted-token>');
     }
   }
+
   for (const [re, to] of SCRUBS) {
     out = out.replace(re, to);
   }
+
   if (out !== s) {
     scrubbed += 1;
   }
@@ -76,9 +79,11 @@ function scrubDeep(v, secrets) {
   if (typeof v === 'string') {
     return scrubText(v, secrets);
   }
+
   if (Array.isArray(v)) {
     return v.map((x) => scrubDeep(x, secrets));
   }
+
   if (v && typeof v === 'object') {
     return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, scrubDeep(x, secrets)]));
   }
@@ -88,8 +93,10 @@ function scrubDeep(v, secrets) {
 
 // `--scrub <file>`: scrub an already-recorded snapshot in place (no hub, no re-record).
 const scrubPath = arg('scrub');
+
 if (scrubPath) {
   let secrets = [];
+
   try {
     secrets = [
       readFileSync(
@@ -100,19 +107,23 @@ if (scrubPath) {
   } catch {
     // no token file: the patterns still run
   }
+
   const file = scrubDeep(JSON.parse(readFileSync(scrubPath, 'utf8')), secrets);
+
   writeFileSync(scrubPath, `${JSON.stringify(file)}\n`);
   console.log(`scrubbed ${scrubPath}: ${scrubbed} strings changed`);
   process.exit(0);
 }
 
 const name = arg('name');
+
 if (!name || !/^[a-z0-9][a-z0-9-]*$/.test(name)) {
   console.error(
     'usage: record-frozen.mjs --name <kebab-name> [--hub url] [--token-file path] | --scrub <file>'
   );
   process.exit(2);
 }
+
 const hub = arg('hub', 'http://100.126.70.25:7191');
 const tokenFile = arg('token-file', path.join(homedir(), '.config', 'appyrig', 'token'));
 const listenMs = Number(arg('listen', '6')) * 1000;
@@ -132,6 +143,7 @@ const socket = io(hub, {
 
 const machines = new Map();
 let updates = 0;
+
 socket.on('fleet:update', (u) => {
   updates += 1;
   for (const m of u.machines ?? []) {
@@ -145,6 +157,7 @@ function cutLines(lines, what) {
   if (!Array.isArray(lines) || lines.length <= keepTail) {
     return lines;
   }
+
   stripped.push(`${what}: ${lines.length - keepTail} older lines`);
 
   return lines.slice(-keepTail);
@@ -155,8 +168,10 @@ function cutDeep(value, where) {
   if (Array.isArray(value)) {
     return value.map((v, i) => cutDeep(v, `${where}[${i}]`));
   }
+
   if (value && typeof value === 'object') {
     const out = {};
+
     for (const [k, v] of Object.entries(value)) {
       out[k] =
         k === 'lines' && Array.isArray(v) && v.every((x) => typeof x === 'string')
@@ -180,11 +195,14 @@ function shrink(verb, a) {
   if (!a?.ok) {
     return a;
   }
+
   const v = structuredClone(a.value);
+
   if (verb === 'seat.history' && Array.isArray(v.events)) {
     if (v.events.length > HISTORY_EVENTS) {
       v.truncated = true;
     }
+
     v.events = v.events
       .slice(-HISTORY_EVENTS)
       .map((e) =>
@@ -193,6 +211,7 @@ function shrink(verb, a) {
           : e
       );
   }
+
   if (verb === 'seat.loadout' && Array.isArray(v.loadout?.layers)) {
     v.loadout.layers = v.loadout.layers.map((l) =>
       typeof l.content === 'string' && l.content.length > LAYER_MAX
@@ -200,6 +219,7 @@ function shrink(verb, a) {
         : l
     );
   }
+
   if (
     verb === 'rig.file' &&
     typeof v.file?.content === 'string' &&
@@ -225,27 +245,35 @@ function dedupe(calls) {
     if (!v || typeof v !== 'object') {
       return;
     }
+
     const s = JSON.stringify(v);
+
     if (s.length > 1024) {
       seen.set(s, (seen.get(s) ?? 0) + 1);
     }
+
     for (const x of Array.isArray(v) ? v : Object.values(v)) {
       count(x);
     }
   };
+
   for (const a of Object.values(calls)) {
     count(a);
   }
+
   const refs = {};
   const idOf = new Map();
   const swap = (v) => {
     if (!v || typeof v !== 'object') {
       return v;
     }
+
     const s = JSON.stringify(v);
+
     if (s.length > 1024 && (seen.get(s) ?? 0) > 1) {
       if (!idOf.has(s)) {
         const id = `r${idOf.size}`;
+
         idOf.set(s, id);
         refs[id] = Array.isArray(v)
           ? v.map(swap)
@@ -259,6 +287,7 @@ function dedupe(calls) {
       ? v.map(swap)
       : Object.fromEntries(Object.entries(v).map(([k, x]) => [k, swap(x)]));
   };
+
   const out = Object.fromEntries(Object.entries(calls).map(([k, a]) => [k, swap(a)]));
 
   return { calls: out, refs };
@@ -303,6 +332,7 @@ async function main() {
   const calls = {};
   const record = async (verb, input, cut = false) => {
     const a = await call(verb, input);
+
     calls[callKey(verb, input)] = shrink(
       verb,
       cut ? cutDeep(a, `${verb} ${input.machine}/${input.seat ?? input.rig ?? ''}`) : a
@@ -314,10 +344,12 @@ async function main() {
   for (const fm of machines.values()) {
     const machine = fm.machine.id;
     const snap = fm.snapshot;
+
     await record('db.schema', { machine });
     for (const rig of snap.rigs ?? []) {
       const r = rig.name;
       const files = await record('rig.files', { machine, rig: r });
+
       await record('rig.entry', { machine, rig: r });
       await record('rig.waiting', { machine, rig: r });
       await record('rig.outputs', { machine, rig: r });
@@ -327,29 +359,36 @@ async function main() {
         }
       }
     }
+
     const running = new Set(
       (snap.rigs ?? []).filter((r) => r.status === 'running').map((r) => r.name)
     );
+
     for (const seat of snap.seats ?? []) {
       if (seat.tail?.lines) {
         seat.tail.lines = cutLines(seat.tail.lines, `snapshot ${machine}/${seat.id} tail`);
       }
+
       // Seat verbs only for seats of running rigs: a stopped rig's seats refuse as not_in_snapshot.
       if (!running.has(seat.rig)) {
         continue;
       }
+
       await record('seat.get', { machine, seat: seat.id }, true);
       await record('seat.loadout', { machine, seat: seat.id });
       await record('seat.history', { machine, seat: seat.id }, true);
     }
+
     const newest = [...(snap.queue ?? [])]
       .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
       .slice(0, handoffCap);
+
     if ((snap.queue ?? []).length > newest.length) {
       stripped.push(
         `handoff.get on ${machine}: recorded the newest ${newest.length} of ${snap.queue.length} queue rows`
       );
     }
+
     for (const q of newest) {
       await record('handoff.get', { machine, id: q.id });
     }
@@ -375,10 +414,15 @@ async function main() {
     update: { generatedAt: recordedAt, full: true, machines: [...machines.values()] },
     ...dedupe(calls),
   };
+
   mkdirSync(OUT_DIR, { recursive: true });
+
   const out = path.join(OUT_DIR, `${name}.json`);
+
   writeFileSync(out, `${JSON.stringify(scrubDeep(file, [token]))}\n`);
+
   const kb = Math.round(Buffer.byteLength(JSON.stringify(file)) / 1024);
+
   console.log(
     `wrote ${path.relative(ROOT, out)} · ${kb} KB · ${machines.size} machines · ${Object.keys(file.calls).length} verb answers · ${updates} updates seen`
   );

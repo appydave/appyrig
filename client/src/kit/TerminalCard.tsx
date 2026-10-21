@@ -70,9 +70,11 @@ export function skillChips(
 ): { shown: string[]; more: number; onlyCount: number | null } {
   const names = skills ?? [];
   const total = Math.max(count ?? 0, names.length);
+
   if (names.length === 0) {
     return { shown: [], more: 0, onlyCount: count ?? null };
   }
+
   const shown = names.slice(0, SKILL_CHIPS).map(short);
 
   return { shown, more: Math.max(0, total - shown.length), onlyCount: null };

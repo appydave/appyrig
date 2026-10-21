@@ -270,6 +270,7 @@ export type HealthData = z.infer<typeof HealthDataSchema>;
 export function healthCaveats(d: HealthData): string[] {
   const out: string[] = [];
   const p = d.policy;
+
   if (p === null) {
     out.push('the health policy could not be read: cannot tell whether detectors run');
   } else {
@@ -280,20 +281,25 @@ export function healthCaveats(d: HealthData): string[] {
     } else if (p.diagnosisEnabled === null) {
       out.push('the policy did not say whether diagnosis is on');
     }
+
     if (p.detectors.length === 0) {
       out.push('the policy lists no detectors: nothing is known to have run');
     } else if (p.detectors.every((x) => p.disabledDetectors.includes(x))) {
       out.push('every detector the policy lists is disabled');
     }
   }
+
   if (d.coverage.length === 0) {
     out.push('no coverage was reported: cannot tell what was evaluated');
   }
+
   for (const c of d.coverage) {
     const unit = c.unit ? ` ${c.unit}` : '';
+
     if (c.partial === true) {
       out.push(`coverage of ${c.source} was partial`);
     }
+
     if (c.evaluated === null || c.total === null) {
       out.push(`coverage of ${c.source} did not say how much was evaluated`);
     } else if (c.evaluated === 0) {
@@ -302,6 +308,7 @@ export function healthCaveats(d: HealthData): string[] {
       out.push(`${c.source} evaluated ${c.evaluated} of ${c.total}${unit}`);
     }
   }
+
   if (d.findingsTruncated === true) {
     out.push('the findings list was cut short');
   }

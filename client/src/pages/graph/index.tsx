@@ -39,6 +39,7 @@ import './graph.css';
 /** A stable function that always calls the latest one: lets memo(RigBox) skip boxes whose rig has not changed. */
 function useStable<A extends unknown[], R>(fn: (...a: A) => R): (...a: A) => R {
   const ref = useRef(fn);
+
   ref.current = fn;
 
   return useCallback((...a: A) => ref.current(...a), []);
@@ -55,22 +56,29 @@ function useThrottled<T>(value: T, ms: number): T {
   const [out, setOut] = useState(value);
   const last = useRef(0);
   const latest = useRef(value);
+
   latest.current = value;
+
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (Object.is(value, out)) {
       return;
     }
+
     const wait = last.current + ms - Date.now();
+
     if (wait <= 0) {
       last.current = Date.now();
       setOut(value);
 
       return;
     }
+
     if (timer.current) {
       return;
     }
+
     timer.current = setTimeout(() => {
       timer.current = null;
       last.current = Date.now();
@@ -125,6 +133,7 @@ interface Geom {
   tipA: Tip;
   tipB: Tip;
 }
+
 const pairKey = (p: { a: string; b: string }) => `${p.a}↔${p.b}`;
 
 /** The breakdown behind "+N not drawn": by what the unplaced name is, then the commonest names. */
@@ -171,11 +180,14 @@ export function labelClearOf(
         y - LABEL_BOX_H / 2 < b.y + b.h &&
         y + LABEL_BOX_H / 2 > b.y
     );
+
   if (!hits(lx, ly)) {
     return { x: lx, y: ly };
   }
+
   const NS = 'http://www.w3.org/2000/svg';
   const path = document.createElementNS(NS, 'path');
+
   path.setAttribute('d', d);
   // a path measures only while it is in the document: borrow the lines layer for a moment
   host?.appendChild(path);
@@ -183,16 +195,21 @@ export function labelClearOf(
     if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') {
       return { x: lx, y: ly };
     }
+
     const len = path.getTotalLength();
+
     if (!(len > 0)) {
       return { x: lx, y: ly };
     }
+
     for (let i = 1; i <= 40; i++) {
       for (const t of [0.5 - i * 0.0125, 0.5 + i * 0.0125]) {
         if (t < 0.04 || t > 0.96) {
           continue;
         }
+
         const pt = path.getPointAtLength(len * t);
+
         if (!hits(pt.x, pt.y)) {
           return { x: pt.x, y: pt.y };
         }
@@ -230,6 +247,7 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
     setShowStoppedState(on);
     writeShowStopped(on);
   };
+
   const [filter, setFilter] = useState<FlagFilter | null>(null);
   // which rigs are open persists across visits (the URL's `open=` once the nav lane provides it)
   const [expanded, setExpanded] = useOpenRigs(ctx);
@@ -261,6 +279,7 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
 
   const names = useMemo(() => {
     const m = new Map<string, string>();
+
     for (const g of groups) {
       m.set(g.key, g.ref ? `${g.name} (${g.machineLabel})` : `no rig (${g.machineLabel})`);
     }
@@ -274,27 +293,34 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
   const [geom, setGeom] = useState<Map<string, Geom>>(new Map());
   const [size, setSize] = useState({ w: 0, h: 0 });
   const sig = `${pairs.map(pairKey).join('|')}~${[...visible].join(',')}~${columns.length}`;
+
   useLayoutEffect(() => {
     const el = canvas.current;
+
     if (!el) {
       return;
     }
+
     const measure = () => {
       const base = el.getBoundingClientRect();
       const box = (key: string): Box | null => {
         const f = el.querySelector<HTMLElement>(`[data-graph-rig="${CSS.escape(key)}"]`);
+
         if (!f) {
           return null;
         }
+
         const r = f.getBoundingClientRect();
 
         return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       };
+
       const rigBoxes = [...el.querySelectorAll<HTMLElement>('[data-graph-rig]')].map((f) => {
         const r = f.getBoundingClientRect();
 
         return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       });
+
       setGeom(
         new Map(
           routeLines(pairs, box).map((l) => {
@@ -312,11 +338,14 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
       );
       setSize({ w: el.clientWidth, h: el.clientHeight });
     };
+
     measure();
     if (typeof ResizeObserver === 'undefined') {
       return;
     }
+
     const ro = new ResizeObserver(measure);
+
     ro.observe(el);
     el.querySelectorAll('[data-graph-rig]').forEach((n) => ro.observe(n));
 
@@ -328,9 +357,11 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
   // the box at either end of the lit line (or the lit box itself) wears an ink outline
   const traceOf = (rigKey: string): string | undefined => {
     const f = lineFocus.focus;
+
     if (f === null) {
       return undefined;
     }
+
     if (f.startsWith('line:')) {
       return pairs.some((x) => lineFocusId(x.a, x.b) === f && (x.a === rigKey || x.b === rigKey))
         ? 'var(--ar-ink)'
@@ -339,6 +370,7 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
 
     return f === rigKey ? 'var(--ar-ink)' : undefined;
   };
+
   const drawn = pairs.flatMap((p) => {
     const g = geom.get(pairKey(p));
 
@@ -349,6 +381,7 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
     `${nameOf(p.a)} ⇄ ${nameOf(p.b)} · ${p.total} handoff${p.total === 1 ? '' : 's'} between rigs`;
   const lineHoverCard = (p: PairEdge, ev: { clientX: number; clientY: number }) => {
     const last = p.items[p.items.length - 1];
+
     setLineHover({
       title: pairTitle(p),
       lines: [
@@ -362,21 +395,26 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
       y: ev.clientY + 14,
     });
   };
+
   const pinPair = (p: PairEdge) => {
     setLineHover(null);
     setPinned({ title: pairTitle(p), items: p.items });
   };
+
   useEffect(() => {
     if (!pinned) {
       return;
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) {
         return;
       }
+
       e.preventDefault();
       setPinned(null);
     };
+
     window.addEventListener('keydown', onKey, true);
 
     return () => window.removeEventListener('keydown', onKey, true);
@@ -397,21 +435,28 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
   // open pre-opens nothing; the `map` alias opens the chosen rig at once.
   const nonce = ctx.focusNonce;
   const seen = useRef<{ rig: string | null; nonce: number } | null>(null);
+
   useEffect(() => {
     if (!picked) {
       return;
     }
+
     const before = seen.current;
+
     seen.current = { rig: picked, nonce };
     if (!before && !focusChosen && nonce === 0) {
       return;
     }
+
     if (before && before.rig === picked && before.nonce === nonce) {
       return;
     }
+
     setExpanded((o) => ({ ...o, [picked]: true }));
     setFlash(picked);
+
     const t = window.setTimeout(() => setFlash((f) => (f === picked ? null : f)), 2500);
+
     // after the box has grown, bring it into view (centred; never past the page)
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
@@ -425,6 +470,7 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
     // setExpanded is stable enough: the pick and the nonce are what trigger this
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked, nonce, focusChosen]);
+
   // A card click opens the Agent panel on top of this page (never another page). ⋯ → Documents opens the
   // same panel on its Documents tab.
   const openAgent = (key: string) =>

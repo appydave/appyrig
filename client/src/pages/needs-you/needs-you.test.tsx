@@ -38,6 +38,7 @@ function q(id: string, over: Partial<QueueItem>): QueueItem {
 /** Two machines: M2 holds two old/new human items, a closed one and a sweep notice; Roamy has a blocked seat. */
 function twoMachines(): FleetMachine[] {
   const m2 = fleetMachine(snapshot('m2'));
+
   m2.snapshot = {
     ...m2.snapshot,
     queue: [
@@ -49,7 +50,9 @@ function twoMachines(): FleetMachine[] {
       q('to-seat', { destination: 'dev-qa@fliedit-team', createdAt: ago(9 * H) }),
     ],
   };
+
   const roamy = fleetMachine(snapshot('roamy--blocked'));
+
   roamy.snapshot = {
     ...roamy.snapshot,
     queue: [
@@ -85,8 +88,10 @@ function ctxFor(
         ack: (e: null, a: CallAnswer) => void
       ) => {
         sent.push(req.verb);
+
         const raw = answers[req.verb];
         const hit = typeof raw === 'function' ? (raw as (i: unknown) => unknown)(req.input) : raw;
+
         setTimeout(
           () =>
             ack(
@@ -151,6 +156,7 @@ describe('Needs You model', () => {
   it('aggregates human-addressed open items and blocked seats across two machines', () => {
     const items = buildNeeds(twoMachines(), {}, NOW);
     const ids = items.map((i) => i.id);
+
     expect(ids).toContain('m2:q:new-ask');
     expect(ids).toContain('roamy:q:roamy-ask');
     expect(ids.some((i) => i.startsWith('roamy:b:'))).toBe(true);
@@ -164,15 +170,20 @@ describe('Needs You model', () => {
   it('orders by age, longest wait first, with stale items last', () => {
     const items = buildNeeds(twoMachines(), {}, NOW);
     const asks = items.filter((i) => i.kind === 'action');
+
     expect(asks.map((i) => i.id)).toEqual([
       'm2:q:old-ask',
       'roamy:q:roamy-ask',
       'm2:q:new-ask',
       'm2:q:stale-ask',
     ]);
+
     const firstStale = items.findIndex((i) => i.stale);
+
     expect(items.slice(firstStale).every((i) => i.stale)).toBe(true);
+
     const fresh = items.slice(0, firstStale);
+
     expect(fresh.map((i) => i.waitedMs)).toEqual(
       [...fresh.map((i) => i.waitedMs)].sort((a, b) => b - a)
     );
@@ -197,8 +208,11 @@ describe('Needs You model', () => {
       },
       NOW
     );
+
     expect(items.some((i) => i.kind === 'gate')).toBe(true);
+
     const c = countsByFilter(items);
+
     expect(c.action).toBe(items.filter((i) => i.kind === 'action' || i.kind === 'gate').length);
     expect(c.blocked).toBe(1);
     expect(c.approval + c.shipped + c.progress).toBe(0);
@@ -211,8 +225,11 @@ describe('Needs You model', () => {
   it('builds sample cards from real names and keeps them out of real counts', () => {
     const ms = twoMachines();
     const sample = sampleNeeds(ms, NOW);
+
     expect(sample.every((s) => !s.real)).toBe(true);
+
     const seatIds = ms.flatMap((m) => m.snapshot.seats.map((s) => s.id.split('@')[0]));
+
     expect(sample.every((s) => seatIds.includes(s.from))).toBe(true);
     expect(buildNeeds(ms, {}, NOW).every((i) => i.real)).toBe(true);
   });
@@ -230,7 +247,9 @@ describe('Needs You page', () => {
 
   it('shows real cards across both machines, stale ones in their own band, samples labelled', () => {
     render(<Page ctx={ctxFor(twoMachines())} />);
+
     const fresh = within(screen.getByTestId('ny-fresh')).getAllByTestId('ny-card');
+
     expect(fresh.every((c) => c.dataset.real === 'real')).toBe(true);
     expect(fresh.some((c) => c.textContent?.includes('Which port?'))).toBe(true);
     expect(fresh.some((c) => c.textContent?.includes('Roamy'))).toBe(true);
@@ -244,25 +263,34 @@ describe('Needs You page', () => {
     expect(screen.getByTestId('ny-toggle-sample')).toHaveTextContent('Hide sample cards');
     // the sample section is labelled and its cards are marked sample
     expect(screen.getAllByTestId('sample-label').length).toBeGreaterThan(0);
+
     const sample = within(screen.getByTestId('ny-sample')).getAllByTestId('ny-card');
+
     expect(sample.every((c) => c.dataset.real === 'sample')).toBe(true);
   });
 
   it('puts the toggle after the real list, and says when nothing fresh is waiting', () => {
     const ms = twoMachines();
+
     render(<Page ctx={ctxFor(ms)} />);
+
     const toggle = screen.getByTestId('ny-toggle-sample');
     const band = screen.getByTestId('ny-stale-band');
+
     expect(band.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByTestId('ny-total')).toHaveTextContent('waiting (');
+
     // only stale items: header leads with "Nothing new waiting"
     const m2 = fleetMachine(snapshot('m2'));
+
     m2.snapshot = {
       ...m2.snapshot,
       seats: [],
       queue: [q('stale-ask', { summary: 'Ancient question', createdAt: ago(STALE_MS + 2 * H) })],
     };
+
     const stale = [m2];
+
     render(<Page ctx={ctxFor(stale)} />);
     expect(screen.getAllByTestId('ny-total').at(-1)).toHaveTextContent(
       /Nothing new waiting · 1 stale/
@@ -279,7 +307,9 @@ describe('Needs You page', () => {
   it('filters the list', () => {
     render(<Page ctx={ctxFor(twoMachines())} />);
     fireEvent.click(screen.getByTestId('ny-filter-blocked'));
+
     const cards = within(screen.getByTestId('ny-fresh')).getAllByTestId('ny-card');
+
     expect(cards.every((c) => c.dataset.kind === 'blocked')).toBe(true);
     fireEvent.click(screen.getByTestId('ny-filter-approval'));
     expect(screen.queryByTestId('ny-fresh')).toBeNull();
@@ -293,13 +323,17 @@ describe('Needs You page', () => {
 
   it('fake actions and Clear stale make no socket call', async () => {
     const sent: string[] = [];
+
     render(<Page ctx={ctxFor(twoMachines(), sent)} />);
     await waitFor(() => expect(sent).toContain('rig.waiting'));
+
     // the page may ask the hub to read gates (read-only rig.waiting); nothing else is allowed
     const before = sent.length;
+
     for (const name of ['approve', 'dismiss', 'snooze', 'reply']) {
       fireEvent.click(screen.getAllByTestId(`ny-${name}`)[0]!);
     }
+
     expect(screen.getAllByTestId('ny-pretend').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText(/Clear 1 stale/));
     fireEvent.click(screen.getByTestId('fake-confirm'));
@@ -311,6 +345,7 @@ describe('Needs You page', () => {
 
   it('jumps to the agent that asked', () => {
     const ctx = ctxFor(twoMachines());
+
     render(<Page ctx={ctx} />);
     fireEvent.click(screen.getAllByTestId('ny-open-agent')[0]!);
     expect(ctx.openAgentPage).toHaveBeenCalledOnce();
@@ -332,14 +367,19 @@ describe('Needs You: gates, unread rigs, hub link, no machines', () => {
         gate('3', 'item-b', { to: 'dev-qa@fliedit-team' }),
       ]),
     });
+
     render(<Page ctx={ctx} />);
     await waitFor(() => expect(screen.getAllByText(/FliStudio gate/).length).toBeGreaterThan(0));
+
     const gateCards = screen
       .getAllByTestId('ny-card')
       .filter((c) => (c as HTMLElement).dataset.kind === 'gate');
+
     // every running rig answers the same three gates: two handoffs per rig, so 2 cards each
     expect(gateCards.length).toBe(2 * runningRigs(ms).length);
+
     const two = gateCards.find((c) => c.textContent?.includes('gates g_0000000001, g_0000000002'))!;
+
     expect(two).toBeTruthy();
     expect(two).toHaveTextContent('→ human');
     expect(within(two as HTMLElement).getByTestId('ny-gate-link')).toHaveAttribute('href', link);
@@ -352,15 +392,19 @@ describe('Needs You: gates, unread rigs, hub link, no machines', () => {
       const sent: string[] = [];
       const base = ctxFor(ms, sent, { 'rig.waiting': waitingFor([]) });
       const { rerender } = render(<Page ctx={base} />);
+
       await waitFor(() => expect(sent.length).toBeGreaterThan(0));
+
       const first = sent.length;
       // a new snapshot object with the same rigs and the same activity asks nothing
       const same = ms.map((m) => ({ ...m, snapshot: { ...m.snapshot } }));
+
       rerender(<Page ctx={{ ...base, machines: same, allMachines: same }} />);
       await act(async () => {
         await Promise.resolve();
       });
       expect(sent.length).toBe(first);
+
       // queue activity on a rig: newer updatedAt on one of its items
       const rigName = runningRigs(ms)[0]!;
       const busy = ms.map((m) => ({
@@ -377,9 +421,12 @@ describe('Needs You: gates, unread rigs, hub link, no machines', () => {
           ],
         },
       }));
+
       rerender(<Page ctx={{ ...base, machines: busy, allMachines: busy }} />);
       await waitFor(() => expect(sent.length).toBeGreaterThan(first));
+
       const second = sent.length;
+
       // and on the interval
       await act(async () => {
         await vi.advanceTimersByTimeAsync(61_000);
@@ -393,9 +440,12 @@ describe('Needs You: gates, unread rigs, hub link, no machines', () => {
   it('says gates are unread for N rigs, and does not say nothing is waiting', async () => {
     const ms = twoMachines();
     const n = runningRigs(ms).length;
+
     expect(n).toBeGreaterThan(0);
+
     // rig.waiting refused for every rig; the filter hides all the human items
     const empty = ms.map((m) => ({ ...m, snapshot: { ...m.snapshot, queue: [], seats: [] } }));
+
     render(<Page ctx={ctxFor(empty, [], {})} />);
     await waitFor(() =>
       expect(screen.getByTestId('ny-unread')).toHaveTextContent(`unread for ${n}`)
@@ -416,6 +466,7 @@ describe('Needs You: gates, unread rigs, hub link, no machines', () => {
 
   it('counts the stuck-sweep notices it leaves out', () => {
     const ms = twoMachines();
+
     expect(sweepCount(ms)).toBe(1);
     render(<Page ctx={ctxFor(ms)} />);
     expect(screen.getByTestId('ny-sweeps')).toHaveTextContent(

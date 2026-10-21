@@ -84,6 +84,7 @@ export function createHub(opts: HubOptions): Hub {
       const cfg = config.current();
       // One computation (and one `asOf`) per fleet read, shared by every machine in it.
       let views = viewsOf.get(all);
+
       if (!views) {
         views = accountViews(all, cfg, now(), (id) => store.emailChangedAt(id));
         viewsOf.set(all, views);
@@ -153,6 +154,7 @@ export function createHub(opts: HubOptions): Hub {
 
   if (opts.clientDist) {
     const dist = opts.clientDist;
+
     app.use(express.static(dist));
     app.get('*splat', (_req, res) => res.sendFile('index.html', { root: dist }));
   }
@@ -165,6 +167,7 @@ export function createHub(opts: HubOptions): Hub {
 
   // Browsers: session cookie at connect, then the whole fleet, then changed machines (D3).
   const browsers = io.of(SOCKET_NAMESPACES.BROWSER);
+
   browsers.use((socket, next) => {
     if (isAuthorised(socket.handshake.headers, opts.hubToken)) {
       next();
@@ -178,14 +181,17 @@ export function createHub(opts: HubOptions): Hub {
       full: true,
       machines: store.list(),
     };
+
     socket.emit(FLEET_EVENTS.UPDATE, update);
     // The UI's door onto the core (B1, B13): same seam, fixed principal.
     socket.on(FLEET_EVENTS.CALL, (request: CoreCallRequest, ack: (a: CallAnswer) => void) => {
       if (typeof ack !== 'function') {
         return;
       }
+
       const r: Partial<CoreCallRequest> =
         typeof request === 'object' && request !== null ? request : {};
+
       ack(core.call(UI_PRINCIPAL, String(r.verb ?? ''), r.input, { dryRun: r.dryRun }));
     });
   });
@@ -194,7 +200,9 @@ export function createHub(opts: HubOptions): Hub {
     if (machines.length === 0) {
       return;
     }
+
     const update: FleetUpdate = { generatedAt: now().toISOString(), full: false, machines };
+
     browsers.emit(FLEET_EVENTS.UPDATE, update);
   };
 
@@ -206,6 +214,7 @@ export function createHub(opts: HubOptions): Hub {
 
   const sweep = () => {
     const changed = store.sweep();
+
     emitChanged(changed);
 
     return changed;
@@ -222,6 +231,7 @@ export function createHub(opts: HubOptions): Hub {
     core,
     load: async () => {
       const loaded = await store.load();
+
       await store.loadHistories();
       await store.loadHandoffs();
       await store.schemas.load();
@@ -233,6 +243,7 @@ export function createHub(opts: HubOptions): Hub {
       if (timer) {
         return;
       }
+
       timer = setInterval(sweep, opts.livenessIntervalMs ?? 1_000);
       timer.unref();
     },
@@ -245,6 +256,7 @@ export function createHub(opts: HubOptions): Hub {
       if (timer) {
         clearInterval(timer);
       }
+
       timer = undefined;
       await listening?.close();
       await new Promise<void>((r) => io.close(() => r())); // also closes httpServer

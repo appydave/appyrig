@@ -27,19 +27,23 @@ export function watchConfig(
   return {
     current() {
       let m: number;
+
       try {
         m = statSync(path).mtimeMs;
       } catch {
         m = 0;
       }
+
       if (m === mtimeMs) {
         return value;
       }
+
       mtimeMs = m;
       value = {};
       if (m === 0) {
         return value;
       }
+
       try {
         value = AppConfigSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
       } catch (err) {
@@ -55,18 +59,22 @@ export function watchConfig(
 export function applyRigLabels(machine: FleetMachine, config: AppConfig): FleetMachine {
   // displayName and owner belong to the hub's config. A collector that sends them is ignored: config wins.
   const labels = config.rigs ?? {};
+
   if (machine.snapshot.rigs.length === 0) {
     return machine;
   }
+
   let changed = false;
   const rigs = machine.snapshot.rigs.map((rig) => {
     const label = Object.hasOwn(labels, rig.name) ? labels[rig.name] : undefined;
     const bare: Record<string, unknown> = { ...rig };
+
     delete bare.displayName;
     delete bare.owner;
     if (!label?.displayName && !label?.owner && !('displayName' in rig) && !('owner' in rig)) {
       return rig;
     }
+
     changed = true;
 
     return {

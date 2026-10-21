@@ -20,6 +20,7 @@ export function readIdentity(
   packageJson = resolve(dirname(fileURLToPath(import.meta.url)), '../../../package.json')
 ): AppIdentity {
   const pkg = JSON.parse(readFileSync(packageJson, 'utf8')) as { name?: string; version?: string };
+
   if (pkg.name !== ROOT_PACKAGE || typeof pkg.version !== 'string') {
     throw new Error(`${packageJson} is not ${ROOT_PACKAGE} (found ${pkg.name ?? 'no name'})`);
   }

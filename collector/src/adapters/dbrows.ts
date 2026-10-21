@@ -28,17 +28,21 @@ export function cellOf(v: unknown): DbCell {
   if (v === null || v === undefined) {
     return null;
   }
+
   if (typeof v === 'number') {
     return v;
   }
+
   if (typeof v === 'bigint') {
     return v <= BigInt(Number.MAX_SAFE_INTEGER) && v >= BigInt(Number.MIN_SAFE_INTEGER)
       ? Number(v)
       : v.toString();
   }
+
   if (v instanceof Uint8Array) {
     return `(blob ${v.byteLength} bytes)`;
   }
+
   const s = redactString(String(v));
 
   return s.length > DB_CELL_MAX
@@ -52,8 +56,10 @@ export function readAllTableRows(
   collectedAt: string
 ): DbRowsPush[] {
   const db = openReadOnly(dbPath);
+
   try {
     db.exec('PRAGMA query_only = ON');
+
     const tables = (
       db
         .prepare(
@@ -63,6 +69,7 @@ export function readAllTableRows(
     ).map((t) => t.name);
     const colsOf = db.prepare('SELECT name FROM pragma_table_info(?) ORDER BY cid');
     const out: DbRowsPush[] = [];
+
     for (const table of tables) {
       const columns = (colsOf.all(table) as { name: string }[]).map((c) => String(c.name));
       const total = Number(
@@ -70,6 +77,7 @@ export function readAllTableRows(
       );
       let raw: Record<string, unknown>[];
       let order: 'rowid' | null = 'rowid';
+
       try {
         raw = db
           .prepare(`SELECT * FROM ${quote(table)} ORDER BY rowid DESC LIMIT ${DB_ROWS_MAX}`)
@@ -82,18 +90,23 @@ export function readAllTableRows(
           unknown
         >[];
       }
+
       const hidden = columns.filter((c) => DB_SECRET_COLUMN.test(c));
       const rows: DbCell[][] = [];
       let bytes = 0;
+
       for (const r of raw) {
         const row = columns.map((c) => (hidden.includes(c) ? DB_HIDDEN_CELL : cellOf(r[c])));
+
         // The byte cap counts what is actually sent: the serialized row.
         bytes += Buffer.byteLength(JSON.stringify(row));
         if (bytes > DB_ROWS_BYTES_MAX) {
           break;
         }
+
         rows.push(row);
       }
+
       out.push({
         machineId,
         collectedAt,
@@ -145,10 +158,12 @@ export class DbRowsReader {
     if (this.now().getTime() - this.lastRead < this.ttlMs) {
       return null;
     }
+
     this.lastRead = this.now().getTime();
     if (!existsSync(this.dbPath)) {
       return null;
     }
+
     const sigOf = async (p: string) => {
       try {
         const st = await stat(p);
@@ -158,29 +173,39 @@ export class DbRowsReader {
         return '-';
       }
     };
+
     const fileSig = `${await sigOf(this.dbPath)}|${await sigOf(`${this.dbPath}-wal`)}`;
+
     if (fileSig === this.fileSig) {
       return null;
     }
+
     let pushes: DbRowsPush[];
+
     try {
       pushes = readAllTableRows(this.machineId, this.dbPath, this.now().toISOString());
     } catch {
       return null; // unreadable this round (db.schema reports why); the next round retries
     }
+
     const changed: DbRowsPush[] = [];
     const sigs = new Map<string, string>();
+
     for (const p of pushes) {
       const sig = createHash('sha1')
         .update(JSON.stringify({ ...p, collectedAt: '' }))
         .digest('hex');
+
       if (this.sent.get(p.table) === sig) {
         continue;
       }
+
       changed.push(p);
       sigs.set(p.table, sig);
     }
+
     const thisSig = fileSig;
+
     if (changed.length === 0) {
       this.fileSig = thisSig;
 

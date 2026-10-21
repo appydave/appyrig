@@ -29,6 +29,7 @@ function Window({
   if (!w) {
     return <p className="quiet">{label}: not reported by this hub.</p>;
   }
+
   const st = windowStory(w, now);
   const burn = burnPerHour(w);
   const empty = hoursToEmpty(w);

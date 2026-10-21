@@ -25,7 +25,9 @@ function swatch(s: Swatch | undefined, entry: LegendMark): ReactNode {
   if (!s || s === 'text') {
     return null;
   }
+
   const [kind, arg = ''] = s.split(':') as [string, string?];
+
   switch (kind) {
     case 'pip': {
       const k = arg as PipKey;
@@ -36,6 +38,7 @@ function swatch(s: Swatch | undefined, entry: LegendMark): ReactNode {
         </span>
       );
     }
+
     case 'chip':
       return arg === 'codex' || arg === 'terminal' ? (
         <span className="chip legend2-chip" data-family={arg === 'codex' ? 'codex' : 'other'}>
@@ -73,6 +76,7 @@ function swatch(s: Swatch | undefined, entry: LegendMark): ReactNode {
         </span>
       );
     }
+
     case 'rd-dot':
       return <span className="rd-dot" data-pip={arg} aria-hidden="true" />;
     case 'rd-chip':

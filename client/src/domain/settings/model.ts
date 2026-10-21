@@ -55,6 +55,7 @@ const same = (a: SettingValue | undefined, b: SettingValue | undefined) =>
  */
 export function groupSettings(machines: SettingsMachine[], changedOnly: boolean): SettingGroup[] {
   const lines = new Map<string, SettingLine>();
+
   for (const m of machines) {
     for (const s of m.settings) {
       const l =
@@ -67,24 +68,32 @@ export function groupSettings(machines: SettingsMachine[], changedOnly: boolean)
           differs: false,
         } as SettingLine);
       const changed = !same(s.value, s.defaultValue);
+
       l.byMachine[m.machine] = { value: s.value, source: s.source, changed };
       l.changed ||= changed;
       lines.set(s.key, l);
     }
   }
+
   for (const l of lines.values()) {
     // a machine that lacks the key counts as a different value
     const vals = machines.map((m) => JSON.stringify(l.byMachine[m.machine]?.value ?? '\u0000none'));
+
     l.differs = new Set(vals).size > 1;
   }
+
   const groups = new Map<string, SettingLine[]>();
+
   for (const l of [...lines.values()].sort((a, b) => a.key.localeCompare(b.key))) {
     if (changedOnly && !l.changed) {
       continue;
     }
+
     const g = groupOf(l.key);
+
     groups.set(g, [...(groups.get(g) ?? []), l]);
   }
+
   const rank = (g: string) => (ORDER.includes(g) ? ORDER.indexOf(g) : ORDER.length);
 
   return [...groups.entries()]
@@ -101,6 +110,7 @@ export const PATH_HIDDEN = '(path hidden)';
  */
 // The path must start the value or follow a quote or bracket, so "UTC / local" is not a path.
 const PATHISH = /(^|["'[{(])(\/|~\/|\.\.?\/|[A-Za-z]:[\\/]|\\\\|file:\/\/)/i;
+
 export const looksLikePath = (s: string): boolean => PATHISH.test(s.trim());
 
 export const show = (v: SettingValue | undefined): string =>
@@ -199,6 +209,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
   const pick = stopped[0];
   const first = machines[0];
   const rows: ScheduleRow[] = [];
+
   if (pick) {
     rows.push({
       id: 'wake',
@@ -209,6 +220,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
       result: 'pass',
     });
   }
+
   rows.push({
     id: 'release',
     what: 'On a new OpenRig release: run rig doctor and tell David',
@@ -227,6 +239,7 @@ export function sampleSchedules(machines: FleetMachine[]): ScheduleRow[] {
       result: 'fail',
     });
   }
+
   rows.push({
     id: 'retention',
     what: 'Trim transitions older than 30 days',

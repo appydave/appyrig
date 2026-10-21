@@ -117,16 +117,21 @@ const memo = new WeakMap<object, Map<string, unknown>>();
 
 function cached<T>(snap: object, key: string, make: () => T): T {
   let m = memo.get(snap);
+
   if (!m) {
     memo.set(snap, (m = new Map()));
   }
+
   if (m.has(key)) {
     return m.get(key) as T;
   }
+
   const v = make();
+
   if (m.size > 300) {
     m.clear();
   } // clock buckets pile up on a snapshot that never changes
+
   m.set(key, v);
 
   return v;
@@ -165,19 +170,26 @@ export function endpointGroup(
   if (!raw || bare(raw) === 'human') {
     return null;
   }
+
   const sig = fleetSeatsSig(all);
+
   if (sig !== placementSig) {
     placementSig = sig;
     placements = new WeakMap();
   }
+
   let byRaw = placements.get(home.snapshot);
+
   if (!byRaw) {
     placements.set(home.snapshot, (byRaw = new Map()));
   }
+
   if (byRaw.has(raw)) {
     return byRaw.get(raw) ?? null;
   }
+
   const g = placeEndpoint(raw, home, all);
+
   byRaw.set(raw, g);
 
   return g;
@@ -188,22 +200,28 @@ const hasLoose = (fm: FleetMachine): boolean =>
 
 function placeEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): GroupKey | null {
   const ep = resolveEndpoint(raw, home, all);
+
   if (ep.seat && ep.machineId) {
     const fm = all.find((m) => m.machine.id === ep.machineId);
     const rig = ep.seat.rig;
+
     if (rig && fm?.snapshot.rigs.some((r) => r.name === rig)) {
       return `${ep.machineId}:${rig}`;
     }
 
     return looseKey(ep.machineId);
   }
+
   const rig = endpointRig(home, raw);
+
   if (rig && home.snapshot.rigs.some((r) => r.name === rig)) {
     return `${home.machine.id}:${rig}`;
   }
+
   // `openrig-orch@roamy` where that session is not a seat any more: its machine's no-rig group.
   const where = raw.includes('@') ? raw.slice(raw.lastIndexOf('@') + 1) : '';
   const there = where ? all.find((m) => m.machine.id === where) : undefined;
+
   if (there && hasLoose(there)) {
     return looseKey(where);
   }
@@ -221,23 +239,30 @@ export function crossRigEdges(
   let unplaced = 0;
   const names = new Map<string, number>();
   const machineIds = new Set(machines.map((m) => m.machine.id));
+
   for (const home of machines) {
     for (const q of home.snapshot.queue) {
       if (seen.has(q.id)) {
         continue;
       }
+
       seen.add(q.id);
       if (!q.source || !q.destination) {
         continue;
       }
+
       if (bare(q.source) === 'human' || bare(q.destination) === 'human') {
         continue;
       }
+
       const from = endpointGroup(q.source, home, machines);
       const to = endpointGroup(q.destination, home, machines);
+
       if (!from || !to) {
         unplaced += 1;
+
         const missing = new Set<string>();
+
         for (const [raw, g] of [
           [q.source, from],
           [q.destination, to],
@@ -246,16 +271,21 @@ export function crossRigEdges(
             missing.add(raw.includes('@') ? raw.slice(raw.lastIndexOf('@') + 1) : raw);
           }
         }
+
         for (const where of missing) {
           names.set(where, (names.get(where) ?? 0) + 1);
         }
+
         continue;
       }
+
       if (from === to) {
         continue;
       }
+
       const k = `${from}→${to}`;
       const e = map.get(k) ?? { from, to, count: 0, open: 0, stale: 0, items: [] };
+
       e.count += 1;
       e.items.push(q);
       if (isOpen(q)) {
@@ -265,9 +295,11 @@ export function crossRigEdges(
           e.open += 1;
         }
       }
+
       map.set(k, e);
     }
   }
+
   const edges = [...map.values()]
     .map((e) => ({
       ...e,
@@ -309,14 +341,18 @@ const askedDavid = (fm: FleetMachine, now: number): Map<string, number> =>
 
 function askedDavidOf(fm: FleetMachine, now: number): Map<string, number> {
   const out = new Map<string, number>();
+
   for (const q of fm.snapshot.queue) {
     if (bare(q.destination) !== 'human' || !q.source || !isOpen(q)) {
       continue;
     }
+
     if (now - ms(q.createdAt) > STALE_MS) {
       continue;
     }
+
     const seat = fm.snapshot.seats.find((s) => s.id === q.source || s.logicalId === q.source);
+
     if (seat) {
       out.set(seat.id, (out.get(seat.id) ?? 0) + 1);
     }
@@ -343,13 +379,16 @@ function flagsOf(
 const staleSeats = (fm: FleetMachine, now: number): Set<string> =>
   cached(fm.snapshot, `stale:${now}`, () => {
     const out = new Set<string>();
+
     for (const q of fm.snapshot.queue) {
       if (!q.destination || !isOpen(q) || now - ms(q.createdAt) <= STALE_MS) {
         continue;
       }
+
       const seat = fm.snapshot.seats.find(
         (s) => s.id === q.destination || s.logicalId === q.destination
       );
+
       if (seat) {
         out.add(seat.id);
       }
@@ -426,6 +465,7 @@ function boxOf(
 function lastHandoff(fm: FleetMachine, rig: string): LastHandoff | null {
   const items = rigQueue(fm, rig);
   let best: QueueItem | null = null;
+
   for (const q of items) {
     if (!best || q.updatedAt > best.updatedAt) {
       best = q;
@@ -445,6 +485,7 @@ function lastHandoff(fm: FleetMachine, rig: string): LastHandoff | null {
 /** Both directions of a rig pair as one line, merged by the kit; the items behind it ride along. */
 export function pairEdges(cross: CrossEdge[]): PairEdge[] {
   const items = new Map<string, QueueItem[]>();
+
   for (const e of cross) {
     items.set(pairKey(e.from, e.to), [...(items.get(pairKey(e.from, e.to)) ?? []), ...e.items]);
   }
@@ -464,14 +505,18 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
   const { edges: cross, unplaced } = crossRigEdges(machines, now);
   const out = new Map<string, number>();
   const into = new Map<string, number>();
+
   for (const e of cross) {
     out.set(e.from, (out.get(e.from) ?? 0) + e.count);
     into.set(e.to, (into.get(e.to) ?? 0) + e.count);
   }
+
   let rigCount = 0;
   const built: GraphMachine[] = machines.map((fm) => {
     const refs = cached(fm.snapshot, `refs:${fm.liveness}`, () => listRigs([fm]));
+
     rigCount += refs.length;
+
     const rigs = refs.map((ref) => {
       const o = out.get(ref.key) ?? 0;
       const i = into.get(ref.key) ?? 0;
@@ -567,6 +612,7 @@ export function rigMatches(r: GraphRig, f: FlagFilter | null): boolean {
   if (!f) {
     return true;
   }
+
   if (f === 'needsMe' && r.ref && r.state === 'attention') {
     return true;
   }

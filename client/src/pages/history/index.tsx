@@ -31,6 +31,7 @@ export const SEARCH_DEBOUNCE_MS = 150;
 
 /** Which field the search box searches (sent to the verb as seat, rig or closureReason; "anything" is text). */
 export type SearchBy = 'text' | 'seat' | 'rig' | 'closureReason';
+
 const SEARCH_BY: { key: SearchBy; label: string }[] = [
   { key: 'text', label: 'anything' },
   { key: 'seat', label: 'seat' },
@@ -110,6 +111,7 @@ function Row({
 /** A value that follows `v` after `ms` of quiet (the search box is sent to the hub, so not on every key). */
 function useDebounced<T>(v: T, ms: number): T {
   const [d, setD] = useState(v);
+
   useEffect(() => {
     const id = setTimeout(() => setD(v), ms);
 
@@ -161,6 +163,7 @@ function History({ ctx }: PageProps) {
   // Reset and re-ask when the query changes or the socket (the live source) changes.
   useEffect(() => {
     const gen = ++generation.current;
+
     setOlder([]);
     setOlderErr(null);
     setBusy(false);
@@ -173,6 +176,7 @@ function History({ ctx }: PageProps) {
       if (gen !== generation.current) {
         return;
       }
+
       if (a.ok) {
         setFirst({ phase: 'ok', value: a.value });
         setCursor(a.value.nextCursor);
@@ -190,7 +194,9 @@ function History({ ctx }: PageProps) {
     if (!cursor || busy) {
       return;
     }
+
     const gen = generation.current;
+
     setBusy(true);
     setOlderErr(null);
     void callVerb<HistoryTransitionsOutput>(
@@ -201,10 +207,12 @@ function History({ ctx }: PageProps) {
       if (gen !== generation.current) {
         return;
       }
+
       setBusy(false);
       if (!a.ok) {
         return setOlderErr(a.error.message);
       }
+
       setOlder((o) => [...o, ...a.value.rows]);
       setCursor(a.value.nextCursor);
     });

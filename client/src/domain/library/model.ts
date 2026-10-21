@@ -19,9 +19,11 @@ export function kindOf(i: LibraryItem): LibKind | 'spec' {
   if (i.group === 'skill') {
     return 'skill';
   }
+
   if (i.group === 'context-pack') {
     return 'context pack';
   }
+
   const k = (i.kind ?? '').toLowerCase();
 
   return k === 'workflow' || k === 'agent' || k === 'rig' ? k : 'spec';
@@ -51,8 +53,10 @@ export function countByKind(items: LibraryItem[]): Record<LibFilter, number> {
     'context pack': 0,
     skill: 0,
   };
+
   for (const i of items) {
     const k = kindOf(i);
+
     if (k !== 'spec') {
       c[k] += 1;
     }
@@ -180,17 +184,21 @@ export function unreadByFilter(
     'context pack': [],
     skill: [],
   };
+
   for (const m of machines) {
     if (m.status !== 'ok') {
       continue;
     }
+
     for (const g of ['specs', 'skills', 'contextPacks'] as const) {
       if (m.counts[g] !== null) {
         continue;
       }
+
       for (const f of GROUP_FILTERS[g]) {
         out[f].push(label(m.machine));
       }
+
       out.all.push(`${g === 'contextPacks' ? 'context packs' : g} on ${label(m.machine)}`);
     }
   }

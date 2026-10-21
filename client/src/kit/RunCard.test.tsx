@@ -6,6 +6,7 @@ import { queueMachine } from '../test/queueFixtures.js';
 import RunCard from './RunCard.js';
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');
+
 type Answer =
   { ok: true; value: unknown } | { ok: false; error: { failureMode: string; message: string } };
 
@@ -42,6 +43,7 @@ function machine(status: string, summary: string | null = null): FleetMachine {
   const snap = fm.snapshot as unknown as {
     rigs: { name: string; status?: string; summary?: string | null }[];
   };
+
   for (const r of snap.rigs) {
     Object.assign(r, { status, summary });
   }
@@ -72,6 +74,7 @@ describe('Run card R1 on screen', () => {
             },
           }
     );
+
     render(<RunCard machine={machine('stopped')} rig="ylo-d10" now={NOW} socket={socket} />);
     await waitFor(() =>
       expect(screen.getByTestId('run-ended')).toHaveAttribute('data-from', 'report')
@@ -93,6 +96,7 @@ describe('Run card R1 on screen', () => {
       ok: true,
       value: { machine: 'm4', rig: 'ylo-d10', status: 'no-spec', reason: 'no rig.yaml', files: [] },
     }));
+
     render(<RunCard machine={machine('running')} rig="ylo-d10" now={NOW} socket={socket} />);
     await waitFor(() =>
       expect(screen.getByTestId('run-mission')).toHaveTextContent(
@@ -110,6 +114,7 @@ describe('Run card R1 on screen', () => {
       ok: true,
       value: { machine: 'm4', rig: 'ylo-d10', status: 'pending', reason: null, files: [] },
     }));
+
     render(
       <RunCard
         machine={machine('running', 'The D10 launch run.')}
@@ -160,6 +165,7 @@ describe('D09 W0: folded to one line by default', () => {
 
   it('reads as one sentence; Details opens exactly the full card, with the rig info first; remembered', async () => {
     localStorage.removeItem('appyrig.runCardOpen');
+
     const { unmount } = render(
       <RunCard
         machine={machine('running')}
@@ -170,12 +176,15 @@ describe('D09 W0: folded to one line by default', () => {
       />
     );
     const line = screen.getByTestId('run-line');
+
     expect(line.textContent).toMatch(
       /^ylo-d10 ·○ idle· last: ylo-lead → d10-ai-powered-video-cuts: change 04 done/
     );
+
     // QA MEDIUM-2: the step's words are their own piece (the one that may be cut), with the full
     // text in its title; time and count are separate pieces that always show whole.
     const lastPart = screen.getByTestId('run-line-last');
+
     expect(lastPart).toHaveAttribute('title', expect.stringMatching(/^last: ylo-lead → /));
     await waitFor(() =>
       expect(screen.getByTestId('run-line-waiting')).toHaveTextContent(/^· nothing waiting on you$/)
@@ -183,10 +192,14 @@ describe('D09 W0: folded to one line by default', () => {
     expect(lastPart.nextElementSibling).toHaveTextContent(/^· .+/);
     // r1 W0 LOW-2: the title carries the step's full text, not the 110-character clip.
     expect(lastPart.getAttribute('title')).not.toMatch(/…$/);
+
     const toggle = screen.getByTestId('run-details-toggle');
+
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(toggle).toHaveAccessibleName('Details ▸');
+
     const body = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+
     expect(body).not.toBeVisible();
     expect(body.firstElementChild).toBe(screen.getByTestId('rig-info'));
     expect(body).toContainElement(screen.getByTestId('run-mission'));
@@ -203,6 +216,7 @@ describe('D09 W0: folded to one line by default', () => {
 
   it('waiting on you counts open items AND the open gates Details lists, never the list (QA MEDIUM-1)', async () => {
     const fm = machine('running');
+
     (fm.snapshot.queue as unknown as object[]).push(
       ...['a', 'b'].map((id) => ({
         id: `q-${id}`,
@@ -216,7 +230,9 @@ describe('D09 W0: folded to one line by default', () => {
         updatedAt: '2026-10-13T07:10:00.000Z',
       }))
     );
+
     const items = screen.queryAllByTestId('run-line-waiting').length;
+
     expect(items).toBe(0);
     render(
       <RunCard
@@ -226,7 +242,9 @@ describe('D09 W0: folded to one line by default', () => {
         socket={hub([gate('g_1'), gate('g_2'), gate('g_3')])}
       />
     );
+
     const w = screen.getByTestId('run-line-waiting');
+
     expect(w).toHaveTextContent('checking gates…');
     await waitFor(() => expect(w).toHaveTextContent(/^· 5 waiting on you$/));
     expect(screen.getAllByTestId('run-gate')).toHaveLength(3);

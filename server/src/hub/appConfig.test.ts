@@ -19,10 +19,12 @@ const RigSummaryStrictV13 = RigSummarySchema.omit({
 const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-cfg-'));
+
   dirs.push(d);
 
   return d;
 };
+
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 const machine = (): FleetMachine => {
@@ -35,6 +37,7 @@ describe('watchConfig', () => {
   it('a missing file is no labels and no error', () => {
     const errors: string[] = [];
     const w = watchConfig(join(tmp(), 'nope.json'), (m) => errors.push(m));
+
     expect(w.current()).toEqual({});
     expect(errors).toEqual([]);
   });
@@ -43,6 +46,7 @@ describe('watchConfig', () => {
     const file = join(tmp(), 'config.json');
     const errors: string[] = [];
     const w = watchConfig(file, (m) => errors.push(m));
+
     writeFileSync(file, JSON.stringify({ rigs: { a: { displayName: 'A' } } }));
     expect(w.current().rigs?.a?.displayName).toBe('A');
 
@@ -55,6 +59,7 @@ describe('watchConfig', () => {
 
   it('keeps keys it does not know (later slices add their own)', () => {
     const file = join(tmp(), 'config.json');
+
     writeFileSync(file, JSON.stringify({ accounts: { x: { tier: 'max200' } } }));
     expect(watchConfig(file).current()).toMatchObject({ accounts: { x: { tier: 'max200' } } });
   });
@@ -67,6 +72,7 @@ describe('applyRigLabels', () => {
     const out = applyRigLabels(m, {
       rigs: { [rig.name]: { displayName: 'Pretty', owner: 'David' } },
     });
+
     expect(out.snapshot.rigs[0]).toMatchObject({
       id: rig.id,
       name: rig.name,
@@ -79,6 +85,7 @@ describe('applyRigLabels', () => {
 
   it('returns the very same machine when nothing applies', () => {
     const m = machine();
+
     expect(applyRigLabels(m, {})).toBe(m);
     expect(applyRigLabels(m, { rigs: { 'no-such-rig': { displayName: 'x' } } })).toBe(m);
   });
@@ -91,9 +98,12 @@ describe('applyRigLabels', () => {
       snapshot: { ...m.snapshot, rigs: [{ ...rig, displayName: 'Spoofed', owner: 'Nobody' }] },
     };
     const none = applyRigLabels(sent, {});
+
     expect(none.snapshot.rigs[0]).not.toHaveProperty('displayName');
     expect(none.snapshot.rigs[0]).not.toHaveProperty('owner');
+
     const set = applyRigLabels(sent, { rigs: { [rig.name]: { displayName: 'Real' } } });
+
     expect(set.snapshot.rigs[0]).toMatchObject({ displayName: 'Real' });
     expect(set.snapshot.rigs[0]).not.toHaveProperty('owner');
   });
@@ -102,6 +112,7 @@ describe('applyRigLabels', () => {
     const m = machine();
     const rigs = { ...m.snapshot.rigs[0]!, name: 'constructor' };
     const odd = { ...m, snapshot: { ...m.snapshot, rigs: [rigs] } };
+
     expect(applyRigLabels(odd, { rigs: {} })).toBe(odd);
   });
 });
@@ -111,17 +122,25 @@ describe('S3 over the hub', () => {
     const file = join(tmp(), 'config.json');
     const snapshot = loadSnapshot('roamy');
     const rigName = snapshot.rigs[0]!.name;
+
     writeFileSync(
       file,
       JSON.stringify({ rigs: { [rigName]: { displayName: 'First', owner: 'D' } } })
     );
+
     const h = await startHub({ configPath: file });
+
     try {
       const browser = h.browser();
+
       await nextUpdate(browser);
+
       const update = nextUpdate(browser);
+
       await push(h.collector({ token: TOKEN, machineId: 'roamy' }), snapshot);
+
       const got = await update;
+
       expect(got.machines[0]!.snapshot.rigs[0]).toMatchObject({
         displayName: 'First',
         owner: 'D',
@@ -130,7 +149,9 @@ describe('S3 over the hub', () => {
 
       writeFileSync(file, JSON.stringify({ rigs: { [rigName]: { displayName: 'Second' } } }));
       utimesSync(file, new Date(), new Date(Date.now() + 5_000));
+
       const topo = h.hub.core.call('human:ui', 'rig.topology', { rig: rigName });
+
       expect(topo).toMatchObject({
         ok: true,
         value: [{ rig: { displayName: 'Second', name: rigName } }],
@@ -167,6 +188,7 @@ describe('S3 schema compatibility (both directions)', () => {
       runningCount: 5,
       attentionCount: 0,
     };
+
     expect(RigSummaryStrictV13.safeParse(old).success).toBe(true);
     expect(RigSummarySchema.safeParse(old).success).toBe(true);
   });
@@ -178,8 +200,10 @@ describe('S3 schema compatibility (both directions)', () => {
 
   it('a whole old snapshot still pushes to the new hub', async () => {
     const h = await startHub();
+
     try {
       const ack = await push(h.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'));
+
       expect(ack.ok).toBe(true);
     } finally {
       await h.stop();

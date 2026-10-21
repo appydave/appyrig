@@ -36,12 +36,17 @@ describe('one data coverage line per page', () => {
         nextCursor: null,
       },
     });
+
     render(<history.component ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('coverage')).toBeInTheDocument());
+
     const line = screen.getByTestId('coverage').querySelector('.cov-line')!;
+
     expect(line).toHaveTextContent('Real data from M2 · Roamy: pending');
+
     // the long wording lives inside a closed disclosure, not as paragraphs on the page
     const details = screen.getByTestId('coverage').querySelector('details')!;
+
     expect(details).not.toHaveAttribute('open');
     expect(within(details).getByTestId('data-notes')).toHaveTextContent('has not sent');
     expect(within(details).getByTestId('hist-retention')).toHaveTextContent('not all history');
@@ -51,6 +56,7 @@ describe('one data coverage line per page', () => {
 
   it('a refused read is one "Sample data" line, with the full reason in the disclosure', async () => {
     const { socket } = answeringSocket({});
+
     render(<history.component ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('sample-why')).toBeInTheDocument());
     expect(screen.getByTestId('sample-why').querySelector('.cov-line')).toHaveTextContent(
@@ -74,6 +80,7 @@ describe('one data coverage line per page', () => {
         truncated: false,
       },
     });
+
     render(<library.component ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('coverage')).toBeInTheDocument());
     expect(screen.getByTestId('lib-unread-skill')).toHaveTextContent('not read on M2');
@@ -84,8 +91,11 @@ describe('one data coverage line per page', () => {
 describe('Health: a one-line summary per machine', () => {
   it('lists every machine with its verdict, never "healthy"', async () => {
     const { socket } = answeringSocket({});
+
     render(<health.component ctx={pageCtx(machines(), socket, NOW)} />);
+
     const items = within(screen.getByTestId('hl2-summary')).getAllByRole('listitem');
+
     expect(items).toHaveLength(2);
     expect(items[0]).toHaveTextContent('M2');
     expect(items[1]).toHaveTextContent('Roamy');
@@ -109,10 +119,12 @@ describe('Missions: the brief is rendered, the untagged note is calm', () => {
       createdAt: T,
       updatedAt: T,
     });
+
     m2.snapshot = {
       ...m2.snapshot,
       queue: [q('a', ['mission:alpha', 'slice:alpha.1']), q('b', ['slice:orphan'])],
     };
+
     const { socket } = answeringSocket({
       'rig.files': {
         machine: 'm2',
@@ -144,12 +156,17 @@ describe('Missions: the brief is rendered, the untagged note is calm', () => {
         },
       },
     });
+
     render(<missions.component ctx={pageCtx(ms, socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('ms-doc-md')).toBeInTheDocument());
+
     const md = screen.getByTestId('ms-doc-md');
+
     expect(md.textContent).not.toContain('**');
     expect(md.querySelectorAll('strong').length).toBe(2);
+
     const note = screen.getByTestId('ms-unresolved');
+
     expect(note).not.toHaveClass('ar-note-warn');
     expect(note.className).toContain('quiet');
   });

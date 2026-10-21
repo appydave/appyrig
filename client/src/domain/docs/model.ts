@@ -71,17 +71,22 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
   const out: DocItem[] = [];
   const add = (it: DocItem) => {
     const n = lc(it.name);
+
     if (seen.has(n)) {
       return;
     }
+
     seen.add(n);
     out.push(it);
   };
+
   const layers = [...i.layers].sort(
     (a, b) => LAYER_ORDER.indexOf(a.id) - LAYER_ORDER.indexOf(b.id)
   );
+
   for (const l of layers) {
     const there = l.present && l.content !== null;
+
     add({
       key: `agent:${l.id}`,
       group: 'agent',
@@ -93,6 +98,7 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
         : { kind: 'absent' },
     });
   }
+
   for (const f of i.startup) {
     add({
       key: `agent:startup:${f.path}`,
@@ -106,6 +112,7 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
       },
     });
   }
+
   for (const f of i.rigFiles) {
     add({
       key: `rig:${f.id}`,
@@ -116,6 +123,7 @@ export function buildDocItems(i: BuildDocsInput): DocItem[] {
       source: { kind: 'rig', fileId: f.id },
     });
   }
+
   for (const p of i.missionPaths) {
     add({
       key: `mission:${p}`,
@@ -146,12 +154,15 @@ export function docKind(name: string): DocKind {
   if (/\.ya?ml$/i.test(name)) {
     return 'yaml';
   }
+
   if (/\.html?$/i.test(name)) {
     return 'html';
   }
+
   if (/\.(png|jpe?g)$/i.test(name)) {
     return 'image';
   }
+
   if (/\.md$/i.test(name) || !/\.[a-z0-9]+$/i.test(name)) {
     return 'markdown';
   }
@@ -180,19 +191,23 @@ const SOURCE_LABEL: Record<LoadoutSkill['source'], string> = {
 export function groupSkills(skills: LoadoutSkill[], query: string): SkillGroup[] {
   const q = lc(query.trim());
   const map = new Map<string, SkillGroup>();
+
   for (const s of skills) {
     if (q && !lc(s.name).includes(q) && !lc(s.plugin ?? '').includes(q)) {
       continue;
     }
+
     const id = s.source === 'plugin' ? `plugin:${s.plugin ?? '?'}` : s.source;
     const g = map.get(id) ?? {
       id,
       label: s.source === 'plugin' ? (s.plugin ?? 'plugin') : SOURCE_LABEL[s.source],
       skills: [],
     };
+
     g.skills.push(s);
     map.set(id, g);
   }
+
   const top = (g: SkillGroup) => (g.id === 'role' ? 0 : g.id === 'repo' ? 1 : 2);
 
   return [...map.values()]

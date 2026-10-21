@@ -12,6 +12,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 const SCRIPT = join(new URL('../..', import.meta.url).pathname, 'scripts/test-trust.mjs');
 const scratch = mkdtempSync(join(tmpdir(), 'test-trust-'));
+
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 let n = 0;
@@ -19,11 +20,14 @@ let n = 0;
 /** Writes `files` ({ 'dir/name': body }) into a fresh tree and runs the gate over it. */
 function gate(files: Record<string, string>) {
   const root = join(scratch, `tree-${n++}`);
+
   for (const [path, body] of Object.entries(files)) {
     const full = join(root, path);
+
     mkdirSync(join(full, '..'), { recursive: true });
     writeFileSync(full, body);
   }
+
   const r = spawnSync('node', [SCRIPT, '--root', root], { encoding: 'utf8' });
 
   return { status: r.status, out: `${r.stdout}${r.stderr}` };
@@ -60,6 +64,7 @@ describe('Feature: the test-trust gate fails a test that proves nothing', () => 
     'Scenario: given a %s, when the gate runs, then it exits 1 and names the file and line',
     (_name, file, body, tag) => {
       const r = gate({ [file]: body });
+
       expect(r.status, r.out).toBe(1);
       expect(r.out).toContain(tag);
       expect(r.out).toContain(`${file}:1`);
@@ -68,11 +73,13 @@ describe('Feature: the test-trust gate fails a test that proves nothing', () => 
 
   it('Scenario: given a failure, when the gate prints it, then it says what to do instead', () => {
     const r = gate({ 'e2e/k.spec.ts': `await page.${'waitForTimeout'}(1);` });
+
     expect(r.out).toContain('page.clock');
   });
 
   it('Scenario: given a snapshot flag on a test command in package.json, then it fails', () => {
     const r = gate({ 'package.json': JSON.stringify({ scripts: { test: 'vitest run -u' } }) });
+
     expect(r.status, r.out).toBe(1);
     expect(r.out).toContain('package.json scripts.test [snapshot]');
   });
@@ -81,6 +88,7 @@ describe('Feature: the test-trust gate fails a test that proves nothing', () => 
 describe('Feature: the test-trust gate leaves honest tests alone', () => {
   it('Scenario: given a clean test, when the gate runs, then it exits 0', () => {
     const r = gate({ 'server/src/ok.test.ts': `it('a', () => { ${EXPECT}(1).toBe(1); });` });
+
     expect(r.status, r.out).toBe(0);
   });
 
@@ -88,16 +96,19 @@ describe('Feature: the test-trust gate leaves honest tests alone', () => {
     const r = gate({
       'server/src/l.test.ts': `await new Promise((r) => ${'setTimeout'}(r, 5));`,
     });
+
     expect(r.status, r.out).toBe(0);
   });
 
   it('Scenario: given test.setTimeout in a browser test, then it is not flagged', () => {
     const r = gate({ 'e2e/m.spec.ts': `test.${'setTimeout'}(60_000);` });
+
     expect(r.status, r.out).toBe(0);
   });
 
   it('Scenario: given a bad example under a fixtures folder, then it is not scanned', () => {
     const r = gate({ 'test/fixtures/n.test.ts': `it.${'skip'}('a', () => {});` });
+
     expect(r.status, r.out).toBe(0);
   });
 });
@@ -108,11 +119,13 @@ describe('Feature: the test-trust gate has no easy way round it', () => {
     const r = gate({
       'server/src/o.test.ts': `if (!${ENV('OKEN')}) return;\n${EXPECT}(x).toBe(1);`,
     });
+
     expect(r.status, r.out).toBe(1);
   });
 
   it('Scenario: given an env var && assertion, then it fails', () => {
     const r = gate({ 'server/src/p.test.ts': `${ENV('OKEN')} && ${EXPECT}(x).toBe(1);` });
+
     expect(r.status, r.out).toBe(1);
   });
 
@@ -120,6 +133,7 @@ describe('Feature: the test-trust gate has no easy way round it', () => {
     const r = gate({
       'server/src/q.test.ts': `${ENV('OKEN')} ? ${EXPECT}(x).toBe(1) : undefined;`,
     });
+
     expect(r.status, r.out).toBe(1);
   });
 
@@ -127,6 +141,7 @@ describe('Feature: the test-trust gate has no easy way round it', () => {
     const r = gate({
       'e2e/r.spec.ts': `await new Promise((r) => ${'setTimeout'}(r, 500));`,
     });
+
     expect(r.status, r.out).toBe(1);
   });
 
@@ -134,6 +149,7 @@ describe('Feature: the test-trust gate has no easy way round it', () => {
     const r = gate({
       'e2e/s.spec.ts': `await page.evaluate(() => new Promise((r) => ${'setTimeout'}(r, 300)));`,
     });
+
     expect(r.status, r.out).toBe(1);
   });
 });

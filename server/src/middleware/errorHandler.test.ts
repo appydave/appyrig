@@ -5,6 +5,7 @@ import { AppError, errorHandler } from './errorHandler.js';
 
 function buildApp(thrower: (req: Request, res: Response, next: NextFunction) => void) {
   const app = express();
+
   app.get('/test', thrower);
   app.use(errorHandler);
 
@@ -14,22 +15,26 @@ function buildApp(thrower: (req: Request, res: Response, next: NextFunction) => 
 describe('AppError', () => {
   it('stores statusCode and message', () => {
     const err = new AppError(422, 'Unprocessable');
+
     expect(err.statusCode).toBe(422);
     expect(err.message).toBe('Unprocessable');
   });
 
   it('defaults isOperational to true', () => {
     const err = new AppError(400, 'Bad input');
+
     expect(err.isOperational).toBe(true);
   });
 
   it('allows isOperational to be set false', () => {
     const err = new AppError(500, 'Crash', false);
+
     expect(err.isOperational).toBe(false);
   });
 
   it('is an instance of Error', () => {
     const err = new AppError(404, 'Not found');
+
     expect(err).toBeInstanceOf(Error);
   });
 });

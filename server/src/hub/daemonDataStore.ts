@@ -28,14 +28,18 @@ export class DaemonDataStore {
   pruneSeats(machine: string, live: Set<string>, nowMs: number, graceMs = 5 * 60_000): void {
     for (const k of [...this.byKey.keys()]) {
       const [m, kind, key] = k.split('\u0000');
+
       if (m !== machine || kind !== 'seatdetail') {
         continue;
       }
+
       if (live.has(key ?? '')) {
         this.absentSince.delete(k);
         continue;
       }
+
       const since = this.absentSince.get(k) ?? nowMs;
+
       this.absentSince.set(k, since);
       if (nowMs - since >= graceMs) {
         this.byKey.delete(k);

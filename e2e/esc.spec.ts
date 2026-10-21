@@ -4,6 +4,7 @@ import { test, expect, type Page } from '@playwright/test';
 // the page and never adds a history entry.
 
 const FROZEN = '/?frozen=busy-2026-10-18&v=2';
+
 test.use({ viewport: { width: 1440, height: 900 } });
 
 async function open(page: Page) {
@@ -14,6 +15,7 @@ async function open(page: Page) {
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
   for (const id of ['ar-welcome-dismiss']) {
     const b = page.getByTestId(id);
+
     if (await b.count()) {
       await b.click();
     }
@@ -38,7 +40,9 @@ test.describe('Esc never navigates', () => {
     await page.getByTestId('terminal-card-open').first().click();
     await expect(page.getByTestId('agent-panel')).toBeVisible();
     expect(pageParam(page)).toBe('wall');
+
     const n = await historyLength(page);
+
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await page.clock.runFor(500);
@@ -62,7 +66,9 @@ test.describe('Esc never navigates', () => {
     // a station's Docs now opens the agent panel (the full-screen docs drawer is gone from there)
     await page.getByTestId('run-station-docs').first().click();
     await expect(page.getByTestId('agent-panel')).toBeVisible();
+
     const n = await historyLength(page);
+
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await page.clock.runFor(500);
@@ -82,7 +88,9 @@ test.describe('Esc never navigates', () => {
     await page.getByTestId('rig-drawer-tab').click();
     await page.getByTestId('drawer-agent').first().click();
     await expect(page.getByTestId('agent-panel')).toBeVisible();
+
     const n = await historyLength(page);
+
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('agent-panel')).toHaveCount(0);
     await page.clock.runFor(500);

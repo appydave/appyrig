@@ -20,8 +20,10 @@ export function answeringSocket(answers: Record<string, unknown> = {}) {
         ack: (e: Error | null, a?: CallAnswer) => void
       ) => {
         sent.push(req.verb);
+
         const raw = answers[req.verb];
         const hit = typeof raw === 'function' ? (raw as (i: unknown) => unknown)(req.input) : raw;
+
         setTimeout(
           () =>
             ack(

@@ -35,17 +35,21 @@ function RigMapPage({ ctx }: PageProps) {
   );
   const { openDocs, drawer: docsDrawer } = useDocsDrawer(ctx);
   const [pinned, setPinned] = useState<Pinned | null>(null);
+
   useEffect(() => {
     if (!pinned) {
       return;
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) {
         return;
       }
+
       e.preventDefault();
       setPinned(null);
     };
+
     window.addEventListener('keydown', onKey, true);
 
     return () => window.removeEventListener('keydown', onKey, true);
@@ -70,6 +74,7 @@ function RigMapPage({ ctx }: PageProps) {
       </main>
     );
   }
+
   const st = RIG_STATE[rig.state];
 
   return (

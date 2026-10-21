@@ -23,6 +23,7 @@ const base = {
 describe('TerminalCard: one fixed size', () => {
   it('the stylesheet gives each size a width and a height and never min- or max-height', () => {
     const css = readFileSync(path.resolve(__dirname, 'terminalCard.css'), 'utf8');
+
     expect(css).toMatch(/--tc-w:\s*\d+px/);
     expect(css).toMatch(/--tc-h:\s*\d+px/);
     expect(css).toMatch(/\.tcard\[data-size='compact'\]\s*\{[^}]*--tc-h:\s*\d+px/);
@@ -34,7 +35,9 @@ describe('TerminalCard: one fixed size', () => {
 
   it('a very long tail and address are one clipped line each, with the full text on hover', () => {
     render(<TerminalCard size="wall" {...base} />);
+
     const tail = screen.getByTestId('terminal-card-tail');
+
     expect(tail.textContent).toHaveLength(400); // one element, clipped by CSS, not wrapped into more
     expect(tail.title).toHaveLength(400);
     expect(screen.getByTestId('terminal-card-address').title).toContain('really-long-name');
@@ -43,6 +46,7 @@ describe('TerminalCard: one fixed size', () => {
 
   it('wall shows address and skills; compact leaves both out', () => {
     const { unmount } = render(<TerminalCard size="wall" {...base} />);
+
     expect(screen.getByTestId('terminal-card-address')).toBeInTheDocument();
     expect(screen.getByTestId('terminal-card-skills')).toBeInTheDocument();
     unmount();
@@ -55,6 +59,7 @@ describe('TerminalCard: one fixed size', () => {
 
   it('skills: a few chips (short names) then +N of the full count', () => {
     const s = skillChips(base.skills, 317);
+
     expect(s.shown).toEqual(['appystack-conventions', 'one-seam', 'recipe']);
     expect(s.shown).toHaveLength(SKILL_CHIPS);
     expect(s.more).toBe(314);
@@ -78,6 +83,7 @@ describe('TerminalCard: one fixed size', () => {
     const { unmount } = render(
       <TerminalCard size="wall" name="x" status="stopped" tail={null} onOpen={open} />
     );
+
     expect(screen.getByTestId('terminal-card-tail')).toHaveTextContent('session stopped');
     fireEvent.click(screen.getByTestId('terminal-card-open'));
     expect(open).toHaveBeenCalledOnce();
@@ -103,7 +109,9 @@ describe('TerminalCard: one fixed size', () => {
         overlay={<div role="menu" />}
       />
     );
+
     const card = screen.getByTestId('terminal-card');
+
     expect(card.getAttribute('style')).toBeNull();
     expect(card.querySelector('.tcard-corner button')).not.toBeNull();
     expect(card.querySelector('[role="menu"]')).not.toBeNull();
