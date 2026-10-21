@@ -1,6 +1,8 @@
 import appyConfig from '@appydave/appystack-config/eslint/react';
 import stylistic from '@stylistic/eslint-plugin';
-import { limitRules } from './lint/limits.js';
+import { colorSelectors } from './lint/colors.js';
+import { limitRules, sizeSelectors } from './lint/limits.js';
+import { numericRules } from './lint/numeric.js';
 import { spacingRules } from './lint/spacing.js';
 
 // OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours.
@@ -9,6 +11,18 @@ const openRigFiles = ['.openrig/**', '.claude/**', '.agents/**', '.codex/**', 't
 // Vendored fli-core files keep upstream bytes (server/src/core/vendor/LICENSE). So do the OpenRig
 // files copied into test/root/fixtures for the provenance check (Apache-2.0).
 const vendored = ['server/src/core/vendor/**', 'test/root/fixtures/**'];
+
+const MAX_TEST_FILE_LINES = 500;
+
+// Tests, e2e and test support: not production code.
+const testFiles = [
+  '**/*.test.{ts,tsx,mjs,js}',
+  '**/*.spec.{ts,tsx,mjs,js}',
+  'e2e/**',
+  'test/**',
+  '**/test/**',
+  '**/*test-kit*',
+];
 
 export default [
   { ignores: [...openRigFiles, ...vendored] },
@@ -24,25 +38,31 @@ export default [
     plugins: { '@stylistic': stylistic },
     rules: spacingRules,
   },
-  // G04: size. Today's findings sit in eslint-suppressions.json; only new ones fail.
+  // G04: size, and G05: palette only (TypeScript colours). Both restrict syntax, which is one rule per file.
+  // Today's findings sit in eslint-suppressions.json; only new ones fail.
   {
     files: ['**/*.{ts,tsx,js,mjs,cjs}'],
-    rules: limitRules,
+    rules: {
+      ...limitRules,
+      'no-restricted-syntax': ['error', ...sizeSelectors, ...colorSelectors],
+    },
+  },
+  // G05: named constants. Production code only; tests state their own numbers.
+  {
+    files: ['**/*.{ts,tsx,js,mjs,cjs}'],
+    ignores: testFiles,
+    rules: numericRules,
   },
   // A describe() callback is a list of tests, not a long function, and a test file may run to 500 lines.
   // Parameters and members still use the shared limits.
   {
-    files: [
-      '**/*.test.{ts,tsx,mjs,js}',
-      '**/*.spec.{ts,tsx,mjs,js}',
-      'e2e/**',
-      'test/**',
-      '**/test/**',
-      '**/*test-kit*',
-    ],
+    files: testFiles,
     rules: {
       'max-lines-per-function': 'off',
-      'max-lines': ['error', { max: 500, skipBlankLines: false, skipComments: false }],
+      'max-lines': [
+        'error',
+        { max: MAX_TEST_FILE_LINES, skipBlankLines: false, skipComments: false },
+      ],
     },
   },
 ];

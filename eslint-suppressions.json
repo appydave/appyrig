@@ -2,6 +2,9 @@
   "bin/appyrig.mjs": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/app/App.tsx": {
@@ -12,6 +15,14 @@
       "count": 2
     },
     "max-params": {
+      "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "client/src/app/devProxy.ts": {
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -26,6 +37,9 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/app/w2.test.tsx": {
@@ -33,18 +47,32 @@
       "count": 1
     }
   },
+  "client/src/domain/accounts/model.ts": {
+    "no-magic-numbers": {
+      "count": 5
+    }
+  },
   "client/src/domain/docs/model.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "client/src/domain/fleet/accountWindow.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 10
     }
   },
   "client/src/domain/fleet/coreCall.ts": {
     "max-params": {
+      "count": 1
+    },
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -56,6 +84,9 @@
   "client/src/domain/fleet/health.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 12
     }
   },
   "client/src/domain/fleet/model.test.ts": {
@@ -66,6 +97,9 @@
   "client/src/domain/fleet/model.ts": {
     "max-lines": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 8
     }
   },
   "client/src/domain/fleet/plan.test.ts": {
@@ -79,10 +113,21 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 10
     }
   },
   "client/src/domain/fleet/runcard.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 8
+    }
+  },
+  "client/src/domain/fleet/store.ts": {
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -100,6 +145,14 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 20
+    }
+  },
+  "client/src/domain/fleet/useFleet.ts": {
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "client/src/domain/fleet/views.test.ts": {
@@ -119,10 +172,21 @@
     },
     "max-params": {
       "count": 4
+    },
+    "no-magic-numbers": {
+      "count": 12
     }
   },
   "client/src/domain/flow/flowLines.ts": {
     "max-params": {
+      "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 6
+    }
+  },
+  "client/src/domain/flow/words.ts": {
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -132,6 +196,9 @@
     },
     "max-params": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 16
     }
   },
   "client/src/domain/graph/model.ts": {
@@ -140,6 +207,9 @@
     },
     "max-lines-per-function": {
       "count": 4
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/domain/health/model.ts": {
@@ -147,6 +217,14 @@
       "count": 1
     },
     "max-lines-per-function": {
+      "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 2
+    }
+  },
+  "client/src/domain/history/model.ts": {
+    "no-magic-numbers": {
       "count": 2
     }
   },
@@ -158,6 +236,19 @@
   "client/src/domain/library/model.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 13
+    }
+  },
+  "client/src/domain/lines/handoffLines.ts": {
+    "no-magic-numbers": {
+      "count": 3
+    }
+  },
+  "client/src/domain/machines/model.ts": {
+    "no-magic-numbers": {
+      "count": 8
     }
   },
   "client/src/domain/missions/model.ts": {
@@ -166,11 +257,17 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "client/src/domain/needs-you/model.ts": {
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 15
     }
   },
   "client/src/domain/rig-map/lines.test.ts": {
@@ -180,6 +277,9 @@
   },
   "client/src/domain/rig-map/lines.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -192,31 +292,54 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 14
     }
   },
   "client/src/domain/settings/model.ts": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 22
     }
   },
   "client/src/domain/specs/model.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-magic-numbers": {
       "count": 1
     }
   },
   "client/src/domain/timeline/model.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 8
+    }
+  },
+  "client/src/domain/wall/model.ts": {
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "client/src/domain/workflows/model.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/kit/AgentPanel.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "client/src/kit/DocsDrawer.tsx": {
@@ -233,6 +356,9 @@
   "client/src/kit/FakeControl.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/kit/FleetStrip.tsx": {
@@ -243,6 +369,12 @@
   "client/src/kit/FocusTerminal.tsx": {
     "max-lines-per-function": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 3
+    },
+    "no-restricted-syntax": {
+      "count": 2
     }
   },
   "client/src/kit/FollowWork.tsx": {
@@ -253,6 +385,9 @@
   "client/src/kit/HandoffLineMarks.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "client/src/kit/HandoffPanel.tsx": {
@@ -279,6 +414,9 @@
   "client/src/kit/MarkdownView.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/kit/PlanStrip.tsx": {
@@ -292,6 +430,9 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "client/src/kit/RigFilesSchema.test.tsx": {
@@ -315,6 +456,9 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "client/src/kit/RunOutputs.tsx": {
@@ -325,6 +469,9 @@
   "client/src/kit/SchemaRows.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/kit/SchemaView.tsx": {
@@ -333,11 +480,17 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "client/src/kit/SeatCardLines.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "client/src/kit/SkillsPanel.tsx": {
@@ -358,6 +511,9 @@
   "client/src/kit/WaitingOnDavid.tsx": {
     "max-lines-per-function": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/kit/WallCard.tsx": {
@@ -373,6 +529,9 @@
   "client/src/kit/data/index.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 8
     }
   },
   "client/src/kit/legendData.ts": {
@@ -380,9 +539,17 @@
       "count": 1
     }
   },
+  "client/src/kit/v1ArchiveManifest.ts": {
+    "no-magic-numbers": {
+      "count": 30
+    }
+  },
   "client/src/lib/markdown.ts": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/lib/stableOrder.ts": {
@@ -390,6 +557,9 @@
       "count": 1
     },
     "max-params": {
+      "count": 1
+    },
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -401,11 +571,17 @@
   "client/src/pages/about/index.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/pages/accounts/index.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "client/src/pages/agent/index.tsx": {
@@ -413,6 +589,9 @@
       "count": 1
     },
     "max-lines-per-function": {
+      "count": 5
+    },
+    "no-magic-numbers": {
       "count": 5
     }
   },
@@ -430,6 +609,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 38
     }
   },
   "client/src/pages/flow/ReplayConsoles.tsx": {
@@ -460,6 +642,9 @@
   "client/src/pages/graph/FakeRunner.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/pages/graph/RigBox.tsx": {
@@ -476,6 +661,9 @@
     },
     "max-lines-per-function": {
       "count": 9
+    },
+    "no-magic-numbers": {
+      "count": 42
     }
   },
   "client/src/pages/graph/graph.test.tsx": {
@@ -495,6 +683,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 25
     }
   },
   "client/src/pages/health/index.tsx": {
@@ -516,16 +707,25 @@
   "client/src/pages/learn/index.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/pages/library/index.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/pages/machines/index.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/pages/missions/index.tsx": {
@@ -534,6 +734,9 @@
     },
     "max-lines-per-function": {
       "count": 4
+    },
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "client/src/pages/missions/machines.test.tsx": {
@@ -562,11 +765,17 @@
   "client/src/pages/rig-map/index.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "client/src/pages/run/HowRunWent.tsx": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/pages/run/index.tsx": {
@@ -575,6 +784,9 @@
     },
     "max-lines-per-function": {
       "count": 4
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/pages/run/run.test.tsx": {
@@ -609,6 +821,9 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "client/src/pages/specs/index.tsx": {
@@ -622,6 +837,9 @@
   "client/src/pages/timeline/index.tsx": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 17
     }
   },
   "client/src/pages/w4.test.tsx": {
@@ -650,6 +868,9 @@
     },
     "max-lines-per-function": {
       "count": 4
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "client/src/pages/workflows/index.tsx": {
@@ -668,6 +889,9 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 9
     }
   },
   "client/src/shell/StripShell.tsx": {
@@ -678,11 +902,27 @@
   "client/vite.config.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "client/vitest.config.ts": {
+    "no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "collector/src/adapters/account.ts": {
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "collector/src/adapters/daemon.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 5
     }
   },
   "collector/src/adapters/daemondata.test.ts": {
@@ -696,6 +936,9 @@
     },
     "max-lines-per-function": {
       "count": 8
+    },
+    "no-magic-numbers": {
+      "count": 102
     }
   },
   "collector/src/adapters/dbrows.ts": {
@@ -704,6 +947,14 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "collector/src/adapters/dbschema.ts": {
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "collector/src/adapters/health.ts": {
@@ -712,6 +963,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 15
     }
   },
   "collector/src/adapters/history.ts": {
@@ -720,6 +974,9 @@
     },
     "max-lines-per-function": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "collector/src/adapters/loadout.test.ts": {
@@ -736,6 +993,9 @@
     },
     "max-params": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "collector/src/adapters/missionfiles.ts": {
@@ -747,6 +1007,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "collector/src/adapters/openrigShapes.ts": {
@@ -757,6 +1020,9 @@
   "collector/src/adapters/rigcommands.ts": {
     "max-params": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 9
     }
   },
   "collector/src/adapters/rigfiles.test.ts": {
@@ -770,21 +1036,43 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 8
     }
   },
   "collector/src/adapters/rigspecs.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "collector/src/adapters/seatcard.ts": {
+    "no-magic-numbers": {
       "count": 1
     }
   },
   "collector/src/adapters/sources.ts": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 8
+    }
+  },
+  "collector/src/adapters/specs.ts": {
+    "no-magic-numbers": {
+      "count": 1
     }
   },
   "collector/src/adapters/tmux.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "collector/src/builder.test.ts": {
@@ -801,6 +1089,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "collector/src/config.ts": {
@@ -810,6 +1101,9 @@
   },
   "collector/src/main.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -827,15 +1121,39 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 19
     }
   },
   "collector/src/redact.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
+    }
+  },
+  "collector/vitest.config.ts": {
+    "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "playwright.config.ts": {
+    "no-magic-numbers": {
+      "count": 6
     }
   },
   "scripts/customize.ts": {
     "max-lines-per-function": {
+      "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
+    }
+  },
+  "scripts/gen-api.ts": {
+    "no-magic-numbers": {
       "count": 1
     }
   },
@@ -845,11 +1163,17 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 9
     }
   },
   "scripts/provenance/check.ts": {
     "max-lines": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 10
     }
   },
   "scripts/record-frozen.mjs": {
@@ -858,11 +1182,27 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 7
     }
   },
   "server/scripts/fake-collector.mjs": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "server/scripts/hub-ui-probe.mjs": {
+    "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "server/src/config/env.ts": {
+    "no-magic-numbers": {
+      "count": 5
     }
   },
   "server/src/core/core.test.ts": {
@@ -887,6 +1227,9 @@
     },
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 16
     }
   },
   "server/src/core/rigEntry.test.ts": {
@@ -908,6 +1251,14 @@
     },
     "max-params": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 26
+    }
+  },
+  "server/src/helpers/response.ts": {
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "server/src/hub/accounts.ts": {
@@ -916,21 +1267,38 @@
     },
     "max-params": {
       "count": 3
+    },
+    "no-magic-numbers": {
+      "count": 5
+    }
+  },
+  "server/src/hub/browserAuth.ts": {
+    "no-magic-numbers": {
+      "count": 7
     }
   },
   "server/src/hub/collectorIngest.ts": {
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "server/src/hub/createHub.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "server/src/hub/daemonDataStore.ts": {
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "server/src/hub/fleetStore.ts": {
@@ -939,6 +1307,9 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "no-magic-numbers": {
+      "count": 6
     },
     "no-restricted-syntax": {
       "count": 1
@@ -957,16 +1328,62 @@
   "server/src/hub/schemaStore.ts": {
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
+    }
+  },
+  "server/src/hub/v1ArchiveRouter.ts": {
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "server/src/middleware/errorHandler.ts": {
     "max-params": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 2
+    }
+  },
+  "server/src/middleware/rateLimiter.ts": {
+    "no-magic-numbers": {
+      "count": 3
+    }
+  },
+  "server/src/middleware/requestLogger.ts": {
+    "no-magic-numbers": {
+      "count": 2
     }
   },
   "server/src/middleware/validate.test.ts": {
     "max-params": {
       "count": 1
+    }
+  },
+  "server/src/middleware/validate.ts": {
+    "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "server/vitest.config.ts": {
+    "no-magic-numbers": {
+      "count": 5
+    }
+  },
+  "shared/src/accounts.ts": {
+    "no-magic-numbers": {
+      "count": 11
+    }
+  },
+  "shared/src/appConfig.ts": {
+    "no-magic-numbers": {
+      "count": 4
+    }
+  },
+  "shared/src/clock.ts": {
+    "no-magic-numbers": {
+      "count": 3
     }
   },
   "shared/src/daemondata.ts": {
@@ -975,11 +1392,32 @@
     },
     "max-lines-per-function": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 88
+    }
+  },
+  "shared/src/dbrows.ts": {
+    "no-magic-numbers": {
+      "count": 8
+    }
+  },
+  "shared/src/dbschema.ts": {
+    "no-magic-numbers": {
+      "count": 9
+    }
+  },
+  "shared/src/health.ts": {
+    "no-magic-numbers": {
+      "count": 4
     }
   },
   "shared/src/loadout.ts": {
     "max-lines": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 16
     }
   },
   "shared/src/missionJobs.ts": {
@@ -987,9 +1425,27 @@
       "count": 1
     }
   },
+  "shared/src/missionfiles.ts": {
+    "no-magic-numbers": {
+      "count": 13
+    }
+  },
+  "shared/src/rigfiles.ts": {
+    "no-magic-numbers": {
+      "count": 6
+    }
+  },
+  "shared/src/rigspecs.ts": {
+    "no-magic-numbers": {
+      "count": 14
+    }
+  },
   "shared/src/snapshot.ts": {
     "max-lines": {
       "count": 1
+    },
+    "no-magic-numbers": {
+      "count": 10
     }
   },
   "test/root/test-trust.test.ts": {
