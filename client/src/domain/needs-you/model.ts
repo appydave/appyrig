@@ -128,8 +128,7 @@ export function blockedItems(fm: FleetMachine, now: number): NeedItem[] {
 /** Gates a rig's handoffs still call open (from rig.waiting; one list per rig). */
 export function gateItems(
   fm: FleetMachine,
-  rig: string,
-  gates: RigGate[],
+  { rig, gates }: { rig: string; gates: RigGate[] },
   now: number
 ): NeedItem[] {
   // Gates named by the same handoff are one card (one ask, several gate ids).
@@ -183,7 +182,7 @@ export function buildNeeds(machines: FleetMachine[], gates: GatesByRig, now: num
     for (const r of fm.snapshot.rigs) {
       const g = gates[`${fm.machine.id}:${r.name}`];
       if (g?.length) {
-        out.push(...gateItems(fm, r.name, g, now));
+        out.push(...gateItems(fm, { rig: r.name, gates: g }, now));
       }
     }
   }

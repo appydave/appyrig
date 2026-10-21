@@ -190,8 +190,7 @@ describe('chunking and change detection', () => {
   });
   it('splits into messages under the chunk size; only the first replaces', () => {
     const pushes = chunkRigFiles(
-      'm2',
-      'demo',
+      { machineId: 'm2', rig: 'demo' },
       [1, 2, 3, 4, 5].map(file),
       '2026-10-11T12:00:00.000Z'
     );

@@ -18,12 +18,14 @@ export type Loaded<T> =
   /** Nothing to ask: the input does not apply (a seat with no rig has no rig files). */
   | { state: 'na' };
 
-function useVerb<T>(
-  socket: FleetSocket,
-  verb: string,
-  input: unknown | null,
-  dep: string
-): Loaded<T> {
+interface VerbRequest {
+  verb: string;
+  input: unknown | null;
+  /** Describes `input`: the call is repeated when it changes. */
+  dep: string;
+}
+
+function useVerb<T>(socket: FleetSocket, { verb, input, dep }: VerbRequest): Loaded<T> {
   const [got, setGot] = useState<Loaded<T>>({ state: 'loading' });
   useEffect(() => {
     if (input === null) {
@@ -61,34 +63,29 @@ export type DetailState =
 export function useAgentData(
   socket: FleetSocket,
   machineId: string,
-  seatId: string,
-  rig: string | null
+  { id: seatId, rig }: { id: string; rig: string | null }
 ) {
   const dep = `${machineId}/${seatId}`;
-  const loadout = useVerb<SeatLoadoutOutput>(
-    socket,
-    'seat.loadout',
-    { machine: machineId, seat: seatId },
-    dep
-  );
-  const files = useVerb<RigFilesOutput>(
-    socket,
-    'rig.files',
-    rig ? { machine: machineId, rig } : null,
-    `${machineId}/${rig}`
-  );
-  const waiting = useVerb<RigWaitingOutput>(
-    socket,
-    'rig.waiting',
-    rig ? { machine: machineId, rig } : null,
-    `${machineId}/${rig}`
-  );
-  const raw = useVerb<SeatDetailOutput>(
-    socket,
-    'seat.detail',
-    { machine: machineId, seat: seatId },
-    dep
-  );
+  const loadout = useVerb<SeatLoadoutOutput>(socket, {
+    verb: 'seat.loadout',
+    input: { machine: machineId, seat: seatId },
+    dep,
+  });
+  const files = useVerb<RigFilesOutput>(socket, {
+    verb: 'rig.files',
+    input: rig ? { machine: machineId, rig } : null,
+    dep: `${machineId}/${rig}`,
+  });
+  const waiting = useVerb<RigWaitingOutput>(socket, {
+    verb: 'rig.waiting',
+    input: rig ? { machine: machineId, rig } : null,
+    dep: `${machineId}/${rig}`,
+  });
+  const raw = useVerb<SeatDetailOutput>(socket, {
+    verb: 'seat.detail',
+    input: { machine: machineId, seat: seatId },
+    dep,
+  });
   let detail: DetailState;
   if (raw.state === 'loading') {
     detail = { state: 'loading' };
@@ -116,16 +113,13 @@ export type OpenDoc =
 /** One rig file's text, fetched when `fileId` is set. */
 export function useRigFile(
   socket: FleetSocket,
-  machineId: string,
-  rig: string | null,
-  fileId: string | null
+  { machineId, rig, fileId }: { machineId: string; rig: string | null; fileId: string | null }
 ): OpenDoc | null {
-  const loaded = useVerb<RigFileOutput>(
-    socket,
-    'rig.file',
-    rig && fileId ? { machine: machineId, rig, fileId } : null,
-    `${machineId}/${rig}/${fileId}`
-  );
+  const loaded = useVerb<RigFileOutput>(socket, {
+    verb: 'rig.file',
+    input: rig && fileId ? { machine: machineId, rig, fileId } : null,
+    dep: `${machineId}/${rig}/${fileId}`,
+  });
   if (!rig || !fileId || loaded.state === 'na') {
     return null;
   }

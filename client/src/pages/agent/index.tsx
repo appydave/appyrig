@@ -421,7 +421,7 @@ function Terminal({ seat }: { seat: Seat }) {
 function AgentBody({ ctx, tile }: { ctx: PageContext; tile: TileRef }) {
   const { seat, machine } = tile;
   const socket = ctx.getSocket();
-  const data = useAgentData(socket, machine.machine.id, seat.id, seat.rig);
+  const data = useAgentData(socket, machine.machine.id, seat);
   const mates = machine.snapshot.seats.filter((s) => s.rig === seat.rig).map((s) => s.id);
   const notOpenRig = !isOpenRigSeat(seat) || data.detail.state === 'not-openrig';
   const sample = data.detail.state !== 'ok';

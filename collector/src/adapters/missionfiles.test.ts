@@ -234,7 +234,8 @@ describe('the manifest and the reading', () => {
     put(join(mission, 'shots', 'big.png'), Buffer.alloc(MISSION_IMAGE_MAX_BYTES + 1, 1));
     put(join(mission, 'shots', 'edge.png'), Buffer.alloc(MISSION_IMAGE_MAX_BYTES, 2));
     const al = await allowlistFor(spec, ROOTS);
-    const read = (p: string) => readMissionFile('m2', 'demo', p, al, '2026-10-19T00:00:00.000Z');
+    const read = (p: string) =>
+      readMissionFile({ machineId: 'm2', rig: 'demo', path: p }, al, '2026-10-19T00:00:00.000Z');
     const bigText = await read(join(mission, 'qa', 'big.md'));
     expect(bigText).toHaveLength(1);
     expect(bigText[0]).toMatchObject({ status: 'too_large', bytes: MISSION_TEXT_MAX_BYTES + 1 });
@@ -264,9 +265,17 @@ describe('the manifest and the reading', () => {
     put(join(mission, 'qa', 'key.md'), 'token sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA end');
     put(join(root, 'secret.md'), 'TOP SECRET');
     const al = await allowlistFor(spec, ROOTS);
-    const [k] = await readMissionFile('m2', 'demo', join(mission, 'qa', 'key.md'), al, 'x');
+    const [k] = await readMissionFile(
+      { machineId: 'm2', rig: 'demo', path: join(mission, 'qa', 'key.md') },
+      al,
+      'x'
+    );
     expect(k!.text).not.toContain('sk-ant-api03-AAAA');
-    const out = await readMissionFile('m2', 'demo', join(root, 'secret.md'), al, 'x');
+    const out = await readMissionFile(
+      { machineId: 'm2', rig: 'demo', path: join(root, 'secret.md') },
+      al,
+      'x'
+    );
     expect(JSON.stringify(out)).not.toContain('TOP SECRET');
     expect(out[0]).toMatchObject({ status: 'missing' });
   });
