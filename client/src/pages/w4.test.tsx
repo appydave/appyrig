@@ -23,9 +23,8 @@ import { page as machinesPage } from './machines/index.js';
 import {
   behindWords,
   isPrerelease,
-  latestIsStale,
-  LATEST_OPENRIG,
   machineView,
+  newestVersion,
   parseVersion,
   versionState,
 } from '../domain/machines/model.js';
@@ -281,11 +280,13 @@ describe('v2 Machines', () => {
 
   it('a card per machine: memory, swap, pressure, OpenRig and collector versions, mock upgrade', () => {
     const { machines, now } = busy();
-    expect(machineView(machines[1]!, now)).toMatchObject({
+    expect(machineView(machines[1]!, now, '0.6.13')).toMatchObject({
       openrig: '0.6.6',
       collector: '0.1.0',
       version: 'behind',
     });
+    // one machine on a newer OpenRig makes the others "behind" it (and nothing else can)
+    machines[2]!.snapshot.sources.daemon.version = '0.6.13';
     const Page = machinesPage.component;
     render(<Page ctx={ctxFor(machines, { now })} />);
     const cards = screen.getAllByTestId('mc2-machine');
@@ -293,11 +294,12 @@ describe('v2 Machines', () => {
     expect(within(cards[0]!).getByTestId('mc2-mem')).toHaveTextContent('32 GB');
     expect(within(cards[0]!).getByTestId('mc2-openrig')).toHaveTextContent('0.6.6');
     expect(within(cards[0]!).getByTestId('mc2-vstate')).toHaveTextContent(
-      '5 patch releases behind'
+      'the newest on the fleet'
     );
-    expect(screen.getByTestId('mc2-latest')).toHaveTextContent(LATEST_OPENRIG.version);
-    // the latest release and load are not collected: labelled sample data
-    expect(within(screen.getByTestId('mc2-watch')).getByTestId('sample-label')).toBeInTheDocument();
+    // no made-up "latest release": the panel names only what the machines report
+    expect(screen.queryByTestId('mc2-latest')).toBeNull();
+    expect(screen.getByTestId('mc2-watch')).not.toHaveTextContent('latest release');
+    // load is not collected: labelled sample data
     expect(within(cards[0]!).getAllByTestId('sample-label').length).toBeGreaterThan(0);
     expect(within(cards[0]!).getByRole('button', { name: 'Upgrade OpenRig' })).toBeInTheDocument();
   });
@@ -475,10 +477,10 @@ describe('v2 Learn: commands panel (C19)', () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('rig ps --nodes'));
   });
 
-  it('the real list loads: 357 commands, 51 in plain words', async () => {
+  it('the real list loads: 371 commands, 51 in plain words', async () => {
     const { loadCommands } = await import('../domain/learn/commands.js');
     const d = await loadCommands();
-    expect(d.commands).toHaveLength(357);
+    expect(d.commands).toHaveLength(371);
     expect(d.commands.filter((c) => c.curated)).toHaveLength(51);
   });
 });
@@ -621,29 +623,24 @@ describe('W4 fold: machines version watch (MEDIUM-3, LOW)', () => {
     expect(behindWords('0.9.0', '1.0.0')).toBe('major 0 vs 1');
   });
 
-  it('the by-hand latest is trusted for 7 days; after that nobody is behind', () => {
-    const read = Date.parse(LATEST_OPENRIG.readOn);
-    expect(latestIsStale(read + 6 * 86_400_000)).toBe(false);
-    expect(latestIsStale(read + 8 * 86_400_000)).toBe(true);
+  it('the newest version is the highest one the fleet reports, never an invented number', () => {
+    expect(newestVersion(['0.6.6', '0.6.13 (9eeb2e42)', null, '0.6.11'])).toBe('0.6.13 (9eeb2e42)');
+    expect(newestVersion([null, undefined])).toBeNull();
     const fm = fleetMachine(snapshot('roamy'));
     fm.snapshot.sources.daemon.version = '0.6.1';
-    expect(machineView(fm, read + 86_400_000).version).toBe('behind');
-    expect(machineView(fm, read + 9 * 86_400_000).version).toBe('unknown');
+    expect(machineView(fm, 0, '0.6.13').version).toBe('behind');
+    expect(machineView(fm, 0, null).version).toBe('unknown');
   });
 
-  it('the page says "as of" and, when old, stops saying behind', () => {
-    const fm = fleetMachine(snapshot('roamy'));
-    fm.snapshot.sources.daemon.version = '0.6.1';
+  it('the panel compares machines with each other, not with a made-up latest', () => {
+    const a = fleetMachine(snapshot('roamy'));
+    a.snapshot.sources.daemon.version = '0.6.1';
+    const b = fleetMachine(snapshot('m2'));
+    b.snapshot.sources.daemon.version = '0.6.13';
     const Page = machinesPage.component;
-    const read = Date.parse(LATEST_OPENRIG.readOn);
-    const { unmount } = render(<Page ctx={ctxFor([fm], { now: read + 86_400_000 })} />);
-    expect(screen.getByTestId('mc2-watch')).toHaveTextContent(`as of ${LATEST_OPENRIG.readOn}`);
-    expect(screen.getByTestId('mc2-watch')).toHaveTextContent('1 of 1 behind');
-    unmount();
-    render(<Page ctx={ctxFor([fm], { now: read + 9 * 86_400_000 })} />);
-    expect(screen.getByTestId('mc2-watch')).toHaveTextContent('not rechecked');
-    expect(screen.getByTestId('mc2-watch')).not.toHaveTextContent('behind');
-    expect(screen.getByTestId('mc2-vstate')).toHaveTextContent('not rechecked');
+    render(<Page ctx={ctxFor([a, b], { now: 0 })} />);
+    expect(screen.getByTestId('mc2-watch')).toHaveTextContent('1 of 2 behind the newest (0.6.13)');
+    expect(screen.getByTestId('mc2-watch')).not.toHaveTextContent('sample');
   });
 });
 

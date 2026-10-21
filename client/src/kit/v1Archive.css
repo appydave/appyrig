@@ -96,3 +96,15 @@
   opacity: 0.4;
   cursor: default;
 }
+.v1a-pics {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.v1a-pics .pill-btn {
+  padding: 2px 10px;
+  min-width: 32px;
+}
+.v1a-pics .pill-btn:disabled {
+  opacity: 0.4;
+}

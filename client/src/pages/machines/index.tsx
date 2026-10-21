@@ -3,9 +3,8 @@ import { FakeControl, MockNote, SampleLabel } from '../../kit/index.js';
 import type { PageDef, PageProps } from '../../app/types.js';
 import {
   behindWords,
-  latestIsStale,
-  LATEST_OPENRIG,
   machineView,
+  newestVersion,
   sampleLoad,
   type MachineView,
 } from '../../domain/machines/model.js';
@@ -43,7 +42,7 @@ function Meter({
   );
 }
 
-function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
+function Card({ m, newest }: { m: MachineView; newest: string | null }) {
   const load = sampleLoad(m);
   return (
     <section
@@ -120,9 +119,11 @@ function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
           </b>{' '}
           <span className="mc2-vstate" data-state={m.version} data-testid="mc2-vstate">
             {m.version === 'current' ? '● ' : ''}
-            {latestStale
-              ? `latest release not rechecked since ${LATEST_OPENRIG.readOn}`
-              : `${behindWords(m.openrig, LATEST_OPENRIG.version)}${m.version === 'behind' ? ' the hand-read latest, sample' : ''}`}
+            {newest && m.version !== 'unknown'
+              ? m.version === 'current'
+                ? 'matches the newest on the fleet'
+                : `${behindWords(m.openrig, newest)} the newest on the fleet (${newest})`
+              : ''}
           </span>
           {!m.openrigOk && <span className="quiet"> · daemon not answering</span>}
         </div>
@@ -132,8 +133,8 @@ function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
         {m.version === 'behind' && (
           <FakeControl
             label="Upgrade OpenRig"
-            question={`Upgrade OpenRig on the ${m.label} from ${m.openrig} to ${LATEST_OPENRIG.version}?`}
-            result={`${m.label} upgraded to ${LATEST_OPENRIG.version} (pretend): nothing changed`}
+            question={`Upgrade OpenRig on the ${m.label} from ${m.openrig} to ${newest}?`}
+            result={`${m.label} upgraded to ${newest} (pretend): nothing changed`}
           />
         )}
       </div>
@@ -144,35 +145,31 @@ function Card({ m, latestStale }: { m: MachineView; latestStale: boolean }) {
 /**
  * v2 Machines: one card per machine. Memory and swap as meters, the pressure verdict (the worse of
  * macOS memory pressure and swap use), processes, and the OpenRig and collector versions against
- * the latest OpenRig release (C21). Load and the latest release are sample data, labelled.
+ * the newest OpenRig version the fleet reports (C21). Load is sample data, labelled.
  */
 function MachinesPage({ ctx }: PageProps) {
-  const views = ctx.machines.map((fm) => machineView(fm, ctx.now));
+  const newest = newestVersion(ctx.machines.map((fm) => fm.snapshot.sources.daemon.version));
+  const views = ctx.machines.map((fm) => machineView(fm, ctx.now, newest));
   const versions = [...new Set(views.map((v) => v.openrig).filter(Boolean))];
   const behind = views.filter((v) => v.version === 'behind').length;
-  const latestStale = latestIsStale(ctx.now);
   return (
     <main className="view w4-page" data-testid="ar-machines">
       <p className="mc2-watch" data-testid="mc2-watch">
-        OpenRig on the fleet <b className="mono">{versions.join(', ') || 'not reported'}</b> ·
-        latest release{' '}
-        <b className="mono" data-testid="mc2-latest">
-          {LATEST_OPENRIG.version}
-        </b>
-        , {LATEST_OPENRIG.source}, as of {LATEST_OPENRIG.readOn} <SampleLabel />
+        OpenRig on the fleet <b className="mono">{versions.join(', ') || 'not reported'}</b>
         <span className="quiet">
-          {latestStale
-            ? ' · not rechecked for over 7 days, so no machine is compared'
-            : behind
-              ? ` · ${behind} of ${views.length} behind by that sample`
-              : ' · all current by that sample'}{' '}
-          (AppyRig does not check npm yet)
+          {' '}
+          · as each machine&apos;s daemon reports it
+          {versions.length > 1
+            ? ` · ${behind} of ${views.length} behind the newest (${newest})`
+            : versions.length === 1
+              ? ' · all machines match'
+              : ''}
         </span>
       </p>
-      {behind > 0 && !latestStale && <MockNote />}
+      {behind > 0 && <MockNote />}
       <div className="mc2-grid">
         {views.map((m) => (
-          <Card key={m.id} m={m} latestStale={latestStale} />
+          <Card key={m.id} m={m} newest={newest} />
         ))}
       </div>
     </main>
@@ -184,6 +181,5 @@ export const page: PageDef = {
   label: 'Machines',
   group: 'fleet',
   component: MachinesPage,
-  blurb:
-    'Memory, swap, pressure and processes per machine; OpenRig version against the latest release.',
+  blurb: 'Memory, swap, pressure and processes per machine; OpenRig version per machine.',
 };

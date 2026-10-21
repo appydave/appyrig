@@ -2,21 +2,19 @@ import type { FleetMachine, Reading } from '@appydave/shared';
 import { pressureOf, value, type PressureView } from '../fleet/health.js';
 
 /**
- * C21 version watch. AppyRig does not ask npm; this is the latest OpenRig release as read by hand
- * on the day, shown as sample data until a collector field or hub check reports it.
+ * C21 version watch. AppyRig does not ask npm and holds no "latest release" of its own: each
+ * machine's OpenRig version is the one its daemon reports, compared with the newest version the
+ * fleet reports, so a machine is only ever "behind" another machine it can be checked against.
  */
-export const LATEST_OPENRIG = {
-  version: '0.6.11',
-  readOn: '2026-10-18',
-  source: 'npm latest, read by hand',
-};
-
-/** How long a by-hand "latest release" is trusted. Older than this, nothing is called behind. */
-export const LATEST_MAX_AGE_MS = 7 * 24 * 3_600_000;
-
-export function latestIsStale(now: number): boolean {
-  const read = Date.parse(LATEST_OPENRIG.readOn);
-  return Number.isNaN(read) || now - read > LATEST_MAX_AGE_MS;
+export function newestVersion(list: (string | null | undefined)[]): string | null {
+  let best: string | null = null;
+  for (const v of list) {
+    if (!v) continue;
+    const a = parseVersion(v);
+    if (!a) continue;
+    if (!best || versionState(best, v) === 'behind') best = v;
+  }
+  return best;
 }
 
 /** `0.6.11-rc.1`: a pre-release sorts before its release. */
@@ -85,7 +83,11 @@ export interface MachineView {
   seats: number;
 }
 
-export function machineView(fm: FleetMachine, now: number): MachineView {
+export function machineView(
+  fm: FleetMachine,
+  now: number,
+  newest: string | null = null
+): MachineView {
   const h = fm.snapshot.health;
   const v = <T>(r: Reading<T> | undefined): T | null => (r ? value(r).v : null);
   const daemon = fm.snapshot.sources.daemon;
@@ -106,8 +108,7 @@ export function machineView(fm: FleetMachine, now: number): MachineView {
     openrig: daemon.version,
     openrigOk: daemon.ok,
     collector: fm.snapshot.collector.version,
-    // An old by-hand "latest" cannot say anyone is behind: unknown until it is read again.
-    version: latestIsStale(now) ? 'unknown' : versionState(daemon.version, LATEST_OPENRIG.version),
+    version: newest ? versionState(daemon.version, newest) : 'unknown',
     rigs: fm.snapshot.rigs.length,
     seats: fm.snapshot.seats.length,
   };

@@ -41,15 +41,15 @@ describe('V1 archive viewer', () => {
     expect(screen.getByTestId('v1-archive-count').textContent).toBe(
       'V1 archive · screen 1 of 32 · picture 1 of 3'
     );
-    fireEvent.click(screen.getByTestId('v1-archive-next'));
+    fireEvent.click(screen.getByTestId('v1-archive-pic-next'));
     expect(screen.getByTestId('v1-archive-img').getAttribute('src')).toContain('by-machine');
     expect(screen.getByTestId('v1-archive-count').textContent).toBe(
       'V1 archive · screen 1 of 32 · picture 2 of 3'
     );
-    fireEvent.keyDown(window, { key: 'ArrowRight' });
-    // third Wall screen is not on this hub
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    // third Wall picture is not on this hub
     expect(screen.getByTestId('v1-archive-missing').textContent).toBe('screenshot not on this hub');
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    fireEvent.keyDown(window, { key: 'ArrowUp' });
     expect(screen.getByTestId('v1-archive-img')).toBeTruthy();
     fireEvent.click(screen.getByTestId('v1-archive-jump-27'));
     expect(screen.getByTestId('v1-archive-title').textContent).toContain('27. Waiting on David');
@@ -58,6 +58,32 @@ describe('V1 archive viewer', () => {
     );
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('Next, Prev and the arrows move one screen; pictures move with their own switch', () => {
+    render(<V1Archive onClose={() => {}} />);
+    const count = () => screen.getByTestId('v1-archive-count').textContent;
+    expect(count()).toMatch(/^V1 archive · screen 1 of 32 · picture 1 of 3/);
+    // Prev is off on the first screen; the first picture's "up" is off too
+    expect(screen.getByTestId('v1-archive-prev').hasAttribute('disabled')).toBe(true);
+    expect(screen.getByTestId('v1-archive-pic-prev').hasAttribute('disabled')).toBe(true);
+    // go to the last picture of screen 1, then Next still lands on screen 2, not picture 3
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(count()).toMatch(/screen 1 of 32 · picture 3 of 3/);
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+    expect(count()).toMatch(/picture 3 of 3/);
+    fireEvent.click(screen.getByTestId('v1-archive-next'));
+    expect(count()).toMatch(/^V1 archive · screen 2 of 32/);
+    fireEvent.keyDown(window, { key: 'ArrowLeft' });
+    expect(count()).toMatch(/^V1 archive · screen 1 of 32 · picture 1 of 3/);
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    fireEvent.keyDown(window, { key: 'ArrowRight' });
+    expect(count()).toMatch(/^V1 archive · screen 3 of 32/);
+    // the picture switch is hidden, not removed, on a one-picture screen (no layout shift)
+    expect(screen.getByTestId('v1-archive-pic-next').parentElement!.style.visibility).toBe(
+      slides3Parts() > 1 ? 'visible' : 'hidden'
+    );
   });
 
   it('says so when a row never had a screenshot', async () => {
@@ -69,3 +95,7 @@ describe('V1 archive viewer', () => {
     expect(screen.getByTestId('v1-archive-next').hasAttribute('disabled')).toBe(true);
   });
 });
+
+function slides3Parts(): number {
+  return v1ArchiveSlides().find((s) => s.row.row === 3)!.parts;
+}

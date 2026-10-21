@@ -851,6 +851,9 @@ export default function HandoffFlow({
                         className={`pulse ar-pulse${isCur ? ' ar-pulse-current' : ''}`}
                         data-testid="flow-pulse"
                         data-item={q.id}
+                        // Hidden until its own motion begins: before that an animateMotion dot has
+                        // no position and would sit at the diagram's top-left corner, half cut off.
+                        visibility="hidden"
                         onPointerEnter={(ev) => peek(p.key, q.id, ev)}
                         onClick={(ev) => {
                           ev.stopPropagation();
@@ -858,6 +861,12 @@ export default function HandoffFlow({
                         }}
                       >
                         <title>{q.summary ?? q.id}</title>
+                        <set
+                          attributeName="visibility"
+                          to="visible"
+                          begin={`${(k * 0.4).toFixed(1)}s`}
+                          fill="freeze"
+                        />
                         <animateMotion
                           dur={calm ? '2.4s' : '3.6s'}
                           repeatCount="indefinite"

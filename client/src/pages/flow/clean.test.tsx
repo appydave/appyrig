@@ -107,6 +107,23 @@ beforeEach(() => {
 describe('v2 Handoff Flow replay (clean batch)', () => {
   const Flow = flowPage.component;
 
+  it('V55: no dot sits at the diagram corner before its own motion begins', () => {
+    render(<Flow ctx={ctxFor(fleet())} />);
+    fireEvent.click(screen.getByTestId('flow-next'));
+    const dots = screen.getAllByTestId('flow-pulse');
+    expect(dots.length).toBeGreaterThan(0);
+    for (const d of dots) {
+      // hidden at first (an animateMotion dot has no position until it begins) ...
+      expect(d.getAttribute('visibility')).toBe('hidden');
+      // ... and shown by its own <set>, timed with its motion
+      const set = d.querySelector('set')!;
+      expect(set.getAttribute('to')).toBe('visible');
+      expect(set.getAttribute('begin')).toBe(
+        d.querySelector('animateMotion')!.getAttribute('begin')
+      );
+    }
+  });
+
   it('B1: stepping from Structure switches to Traffic, and the current handoff is lit with dots', () => {
     render(<Flow ctx={ctxFor(fleet())} />);
     fireEvent.click(screen.getByTestId('flow-lens-structure'));
