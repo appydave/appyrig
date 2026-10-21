@@ -1,5 +1,6 @@
 import appyConfig from '@appydave/appystack-config/eslint/react';
 import stylistic from '@stylistic/eslint-plugin';
+import { limitRules } from './lint/limits.js';
 import { spacingRules } from './lint/spacing.js';
 
 // OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours.
@@ -22,5 +23,10 @@ export default [
     files: ['**/*.{ts,tsx,js,mjs,cjs}'],
     plugins: { '@stylistic': stylistic },
     rules: spacingRules,
+  },
+  // G04: size. Today's findings sit in eslint-suppressions.json; only new ones fail.
+  {
+    files: ['**/*.{ts,tsx,js,mjs,cjs}'],
+    rules: limitRules,
   },
 ];
