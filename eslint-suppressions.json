@@ -583,13 +583,13 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 3
+      "count": 2
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 7
+      "count": 6
     },
     "sonarjs/expression-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/kit/FakeControl.tsx": {
@@ -907,16 +907,13 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
-    },
-    "no-magic-numbers": {
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 3
+      "count": 2
     },
     "sonarjs/expression-complexity": {
       "count": 2

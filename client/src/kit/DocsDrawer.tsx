@@ -144,6 +144,26 @@ interface Content {
   why?: string;
 }
 
+const MISSION_FILE_WHY: Partial<Record<string, string>> = {
+  missing: 'Not written yet.',
+  refused: "Not shared (outside the rig's allowlist).",
+  too_large: 'Too large to show here.',
+  'no-data': "This machine's collector has not sent mission files yet.",
+};
+
+function missionFileContent(v: MissionFileOutput): Content {
+  if (v.status !== 'ok') {
+    return { state: 'why', why: MISSION_FILE_WHY[v.status] ?? 'Loading from the machine…' };
+  }
+
+  return {
+    state: 'ok',
+    ...(v.text !== null ? { text: v.text } : {}),
+    ...(v.base64 !== null ? { base64: v.base64 } : {}),
+    ...(v.mime ? { mime: v.mime } : {}),
+  };
+}
+
 function useContent(
   getSocket: () => FleetSocket,
   machineId: string,
@@ -216,30 +236,7 @@ function useContent(
           });
         }
 
-        const v = a.value;
-
-        if (v.status === 'ok') {
-          setC({
-            state: 'ok',
-            ...(v.text !== null ? { text: v.text } : {}),
-            ...(v.base64 !== null ? { base64: v.base64 } : {}),
-            ...(v.mime ? { mime: v.mime } : {}),
-          });
-        } else {
-          setC({
-            state: 'why',
-            why:
-              v.status === 'missing'
-                ? 'Not written yet.'
-                : v.status === 'refused'
-                  ? "Not shared (outside the rig's allowlist)."
-                  : v.status === 'too_large'
-                    ? 'Too large to show here.'
-                    : v.status === 'no-data'
-                      ? "This machine's collector has not sent mission files yet."
-                      : 'Loading from the machine…',
-          });
-        }
+        setC(missionFileContent(a.value));
       });
     }
 
