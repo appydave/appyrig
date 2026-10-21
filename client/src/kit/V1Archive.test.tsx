@@ -36,7 +36,7 @@ describe('V1 archive viewer', () => {
         '/api/v1-archive/v1-01-wall-by-rig.png'
       )
     );
-    expect(screen.getByTestId('v1-archive-text').textContent).toContain('In V2:');
+    expect(screen.getByTestId('v1-archive-text').textContent).toContain('Now:');
     // the counter counts rows, like the strip, and names the picture within the row
     expect(screen.getByTestId('v1-archive-count').textContent).toBe(
       'V1 archive · screen 1 of 32 · picture 1 of 3'

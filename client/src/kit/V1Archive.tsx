@@ -94,7 +94,7 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
           </h3>
           <p>{slide.row.showed}</p>
           <p className="v1a-v2">
-            <b>In V2:</b> {slide.row.inV2}
+            <b>Now:</b> {slide.row.inV2}
           </p>
         </div>
         <div className="v1a-stage">

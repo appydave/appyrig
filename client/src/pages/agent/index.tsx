@@ -525,8 +525,8 @@ function AgentPage({ ctx }: PageProps) {
       {/* Navigation brief: the "new in v2" and mock lines live behind Legend · L, not above the
           header (the header's ⋯ carries the mock controls and their MockMark). */}
       <p className="quiet ar-agent-new ar-explainer" data-testid="ar-agent-new-note">
-        New in v2: there is no old version of this page. <MockMark label="mock" /> marks controls
-        that change nothing.
+        New page: there is no V1 version of it. <MockMark label="mock" /> marks controls that change
+        nothing.
       </p>
       {missing && (
         <p className="quiet" role="status" data-testid="ar-agent-gone">

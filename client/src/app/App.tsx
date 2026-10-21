@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import FleetStrip from '../kit/FleetStrip.js';
 import RigFiles from '../kit/RigFiles.js';
 import { Legend2 } from '../kit/index.js';
-import { isShortcutBlocked } from '../lib/keys.js';
+import { isShortcutBlocked, isTextEntry } from '../lib/keys.js';
 import { findSeat, orderedMachines, seatName } from '../domain/fleet/model.js';
 import { listRigs } from '../domain/fleet/views.js';
 import { getFleetSocket, useFleet, useNow, type FleetSocket } from '../domain/fleet/useFleet.js';
@@ -107,21 +107,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       .map((p) => rigFromParam(p))
       .filter((k): k is string => k !== null)
   );
-  /**
-   * Opening an agent picks that agent's rig, from every entry point (drawer, Wall card, Graph card,
-   * Flow box, Run board Docs). A plain tmux seat (no rig) leaves the pick alone. It does not touch
-   * the panel, so the panel just opened stays open.
-   */
-  const pickAgentRig = useCallback(
-    (tileKey: string) => {
-      const t = findSeat(state.machines, tileKey);
-      if (!t || !t.seat.rig) return;
-      chooseRig(`${t.machine.machine.id}:${t.seat.rig}`);
-    },
-    [state.machines, chooseRig]
-  );
   const frame = usePages({
-    onAgentOpened: pickAgentRig,
     onUrlRig,
     frozen,
     ctx: {
@@ -261,10 +247,13 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     if (filesFor) return;
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) toggleLegend();
+      // Esc closes the open legend like any other panel; it never navigates anywhere.
+      else if (e.key === 'Escape' && legendOpen && !e.defaultPrevented && !isTextEntry(e.target))
+        toggleLegend();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [filesFor, toggleLegend]);
+  }, [filesFor, toggleLegend, legendOpen]);
 
   return (
     <div className="app ar-app" data-legend={legendOpen ? 'on' : 'off'} data-testid="ar-shell">

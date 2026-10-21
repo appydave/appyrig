@@ -16,11 +16,6 @@ export function urlPage(): PageKey | null {
 export interface UsePagesArgs {
   /** The viewer went Back or Forward to an address that names this rig key (or none): restore it. */
   onUrlRig?: (rigKey: string | null) => void;
-  /**
-   * An agent was opened in the panel (from any entry point). The shell picks that agent's rig, so the
-   * Wall outline, the drawer, the scope line and `rig=` all name the same rig. Called with the tile key.
-   */
-  onAgentOpened?: (tileKey: string) => void;
   frozen?: FrozenMeta;
   ctx: Omit<
     PageContext,
@@ -67,7 +62,7 @@ function panelFromUrl(): AgentPanelTarget | null {
     : null;
 }
 
-export function usePages({ frozen, ctx, onUrlRig, onAgentOpened }: UsePagesArgs): PageFrame {
+export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
   const [page, setPage] = useState<PageKey>(() => urlPage() ?? 'wall');
   const [openGroup, setOpenGroup] = useState<NavGroupKey | null>(null);
   /** The agent the Agent page shows; kept when the viewer leaves the page and comes back. */
@@ -76,13 +71,9 @@ export function usePages({ frozen, ctx, onUrlRig, onAgentOpened }: UsePagesArgs)
   );
   /** The Agent panel: open on top of whatever page is showing. */
   const [agentPanel, setAgentPanel] = useState<AgentPanelTarget | null>(panelFromUrl);
-  const agentOpenedRef = useRef(onAgentOpened);
-  agentOpenedRef.current = onAgentOpened;
   const openAgentPanel = useCallback((t: AgentPanelTarget) => {
     const key = t.seatKey.startsWith(`${t.machineId}/`) ? t.seatKey : `${t.machineId}/${t.seatKey}`;
-    // First pick the agent's rig (it rewrites `rig=` on the current entry), then open the panel on a
-    // new entry: so the picked rig and the panel agree, and the panel it opens is never closed by it.
-    agentOpenedRef.current?.(key);
+    // Opening an agent never changes the focused rig: the panel opens on a new entry, `rig=` stays.
     setAgentPanel({ machineId: t.machineId, seatKey: key, tab: t.tab ?? 'documents' });
     // a new history entry, so Back closes the panel
     writeParams({ agent: agentToParam(key) }, 'push', PANEL_ENTRY);

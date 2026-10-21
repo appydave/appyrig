@@ -208,6 +208,7 @@ function useGates(ctx: PageProps['ctx']): GatesState {
 function NeedsYou({ ctx }: PageProps) {
   const [filter, setFilter] = useState<NeedFilter>('all');
   const [showStale, setShowStale] = useState(false);
+  const [showSamples, setShowSamples] = useState(false);
   const { byRig: gates, unread, loaded } = useGates(ctx);
   const sweeps = useMemo(() => sweepCount(ctx.machines), [ctx.machines]);
   const real = useMemo(
@@ -220,6 +221,8 @@ function NeedsYou({ ctx }: PageProps) {
   const fresh = shown.filter((i) => !i.stale);
   const stale = shown.filter((i) => i.stale);
   const sampleShown = sample.filter((i) => matches(i, filter));
+  // Real items come first; when there are any, the made-up cards are tucked behind a toggle.
+  const hasReal = fresh.length + stale.length > 0;
   const asleep = ctx.machines.filter((m) => m.liveness === 'asleep');
   const [levels, setLevels] = useState<Record<string, string>>({});
 
@@ -229,7 +232,16 @@ function NeedsYou({ ctx }: PageProps) {
         title="Needs You"
         facts={[
           <span key="total" className="ny-summary-line" data-testid="ny-total">
-            <b>{real.length}</b> waiting ({fresh.length} fresh, {stale.length} stale in this view)
+            {fresh.length === 0 && stale.length > 0 ? (
+              <>
+                Nothing new waiting · <b>{stale.length}</b> stale
+              </>
+            ) : (
+              <>
+                <b>{real.length}</b> waiting ({fresh.length} fresh, {stale.length} stale in this
+                view)
+              </>
+            )}{' '}
             across {ctx.machines.length} {ctx.machines.length === 1 ? 'machine' : 'machines'}.
           </span>,
         ]}
@@ -345,7 +357,21 @@ function NeedsYou({ ctx }: PageProps) {
         </section>
       )}
 
-      {sampleShown.length > 0 && (
+      {sampleShown.length > 0 && hasReal && (
+        <p>
+          <button
+            type="button"
+            className="pill-btn"
+            data-testid="ny-toggle-sample"
+            aria-expanded={showSamples}
+            onClick={() => setShowSamples((v) => !v)}
+          >
+            {showSamples ? 'Hide sample cards' : 'Show sample cards'}
+          </button>{' '}
+          <span className="quiet">{sampleShown.length} made-up cards, not counted above</span>
+        </p>
+      )}
+      {sampleShown.length > 0 && (!hasReal || showSamples) && (
         <SampleData
           title="Approvals, shipped and progress"
           what="Made up from real machine, rig and seat names: AppyRig does not collect approvals, shipped or progress cards yet. They are not counted above."

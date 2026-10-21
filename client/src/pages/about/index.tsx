@@ -1,10 +1,9 @@
 import { FakeControl, SampleData, realNames } from '../../kit/index.js';
-import { NAV_GROUPS, navLabel, pageFor } from '../../app/registry.js';
+import { NAV_GROUPS, navLabel } from '../../app/registry.js';
 import type { PageDef, PageProps } from '../../app/types.js';
 
 /**
- * W0 demo of a page that exists only in v2: what v2 is, how to move around it, and what is still
- * to come. Uses the kit (one FakeControl, one SampleData section) so later waves have an example.
+ * The About page: what AppyRig is, where things are, and what is real versus a mock. Uses the kit (one FakeControl, one SampleData section) so later waves have an example.
  */
 function AboutPage({ ctx }: PageProps) {
   const names = realNames(ctx.allMachines);
@@ -12,12 +11,11 @@ function AboutPage({ ctx }: PageProps) {
   const seats = names.seats.slice(0, 3);
   return (
     <main className="view ar-about" data-testid="ar-about">
-      <h2>About v2</h2>
+      <h2>About</h2>
       <p>
-        v2 is the redesign of AppyRig, built inside the real app on the same data. <kbd>V</kbd>{' '}
-        switches the whole app between <b>Current</b> and <b>v2</b>; <kbd>B</kbd> flips just this
-        page between old and new, keeping the rig, the selection and the scroll. This page is new in
-        v2, so it has no old version.
+        AppyRig is a read-only view of David&rsquo;s OpenRig fleet across the M2, the M4 and Roamy:
+        the rigs, the seats and what they are doing. It reads the hub&rsquo;s collected data and
+        never changes a rig. The screens of the old V1 are kept in <b>⋯ → V1 archive</b>.
       </p>
       <h3>Where things are</h3>
       <ul className="ar-about-groups">
@@ -27,19 +25,16 @@ function AboutPage({ ctx }: PageProps) {
             {g.pages.map((p, i) => (
               <span key={p}>
                 {i > 0 && ' · '}
-                <span>
-                  {navLabel(p)}
-                  {pageFor(p) ? ' (v2)' : ''}
-                </span>
+                <span>{navLabel(p)}</span>
               </span>
             ))}
           </li>
         ))}
       </ul>
-      <h3>The v2 kit</h3>
+      <h3>What is real, what is a mock</h3>
       <p>
-        A control AppyRig does not have yet is shown as a mock: it walks through confirm, progress
-        and result, and changes nothing.
+        Everything you read is real. A control AppyRig does not have yet is shown as a mock: it
+        walks through confirm, progress and result, and changes nothing.
       </p>
       <p>
         <FakeControl
@@ -77,8 +72,8 @@ function AboutPage({ ctx }: PageProps) {
 
 export const page: PageDef = {
   key: 'about',
-  label: 'About v2',
+  label: 'About',
   group: 'hood',
   component: AboutPage,
-  blurb: 'What v2 is, its keys, and what is still to come.',
+  blurb: 'What AppyRig is, where things are, what is real and what is still a mock.',
 };
