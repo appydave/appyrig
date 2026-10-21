@@ -29,7 +29,8 @@ export default [
     files: ['**/*.{ts,tsx,js,mjs,cjs}'],
     rules: limitRules,
   },
-  // A describe() callback is a list of tests, not a long function; the other size limits still apply.
+  // A describe() callback is a list of tests, not a long function, and a test file may run to 500 lines.
+  // Parameters and members still use the shared limits.
   {
     files: [
       '**/*.test.{ts,tsx,mjs,js}',
@@ -39,6 +40,9 @@ export default [
       '**/test/**',
       '**/*test-kit*',
     ],
-    rules: { 'max-lines-per-function': 'off' },
+    rules: {
+      'max-lines-per-function': 'off',
+      'max-lines': ['error', { max: 500, skipBlankLines: false, skipComments: false }],
+    },
   },
 ];

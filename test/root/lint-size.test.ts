@@ -76,4 +76,13 @@ describe('G04 size limits', () => {
 
     expect(await ruleIds(wide, 'g04-wide', 'test.ts')).toContain('max-params');
   });
+
+  it('lets a test file run to 500 lines but not 501; source stays at 300', async () => {
+    const file = (n: number): string =>
+      `${Array.from({ length: n }, (_, i) => `export const c${i} = ${i};`).join('\n')}\n`;
+
+    expect(await ruleIds(file(500), 'g04-long', 'test.ts')).not.toContain('max-lines');
+    expect(await ruleIds(file(501), 'g04-longer', 'test.ts')).toContain('max-lines');
+    expect(await ruleIds(file(301), 'g04-long-source')).toContain('max-lines');
+  });
 });

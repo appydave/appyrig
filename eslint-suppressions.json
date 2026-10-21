@@ -15,11 +15,6 @@
       "count": 1
     }
   },
-  "client/src/app/app.test.tsx": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "client/src/app/frozen/frozenSocket.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -30,11 +25,6 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "client/src/app/ux-pages-a.test.tsx": {
-    "max-lines": {
       "count": 1
     }
   },
@@ -69,9 +59,6 @@
     }
   },
   "client/src/domain/fleet/model.test.ts": {
-    "max-lines": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
@@ -391,11 +378,6 @@
       "count": 1
     }
   },
-  "client/src/kit/handoffLines.test.tsx": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "client/src/kit/legendData.ts": {
     "max-lines": {
       "count": 1
@@ -579,9 +561,6 @@
     }
   },
   "client/src/pages/needs-you/needs-you.test.tsx": {
-    "max-lines": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
@@ -605,9 +584,6 @@
     }
   },
   "client/src/pages/run/run.test.tsx": {
-    "max-lines": {
-      "count": 1
-    },
     "max-params": {
       "count": 2
     }
@@ -649,11 +625,6 @@
       "count": 3
     }
   },
-  "client/src/pages/specs/specs.test.tsx": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "client/src/pages/timeline/index.tsx": {
     "max-lines-per-function": {
       "count": 2
@@ -687,11 +658,6 @@
       "count": 4
     }
   },
-  "client/src/pages/wall/wall.test.tsx": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "client/src/pages/workflows/index.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -715,18 +681,8 @@
       "count": 1
     }
   },
-  "client/src/shell/shell.test.tsx": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "client/vite.config.ts": {
     "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "collector/src/adapters/daemon.test.ts": {
-    "max-lines": {
       "count": 1
     }
   },
@@ -788,11 +744,6 @@
       "count": 2
     }
   },
-  "collector/src/adapters/missionfiles.test.ts": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "collector/src/adapters/missionfiles.ts": {
     "max-lines": {
       "count": 1
@@ -846,9 +797,6 @@
     }
   },
   "collector/src/builder.test.ts": {
-    "max-lines": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
@@ -887,11 +835,6 @@
       "count": 3
     },
     "max-params": {
-      "count": 1
-    }
-  },
-  "collector/src/redact.test.ts": {
-    "max-lines": {
       "count": 1
     }
   },
@@ -974,11 +917,6 @@
     },
     "max-params": {
       "count": 3
-    }
-  },
-  "server/src/hub/accounts.test.ts": {
-    "max-lines": {
-      "count": 1
     }
   },
   "server/src/hub/accounts.ts": {
