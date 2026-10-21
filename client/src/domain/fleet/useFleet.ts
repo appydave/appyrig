@@ -57,6 +57,7 @@ export function useFleet(getSocket: () => FleetSocket = getFleetSocket): FleetVi
     const onDisconnect = () => setLink('disconnected');
     const onError = (err: Error) =>
       setLink(err.message === AUTH_ERRORS.browserSession ? 'unauthorised' : 'disconnected');
+
     s.on(FLEET_EVENTS.UPDATE, onUpdate);
     s.on('connect', onConnect);
     s.on('disconnect', onDisconnect);
@@ -82,25 +83,32 @@ export function useFleet(getSocket: () => FleetSocket = getFleetSocket): FleetVi
  */
 export function useNow(intervalMs = 1000): number {
   const [now, setNow] = useState(() => Date.now());
+
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
     const start = () => {
       if (timer) {
         return;
       }
+
       setNow(Date.now());
       timer = setInterval(() => setNow(Date.now()), intervalMs);
     };
+
     const stop = () => {
       if (timer) {
         clearInterval(timer);
       }
+
       timer = null;
     };
+
     const onVisibility = () => (document.hidden ? stop() : start());
+
     if (!document.hidden) {
       start();
     }
+
     document.addEventListener('visibilitychange', onVisibility);
 
     return () => {

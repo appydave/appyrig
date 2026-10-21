@@ -34,6 +34,7 @@ export interface AgentPanelProps extends AgentPanelTarget {
 
 // eslint-disable-next-line no-control-regex
 const ANSI = /\u001b?\[[0-9;?]*[ -/]*[@-~]/g;
+
 export const stripAnsi = (s: string) => s.replace(ANSI, '');
 
 /**
@@ -47,12 +48,16 @@ export default function AgentPanel(p: AgentPanelProps) {
   const key = p.seatKey.startsWith(`${machineId}/`) ? p.seatKey : `${machineId}/${p.seatKey}`;
   const tile = useMemo(() => findTile(ctx.allMachines, key), [ctx.allMachines, key]);
   const [tab, setTab] = useState<AgentPanelTab>(p.tab ?? 'documents');
+
   useEffect(() => setTab(p.tab ?? 'documents'), [p.tab, key]);
+
   const top = useTopOffset();
   const [wide, setWide] = useState(false);
+
   // In the narrow peek the page makes room (see docs.css), so its chips and controls stay clickable.
   useEffect(() => {
     const root = document.documentElement;
+
     if (wide) {
       root.removeAttribute('data-agent-panel');
     } else {
@@ -63,16 +68,19 @@ export default function AgentPanel(p: AgentPanelProps) {
   }, [wide]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+
     window.addEventListener('keydown', k);
 
     return () => window.removeEventListener('keydown', k);
   }, [onClose]);
+
   const rig = tile?.seat.rig ?? null;
   const waiting = useRead<RigWaitingOutput>(
     ctx.getSocket,
     'rig.waiting',
     rig ? { machine: machineId, rig } : null
   );
+
   if (!tile) {
     return (
       <aside
@@ -102,6 +110,7 @@ export default function AgentPanel(p: AgentPanelProps) {
       </aside>
     );
   }
+
   const { seat, machine } = tile;
   const pip = pipFor(seat, machine);
   const chip = modelChip(seat);
@@ -236,6 +245,7 @@ function TerminalTab({ tail }: { tail: string[] | null }) {
       </p>
     );
   }
+
   const lines = visibleTail(tail, 60).map(stripAnsi);
 
   return (

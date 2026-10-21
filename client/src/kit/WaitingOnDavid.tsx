@@ -27,6 +27,7 @@ export function attachLine(session: string, ssh: string | null): string | null {
   if (!SAFE_SESSION.test(session)) {
     return null;
   }
+
   const local = `tmux attach -t '${session}'`;
 
   return ssh ? `ssh -t ${ssh} "${local}"` : local;
@@ -49,19 +50,24 @@ export async function copyText(text: string): Promise<boolean> {
       // fall through to the old way
     }
   }
+
   const box = document.createElement('textarea');
+
   box.value = text;
   box.setAttribute('readonly', '');
   box.style.position = 'fixed';
   box.style.opacity = '0';
   document.body.appendChild(box);
   box.select();
+
   let ok = false;
+
   try {
     ok = document.execCommand('copy');
   } catch {
     ok = false;
   }
+
   box.remove();
 
   return ok;
@@ -77,11 +83,13 @@ function Copy({
   target: () => Element | null;
 }) {
   const [said, setSaid] = useState<'copied' | 'select' | null>(null);
+
   // r1 INFO-1: "Copied" goes back to "Copy" after a moment.
   useEffect(() => {
     if (said !== 'copied') {
       return;
     }
+
     const t = setTimeout(() => setSaid(null), 2000);
 
     return () => clearTimeout(t);
@@ -100,13 +108,16 @@ function Copy({
               // Select the line itself so ⌘C works, and say so.
               const el = target();
               const sel = window.getSelection();
+
               if (el && sel) {
                 const range = document.createRange();
+
                 range.selectNodeContents(el);
                 sel.removeAllRanges();
                 sel.addRange(range);
               }
             }
+
             setSaid(ok ? 'copied' : 'select');
           });
         }}
@@ -131,6 +142,7 @@ function Copy({
 export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates }: Props) {
   const [w, setW] = useState<RigWaitingOutput | null | 'loading'>('loading');
   const machineId = machine.machine.id;
+
   useEffect(() => {
     setW('loading');
     if (!socket) {
@@ -138,7 +150,9 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates 
 
       return;
     }
+
     let live = true;
+
     void callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: machineId, rig }).then(
       (a) => live && setW(a.ok ? a.value : null)
     );
@@ -151,9 +165,11 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates 
   const got = w === 'loading' ? null : w;
   const gates = got?.gates ?? [];
   const gateCount = w === 'loading' ? 'loading' : w === null ? null : gates.length;
+
   useEffect(() => {
     onGates?.(gateCount);
   }, [onGates, gateCount]);
+
   const seats = new Set(machine.snapshot.seats.map((s) => s.id));
   const label = machine.machine.label;
 

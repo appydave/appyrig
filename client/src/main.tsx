@@ -22,6 +22,7 @@ function mount(frozen?: FrozenRun) {
 
 // v2 W0: `?frozen=<name>` replays a recorded snapshot instead of connecting to the hub.
 const frozenName = frozenFromSearch(location.search);
+
 if (frozenName) {
   void loadFrozen(frozenName).then(mount);
 } else {

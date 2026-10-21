@@ -9,10 +9,12 @@ import { RigSpecsReader, specEntryOf } from './rigspecs.js';
 const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-rigspecs-'));
+
   dirs.push(d);
 
   return d;
 };
+
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
 
 const write = (file: string, text: string) => {
@@ -65,6 +67,7 @@ const AGENT = [
 function rigFolder() {
   const root = tmp();
   const rigs = join(root, 'appyrigs', 'rigs');
+
   write(join(rigs, 'spaghetti', 'rig.yaml'), RIG);
   write(join(rigs, 'spaghetti', 'agents', 'spaghetti', 'agent.yaml'), AGENT);
 
@@ -78,8 +81,11 @@ describe('N9: rigs written outside the brains', () => {
 
   it('rigs/<name>/rig.yaml under a rigs folder is found, and its agents/ folder is not mistaken for a rig', async () => {
     const { rigs } = rigFolder();
+
     write(join(rigs, 'visuals', 'notes.md'), '# not a rig yet\n');
+
     const found = await scanSpecs([rigs]);
+
     expect([...found.keys()]).toEqual(['spaghetti']);
     expect(found.get('spaghetti')).toMatchObject({
       path: join(rigs, 'spaghetti', 'rig.yaml'),
@@ -94,6 +100,7 @@ describe('N10: a rig spec as the Rig specs page shows it', () => {
     const { rigs } = rigFolder();
     const spec = (await scanSpecs([rigs])).get('spaghetti')!;
     const e = await specEntryOf('spaghetti', spec);
+
     expect(e).toMatchObject({
       name: 'spaghetti',
       specValid: true,
@@ -125,11 +132,14 @@ describe('N10: a rig spec as the Rig specs page shows it', () => {
 
   it('reads each AgentSpec once, with its profiles; a ref that leaves the rig folder is refused, never read', async () => {
     const { rigs, root } = rigFolder();
+
     // a real agent.yaml just outside the rig folder: `local:../outside` must not read it
     write(join(rigs, 'outside', 'agent.yaml'), AGENT);
+
     const spec = (await scanSpecs([rigs])).get('spaghetti')!;
     const e = await specEntryOf('spaghetti', spec);
     const byRef = Object.fromEntries(e.agents!.map((a) => [a.ref, a]));
+
     expect(byRef['local:agents/spaghetti']).toMatchObject({
       status: 'ok',
       usedBy: ['orch.lead', 'gates.shape'],
@@ -141,24 +151,32 @@ describe('N10: a rig spec as the Rig specs page shows it', () => {
 
     // a symlinked agents folder that leads out of the rig folder: refused
     const away = join(root, 'elsewhere');
+
     write(join(away, 'agent.yaml'), AGENT);
     rmSync(join(rigs, 'spaghetti', 'agents', 'spaghetti'), { recursive: true });
     symlinkSync(away, join(rigs, 'spaghetti', 'agents', 'spaghetti'));
+
     const e2 = await specEntryOf('spaghetti', spec);
+
     expect(e2.agents!.find((a) => a.ref === 'local:agents/spaghetti')).toMatchObject({
       status: 'refused',
       spec: null,
     });
     // and gone altogether: missing
     unlinkSync(join(rigs, 'spaghetti', 'agents', 'spaghetti'));
+
     const e3 = await specEntryOf('spaghetti', spec);
+
     expect(e3.agents!.find((a) => a.ref === 'local:agents/spaghetti')!.status).toBe('missing');
   });
 
   it('a rig.yaml OpenRig would refuse is listed, flagged, and carries no pods', async () => {
     const d = tmp();
+
     write(join(d, 'bad', 'rig.yaml'), 'version: "0.2"\nname: bad\nsummary: half written\n');
+
     const e = await specEntryOf('bad', (await scanSpecs([d])).get('bad')!);
+
     expect(e).toEqual({
       name: 'bad',
       specPath: join(d, 'bad', 'rig.yaml'),
@@ -171,11 +189,14 @@ describe('N10: a rig spec as the Rig specs page shows it', () => {
     const { rigs } = rigFolder();
     const reader = new RigSpecsReader('m4', () => new Date('2026-10-20T00:00:00Z'));
     const first = await reader.next(await scanSpecs([rigs]));
+
     expect(first!.push.specs.map((s) => s.name)).toEqual(['spaghetti']);
     first!.markSent();
     expect(await reader.next(await scanSpecs([rigs]))).toBeNull();
     write(join(rigs, 'visuals', 'rig.yaml'), RIG.replace('name: spaghetti', 'name: visuals'));
+
     const second = await reader.next(await scanSpecs([rigs]));
+
     expect(second!.push.specs.map((s) => s.name).sort()).toEqual(['spaghetti', 'visuals']);
     reader.reset();
     second!.markSent();

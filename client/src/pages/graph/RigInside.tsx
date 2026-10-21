@@ -169,26 +169,32 @@ export default function RigInside({
 
     return { from: from.slice(0, 2), total: from.reduce((n, f) => n + f.count, 0) };
   };
+
   const waitingOnYou = humans.reduce((n, h) => n + h.open, 0);
 
   useLayoutEffect(() => {
     const el = box.current;
+
     if (!el) {
       setArcs([]);
 
       return;
     }
+
     const measure = () => {
       const base = el.getBoundingClientRect();
       const rect = (key: string): Rect | null => {
         const n = el.querySelector<HTMLElement>(`[data-node-key="${CSS.escape(key)}"]`);
+
         if (!n) {
           return null;
         }
+
         const r = n.getBoundingClientRect();
 
         return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       };
+
       const placedPairs = pairs
         .map((p) => ({ p, a: rect(p.a), b: rect(p.b) }))
         .filter((x): x is { p: MapPair; a: Rect; b: Rect } => !!x.a && !!x.b);
@@ -201,23 +207,28 @@ export default function RigInside({
       const otherRow = placedPairs.filter((x) => Math.abs(x.a.y - x.b.y) >= 20);
       const levels: [number, number][][] = [];
       const out: Arc[] = [];
+
       for (const { p, a, b } of sameRow) {
         const sx = a.x + a.w / 2;
         const ex = b.x + b.w / 2;
         const lo = Math.min(sx, ex) - 10;
         const hi = Math.max(sx, ex) + 10;
         let lv = levels.findIndex((iv) => iv.every(([l, h]) => hi < l || lo > h));
+
         if (lv === -1) {
           lv = levels.length;
           levels.push([]);
         }
+
         levels[lv]!.push([lo, hi]);
+
         const up = LB + lv * LS;
         // stop 3 px above the card, so a line never runs over its edge
         const sy = a.y - 3;
         const ey = b.y - 3;
         // a cubic with both handles lifted peaks at 3/4 of the lift
         const peak = (up * 4) / 3;
+
         out.push({
           pair: p,
           d: `M${sx},${sy} C${sx},${sy - peak} ${ex},${ey - peak} ${ex},${ey}`,
@@ -225,6 +236,7 @@ export default function RigInside({
           ly: (sy + ey) / 2 - up * (big ? 1 : 0.75),
         });
       }
+
       otherRow.forEach(({ p, a, b }, i) => {
         const sx = a.x + a.w / 2;
         const ex = b.x + b.w / 2;
@@ -232,6 +244,7 @@ export default function RigInside({
         const chan = big ? ROOMY.chan + (i % 4) * 8 : 4 + (i % 4) * 4;
         const ay = a.y - gap;
         const by = b.y - gap;
+
         out.push({
           elbow: true,
           pair: p,
@@ -245,11 +258,14 @@ export default function RigInside({
       setLift(LB + Math.max(1, levels.length) * LS + 8);
       setSize({ w: el.clientWidth, h: el.clientHeight });
     };
+
     measure();
     if (typeof ResizeObserver === 'undefined') {
       return;
     }
+
     const ro = new ResizeObserver(measure);
+
     ro.observe(el);
     el.querySelectorAll('[data-node-key]').forEach((n) => ro.observe(n));
 
@@ -258,8 +274,10 @@ export default function RigInside({
 
   // The attach line needs the machine's ssh target (rig.waiting); unknown means no button.
   const [ssh, setSsh] = useState<string | null | undefined>(undefined);
+
   useEffect(() => {
     let live = true;
+
     setSsh(undefined);
     void callVerb<RigWaitingOutput>(socket, 'rig.waiting', {
       machine: home,
@@ -275,26 +293,33 @@ export default function RigInside({
     if (hideTimer.current) {
       clearTimeout(hideTimer.current);
     }
+
     hideTimer.current = null;
   };
+
   const hide = () => {
     keep();
     hideTimer.current = setTimeout(() => setHover(null), 220);
   };
+
   useEffect(() => () => keep(), []);
   // a press anywhere outside the card, its menu and the hover card puts the hover card away
   useEffect(() => {
     if (!hover) {
       return;
     }
+
     const away = (e: PointerEvent) => {
       const t = e.target as Element | null;
+
       if (t?.closest('.g2-hover, .g2-cell')) {
         return;
       }
+
       keep();
       setHover(null);
     };
+
     document.addEventListener('pointerdown', away);
 
     return () => document.removeEventListener('pointerdown', away);
@@ -305,11 +330,15 @@ export default function RigInside({
     if (Date.now() < quietUntil.current) {
       return;
     }
+
     const base = box.current?.getBoundingClientRect();
+
     if (!base) {
       return;
     }
+
     const r = node.getBoundingClientRect();
+
     setHover({
       key: s.key,
       x: Math.max(0, Math.min(r.left - base.left, base.width - 290)),
@@ -321,10 +350,12 @@ export default function RigInside({
     lf.setFocus(s.key);
     showHover(s, el);
   };
+
   const leave = () => {
     lf.setFocus(null);
     hide();
   };
+
   const hoverSeat = hover ? [...ownSeats, ...outsideHumans].find((s) => s.key === hover.key) : null;
   const touches = (key: string) =>
     `${pairs.filter((p) => p.total > 0 && (p.a === key || p.b === key)).length} handed · ${pairs.filter((p) => p.planned && (p.a === key || p.b === key)).length} planned`;
@@ -665,22 +696,27 @@ export function HumanCard({
 function CardMenu({ name, onDocuments }: { name: string; onDocuments: () => void }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
     if (!open) {
       return;
     }
+
     const away = (e: PointerEvent) => {
       if (!wrap.current?.contains(e.target as Node)) {
         setOpen(false);
       }
     };
+
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') {
         return;
       }
+
       e.stopPropagation();
       setOpen(false);
     };
+
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc, true);
 

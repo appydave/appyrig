@@ -94,10 +94,13 @@ function rigOf(fm: FleetMachine, raw: string | null): string | null {
   if (!raw) {
     return null;
   }
+
   const seat = fm.snapshot.seats.find((s) => s.id === raw);
+
   if (seat) {
     return seat.rig ?? null;
   }
+
   const at = raw.indexOf('@');
 
   return at >= 0 ? raw.slice(at + 1) : null;
@@ -137,25 +140,32 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
     string,
     { id: string; fm: FleetMachine; rig: string | null; slices: Map<string, Job[]> }
   >();
+
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
       if (isSweep(q)) {
         continue;
       }
+
       const mid = missionOf(q.tags);
+
       if (!mid) {
         continue;
       }
+
       const s = sliceOf(q.tags);
       const rig = jobRig(fm, q);
       const key = `${fm.machine.id}:${rig ?? NO_RIG}:${mid}`;
       const sid = !s ? WHOLE_MISSION : isLoose(s) ? `${s} (${rig ?? fm.machine.label})` : s;
       const g = groups.get(key) ?? { id: mid, fm, rig, slices: new Map<string, Job[]>() };
+
       g.slices.set(sid, [...(g.slices.get(sid) ?? []), jobFor(fm, q)]);
       groups.set(key, g);
     }
   }
+
   const out: Mission[] = [];
+
   for (const [key, g] of groups) {
     const list: Slice[] = [...g.slices.entries()]
       .map(([sid, jobs]) => {
@@ -178,6 +188,7 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
       .sort((a, b) => natural(a.id, b.id));
     const sum = (k: 'open' | 'done' | 'notDone') => list.reduce((n, x) => n + x[k], 0);
     const total = sum('open') + sum('done') + sum('notDone');
+
     out.push({
       id: g.id,
       key,
@@ -201,11 +212,13 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
 /** Jobs with a slice tag but no mission tag: a flat list per rig, with no progress (there is no mission to measure). */
 export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
   const groups = new Map<string, Unattributed>();
+
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
       if (isSweep(q) || missionOf(q.tags) || !sliceOf(q.tags)) {
         continue;
       }
+
       const rig = jobRig(fm, q) ?? '(no rig)';
       const key = `${fm.machine.id}:${rig}`;
       const g = groups.get(key) ?? {
@@ -214,6 +227,7 @@ export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
         rig,
         jobs: [],
       };
+
       g.jobs.push(jobFor(fm, q));
       groups.set(key, g);
     }
@@ -230,6 +244,7 @@ export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
 /** Items with a slice tag but no mission tag: the "unresolved tag" warning (C11). */
 export function untaggedMissionCount(machines: FleetMachine[]): number {
   let n = 0;
+
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
       if (!isSweep(q) && sliceOf(q.tags) && !missionOf(q.tags)) {
@@ -310,11 +325,15 @@ export function missionDocSummary(text: string): { title: string; lead: string }
   let body = text;
   let fmTitle: string | null = null;
   const fm = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
+
   if (fm) {
     body = text.slice(fm[0].length);
+
     const t = /^title:\s*["']?(.*?)["']?\s*$/m.exec(fm[1]!);
+
     fmTitle = t?.[1] || null;
   }
+
   const lines = body.split('\n').filter((l) => l.trim());
   const heading = lines.findIndex((l) => /^#+\s/.test(l));
   const title =

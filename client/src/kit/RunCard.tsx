@@ -63,6 +63,7 @@ function missingWhy(files: RigFilesOutput | null, machineLabel: string, what: st
   if (!files) {
     return `couldn't ask the hub for this rig's files`;
   }
+
   switch (files.status) {
     case 'no-spec':
       return `no ${what} file found: no rig.yaml for this rig, so there is no folder to look in`;
@@ -86,6 +87,7 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
   const bodyId = useId();
   const toggle = () => {
     const next = !open;
+
     setOpen(next);
     try {
       localStorage.setItem(OPEN_KEY, next ? 'on' : 'off');
@@ -93,6 +95,7 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
       // per-viewer convenience only
     }
   };
+
   const minute = Math.floor(now / 60_000) * 60_000;
   const model = useMemo(() => runCard(machine, rig, minute), [machine, rig, minute]);
   const items = useMemo(() => rigQueue(machine, rig), [machine, rig]);
@@ -115,12 +118,15 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
 
       return;
     }
+
     let live = true;
     const read = async (ids: string[], have: Set<string>) => {
       const id = ids.find((x) => have.has(x));
+
       if (!id) {
         return null;
       }
+
       const a = await callVerb<RigFileOutput>(socket, 'rig.file', {
         machine: machineId,
         rig,
@@ -129,48 +135,67 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
 
       return a.ok ? { id, content: a.value.file.content } : null;
     };
+
     void (async () => {
       const a = await callVerb<RigFilesOutput>(socket, 'rig.files', { machine: machineId, rig });
+
       if (!live) {
         return;
       }
+
       const list = a.ok ? a.value : null;
+
       setFiles(list);
+
       const have = new Set(list?.status === 'ok' ? list.files.map((f) => f.id) : []);
       const m = await read(
         [...MISSION_IDS.slice(0, 2), ...variantDoc(have, 'MISSION'), ...MISSION_IDS.slice(2)],
         have
       );
+
       if (!live) {
         return;
       }
+
       const line = m ? missionLine(m.content) : null;
+
       setMission(line && m ? { text: line, from: `from ${fileWhere(m.id)}` } : null);
+
       const r = await read([...REPORT_IDS, ...variantDoc(have, 'REPORT')], have);
+
       if (!live) {
         return;
       }
+
       const rl = r ? reportLine(r.content) : null;
+
       setReport(rl && r ? { text: rl, from: `from ${fileWhere(r.id)}` } : null);
+
       // R3: every mission and brief may hold the plan; change orders count by their names.
       const found: PlanSource[] = [];
+
       for (const id of [...have]
         .filter((x) => PLAN_FILE.test(x))
         .sort()
         .slice(0, MAX_PLAN_FILES)) {
         const f = id === m?.id ? m : await read([id], have);
+
         if (!live) {
           return;
         }
+
         const p = f ? planIn(f.content, fileWhere(id)) : null;
+
         if (p) {
           found.push(p);
         }
       }
+
       const orders = changeOrders(
         [...have].filter((x) => x.startsWith('spec:')).map((x) => x.slice(5)),
         line
       );
+
       setSources(orders ? [...found, orders] : found);
     })();
 
@@ -182,6 +207,7 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
   if (!model) {
     return null;
   }
+
   const list = files === 'loading' ? null : files;
   const missionShown: Sourced =
     mission ??

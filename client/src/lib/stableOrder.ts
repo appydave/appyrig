@@ -16,9 +16,11 @@ export function nextOrder(
   opts: { allowResort: boolean; groupChanged: boolean; frozen: boolean }
 ): { order: string[]; resorted: boolean } {
   const present = new Set(sorted);
+
   if (!opts.frozen && (opts.allowResort || opts.groupChanged || prev.length === 0)) {
     return { order: sorted, resorted: true };
   }
+
   const kept = prev.filter((k) => present.has(k));
   const known = new Set(kept);
 
@@ -39,10 +41,12 @@ export function useStableOrder<T>(
   const lastSort = useRef(0);
   // Re-render once the freeze lifts or the interval passes, so a held-back sort lands then.
   const [, setTick] = useState(0);
+
   useEffect(() => {
     if (frozen) {
       return;
     }
+
     const id = window.setInterval(() => setTick((t) => t + 1), everyMs);
 
     return () => window.clearInterval(id);
@@ -59,11 +63,14 @@ export function useStableOrder<T>(
     groupChanged: groupSig !== groups.current,
     frozen,
   });
+
   if (resorted) {
     lastSort.current = t;
     groups.current = groupSig;
   }
+
   order.current = next;
+
   const byKey = new Map(sorted.map((s) => [keyOf(s), s]));
 
   return next.map((k) => byKey.get(k)!).filter(Boolean);

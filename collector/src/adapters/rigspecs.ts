@@ -35,15 +35,19 @@ const isUnder = (child: string, parent: string): boolean =>
 function agentPlace(ref: string, spec: SpecInfo): { file: string; within: string } | null {
   if (ref.startsWith('local:')) {
     const rel = ref.slice('local:'.length).trim();
+
     if (!rel || isAbsolute(rel) || normalize(rel).split(sep).includes('..')) {
       return null;
     }
+
     const rigRoot = dirname(spec.path);
 
     return { file: join(rigRoot, rel, 'agent.yaml'), within: rigRoot };
   }
+
   if (ref.startsWith('path:')) {
     const abs = ref.slice('path:'.length).trim();
+
     if (!isAbsolute(abs)) {
       return null;
     }
@@ -63,20 +67,26 @@ export async function readSpecAgent(
   usedBy: string[]
 ): Promise<SpecAgent> {
   const base = { ref: redactString(ref).slice(0, 500), usedBy: usedBy.slice(0, 200) };
+
   if (ref === 'builtin:terminal') {
     return { ...base, status: 'builtin', spec: null };
   }
+
   const place = agentPlace(ref, spec);
+
   if (!place) {
     return { ...base, status: 'refused', spec: null };
   }
+
   let real: string;
   let within: string;
+
   try {
     within = await realpath(place.within);
   } catch {
     return { ...base, status: 'missing', spec: null };
   }
+
   try {
     real = await realpath(place.file);
   } catch {
@@ -87,26 +97,35 @@ export async function readSpecAgent(
       spec: null,
     };
   }
+
   if (!isUnder(real, within)) {
     return { ...base, status: 'refused', spec: null };
   }
+
   try {
     const st = await lstat(real);
+
     if (!st.isFile() || st.size > AGENT_YAML_MAX) {
       return { ...base, status: 'invalid', spec: null };
     }
+
     const parsed = OpenRig.AgentSpecSchema.safeParse(parse(await readFile(real, 'utf8')));
+
     if (!parsed.success) {
       return { ...base, status: 'invalid', spec: null };
     }
+
     const { name, version, description, summary, defaults, profiles } = parsed.data;
     const view: NonNullable<SpecAgent['spec']> = { name, version, profiles: profiles ?? {} };
+
     if (description !== undefined) {
       view.description = description.replace(/\s+/g, ' ').trim();
     }
+
     if (summary !== undefined) {
       view.summary = summary.replace(/\s+/g, ' ').trim();
     }
+
     if (defaults !== undefined) {
       view.defaults = defaults;
     }
@@ -124,6 +143,7 @@ function seatOf(rig: string, pod: OpenRig.PodSpec, m: OpenRig.MemberSpec): SpecS
     pod: pod.id,
     session: OpenRig.sessionName(rig, pod.id, m.id),
   };
+
   if (env) {
     out.envNames = Object.keys(env).slice(0, MEMBER_ENV_NAMES_MAX);
   }
@@ -140,24 +160,30 @@ export async function specEntryOf(name: string, spec: SpecInfo): Promise<RigSpec
     specValid: spec.spec !== null,
   };
   const s = spec.spec;
+
   if (!s) {
     return entry;
   }
+
   entry.pods = s.pods.slice(0, RIG_PODS_MAX).map((p): SpecPod => ({
     ...podOf(p),
     seats: p.members.slice(0, POD_MEMBERS_MAX).map((m) => seatOf(name, p, m)),
   }));
   entry.specEdges = (s.edges ?? []).slice(0, RIG_EDGES_MAX);
   entry.rigSpec = rigSpecOf(s);
+
   // Each agent_ref once, in the order members first use it.
   const refs = new Map<string, string[]>();
+
   for (const p of s.pods) {
     for (const m of p.members) {
       const users = refs.get(m.agent_ref) ?? [];
+
       users.push(OpenRig.logicalId(p.id, m.id));
       refs.set(m.agent_ref, users);
     }
   }
+
   entry.agents = [];
   for (const [ref, users] of [...refs].slice(0, RIG_SPEC_AGENTS_MAX)) {
     entry.agents.push(await readSpecAgent(ref, spec, users));
@@ -189,10 +215,13 @@ export class RigSpecsReader {
 
   async next(specs: Map<string, SpecInfo>): Promise<PendingRigSpecs | null> {
     const entries: RigSpecEntry[] = [];
+
     for (const [name, spec] of [...specs].slice(0, RIG_SPECS_MAX)) {
       entries.push(await specEntryOf(name, spec));
     }
+
     const sig = JSON.stringify(entries);
+
     if (sig === this.sent) {
       return null;
     }

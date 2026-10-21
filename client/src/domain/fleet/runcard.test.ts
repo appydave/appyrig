@@ -20,12 +20,15 @@ function d10(
     seats: { id: string; rig: string; status?: string }[];
     queue: QueueItem[];
   };
+
   for (const r of snap.rigs) {
     r.status = r.name === 'ylo-d10' ? (over.status ?? 'running') : 'running';
   }
+
   for (const s of snap.seats) {
     s.status = over.working?.includes(s.id) ? 'working' : 'idle';
   }
+
   if (over.queue) {
     snap.queue = over.queue(snap.queue);
   }
@@ -40,6 +43,7 @@ function d10(
 describe('R1 · runCard state in words, with its evidence', () => {
   it('asleep machine: says its state now is unknown, and what it was at the last report', () => {
     const c = runCard(d10({ liveness: 'asleep' }), 'ylo-d10', NOW)!;
+
     expect(c.state.word).toBe('asleep');
     expect(c.state.why).toMatch(/M4 is asleep \(last report 4 h ago\).*unknown.*running/);
   });
@@ -53,6 +57,7 @@ describe('R1 · runCard state in words, with its evidence', () => {
     const seat = (
       fm.snapshot.seats as unknown as { id: string; status: string; blockedReason?: string }[]
     ).find((s) => s.id === 'ylo-lead@ylo-d10')!;
+
     Object.assign(seat, { status: 'blocked', blockedReason: 'permission prompt' });
     expect(runCard(fm, 'ylo-d10', NOW)!.state).toEqual({
       word: 'waiting',
@@ -70,6 +75,7 @@ describe('R1 · runCard state in words, with its evidence', () => {
 
   it('working names the seats mid-turn', () => {
     const c = runCard(d10({ working: ['ylo-check@ylo-d10'] }), 'ylo-d10', NOW)!;
+
     expect(c.state).toEqual({ word: 'working', why: 'ylo-check is mid-turn now.' });
   });
 
@@ -86,11 +92,14 @@ describe('R1 · runCard state in words, with its evidence', () => {
       updatedAt: '2026-10-13T07:10:00.000Z',
     };
     const waiting = runCard(d10({ queue: (q) => [...q, ask] }), 'ylo-d10', NOW)!;
+
     expect(waiting.state.word).toBe('waiting');
     expect(waiting.toDavid.map((q) => q.id)).toEqual(['q-ask']);
+
     // An older open item to David, with work since, is not "waiting": just idle.
     const old = { ...ask, createdAt: '2026-10-13T04:00:00.000Z' };
     const idle = runCard(d10({ queue: (q) => [...q, old] }), 'ylo-d10', NOW)!;
+
     expect(idle.state.word).toBe('idle');
     expect(idle.toDavid).toHaveLength(1);
   });
@@ -108,6 +117,7 @@ describe('R1 · runCard state in words, with its evidence', () => {
       updatedAt: '2026-10-13T07:30:00.000Z',
     };
     const c = runCard(d10({ queue: (q) => [...q, sweep] }), 'ylo-d10', NOW)!;
+
     expect(c.live!.item.id).not.toBe('q-sweep');
     expect(c.toDavid.map((q) => q.id)).not.toContain('q-sweep');
     expect(c.sweeps).toBe(3); // two in the fixture, plus this one
@@ -116,6 +126,7 @@ describe('R1 · runCard state in words, with its evidence', () => {
 
   it('the live step is the newest handoff, in words', () => {
     const c = runCard(d10(), 'ylo-d10', NOW)!;
+
     expect(c.live!.item.createdAt).toBe('2026-10-13T07:05:14.276Z');
     expect(c.live!.text).toMatch(/^ylo-lead → d10-ai-powered-video-cuts: change 04 done/);
   });
@@ -138,6 +149,7 @@ describe('R1 · one line from a rig file', () => {
   it('report: the first paragraph line under the title, markdown off', () => {
     const md =
       '# flicut-reapply — REPORT (build@flicut-reapply, 2026-10-11)\nBranch `openrig/flicut-reapply` pushed at **bdf1d05**. NOT merged: David listens on the M4 first.\n\n| a | b |';
+
     expect(reportLine(md)).toBe(
       'Branch openrig/flicut-reapply pushed at bdf1d05. NOT merged: David listens on the M4 first.'
     );

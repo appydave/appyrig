@@ -20,9 +20,11 @@ const clock = (iso: string) =>
  */
 export default function PlanStrip({ sources, items, why }: Props) {
   const plan = useMemo(() => (sources ? choosePlan(sources, items) : null), [sources, items]);
+
   if (!sources) {
     return <span className="run-from">{why ?? 'reading the rig’s mission and briefs…'}</span>;
   }
+
   if (!plan) {
     return (
       <span className="run-from" data-testid="run-plan-none">

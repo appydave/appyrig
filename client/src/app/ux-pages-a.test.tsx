@@ -52,10 +52,12 @@ function verbSocket(answers: Answers = {}) {
         cb: (err: Error | null, answer?: CallAnswer) => void
       ) => {
         sent.push(req.verb);
+
         const a = answers[req.verb]?.(req.input) ?? {
           ok: false,
           error: { failureMode: 'unknown_verb', message: `no such verb: ${req.verb}` },
         };
+
         cb(null, a as CallAnswer);
       },
     }),
@@ -103,6 +105,7 @@ beforeEach(() => {
   } catch {
     /* ignore */
   }
+
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -126,6 +129,7 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
       </main>
     );
     const notes = within(screen.getByTestId('pg')).getAllByTestId('mock-note');
+
     expect(notes).toHaveLength(1);
     expect(notes[0]).toHaveTextContent(MOCK_NOTE_TEXT);
     expect(screen.getByTestId('pg').firstElementChild).toBe(notes[0]);
@@ -150,7 +154,9 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
         <FakeControl label="Start" question="Start rig?" result="started (pretend)" workMs={100} />
       </main>
     );
+
     const fake = screen.getByTestId('fake-control');
+
     // CSS (kit.css) hides `.ar-fake[data-phase='idle'] > .ar-mock-mark` until :hover / :focus-within
     expect(fake).toHaveAttribute('data-phase', 'idle');
     expect(fake.querySelector(':scope > .ar-mock-mark')).not.toBeNull();
@@ -170,6 +176,7 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
   it('every v2 page that shows a mock control shows a page-level mock note', () => {
     const { socket } = verbSocket();
     const checked: string[] = [];
+
     for (const def of allPages()) {
       const Page = def.component;
       const { container, unmount } = render(<Page ctx={makeCtx(fleet(), socket)} />);
@@ -177,6 +184,7 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
       const loose = [...container.querySelectorAll('[data-testid="fake-control"]')].filter(
         (f) => !f.closest('.ar-mock-menu')
       );
+
       if (loose.length > 0) {
         expect(
           container.querySelectorAll('[data-mock-note]').length,
@@ -184,8 +192,10 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
         ).toBeGreaterThanOrEqual(1);
         checked.push(def.key);
       }
+
       unmount();
     }
+
     expect(checked.length).toBeGreaterThan(0);
   });
 });
@@ -193,10 +203,13 @@ describe('#8 kit: one mock note per page, badges on hover', () => {
 describe('#8 and #10: the Wall', () => {
   it('one page note; a card shows its mocks only behind "⋯"', () => {
     const { socket, sent, raw } = verbSocket();
+
     render(<wallPage.component ctx={makeCtx(fleet(), socket)} />);
     expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
     expect(screen.queryAllByTestId('fake-control')).toHaveLength(0);
+
     const card = screen.getAllByTestId('ar-seat-card')[0]!;
+
     fireEvent.click(within(card).getByTestId('ar-card-more'));
     expect(within(card).getAllByTestId('fake-control')).toHaveLength(2);
     fireEvent.click(within(card).getByRole('button', { name: 'Restart' }));
@@ -210,24 +223,33 @@ describe('#8 and #10: the Wall', () => {
     const { socket } = verbSocket();
     const machines = fleet();
     const teams = teamsOf(machines);
+
     expect(teamsLabel(teams, new Set())).toBe('Teams: all');
     expect(teamsLabel(teams, new Set([teams[0]!.key]))).toBe(
       `Teams: ${teams.length - 1} of ${teams.length} · 1 hidden`
     );
     expect(matchTeams(teams, 'kern').every((t) => t.name.includes('kern'))).toBe(true);
+
     const { unmount } = render(<wallPage.component ctx={makeCtx(machines, socket)} />);
+
     // no pill per team on the page itself
     expect(screen.queryAllByTestId('ar-team-chip')).toHaveLength(0);
+
     const btn = screen.getByTestId('ar-teams-button');
+
     expect(btn).toHaveTextContent('Teams: all');
     fireEvent.click(btn);
     fireEvent.change(screen.getByTestId('ar-team-search'), { target: { value: 'starter' } });
+
     const shown = screen.getAllByTestId('ar-team-chip');
+
     expect(shown.length).toBeGreaterThan(0);
     expect(shown.every((c) => c.dataset.teamKey!.endsWith(':starter'))).toBe(true);
     fireEvent.change(screen.getByTestId('ar-team-search'), { target: { value: '' } });
     fireEvent.click(screen.getByTestId('ar-teams-running'));
+
     const stopped = teams.filter((t) => !t.running).length;
+
     expect(stopped).toBeGreaterThan(0);
     expect(btn).toHaveTextContent(`${stopped} hidden`);
     expect(JSON.parse(localStorage.getItem('appyrig.v2.wallHiddenTeams')!)).toHaveLength(stopped);
@@ -247,6 +269,7 @@ describe('#8 and #10: the Wall', () => {
 describe('#6 Machines', () => {
   it('shows "could be freed" beside memory, and the latest release as a small sample line', () => {
     const fm = fleetMachine(snapshot('m2'));
+
     fm.snapshot.health = {
       sampledAt: new Date(NOW).toISOString(),
       memory: {
@@ -264,13 +287,19 @@ describe('#6 Machines', () => {
         terminalApps: { status: 'ok', value: [] },
       },
     };
+
     const { socket } = verbSocket();
+
     render(<machinesPage.component ctx={makeCtx([fm], socket)} />);
+
     const free = screen.getByTestId('mc2-free');
+
     expect(free).toHaveTextContent('could be freed');
     expect(free).toHaveTextContent('52%');
     expect(free).toHaveTextContent('84% used, 52% could be freed');
+
     const watch = screen.getByTestId('mc2-watch');
+
     expect(watch.tagName).toBe('P');
     expect(watch).toHaveTextContent('as each machine');
     expect(watch).not.toHaveTextContent('latest release');
@@ -315,16 +344,21 @@ describe('#5 OpenRig DB', () => {
     const { container } = render(
       <schemaPage.component ctx={makeCtx([fleetMachine(snapshot('roamy'))], socket)} />
     );
+
     await waitFor(() => expect(screen.getByTestId('db2-sample-details')).toBeInTheDocument());
     expect(screen.getByTestId('db2-machine')).toHaveTextContent(
       'Roamy: baseline 0.6.6 (2620dea8), nothing to compare yet'
     );
+
     const details = screen.getByTestId('db2-sample-details') as HTMLDetailsElement;
+
     expect(details.open).toBe(false);
     expect(within(details).getByTestId('sample-data')).toBeInTheDocument();
+
     // order on the page: version lines, then the tables, then the sample
     const main = container.querySelector('main')!;
     const kids = [...main.children].map((el) => el.getAttribute('data-testid') ?? el.tagName);
+
     expect(kids.indexOf('db2-versions')).toBeLessThan(kids.indexOf('schema'));
     expect(kids.indexOf('schema')).toBeLessThan(kids.indexOf('db2-sample-details'));
     expect(kids.filter((k) => k === 'db2-versions')).toHaveLength(1);

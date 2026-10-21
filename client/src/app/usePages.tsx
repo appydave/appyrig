@@ -46,6 +46,7 @@ function formatRecorded(iso: string | null): string {
   if (!iso) {
     return 'unknown time';
   }
+
   const d = new Date(iso);
 
   return Number.isNaN(d.getTime())
@@ -78,6 +79,7 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
   const [agentPanel, setAgentPanel] = useState<AgentPanelTarget | null>(panelFromUrl);
   const openAgentPanel = useCallback((t: AgentPanelTarget) => {
     const key = t.seatKey.startsWith(`${t.machineId}/`) ? t.seatKey : `${t.machineId}/${t.seatKey}`;
+
     // Opening an agent never changes the focused rig: the panel opens on a new entry, `rig=` stays.
     setAgentPanel({ machineId: t.machineId, seatKey: key, tab: t.tab ?? 'documents' });
     // a new history entry, so Back closes the panel
@@ -87,16 +89,19 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     if (readUrlState().agent) {
       writeParams({ agent: null }, 'replace');
     }
+
     setAgentPanel(null);
   }, []);
   const closeAgentPanel = useCallback(() => {
     const st = window.history.state as { ar?: string } | null;
+
     if (st?.ar === PANEL_ENTRY && readUrlState().agent) {
       // the entry that opened it is the one before: go Back, and the pop handler closes it
       window.history.back();
 
       return;
     }
+
     writeParams({ agent: null }, 'replace');
     setAgentPanel(null);
   }, []);
@@ -110,14 +115,18 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
   const curHref = useRef(typeof window === 'undefined' ? '' : window.location.href);
   /** Set by Back/Forward: where the page we land on was left. null = a new page, start at the top. */
   const restoreY = useRef<number | null>(null);
+
   useEffect(() => {
     const onScroll = () => {
       liveY.current = window.scrollY;
       curHref.current = window.location.href;
     };
+
     window.addEventListener('scroll', onScroll, { passive: true });
+
     // The browser's own restore runs before the page has rendered and would fight ours.
     const prev = window.history.scrollRestoration;
+
     window.history.scrollRestoration = 'manual';
 
     return () => {
@@ -125,10 +134,12 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
       window.history.scrollRestoration = prev;
     };
   }, []);
+
   const rememberScroll = useCallback(() => {
     scrollMemory.current.set(window.location.href, liveY.current);
   }, []);
   const firstScroll = useRef(true);
+
   useLayoutEffect(() => {
     curHref.current = window.location.href;
     if (firstScroll.current) {
@@ -136,13 +147,16 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
 
       return;
     }
+
     const y = restoreY.current ?? 0;
+
     restoreY.current = null;
     window.scrollTo(0, y);
     liveY.current = window.scrollY;
     if (y === 0) {
       return;
     }
+
     // A page that fills in after it mounts is not tall enough yet: try again for a moment.
     let tries = 0;
     let raf = 0;
@@ -150,9 +164,11 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
       if (Math.abs(window.scrollY - y) <= 1 || ++tries > 30) {
         return;
       }
+
       window.scrollTo(0, y);
       raf = requestAnimationFrame(again);
     };
+
     raf = requestAnimationFrame(again);
 
     return () => cancelAnimationFrame(raf);
@@ -170,18 +186,22 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
 
   // ---- the URL is the state: page pushes, Back and Forward restore -------------------------
   const wroteOnce = useRef(false);
+
   useEffect(() => {
     const cur = readUrlState().page;
     const first = !wroteOnce.current;
+
     wroteOnce.current = true;
     // The old version switch kept its choice in `v` (`?v=2`, `?v=1`). There is one version now, so
     // an old link opens the same app and the parameter is dropped from the address on load.
     if (first) {
       writeParams({ v: null }, 'replace');
     }
+
     if (cur === page) {
       return;
     }
+
     writeParams(
       { page, agent: page === 'agent' && agentKey ? agentToParam(agentKey) : null },
       first ? 'replace' : 'push'
@@ -193,12 +213,14 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     if (page !== 'agent' || !agentKey) {
       return;
     }
+
     writeParams({ agent: agentToParam(agentKey) }, 'replace');
   }, [page, agentKey]);
   useEffect(() => {
     const onPop = () => {
       const u = readUrlState();
       const p = urlPage() ?? 'wall';
+
       // popstate fires before the page re-renders: the scroll is still the page being left
       scrollMemory.current.set(curHref.current, liveY.current);
       curHref.current = window.location.href;
@@ -210,8 +232,10 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
       } else {
         setAgentPanel(panelFromUrl());
       }
+
       onUrlRig?.(u.rig);
     };
+
     window.addEventListener('popstate', onPop);
 
     return () => window.removeEventListener('popstate', onPop);
@@ -223,6 +247,7 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
       if (key.startsWith('?/')) {
         return;
       }
+
       rememberScroll();
       setAgentPanel(null);
       setAgentKey(key);
@@ -233,17 +258,21 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
 
   // Clicking a group opens a page of that group: the one last visited there, else its first.
   const lastInGroup = useRef<Partial<Record<NavGroupKey, PageKey>>>({});
+
   useEffect(() => {
     const g = groupOf(page);
+
     if (g) {
       lastInGroup.current[g] = page;
     }
   }, [page]);
+
   const openGroupPage = useCallback(
     (g: NavGroupKey) => {
       const pages = navGroups().find((x) => x.key === g)?.pages ?? [];
       const last = lastInGroup.current[g];
       const target = last && pages.includes(last) ? last : pages[0];
+
       if (target && target !== page) {
         goTo(target);
       } else {

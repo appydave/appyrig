@@ -120,8 +120,11 @@ describe('flowPairs: one line per pair', () => {
       ],
       at
     );
+
     expect(pairs.map((p) => p.key)).toEqual(['pair:build|qa', 'pair:build|lead']);
+
     const bq = pairs[0]!;
+
     expect(bq).toMatchObject({ aToB: 14, bToA: 8, total: 22, waiting: 1, leftOpen: 2, back: 8 });
     expect(bq.edges).toHaveLength(2);
   });
@@ -134,9 +137,12 @@ describe('flowPairs: one line per pair', () => {
       boxW: 120,
     };
     const near = pairPath({ a: 'qa', b: 'build' }, L, 200, 92);
+
     expect(near.aLeft).toBe(false);
     expect(near.d.startsWith('M360,200 L440,200')).toBe(true);
+
     const far = pairPath({ a: 'lead', b: 'review' }, L, 200, 92);
+
     expect(far.d).toContain(' C');
     expect(far.ly).toBeLessThan(200 - 46);
   });
@@ -149,17 +155,20 @@ describe('Handoff Flow v2 page: quiet lines', () => {
     const { container } = render(<Flow ctx={ctxFor([fleetMachine(snapshot('roamy--blocked'))])} />);
     const lines = screen.getAllByTestId('flow-edge');
     const pairsSeen = lines.map((l) => l.dataset.pair);
+
     expect(new Set(pairsSeen).size).toBe(pairsSeen.length);
     for (const l of lines) {
       const path = l.querySelector('path.hl-line')!;
       const pill = within(l).getByTestId('flow-count-pill');
       const total = Number(pill.dataset.count);
+
       expect(Number(path.getAttribute('stroke-width'))).toBe(lineWidth(total));
       expect(Number(path.getAttribute('stroke-width'))).toBeLessThanOrEqual(LINE_WIDTH_CAP);
       // a traffic line is never dotted or dashed: that is planned only
       expect(path.getAttribute('class')).not.toContain('hl-planned');
       expect(path.getAttribute('stroke-dasharray')).toBeNull();
     }
+
     // starter: dev-build and dev-review hand work both ways, so one line reads "n ⇄ m"
     expect(
       lines.some((l) =>
@@ -177,6 +186,7 @@ describe('Handoff Flow v2 page: quiet lines', () => {
     const machines = [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
     const rigs = listRigs(machines).filter((r) => r.handoffs > 0);
     let found = false;
+
     for (const r of rigs) {
       const { unmount } = render(<Flow ctx={ctxFor(machines, r.name)} />);
       const lines = screen.queryAllByTestId('flow-edge');
@@ -187,18 +197,23 @@ describe('Handoff Flow v2 page: quiet lines', () => {
 
         return mine.length > 0 && mine.length < lines.length;
       });
+
       if (!box) {
         unmount();
         continue;
       }
+
       found = true;
       expect(lines.every((l) => l.dataset.state === 'faint')).toBe(true);
+
       const id = box.dataset.stage!;
       const touches = (l: HTMLElement) => l.dataset.pair!.split('|').includes(id);
+
       fireEvent.pointerEnter(box);
       for (const l of screen.getAllByTestId('flow-edge')) {
         expect(l.dataset.state).toBe(touches(l) ? 'lit' : 'dimmed');
       }
+
       fireEvent.pointerLeave(box);
       expect(screen.getAllByTestId('flow-edge').every((l) => l.dataset.state === 'faint')).toBe(
         true
@@ -207,28 +222,36 @@ describe('Handoff Flow v2 page: quiet lines', () => {
       for (const l of screen.getAllByTestId('flow-edge')) {
         expect(l.dataset.state).toBe(touches(l) ? 'lit' : 'dimmed');
       }
+
       fireEvent.blur(box);
+
       // hovering a line lights that line only
       const first = screen.getAllByTestId('flow-edge')[0]!;
+
       fireEvent.pointerEnter(first);
       for (const l of screen.getAllByTestId('flow-edge')) {
         expect(l.dataset.state).toBe(l === first ? 'lit' : 'dimmed');
       }
+
       unmount();
       break;
     }
+
     expect(found, 'a rig with a box that has some but not all lines').toBe(true);
   });
 
   it('the structure lens draws planned lines dotted, one per pair', () => {
     const planned = [fleetMachine(snapshot('roamy--blocked'))];
+
     planned[0]!.snapshot.rigs.find((r) => r.name === 'starter')!.edges = [
       { from: 'dev-build@starter', to: 'dev-review@starter', kind: 'delegates_to' },
       { from: 'dev-review@starter', to: 'dev-build@starter', kind: 'can_observe' },
     ];
     render(<Flow ctx={ctxFor(planned)} />);
     fireEvent.click(screen.getByTestId('flow-lens-structure'));
+
     const lines = screen.getAllByTestId('flow-structure-line');
+
     expect(lines).toHaveLength(1);
     expect(lines[0]).toHaveAttribute('data-kind-text', 'delegates_to · can_observe');
     expect(lines[0]!.querySelector('path')!.getAttribute('class')).toContain('hl-planned');
@@ -237,6 +260,7 @@ describe('Handoff Flow v2 page: quiet lines', () => {
   it('no width is sized from the busiest pair in the Flow files', () => {
     for (const f of ['HandoffFlow.tsx', '../../domain/flow/flowLines.ts', 'index.tsx']) {
       const src = readFileSync(path.resolve(__dirname, f), 'utf8');
+
       expect(relativeWidthLines(src), f).toEqual([]);
     }
   });

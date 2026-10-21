@@ -156,9 +156,11 @@ export class FleetStore {
     const before = prior?.liveness ?? null;
     const was = prior?.snapshot.account?.email?.toLowerCase();
     const is = snapshot.account?.email?.toLowerCase();
+
     if (was && is && was !== is) {
       this.emailChanged.set(entry.machine.id, this.now().getTime());
     }
+
     this.machines.set(entry.machine.id, entry);
     this.daemonData.pruneSeats(
       entry.machine.id,
@@ -184,9 +186,11 @@ export class FleetStore {
    */
   sweep(): FleetMachine[] {
     const changed: FleetMachine[] = [];
+
     for (const entry of this.machines.values()) {
       if (entry.liveness === 'live' && this.livenessAt(entry.lastSeen) === 'asleep') {
         const asleep: FleetMachine = { ...entry, liveness: 'asleep' };
+
         this.machines.set(entry.machine.id, asleep);
         changed.push(this.decorate(asleep, [...this.machines.values()]));
         this.onLiveness({
@@ -206,34 +210,44 @@ export class FleetStore {
     if (!this.dir) {
       return [];
     }
+
     let names: string[];
+
     try {
       names = (await readdir(this.dir)).filter((n) => n.endsWith('.json'));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
         return [];
       }
+
       this.onDiskError(`cannot read ${this.dir}`, err);
 
       return [];
     }
+
     for (const name of names) {
       const file = join(this.dir, name);
+
       try {
         const parsed = StoredMachineSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+
         if (!parsed.success) {
           this.onDiskError(`${file} is not a stored snapshot; skipped`, parsed.error);
           continue;
         }
+
         const { lastSeen, snapshot } = parsed.data;
+
         if (`${snapshot.machine.id}.json` !== name) {
           this.onDiskError(`${file} holds machine ${snapshot.machine.id}; skipped`, null);
           continue;
         }
+
         // A newer push may already have arrived while loading; never overwrite it.
         if (this.machines.has(snapshot.machine.id)) {
           continue;
         }
+
         this.machines.set(snapshot.machine.id, {
           machine: snapshot.machine,
           liveness: this.livenessAt(lastSeen),
@@ -254,6 +268,7 @@ export class FleetStore {
     if (!this.historyDir) {
       return;
     }
+
     const key = `history:${h.machineId}/${h.seat}`;
     const file = join(
       this.historyDir,
@@ -262,6 +277,7 @@ export class FleetStore {
     const prev = this.writes.get(key) ?? Promise.resolve();
     const run = prev.then(async () => {
       const tmp = `${file}.${process.pid}.tmp`;
+
       try {
         await mkdir(this.historyDir!, { recursive: true, mode: 0o700 });
         await writeFile(tmp, JSON.stringify(this.histories.get(`${h.machineId}/${h.seat}`)), {
@@ -272,6 +288,7 @@ export class FleetStore {
         this.onDiskError(`cannot write ${file}`, err);
       }
     });
+
     this.writes.set(key, run);
     void run.then(() => {
       if (this.writes.get(key) === run) {
@@ -289,7 +306,9 @@ export class FleetStore {
     if (!this.historyDir) {
       return 0;
     }
+
     let names: string[];
+
     try {
       names = (await readdir(this.historyDir)).filter((n) => n.endsWith('.json'));
     } catch (err) {
@@ -299,15 +318,20 @@ export class FleetStore {
 
       return 0;
     }
+
     for (const name of names) {
       const file = join(this.historyDir, name);
+
       try {
         const parsed = SeatHistorySchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+
         if (!parsed.success) {
           this.onDiskError(`${file} is not a seat history; skipped`, parsed.error);
           continue;
         }
+
         const key = `${parsed.data.machineId}/${parsed.data.seat}`;
+
         if (!this.histories.has(key)) {
           this.histories.set(key, parsed.data);
         }
@@ -322,10 +346,12 @@ export class FleetStore {
   /** v1.4 · S4: keep queue bodies a collector sent (memory + disk). Oldest dropped past HANDOFF_STORE_MAX. */
   putHandoffs(b: HandoffBodies): void {
     const m = this.handoffs.get(b.machineId) ?? new Map();
+
     this.handoffs.set(b.machineId, m);
     for (const i of b.items) {
       m.set(i.id, { body: i.body, truncated: i.truncated });
     }
+
     // Over the cap, drop the OLDEST items, not the earliest arrivals: a collector sends newest first,
     // so arrival order would throw away exactly what a person is looking at. Age comes from the
     // machine's queue rows; a body whose item is not in them (nothing serves it) goes first.
@@ -341,29 +367,36 @@ export class FleetStore {
           (created.get(x) ?? -Infinity) - (created.get(y) ?? -Infinity) ||
           (x < y ? -1 : x > y ? 1 : 0)
       );
+
       for (const id of oldestFirst.slice(0, m.size - HANDOFF_STORE_MAX)) {
         m.delete(id);
       }
     }
+
     if (!this.handoffDir) {
       return;
     }
+
     const key = `handoffs:${b.machineId}`;
     const file = join(this.handoffDir, `${encodeURIComponent(b.machineId)}.json`);
     const prev = this.writes.get(key) ?? Promise.resolve();
     const run = prev.then(async () => {
       const tmp = `${file}.${process.pid}.tmp`;
+
       try {
         await mkdir(this.handoffDir!, { recursive: true, mode: 0o700 });
+
         const items = [...(this.handoffs.get(b.machineId) ?? new Map()).entries()].map(
           ([id, v]) => ({ id, ...v })
         );
+
         await writeFile(tmp, JSON.stringify({ machineId: b.machineId, items }), { mode: 0o600 });
         await rename(tmp, file);
       } catch (err) {
         this.onDiskError(`cannot write ${file}`, err);
       }
     });
+
     this.writes.set(key, run);
     void run.then(() => {
       if (this.writes.get(key) === run) {
@@ -381,7 +414,9 @@ export class FleetStore {
     if (!this.handoffDir) {
       return 0;
     }
+
     let names: string[];
+
     try {
       names = (await readdir(this.handoffDir)).filter((n) => n.endsWith('.json'));
     } catch (err) {
@@ -391,21 +426,27 @@ export class FleetStore {
 
       return 0;
     }
+
     for (const name of names) {
       const file = join(this.handoffDir, name);
+
       try {
         const parsed = StoredHandoffsSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
+
         if (!parsed.success) {
           this.onDiskError(`${file} is not stored queue bodies; skipped`, parsed.error);
           continue;
         }
+
         // Bodies that arrived while loading win; never overwrite them.
         const m = this.handoffs.get(parsed.data.machineId) ?? new Map();
+
         for (const i of parsed.data.items.slice(-HANDOFF_STORE_MAX)) {
           if (!m.has(i.id)) {
             m.set(i.id, { body: i.body, truncated: i.truncated });
           }
         }
+
         this.handoffs.set(parsed.data.machineId, m);
       } catch (err) {
         this.onDiskError(`cannot load ${file}; skipped`, err);
@@ -427,18 +468,23 @@ export class FleetStore {
     if (!this.dir) {
       return;
     }
+
     const id = entry.machine.id;
+
     this.pending.set(id, entry);
     if (this.writes.has(id)) {
       return;
     } // the running write picks up the latest entry when it ends
+
     const run = async () => {
       for (let next = this.pending.get(id); next; next = this.pending.get(id)) {
         this.pending.delete(id);
         await this.write(next);
       }
+
       this.writes.delete(id);
     };
+
     this.writes.set(id, run());
   }
 
@@ -446,6 +492,7 @@ export class FleetStore {
     const dir = this.dir!;
     const file = join(dir, `${entry.machine.id}.json`);
     const tmp = `${file}.${process.pid}.tmp`;
+
     try {
       await mkdir(dir, { recursive: true, mode: 0o700 });
       // 0600: snapshots carry (redacted) terminal text; only this user reads them.

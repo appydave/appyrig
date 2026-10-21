@@ -53,6 +53,7 @@ function q(id: string, from: string, to: string, min: number, summary: string): 
 
 function fleet(): FleetMachine[] {
   const fm = fleetMachine(snapshot('m2'));
+
   fm.snapshot = {
     ...fm.snapshot,
     queue: [
@@ -118,13 +119,17 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
   it('V55: no dot sits at the diagram corner before its own motion begins', () => {
     render(<Flow ctx={ctxFor(fleet())} />);
     fireEvent.click(screen.getByTestId('flow-next'));
+
     const dots = screen.getAllByTestId('flow-pulse');
+
     expect(dots.length).toBeGreaterThan(0);
     for (const d of dots) {
       // hidden at first (an animateMotion dot has no position until it begins) ...
       expect(d.getAttribute('visibility')).toBe('hidden');
+
       // ... and shown by its own <set>, timed with its motion
       const set = d.querySelector('set')!;
+
       expect(set.getAttribute('to')).toBe('visible');
       expect(set.getAttribute('begin')).toBe(
         d.querySelector('animateMotion')!.getAttribute('begin')
@@ -138,7 +143,9 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
     expect(screen.queryAllByTestId('flow-edge')).toHaveLength(0);
     fireEvent.click(screen.getByTestId('flow-next'));
     expect(screen.getByTestId('handoff-flow')).toHaveAttribute('data-lens', 'traffic');
+
     const cur = screen.getAllByTestId('flow-edge').filter((e) => e.hasAttribute('data-current'));
+
     expect(cur).toHaveLength(1);
     expect(cur[0]!.dataset.state).toBe('lit');
     expect(cur[0]!.querySelector('path.hl-line')!.getAttribute('class')).toContain('ar-current');
@@ -155,7 +162,9 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
     fireEvent.click(screen.getByTestId('flow-next'));
     fireEvent.click(screen.getByTestId('flow-next'));
     expect(screen.getByTestId('flow-step-count')).toHaveTextContent('2 / 3');
+
     const strip = screen.getByTestId('flow-narration');
+
     expect(strip).toHaveTextContent('Handoff 2 of 3');
     expect(strip).toHaveTextContent('dev-overlay → dev-qa');
     // the message is not in the strip: the panel shows it
@@ -167,8 +176,10 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
     render(<Flow ctx={ctxFor(fleet())} />);
     expect(screen.queryByTestId('flow-docs-bar')).toBeNull();
     fireEvent.click(screen.getByTestId('flow-next'));
+
     const bar = screen.getByTestId('flow-docs-bar');
     const btns = within(bar).getAllByTestId('flow-docs');
+
     expect(btns.length).toBeGreaterThan(0);
     fireEvent.click(btns[0]!);
     expect(screen.getByTestId('docs-drawer')).toBeInTheDocument();

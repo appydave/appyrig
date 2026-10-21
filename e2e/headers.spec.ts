@@ -8,6 +8,7 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
+
   if (await gotIt.count()) {
     await gotIt.first().click();
   }
@@ -23,6 +24,7 @@ async function chooseRig(page: Page, key: string) {
   if (await page.getByTestId('rig-drawer-panel').isHidden()) {
     await page.getByTestId('rig-drawer-tab').click();
   }
+
   await page.locator(`[data-testid="drawer-rig"][data-rig-key="${key}"]`).first().click();
 }
 
@@ -31,6 +33,7 @@ test.describe('v2 one-line page headers', () => {
 
   test('each page has one 36 px header', async ({ page }) => {
     const errors = watchErrors(page);
+
     await page.goto(FROZEN);
     await quietIntro(page);
     for (const [group, key] of [
@@ -43,11 +46,16 @@ test.describe('v2 one-line page headers', () => {
       ['agents', 'agent'],
     ] as const) {
       await go(page, group, key);
+
       const head = page.getByTestId('ar-page-head');
+
       await expect(head, key).toHaveCount(1);
+
       const b = await head.boundingBox();
+
       expect(Math.round(b!.height), `${key} header height`).toBe(36);
     }
+
     expect(errors).toEqual([]);
   });
 
@@ -60,7 +68,9 @@ test.describe('v2 one-line page headers', () => {
     await page.clock.install();
     for (const key of ['m2:openrig-watch', 'm4:workshop', 'm2:appyrig-v15-loadout']) {
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
       const before = await page.evaluate(() => window.scrollY);
+
       await chooseRig(page, key);
       await page.clock.runFor(500); // lets the page's timers (the drawer has a 250 ms close timer) run
       expect(await page.evaluate(() => window.scrollY), `scroll after choosing ${key}`).toBe(

@@ -34,6 +34,7 @@ function spySocket() {
       if (!handlers.has(ev)) {
         handlers.set(ev, new Set());
       }
+
       handlers.get(ev)!.add(h);
 
       return s;
@@ -56,7 +57,9 @@ const fleet = () => [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snap
 
 function renderAt(search: string) {
   history.replaceState(null, '', `/${search}`);
+
   const spy = spySocket();
+
   render(<App getSocket={() => spy.socket} />);
   spy.fire(FLEET_EVENTS.UPDATE, update(fleet()));
 }
@@ -89,8 +92,10 @@ describe('the URL is the state', () => {
       screen.getAllByTestId('drawer-rig').filter((r) => r.getAttribute('aria-pressed') === 'true')
     ).toHaveLength(0);
     expect(screen.getByTestId('drawer-scope')).toHaveTextContent(/Whole fleet/);
+
     // the banner is a row in the page flow under the bar, not inside the header
     const row = screen.getByTestId('ar-hint-row');
+
     expect(row.closest('header')).toBeNull();
     expect(row.compareDocumentPosition(screen.getByTestId('ar-strip'))).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING
@@ -99,12 +104,16 @@ describe('the URL is the state', () => {
 
   it('a page change pushes an entry; a rig pick only replaces the current one', () => {
     renderAt('?v=2');
+
     const n0 = history.length;
+
     fireEvent.click(screen.getByTestId('ar-group-work'));
     expect(location.search).toMatch(/page=/);
     expect(history.length).toBe(n0 + 1);
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const row = screen.getAllByTestId('drawer-rig')[0]!;
+
     fireEvent.click(row);
     expect(location.search).toContain(`rig=${encodeURIComponent(rigToParam(row.dataset.rigKey!))}`);
     expect(history.length).toBe(n0 + 1);
@@ -112,10 +121,14 @@ describe('the URL is the state', () => {
 
   it('a drawer agent click opens the panel on top of the page and never changes it; Back closes it', async () => {
     renderAt('?v=2&page=flow');
+
     const page0 = new URLSearchParams(location.search).get('page');
     const n0 = history.length;
+
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const agent = screen.getAllByTestId('drawer-agent')[0]!;
+
     fireEvent.click(agent);
     expect(new URLSearchParams(location.search).get('page')).toBe(page0);
     expect(location.search).toContain('agent=');
@@ -134,6 +147,7 @@ describe('the URL is the state', () => {
     const m2 = fleet()[1]!;
     const rig = listRigs([m2])[0]!;
     const seat = m2.snapshot.seats.find((s) => s.rig === rig.name)!;
+
     renderAt(
       `?v=2&page=flow&rig=${encodeURIComponent(rigToParam(rig.key))}&agent=${encodeURIComponent(agentToParam(`${m2.machine.id}/${seat.id}`))}`
     );
@@ -148,7 +162,9 @@ describe('the URL is the state', () => {
 
   it('a machine badge or its health mark toggles the strip in place and never navigates', () => {
     renderAt('?v=2&page=wall');
+
     const before = location.search;
+
     fireEvent.click(screen.getAllByTestId('health-mark')[0]!);
     expect(screen.getByTestId('ar-strip')).toHaveAttribute('data-expanded', 'true');
     expect(location.search).toBe(before);
@@ -161,11 +177,14 @@ describe('the drawer follows the open agent', () => {
     const m2 = fleet()[1]!;
     const rig = listRigs([m2])[0]!;
     const seat = m2.snapshot.seats.find((s) => s.rig === rig.name)!;
+
     renderAt(
       `?v=2&page=wall&agent=${encodeURIComponent(agentToParam(`${m2.machine.id}/${seat.id}`))}`
     );
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+
     const rows = screen.getAllByTestId('drawer-rig');
+
     expect(
       rows.filter((r) => r.getAttribute('aria-pressed') === 'true').map((r) => r.dataset.rigKey)
     ).toEqual([rig.key]);
@@ -173,8 +192,10 @@ describe('the drawer follows the open agent', () => {
       screen.getAllByTestId('drawer-agent').filter((a) => a.getAttribute('aria-pressed') === 'true')
     ).toHaveLength(1);
     expect(screen.getByTestId('drawer-scope')).toHaveTextContent(`rig ${rig.name}`);
+
     // picking another rig closes the panel so the page's response is visible
     const other = rows.find((r) => r.dataset.rigKey !== rig.key)!;
+
     fireEvent.click(other);
     expect(screen.queryByTestId('agent-panel')).toBeNull();
     expect(location.search).not.toContain('agent=');
@@ -190,7 +211,9 @@ describe('the drawer follows the open agent', () => {
 
   it('the cold open says what the app is, once, and it is dismissible', () => {
     renderAt('?v=2');
+
     const w = screen.getByTestId('ar-welcome');
+
     expect(w).toHaveTextContent(/AppyRig shows your OpenRig teams across/);
     expect(w).toHaveTextContent(/pick a rig on the left/);
     fireEvent.click(screen.getByTestId('ar-welcome-dismiss'));

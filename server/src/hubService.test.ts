@@ -18,6 +18,7 @@ const value = (xml: string, key: string) =>
 describe('hub-service.sh plist', () => {
   it('defaults to the real M2 hub: label, port 7191, Tailscale + localhost bind, token file', () => {
     const xml = plist();
+
     expect(value(xml, 'Label')).toBe('com.appydave.appyrig.hub');
     expect(value(xml, 'PORT')).toBe('7191');
     expect(value(xml, 'HUB_BIND_HOSTS')).toBe('127.0.0.1,::1,100.126.70.25');
@@ -36,6 +37,7 @@ describe('hub-service.sh plist', () => {
     const [node, entry] = [...xml.matchAll(/<string>([^<]*)<\/string>/g)]
       .map((m) => m[1]!)
       .slice(1, 3);
+
     expect(node).toMatch(/^\/.+\/node$/);
     expect(entry).toBe(`${repo}/server/dist/index.js`);
     expect(value(xml, 'PATH')!.split(':')[0]).toBe(node!.replace(/\/node$/, ''));
@@ -48,6 +50,7 @@ describe('hub-service.sh plist', () => {
       encoding: 'utf8',
       env: { ...process.env, HUB_TOKEN: token },
     });
+
     expect(xml).not.toMatch(/<key>HUB_TOKEN<\/key>/);
     expect(xml).not.toContain(token);
   });
@@ -61,6 +64,7 @@ describe('hub-service.sh plist', () => {
       '--bind',
       '127.0.0.1'
     );
+
     expect(value(xml, 'Label')).toBe('com.appydave.appyrig.hub.lane-test');
     expect(value(xml, 'PORT')).toBe('7300');
     expect(value(xml, 'CLIENT_URL')).toBe('http://localhost:7300');

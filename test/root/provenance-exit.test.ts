@@ -30,6 +30,7 @@ const SOURCE = join(ROOT, 'test/root/fixtures/openrig-0.6.11-source');
 const NO_CLI = { OPENRIG_CLI: join(tmpdir(), 'no-openrig-cli-here') };
 
 const scratch = mkdtempSync(join(tmpdir(), 'prov-exit-'));
+
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 function run(args: string[], env: Record<string, string> = {}) {
@@ -48,9 +49,12 @@ describe('provenance exit codes', () => {
     // --source over a tree holding a dangling symlink: walking it throws an error the script did not
     // anticipate (ENOENT from stat), which used to escape as Node's own exit code 1.
     const src = join(scratch, 'broken-tree');
+
     mkdirSync(src, { recursive: true });
     symlinkSync(join(scratch, 'nowhere'), join(src, 'dangling'));
+
     const r = run(['--source', src]);
+
     expect(r.status, r.out).toBe(2);
     expect(r.out).toContain('provenance: cannot run:');
   });
@@ -61,12 +65,16 @@ describe('provenance exit codes', () => {
     const out = join(ROOT, 'scripts/provenance/out');
     const aside = join(scratch, 'out-aside');
     const had = existsSync(out);
+
     if (had) {
       renameSync(out, aside);
     }
+
     try {
       writeFileSync(out, 'not a folder');
+
       const r = run(['--source', SOURCE], NO_CLI);
+
       expect(r.out).toContain('# OpenRig provenance: clean');
       expect(r.status, r.out).toBe(0);
       expect(r.out).toMatch(/provenance: could not write .*; wrote the report to /);

@@ -12,6 +12,7 @@ describe('cn', () => {
 
   it('handles conditional classes — falsy values are skipped', () => {
     const condition = false;
+
     expect(cn('base', condition && 'skip', 'keep')).toBe('base keep');
   });
 

@@ -38,12 +38,15 @@ export function filterCommands(
     if (curatedOnly && !c.curated) {
       return false;
     }
+
     if (group && c.group !== group) {
       return false;
     }
+
     if (!words.length) {
       return true;
     }
+
     const hay = [c.command, c.plain, c.openrig_says, c.when_to_use, c.when_not, c.group]
       .filter(Boolean)
       .join(' ')
@@ -55,6 +58,7 @@ export function filterCommands(
 
 export function groupsOf(all: RigCommand[]): { group: string; count: number }[] {
   const m = new Map<string, number>();
+
   for (const c of all) {
     m.set(c.group, (m.get(c.group) ?? 0) + 1);
   }

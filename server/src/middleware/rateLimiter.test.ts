@@ -14,6 +14,7 @@ function buildApp(limit: number) {
   });
 
   const app = express();
+
   app.use(testLimiter);
   app.get('/ping', (_req, res) => {
     res.json({ ok: true });
@@ -38,11 +39,13 @@ describe('rateLimiter middleware', () => {
     // Send 3 allowed requests
     for (let i = 0; i < 3; i++) {
       const res = await request(app).get('/ping');
+
       expect(res.status).toBe(200);
     }
 
     // The 4th request should be rate-limited
     const limited = await request(app).get('/ping');
+
     expect(limited.status).toBe(429);
   });
 
@@ -53,8 +56,10 @@ describe('rateLimiter middleware', () => {
 
     // draft-8 headers use RateLimit-* format
     expect(res.status).toBe(200);
+
     // At least one rate-limit related header should be present
     const headers = Object.keys(res.headers).join(' ').toLowerCase();
+
     expect(headers).toMatch(/ratelimit/);
   });
 

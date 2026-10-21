@@ -29,12 +29,16 @@ function renderWall() {
 describe('Wall v2: V1 terminal cards, V2 triage', () => {
   it('every card is the kit WallCard: one fixed size, set by the stylesheet, never by content', () => {
     renderWall();
+
     const cards = screen.getAllByTestId('ar-seat-card');
+
     expect(cards.length).toBeGreaterThan(3);
     expect(cards.every((c) => c.classList.contains('wcard'))).toBe(true);
     expect(cards.every((c) => c.getAttribute('style') === null)).toBe(true);
+
     const css = readFileSync(path.resolve(__dirname, '../../kit/wallCard.css'), 'utf8');
     const rule = /\.wcard\s*\{[^}]*\}/.exec(css)![0];
+
     expect(rule).toMatch(/width:\s*var\(--wc-w\)/);
     expect(rule).toMatch(/height:\s*var\(--wc-h\)/);
     expect(rule).not.toMatch(/(min|max)-height/);
@@ -43,15 +47,19 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
 
   it('live cards are solid dark; stopped and unknown cards are frosted', () => {
     renderWall();
+
     const cards = screen.getAllByTestId('ar-seat-card');
+
     for (const c of cards) {
       const frosted = ['stopped', 'asleep', 'unknown'].includes(c.dataset.pip ?? '');
+
       expect(c.hasAttribute('data-frosted')).toBe(frosted);
     }
   });
 
   it('groups size to their cards and flow side by side; only a machine heading forces a new row', () => {
     const css = readFileSync(path.resolve(__dirname, '../../app/w2.css'), 'utf8');
+
     expect(/\.ar-wall-group\s*\{[^}]*\}/.exec(css)![0]).toMatch(/width:\s*fit-content/);
     expect(/\.ar-wall-machine\s*\{[^}]*\}/.exec(css)![0]).toMatch(/flex-wrap:\s*wrap/);
     expect(/\.ar-wall-machine-head\s*\{[^}]*\}/.exec(css)![0]).toMatch(/flex:\s*0 0 100%/);
@@ -76,20 +84,24 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
 
   it('groups by rig with the rig as the heading and the machine beside it', () => {
     renderWall();
+
     const group = screen
       .getAllByTestId('ar-wall-group')
       .find((g) => g.dataset.groupKey === 'roamy:starter')!;
     const head = within(group).getByTestId('ar-wall-group-head');
+
     expect(head).toHaveTextContent('starter');
     expect(head).toHaveTextContent('Roamy');
   });
 
   it('plain tmux sessions sit under "No rig · <machine>" and say what they are', () => {
     renderWall();
+
     const group = screen
       .getAllByTestId('ar-wall-group')
       .find((g) => g.dataset.groupKey === 'roamy:~tmux')!;
     const head = within(group).getByTestId('ar-wall-group-head');
+
     expect(head).toHaveTextContent('No rig · Roamy');
     expect(within(group).getByTestId('ar-wall-summary')).toHaveTextContent('plain tmux sessions');
   });
@@ -105,9 +117,11 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
 
   it('idle teams are open by default (dense, like V1), and a group head still collapses it', () => {
     renderWall();
+
     const group = screen
       .getAllByTestId('ar-wall-group')
       .find((g) => g.dataset.groupKey === 'roamy:starter')!;
+
     expect(within(group).getAllByTestId('ar-seat-card').length).toBe(2);
     fireEvent.click(within(group).getByTestId('ar-wall-group-head'));
     expect(within(group).queryAllByTestId('ar-seat-card')).toHaveLength(0);
@@ -139,8 +153,11 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
   it('a card body opens the agent panel over the page, never the Agent page', () => {
     const ctx = ctxWith(undefined, null);
+
     render(<Wall ctx={ctx} />);
+
     const card = screen.getAllByTestId('ar-seat-card')[0]!;
+
     fireEvent.click(within(card).getByTestId('terminal-card-open'));
     expect(ctx.openAgentPanel).toHaveBeenCalledOnce();
     expect(ctx.openAgentPanel).toHaveBeenCalledWith({
@@ -152,8 +169,11 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
   it('⋯ → Documents opens the same panel on its Documents tab', () => {
     const ctx = ctxWith(undefined, null);
+
     render(<Wall ctx={ctx} />);
+
     const card = screen.getAllByTestId('ar-seat-card')[0]!;
+
     fireEvent.click(within(card).getByTestId('ar-card-more'));
     fireEvent.click(within(card).getByTestId('ar-card-docs'));
     expect(ctx.openAgentPanel).toHaveBeenCalledWith({
@@ -166,20 +186,26 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
   it('a rig pick scrolls to its group and outlines it; a repeat pick scrolls again', () => {
     const ctx = ctxWith();
+
     vi.useFakeTimers();
     try {
       const { rerender } = render(<Wall ctx={ctx} />);
+
       act(() => {
         vi.advanceTimersByTime(100);
       });
+
       const group = screen
         .getAllByTestId('ar-wall-group')
         .find((g) => g.dataset.groupKey === 'roamy:starter')!;
+
       expect(group).toHaveAttribute('data-focused');
       expect(
         screen.getAllByTestId('ar-wall-group').filter((g) => g.hasAttribute('data-focused'))
       ).toHaveLength(1);
+
       const first = vi.mocked(Element.prototype.scrollIntoView).mock.calls.length;
+
       expect(first).toBeGreaterThan(0);
       rerender(<Wall ctx={{ ...ctx, focusNonce: 1 }} />);
       act(() => {
@@ -193,8 +219,10 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
   it('scrolls the picked group clear of the shell bar plus this page header, measured (it wraps)', () => {
     const bar = document.createElement('header');
+
     bar.className = 'app-header';
     document.body.appendChild(bar);
+
     const real = HTMLElement.prototype.getBoundingClientRect;
     const spy = vi
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
@@ -207,15 +235,18 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
         return { ...real.call(this), height: h } as DOMRect;
       });
+
     vi.useFakeTimers();
     try {
       render(<Wall ctx={ctxWith()} />);
       act(() => {
         vi.advanceTimersByTime(100);
       });
+
       const group = screen
         .getAllByTestId('ar-wall-group')
         .find((g) => g.dataset.groupKey === 'roamy:starter')!;
+
       expect(group.style.scrollMarginTop).toBe('128px'); // 40 + 76 + 12
     } finally {
       vi.useRealTimers();
@@ -227,14 +258,17 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
   it('no pick means no outline; "Only this rig" narrows the Wall and a second click restores it', () => {
     const none = ctxWith(undefined, null);
     const { unmount } = render(<Wall ctx={none} />);
+
     expect(screen.queryByTestId('ar-only-rig')).toBeNull();
     expect(screen.getAllByTestId('ar-wall-group').some((g) => g.hasAttribute('data-focused'))).toBe(
       false
     );
     unmount();
     render(<Wall ctx={ctxWith()} />);
+
     const all = screen.getAllByTestId('ar-wall-group').length;
     const chip = screen.getByTestId('ar-only-rig');
+
     expect(chip).toHaveTextContent('Show only starter');
     expect(chip).not.toHaveTextContent('×');
     fireEvent.click(chip);
@@ -248,8 +282,11 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
   it('says so, and does not pretend, when the picked rig has no seat on the Wall', () => {
     const m2 = fleetMachine(snapshot('m2'));
+
     render(<Wall ctx={ctxWith([m2], 'm2:control')} />);
+
     const chip = screen.getByTestId('ar-only-rig');
+
     expect(chip).toBeDisabled();
     expect(chip).toHaveTextContent('not shown');
     expect(chip.title).toMatch(/no seat on the Wall/);
@@ -259,7 +296,9 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
     render(<Wall ctx={ctxWith(undefined, null)} />);
     expect(screen.queryByText('Group')).toBeNull();
     expect(screen.getAllByTestId('ar-page-head')).toHaveLength(1);
+
     const menu = screen.getByTestId('mock-menu-open').closest('.ar-mock-menu')!;
+
     expect(menu.querySelector('.ar-mock-menu-pop')).toHaveAttribute('hidden');
     expect(menu.querySelector('[data-testid="mock-note"]')).not.toBeNull();
     expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
@@ -267,8 +306,10 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
 
   it('the ⋯ popover closes on Escape and on a click elsewhere, and its tooltip goes while open', () => {
     render(<Wall ctx={ctxWith(undefined, null)} />);
+
     const card = screen.getAllByTestId('ar-seat-card')[0]!;
     const more = within(card).getByTestId('ar-card-more');
+
     expect(more.getAttribute('title')).toMatch(/Documents/);
     fireEvent.click(more);
     expect(more.getAttribute('title')).toBeNull();
@@ -283,6 +324,7 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
   it('the popover is not clipped: no overflow or max-height, a raised layer, anchored to the card corner', () => {
     const css = readFileSync(path.resolve(__dirname, '../../app/w2.css'), 'utf8');
     const rule = /\.ar-wall-actions\s*\{[^}]*\}/.exec(css)![0];
+
     expect(rule).not.toMatch(/overflow\s*:/);
     expect(rule).not.toMatch(/max-height\s*:/);
     expect(rule).toMatch(/z-index:\s*(\d{2,})/);
@@ -293,6 +335,7 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
   it('the sticky header sits under the shell bar (its published height), not behind it', () => {
     const css = readFileSync(path.resolve(__dirname, 'wall.css'), 'utf8');
     const rule = /\.ar-wall \.ar-page-head\s*\{[^}]*\}/.exec(css)![0];
+
     expect(rule).toMatch(/position:\s*sticky/);
     expect(rule).toMatch(/top:\s*var\(--ar-bar-h,\s*0px\)/);
   });
@@ -312,6 +355,7 @@ describe('wallTail: whole words or an em dash', () => {
   });
   it('cuts a long line at a whole word', () => {
     const t = wallTail([`${'word '.repeat(40)}tail`]);
+
     expect(t.endsWith('…')).toBe(true);
     expect(t.length).toBeLessThanOrEqual(121);
     expect(t).toMatch(/word…$/);
@@ -328,16 +372,19 @@ describe('machine order and card body', () => {
       ['m2', 'roamy'],
       groups.map((g) => g.key)
     );
+
     expect(out.map((m) => m.machineId)).toEqual(['m2', 'roamy']);
     for (const m of out) {
       const kinds = m.groups.map((g) =>
         ['stopped', 'asleep'].includes(groupState(g)) ? 'dead' : g.rig ? 'rig' : 'tmux'
       );
       const firstDead = kinds.indexOf('dead');
+
       if (firstDead >= 0) {
         expect(kinds.slice(firstDead).every((k) => k === 'dead')).toBe(true);
       }
     }
+
     expect(machineCounts('M2', out[0]!.groups)).toMatch(/^M2 · \d+ seats/);
   });
 
@@ -347,10 +394,13 @@ describe('machine order and card body', () => {
       tail: { lines: ['/metadata.json (+154 -0)', '~/dev/ad/brains (main)', '\u276f fix the bug'] },
     } as never;
     const b = cardBody(seat);
+
     expect(b.lastTyped).toBe('fix the bug');
     expect(b.folder).toBe('~/dev/ad/brains');
     expect(b.branch).toBe('main');
+
     const none = cardBody({ cwd: null, tail: { lines: ['/ (1)'] } } as never);
+
     expect(none.folder).toBeNull();
   });
 });

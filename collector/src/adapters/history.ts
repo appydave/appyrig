@@ -27,6 +27,7 @@ const SEAT_TITLE = /^[\w.-]+@[\w.-]+$/;
 export function seatOfFirstLine(line: string): string | null {
   try {
     const d = JSON.parse(line) as { type?: unknown; customTitle?: unknown };
+
     if (d.type !== 'custom-title' || typeof d.customTitle !== 'string') {
       return null;
     }
@@ -61,18 +62,23 @@ const STARTUP_HEADER_END = /and transcript path\.\s*/;
  */
 export function classifyPrompt(raw: string): { origin: SeatHistoryOrigin; text: string } {
   const t = raw.replace(/<\/?pasted_content[^>]*>/g, ' ').trim();
+
   if (/^From: \S+\s+To: \S+\s+Sent:/.test(t)) {
     return { origin: /---\s*Queue handoff: qitem-/.test(t) ? 'queue' : 'send', text: t };
   }
+
   if (/^\[OpenRig watchdog/.test(t)) {
     return { origin: 'system', text: t };
   }
+
   if (/^This session is being continued/.test(t)) {
     return { origin: 'compaction', text: t };
   }
+
   if (/^Base directory for this skill/.test(t)) {
     return { origin: 'skill', text: t };
   }
+
   if (/^\S+@\S+\s+OpenRig session identity:/.test(t)) {
     const end = STARTUP_HEADER_END.exec(t);
     const rest = end ? t.slice(end.index + end[0].length) : '';
@@ -105,25 +111,32 @@ interface Block {
 /** Prompts, replies and tool calls from a transcript's JSONL, oldest first. */
 export function parseTranscript(text: string): SeatHistoryEvent[] {
   const out: SeatHistoryEvent[] = [];
+
   for (const line of text.split('\n')) {
     if (!line.includes('"timestamp"')) {
       continue;
     }
+
     let d: { type?: string; timestamp?: string; message?: { content?: unknown } };
+
     try {
       d = JSON.parse(line);
     } catch {
       continue;
     }
+
     const at = d.timestamp;
+
     if (!at || Number.isNaN(Date.parse(at))) {
       continue;
     }
+
     const content = d.message?.content;
     const push = (kind: SeatHistoryEvent['kind'], t: string) => {
       if (kind === 'prompt') {
         const { origin, text } = classifyPrompt(t);
         const c = clean(text);
+
         // A startup prompt with nothing after its header is still an event: it is how the seat began.
         if (c || origin === 'startup') {
           out.push({ at: new Date(at).toISOString(), kind, text: c, origin });
@@ -131,11 +144,14 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
 
         return;
       }
+
       const c = clean(t);
+
       if (c) {
         out.push({ at: new Date(at).toISOString(), kind, text: c });
       }
     };
+
     if (d.type === 'user') {
       if (typeof content === 'string') {
         push('prompt', content);
@@ -171,11 +187,14 @@ export const TITLE_HEAD_LINES = 20;
  */
 export function seatOfHead(head: string, complete: boolean): string | null {
   const lines = head.split('\n');
+
   if (!complete) {
     lines.pop();
   } // the head was cut: its last line is partial
+
   for (const line of lines.slice(0, TITLE_HEAD_LINES)) {
     const seat = seatOfFirstLine(line);
+
     if (seat) {
       return seat;
     }
@@ -186,6 +205,7 @@ export function seatOfHead(head: string, complete: boolean): string | null {
 
 async function seatOfFile(path: string): Promise<string | null> {
   const fh = await open(path, 'r');
+
   try {
     const buf = Buffer.alloc(TITLE_HEAD_BYTES);
     const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
@@ -206,8 +226,10 @@ export const TAIL_EVENT_BYTES = 256 * 1024;
  */
 export function lastEventMs(tail: string): number | null {
   let best: number | null = null;
+
   for (const m of tail.matchAll(/"timestamp":"([^"]{10,40})"/g)) {
     const t = Date.parse(m[1]!);
+
     if (!Number.isNaN(t) && (best === null || t > best)) {
       best = t;
     }
@@ -218,6 +240,7 @@ export function lastEventMs(tail: string): number | null {
 
 async function lastEventOfFile(path: string, size: number): Promise<number | null> {
   const fh = await open(path, 'r');
+
   try {
     const len = Math.min(size, TAIL_EVENT_BYTES);
     const buf = Buffer.alloc(len);
@@ -258,35 +281,45 @@ export class TranscriptIndex {
   /** seat → its transcripts (several when a seat was rebuilt or resumed). Empty without Claude Code. */
   async scan(knownSeats: Set<string>): Promise<Map<string, TranscriptFile[]>> {
     const bySeat = new Map<string, TranscriptFile[]>();
+
     if (knownSeats.size === 0) {
       return bySeat;
     }
+
     let dirs: string[];
+
     try {
       dirs = await readdir(this.projectsDir);
     } catch {
       return bySeat; // no Claude Code on this machine
     }
+
     for (const dir of dirs) {
       let names: string[];
+
       try {
         names = (await readdir(join(this.projectsDir, dir))).filter((n) => n.endsWith('.jsonl'));
       } catch {
         continue;
       }
+
       for (const name of names) {
         const path = join(this.projectsDir, dir, name);
+
         try {
           const st = await stat(path);
           let info = this.files.get(path);
+
           if (!info || info.size !== st.size || info.mtimeMs !== st.mtimeMs) {
             // A title never changes once found. A file without one is looked at again when it changes:
             // a new transcript can be seen before its title row is written.
             const seat = info?.seat ?? (await seatOfFile(path));
             const last = seat ? await lastEventOfFile(path, st.size) : null;
+
             info = { seat, size: st.size, mtimeMs: st.mtimeMs, lastEventMs: last };
             this.files.set(path, info);
           }
+
           if (info.seat && knownSeats.has(info.seat)) {
             const f = {
               path,
@@ -294,6 +327,7 @@ export class TranscriptIndex {
               mtimeMs: info.mtimeMs,
               lastEventMs: info.lastEventMs,
             };
+
             bySeat.set(info.seat, [...(bySeat.get(info.seat) ?? []), f]);
           }
         } catch {
@@ -340,26 +374,33 @@ export class HistoryReader {
     if (knownSeats.size === 0) {
       return [];
     }
+
     const bySeat = await this.index.scan(knownSeats);
+
     // F3: the newest event across a seat's transcripts; a seat whose files hold none is left out (null).
     this.latest = new Map();
     for (const [seat, list] of bySeat) {
       const times = list.map((f) => f.lastEventMs).filter((t): t is number => t !== null);
+
       if (times.length) {
         this.latest.set(seat, Math.max(...times));
       }
     }
 
     const out: PendingHistory[] = [];
+
     for (const [seat, list] of bySeat) {
       const sig = list
         .map((f) => `${f.path}:${f.size}:${f.mtimeMs}`)
         .sort()
         .join('|');
+
       if (this.sent.get(seat) === sig) {
         continue;
       }
+
       const events: SeatHistoryEvent[] = [];
+
       for (const f of list) {
         try {
           events.push(...parseTranscript(await readFile(f.path, 'utf8')));
@@ -367,8 +408,11 @@ export class HistoryReader {
           // unreadable this round; the next round retries
         }
       }
+
       events.sort((a, b) => a.at.localeCompare(b.at));
+
       const truncated = events.length > HISTORY_MAX_EVENTS;
+
       out.push({
         history: {
           machineId: this.machineId,

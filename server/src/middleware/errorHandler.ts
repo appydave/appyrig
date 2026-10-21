@@ -17,6 +17,7 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
 
     return;
   }
+
   const statusCode = err instanceof AppError ? err.statusCode : 500;
   const isOperational = err instanceof AppError ? err.isOperational : false;
 

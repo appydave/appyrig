@@ -41,6 +41,7 @@ describe('v15 UI-A: figures', () => {
 
   it('renders context as monospace `12%` and `119k`, or dashes', () => {
     const { rerender } = render(<ContextLine pct={12} tokens={119_400} />);
+
     expect(screen.getByTestId('seat-context').className).toMatch(/\bmono\b/);
     expect(screen.getByTestId('seat-context-pct').textContent).toBe('12%');
     expect(screen.getByTestId('seat-context-tokens').textContent).toBe('119k');
@@ -51,7 +52,9 @@ describe('v15 UI-A: figures', () => {
 
   it('renders the mailbox address in monospace', () => {
     render(<Address id="ylo-lead@ylo-d10" />);
+
     const a = screen.getByTestId('seat-address');
+
     expect(a.textContent).toBe('ylo-lead@ylo-d10');
     expect(a.className).toMatch(/\bmono\b/);
   });
@@ -68,7 +71,9 @@ describe('v15 UI-A: harness', () => {
 
   it('draws a small mark with the harness word', () => {
     render(<HarnessMark runtime="codex" />);
+
     const m = screen.getByTestId('seat-harness');
+
     expect(m.getAttribute('data-harness')).toBe('codex');
     expect(m.textContent).toBe('Codex');
     expect(m.querySelector('svg')).not.toBeNull();
@@ -83,6 +88,7 @@ const secure = (writeText: (t: string) => Promise<void>) => {
 describe('v15 UI-A: copy attach', () => {
   it('copies the quoted local line and sends nothing', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
+
     secure(writeText);
     render(<CopyAttach session="ylo-lead@ylo-d10" ssh={null} />);
     await act(async () => {
@@ -93,6 +99,7 @@ describe('v15 UI-A: copy attach', () => {
 
   it('wraps the line in ssh for another machine', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
+
     secure(writeText);
     render(<CopyAttach session="ylo-lead@ylo-d10" ssh="david@m2" />);
     await act(async () => {

@@ -51,6 +51,7 @@ export default function FollowWork({
 }: Props) {
   const [open, setOpen] = useState<Record<string, HandoffGetOutput | 'loading' | string>>({});
   const back = useRef<HTMLButtonElement>(null);
+
   useEffect(() => back.current?.focus(), []);
 
   // r1 LOW-3: closing hands keyboard focus back to the panel's "Follow this work" button.
@@ -60,7 +61,9 @@ export default function FollowWork({
       document.querySelector<HTMLElement>('[data-testid="handoff-follow"]')?.focus()
     );
   };
+
   const closeRef = useRef(close);
+
   closeRef.current = close;
 
   // Esc goes back to the handoff panel only (capture, before the panel's own Esc closes it).
@@ -69,14 +72,17 @@ export default function FollowWork({
     if (!keys) {
       return;
     }
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented || isTextEntry(e.target)) {
         return;
       }
+
       e.preventDefault();
       e.stopPropagation();
       closeRef.current();
     };
+
     window.addEventListener('keydown', onKey, true);
 
     return () => window.removeEventListener('keydown', onKey, true);
@@ -88,22 +94,27 @@ export default function FollowWork({
 
       return;
     }
+
     const cached = cache.get(id);
+
     if (cached) {
       setOpen((o) => ({ ...o, [id]: cached }));
 
       return;
     }
+
     if (!socket) {
       setOpen((o) => ({ ...o, [id]: 'No hub connection to read the message.' }));
 
       return;
     }
+
     setOpen((o) => ({ ...o, [id]: 'loading' }));
     void callVerb<HandoffGetOutput>(socket, 'handoff.get', { machine: machineId, id }).then((a) => {
       if (a.ok && a.value.bodyStatus === 'present') {
         cache.set(id, a.value);
       }
+
       setOpen((o) =>
         id in o
           ? {

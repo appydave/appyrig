@@ -7,11 +7,13 @@ import type { FleetSocket } from '../domain/fleet/useFleet.js';
 // A real, never-connected socket: the pages show their empty state, which is all a scroll test needs.
 function renderApp() {
   const socket: FleetSocket = io('http://localhost:1', { autoConnect: false });
+
   render(<App getSocket={() => socket} />);
 }
 
 // jsdom has no layout: a window whose scroll position the test can set and read.
 let y = 0;
+
 beforeEach(() => {
   y = 0;
   history.replaceState(null, '', '/');
@@ -29,6 +31,7 @@ const scrollTo = (to: number) => {
     window.dispatchEvent(new Event('scroll'));
   });
 };
+
 const flush = () => act(async () => void (await new Promise((r) => setTimeout(r, 50))));
 
 describe('V55: scroll across pages', () => {
@@ -47,6 +50,7 @@ describe('V55: scroll across pages', () => {
       });
       await flush();
     }
+
     expect(window.location.search).toContain('wall');
     expect(y).toBe(640);
     // Forward, Forward: the Flow page again, left at 90
@@ -56,6 +60,7 @@ describe('V55: scroll across pages', () => {
       });
       await flush();
     }
+
     expect(window.location.search).toContain('flow');
     expect(y).toBe(90);
   });

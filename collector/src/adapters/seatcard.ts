@@ -15,13 +15,16 @@ const short = (n: string) => n.slice(n.lastIndexOf(':') + 1);
 
 export function keySkillsOf(allow: string[], listed: string[]): string[] {
   const out: string[] = [];
+
   for (const want of allow) {
     const hit =
       listed.find((n) => n === want) ??
       (want.includes(':') ? undefined : listed.find((n) => short(n) === want));
+
     if (hit && !out.includes(hit)) {
       out.push(hit);
     }
+
     if (out.length === KEY_SKILLS_MAX) {
       break;
     }
@@ -43,6 +46,7 @@ export function withSeatCards<T extends { id: string; rig: string | null }>(
     if (s.rig === null) {
       return s;
     }
+
     // QA LOW-3, r1 LOW-1: any scheme (`path:`, `local:`, `builtin:terminal`) ends in the agent's name.
     const ref = input.agentRefs.get(s.id)?.replace(/^[a-z][\w-]*:/i, '');
     const out: T & { agentRole?: string | null; keySkills?: string[] } = {
@@ -51,6 +55,7 @@ export function withSeatCards<T extends { id: string; rig: string | null }>(
     };
     const allow = Object.hasOwn(input.config, s.id) ? input.config[s.id]?.keySkills : undefined;
     const listed = input.names.get(s.id);
+
     if (allow?.length && listed) {
       out.keySkills = keySkillsOf(allow, listed);
     }
@@ -70,19 +75,23 @@ export function seatConfigReader(
 
   return () => {
     let m = 0;
+
     try {
       m = statSync(file).mtimeMs;
     } catch {
       m = 0;
     }
+
     if (m === mtime) {
       return value;
     }
+
     mtime = m;
     value = {};
     if (m === 0) {
       return value;
     }
+
     try {
       value = AppConfigSchema.parse(JSON.parse(readFileSync(file, 'utf8'))).seats ?? {};
     } catch (e) {

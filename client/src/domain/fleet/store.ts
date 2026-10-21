@@ -21,6 +21,7 @@ export const initialFleetState: FleetState = { machines: {}, received: false, er
  */
 export function clampTails(raw: unknown): unknown {
   const machines = (raw as { machines?: unknown })?.machines;
+
   if (!Array.isArray(machines)) {
     return raw;
   }
@@ -29,6 +30,7 @@ export function clampTails(raw: unknown): unknown {
     ...(raw as object),
     machines: machines.map((m) => {
       const seats = m?.snapshot?.seats;
+
       if (!Array.isArray(seats)) {
         return m;
       }
@@ -50,6 +52,7 @@ export function clampTails(raw: unknown): unknown {
 
 export function applyFleetUpdate(state: FleetState, raw: unknown): FleetState {
   const parsed = FleetUpdateSchema.safeParse(clampTails(raw));
+
   if (!parsed.success) {
     const detail = parsed.error.issues
       .slice(0, 3)
@@ -59,8 +62,10 @@ export function applyFleetUpdate(state: FleetState, raw: unknown): FleetState {
     // Honest error: keep the last good fleet on screen and say the update was refused.
     return { ...state, error: `refused a fleet update (${detail})` };
   }
+
   const update = parsed.data;
   const machines: Record<string, FleetMachine> = update.full ? {} : { ...state.machines };
+
   for (const m of update.machines) {
     machines[m.machine.id] = m;
   }

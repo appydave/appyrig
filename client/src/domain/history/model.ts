@@ -66,9 +66,11 @@ export function rigOfAddress(fm: FleetMachine | undefined, raw: string | null): 
   if (!raw) {
     return null;
   }
+
   if (fm) {
     return endpointRig(fm, raw);
   }
+
   const at = raw.indexOf('@');
 
   return at >= 0 ? raw.slice(at + 1) : null;

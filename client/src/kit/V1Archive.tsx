@@ -18,26 +18,31 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
   // A screen is a row; its pictures are the consecutive slides sharing that row.
   const firstOfRow = (i: number) => {
     let j = i;
+
     while (j > 0 && slides[j - 1]!.row.row === slides[i]!.row.row) {
       j--;
     }
 
     return j;
   };
+
   const prevScreen = (i: number) => (firstOfRow(i) === 0 ? 0 : firstOfRow(firstOfRow(i) - 1));
   const nextScreen = (i: number) => {
     let j = i;
+
     while (j < last && slides[j + 1]!.row.row === slides[i]!.row.row) {
       j++;
     }
 
     return Math.min(last, j + 1);
   };
+
   const samePicture = (i: number, d: number) =>
     slides[i + d] && slides[i + d]!.row.row === slides[i]!.row.row ? i + d : i;
 
   useEffect(() => {
     let live = true;
+
     fetch('/api/v1-archive', { credentials: 'same-origin' })
       .then((r) => (r.ok ? r.json() : { files: [] }))
       .then((j: { files?: unknown }) => {
@@ -58,6 +63,7 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
       if (e.key === 'Tab') {
         return;
       }
+
       // This layer owns the keyboard while it is open (F, L, ? and friends stay quiet).
       e.stopPropagation();
       if (e.key === 'Escape') {
@@ -77,6 +83,7 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
         setAt((i) => samePicture(i, 1));
       }
     };
+
     window.addEventListener('keydown', onKey, true);
 
     return () => window.removeEventListener('keydown', onKey, true);

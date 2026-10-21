@@ -22,6 +22,7 @@ export function v1ArchiveRouter(dataDir: string | undefined): Router {
 
   router.get('/api/v1-archive', (_req, res) => {
     let files: string[] = [];
+
     if (folder && existsSync(folder)) {
       try {
         files = readdirSync(folder)
@@ -31,22 +32,27 @@ export function v1ArchiveRouter(dataDir: string | undefined): Router {
         files = [];
       }
     }
+
     res.json({ files });
   });
 
   router.get('/api/v1-archive/:file', (req, res) => {
     const name = req.params.file;
+
     if (!folder || !V1_ARCHIVE_NAME.test(name)) {
       res.status(404).json({ status: 'error', error: 'Not found' });
 
       return;
     }
+
     const full = resolve(folder, name);
+
     if (!full.startsWith(folder + sep) || !existsSync(full)) {
       res.status(404).json({ status: 'error', error: 'Not found' });
 
       return;
     }
+
     res.type('image/png').sendFile(join(folder, name), { dotfiles: 'deny' }, (err) => {
       if (err && !res.headersSent) {
         res.status(404).json({ status: 'error', error: 'Not found' });

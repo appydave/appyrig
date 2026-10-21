@@ -80,6 +80,7 @@ export function newerSet(a: ShownSkills, b: ShownSkills | null): boolean {
   if (!b) {
     return true;
   }
+
   if (a.isInitial !== b.isInitial) {
     return a.isInitial;
   }
@@ -102,6 +103,7 @@ export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkil
       startedAt: l.at,
     };
   }
+
   const names = [...new Set([...cur.names, ...l.names])];
 
   return {
@@ -120,6 +122,7 @@ export function listingOfLine(line: string): SkillListing | null {
   if (!line.includes('"skill_listing"')) {
     return null;
   }
+
   try {
     const d = JSON.parse(line) as {
       type?: unknown;
@@ -127,12 +130,15 @@ export function listingOfLine(line: string): SkillListing | null {
       attachment?: { type?: unknown; skillCount?: unknown; isInitial?: unknown; names?: unknown };
     };
     const a = d.attachment;
+
     if (d.type !== 'attachment' || !a || a.type !== 'skill_listing') {
       return null;
     }
+
     if (typeof d.timestamp !== 'string' || Number.isNaN(Date.parse(d.timestamp))) {
       return null;
     }
+
     const names = Array.isArray(a.names)
       ? a.names.filter((n): n is string => typeof n === 'string' && n.length > 0)
       : [];
@@ -166,12 +172,15 @@ export class ListingTracker {
 
   async latest(file: TranscriptFile): Promise<{ listing: ShownSkills; count: number } | null> {
     let s = this.state.get(file.path);
+
     if (!s || file.size < s.offset) {
       s = { offset: 0, latest: null, count: 0 };
     }
+
     if (file.size > s.offset) {
       s = await this.scan(file.path, s, file.size);
     }
+
     this.state.set(file.path, s);
 
     return s.latest ? { listing: s.latest, count: s.count } : null;
@@ -180,29 +189,39 @@ export class ListingTracker {
   private async scan(path: string, from: ScanState, size: number): Promise<ScanState> {
     const s = { ...from };
     const fh = await open(path, 'r');
+
     try {
       let pos = s.offset;
       let carry = Buffer.alloc(0);
+
       while (pos < size) {
         const buf = Buffer.alloc(Math.min(BLOCK, size - pos));
         const { bytesRead } = await fh.read(buf, 0, buf.length, pos);
+
         if (bytesRead === 0) {
           break;
         }
+
         pos += bytesRead;
+
         let chunk = Buffer.concat([carry, buf.subarray(0, bytesRead)]);
         let nl = chunk.indexOf(10);
+
         while (nl !== -1) {
           const found = listingOfLine(chunk.subarray(0, nl).toString('utf8'));
+
           if (found) {
             s.latest = foldListing(s.latest, found);
             s.count += 1;
           }
+
           chunk = chunk.subarray(nl + 1);
           nl = chunk.indexOf(10);
         }
+
         carry = chunk;
       }
+
       // Only whole lines count as read: an unfinished last line is read again next time.
       s.offset = pos - carry.length;
     } finally {
@@ -234,12 +253,15 @@ export function classifySkills(names: string[], places: SkillPlaces): LoadoutSki
   const pluginShort = new Set(names.filter((n) => n.includes(':')).map(shortSkillName));
   const placesOf = (short: string): SkillSource[] => {
     const out: SkillSource[] = [];
+
     if (places.cwd.has(short)) {
       out.push(places.tracked.has(short) ? 'repo' : 'role');
     }
+
     if (places.personal.has(short)) {
       out.push('personal');
     }
+
     if (pluginShort.has(short)) {
       out.push('plugin');
     }
@@ -252,6 +274,7 @@ export function classifySkills(names: string[], places: SkillPlaces): LoadoutSki
     const short = shortSkillName(name);
     const where = placesOf(short);
     let source: SkillSource;
+
     if (colon > 0) {
       source = 'plugin';
     } else if (places.cwd.has(name)) {
@@ -261,6 +284,7 @@ export function classifySkills(names: string[], places: SkillPlaces): LoadoutSki
     } else {
       source = places.cwdKnown === false ? 'unplaced' : 'builtin';
     }
+
     // A plugin skill is "also in" a plugin only when it is a different plugin's skill of that name.
     const otherPlugins =
       source === 'plugin' &&
@@ -280,11 +304,13 @@ export function classifySkills(names: string[], places: SkillPlaces): LoadoutSki
 export async function skillFolders(dir: string): Promise<Set<string>> {
   const out = new Set<string>();
   let names: string[];
+
   try {
     names = await readdir(dir);
   } catch {
     return out;
   }
+
   for (const n of names) {
     try {
       if ((await stat(join(dir, n, 'SKILL.md'))).isFile()) {
@@ -309,13 +335,17 @@ export async function trackedSkills(
   cwd: string
 ): Promise<{ isRepo: boolean; tracked: Set<string> }> {
   const tracked = new Set<string>();
+
   try {
     const r = await exec('git', ['-C', cwd, 'ls-files', '-z', '--', '.claude/skills']);
+
     if (r.code !== 0) {
       return { isRepo: false, tracked };
     }
+
     for (const p of r.stdout.split('\0')) {
       const m = /^\.claude\/skills\/([^/]+)\//.exec(p);
+
       if (m) {
         tracked.add(m[1]!);
       }
@@ -344,6 +374,7 @@ async function readDocFile(
 ): Promise<{ path: string; text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
   let real: string;
   let within: string;
+
   try {
     real = await realpath(spot.path);
     within = await realpath(spot.within);
@@ -353,14 +384,18 @@ async function readDocFile(
   } catch {
     return null; // absent, a broken link, or no permission
   }
+
   let fh;
+
   try {
     fh = await open(real, 'r');
+
     const st = await fh.stat();
     const want = Math.min(st.size, maxBytes);
     const buf = Buffer.alloc(want);
     const { bytesRead } = await fh.read(buf, 0, want, 0);
     const slice = buf.subarray(0, bytesRead);
+
     if (slice.includes(0)) {
       return null;
     } // binary
@@ -388,6 +423,7 @@ async function doc(
 ): Promise<SeatDoc> {
   for (const spot of spots) {
     const r = await readDocFile(spot);
+
     if (r) {
       return {
         id,
@@ -432,6 +468,7 @@ function cultureName(spec: SpecInfo): string {
  */
 async function roleSpot(agentDir: string): Promise<DocSpot> {
   let rel = 'guidance/role.md';
+
   try {
     const doc = OpenRig.AgentSpecSchema.safeParse(
       parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8'))
@@ -440,6 +477,7 @@ async function roleSpot(agentDir: string): Promise<DocSpot> {
     const hit =
       files.find((f) => f.orientation === 'role') ??
       files.find((f) => basename(f.path) === 'role.md');
+
     if (hit && !hit.path.split('/').includes('..')) {
       rel = hit.path;
     }
@@ -542,21 +580,27 @@ export async function readTopologyDocs(
   if (!topologyRoot || !seat.rig) {
     return [];
   }
+
   const pod = seat.logicalId?.includes('.') ? seat.logicalId.split('.')[0]! : null;
   const out: TopologyDoc[] = [];
+
   for (const node of OpenRig.topologyTrace(seat.rig, pod, topologySeatName(seat))) {
     const dir = join(topologyRoot, OpenRig.topologyDir(node));
+
     for (const name of OpenRig.TOPOLOGY_CHAIN_FILES) {
       if (name === 'RECAP.md' && node.altitude !== 'seat') {
         continue;
       }
+
       const r = await readDocFile(
         { path: join(dir, name), within: topologyRoot },
         TOPOLOGY_DOC_MAX_BYTES
       );
+
       if (!r) {
         continue;
       }
+
       out.push({
         altitude: node.altitude,
         name,
@@ -583,11 +627,14 @@ export function memberOf(
   const [podId, memberId] = logicalId?.split('.') ?? [];
   const pod = spec?.spec?.pods.find((p) => p.id === podId);
   const m = pod?.members.find((x) => x.id === memberId);
+
   if (!pod || !m) {
     return null;
   }
+
   const { env, ...rest } = m;
   const out: MemberView = { ...redactDeep(rest), pod: pod.id };
+
   if (env) {
     out.envNames = Object.keys(env).slice(0, MEMBER_ENV_NAMES_MAX);
   }
@@ -603,7 +650,9 @@ export async function agentSpecOf(
   if (!agentDir) {
     return null;
   }
+
   let parsed;
+
   try {
     parsed = OpenRig.AgentSpecSchema.safeParse(
       parse(await readFile(join(agentDir, 'agent.yaml'), 'utf8'))
@@ -611,9 +660,11 @@ export async function agentSpecOf(
   } catch {
     return null;
   }
+
   if (!parsed.success) {
     return null;
   }
+
   const { profiles, ...rest } = parsed.data;
 
   return redactDeep({
@@ -696,7 +747,9 @@ export class LoadoutReader {
     if (this.now().getTime() - this.lastScan < this.ttlMs) {
       return null;
     }
+
     this.lastScan = this.now().getTime();
+
     const claude = seats.filter((s) => s.runtime === 'claude-code');
     const transcripts = await this.index.scan(new Set(claude.map((s) => s.id)));
     const personal = await skillFolders(join(this.home, '.claude', 'skills'));
@@ -706,12 +759,14 @@ export class LoadoutReader {
     >();
     const placesFor = (cwd: string) => {
       let p = byCwd.get(cwd);
+
       if (!p) {
         p = (async () => {
           const exists = await stat(cwd).then(
             (st) => st.isDirectory(),
             () => false
           );
+
           if (!exists) {
             return {
               places: {
@@ -724,6 +779,7 @@ export class LoadoutReader {
               exists,
             };
           }
+
           const [dirs, git] = await Promise.all([
             skillFolders(join(cwd, '.claude', 'skills')),
             trackedSkills(this.exec, cwd),
@@ -745,6 +801,7 @@ export class LoadoutReader {
     const sigs = new Map<string, string>();
     const counts = new Map<string, number | null>();
     const names = new Map<string, string[]>();
+
     for (const seat of seats) {
       const spec = seat.rig ? specs.get(seat.rig) : undefined;
       const member = memberOf(spec, seat.logicalId);
@@ -763,6 +820,7 @@ export class LoadoutReader {
         agentSpec: await agentSpecOf(agentDirs.get(seat.id), member?.profile ?? null),
       };
       let loadout: SeatLoadout;
+
       if (seat.runtime !== 'claude-code') {
         loadout = {
           ...base,
@@ -776,12 +834,15 @@ export class LoadoutReader {
         };
       } else {
         let best: { listing: ShownSkills; count: number; path: string } | null = null;
+
         for (const f of transcripts.get(seat.id) ?? []) {
           try {
             const r = await this.tracker.latest(f);
+
             if (!r) {
               continue;
             }
+
             if (newerSet(r.listing, best?.listing ?? null)) {
               best = { ...r, path: f.path };
             }
@@ -789,6 +850,7 @@ export class LoadoutReader {
             // unreadable this round
           }
         }
+
         const where = seat.cwd ? await placesFor(seat.cwd) : null;
         const places = where?.places ?? {
           cwd: new Set<string>(),
@@ -796,6 +858,7 @@ export class LoadoutReader {
           personal,
           cwdKnown: false,
         };
+
         loadout = {
           ...base,
           status: best ? 'ok' : 'no-listing',
@@ -817,6 +880,7 @@ export class LoadoutReader {
           ...given,
         };
       }
+
       counts.set(seat.id, loadout.listing?.skillCount ?? null);
       if (loadout.status === 'ok') {
         names.set(
@@ -824,15 +888,19 @@ export class LoadoutReader {
           loadout.skills.map((k) => k.name)
         );
       }
+
       const sig = createHash('sha1')
         .update(JSON.stringify({ ...loadout, collectedAt: '' }))
         .digest('hex');
+
       if (this.sent.get(seat.id) === sig) {
         continue;
       }
+
       out.push(loadout);
       sigs.set(seat.id, sig);
     }
+
     this.counts = counts;
     this.names = names;
     if (out.length === 0) {

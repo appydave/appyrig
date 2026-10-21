@@ -9,10 +9,12 @@ async function open(page: Page) {
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
   for (const id of ['ar-welcome-dismiss']) {
     const b = page.getByTestId(id);
+
     if (await b.count()) {
       await b.click();
     }
   }
+
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
 }
 
@@ -35,6 +37,7 @@ test.describe('v2 shell on narrow windows', () => {
     }) => {
       await page.setViewportSize({ width, height: 800 });
       await open(page);
+
       const r = await page.evaluate(() => {
         const links = [...document.querySelectorAll<HTMLElement>('.ar-nav-page')];
         const pages = document.querySelector<HTMLElement>('.ar-nav-pages')!;
@@ -50,11 +53,14 @@ test.describe('v2 shell on narrow windows', () => {
           overflowX: document.documentElement.scrollWidth > window.innerWidth,
         };
       });
+
       expect(r.n).toBeGreaterThan(3);
       expect(r.clipped, JSON.stringify(r)).toBe(0);
       expect(r.pagesClipped, JSON.stringify(r)).toBe(false);
       expect(r.overflowX, `${width}: no sideways scroll`).toBe(false);
+
       const top = await contentTop(page);
+
       console.log(`shell ${width}px: content starts at y=${top}`);
       expect(top, `${width}: content starts at y=${top}`).toBeLessThanOrEqual(maxTop);
     });
@@ -67,6 +73,7 @@ test.describe('v2 explainer class', () => {
     await open(page);
     await page.evaluate(() => {
       const p = document.createElement('p');
+
       p.className = 'ar-explainer';
       p.setAttribute('data-testid', 'probe-explainer');
       p.textContent = 'explainer';
@@ -89,6 +96,7 @@ test.describe('v2 shell with the agent panel open', () => {
       await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
       await page.getByTestId('terminal-card-open').first().click();
       await expect(page.getByTestId('agent-panel')).toBeVisible();
+
       const m = await page.evaluate(() => {
         const left = document
           .querySelector('[data-testid="agent-panel"]')!
@@ -104,6 +112,7 @@ test.describe('v2 shell with the agent panel open', () => {
 
         return { left, maxRight: Math.max(...rights), main };
       });
+
       expect(m.maxRight, JSON.stringify(m)).toBeLessThanOrEqual(m.left);
       expect(m.main, `page width ${m.main}`).toBeGreaterThanOrEqual(500);
       // the panel closes: the saved pin is back

@@ -22,6 +22,7 @@ import {
 } from '../../domain/needs-you/model.js';
 
 type Pretend = 'Approved' | 'Dismissed' | 'Snoozed' | 'Replied';
+
 const ACTIONS: { label: string; done: Pretend; kinds?: NeedItem['kind'][] }[] = [
   { label: 'Approve', done: 'Approved', kinds: ['action', 'gate', 'approval'] },
   { label: 'Reply', done: 'Replied' },
@@ -35,6 +36,7 @@ const ACTIONS: { label: string; done: Pretend; kinds?: NeedItem['kind'][] }[] = 
  */
 function ItemActions({ item }: { item: NeedItem }) {
   const [done, setDone] = useState<Pretend | null>(null);
+
   if (done) {
     return (
       <span className="ny-actions" data-testid="ny-pretend">
@@ -177,6 +179,7 @@ function useGates(ctx: PageProps['ctx']): GatesState {
   );
   const sig = targets.map((t) => `${t.machine}:${t.rig}@${t.at}`).join('|');
   const { getSocket } = ctx;
+
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), GATES_REFRESH_MS);
 
@@ -185,6 +188,7 @@ function useGates(ctx: PageProps['ctx']): GatesState {
   useEffect(() => {
     let live = true;
     const socket = getSocket();
+
     void Promise.all(
       targets.map((t) =>
         callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: t.machine, rig: t.rig }).then(
@@ -195,6 +199,7 @@ function useGates(ctx: PageProps['ctx']): GatesState {
       if (!live) {
         return;
       }
+
       setState({
         byRig: Object.fromEntries(rows.filter((r) => r.gates).map((r) => [r.key, r.gates!])),
         unread: rows.filter((r) => !r.gates).length,

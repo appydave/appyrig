@@ -40,16 +40,20 @@ export function useVerb<T>(
 ): VerbState<T> {
   const [state, setState] = useState<VerbState<T>>({ phase: 'loading' });
   const key = JSON.stringify(input);
+
   useEffect(() => {
     if (!verb) {
       return;
     }
+
     let live = true;
+
     setState({ phase: 'loading' });
     void callVerb<T>(getSocket(), verb, JSON.parse(key)).then((a) => {
       if (!live) {
         return;
       }
+
       setState(
         a.ok ? { phase: 'ok', value: a.value } : { phase: 'refused', message: a.error.message }
       );
@@ -94,10 +98,13 @@ export function pick<T>(
   if (s.phase === 'loading') {
     return { kind: 'loading' };
   }
+
   if (s.phase === 'refused') {
     return { kind: 'sample', why: `the hub refused the read: ${s.message}` };
   }
+
   const ms = machines(s.value);
+
   if (!ms.some((m) => m.status === 'ok')) {
     return {
       kind: 'sample',
@@ -145,6 +152,7 @@ export function Coverage<T>({
   if (src.kind === 'loading') {
     return null;
   }
+
   if (src.kind === 'sample') {
     return (
       <div className="cov cov-sample" data-testid="sample-why">
@@ -159,6 +167,7 @@ export function Coverage<T>({
       </div>
     );
   }
+
   const hasMore = src.notes.length > 0 || !!details;
 
   return (
@@ -198,16 +207,21 @@ export function agoFrom(iso: string | null, now: number): string {
   if (!iso) {
     return 'unknown';
   }
+
   const m = Math.floor((now - Date.parse(iso)) / 60_000);
+
   if (Number.isNaN(m)) {
     return 'unknown';
   }
+
   if (m < 1) {
     return 'just now';
   }
+
   if (m < 60) {
     return `${m}m ago`;
   }
+
   if (m < 1440) {
     return `${Math.floor(m / 60)}h ${m % 60}m ago`;
   }

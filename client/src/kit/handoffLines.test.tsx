@@ -49,6 +49,7 @@ describe('width steps are absolute counts', () => {
     // the old formula made the busiest pair of every rig fat, however few handoffs it had
     const counts = [3, 2, 1];
     const max = Math.max(...counts);
+
     expect(counts[0]! / max).toBe(1);
     expect(lineStep(counts[0]!)).toBe('thin');
     expect(lineWidth(3)).toBe(LINE_WIDTH.thin);
@@ -76,6 +77,7 @@ describe('mergePairs: one entry per unordered pair', () => {
 
   it('merges both directions with the split kept, and sums the marks', () => {
     const pairs = mergePairs(edges);
+
     expect(pairs.map((p) => `${p.a}-${p.b}`)).toEqual(['a-b', 'a-c', 'a-d']);
     expect(pairs[0]).toEqual({
       a: 'a',
@@ -92,6 +94,7 @@ describe('mergePairs: one entry per unordered pair', () => {
 
   it('planned only when the pair has no handoff at all', () => {
     const pairs = mergePairs(edges);
+
     expect(pairs.find((p) => p.b === 'd')).toMatchObject({ planned: true, total: 0 });
     // a planned edge on a pair that also has real handoffs is not dotted
     expect(
@@ -143,6 +146,7 @@ describe('status as marks', () => {
         <LeftOpenBadgeSvg x={30} y={10} n={0} />
       </svg>
     );
+
     expect(container.querySelector('.hl-badge')).toBeNull();
     rerender(
       <svg>
@@ -166,6 +170,7 @@ describe('status as marks', () => {
       { fromPod: 'dev', toPod: 'review', count: 5 },
       { fromPod: 'dev', toPod: 'dev', count: 20 },
     ]);
+
     expect(rails).toHaveLength(2);
     expect(rails[0]).toMatchObject({
       a: 'dev',
@@ -190,6 +195,7 @@ describe('calm / lit / dimmed', () => {
 
   it('focusing a line lights only that line (whichever way round its ends are given)', () => {
     const f = lineFocusId('a', 'b');
+
     expect(lineFocusState(f, 'a', 'b')).toBe('lit');
     expect(lineFocusState(f, 'b', 'a')).toBe('lit');
     expect(lineFocusState(f, 'a', 'c')).toBe('dimmed');
@@ -197,8 +203,11 @@ describe('calm / lit / dimmed', () => {
 
   it('useLineFocus: pointer hover and keyboard focus both light, leaving and blur both clear', () => {
     const { result } = renderHook(() => useLineFocus());
+
     expect(result.current.stateOf('a', 'b')).toBe('faint');
+
     const p = result.current.focusProps('a');
+
     act(() => p.onPointerEnter());
     expect(result.current.stateOf('a', 'b')).toBe('lit');
     expect(result.current.stateOf('c', 'd')).toBe('dimmed');
@@ -234,6 +243,7 @@ describe('calm / lit / dimmed', () => {
 
   it('the css is calm by default: a faint ink, lit at full, dimmed nearly gone, no glow, dotted for planned', () => {
     const css = readFileSync(path.resolve(__dirname, 'handoffLines.css'), 'utf8');
+
     expect(css).toMatch(/\.hl-faint \{\s*stroke-opacity: 0\.32/);
     expect(css).toMatch(/\.hl-lit \{\s*stroke-opacity: 1/);
     expect(css).toMatch(/\.hl-dimmed \{\s*stroke-opacity: 0\.1/);
@@ -262,10 +272,13 @@ describe('one legend, one explain sentence', () => {
   it('every screen renders the same words from the HandoffLegend component', () => {
     const a = render(<HandoffLegend />);
     const first = screen.getByTestId('hl-explain').textContent;
+
     expect(first).toBe(LINE_EXPLAIN);
     expect(a.container.querySelectorAll('li')).toHaveLength(LINE_LEGEND.length);
+
     // the "14 ⇄ 8" sample is the label: it appears once in the legend, not twice
     const both = a.container.querySelector('[data-legend="both"]')!;
+
     expect(both.textContent!.match(/14 ⇄ 8/g)).toHaveLength(1);
     a.unmount();
     render(<HandoffLegend compact />);
@@ -280,9 +293,11 @@ describe('guard: no screen sizes a line by a share of the busiest pair', () => {
       'strokeWidth={1.8 + (p.count / maxCount) * 4.5}',
       'const w = 1.5 + (e.count / Math.max(1, ...counts)) * 6; // stroke width',
     ];
+
     for (const l of old) {
       expect(relativeWidthLines(l), l).toHaveLength(1);
     }
+
     expect(
       relativeWidthLines('// stroke width: count / max is what we stopped doing')
     ).toHaveLength(0);
@@ -297,6 +312,7 @@ describe('guard: no screen sizes a line by a share of the busiest pair', () => {
     const walk = (dir: string) => {
       for (const n of readdirSync(dir)) {
         const f = path.join(dir, n);
+
         if (statSync(f).isDirectory()) {
           walk(f);
         } else if (/\.(ts|tsx)$/.test(n) && !/\.test\./.test(n) && n !== 'handoffLines.ts') {
@@ -304,12 +320,15 @@ describe('guard: no screen sizes a line by a share of the busiest pair', () => {
         }
       }
     };
+
     walk(root);
+
     const hits = files.flatMap((f) =>
       relativeWidthLines(readFileSync(f, 'utf8')).map(
         (l) => `${path.relative(root, f)}: ${l.trim()}`
       )
     );
+
     expect(hits, 'relative width formulas left').toEqual([]);
   });
 });

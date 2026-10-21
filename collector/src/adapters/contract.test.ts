@@ -48,6 +48,7 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
   it.each(psFiles)('ps %s: strict', (f) => {
     for (const row of readFixtureJson(f) as unknown[]) {
       const r = PsRowStrict.safeParse(row);
+
       expect(r.success ? [] : issueMessages(r.error)).toEqual([]);
     }
   });
@@ -55,34 +56,41 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
   it.each(queueFiles)('queue %s: strict', (f) => {
     for (const row of readFixtureJson(f) as unknown[]) {
       const r = QueueItemStrict.safeParse(row);
+
       expect(r.success ? [] : issueMessages(r.error)).toEqual([]);
     }
   });
 
   it('agent list: strict envelope', () => {
     const r = HerdrAgentListStrict.safeParse(readFixtureJson('roamy--herdr-agent-list.json'));
+
     expect(r.success ? [] : issueMessages(r.error)).toEqual([]);
   });
 
   it('required keys exist by seat status, on real captures of both', () => {
     let running = 0;
     let stopped = 0;
+
     for (const f of nodeFiles) {
       for (const node of nodesOf(f)) {
         const cls = nodeStatusClass(node.sessionStatus);
+
         if (cls === 'running') {
           running++;
         } else {
           stopped++;
         }
+
         for (const key of REQUIRED_NODE_KEYS[cls]) {
           expect(node, `${f} ${key}`).toHaveProperty(key);
         }
+
         if (cls === 'running') {
           expect(node.activityState, f).not.toBeNull();
         }
       }
     }
+
     expect(running).toBeGreaterThan(0);
     expect(stopped).toBeGreaterThan(0);
   });
@@ -92,6 +100,7 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
       const node = nodesOf('roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json').find(
         (n) => n.sessionStatus === 'running' && n.activityState
       )!;
+
       expect(node).toBeDefined();
 
       return node;
@@ -105,6 +114,7 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
         activityStateX: activityState,
       };
       const issues = nodeContractIssues(drifted).join('\n');
+
       expect(issues).toMatch(/canonicalSessionName: /);
       expect(issues).toMatch(/activityState: /);
       expect(NodeStrict.safeParse(drifted).success).toBe(false);
@@ -112,9 +122,11 @@ describe('contract: OpenRig 0.6.6 shapes (strict)', () => {
 
     it('each rename on its own is caught', () => {
       const node = running();
+
       for (const key of ['canonicalSessionName', 'activityState']) {
         const { [key]: value, ...rest } = node;
         const issues = nodeContractIssues({ ...rest, [`${key}Renamed`]: value }).join('\n');
+
         expect(issues).toContain(`${key}: `);
         expect(issues).toContain(`unrecognized key ${key}Renamed`);
       }

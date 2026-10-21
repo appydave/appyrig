@@ -57,9 +57,11 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
     pace: null,
     resetsAt: w.resetsAt,
   };
+
   if (w.status === 'no-reading' || w.usedPct === null) {
     return { ...base, kind: 'none', glyph: '–', text: 'no reading' };
   }
+
   if (w.status === 'window-ended') {
     return {
       ...base,
@@ -68,6 +70,7 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
       text: `window ended${w.resetsAt ? ` at ${hhmm(Date.parse(w.resetsAt), now)}` : ''}; it starts fresh, no reading for the new one yet`,
     };
   }
+
   const start = w.startsAt ? Date.parse(w.startsAt) : null;
   const nowPct =
     start === null
@@ -94,9 +97,11 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
           }`,
   };
   const resetText = w.resetsAt ? hhmm(Date.parse(w.resetsAt), now) : 'the reset';
+
   if (used >= 100) {
     return { ...story, kind: 'spent', glyph: '■', text: `spent · resets ${resetText}` };
   }
+
   if (w.projectedPct === null) {
     return {
       ...story,
@@ -105,11 +110,14 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
       text: `too early to tell · ${Math.round(used)}% used`,
     };
   }
+
   if (w.projectedPct >= 100) {
     // When use reaches 100% if the pace at the reading holds.
     let when = '';
+
     if (start !== null && w.elapsedPct && used > 0) {
       const at = start + (100 / used) * (w.elapsedPct / 100) * w.windowMs;
+
       // An old reading can project a time that has already gone: say so, don't promise the past.
       if (at <= now) {
         return {
@@ -119,11 +127,13 @@ export function windowStory(w: AccountWindow, now: number): WindowStory {
           text: `likely ran out ~${hhmm(at, now)} (reading is older than that)`,
         };
       }
+
       when = ` ~${hhmm(at, now)}`;
     }
 
     return { ...story, kind: 'runs-out', glyph: '■', text: `will run out${when}` };
   }
+
   if (w.projectedPct >= CAREFUL_PCT) {
     return {
       ...story,

@@ -98,6 +98,9 @@
     "max-lines": {
       "count": 1
     },
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-magic-numbers": {
       "count": 8
     }
@@ -178,6 +181,9 @@
     }
   },
   "client/src/domain/flow/flowLines.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
     "max-params": {
       "count": 1
     },
@@ -242,6 +248,9 @@
     }
   },
   "client/src/domain/lines/handoffLines.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-magic-numbers": {
       "count": 3
     }
@@ -288,7 +297,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
+      "count": 2
     },
     "max-params": {
       "count": 1
@@ -297,9 +306,14 @@
       "count": 14
     }
   },
+  "client/src/domain/schema/model.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
   "client/src/domain/settings/model.ts": {
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     },
     "no-magic-numbers": {
       "count": 22
@@ -322,6 +336,12 @@
     }
   },
   "client/src/domain/wall/model.ts": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-magic-numbers": {
       "count": 6
     }
@@ -335,6 +355,9 @@
     }
   },
   "client/src/kit/AgentPanel.tsx": {
+    "max-lines": {
+      "count": 1
+    },
     "max-lines-per-function": {
       "count": 2
     },
@@ -379,7 +402,7 @@
   },
   "client/src/kit/FollowWork.tsx": {
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     }
   },
   "client/src/kit/HandoffLineMarks.tsx": {
@@ -395,7 +418,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 1
+      "count": 2
     }
   },
   "client/src/kit/Learn.tsx": {
@@ -416,6 +439,11 @@
       "count": 2
     },
     "no-magic-numbers": {
+      "count": 1
+    }
+  },
+  "client/src/kit/MockNote.tsx": {
+    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -545,6 +573,9 @@
     }
   },
   "client/src/lib/markdown.ts": {
+    "max-lines": {
+      "count": 1
+    },
     "max-lines-per-function": {
       "count": 2
     },
@@ -679,7 +710,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 5
+      "count": 6
     },
     "max-params": {
       "count": 1
@@ -804,7 +835,7 @@
   },
   "client/src/pages/run/useRigDoc.ts": {
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     },
     "max-params": {
       "count": 1
@@ -820,7 +851,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 4
     },
     "no-magic-numbers": {
       "count": 3
@@ -935,7 +966,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 8
+      "count": 11
     },
     "no-magic-numbers": {
       "count": 17
@@ -953,13 +984,16 @@
     }
   },
   "collector/src/adapters/dbschema.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-magic-numbers": {
       "count": 4
     }
   },
   "collector/src/adapters/health.ts": {
     "max-lines-per-function": {
-      "count": 1
+      "count": 2
     },
     "max-params": {
       "count": 1
@@ -989,7 +1023,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 6
     },
     "max-params": {
       "count": 2
@@ -1035,7 +1069,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     },
     "no-magic-numbers": {
       "count": 8
@@ -1055,11 +1089,19 @@
     }
   },
   "collector/src/adapters/sources.ts": {
+    "max-lines": {
+      "count": 1
+    },
     "max-lines-per-function": {
       "count": 2
     },
     "no-magic-numbers": {
       "count": 8
+    }
+  },
+  "collector/src/adapters/specView.ts": {
+    "max-lines-per-function": {
+      "count": 1
     }
   },
   "collector/src/adapters/specs.ts": {
@@ -1085,7 +1127,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 4
     },
     "max-params": {
       "count": 1
@@ -1117,7 +1159,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 4
     },
     "max-params": {
       "count": 1
@@ -1181,7 +1223,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     },
     "no-magic-numbers": {
       "count": 7
@@ -1247,7 +1289,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 5
+      "count": 7
     },
     "max-params": {
       "count": 3
@@ -1259,6 +1301,11 @@
   "server/src/helpers/response.ts": {
     "no-magic-numbers": {
       "count": 2
+    }
+  },
+  "server/src/hub/accounts.test.ts": {
+    "max-lines": {
+      "count": 1
     }
   },
   "server/src/hub/accounts.ts": {
@@ -1279,7 +1326,7 @@
   },
   "server/src/hub/collectorIngest.ts": {
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     },
     "no-magic-numbers": {
       "count": 4
@@ -1306,7 +1353,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 2
+      "count": 3
     },
     "no-magic-numbers": {
       "count": 6
@@ -1322,7 +1369,7 @@
   },
   "server/src/hub/missionFileStore.ts": {
     "max-lines-per-function": {
-      "count": 1
+      "count": 2
     }
   },
   "server/src/hub/schemaStore.ts": {
@@ -1334,6 +1381,9 @@
     }
   },
   "server/src/hub/v1ArchiveRouter.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-magic-numbers": {
       "count": 3
     }
@@ -1352,6 +1402,9 @@
     }
   },
   "server/src/middleware/requestLogger.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
     "no-magic-numbers": {
       "count": 2
     }

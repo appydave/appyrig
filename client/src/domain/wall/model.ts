@@ -21,6 +21,7 @@ export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags 
   if (fm.liveness === 'asleep') {
     return { needs: false, stuck: false, failing: false };
   }
+
   const pip = pipFor(seat, fm);
   const rig = seat.rig ? fm.snapshot.rigs.find((r) => r.name === seat.rig) : undefined;
   const attention = seat.lifecycleState === 'attention_required';
@@ -105,32 +106,41 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
   const counts = { all: 0, needs: 0, stuck: 0, failing: 0 };
   let stoppedHidden = 0;
   const out: FleetMachine[] = [];
+
   for (const fm of machines) {
     const kept: Seat[] = [];
+
     for (const seat of fm.snapshot.seats) {
       if (scope.hiddenTeams.has(teamKeyOf(fm, seat))) {
         continue;
       }
+
       const flags = seatFlags(seat, fm, now);
+
       // Hide stopped never hides a failing seat: a seat that is down while its rig runs is the news.
       if (scope.hideStopped && pipFor(seat, fm) === 'stopped' && !flags.failing) {
         stoppedHidden += 1;
         continue;
       }
+
       counts.all += 1;
       if (flags.needs) {
         counts.needs += 1;
       }
+
       if (flags.stuck) {
         counts.stuck += 1;
       }
+
       if (flags.failing) {
         counts.failing += 1;
       }
+
       if (matches(scope.filter, flags)) {
         kept.push(seat);
       }
     }
+
     if (kept.length > 0) {
       out.push({ ...fm, snapshot: { ...fm.snapshot, seats: kept } });
     }
@@ -147,21 +157,26 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
  */
 export function wallTail(lines: readonly string[] | null | undefined): string {
   const raw = tailLine(lines);
+
   if (!raw) {
     return '\u2014';
   }
+
   let s = raw
     .replace(/[\u2500-\u259f]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   // a capture cut in the middle: a short fragment closed by a bracket that was never opened
   const cut = /^([^[\](){}]{1,14})[\])}]\s*/.exec(s);
+
   if (cut) {
     s = s.slice(cut[0].length);
   }
+
   if (!/[A-Za-z0-9]{2,}/.test(s)) {
     return '\u2014';
   }
+
   if (s.length > 120) {
     s = `${s.slice(0, 120).replace(/\s+\S*$/, '')}\u2026`;
   }
@@ -214,13 +229,17 @@ export function orderByMachine(
 export function machineCounts(label: string, groups: WallGroup[]): string {
   const n = new Map<string, number>();
   let seats = 0;
+
   for (const g of groups) {
     for (const t of g.tiles) {
       seats += 1;
+
       const pip = pipFor(t.seat, t.machine);
+
       n.set(pip, (n.get(pip) ?? 0) + 1);
     }
   }
+
   const order = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
 
   return [
@@ -256,30 +275,37 @@ const clean = (l: string) =>
 export function cardBody(seat: Seat): CardBody {
   const lines = (seat.tail?.lines ?? []).map(clean).filter(Boolean);
   let lastTyped: string | null = null;
+
   for (let i = lines.length - 1; i >= 0; i--) {
     const m = /^[\u276f\u203a>]\s+(.{2,})$/.exec(lines[i]!);
+
     if (m) {
       lastTyped = m[1]!;
       break;
     }
   }
+
   let folder: string | null = null;
   let branch: string | null = null;
+
   for (let i = lines.length - 1; i >= 0; i--) {
     // a status line like "~/dev/ad/brains (main) ✗": a real folder, then a branch name in brackets
     const m =
       /((?:~\/|\/(?:Users|home|dev|private|opt|tmp|var)\/)[^\s|()]*)\s+\(([A-Za-z0-9._/-]{1,60})\)/.exec(
         lines[i]!
       );
+
     if (m) {
       folder = m[1]!;
       branch = m[2]!;
       break;
     }
   }
+
   if (!folder && seat.cwd) {
     folder = seat.cwd.replace(/^\/Users\/[^/]+/, '~');
   }
+
   const fb = wallTail(seat.tail?.lines);
 
   return { lastTyped, folder, branch, fallback: lastTyped || fb === '\u2014' ? [] : [fb] };

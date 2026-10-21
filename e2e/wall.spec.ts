@@ -9,10 +9,12 @@ test.use({ viewport: { width: 1440, height: 900 } });
 test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
   test('one fixed card size, rig headings, No-rig group, dense, triage kept', async ({ page }) => {
     test.setTimeout(60_000);
+
     const errors = watchErrors(page);
     // A timeline of the address and the Escape key, attached to the report if the panel does not
     // close (the failure has been seen on CI only, never locally), so the next one is provable.
     const timeline: string[] = [];
+
     page.on('console', (m) => {
       if (m.text().startsWith('TIMELINE ')) {
         timeline.push(m.text().slice(9));
@@ -23,34 +25,44 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
       const add = (what: string) =>
         console.log(`TIMELINE ${Math.round(performance.now() - t0)}ms ${what}`);
       const push = history.pushState.bind(history);
+
       history.pushState = (state, title, url) => {
         add(`pushState ${url} ${JSON.stringify(state)}`);
         push(state, title, url);
       };
+
       const replace = history.replaceState.bind(history);
+
       history.replaceState = (state, title, url) => {
         add(`replaceState ${url}`);
         replace(state, title, url);
       };
+
       const back = history.back.bind(history);
+
       history.back = () => {
         add(`back() from ${location.search} (entries: ${history.length})`);
         back();
       };
+
       window.addEventListener('popstate', () => add(`popstate ${location.search}`), true);
       window.addEventListener('keydown', (e) => add(`keydown ${e.key}`), true);
     });
     await page.goto('/?frozen=busy-2026-10-18&v=2');
+
     const gotIt = page.getByRole('button', { name: /got it/i });
+
     if (await gotIt.count()) {
       await gotIt.first().click();
     }
+
     await page.getByTestId('ar-group-fleet').click();
     await page.getByTestId('ar-page-wall').click();
     await expect(page.getByTestId('ar-wall')).toBeVisible();
 
     const cards = page.getByTestId('ar-seat-card');
     const n = await cards.count();
+
     expect(n).toBeGreaterThan(10);
 
     // every card is the same size, whatever it holds
@@ -61,10 +73,12 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
         return `${Math.round(r.width)}x${Math.round(r.height)}`;
       })
     );
+
     expect(new Set(sizes).size, `card sizes: ${[...new Set(sizes)].join(', ')}`).toBe(1);
 
     // the rig is the heading, the machine sits beside it; plain tmux sessions say what they are
     const heads = await page.getByTestId('ar-wall-group-head').allInnerTexts();
+
     expect(heads.some((h) => /d09-crew/i.test(h) && /M2/.test(h))).toBe(true);
     expect(heads.some((h) => /No rig · /i.test(h))).toBe(true);
     await expect(
@@ -73,6 +87,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
 
     // default order is by machine (headings with counts, in machine order); no two groups share a row
     const mh = await page.getByTestId('ar-wall-machine-head').allInnerTexts();
+
     expect(mh.length).toBeGreaterThan(1);
     expect(mh[0]).toMatch(/^\S+ · \d+ seats/);
 
@@ -83,6 +98,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
       (els, offset) => els.filter((e) => e.getBoundingClientRect().bottom - offset <= 900).length,
       top - 140
     );
+
     console.log(
       `wall: ${n} cards, ${above} above the fold with the page at y=140 (page top now y=${Math.round(top)})`
     );
@@ -93,6 +109,7 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     for (const f of ['all', 'needs', 'stuck', 'failing']) {
       await expect(page.getByTestId(`ar-filter-${f}`)).toBeVisible();
     }
+
     await expect(page.getByTestId('ar-wall-order')).toContainText('by machine');
     await page.getByTestId('ar-wall-order-busy').click();
     await expect(page).toHaveURL(/order=busy/);
@@ -105,7 +122,9 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
     // the ⋯ popover is not clipped by the card, and a click on a card opens the Agent page
     await page.getByTestId('ar-card-more').first().click();
     await expect(page.getByTestId('ar-card-actions')).toBeVisible();
+
     const pop = page.getByTestId('ar-card-actions');
+
     await expect(pop.getByRole('button', { name: 'Documents' })).toBeVisible();
     await expect(pop.getByRole('button', { name: 'Restart' })).toBeVisible();
     await expect(pop.getByRole('button', { name: 'Stop' })).toBeVisible();
@@ -132,7 +151,9 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
 
     // a rig pick in the drawer is never a no-op: its group is outlined, and "Only this rig" narrows
     await chooseRigInDrawer(page, 'm2:d09-crew');
+
     const group = page.locator('[data-testid="ar-wall-group"][data-group-key="m2:d09-crew"]');
+
     await expect(group).toHaveAttribute('data-focused', 'true');
     // the page header sticks UNDER the shell's top bar, so it (and the chip) stay in reach
     await expect
@@ -151,7 +172,9 @@ test.describe('v2 Wall (frozen busy snapshot, 1440 px)', () => {
         return h!.y >= head!.y + head!.height - 1;
       })
       .toBe(true);
+
     const all = await page.getByTestId('ar-wall-group').count();
+
     // an action while all rigs show, a state once it is on
     await expect(page.getByTestId('ar-only-rig')).toContainText('Show only d09-crew');
     await page.getByTestId('ar-only-rig').click();

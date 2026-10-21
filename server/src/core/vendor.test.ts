@@ -20,8 +20,11 @@ describe('vendored fli-core files', () => {
     it(`${file} is unchanged below its attribution header`, () => {
       const text = readFileSync(resolve(import.meta.dirname, 'vendor', file), 'utf8');
       const lines = text.split('\n');
+
       expect(lines[1]).toContain('Vendored from @flivideo/core v0.23.0 (commit fc55518');
+
       const body = lines.slice(5).join('\n');
+
       expect(createHash('sha256').update(body).digest('hex')).toBe(sha);
     });
   }

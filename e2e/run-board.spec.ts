@@ -15,9 +15,13 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     page,
   }) => {
     test.setTimeout(60_000);
+
     const errors = watchErrors(page);
+
     await page.goto(FROZEN);
+
     const gotIt = page.getByRole('button', { name: /got it/i });
+
     if (await gotIt.count()) {
       await gotIt.first().click();
     }
@@ -30,21 +34,26 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     await chooseRigInDrawer(page, 'm2:d09-crew');
 
     const top = page.getByTestId('run-topline');
+
     await expect(top).toContainText('Waiting for GO');
     await expect(top).toContainText('jobs planned');
+
     const tiles = page.getByTestId('run-job');
     const n = await tiles.count();
+
     expect(n).toBeGreaterThan(0);
     await expect(top).toContainText(`${n} jobs planned`);
     // before GO nothing is done or current, and no rework number is drawn
     for (let i = 0; i < n; i++) {
       await expect(tiles.nth(i)).toHaveAttribute('data-status', 'waiting');
     }
+
     await expect(top).not.toContainText(/rework/);
 
     // the job strip and the stations are both above the 900 px fold
     const strip = await page.getByTestId('run-strip').boundingBox();
     const stations = await page.getByTestId('run-stations').boundingBox();
+
     expect(strip, 'strip is drawn').not.toBeNull();
     expect(stations, 'stations are drawn').not.toBeNull();
     console.log(
@@ -56,33 +65,41 @@ test.describe('v2 Run board (frozen busy snapshot, 1440 px)', () => {
     // document tabs in the column beside before / after: Spec at load, one at a time
     const selected = async (k: string) =>
       page.getByTestId(`run-tog-${k}`).getAttribute('aria-selected');
+
     expect([
       await selected('spec'),
       await selected('rig'),
       await selected('culture'),
       await selected('mission'),
     ]).toEqual(['true', 'false', 'false', 'false']);
+
     // the page height once reads have landed (two equal reads in a row)
     const settledHeight = async () => {
       let prev = -1;
+
       await expect(async () => {
         const h = await page.evaluate(() => document.documentElement.scrollHeight);
         const same = h === prev;
+
         prev = h;
         expect(same, 'page height still changing').toBe(true);
       }).toPass({ intervals: [100], timeout: 10_000 });
 
       return prev;
     };
+
     const before = await settledHeight();
+
     await page.getByTestId('run-tog-mission').click();
     await expect(page.getByTestId('run-doc-mission')).toBeVisible();
     await expect(page.getByTestId('run-doc-spec')).toHaveCount(0);
     await expect(page.getByTestId('run-doc-rig')).toHaveCount(0);
     // nothing is appended below the fold: the page is no taller with MISSION.md open
     expect(await settledHeight()).toBeLessThanOrEqual(before + 2);
+
     const docs = await page.getByTestId('run-docs').boundingBox();
     const shots = await page.locator('.run-shots').first().boundingBox();
+
     expect(
       Math.abs(docs!.y - shots!.y),
       'the document column sits beside before / after'

@@ -19,6 +19,7 @@ describe('account adapter', () => {
       },
       someSecret: 'nope',
     });
+
     expect(parseAccountIdentity(text)).toEqual({
       email: 'david@example.com',
       plan: 'claude_max',
@@ -38,6 +39,7 @@ describe('account adapter', () => {
       parseAccountIdentity(
         JSON.stringify({ oauthAccount: { emailAddress: 'a@b', profileFetchedAt: v } })
       ).profileFetchedAt;
+
     expect(at(undefined)).toBeNull();
     expect(at('yesterday')).toBeNull();
     expect(at(-1)).toBeNull();
@@ -48,11 +50,13 @@ describe('account adapter', () => {
     const files = readdirSync(dir, { recursive: true })
       .map(String)
       .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
+
     for (const f of files) {
       // comments may explain the rule; code may not name the store
       const code = readFileSync(join(dir, f), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/.*$/gm, '');
+
       expect(code, f).not.toMatch(/\.credentials\.json|find-generic-password|Keychain|'security'/i);
     }
   });
@@ -64,6 +68,7 @@ describe('account adapter', () => {
       '1791619220,2026-10-10T15:00:20,102,1791622800,,0,2.0,38535fc7',
     ].join('\n');
     const r = parseUsageLog(log);
+
     expect(r.fiveHourPct).toBe(102);
     expect(r.sevenDayPct).toBe(36);
     expect(r.sevenDayResetsAt).toBe(new Date(1791835200 * 1000).toISOString());
@@ -73,8 +78,11 @@ describe('account adapter', () => {
   it('a machine with a login but no sampler reports null, never 0', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-acct-'));
     const claudeJson = join(dir, 'claude.json');
+
     writeFileSync(claudeJson, JSON.stringify({ oauthAccount: { emailAddress: 'a@b.c' } }));
+
     const r = await readAccount({ claudeJson, usageLog: join(dir, 'missing.csv') });
+
     expect(r).toMatchObject({
       email: 'a@b.c',
       fiveHourPct: null,
@@ -85,6 +93,7 @@ describe('account adapter', () => {
 
   it('no login record at all → null account', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-acct-'));
+
     expect(await readAccount({ claudeJson: join(dir, 'x'), usageLog: join(dir, 'y') })).toBeNull();
   });
 });

@@ -16,6 +16,7 @@ function remoteHubAuth(hubUrl: string | undefined, tokenFile: string | undefined
   if (!hubUrl) {
     return null;
   }
+
   try {
     const file = tokenFile || path.join(os.homedir(), '.config', 'appyrig', 'token');
     const token = readFileSync(file, 'utf8').trim();
@@ -36,12 +37,14 @@ export default defineConfig(({ mode }) => {
   // `--port` needs no CLIENT_URL); until then, the resolved or .env port.
   let guardPort = clientPort;
   const auth = remoteHubAuth(env.APPYRIG_HUB_URL, env.APPYRIG_HUB_TOKEN_FILE);
+
   if (env.APPYRIG_HUB_URL && !auth) {
     console.warn(
       `[appyrig] APPYRIG_HUB_URL=${env.APPYRIG_HUB_URL} but no hub token was read ` +
         `(APPYRIG_HUB_TOKEN_FILE or ~/.config/appyrig/token): the hub will refuse this preview.`
     );
   }
+
   // Same target and options for every proxied path. With a remote hub the bearer rides along, but
   // only for a page served by this dev server on this machine (devProxy.ts); a WebSocket upgrade
   // from any other origin is refused.

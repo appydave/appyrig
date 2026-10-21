@@ -25,6 +25,18 @@ const BAD: Array<[string, string]> = [
     '@stylistic/padding-line-between-statements',
     'export function f() {\n  const a = 1;\n  return a;\n}\n',
   ],
+  [
+    '@stylistic/padding-line-between-statements',
+    'export function f(a: number) {\n  const b = a + 1;\n  if (b) {\n    return b;\n  }\n\n  return a;\n}\n',
+  ],
+  [
+    '@stylistic/padding-line-between-statements',
+    'export function f(a: number) {\n  a += 1;\n  const b = a;\n\n  return b;\n}\n',
+  ],
+  [
+    '@stylistic/padding-line-between-statements',
+    'export function f(a: number) {\n  if (a) {\n    a += 1;\n  }\n  a += 2;\n\n  return a;\n}\n',
+  ],
 ];
 
 describe('G03 readable spacing', () => {

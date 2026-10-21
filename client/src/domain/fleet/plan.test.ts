@@ -65,6 +65,7 @@ describe('R3 · reading a plan from a rig file', () => {
 
   it('change orders: the mission, then change 01..04 from the file names', () => {
     const p = changeOrders(D10_FILES, "D10 Launch, David's take first (2026-10-13)")!;
+
     expect(p.steps.map((s) => `${s.id}: ${s.title}`)).toEqual([
       "mission: D10 Launch, David's take first (2026-10-13)",
       'change 01: openrig focus',
@@ -80,6 +81,7 @@ describe('R3 · choosing the plan and marking the live step', () => {
   it('ylo-d10: its change orders, change 04 live, every step accepted', () => {
     const d10 = queueMachine('ylo-d10');
     const plan = choosePlan([changeOrders(D10_FILES, 'D10 Launch')!], d10.snapshot.queue)!;
+
     expect(plan.kind).toBe('changes');
     expect(plan.live?.id).toBe('change 04');
     expect(plan.live?.item.createdAt).toBe('2026-10-13T07:05:14.276Z');
@@ -103,11 +105,14 @@ describe('R3 · choosing the plan and marking the live step', () => {
       q('d', 'R2 b6b11b8: QA NOT YET (Copy dead on http)', [], '2026-10-13T15:15:00.000Z'),
     ];
     const plan = choosePlan(sources, items)!;
+
     expect(plan.file).toBe('run-card-brief.md');
     expect(plan.live?.id).toBe('R2');
     expect([...plan.done.keys()]).toEqual(['R1']);
+
     // The views brief, chosen when it is the newest named: V1, V2 and K all deployed.
     const views = choosePlan(sources, items.slice(0, 2))!;
+
     expect(views.file).toBe('views-brief.md');
     expect([...views.done.keys()]).toEqual(['V1', 'V2', 'K']);
   });
@@ -115,8 +120,11 @@ describe('R3 · choosing the plan and marking the live step', () => {
   it('never guesses: several plans no handoff names → none; one → shown without a live step', () => {
     const a = planIn(brief('views-brief.md'), 'views-brief.md')!;
     const b = planIn(brief('fix-first-brief.md'), 'fix-first-brief.md')!;
+
     expect(choosePlan([a, b], [q('x', 'unrelated chatter')])).toBeNull();
+
     const one = choosePlan([a], [q('x', 'unrelated chatter')])!;
+
     expect(one.live).toBeNull();
     expect(one.done.size).toBe(0);
   });
@@ -130,6 +138,7 @@ describe('R3 · choosing the plan and marking the live step', () => {
       q('a', 'S9 started: build notes', [], '2026-10-11T09:00:00.000Z'),
       q('b', 'r1 ACCEPT S7-data/S7-ui/S8-data/S8-ui', [], '2026-10-11T08:00:00.000Z'),
     ])!;
+
     expect([...plan.done.keys()]).toEqual(['S7', 'S8']);
     expect([...plan.named]).toEqual(['S7', 'S8', 'S9']);
   });
@@ -154,7 +163,9 @@ describe('R3 · choosing the plan and marking the live step', () => {
         q('h', 'R1 deployed (5eb2237); R4 next on r1 confirm', [], at(26)),
       ]
     )!;
+
     expect([...plan.done.keys()]).toEqual(['R1']);
+
     const ok = choosePlan(
       [src],
       [
@@ -162,6 +173,7 @@ describe('R3 · choosing the plan and marking the live step', () => {
         q('f', 'flicut-reapply done: R2-R4 accepted', [], at(21)),
       ]
     )!;
+
     expect([...ok.done.keys()]).toEqual(['R1', 'R2', 'R3', 'R4']);
     expect(ok.done.get('R1')!.phrase).toBe('R1 13d7b82: r1 PASS for merge');
   });
@@ -169,8 +181,11 @@ describe('R3 · choosing the plan and marking the live step', () => {
   it('REPORT counts in capitals only; a "report 2" status update does not tick', () => {
     const src = planIn('| # | Slice |\n|---|---|\n| S1 | **A** |\n| S2 | **B** |\n', 'brief.md')!;
     const p = choosePlan([src], [q('a', 'appyrig-v14 — report 2 (12:16Z): S1 and S2 built')])!;
+
     expect([...p.done.keys()]).toEqual([]);
+
     const r = choosePlan([src], [q('b', 'S1 + S2: final REPORT filed')])!;
+
     expect([...r.done.keys()]).toEqual(['S1', 'S2']);
   });
 
@@ -182,6 +197,7 @@ describe('R3 · choosing the plan and marking the live step', () => {
       ...[1, 2, 3, 4, 5].map((m) => q(`r${m}`, `Run card R${(m % 4) + 1} work`, [], t(m))),
       q('late', "QA: v15 F4 is ticked from 'F2 deployed'", [], t(9)),
     ];
+
     expect(choosePlan([fix, run], items)!.file).toBe('run-card-brief.md');
   });
 
@@ -194,6 +210,7 @@ describe('R3 · choosing the plan and marking the live step', () => {
   it('a range names every slice in it: "R1-R4 accepted" ticks R2 too', () => {
     const r = (id: string) => ({ id, title: '' });
     const done = q('x', 'flicut-reapply done: R1-R4 accepted, branch pushed');
+
     expect(['R1', 'R2', 'R3', 'R4', 'R5'].map((id) => names(done, r(id), 'slices'))).toEqual([
       true,
       true,
@@ -208,6 +225,7 @@ describe('R3 · choosing the plan and marking the live step', () => {
   it('ids match as words: "r1" (the reviewer) is not slice R1, "OK" is not slice K', () => {
     const r1 = { id: 'R1', title: '' };
     const k = { id: 'K', title: '' };
+
     expect(names(q('x', 'sent to r1 for review'), r1, 'slices')).toBe(false);
     expect(names(q('x', 'Run card R1 f8dacbd'), r1, 'slices')).toBe(true);
     expect(names(q('x', 'looks OK to me'), k, 'slices')).toBe(false);

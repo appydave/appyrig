@@ -75,13 +75,16 @@ function Changes({ c }: { c: SchemaChanges }) {
 function SchemaPage({ ctx }: PageProps) {
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const ids = ctx.allMachines.map((m) => m.machine.id).join(',');
+
   useEffect(() => {
     let live = true;
+
     for (const id of ids ? ids.split(',') : []) {
       void callVerb<DbSchemaOutput>(ctx.getSocket(), 'db.schema', { machine: id }).then((a) => {
         if (!live) {
           return;
         }
+
         setAnswers((cur) => ({
           ...cur,
           [id]: a.ok

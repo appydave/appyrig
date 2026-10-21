@@ -11,6 +11,7 @@ const agents = (rows: Record<string, unknown>[]) => ({
 describe('adapter: viewer (agent list)', () => {
   it('parses the recorded Roamy list; unrecognised statuses become unknown', () => {
     const list = parseAgentList(readFixtureJson('roamy--herdr-agent-list.json'));
+
     expect(list).toHaveLength(4);
     expect(list.map((a) => a.status)).toEqual(['idle', 'unknown', 'idle', 'unknown']);
     expect(list[0]).toMatchObject({ agent: 'claude', paneId: 'w2:p3' });
@@ -25,6 +26,7 @@ describe('adapter: viewer (agent list)', () => {
         { ...row, agent_status: 'working' },
       ])
     );
+
     expect(list.map((a) => a.status)).toEqual(['blocked', 'done', 'working']);
   });
 

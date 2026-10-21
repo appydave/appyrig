@@ -38,6 +38,7 @@ describe('buildDocItems', () => {
       ],
       missionPaths: ['/specs/job-1.md', 'qa/1.md'],
     });
+
     expect(items.filter((i) => i.name === 'CULTURE.md')).toHaveLength(1);
     expect(items.find((i) => i.name === 'CULTURE.md')!.group).toBe('agent');
     expect(items.find((i) => i.name === 'RECAP.md')).toMatchObject({ present: false });
@@ -64,8 +65,10 @@ describe('groupSkills', () => {
     plugin,
     alsoIn: [],
   });
+
   it('groups by plugin, biggest first, and filters by search', () => {
     const all = [sk('a:x', 'a'), sk('a:y', 'a'), sk('b:z', 'b'), sk('init', null)];
+
     expect(groupSkills(all, '').map((g) => [g.label, g.skills.length])).toEqual([
       ['a', 2],
       ['b', 1],
@@ -80,6 +83,7 @@ describe('groupSkills', () => {
     for (const d of screen.getAllByTestId('skills-group')) {
       expect(d).not.toHaveAttribute('open');
     }
+
     fireEvent.change(screen.getByTestId('skills-search'), { target: { value: 'z' } });
     expect(screen.getAllByTestId('skills-group')).toHaveLength(1);
   });
@@ -87,6 +91,7 @@ describe('groupSkills', () => {
 
 describe('DocsDrawer', () => {
   const seat = { id: 'dev@r', rig: 'r', source: 'openrig' } as unknown as Seat;
+
   it('frames an html mission file with an empty sandbox and closes on Escape', async () => {
     const { socket } = answeringSocket({
       'rig.files': { machine: 'm', rig: 'r', status: 'ok', reason: null, files: [] },
@@ -103,6 +108,7 @@ describe('DocsDrawer', () => {
       },
     });
     let closed = 0;
+
     render(
       <DocsDrawer
         getSocket={() => socket}
@@ -116,7 +122,9 @@ describe('DocsDrawer', () => {
         onClose={() => closed++}
       />
     );
+
     const frame = await screen.findByTestId('docs-html');
+
     expect(frame.getAttribute('sandbox')).toBe('');
     expect(
       within(screen.getByTestId('docs-group-mission')).getByText('spec.html')

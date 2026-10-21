@@ -27,6 +27,7 @@ export const RPC_PATH = '/v1/rpc';
 export const CONSOLE_PATH = '/v1/console';
 export const DOCS_PATH = '/v1/docs';
 export const CONSOLE_PRINCIPAL = 'agent:console';
+
 const DRY_RUN_HEADER = 'x-fli-dry-run';
 const NAMES = {
   unknownCapability: 'unknown-capability',
@@ -63,7 +64,9 @@ export function withLiveHosts(html: string, hosts: string[]): string {
   if (!html.includes(LOOPBACK_EXPR)) {
     throw new Error('api page: which-copy expression not found');
   }
+
   const names = new Set(['127.0.0.1', 'localhost', '[::1]']);
+
   for (const h of hosts) {
     names.add(h.includes(':') ? `[${h}]` : h);
   }
@@ -132,6 +135,7 @@ export function readCallHeaders(headers: IncomingHttpHeaders): HeaderCheck {
     (h) => /^x-[a-z0-9-]+-principal$/.test(h) && h !== PRINCIPAL_HEADER
   );
   const principal = headers[PRINCIPAL_HEADER];
+
   if (foreign.length > 0 || typeof principal !== 'string' || principal === '') {
     return {
       ok: false,
@@ -143,7 +147,9 @@ export function readCallHeaders(headers: IncomingHttpHeaders): HeaderCheck {
       details: { expected: PRINCIPAL_HEADER, got: foreign },
     };
   }
+
   const dry = headers[DRY_RUN_HEADER];
+
   if (dry !== undefined && dry !== '1' && dry !== '0') {
     return {
       ok: false,
@@ -202,6 +208,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
         ? (body as { id?: unknown }).id
         : null;
     const headers = readCallHeaders(req.headers);
+
     if (!headers.ok) {
       res.status(400).json(
         rpcError(id, {
@@ -216,6 +223,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
 
       return;
     }
+
     if (Array.isArray(body)) {
       res.json(
         rpcError(null, {
@@ -227,8 +235,10 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
 
       return;
     }
+
     if (typeof body === 'object' && body !== null) {
       const extra = Object.keys(body).filter((k) => !ENVELOPE_KEYS.has(k));
+
       if (extra.length > 0) {
         res.json(
           rpcError(id, {
@@ -244,10 +254,12 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
         return;
       }
     }
+
     const answer = await answerJsonRpc(
       body,
       async (method, params) => {
         const { dryRun, ...input } = params;
+
         if (dryRun !== undefined && headers.dryRun !== undefined && dryRun !== headers.dryRun) {
           return {
             ok: false,
@@ -262,6 +274,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
       },
       { codes: FAILURE_CODES, names: NAMES, refuseNotifications: true }
     );
+
     if (answer === null) {
       res.status(204).end();
     } else {
@@ -273,6 +286,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
     const headers = readCallHeaders(req.headers);
     const send = (answer: CallAnswer) =>
       res.status(answer.ok ? 200 : (STATUS[answer.error.failureMode] ?? 400)).json(answer);
+
     if (!headers.ok) {
       send({
         ok: false,
@@ -285,8 +299,10 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
 
       return;
     }
+
     const body = req.body as { verb?: unknown; input?: unknown; dryRun?: unknown } | undefined;
     const extra = Object.keys(body ?? {}).filter((k) => !['verb', 'input', 'dryRun'].includes(k));
+
     if (typeof body?.verb !== 'string' || extra.length > 0) {
       send({
         ok: false,
@@ -299,6 +315,7 @@ export function apiRouter(core: Core, identity: AppIdentity, liveHosts: string[]
 
       return;
     }
+
     send(
       core.call(headers.principal, body.verb, body.input, { dryRun: body.dryRun ?? headers.dryRun })
     );
@@ -320,5 +337,6 @@ export function rpcParseError(err: unknown, req: Request, res: Response, next: N
 
     return;
   }
+
   next(err);
 }

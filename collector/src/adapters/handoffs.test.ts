@@ -11,11 +11,16 @@ describe('classifyPrompt', () => {
   it('a nudge about a queued handoff is queue; a plain From/To message is send', () => {
     const nudge =
       'From: a@r To: b@r Sent: 10-11 06:15Z --- Queue handoff: qitem-2026 - check your queue.';
+
     expect(classifyPrompt(nudge).origin).toBe('queue');
+
     const direct = 'From: a@r To: b@r Sent: 10-11 06:15Z --- r1: ack GO + routing';
+
     expect(classifyPrompt(direct).origin).toBe('send');
+
     // mentioning a qitem id in a direct message does not make it a queue nudge
     const blocker = 'From: a@r To: b@r Sent: 10-11 06:58Z --- Blocker qitem-20261011 is stuck';
+
     expect(classifyPrompt(blocker).origin).toBe('send');
   });
 
@@ -31,14 +36,19 @@ describe('classifyPrompt', () => {
 
   it('a startup prompt keeps only what follows its identity header, minus the standard role pack', () => {
     expect(classifyPrompt(STARTUP)).toEqual({ origin: 'startup', text: '' });
+
     const withTask = classifyPrompt(`${STARTUP}\n\nFix the cancel button.`);
+
     expect(withTask).toEqual({ origin: 'startup', text: 'Fix the cancel button.' });
+
     const withRole = classifyPrompt(`${STARTUP}\n\n# Role: Implementer\n\nBuild the thing.`);
+
     expect(withRole).toEqual({ origin: 'startup', text: '' });
   });
 
   it('a startup prompt wrapped in pasted_content tags is still a startup prompt', () => {
     const wrapped = `<pasted_content id="x">\n${STARTUP}\n\nDo R4.\n</pasted_content id="x">`;
+
     expect(classifyPrompt(wrapped)).toMatchObject({ origin: 'startup' });
     expect(classifyPrompt(wrapped).text).toContain('Do R4.');
   });
@@ -47,6 +57,7 @@ describe('classifyPrompt', () => {
     const kernel = classifyPrompt(
       `${STARTUP}\n\n# Advisor Lead — Role\n\nYou are the advisor lead.`
     );
+
     expect(kernel).toEqual({ origin: 'startup', text: '' });
     // a heading that is not a role is real text and is kept
     expect(classifyPrompt(`${STARTUP}\n\n# Task\n\nDo it.`).text).toContain('Do it.');
@@ -63,6 +74,7 @@ describe('classifyPrompt', () => {
 describe('parseTranscript origins', () => {
   const line = (type: string, at: string, content: unknown) =>
     JSON.stringify({ type, timestamp: at, message: { content } });
+
   it('tags prompts, keeps an empty startup as an event, leaves replies and tools untagged', () => {
     const events = parseTranscript(
       [
@@ -73,6 +85,7 @@ describe('parseTranscript origins', () => {
         line('user', '2026-10-11T09:49:00.000Z', 'do the thing'),
       ].join('\n')
     );
+
     expect(events.map((e) => [e.kind, e.origin, e.text])).toEqual([
       ['prompt', 'startup', ''],
       ['tool', undefined, 'Bash: rig whoami'],
@@ -94,22 +107,27 @@ describe('parseQueueBodies', () => {
       body,
     });
     const m = parseQueueBodies([row('q1', 'hello'), row('q2', ''), row('q3', 'x')]);
+
     expect([...m.keys()]).toEqual(['q1', 'q3']);
   });
 });
 
 describe('HandoffReader', () => {
   const bodies = (ids: string[]) => new Map(ids.map((id) => [id, `body of ${id}`]));
+
   it('sends each body once, newest first, in batches, and re-sends only what was not accepted', () => {
     const r = new HandoffReader('m2', () => new Date('2026-10-11T10:00:00.000Z'));
     const ids = Array.from({ length: HANDOFF_BATCH_MAX + 5 }, (_, i) => `q${i}`);
     const first = r.next(ids, bodies(ids))!;
+
     expect(first.bodies.items).toHaveLength(HANDOFF_BATCH_MAX);
     expect(first.bodies.items[0]!.id).toBe('q0');
     // not accepted: same batch again
     expect(r.next(ids, bodies(ids))!.bodies.items[0]!.id).toBe('q0');
     first.markSent();
+
     const second = r.next(ids, bodies(ids))!;
+
     expect(second.bodies.items.map((i) => i.id)).toEqual(ids.slice(HANDOFF_BATCH_MAX));
     second.markSent();
     expect(r.next(ids, bodies(ids))).toBeNull();
@@ -118,6 +136,7 @@ describe('HandoffReader', () => {
   it('reset() makes everything go out again (the hub may have lost its bodies)', () => {
     const r = new HandoffReader('m2');
     const ids = ['a', 'b'];
+
     r.next(ids, bodies(ids))!.markSent();
     expect(r.next(ids, bodies(ids))).toBeNull();
     r.reset();
@@ -134,6 +153,7 @@ describe('HandoffReader', () => {
         ['c', 'short'],
       ])
     )!;
+
     expect(got.bodies.items.map((i) => i.id)).toEqual(['a', 'c']);
     expect(got.bodies.items[0]!.body.length).toBe(HANDOFF_BODY_MAX);
     expect(got.bodies.items[0]!.truncated).toBe(true);

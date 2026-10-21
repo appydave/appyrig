@@ -5,6 +5,7 @@ import { apiSuccess, apiFailure } from './response.js';
 
 function buildApp() {
   const app = express();
+
   app.get('/success', (_req, res) => {
     apiSuccess(res, { name: 'test' });
   });
@@ -24,6 +25,7 @@ function buildApp() {
 describe('apiSuccess', () => {
   it('returns 200 with status ok and data', async () => {
     const res = await request(buildApp()).get('/success');
+
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
     expect(res.body.data).toEqual({ name: 'test' });
@@ -32,6 +34,7 @@ describe('apiSuccess', () => {
 
   it('returns the provided status code', async () => {
     const res = await request(buildApp()).get('/success-201');
+
     expect(res.status).toBe(201);
     expect(res.body.data).toEqual({ created: true });
   });
@@ -40,6 +43,7 @@ describe('apiSuccess', () => {
 describe('apiFailure', () => {
   it('returns 400 with status error and message', async () => {
     const res = await request(buildApp()).get('/failure');
+
     expect(res.status).toBe(400);
     expect(res.body.status).toBe('error');
     expect(res.body.error).toBe('Something went wrong');
@@ -48,6 +52,7 @@ describe('apiFailure', () => {
 
   it('returns the provided status code', async () => {
     const res = await request(buildApp()).get('/failure-404');
+
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Not found');
   });

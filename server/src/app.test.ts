@@ -13,6 +13,7 @@ const COOKIE = sessionCookieHeader(TOKEN).split(';')[0];
 describe('Express app (via index.ts export)', () => {
   it('GET /health returns 200', async () => {
     const res = await request(app).get('/health');
+
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
   });
@@ -20,22 +21,26 @@ describe('Express app (via index.ts export)', () => {
   it('the CSP lets the page connect to nothing off-origin', async () => {
     const res = await request(app).get('/health');
     const csp = String(res.headers['content-security-policy']);
+
     expect(csp).not.toMatch(/connect-src/);
     expect(csp).toMatch(/default-src 'self'/);
   });
 
   it('GET /api/info returns 200 with a session', async () => {
     const res = await request(app).get('/api/info').set(BEARER);
+
     expect(res.status).toBe(200);
   });
 
   it('GET /api/info is refused without a session', async () => {
     const res = await request(app).get('/api/info');
+
     expect(res.status).toBe(401);
   });
 
   it('GET /unknown-route returns 404', async () => {
     const res = await request(app).get('/unknown-route-that-does-not-exist').set(BEARER);
+
     expect(res.status).toBe(404);
     expect(res.body.status).toBe('error');
     expect(res.body.error).toBe('Not found');
@@ -51,6 +56,7 @@ describe('Socket.io via httpServer export', () => {
     if (!httpServer.listening) {
       await new Promise<void>((resolve) => httpServer.listen(0, resolve));
     }
+
     port = (httpServer.address() as AddressInfo).port;
   });
 

@@ -20,7 +20,9 @@ describe('the V2 Legend', () => {
 
   it.each(pages)('%s: purpose first, then its marks, then Everywhere', (k) => {
     render(<Legend2 page={k} onClose={() => undefined} />);
+
     const sections = screen.getAllByTestId('legend2-section');
+
     expect(within(sections[0]!).getByTestId('legend2-purpose')).toHaveTextContent(PAGE_PURPOSE[k]!);
     expect(sections.at(-1)).toBeDefined();
     expect(screen.getByText(/Everywhere · the top bar/)).toBeInTheDocument();
@@ -45,10 +47,13 @@ describe('the V2 Legend', () => {
   it('Graph, Flow and Rig Map show the handoff-line key once, here', () => {
     for (const k of ['graph', 'flow', 'map'] as const) {
       const { unmount } = render(<Legend2 page={k} onClose={() => undefined} />);
+
       expect(screen.getAllByTestId('hl-legend')).toHaveLength(1);
       unmount();
     }
+
     const css = readFileSync(path.resolve(__dirname, 'legend2.css'), 'utf8');
+
     expect(css).toMatch(/\.ar-app \.hl-legend:not\(\.legend2 \.hl-legend\)/);
   });
 
@@ -57,6 +62,7 @@ describe('the V2 Legend', () => {
       .flatMap((k) => legendSections(k))
       .flatMap((s) => s.entries.map((e) => `${e.mark} ${e.means}`))
       .join('\n');
+
     for (const stale of [
       /IDLE TEAMS/i,
       /show \d+ as tiles/i,
@@ -70,6 +76,7 @@ describe('the V2 Legend', () => {
 
   it('the app renders only the V2 legend; the page ⓘ carries the same words', () => {
     const app = readFileSync(path.resolve(__dirname, '../app/App.tsx'), 'utf8');
+
     expect(app).toMatch(/legendOpen && <Legend2/);
     expect(app).not.toMatch(/<Legend /);
     render(<PageInfo page="run" />);
@@ -78,11 +85,14 @@ describe('the V2 Legend', () => {
 
   it('Rig Map entries match the shipped page: WallCard cards, a PEOPLE pod, labelled lines', () => {
     const inside = readFileSync(path.resolve(__dirname, '../pages/graph/RigInside.tsx'), 'utf8');
+
     expect(inside).toMatch(/WallCard/);
     expect(inside).toMatch(/g2-humans/);
+
     const text = legendSections('map')
       .flatMap((s) => s.entries.map((e) => `${e.mark} ${e.means}`))
       .join('\n');
+
     expect(text).toMatch(/PEOPLE/);
     expect(text).toMatch(/V1-style cards/);
     expect(text).toMatch(/Dotted line/);
@@ -95,6 +105,7 @@ describe('the V2 Legend', () => {
 
   it('Hide closes it', () => {
     let closed = 0;
+
     render(<Legend2 page="wall" onClose={() => closed++} />);
     fireEvent.click(screen.getByTestId('legend2-close'));
     expect(closed).toBe(1);

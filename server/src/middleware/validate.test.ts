@@ -18,6 +18,7 @@ const paramsSchema = z.object({ id: z.string().uuid() });
 
 function buildBodyApp() {
   const app = express();
+
   app.use(express.json());
   app.post('/items', validate({ body: nameSchema }), (req, res) => {
     res.json({ received: req.body });
@@ -28,6 +29,7 @@ function buildBodyApp() {
 
 function buildParamsApp() {
   const app = express();
+
   app.get('/items/:id', validate({ params: paramsSchema }), (req, res) => {
     res.json({ id: req.params.id });
   });
@@ -43,6 +45,7 @@ function buildParamsApp() {
 function buildQueryValidationApp() {
   const querySchema = z.object({ page: z.string().regex(/^\d+$/, 'must be digits only') });
   const app = express();
+
   app.get('/items', validate({ query: querySchema }), (_req, res) => {
     res.json({ ok: true });
   });
@@ -129,6 +132,7 @@ const multiQuerySchema = z.object({ page: z.string().regex(/^\d+$/, 'must be dig
 
 function buildMultiSchemaApp() {
   const app = express();
+
   app.use(express.json());
   app.post('/multi', validate({ body: multiBodySchema, query: multiQuerySchema }), (req, res) => {
     res.json({ name: req.body.name, page: req.query['page'] });
@@ -194,6 +198,7 @@ function buildThrowingApp() {
   } as unknown as z.ZodType;
 
   const app = express();
+
   app.use(express.json());
   app.post('/throw', validate({ body: throwingSchema }), (_req, res) => {
     res.json({ ok: true });

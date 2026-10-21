@@ -36,6 +36,7 @@ export function lineStep(count: number): LineStep {
   if (count >= LINE_HEAVY_FROM) {
     return 'heavy';
   }
+
   if (count >= LINE_MEDIUM_FROM) {
     return 'medium';
   }
@@ -79,10 +80,12 @@ export const pairKey = (a: string, b: string): string =>
 /** Both directions of a pair as one entry. Self lines (from === to) are left out. */
 export function mergePairs(edges: RawEdge[]): LinePair[] {
   const map = new Map<string, LinePair>();
+
   for (const e of edges) {
     if (e.from === e.to) {
       continue;
     }
+
     const [a, b] = e.from < e.to ? [e.from, e.to] : [e.to, e.from];
     const k = pairKey(a, b);
     const p = map.get(k) ?? {
@@ -95,17 +98,20 @@ export function mergePairs(edges: RawEdge[]): LinePair[] {
       leftOpen: 0,
       planned: true,
     };
+
     if (e.from === a) {
       p.aToB += e.count;
     } else {
       p.bToA += e.count;
     }
+
     p.total += e.count;
     p.waiting += e.open ?? 0;
     p.leftOpen += e.stale ?? 0;
     if (e.count > 0 || !e.planned) {
       p.planned = false;
     }
+
     map.set(k, p);
   }
 
@@ -119,9 +125,11 @@ export function pairLabel(p: Pick<LinePair, 'aToB' | 'bToA'>): string {
   if (p.aToB > 0 && p.bToA > 0) {
     return `${p.aToB} ⇄ ${p.bToA}`;
   }
+
   if (p.aToB > 0) {
     return `${p.aToB} →`;
   }
+
   if (p.bToA > 0) {
     return `← ${p.bToA}`;
   }
@@ -191,6 +199,7 @@ export function lineFocusState(focus: string | null, a: string, b: string): Line
   if (focus === null) {
     return 'faint';
   }
+
   if (focus.startsWith('line:')) {
     return focus === lineFocusId(a, b) ? 'lit' : 'dimmed';
   }

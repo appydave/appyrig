@@ -80,8 +80,10 @@ export function CommandsPanel({ load = loadCommands }: { load?: () => Promise<Ri
   const [group, setGroup] = useState<string | null>(null);
   const [curatedOnly, setCuratedOnly] = useState(true);
   const [more, setMore] = useState(false);
+
   useEffect(() => {
     let live = true;
+
     load().then(
       (d) => live && setData(d),
       () => live && setFailed(true)
@@ -94,9 +96,11 @@ export function CommandsPanel({ load = loadCommands }: { load?: () => Promise<Ri
   if (failed) {
     return <p className="empty">The command list could not be loaded.</p>;
   }
+
   if (!data) {
     return <p className="quiet">Loading the command list…</p>;
   }
+
   const hits = filterCommands(data.commands, { q, group, curatedOnly });
   const pool = curatedOnly ? data.commands.filter((c) => c.curated) : data.commands;
 

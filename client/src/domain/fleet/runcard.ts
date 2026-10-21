@@ -60,9 +60,11 @@ export const stepText = (q: QueueItem) =>
  */
 export function runCard(fm: FleetMachine, rig: string, now: number): RunCardModel | null {
   const summary = fm.snapshot.rigs.find((r) => r.name === rig);
+
   if (!summary) {
     return null;
   }
+
   // OpenRig's stuck sweep files its own notices as queue items (tag stuck-sweep-finding); they are
   // about the queue, not the run's work, so the live step and David's list leave them out.
   const all = [...rigQueue(fm, rig)].sort(byCreated);
@@ -79,6 +81,7 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
   const blocked = seats.filter((s) => pipFor(s, fm) === 'blocked');
 
   let state: RunState;
+
   if (fm.liveness === 'asleep') {
     state = {
       word: 'asleep',
@@ -137,8 +140,10 @@ function ago(now: number, then: number): string {
 /** Front matter off, then lines. */
 function body(md: string): string[] {
   const lines = md.replace(/\r/g, '').split('\n');
+
   if (lines[0]?.trim() === '---') {
     const end = lines.indexOf('---', 1);
+
     if (end > 0) {
       return lines.slice(end + 1);
     }
@@ -161,6 +166,7 @@ export function clip(s: string, max = 220): string {
   if (s.length <= max) {
     return s;
   }
+
   const cut = s.slice(0, max);
   const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(': '));
 
@@ -170,6 +176,7 @@ export function clip(s: string, max = 220): string {
 /** The mission in one line: the file's first `#` heading, "Mission:" dropped. Null: none. */
 export function missionLine(md: string): string | null {
   const h = body(md).find((l) => /^#\s+\S/.test(l));
+
   if (!h) {
     return null;
   }
@@ -186,19 +193,23 @@ export function reportLine(md: string): string | null {
   // whole, and the paragraph shown is all its lines joined, never its tail.
   const paras: string[][] = [[]];
   let fenced = false;
+
   for (const line of body(md)) {
     if (/^\s*```/.test(line)) {
       fenced = !fenced;
     }
+
     if (fenced || /^\s*```/.test(line)) {
       continue;
     }
+
     if (line.trim()) {
       paras[paras.length - 1]!.push(line);
     } else if (paras[paras.length - 1]!.length) {
       paras.push([]);
     }
   }
+
   // A heading glued to its paragraph (no blank line after "# Title") is not part of it.
   const p = paras
     .map((lines) => lines.filter((l) => !/^\s*#/.test(l)))

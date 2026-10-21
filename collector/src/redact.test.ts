@@ -41,6 +41,7 @@ const PAYLOAD: Record<string, string> = {
 describe('redaction filter (AC 19)', () => {
   it.each(Object.entries(SECRETS))('%s never survives', (name, text) => {
     const out = redactString(`before ${text} after`);
+
     expect(out).not.toContain(PAYLOAD[name]!);
     expect(out).toContain(REDACTED);
     expect(out.startsWith('before ')).toBe(true);
@@ -50,12 +51,14 @@ describe('redaction filter (AC 19)', () => {
   it('leaves ordinary text, short hex and the slug that merely contains sk- alone', () => {
     const plain =
       'git a1b2c3d, sk-analysis-brief, /Users/me/dev, ULID 01M4B5W1CN575YJD9K6JB3D3NC, session 3f2a9c1e-5b7d-4e21-9a0c-8d6f1b2c3e4f';
+
     expect(redactString(plain)).toBe(plain);
   });
 
   it('redacts every string leaf of a nested value, keeping shape and keys', () => {
     const v = { a: [`x ${SECRETS.gho}`, { b: SECRETS.sk }], n: 3, k: null, flag: true };
     const out = redactDeep(v);
+
     expect(JSON.stringify(out)).not.toContain(PAYLOAD.gho);
     expect(JSON.stringify(out)).not.toContain(SECRETS.sk);
     expect(out.n).toBe(3);
@@ -81,6 +84,7 @@ describe('redaction of unprefixed secrets in message bodies', () => {
     ['bare, quoted', `value='${AWS_SECRET}'`],
   ])('%s never survives', (_name, text) => {
     const out = redactString(text);
+
     expect(out).not.toContain(AWS_SECRET);
     expect(out).not.toContain('wJalrXUtnFEMI');
     expect(out).toContain(REDACTED);
@@ -90,14 +94,18 @@ describe('redaction of unprefixed secrets in message bodies', () => {
     const out = redactString(
       `AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET}`
     );
+
     expect(out).not.toMatch(/AKIAIOSFODNN7EXAMPLE|wJalr/);
   });
 
   it('private key blocks, URL passwords and Basic credentials go; the label and user stay readable', () => {
     const pem =
       '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA7n3m\nabcdEFGH1234\n-----END RSA PRIVATE KEY-----';
+
     expect(redactString(`key:\n${pem}\nthanks`)).not.toMatch(/MIIEow|abcdEFGH/);
+
     const url = redactString('clone https://david:hunter2pass@git.example.com/repo.git');
+
     expect(url).toContain('david:');
     expect(url).not.toContain('hunter2pass');
     expect(url).toContain('@git.example.com');
@@ -127,9 +135,11 @@ describe('redaction of unprefixed secrets in message bodies', () => {
       'tskey-client-kABCDEF123456CNTRL-abcdefghijklmnop',
     ]) {
       const out = redactString(`use ${k} to join`);
+
       expect(out, k).not.toContain(k.slice(10));
       expect(out).toContain(REDACTED);
     }
+
     expect(redactString('the tskey- prefix is documented')).toBe('the tskey- prefix is documented');
   });
 
@@ -146,6 +156,7 @@ describe('redaction of unprefixed secrets in message bodies', () => {
       'https://www.openrig.dev/help/agents and node v24.13.0',
       'commit 3403b41 and ba75f89 accepted',
     ];
+
     for (const text of calm) {
       expect(redactString(text), text).toBe(text);
     }
@@ -177,6 +188,7 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
   for (const [name, [text, leak]] of Object.entries(FIXTURES)) {
     it(`redacts ${name}`, () => {
       const out = redactString(text);
+
       expect(out).toContain(REDACTED);
       expect(out).not.toContain(leak);
     });
@@ -191,6 +203,7 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
   it('an ANSI colour code inside a token no longer hides it', () => {
     const coloured = `export TOKEN_X=1 \x1b[33m${tok110.slice(0, 40)}\x1b[0m\x1b[1m${tok110.slice(40)}\x1b[0m`;
     const out = redactString(coloured);
+
     expect(out).toContain(REDACTED);
     for (let i = 0; i + 12 <= tok110.length; i += 6) {
       expect(out).not.toContain(tok110.slice(i, i + 12));
@@ -199,12 +212,14 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
 
   it('a coloured line without a secret keeps its colours', () => {
     const line = '\x1b[32m✓\x1b[0m 256 tests passed \x1b[2m(1.2s)\x1b[0m';
+
     expect(redactString(line)).toBe(line);
   });
 
   it('the 110-char sk-ant token is caught whole once joined (a joined capture), and leaks 0 chars', () => {
     const joined = `CLAUDE_CODE_OAUTH_TOKEN=${tok110}`;
     const out = redactString(joined);
+
     expect(out).toBe(`CLAUDE_CODE_OAUTH_TOKEN=${REDACTED}`);
   });
 });
@@ -214,20 +229,24 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
   const body =
     'riGp_58WAm-dX3a5IDnOdcdbWB2dC4_DSDC6Lc1mxLpQ2yMK_Ye9FZ1wUVl4nuYV-d8fNYvvDbzDZST6IaXqA2h9Uz0-T1SaQ';
   const tok110 = `sk-ant-oat01-${body}`;
+
   expect(tok110).toHaveLength(110);
 
   /** Claude Code style: rows of `width`, each starting with a 2-space indent, hard newlines. */
   const tuiWrap = (text: string, width: number): string[] => {
     const rows: string[] = [];
+
     for (let i = 0; i < text.length; i += width - 2) {
       rows.push(`  ${text.slice(i, i + width - 2)}`);
     }
 
     return rows;
   };
+
   /** Longest run of the token's random body still on screen. */
   const leak = (out: string) => {
     let best = 0;
+
     for (let i = 0; i < body.length; i++) {
       for (let j = body.length; j > i + best; j--) {
         if (out.includes(body.slice(i, j))) {
@@ -239,6 +258,7 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
 
     return best;
   };
+
   const FORMS: Record<string, string> = {
     env: `export CLAUDE_CODE_OAUTH_TOKEN=${tok110}`,
     json: `{"accessToken": "${tok110}", "expiresAt": 1791860924079}`,
@@ -252,6 +272,7 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
         const rule = '─'.repeat(width);
         const rows = [rule, '  Here is the file:', ...tuiWrap(text, width), '  That is all of it.'];
         const out = redactWrapped(rows).map(redactString).join('\n');
+
         expect(leak(out)).toBeLessThanOrEqual(2);
         expect(out).toContain(REDACTED);
         // Rows around the secret are untouched.
@@ -269,6 +290,7 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
       'sk-ant-Q89r4RClQRPXdMtpqkor6qMNHQQrNQpGs6gP4Gow882VUYxj4x98JThHtqoagfsvAFugHkodWg_CsCSBob5WIUzfbkOdfo2W1mdqvpbgu-Xck7qKIdRPZUrfsm05J-IP6pn8C9ma5NHe7uxrv6dKcnPd9NzsOAAL_SaP1MxBinljO61ckBs2W6lgCrW73WWO-dzXTaQZGKoMO4r4b2yZ_iWhahn35faOGqBRMLZtkDafuFTjkduVrM7Vo3IkEHK17LXPdfHsjZkQszLKegYIwSl_lXWwkHARp61R2';
     const longest = (secret: string, out: string) => {
       let best = 0;
+
       for (let i = 0; i < secret.length; i++) {
         for (let j = secret.length; j > i + best; j--) {
           if (out.includes(secret.slice(i, j))) {
@@ -280,6 +302,7 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
 
       return best;
     };
+
     for (const width of [80, 120]) {
       for (const [name, text, secret] of [
         ['600-char JWT', `token: ${jwt}`, jwt],
@@ -288,6 +311,7 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
         it(`${name} at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
           const rows = ['─'.repeat(width), ...tuiWrap(text, width), '  Next line of prose.'];
           const out = redactWrapped(rows).map(redactString).join('\n');
+
           expect(secret.length).toBeGreaterThanOrEqual(300);
           expect(longest(secret, out)).toBeLessThanOrEqual(2);
           expect(out.endsWith('\n  Next line of prose.')).toBe(true);
@@ -304,21 +328,26 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
       ...tuiWrap(FORMS.env!, 80),
       '  Done.',
     ];
+
     // Without the pane width the widest row (200) says no 80-col row is full: the tail leaks.
     expect(leak(redactWrapped(rows).map(redactString).join('\n'))).toBeGreaterThan(40);
+
     // With it (#{pane_width}), nothing past chance.
     const out = redactWrapped(rows, 80).map(redactString).join('\n');
+
     expect(leak(out)).toBeLessThanOrEqual(2);
     expect(out.endsWith('\n  Done.')).toBe(true);
   });
 
   it('a pane width wider than any row never makes a short row count as full', () => {
     const rows = ['  short line ending in tokenish', '  continuationword here'];
+
     expect(redactWrapped(rows, 200)).toEqual(rows);
   });
 
   it('without the cross-row step the second row leaks (the bug)', () => {
     const rows = tuiWrap(FORMS.env!, 80);
+
     expect(leak(rows.map(redactString).join('\n'))).toBeGreaterThan(40);
   });
 
@@ -330,12 +359,14 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
       '  Supercalifragilisticexpialidocious',
       '  wordsalad continues here',
     ];
+
     expect(redactWrapped(rows)).toEqual(rows);
   });
 
   it('a coloured wrapped token is caught too, and only the rows it touches lose colour', () => {
     const rows = tuiWrap(FORMS.env!, 80).map((r) => `\x1b[33m${r}\x1b[0m`);
     const out = redactWrapped([...rows, '\x1b[32m✓ done\x1b[0m']).map(redactString);
+
     expect(leak(out.join('\n'))).toBeLessThanOrEqual(2);
     expect(out.at(-1)).toBe('\x1b[32m✓ done\x1b[0m');
   });

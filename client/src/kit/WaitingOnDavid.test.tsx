@@ -65,7 +65,9 @@ describe('Run card R2 · waiting on David', () => {
         `ssh -t davidcruwys@100.126.70.25 "tmux attach -t 'dev-qa@appyrig-v15-loadout'"`
       )
     );
+
     const rows = screen.getAllByTestId('run-to-david');
+
     expect(rows[0]).toHaveTextContent('dev-qa → David: F4 fold: QA recheck PASS');
     expect(rows[1]).toHaveTextContent('no attach line (stranger is not a seat M2 reports)');
     // Nothing that changes state: the only buttons copy text.
@@ -112,6 +114,7 @@ describe('Run card R2 · waiting on David', () => {
         socket={socket({ gates: [gate('g_8334a98162', link), gate('g_2ffa66960a', null)] })}
       />
     );
+
     await waitFor(() => expect(screen.getByTestId('run-gate-link')).toHaveAttribute('href', link));
     expect(screen.getAllByTestId('run-gate')[1]).toHaveTextContent('no link in the handoffs');
     unmount();
@@ -145,6 +148,7 @@ describe('Run card R2 · waiting on David', () => {
           ),
       }),
     } as unknown as FleetSocket;
+
     render(
       <WaitingOnDavid
         machine={machine}
@@ -172,7 +176,9 @@ describe('QA R2 MEDIUM-1 · Copy on the plain-http real URL', () => {
 
   it('not a secure page: copies through execCommand', async () => {
     Object.defineProperty(window, 'isSecureContext', { value: false, configurable: true });
+
     const exec = vi.fn(() => true);
+
     Object.defineProperty(document, 'execCommand', { value: exec, configurable: true });
     expect(await copyText('x')).toBe(true);
     expect(exec).toHaveBeenCalledWith('copy');

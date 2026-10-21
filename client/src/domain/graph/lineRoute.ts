@@ -57,25 +57,31 @@ export function routeLines<P extends LinePair>(
     if (a.x + a.w <= b.x) {
       return ['r', 'l'];
     }
+
     if (b.x + b.w <= a.x) {
       return ['l', 'r'];
     }
 
     return a.y <= b.y ? ['b', 't'] : ['t', 'b'];
   };
+
   const k = (p: LinePair) => `${p.a}\u0000${p.b}`;
   const ends = new Map<string, { id: string; other: number }[]>();
+
   for (const { pair, a, b } of drawn) {
     const [sa, sb] = sides(a, b);
     const horizontal = sa === 'r' || sa === 'l';
+
     for (const [key, side, role, other] of [
       [pair.a, sa, 'a', horizontal ? b.y : b.x],
       [pair.b, sb, 'b', horizontal ? a.y : a.x],
     ] as const) {
       const id = `${key}|${side}`;
+
       ends.set(id, [...(ends.get(id) ?? []), { id: `${k(pair)}|${role}`, other }]);
     }
   }
+
   const anchor = (frame: Box, key: GroupKey, side: Side, lineId: string): [number, number] => {
     const list = (ends.get(`${key}|${side}`) ?? [])
       .slice()
@@ -85,6 +91,7 @@ export function routeLines<P extends LinePair>(
       list.findIndex((x) => x.id === lineId)
     );
     const f = (i + 1) / (list.length + 1);
+
     switch (side) {
       case 'r':
         return [frame.x + frame.w, frame.y + frame.h * f];
@@ -98,6 +105,7 @@ export function routeLines<P extends LinePair>(
   };
 
   const curves: { line: RoutedLine<P>; at: (t: number) => [number, number] }[] = [];
+
   for (const { pair, a, b } of drawn) {
     const [sa, sb] = sides(a, b);
     const [sx, sy] = anchor(a, pair.a, sa, `${k(pair)}|a`);
@@ -106,20 +114,25 @@ export function routeLines<P extends LinePair>(
     let c1y = sy;
     let c2x = ex;
     let c2y = ey;
+
     if (sa === 'r' || sa === 'l') {
       const dx = Math.max(24, Math.abs(ex - sx) / 2);
+
       c1x = sa === 'r' ? sx + dx : sx - dx;
       c2x = sb === 'l' ? ex - dx : ex + dx;
     } else {
       const dy = Math.max(24, Math.abs(ey - sy) / 2);
+
       c1y = sa === 'b' ? sy + dy : sy - dy;
       c2y = sb === 't' ? ey - dy : ey + dy;
     }
+
     const at = (t: number): [number, number] => [
       bez(t, sx, c1x, c2x, ex),
       bez(t, sy, c1y, c2y, ey),
     ];
     const [lx, ly] = at(0.5);
+
     curves.push({
       line: {
         pair,
@@ -132,14 +145,17 @@ export function routeLines<P extends LinePair>(
       at,
     });
   }
+
   // labels: slide along the line to the first spot that covers no other label
   const taken: { x: number; y: number }[] = [];
   const free = (x: number, y: number) =>
     taken.every((t) => Math.abs(t.x - x) >= LABEL_W + 2 || Math.abs(t.y - y) >= LABEL_H + 2);
+
   for (const { line, at } of curves) {
     if (!free(line.lx, line.ly)) {
       for (const u of [0.4, 0.6, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8]) {
         const [x, y] = at(u);
+
         if (free(x, y)) {
           line.lx = x;
           line.ly = y;
@@ -147,6 +163,7 @@ export function routeLines<P extends LinePair>(
         }
       }
     }
+
     taken.push({ x: line.lx, y: line.ly });
   }
 

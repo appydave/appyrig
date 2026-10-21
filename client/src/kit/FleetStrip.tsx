@@ -30,9 +30,11 @@ function hubMessage(link: HubLink, received: boolean): string | null {
   if (link === 'unauthorised') {
     return 'Not signed in · open this page once with ?token=<hub token>';
   }
+
   if (link === 'disconnected') {
     return 'Hub disconnected · showing last-known state';
   }
+
   if (!received) {
     return 'Connecting to hub…';
   }

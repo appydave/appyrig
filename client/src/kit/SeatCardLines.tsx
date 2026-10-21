@@ -9,6 +9,7 @@ import { roleWord } from '../domain/fleet/model.js';
  */
 export function RoleTag({ agentRole }: { agentRole?: string | null }) {
   const word = roleWord(agentRole);
+
   if (!word) {
     return null;
   }
@@ -55,9 +56,11 @@ export function tokensText(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) {
     return DASH;
   }
+
   if (n >= 999_500) {
     return `${(Math.round(n / 100_000) / 10).toString()}M`;
   }
+
   if (n >= 1000) {
     return `${Math.round(n / 1000)}k`;
   }
@@ -78,9 +81,11 @@ export function harnessOf(
 ): { kind: Harness; label: string } {
   const r = (runtime ?? '').toLowerCase();
   const m = (model ?? '').toLowerCase();
+
   if (r.startsWith('claude') || (!r && m.startsWith('claude'))) {
     return { kind: 'claude', label: 'Claude' };
   }
+
   if (r === 'codex' || (!r && /^(gpt|codex|o\d)/.test(m))) {
     return { kind: 'codex', label: 'Codex' };
   }
@@ -171,6 +176,7 @@ export function CopyAttach({ session, ssh }: { session: string; ssh: string | nu
   const [said, setSaid] = useState<'copied' | 'select' | null>(null);
   const lineEl = useRef<HTMLElement>(null);
   const line = attachLine(session, ssh);
+
   if (!line) {
     return null;
   }
@@ -187,13 +193,16 @@ export function CopyAttach({ session, ssh }: { session: string; ssh: string | nu
             if (!ok) {
               const el = lineEl.current;
               const sel = window.getSelection();
+
               if (el && sel) {
                 const range = document.createRange();
+
                 range.selectNodeContents(el);
                 sel.removeAllRanges();
                 sel.addRange(range);
               }
             }
+
             setSaid(ok ? 'copied' : 'select');
             if (ok) {
               setTimeout(() => setSaid(null), 1500);

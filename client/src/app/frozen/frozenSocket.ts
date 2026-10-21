@@ -37,6 +37,7 @@ export interface FrozenMeta {
  */
 export function frozenNow(real: number, meta: FrozenMeta | undefined): number {
   const at = meta?.recordedAt ? Date.parse(meta.recordedAt) : NaN;
+
   if (Number.isNaN(at)) {
     return real;
   }
@@ -56,8 +57,10 @@ function resolveRefs(v: unknown, refs: Record<string, unknown>): unknown {
   if (Array.isArray(v)) {
     return v.map((x) => resolveRefs(x, refs));
   }
+
   if (v && typeof v === 'object') {
     const ref = (v as { $frozenRef?: unknown }).$frozenRef;
+
     if (typeof ref === 'string' && Object.keys(v).length === 1) {
       return resolveRefs(refs[ref], refs);
     }
@@ -70,6 +73,7 @@ function resolveRefs(v: unknown, refs: Record<string, unknown>): unknown {
 
 export function frozenAnswer(file: FrozenFile, req: CoreCallRequest): CallAnswer {
   const hit = file.calls[callKey(req.verb, req.input)];
+
   if (hit === undefined) {
     return {
       ok: false,
@@ -91,9 +95,11 @@ export function createFrozenSocket(file: FrozenFile): FleetSocket {
   const handlers = new Map<string, Set<Handler>>();
   const answer = (request: unknown, ack: Ack) => {
     const req = (request ?? {}) as CoreCallRequest;
+
     // Async like the wire, so callers see the same order of events as live.
     setTimeout(() => ack(null, frozenAnswer(file, req)), 0);
   };
+
   const emit = (event: string, request: unknown, ack?: Ack) => {
     if (event === FLEET_EVENTS.CALL && typeof ack === 'function') {
       answer(request, ack);
@@ -101,14 +107,17 @@ export function createFrozenSocket(file: FrozenFile): FleetSocket {
 
     return fake;
   };
+
   const fake = {
     connected: true,
     frozen: file.name,
     on(event: string, fn: Handler) {
       let set = handlers.get(event);
+
       if (!set) {
         handlers.set(event, (set = new Set()));
       }
+
       set.add(fn);
       if (event === FLEET_EVENTS.UPDATE) {
         setTimeout(() => set!.has(fn) && fn(file.update), 0);

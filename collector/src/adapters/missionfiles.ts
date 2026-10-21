@@ -53,6 +53,7 @@ export async function allowlistFor(
   missionRoots: string[] = defaultMissionRoots()
 ): Promise<MissionAllowlist> {
   const roots: string[] = [];
+
   for (const r of missionRoots) {
     try {
       roots.push(await realpath(r));
@@ -60,18 +61,23 @@ export async function allowlistFor(
       /* a root that does not exist on this machine allows nothing */
     }
   }
+
   const listed = new Set<string>();
   let missionDir: string | null = null;
+
   for (const c of await candidatesFor(spec)) {
     if (!/^MISSION/.test(c.name)) {
       continue;
     }
+
     missionDir ??= dirname(c.path);
     try {
       const st = await lstat(c.path);
+
       if (st.size > MISSION_TEXT_MAX_BYTES) {
         continue;
       }
+
       for (const p of missionSpecPaths(await readFile(c.path, 'utf8'))) {
         listed.add(p);
       }
@@ -90,27 +96,34 @@ export async function checkPath(path: unknown, al: MissionAllowlist): Promise<Pa
   if (typeof path !== 'string' || !path.startsWith('/') || path.includes('\0')) {
     return { ok: false, why: 'refused' };
   }
+
   if (path.split('/').includes('..') || path.includes('//')) {
     return { ok: false, why: 'refused' };
   }
+
   if (!EXT.test(path)) {
     return { ok: false, why: 'refused' };
   }
+
   const ext = extOf(path);
 
   if (al.listed.has(path)) {
     if (!under(path, al.roots)) {
       return { ok: false, why: 'refused' };
     } // outside the trust root
+
     let real: string;
+
     try {
       real = await realpath(path);
     } catch {
       return { ok: false, why: 'missing' };
     }
+
     if (real !== path) {
       return { ok: false, why: 'refused' };
     } // a symlink somewhere in the path
+
     if (!under(real, al.roots)) {
       return { ok: false, why: 'refused' };
     }
@@ -124,15 +137,18 @@ export async function checkPath(path: unknown, al: MissionAllowlist): Promise<Pa
     const allowed =
       dirname(dir) === al.missionDir &&
       ((base === 'qa' && QA_EXT.has(ext)) || (base === 'shots' && SHOTS_EXT.has(ext)));
+
     if (allowed) {
       let real: string;
       let realDir: string;
+
       try {
         realDir = await realpath(dir);
         real = await realpath(path);
       } catch {
         return { ok: false, why: 'missing' };
       }
+
       // the folder and the file must both still be where they say: no link out of qa/ or shots/
       if (realDir !== join(al.missionDir, base) || dirname(real) !== realDir || !EXT.test(real)) {
         return { ok: false, why: 'refused' };
@@ -156,22 +172,28 @@ async function isFile(p: string): Promise<boolean> {
 /** Every path this rig may serve that exists as a name now: listed ones, then qa/*.md, then shots/*. */
 export async function manifestFor(al: MissionAllowlist): Promise<string[]> {
   const out: string[] = [];
+
   for (const p of [...al.listed].sort()) {
     const c = await checkPath(p, al);
+
     if (c.ok || c.why === 'missing') {
       out.push(p);
     }
   }
+
   if (al.missionDir) {
     for (const folder of ['qa', 'shots']) {
       let names: string[];
+
       try {
         names = (await readdir(join(al.missionDir, folder))).sort();
       } catch {
         continue;
       }
+
       for (const name of names) {
         const p = join(al.missionDir, folder, name);
+
         if ((await checkPath(p, al)).ok) {
           out.push(p);
         }
@@ -190,24 +212,31 @@ export async function readMissionFile(
 ): Promise<MissionFilePush[]> {
   const base = { kind: 'file' as const, machineId, collectedAt, rig, path, part: 0, parts: 1 };
   const c = await checkPath(path, al);
+
   if (!c.ok) {
     return [{ ...base, status: 'missing' }];
   } // refused paths are never on the list; this only races
+
   const ext = extOf(path);
   const mime = MISSION_MIME[ext]!;
   const image = ext === 'png' || ext === 'jpg';
   let fh;
+
   try {
     fh = await open(c.real, 'r');
+
     const st = await fh.stat();
     const bytes = st.size;
     const modifiedAt = st.mtime.toISOString();
+
     if (bytes > (image ? MISSION_IMAGE_MAX_BYTES : MISSION_TEXT_MAX_BYTES)) {
       return [{ ...base, status: 'too_large', mime, bytes, modifiedAt }];
     }
+
     const buf = Buffer.alloc(bytes);
     const { bytesRead } = await fh.read(buf, 0, bytes, 0);
     const data = buf.subarray(0, bytesRead);
+
     if (!image) {
       return [
         {
@@ -220,6 +249,7 @@ export async function readMissionFile(
         },
       ];
     }
+
     const parts = Math.max(1, Math.ceil(data.length / MISSION_PART_BYTES));
 
     return Array.from({ length: parts }, (_, i) => ({
@@ -275,16 +305,20 @@ export class MissionFilesReader {
     if (this.now().getTime() - this.lastScan < this.ttlMs) {
       return null;
     }
+
     const pushes: MissionFilesPush[] = [];
     const sigs = new Map<string, string>();
     let bytes = 0;
     let leftOver = false;
+
     for (const [rig, spec] of specs) {
       try {
         const al = await allowlistFor(spec, this.roots);
+
         if (al.listed.size === 0 && !al.missionDir) {
           continue;
         }
+
         const paths = await manifestFor(al);
         const sig = (
           await Promise.all(
@@ -299,20 +333,25 @@ export class MissionFilesReader {
             })
           )
         ).join('|');
+
         if (this.sent.get(rig) === sig) {
           continue;
         }
+
         if (bytes >= MISSION_TICK_BYTES) {
           leftOver = true;
           continue;
         }
+
         const at = this.now().toISOString();
         const files: MissionFilePush[] = [];
+
         for (const p of paths) {
           files.push(
             ...(await readMissionFile({ machineId: this.machineId, rig, path: p }, al, at))
           );
         }
+
         bytes += files.reduce((n, f) => n + (f.text?.length ?? 0) + (f.base64?.length ?? 0), 0);
         pushes.push({ kind: 'manifest', machineId: this.machineId, collectedAt: at, rig, paths });
         pushes.push(...files);
@@ -321,9 +360,11 @@ export class MissionFilesReader {
         /* this rig's files could not be listed: skip it, try again next scan */
       }
     }
+
     if (!leftOver) {
       this.lastScan = this.now().getTime();
     }
+
     if (pushes.length === 0) {
       return null;
     }

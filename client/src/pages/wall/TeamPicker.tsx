@@ -21,22 +21,27 @@ export default function TeamPicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const box = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) {
       return;
     }
+
     const onDown = (e: PointerEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) {
         return;
       }
+
       e.preventDefault();
       setOpen(false);
     };
+
     document.addEventListener('pointerdown', onDown);
     window.addEventListener('keydown', onKey, true);
 

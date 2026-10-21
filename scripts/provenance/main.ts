@@ -8,6 +8,7 @@
  */
 function cannotRun(e: unknown): never {
   const msg = e instanceof Error ? e.message : String(e);
+
   console.error(`provenance: cannot run: ${msg.split('\n')[0]}`);
   process.exit(2);
 }

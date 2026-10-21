@@ -43,6 +43,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
   const io = new Server(http);
   const received: MachineSnapshot[] = [];
   const extra: { event: string; payload: unknown }[] = [];
+
   io.of('/collector')
     .use((s, next) =>
       s.handshake.auth.token === TOKEN
@@ -53,6 +54,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
       if (hopts.caps && !hopts.ackOnly) {
         socket.emit('hub:caps', hopts.caps);
       }
+
       if (modern) {
         for (const event of [
           'collector:rigfiles',
@@ -69,11 +71,13 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
           });
         }
       }
+
       socket.on('collector:snapshot', (raw, ack: (a: CollectorAck) => void) => {
         if (hopts.strictV15) {
           const bad = [...V2_SEAT_KEYS, ...V2_QUEUE_KEYS].find((k) =>
             JSON.stringify(raw).includes(`"${k}"`)
           );
+
           if (bad) {
             ack({
               ok: false,
@@ -84,8 +88,10 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
             return;
           }
         }
+
         if (hopts.strictPreSpec) {
           const bad = SPEC_RIG_KEYS.find((k) => JSON.stringify(raw).includes(`"${k}"`));
+
           if (bad) {
             ack({
               ok: false,
@@ -96,10 +102,13 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
             return;
           }
         }
+
         const r = MachineSnapshotSchema.safeParse(raw);
+
         if (r.success) {
           received.push(r.data);
         }
+
         ack(
           r.success
             ? {
@@ -112,6 +121,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
       });
     });
   await new Promise<void>((r) => http.listen(port, '127.0.0.1', r));
+
   const actual = (http.address() as AddressInfo).port;
 
   return {
@@ -127,16 +137,19 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
 
 const until = async (cond: () => boolean, ms = 4000) => {
   const t0 = Date.now();
+
   while (!cond()) {
     if (Date.now() - t0 > ms) {
       throw new Error('timed out waiting');
     }
+
     await new Promise((r) => setTimeout(r, 20));
   }
 };
 
 let hub: Hub | undefined;
 let pusher: Pusher | undefined;
+
 afterEach(async () => {
   await pusher?.stop();
   await hub?.close();
@@ -148,7 +161,9 @@ const build = () => buildSnapshot(fixtureSources({ machine: 'roamy' }), cfg);
 describe('pusher', () => {
   it('pushes valid snapshots to the hub repeatedly', async () => {
     hub = await startHub();
+
     const log: string[] = [];
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -166,7 +181,9 @@ describe('pusher', () => {
 
   it('a wrong token is refused and nothing is pushed', async () => {
     hub = await startHub();
+
     const log: string[] = [];
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: 'wrong',
@@ -183,10 +200,13 @@ describe('pusher', () => {
   it('a hub that never acks is logged as a timeout, not a refusal', async () => {
     const http = createServer();
     const io = new Server(http);
+
     io.of('/collector').on('connection', (socket) => socket.on('collector:snapshot', () => {}));
     await new Promise<void>((r) => http.listen(0, '127.0.0.1', r));
+
     const url = `http://127.0.0.1:${(http.address() as AddressInfo).port}`;
     const log: string[] = [];
+
     pusher = startPusher({
       hubUrl: url,
       token: TOKEN,
@@ -210,7 +230,9 @@ describe('pusher', () => {
 
   it('reconnects after the hub restarts and keeps pushing', async () => {
     hub = await startHub();
+
     const port = Number(new URL(hub.url).port);
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -227,8 +249,10 @@ describe('pusher', () => {
 
   it('calls onConnect on every (re)connect, so queue bodies can go out again after a hub restart', async () => {
     hub = await startHub();
+
     const port = Number(new URL(hub.url).port);
     let connects = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -248,8 +272,10 @@ describe('pusher', () => {
 
   it('logs the missing queue-body ack once, not every tick, against a hub that has no listener for it', async () => {
     hub = await startHub(); // this fake hub only answers snapshots: like a pre-1.4 hub
+
     const lines: string[] = [];
     let batches = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -274,8 +300,10 @@ describe('pusher', () => {
 
   it('sends rig files and the database shape on their own channels, once each, after the hub accepts them', async () => {
     hub = await startHub(0, true);
+
     let fileTakes = 0;
     let marked = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -323,9 +351,11 @@ describe('pusher', () => {
 
   it('against a hub with no listener for them, nothing is marked sent and the warning is logged once', async () => {
     hub = await startHub(); // like a pre-1.4 hub
+
     const lines: string[] = [];
     let marked = 0;
     let takes = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -370,12 +400,15 @@ describe('pusher', () => {
       queue: snap.queue.map((q) => ({ ...q, closureReason: 'no-follow-on', tier: 'fast' })),
     };
   };
+
   const hasV2 = (s: MachineSnapshot) =>
     s.seats.some((x) => 'tmuxAttachCommand' in x) || s.queue.some((q) => 'closureReason' in q);
 
   it('H1: a new collector with v2 fields present is accepted by an OLD strict hub (no caps), and sends them bare', async () => {
     hub = await startHub(0, false, { strictV15: true });
+
     const lines: string[] = [];
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -424,14 +457,18 @@ describe('pusher', () => {
     expect(hub.received.every(hasV2)).toBe(true);
     // a reconnect: the caps are forgotten and announced again before the first push
     pusher.socket.disconnect().connect();
+
     const before = hub.received.length;
+
     await until(() => hub!.received.length >= before + 3);
     expect(hub.received.every(hasV2)).toBe(true);
   });
 
   it('flicker: an older hub never announces, so the first push waits only capsWaitMs and goes out as v1.5', async () => {
     hub = await startHub(0, false, { strictV15: true });
+
     const t0 = Date.now();
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -450,7 +487,9 @@ describe('pusher', () => {
   it('H1: a hub that refuses a snapshot naming a v2 key is treated as v1.5 until it reconnects, logged once', async () => {
     // advertises the cap but its schema does not know the key (a mis-advertising or mid-upgrade hub)
     hub = await startHub(0, false, { strictV15: true, caps: [HUB_CAPS.V2_FIELDS] });
+
     const lines: string[] = [];
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -478,11 +517,14 @@ describe('pusher', () => {
       })),
     };
   };
+
   const hasSpec = (s: MachineSnapshot) => s.rigs.some((r) => 'pods' in r || 'specValid' in r);
 
   it("spec fields: today's hub (v2 caps, no spec-fields) gets none of them and refuses nothing", async () => {
     hub = await startHub(0, false, { strictPreSpec: true, caps: [HUB_CAPS.V2_FIELDS] });
+
     const lines: string[] = [];
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -517,7 +559,9 @@ describe('pusher', () => {
 
   it('spec files: the rig-files channel is told which caps the hub advertised', async () => {
     hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.SPEC_FILES] });
+
     const seen: boolean[] = [];
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -556,12 +600,15 @@ describe('pusher', () => {
       member: null,
       agentSpec: null,
     };
+
     for (const [caps, want] of [
       [[HUB_CAPS.V2_FIELDS], false],
       [[HUB_CAPS.V2_FIELDS, HUB_CAPS.SEAT_SPEC], true],
     ] as const) {
       hub = await startHub(0, true, { caps: [...caps] });
+
       let sent = false;
+
       pusher = startPusher({
         hubUrl: hub.url,
         token: TOKEN,
@@ -574,7 +621,9 @@ describe('pusher', () => {
           sent ? null : { loadouts: [loadout], markSent: () => void (sent = true) },
       });
       await until(() => hub!.extra.some((e) => e.event === 'collector:loadout'));
+
       const got = hub.extra.find((e) => e.event === 'collector:loadout')!.payload as object;
+
       expect('topologyRoot' in got, caps.join(',')).toBe(want);
       expect('member' in got).toBe(want);
       await pusher.stop();
@@ -586,7 +635,9 @@ describe('pusher', () => {
 
   it('the daemon-data channel is not even read until the hub advertised it', async () => {
     hub = await startHub(0, true); // listens, but advertises nothing
+
     let takes = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -609,7 +660,9 @@ describe('pusher', () => {
   it('mission files: not read for a hub without the cap (old hub), sent to one with it, and a throwing read leaves snapshots flowing', async () => {
     // an old hub (advertises only daemondata): the channel is never even read, nothing is sent
     hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA] });
+
     let takes = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -632,8 +685,10 @@ describe('pusher', () => {
 
     // a hub with the cap: sent, marked sent, and a read that throws never stops the snapshot push
     hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.MISSIONFILES] });
+
     let n = 0;
     let marked = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -663,7 +718,9 @@ describe('pusher', () => {
       },
     });
     await until(() => n >= 4 && hub!.received.length >= 6 && marked >= 1, 10_000);
+
     const sent = hub.extra.filter((e) => e.event === 'collector:missionfiles');
+
     expect(sent.length).toBeGreaterThan(0);
   }, 20_000);
 
@@ -700,6 +757,7 @@ describe('pusher', () => {
         };
       },
     });
+
     // today's hub (every cap but these two): nothing is read, nothing sent
     hub = await startHub(0, true, {
       caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.SPEC_FIELDS, HUB_CAPS.MISSIONFILES],
@@ -737,6 +795,7 @@ describe('pusher', () => {
 
   it('a read that throws never stops the snapshot push, and an oversize payload is skipped and logged once', async () => {
     hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA] });
+
     const lines: string[] = [];
     let takes = 0;
     let marked = 0;
@@ -756,6 +815,7 @@ describe('pusher', () => {
         instances: null,
       },
     };
+
     // pad past the guard without breaking its own schema: the guard looks at bytes, not shape
     (huge.data.specs[0] as { purpose: string }).purpose = 'y'.repeat(CHANNEL_PAYLOAD_MAX);
     pusher = startPusher({
@@ -780,7 +840,9 @@ describe('pusher', () => {
       },
     });
     await until(() => takes >= 6 && hub!.received.length >= 8 && marked >= 1, 10_000);
+
     const sent = hub.extra.filter((e) => e.event === 'collector:daemondata');
+
     expect(sent.length).toBeGreaterThan(0);
     expect(sent.every((e) => (e.payload as { kind: string }).kind === 'settings')).toBe(true);
     expect(lines.filter((l) => l.includes('was not sent'))).toHaveLength(1);
@@ -791,8 +853,10 @@ describe('pusher', () => {
 
   it('does not overlap ticks when a build is slow', async () => {
     hub = await startHub();
+
     let running = 0;
     let max = 0;
+
     pusher = startPusher({
       hubUrl: hub.url,
       token: TOKEN,
@@ -819,8 +883,10 @@ describe('settings', () => {
     APPYRIG_MACHINE_ID: 'm2',
     APPYRIG_TOKEN_FILE: '/t',
   };
+
   it('reads the token file and normalises the hub url', () => {
     const s = loadSettings(env, () => `${TOKEN}\n`);
+
     expect(s).toMatchObject({ hubUrl: 'http://100.126.70.25:7191', token: TOKEN });
     expect(s.machine).toMatchObject({ id: 'm2', label: 'M2' });
   });

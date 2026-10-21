@@ -23,6 +23,7 @@ describe('V1 archive manifest', () => {
     for (const f of V1_ARCHIVE_ROWS.flatMap((r) => r.files)) {
       expect(f).toMatch(/^v1-[a-z0-9-]+\.png$/);
     }
+
     expect(v1ArchiveSlides().length).toBeGreaterThanOrEqual(32);
   });
 });
@@ -30,6 +31,7 @@ describe('V1 archive manifest', () => {
 describe('V1 archive viewer', () => {
   it('shows the first screen, steps with the buttons and arrow keys, and Esc closes', async () => {
     const onClose = vi.fn();
+
     render(<V1Archive onClose={onClose} />);
     expect(screen.getByTestId('v1-archive-title').textContent).toContain('1. The Wall');
     await waitFor(() =>
@@ -63,7 +65,9 @@ describe('V1 archive viewer', () => {
 
   it('Next, Prev and the arrows move one screen; pictures move with their own switch', () => {
     render(<V1Archive onClose={() => {}} />);
+
     const count = () => screen.getByTestId('v1-archive-count').textContent;
+
     expect(count()).toMatch(/^V1 archive · screen 1 of 32 · picture 1 of 3/);
     // Prev is off on the first screen; the first picture's "up" is off too
     expect(screen.getByTestId('v1-archive-prev').hasAttribute('disabled')).toBe(true);

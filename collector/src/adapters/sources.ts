@@ -45,6 +45,7 @@ const GRAPH_TTL_MS = 60_000;
 
 export function assertLoopback(url: string): void {
   const host = new URL(url).hostname;
+
   if (!['127.0.0.1', 'localhost', '[::1]', '::1'].includes(host)) {
     throw new Error(
       `daemon URL must be loopback, got ${host}: the daemon is read on localhost only`
@@ -54,7 +55,9 @@ export function assertLoopback(url: string): void {
 
 export function createSources(opts: SourceOptions = {}): Sources {
   const daemonUrl = opts.daemonUrl ?? 'http://127.0.0.1:7433';
+
   assertLoopback(daemonUrl);
+
   const rigBin = opts.rigBin ?? 'rig';
   const tmuxBin = opts.tmuxBin ?? 'tmux';
   const viewerBin = opts.viewerBin ?? 'herdr';
@@ -62,6 +65,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
   const queueTtl = opts.queueTtlMs ?? 15_000;
   // A UTF-8 locale for every child: launchd sets none, and tmux mangles control characters without one.
   const env = { LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', ...(opts.env ?? process.env) };
+
   if (!/utf-?8/i.test(env.LC_ALL ?? '')) {
     env.LC_ALL = 'en_US.UTF-8';
   }
@@ -78,6 +82,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
             typeof (err as { code?: unknown } | null)?.code === 'number'
               ? (err as { code: number }).code
               : 0;
+
           resolve({ stdout: String(stdout), stderr: String(stderr), code });
         }
       });
@@ -85,6 +90,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
   const getJson = async (path: string): Promise<unknown> => {
     let res: Response;
+
     try {
       res = await fetch(new URL(path, daemonUrl), { signal: AbortSignal.timeout(timeout) });
     } catch (e) {
@@ -92,8 +98,10 @@ export function createSources(opts: SourceOptions = {}): Sources {
       if ((e as { cause?: { code?: string } }).cause?.code === 'ECONNREFUSED') {
         throw new Error('no OpenRig daemon running on this machine');
       }
+
       throw e;
     }
+
     if (!res.ok) {
       throw new Error(`GET ${path} -> HTTP ${res.status}`);
     }
@@ -110,6 +118,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     if (queueCache && Date.now() - queueCache.at < queueTtl) {
       return queueCache.value;
     }
+
     const r = await run(rigBin, [
       'queue',
       'list',
@@ -120,10 +129,13 @@ export function createSources(opts: SourceOptions = {}): Sources {
       '--limit',
       '5000',
     ]);
+
     if (r.code !== 0) {
       throw new Error(`rig queue list exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
     }
+
     const parsedJson: unknown = JSON.parse(r.stdout);
+
     queueCache = {
       at: Date.now(),
       value: parseQueue(parsedJson),
@@ -143,11 +155,14 @@ export function createSources(opts: SourceOptions = {}): Sources {
     rigId: string
   ): Promise<{ edges: RigEdge[] | undefined; error?: string }> => {
     const hit = graphCache.get(rigId);
+
     if (hit && Date.now() - hit.at < GRAPH_TTL_MS) {
       return { edges: hit.edges };
     }
+
     try {
       const edges = parseGraphEdges(await getJson(`/api/rigs/${encodeURIComponent(rigId)}/graph`));
+
       graphCache.set(rigId, { at: Date.now(), edges });
 
       return { edges };
@@ -166,8 +181,10 @@ export function createSources(opts: SourceOptions = {}): Sources {
     if (versionCache !== undefined) {
       return versionCache;
     }
+
     try {
       const r = await run(rigBin, ['--version']);
+
       versionCache = r.stdout.trim().split(/\s+/)[0] || null;
     } catch {
       versionCache = null;
@@ -184,30 +201,37 @@ export function createSources(opts: SourceOptions = {}): Sources {
       const dirs = new Map<string, string>();
       const refs = new Map<string, string>();
       const graphFailures: string[] = [];
+
       for (const rig of rigs) {
         try {
           const read = parseNodesWithRefs(
             await getJson(`/api/rigs/${encodeURIComponent(rig.id)}/nodes`)
           );
+
           seats.push(...read.seats);
           read.agentDirs.forEach((dir, seat) => dirs.set(seat, dir));
           read.agentRefs.forEach((ref, seat) => refs.set(seat, ref));
         } catch (e) {
           failures.push(`${rig.name}: ${(e as Error).message}`);
         }
+
         const g = await readEdges(rig.id);
+
         if (g.edges) {
           rig.edges = g.edges;
         }
+
         if (g.error) {
           graphFailures.push(`${rig.name}: ${g.error}`);
         }
       }
+
       for (const id of graphCache.keys()) {
         if (!rigs.some((r) => r.id === id)) {
           graphCache.delete(id);
         }
       }
+
       // Partial success: a rig or the queue that cannot be read is reported in `warnings` (the
       // builder turns them into sources.daemon.ok=false) while everything readable still shows.
       const warnings = [
@@ -215,11 +239,13 @@ export function createSources(opts: SourceOptions = {}): Sources {
         ...graphFailures.map((f) => `graph unreadable for ${f} (no planned lines)`),
       ];
       let queue: DaemonRead['queue'] = [];
+
       try {
         queue = await readQueue();
       } catch (e) {
         warnings.push(`queue unreadable: ${(e as Error).message}`);
       }
+
       agentDirs = dirs;
       agentRefs = refs;
 
@@ -228,10 +254,12 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
     async tmuxPanes(): Promise<TmuxPane[]> {
       const r = await run(tmuxBin, LIST_PANES_ARGS);
+
       if (r.code !== 0) {
         if (isNoServer(r.stderr)) {
           return [];
         }
+
         throw new Error(`tmux list-panes exited ${r.code}: ${r.stderr.trim().slice(0, 200)}`);
       }
 
@@ -240,6 +268,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
     async capture(paneId: string): Promise<string> {
       const r = await run(tmuxBin, capturePaneArgs(paneId));
+
       if (r.code !== 0) {
         throw new Error(`tmux capture-pane ${paneId} exited ${r.code}`);
       }
@@ -263,6 +292,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
     ...(opts.specFolders ? { specs: createSpecIndex(opts.specFolders) } : {}),
     async viewerAgents(): Promise<ViewerAgent[]> {
       const r = await run(viewerBin, AGENT_LIST_ARGS);
+
       if (r.code !== 0) {
         throw new Error(
           `viewer agent list exited ${r.code}: ${(r.stderr || r.stdout).trim().slice(0, 200)}`

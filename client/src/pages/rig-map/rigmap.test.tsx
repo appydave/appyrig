@@ -96,7 +96,9 @@ describe('Rig Map page', () => {
   it('is its own page key, in the Work group next to Handoff Flow', () => {
     expect(page.key).toBe('map');
     expect(groupOf('map')).toBe('work');
+
     const work = NAV_GROUPS.find((g) => g.key === 'work')!.pages;
+
     expect(Math.abs(work.indexOf('map') - work.indexOf('flow'))).toBe(1);
   });
 
@@ -108,8 +110,11 @@ describe('Rig Map page', () => {
 
   it('shows the picked rig: status line, pods, cards, no NOT PLACED rail', () => {
     const rig = pickRig();
+
     render(<RigMap ctx={ctxFor(rig.key)} />);
+
     const body = screen.getByTestId('rm-body');
+
     expect(body).toHaveAttribute('data-rig-key', rig.key);
     expect(within(body).getAllByTestId('g2-inside')).toHaveLength(1);
     expect(within(body).getAllByTestId('g2-agent-card').length).toBeGreaterThan(0);
@@ -118,7 +123,9 @@ describe('Rig Map page', () => {
 
   it('cards are the Wall card (V1 body, 5 slots), larger than the Wall, never the compact Graph card', () => {
     render(<RigMap ctx={ctxFor(pickRig().key)} />);
+
     const cards = screen.getAllByTestId('g2-agent-card');
+
     for (const c of cards) {
       expect(c.classList.contains('wcard')).toBe(true);
       expect(c.hasAttribute('data-size')).toBe(false);
@@ -126,12 +133,15 @@ describe('Rig Map page', () => {
       expect(within(c).getByTestId('terminal-card-context')).toBeInTheDocument();
       expect(within(c).getByTestId('seat-freshness')).toBeInTheDocument();
     }
+
     const css = readFileSync(path.resolve(__dirname, 'rigmap.css'), 'utf8');
+
     expect(css).toMatch(/\.ar-rigmap \.wcard \{[^}]*--wc-w:\s*clamp\(232px,[^;]*308px\)/);
   });
 
   it('a card click opens the Agent panel on that seat', () => {
     const ctx = ctxFor(pickRig().key);
+
     render(<RigMap ctx={ctx} />);
     fireEvent.click(screen.getAllByTestId('terminal-card-open')[0]!);
     expect(ctx.openAgentPanel).toHaveBeenCalledTimes(1);
@@ -139,30 +149,37 @@ describe('Rig Map page', () => {
 
   it('a stopped rig is frosted (the page body carries the stopped state)', () => {
     const stopped = listRigs(busy().machines).find((r) => r.status !== 'running');
+
     if (!stopped) {
       return;
     }
+
     render(<RigMap ctx={ctxFor(stopped.key)} />);
     expect(screen.getByTestId('rm-body').dataset.state).toBe('stopped');
   });
 
   it('lays out in the room it has: a size container, cards that clamp to it, pods that stack when narrow', () => {
     const css = readFileSync(path.resolve(__dirname, 'rigmap.css'), 'utf8');
+
     expect(css).toMatch(/container-type:\s*inline-size/);
     expect(css).toMatch(/@container \(max-width: 760px\)[^]*flex-basis:\s*100%/);
   });
 
   it('the shell strip wraps and drops its seats count when narrow and the replay time shrinks, so no page scrolls sideways', () => {
     const shell = readFileSync(path.resolve(__dirname, '../../shell/shell.css'), 'utf8');
+
     expect(/\.ar-strip-wrap \{[^}]*\}/.exec(shell)![0]).toMatch(/flex-wrap:\s*wrap/);
     expect(shell).toMatch(/data-expanded='false'\] \.strip \{[^}]*flex-wrap:\s*wrap/);
     expect(shell).toMatch(/max-width: 1180px\) \{\s*\.ar-strip-summary \{\s*display: none/);
+
     const flow = readFileSync(path.resolve(__dirname, '../flow/flow.css'), 'utf8');
+
     expect(/\.ar-flow \.ar-replay-time \{[^}]*\}/.exec(flow)![0]).toMatch(/flex:\s*0 1 280px/);
   });
 
   it('ships no dark-mode styles', () => {
     const css = readFileSync(path.resolve(__dirname, 'rigmap.css'), 'utf8');
+
     expect(css).not.toMatch(/prefers-color-scheme/);
   });
 });

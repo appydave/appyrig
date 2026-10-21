@@ -53,6 +53,7 @@ interface Props {
 
 /** Under this the page is too narrow to share the window with a pinned drawer and the open panel. */
 export const MIN_PAGE_PX = 640;
+
 /** Width the pinned drawer takes (tab, gap, list) and the space the page keeps clear of the panel. */
 const PINNED_W = 30 + 8 + 272 + 10;
 const pageWidthWith = (win: number) => win - 32 - PINNED_W - Math.min(520, win - 320);
@@ -75,12 +76,15 @@ export default function RigDrawer({
 }: Props) {
   const [pinnedSaved, setPinned] = useState<boolean>(readPinned);
   const [winW, setWinW] = useState(() => window.innerWidth);
+
   useEffect(() => {
     const on = () => setWinW(window.innerWidth);
+
     window.addEventListener('resize', on);
 
     return () => window.removeEventListener('resize', on);
   }, []);
+
   // While the panel is open and the page would be under MIN_PAGE_PX, the drawer shows as its tab only
   // for that moment. The saved pin is not changed, so it comes back when the panel closes.
   const squeezed = pinnedSaved && panelOpen && pageWidthWith(winW) < MIN_PAGE_PX;
@@ -90,15 +94,20 @@ export default function RigDrawer({
   const closeTimer = useRef<number | null>(null);
   // The open list always fits the window below where it sits.
   const panel = useRef<HTMLElement>(null);
+
   useLayoutEffect(() => {
     const el = panel.current;
+
     if (!el || !open) {
       return;
     }
+
     const fit = () => {
       const top = Math.max(0, el.getBoundingClientRect().top);
+
       el.style.maxHeight = `${Math.max(160, window.innerHeight - top - 8)}px`;
     };
+
     fit();
     window.addEventListener('scroll', fit, { passive: true });
     window.addEventListener('resize', fit);
@@ -109,6 +118,7 @@ export default function RigDrawer({
       el.style.maxHeight = '';
     };
   }, [open]);
+
   /** Rigs the viewer opened (or closed) by hand; the highlighted rig is open until closed. */
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   /** Machines whose "Stopped (N)" fold is open. */
@@ -122,22 +132,27 @@ export default function RigDrawer({
     },
     []
   );
+
   const enter = () => {
     if (closeTimer.current) {
       window.clearTimeout(closeTimer.current);
     }
+
     setHover(true);
   };
+
   const leave = () => {
     if (closeTimer.current) {
       window.clearTimeout(closeTimer.current);
     }
+
     closeTimer.current = window.setTimeout(() => setHover(false), CLOSE_DELAY_MS);
   };
 
   /** Rig names that exist on more than one machine: their rows carry the machine chip. */
   const shared = useMemo(() => {
     const seen = new Map<string, Set<string>>();
+
     for (const r of rigs) {
       seen.set(r.name, (seen.get(r.name) ?? new Set()).add(r.machineId));
     }
@@ -189,10 +204,13 @@ export default function RigDrawer({
   const rigRow = (fm: FleetMachine, r: RigRef) => {
     const seats = seatsOf(fm, r.name);
     const pods = new Map<string, Seat[]>();
+
     for (const s of seats) {
       const k = s.pod ?? POD_NONE;
+
       pods.set(k, [...(pods.get(k) ?? []), s]);
     }
+
     const shown = isOpen(r);
 
     return (
@@ -271,6 +289,7 @@ export default function RigDrawer({
         }
         onClick={() => {
           const next = !pinnedSaved;
+
           setPinned(next);
           writePinned(next);
           setHover(false);

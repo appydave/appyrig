@@ -64,6 +64,7 @@ export function diffSchemas(
       changedTables: [],
     };
   }
+
   const b = new Map(before.tables.map((t) => [t.name, t]));
   const a = new Map(after.map((t) => [t.name, t]));
   const addedTables = [...a.keys()].filter((n) => !b.has(n));

@@ -56,6 +56,7 @@ describe('seat history adapter', () => {
 
   it('keeps prompts, replies and tool calls; drops thinking and tool results; redacts', () => {
     const ev = parseTranscript(TRANSCRIPT);
+
     expect(ev.map((e) => e.kind)).toEqual(['prompt', 'reply', 'tool']);
     expect(ev[0]!.text).toBe('QA brief: test the hub');
     expect(ev[1]!.text).toContain('<REDACTED>');
@@ -72,13 +73,17 @@ describe('seat history adapter', () => {
 
   it('reads only known seats, and resends a seat only after its transcript changes', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-hist-'));
+
     mkdirSync(join(dir, 'proj'));
     writeFileSync(join(dir, 'proj', 'a.jsonl'), TRANSCRIPT);
     writeFileSync(join(dir, 'proj', 'mine.jsonl'), `${title('my own session')}\n`);
+
     const reader = new HistoryReader('m2', dir, () => new Date('2026-10-10T00:00:00.000Z'));
 
     expect(await reader.changed(new Set())).toEqual([]);
+
     const first = await reader.changed(new Set(['dev-hub@appyrig-build']));
+
     expect(first.map((p) => p.history.seat)).toEqual(['dev-hub@appyrig-build']);
     expect(first[0]!.history.events).toHaveLength(3);
     first[0]!.markSent();
@@ -88,7 +93,9 @@ describe('seat history adapter', () => {
       join(dir, 'proj', 'a.jsonl'),
       `${TRANSCRIPT}\n${line({ type: 'assistant', timestamp: '2026-10-09T14:00:00.000Z', message: { content: [{ type: 'text', text: 'done' }] } })}`
     );
+
     const again = await reader.changed(new Set(['dev-hub@appyrig-build']));
+
     expect(again[0]!.history.events.at(-1)!.text).toBe('done');
   });
 });
@@ -104,6 +111,7 @@ describe('seat title beyond line 1 (QA D2: M4 ylo-lead / ylo-copy)', () => {
 
   it('only within the first lines, and never from a cut-off last line', () => {
     const filler = Array.from({ length: TITLE_HEAD_LINES }, () => lastPrompt).join('\n');
+
     expect(seatOfHead(`${filler}\n${title('late@x')}\n`, true)).toBeNull();
     expect(seatOfHead(`${lastPrompt}\n${title('cut@x')}`, false)).toBeNull();
     // a person's own session titled without @ is never a seat
@@ -112,13 +120,18 @@ describe('seat title beyond line 1 (QA D2: M4 ylo-lead / ylo-copy)', () => {
 
   it('the index matches a last-prompt-first transcript, and an untitled file once its title lands', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-ti-'));
+
     mkdirSync(join(dir, '-p'));
     writeFileSync(join(dir, '-p', 'a.jsonl'), `${lastPrompt}\n${title('ylo-copy@ylo-thumbs')}\n`);
+
     const late = join(dir, '-p', 'b.jsonl');
+
     writeFileSync(late, `${lastPrompt}\n`);
+
     const index = new TranscriptIndex(dir);
     const seats = new Set(['ylo-copy@ylo-thumbs', 'ylo-lead@ylo-thumbs']);
     let found = await index.scan(seats);
+
     expect([...found.keys()]).toEqual(['ylo-copy@ylo-thumbs']);
     appendFileSync(late, `${title('ylo-lead@ylo-thumbs')}\n`);
     found = await index.scan(seats);
@@ -129,17 +142,23 @@ describe('seat title beyond line 1 (QA D2: M4 ylo-lead / ylo-copy)', () => {
 describe('F3 (truth #6): agent activity is the newest transcript event, not the file mtime', () => {
   it('reads the newest event timestamp; rows without one (a rename) do not move it', () => {
     const renamed = `${TRANSCRIPT}\n${title('dev-hub@appyrig-build')}`;
+
     expect(lastEventMs(renamed)).toBe(Date.parse('2026-10-09T13:50:09.000Z'));
     expect(lastEventMs(title('x@y'))).toBeNull();
   });
 
   it("a seat's agent activity follows new events; a transcript rewritten without one keeps it", async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-act-'));
+
     mkdirSync(join(dir, 'proj'));
+
     const file = join(dir, 'proj', 'a.jsonl');
+
     writeFileSync(file, TRANSCRIPT);
+
     const reader = new HistoryReader('m2', dir);
     const seats = new Set(['dev-hub@appyrig-build', 'dev-qa@appyrig-build']);
+
     expect(reader.agentActivity()).toBeNull(); // before the first scan
     await reader.changed(new Set()); // a scan before any seat is known (QA F3 MEDIUM)
     expect(reader.agentActivity()).toBeNull();

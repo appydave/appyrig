@@ -14,11 +14,13 @@ import { parseNodes, parsePs } from './adapters/daemon.js';
  */
 
 export const NOW = new Date('2026-10-09T13:24:44.000Z');
+
 const cfg = (id: string, label: string): BuilderConfig => ({
   machine: { id, label, hostname: null },
   version: 'fixture',
   pid: null,
 });
+
 export const ROAMY = cfg('roamy', 'Roamy');
 export const M2 = cfg('m2', 'M2');
 

@@ -29,12 +29,15 @@ export function createRequestLogger(log: Logger) {
     genReqId: () => crypto.randomUUID(),
     customLogLevel: (req, res) => {
       const status = res.statusCode;
+
       if (status >= 500) {
         return 'error';
       }
+
       if (status >= 400) {
         return 'warn';
       }
+
       // A poller hitting these every second filled the production log (P6): routine successes
       // drop to debug, which production does not print. Failures above still show.
       if (QUIET_PATHS.has((req.url ?? '').split('?')[0]!)) {

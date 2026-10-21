@@ -121,11 +121,13 @@ export default function RigFiles({
     if (preset) {
       return;
     }
+
     setList({ state: 'loading' });
     void callVerb<RigFilesOutput>(socket, 'rig.files', { machine: machineId, rig }).then((a) => {
       if (!a.ok) {
         return setList({ state: 'refused', error: a.error });
       }
+
       setList({ state: 'ok', out: a.value });
       setSelected(
         (cur) =>
@@ -138,6 +140,7 @@ export default function RigFiles({
     // `preset` is fixed for the viewer's life: App mounts a new viewer to show other files.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, machineId, rig]);
+
   useEffect(() => {
     loadList();
   }, [loadList]);
@@ -146,7 +149,9 @@ export default function RigFiles({
     if (!selected) {
       return setFile({ state: 'idle' });
     }
+
     const given = preset?.files.find((f) => f.id === selected);
+
     if (preset) {
       if (given) {
         setFile({ state: 'ok', file: { ...given, scope: 'spec' } as RigFileOutput['file'] });
@@ -154,7 +159,9 @@ export default function RigFiles({
 
       return;
     }
+
     let current = true;
+
     setFile({ state: 'loading', id: selected });
     void callVerb<RigFileOutput>(socket, 'rig.file', {
       machine: machineId,
@@ -164,6 +171,7 @@ export default function RigFiles({
       if (!current) {
         return;
       }
+
       setFile(
         a.ok
           ? { state: 'ok', file: a.value.file }
@@ -182,6 +190,7 @@ export default function RigFiles({
   }, []);
 
   const files = useMemo(() => (list.state === 'ok' ? list.out.files : []), [list]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -191,6 +200,7 @@ export default function RigFiles({
 
         return;
       }
+
       if (
         (e.key === 'ArrowDown' || e.key === 'ArrowUp') &&
         !isTextEntry(e.target) &&
@@ -199,6 +209,7 @@ export default function RigFiles({
         const i = files.findIndex((f) => f.id === selected);
         const next =
           files[Math.max(0, Math.min(files.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
+
         if (next && next.id !== selected) {
           e.preventDefault();
           setSelected(next.id);
@@ -206,6 +217,7 @@ export default function RigFiles({
         }
       }
     };
+
     // capture: the screen's own Esc must not also run
     window.addEventListener('keydown', onKey, true);
 

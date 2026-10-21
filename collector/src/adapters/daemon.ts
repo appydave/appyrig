@@ -30,6 +30,7 @@ function parseList<S extends z.ZodType>(schema: S, raw: unknown, what: string): 
 
   return raw.map((row, i) => {
     const r = schema.safeParse(row);
+
     if (!r.success) {
       throw new Error(`${what}[${i}]: ${issueMessages(r.error).join('; ')}`);
     }
@@ -60,19 +61,25 @@ export function deriveStatus(node: LenientNodeT): {
   if (node.sessionStatus !== 'running') {
     return { status: 'stopped', blockedReason: null };
   }
+
   const a = node.activityState;
+
   if (!a) {
     return { status: 'unknown', blockedReason: null };
   }
+
   if (a.needsInput.count > 0) {
     return { status: 'blocked', blockedReason: a.needsInput.reason ?? 'needs input' };
   }
+
   if (a.display === 'working') {
     return { status: 'working', blockedReason: null };
   }
+
   if (a.display === 'idle') {
     return { status: 'idle', blockedReason: null };
   }
+
   if (a.display === 'needs-input') {
     return { status: 'blocked', blockedReason: 'needs input' };
   }
@@ -85,6 +92,7 @@ export function optText(v: unknown, max: number): string | undefined {
   if (typeof v !== 'string') {
     return undefined;
   }
+
   const t = v.trim();
 
   return t ? t.slice(0, max) : undefined;
@@ -160,11 +168,14 @@ export function parseNodesWithRefs(raw: unknown): {
   const nodes = parseList(LenientNode, raw, '/api/rigs/:id/nodes');
   const agentDirs = new Map<string, string>();
   const agentRefs = new Map<string, string>();
+
   for (const n of nodes) {
     const ref = n.agentRef;
+
     if (typeof ref === 'string' && ref.startsWith('path:') && ref.length > 5) {
       agentDirs.set(n.canonicalSessionName, ref.slice(5));
     }
+
     if (typeof ref === 'string' && ref) {
       agentRefs.set(n.canonicalSessionName, ref);
     }
@@ -177,9 +188,11 @@ const SUMMARY_MAX = 160;
 
 function summaryOf(item: z.infer<typeof LenientQueueItem>): string | null {
   const s = item.summary?.trim();
+
   if (s) {
     return s.slice(0, SUMMARY_MAX);
   }
+
   const firstLine = item.body
     ?.split('\n')
     .find((l) => l.trim().length > 0)
@@ -190,8 +203,10 @@ function summaryOf(item: z.infer<typeof LenientQueueItem>): string | null {
 
 function noteFields(q: z.infer<typeof LenientQueueItem>): Partial<QueueItem> {
   const out: Partial<QueueItem> = {};
+
   for (const k of ['closureReason', 'closureTarget', 'blockedOn', 'humanIntent', 'tier'] as const) {
     const v = optText(q[k], QUEUE_NOTE_MAX);
+
     if (v !== undefined) {
       out[k] = v;
     }
@@ -227,6 +242,7 @@ export function parseQueue(raw: unknown): QueueItem[] {
  */
 export function parseQueueBodies(raw: unknown): Map<string, string> {
   const out = new Map<string, string>();
+
   for (const q of parseList(LenientQueueItem, raw, 'queue list')) {
     if (typeof q.body === 'string' && q.body.length > 0) {
       out.set(q.qitemId, q.body);
@@ -244,20 +260,27 @@ export function parseQueueBodies(raw: unknown): Map<string, string> {
  */
 export function parseGraphEdges(raw: unknown): RigEdge[] {
   const g = LenientGraph.safeParse(raw);
+
   if (!g.success) {
     throw new Error(`/api/rigs/:id/graph: ${issueMessages(g.error).join('; ')}`);
   }
+
   const session = new Map<string, string>();
+
   for (const n of g.data.nodes) {
     const name = n.data?.canonicalSessionName;
+
     if (typeof name === 'string' && name) {
       session.set(n.id, name);
     }
   }
+
   const out: RigEdge[] = [];
+
   for (const e of g.data.edges) {
     const from = session.get(e.source);
     const to = session.get(e.target);
+
     if (from && to && e.label) {
       out.push({ from, to, kind: e.label.slice(0, 60) });
     }

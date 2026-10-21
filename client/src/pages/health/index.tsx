@@ -233,6 +233,7 @@ function MachineHealth({
 function HealthPage({ ctx }: PageProps) {
   const [loaded, setLoaded] = useState<Loaded>({ state: 'loading' });
   const [settings, setSettings] = useState<SettingsGetOutput | null>(null);
+
   useEffect(() => {
     let live = true;
     const ask = () => {
@@ -240,6 +241,7 @@ function HealthPage({ ctx }: PageProps) {
         if (!live) {
           return;
         }
+
         setLoaded(
           a.ok ? { state: 'ok', out: a.value } : { state: 'refused', why: a.error.message }
         );
@@ -253,7 +255,9 @@ function HealthPage({ ctx }: PageProps) {
         }
       });
     };
+
     ask();
+
     const t = setInterval(ask, HEALTH_REFRESH_MS);
 
     return () => {
@@ -263,6 +267,7 @@ function HealthPage({ ctx }: PageProps) {
     // the getter is stable for the page's life
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   const refusal = loaded.state === 'refused' ? loaded.why : null;
   const rowOf = (id: string) =>
     loaded.state === 'ok' ? loaded.out.machines.find((m) => m.machine === id) : undefined;

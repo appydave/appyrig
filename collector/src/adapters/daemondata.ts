@@ -86,6 +86,7 @@ export function txt(v: unknown, max: number, redact = false): string | null {
   if (typeof v !== 'string') {
     return null;
   }
+
   const t = (redact ? redactString(v) : v).trim();
 
   return t ? t.slice(0, max) : null;
@@ -113,6 +114,7 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
   if (!isRec(raw)) {
     throw new Error('node detail: expected a JSON object');
   }
+
   const compact = isRec(raw.compactSpec) ? raw.compactSpec : {};
   const specName = txt(raw.resolvedSpecName, TEXT_LONG_MAX) ?? txt(compact.name, TEXT_LONG_MAX);
   const specVersion =
@@ -137,7 +139,9 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(f)) {
         return [];
       }
+
       const path = txt(f.path, TEXT_XXXLONG_MAX);
+
       if (!path) {
         return [];
       }
@@ -158,7 +162,9 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(a)) {
         return [];
       }
+
       const type = txt(a.type, TEXT_SHORT_MAX);
+
       if (!type) {
         return [];
       }
@@ -175,7 +181,9 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(p)) {
         return [];
       }
+
       const logicalId = txt(p.logicalId, TEXT_XLONG_MAX);
+
       if (!logicalId) {
         return [];
       }
@@ -193,6 +201,7 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(r)) {
         return [];
       }
+
       const id = txt(r.id, TEXT_XLONG_MAX);
 
       return id ? [{ id, category: txt(r.category, TEXT_SMALL_MAX) }] : [];
@@ -219,8 +228,10 @@ const FACT_TEXT_MAX = 200;
 /** Primitive facts picked from a record; anything else is skipped, never guessed. */
 function pickFacts(r: Record<string, unknown>, keys: string[]): LibraryRow['facts'] {
   const out: LibraryRow['facts'] = {};
+
   for (const k of keys) {
     const v = r[k];
+
     if (typeof v === 'string') {
       out[k] = v.slice(0, FACT_TEXT_MAX);
     } else if (typeof v === 'number' && Number.isFinite(v)) {
@@ -238,9 +249,11 @@ function rowsOf(raw: unknown, wrapper: string): unknown[] {
   if (Array.isArray(raw)) {
     return raw;
   }
+
   if (isRec(raw) && Array.isArray(raw[wrapper])) {
     return raw[wrapper] as unknown[];
   }
+
   throw new Error(`expected a JSON array (or {${wrapper}: [...]})`);
 }
 
@@ -251,8 +264,10 @@ export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
       if (!isRec(r)) {
         return [];
       }
+
       const id = txt(r.id, TEXT_XXLONG_MAX);
       const name = txt(r.name, TEXT_XLONG_MAX);
+
       if (!id || !name) {
         return [];
       }
@@ -289,19 +304,25 @@ export function parseLibrarySkills(raw: unknown): LibraryRow[] {
       if (!isRec(r)) {
         return [];
       }
+
       const id = txt(r.id, TEXT_XXLONG_MAX);
       const name = txt(r.name, TEXT_XLONG_MAX);
+
       if (!id || !name) {
         return [];
       }
+
       const files = list(r.files).flatMap((f) => {
         if (!isRec(f)) {
           return [];
         }
+
         const fname = txt(f.name, TEXT_XLONG_MAX);
+
         if (!fname) {
           return [];
         }
+
         const size = num(f.size);
 
         return [{ name: fname, size: size !== null && size >= 0 ? Math.round(size) : null }];
@@ -335,11 +356,14 @@ export function parseLibraryPacks(raw: unknown): LibraryRow[] {
       if (!isRec(r)) {
         return [];
       }
+
       const id = txt(r.id, TEXT_XXLONG_MAX);
       const name = txt(r.name, TEXT_XLONG_MAX);
+
       if (!id || !name) {
         return [];
       }
+
       const tokens = num(r.manifestEstimatedTokens) ?? num(r.derivedEstimatedTokens);
 
       return [
@@ -364,6 +388,7 @@ export function parseLibraryPacks(raw: unknown): LibraryRow[] {
 
 /** The daemon's page size cap for the telemetry streams is 128 (limit above it is a 400). */
 export const TRANSITIONS_PAGE = 128;
+
 /** Pages read per round, so the first read of a long history is spread over a few rounds. */
 const TRANSITIONS_PAGES_PER_ROUND = 12;
 
@@ -371,6 +396,7 @@ export function parseTransitionRow(r: unknown): TransitionRow | null {
   if (!isRec(r)) {
     return null;
   }
+
   const rawId = r.transitionId;
   const id =
     typeof rawId === 'string' ? rawId.trim() : typeof rawId === 'number' ? String(rawId) : '';
@@ -378,6 +404,7 @@ export function parseTransitionRow(r: unknown): TransitionRow | null {
   const state = txt(r.state, TEXT_SHORT_MAX);
   const when = txt(r.originalTimestamp, TEXT_SHORT_MAX) ?? txt(r.createdAt, TEXT_SHORT_MAX);
   const ms = when ? Date.parse(when) : NaN;
+
   if (!id || id.length > 30 || !qitemId || !state || !Number.isFinite(ms)) {
     return null;
   }
@@ -405,6 +432,7 @@ export function parseTransitionsPage(raw: unknown): {
   if (!isRec(raw) || !Array.isArray(raw.rows) || !isRec(raw.page)) {
     throw new Error('queue-transitions: expected {rows, page}');
   }
+
   const source = isRec(raw.source) ? raw.source : {};
 
   return {
@@ -429,7 +457,9 @@ export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['spe
       if (!isRec(r)) {
         return [];
       }
+
       const name = txt(r.name, TEXT_XLONG_MAX);
+
       if (!name) {
         return [];
       }
@@ -457,10 +487,13 @@ export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData[
       if (!isRec(r)) {
         return [];
       }
+
       const instanceId = txt(r.instanceId, TEXT_XLONG_MAX);
+
       if (!instanceId) {
         return [];
       }
+
       const hops = num(r.hopCount);
       const deadline = isRec(r.deadline) ? r.deadline : {};
 
@@ -528,7 +561,9 @@ export function parseHealthFindings(
         if (!isRec(c)) {
           return [];
         }
+
         const source = txt(c.source, TEXT_LONG_MAX);
+
         if (!source) {
           return [];
         }
@@ -553,6 +588,7 @@ export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
   if (!isRec(raw) || !isRec(raw.policy)) {
     throw new Error('health policy: expected {policy}');
   }
+
   const p = raw.policy;
   const diagnosis = isRec(p.diagnosis) ? p.diagnosis : {};
   const names = (v: unknown) =>
@@ -560,6 +596,7 @@ export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
       .flatMap((x) => txt(x, TEXT_LONG_MAX) ?? [])
       .slice(0, 40);
   const thresholds: Record<string, number> = {};
+
   if (isRec(p.thresholds)) {
     for (const [k, v] of Object.entries(p.thresholds)) {
       if (typeof v === 'number' && Number.isFinite(v)) {
@@ -593,6 +630,7 @@ export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
   if (!isRec(raw)) {
     throw new Error('restore check: expected a JSON object');
   }
+
   const c = isRec(raw.counts) ? raw.counts : {};
 
   return {
@@ -607,6 +645,7 @@ export function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
   if (!isRec(raw)) {
     throw new Error('healthz: expected a JSON object');
   }
+
   const loop = isRec(raw.eventLoop) ? raw.eventLoop : {};
   const lag = num(loop.lagP99Ms);
 
@@ -672,6 +711,7 @@ export const SETTINGS_ALLOW: readonly string[] = [
   'ui.terminal.max_live_terminals',
   'ui.timezone',
 ];
+
 /**
  * A key whose NAME suggests a path, a file, free instructions, a URL or a session is withheld whatever
  * its value, even if it were ever added to the allowlist; so is anything secret-looking.
@@ -688,6 +728,7 @@ export function parseSettings(raw: unknown): SettingsData {
   if (!isRec(raw) || !isRec(raw.settings)) {
     throw new Error('config: expected {settings}');
   }
+
   const settings: SettingsData['settings'] = {};
   let withheld = 0;
   let pathsHidden = 0;
@@ -695,17 +736,22 @@ export function parseSettings(raw: unknown): SettingsData {
     if (v === null) {
       return null;
     }
+
     if (typeof v === 'boolean') {
       return v;
     }
+
     if (typeof v === 'number') {
       return Number.isFinite(v) ? v : undefined;
     }
+
     const text =
       typeof v === 'string' ? v : Array.isArray(v) || isRec(v) ? JSON.stringify(v) : null;
+
     if (text === null) {
       return undefined;
     }
+
     if (PATH_LIKE.test(text)) {
       pathsHidden += 1;
 
@@ -714,18 +760,23 @@ export function parseSettings(raw: unknown): SettingsData {
 
     return redactString(text).slice(0, TEXT_XLONG_MAX);
   };
+
   for (const [key, entry] of Object.entries(raw.settings)) {
     if (!isRec(entry)) {
       continue;
     }
+
     if (!isAllowed(key) || WITHHELD_KEY.test(key) || key.length > TEXT_LONG_MAX) {
       withheld += 1;
       continue;
     }
+
     const v = value(entry.value);
+
     if (v === undefined) {
       continue;
     }
+
     settings[key] = {
       value: v,
       source: txt(entry.source, TEXT_TINY_MAX),
@@ -792,6 +843,7 @@ export class DaemonDataReader {
     this.now = opts.now ?? Date.now;
     this.log = opts.log ?? (() => {});
     this.every = { ...DAEMON_DATA_EVERY_MS, ...(opts.everyMs ?? {}) };
+
     const jobs: Job[] = [
       { kind: 'seatdetail', everyMs: this.every.seatdetail, run: () => this.seatDetail() },
       { kind: 'library', everyMs: this.every.library, run: () => this.library() },
@@ -800,6 +852,7 @@ export class DaemonDataReader {
       { kind: 'health', everyMs: this.every.health, run: () => this.health() },
       { kind: 'settings', everyMs: this.every.settings, run: () => this.settingsRead() },
     ];
+
     this.jobs = jobs.filter((j) => !opts.kinds || opts.kinds.includes(j.kind));
   }
 
@@ -810,6 +863,7 @@ export class DaemonDataReader {
    */
   forgetSeatsNotIn(ids: Set<string>): void {
     const prefix = 'seatdetail\u0000';
+
     for (const k of [...this.sent.keys()]) {
       if (k.startsWith(prefix) && !ids.has(k.slice(prefix.length))) {
         this.sent.delete(k);
@@ -841,22 +895,28 @@ export class DaemonDataReader {
       if (routeMissing.has(rigId)) {
         return routeMissing.get(rigId)!;
       }
+
       const r = await settle(this.get, `/api/rigs/${encodeURIComponent(rigId)}/nodes`);
+
       if (!r.ok && !r.notFound) {
         return null;
       }
+
       routeMissing.set(rigId, !r.ok);
 
       return !r.ok;
     };
+
     for (const t of this.targets) {
       try {
         const raw = await this.get(
           `/api/rigs/${encodeURIComponent(t.rigId)}/nodes/${encodeURIComponent(t.logicalId)}`
         );
+
         out.push({ key: t.seat, status: 'ok', reason: null, data: parseSeatDetail(raw) });
       } catch (e) {
         const missing = isNotFound(e) ? await probe(t.rigId) : null;
+
         if (missing === true) {
           out.push({
             key: t.seat,
@@ -877,6 +937,7 @@ export class DaemonDataReader {
         }
       }
     }
+
     if (failed > 0) {
       this.fail(
         'seatdetail:seats',
@@ -901,6 +962,7 @@ export class DaemonDataReader {
   ): Promise<Outcome[]> {
     const names = Object.keys(reads) as (keyof T & string)[];
     const settled = await Promise.all(names.map((n) => settle(this.get, reads[n].path)));
+
     if (settled.every((r) => !r.ok)) {
       if (settled.every((r) => !r.ok && r.notFound)) {
         return [
@@ -912,17 +974,23 @@ export class DaemonDataReader {
           },
         ];
       }
+
       const bad = settled.find((r) => !r.ok && !r.notFound);
+
       throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
     }
+
     const data = {} as T;
+
     names.forEach((n, i) => {
       const r = settled[i]!;
       const key = `${label}:${n}`;
+
       try {
         if (!r.ok) {
           throw new Error(r.error);
         }
+
         data[n] = reads[n].parse(r.value);
         this.failing.delete(key);
       } catch (e) {
@@ -943,6 +1011,7 @@ export class DaemonDataReader {
 
   private async health(): Promise<Outcome[]> {
     type Rest = Pick<HealthData, 'policy' | 'contextSummary' | 'restore' | 'daemon'>;
+
     const [findings, rest] = await Promise.all([
       settle(this.get, '/api/health'),
       this.parts<Rest>('health', {
@@ -953,19 +1022,24 @@ export class DaemonDataReader {
       }),
     ]);
     const other = rest[0]!;
+
     if (!findings.ok && findings.notFound && other.status === 'unsupported') {
       return rest;
     }
+
     let parsed: ReturnType<typeof parseHealthFindings> | null = null;
+
     try {
       if (!findings.ok) {
         throw new Error(findings.error);
       }
+
       parsed = parseHealthFindings(findings.value);
       this.failing.delete('health:findings');
     } catch (e) {
       this.fail('health:findings', `health findings unreadable: ${(e as Error).message}`);
     }
+
     const data: HealthData = {
       findings: parsed?.findings ?? null,
       findingsTotal: parsed?.findingsTotal ?? null,
@@ -995,6 +1069,7 @@ export class DaemonDataReader {
           },
         ];
       }
+
       throw e;
     }
   }
@@ -1008,9 +1083,11 @@ export class DaemonDataReader {
    */
   private async transitions(): Promise<Outcome[]> {
     const st = this.tr;
+
     for (let page = 0; page < TRANSITIONS_PAGES_PER_ROUND; page++) {
       const q = st.cursor ? `cursor=${encodeURIComponent(st.cursor)}` : 'start=retained';
       let got: ReturnType<typeof parseTransitionsPage>;
+
       try {
         got = parseTransitionsPage(
           await this.get(`/api/telemetry/v1/queue-transitions?limit=${TRANSITIONS_PAGE}&${q}`)
@@ -1026,32 +1103,40 @@ export class DaemonDataReader {
             },
           ];
         }
+
         // Start over ONLY when the daemon rejected our cursor (400/410: its epoch or history
         // changed). A timeout or 5xx says nothing about the cursor: keep what we hold, retry.
         if (st.cursor && /HTTP (400|410)\b/.test((e as Error).message)) {
           this.tr = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null, high: null };
         }
+
         throw e;
       }
+
       if (st.bootEpoch && got.bootEpoch && st.bootEpoch !== got.bootEpoch) {
         // the daemon's history is a different one now: what we hold no longer belongs to it
         st.rows = [];
         st.read = 0;
       }
+
       st.hostId = got.hostId ?? st.hostId;
       st.bootEpoch = got.bootEpoch ?? st.bootEpoch;
       st.read += got.rows.length;
       st.high = got.retainedHigh ?? st.high;
+
       // L2: a row is held once, whichever page it arrives on
       const have = new Set(st.rows.map((r) => r.id));
+
       st.rows = [...st.rows, ...got.rows.filter((r) => !have.has(r.id))].slice(-TRANSITIONS_MAX);
       if (got.nextCursor) {
         st.cursor = got.nextCursor;
       }
+
       if (!got.hasMore || got.rows.length === 0) {
         break;
       }
     }
+
     const data: TransitionsData = {
       rows: st.rows,
       // L1: the daemon's own retained high-water mark (its newest transition id), else rows read
@@ -1077,6 +1162,7 @@ export class DaemonDataReader {
       settle(this.get, '/healthz'),
     ]);
     const lists = [specs, skills, packs];
+
     if (lists.every((l) => !l.ok)) {
       if (lists.every((l) => !l.ok && l.notFound)) {
         return [
@@ -1088,17 +1174,22 @@ export class DaemonDataReader {
           },
         ];
       }
+
       const bad = lists.find((l) => !l.ok && !l.notFound);
+
       throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
     }
+
     const one = (name: string, r: Settled, parse: (raw: unknown) => LibraryRow[]) => {
       if (!r.ok) {
         this.fail(`library:${name}`, `library ${name} unreadable: ${r.error}`);
 
         return null;
       }
+
       try {
         const rows = parse(r.value);
+
         this.failing.delete(`library:${name}`);
 
         return rows;
@@ -1108,6 +1199,7 @@ export class DaemonDataReader {
         return null;
       }
     };
+
     const semver =
       health.ok && isRec(health.value) ? txt(health.value.semver, TEXT_SHORT_MAX) : null;
     const data: LibraryData = {
@@ -1126,15 +1218,20 @@ export class DaemonDataReader {
    */
   async next(targets: SeatTarget[]): Promise<PendingDaemonData | null> {
     this.targets = targets;
+
     const t = this.now();
     const pushes: DaemonDataPush[] = [];
     const sigs = new Map<string, string>();
+
     for (const job of this.jobs) {
       if (t - (this.lastRun.get(job.kind) ?? -Infinity) < job.everyMs) {
         continue;
       }
+
       this.lastRun.set(job.kind, t);
+
       let outcomes: Outcome[];
+
       try {
         outcomes = await job.run();
         this.failing.delete(job.kind);
@@ -1142,12 +1239,15 @@ export class DaemonDataReader {
         this.fail(job.kind, `${job.kind} unreadable: ${(e as Error).message}`);
         continue;
       }
+
       for (const o of outcomes) {
         const k = `${job.kind}\u0000${o.key}`;
         const sig = sigOf(o);
+
         if (this.sent.get(k) === sig) {
           continue;
         }
+
         const parsed = DaemonDataPushSchema.safeParse({
           kind: job.kind,
           machineId: this.machineId,
@@ -1157,6 +1257,7 @@ export class DaemonDataReader {
           key: o.key,
           data: o.status === 'ok' ? o.data : null,
         });
+
         if (!parsed.success) {
           this.fail(
             `${job.kind}:shape`,
@@ -1164,14 +1265,17 @@ export class DaemonDataReader {
           );
           continue;
         }
+
         this.failing.delete(`${job.kind}:shape`);
         pushes.push(parsed.data);
         sigs.set(k, sig);
       }
     }
+
     if (pushes.length === 0) {
       return null;
     }
+
     const skipped = new Set<string>();
 
     return {

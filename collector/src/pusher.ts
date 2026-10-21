@@ -119,18 +119,22 @@ export function startPusher(opts: PusherOptions): Pusher {
   let capsSeen = false;
   let capsWaiter: (() => void) | undefined;
   const capsWaitMs = opts.capsWaitMs ?? 1000;
+
   socket.on(FLEET_EVENTS.CAPS, (caps: unknown) => {
     if (Array.isArray(caps)) {
       hubCaps = new Set(caps.filter((c): c is string => typeof c === 'string'));
     }
+
     capsSeen = true;
     capsWaiter?.();
   });
+
   const waitForCaps = () =>
     capsSeen || capsWaitMs <= 0
       ? Promise.resolve()
       : new Promise<void>((resolve) => {
           const t = setTimeout(resolve, capsWaitMs);
+
           capsWaiter = () => {
             clearTimeout(t);
             resolve();
@@ -154,6 +158,7 @@ export function startPusher(opts: PusherOptions): Pusher {
   const lastWarn = new Map<string, number>();
   const warnSometimes = (key: string, line: string) => {
     const t = Date.now();
+
     if (t - (lastWarn.get(key) ?? 0) >= WARN_EVERY_MS) {
       lastWarn.set(key, t);
       log(line);
@@ -184,22 +189,27 @@ export function startPusher(opts: PusherOptions): Pusher {
     if (stopped) {
       return;
     }
+
     try {
       if (socket.connected) {
         await waitForCaps();
+
         const built = await opts.build();
         const sendV2 = hubCaps.has(HUB_CAPS.V2_FIELDS) && !forceV15;
         const sendSpec = hubCaps.has(HUB_CAPS.SPEC_FIELDS) && !forceV15;
         const v2 = sendV2 ? built : stripV2Fields(built);
         const ack = await push(sendSpec ? v2 : stripSpecFields(v2));
+
         if (!('timeout' in ack) && ack.ok) {
           hubCaps = new Set(ack.caps ?? []);
         }
+
         if (!('timeout' in ack) && !ack.ok && (sendV2 || sendSpec) && namesV2Key(ack.message)) {
           forceV15 = true;
           hubCaps = new Set();
           log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
         }
+
         note(
           'timeout' in ack
             ? `no ack from hub within ${ackTimeout}ms`
@@ -211,10 +221,12 @@ export function startPusher(opts: PusherOptions): Pusher {
     } catch (e) {
       note(`tick failed: ${(e as Error).message}`);
     }
+
     if (!stopped) {
       timer = setTimeout(tick, intervalMs);
     }
   };
+
   void tick();
 
   // Seat histories: one emit per changed seat, marked sent only when the hub accepts it.
@@ -232,10 +244,12 @@ export function startPusher(opts: PusherOptions): Pusher {
     if (stopped || !opts.histories) {
       return;
     }
+
     try {
       if (socket.connected) {
         for (const p of await opts.histories()) {
           const ack = await pushHistory(p.history);
+
           if ('timeout' in ack) {
             note(`no ack for history of ${p.history.seat}`);
           } else if (ack.ok) {
@@ -248,10 +262,12 @@ export function startPusher(opts: PusherOptions): Pusher {
     } catch (e) {
       note(`history tick failed: ${(e as Error).message}`);
     }
+
     if (!stopped) {
       historyTimer = setTimeout(historyTick, historyInterval);
     }
   };
+
   // First history round shortly after the first snapshot, so known seats exist.
   if (opts.histories) {
     historyTimer = setTimeout(historyTick, Math.min(historyInterval, 5_000));
@@ -265,9 +281,11 @@ export function startPusher(opts: PusherOptions): Pusher {
     if (stopped || !opts.handoffs) {
       return;
     }
+
     try {
       if (socket.connected) {
         const pending = await opts.handoffs();
+
         if (pending) {
           const ack = await new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
             socket
@@ -276,6 +294,7 @@ export function startPusher(opts: PusherOptions): Pusher {
                 resolve(err || !a ? { ok: false, timeout: true } : a);
               });
           });
+
           if ('timeout' in ack) {
             warnSometimes('handoffs', 'no ack for queue bodies (is the hub older than v1.4?)');
           } else if (ack.ok) {
@@ -288,10 +307,12 @@ export function startPusher(opts: PusherOptions): Pusher {
     } catch (e) {
       note(`handoff tick failed: ${(e as Error).message}`);
     }
+
     if (!stopped) {
       handoffTimer = setTimeout(handoffTick, handoffInterval);
     }
   };
+
   if (opts.handoffs) {
     handoffTimer = setTimeout(handoffTick, Math.min(handoffInterval, 3_000));
   }
@@ -325,11 +346,14 @@ export function startPusher(opts: PusherOptions): Pusher {
       if (stopped) {
         return;
       }
+
       try {
         if (socket.connected && (!needs || hubCaps.has(needs))) {
           const pending = await take();
+
           if (pending) {
             let all = true;
+
             for (const p of pending.payloads) {
               if (Buffer.byteLength(JSON.stringify(p)) > CHANNEL_PAYLOAD_MAX) {
                 pending.markSkipped?.(p);
@@ -339,18 +363,22 @@ export function startPusher(opts: PusherOptions): Pusher {
                 );
                 continue;
               }
+
               const ack = await sendAcked(event, p);
+
               if ('timeout' in ack) {
                 warnSometimes(key, `no ack for ${key} (is the hub older than ${since}?)`);
                 all = false;
                 break;
               }
+
               if (!ack.ok) {
                 note(`${key} refused: ${ack.failureMode}: ${ack.message}`);
                 all = false;
                 break;
               }
             }
+
             if (all) {
               pending.markSent();
             }
@@ -359,16 +387,20 @@ export function startPusher(opts: PusherOptions): Pusher {
       } catch (e) {
         note(`${key} tick failed: ${(e as Error).message}`);
       }
+
       if (!stopped) {
         t = setTimeout(tick, everyMs);
         timers.push(t);
       }
     };
+
     t = setTimeout(tick, Math.min(everyMs, 4_000));
     timers.push(t);
   };
+
   if (opts.rigFiles) {
     const take = opts.rigFiles;
+
     channel(
       'rig files',
       FLEET_EVENTS.RIGFILES,
@@ -381,8 +413,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       }
     );
   }
+
   if (opts.loadouts) {
     const take = opts.loadouts;
+
     channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, 'v1.5', async () => {
       const p = await take();
       // A hub without seat-spec refuses the member / AgentSpec / topology keys (strict schema).
@@ -393,8 +427,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       );
     });
   }
+
   if (opts.dbRows) {
     const take = opts.dbRows;
+
     channel(
       'database rows',
       FLEET_EVENTS.DBROWS,
@@ -407,8 +443,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       }
     );
   }
+
   if (opts.daemonData) {
     const take = opts.daemonData;
+
     channel(
       'daemon data',
       FLEET_EVENTS.DAEMONDATA,
@@ -428,8 +466,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       HUB_CAPS.DAEMONDATA
     );
   }
+
   if (opts.missionFiles) {
     const take = opts.missionFiles;
+
     channel(
       'mission files',
       FLEET_EVENTS.MISSIONFILES,
@@ -443,8 +483,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       HUB_CAPS.MISSIONFILES
     );
   }
+
   if (opts.rigSpecs) {
     const take = opts.rigSpecs;
+
     channel(
       'rig specs',
       FLEET_EVENTS.RIGSPECS,
@@ -458,8 +500,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       HUB_CAPS.RIG_SPECS
     );
   }
+
   if (opts.rigCommands) {
     const take = opts.rigCommands;
+
     // The snapshot's cadence: a new command shows on the page within a push or two.
     channel(
       'rig commands',
@@ -474,8 +518,10 @@ export function startPusher(opts: PusherOptions): Pusher {
       HUB_CAPS.RIG_COMMANDS
     );
   }
+
   if (opts.schema) {
     const take = opts.schema;
+
     channel(
       'database schema',
       FLEET_EVENTS.SCHEMA,
@@ -495,16 +541,20 @@ export function startPusher(opts: PusherOptions): Pusher {
       for (const t of timers) {
         clearTimeout(t);
       }
+
       if (handoffTimer) {
         clearTimeout(handoffTimer);
       }
+
       stopped = true;
       if (timer) {
         clearTimeout(timer);
       }
+
       if (historyTimer) {
         clearTimeout(historyTimer);
       }
+
       socket.close();
     },
   };

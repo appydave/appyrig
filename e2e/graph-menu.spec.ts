@@ -11,21 +11,26 @@ test.describe('v2 Graph rig menu', () => {
     page,
   }) => {
     const errors = watchErrors(page);
+
     await signIn(page);
     await page.goto('/?v=2');
     await page.getByTestId('ar-page-graph').click();
     await expect(page.getByTestId('ar-graph')).toBeVisible();
+
     // dismiss the first-visit hint if it is up (it can sit over the canvas)
     const gotIt = page.getByRole('button', { name: /got it/i });
+
     if (await gotIt.count()) {
       await gotIt.first().click();
     }
 
     // stopped rigs are hidden by default; the fixture machines mostly have stopped ones
     const showStopped = page.getByTestId('g2-show-stopped');
+
     if ((await showStopped.getAttribute('aria-pressed')) !== 'true') {
       await showStopped.click();
     }
+
     // a column with at least two frames: the menu of the first falls on the second
     const column = page
       .getByTestId('g2-machine')
@@ -35,9 +40,12 @@ test.describe('v2 Graph rig menu', () => {
       .getByTestId('g2-rig')
       .filter({ has: page.getByTestId('g2-rig-menu') })
       .first();
+
     await frame.scrollIntoViewIfNeeded();
     await frame.getByTestId('g2-rig-menu').click();
+
     const items = frame.getByTestId('g2-rig-menu-items');
+
     await expect(items).toBeVisible();
     await items.scrollIntoViewIfNeeded(); // elementFromPoint only sees the viewport
 
@@ -55,14 +63,17 @@ test.describe('v2 Graph rig menu', () => {
         },
         [box.x + box.width / 2, box.y + box.height / 2]
       );
+
       expect(hit, `${id} is on top`).toBe('ok');
     }
+
     // and the open frame is raised above its neighbours
     const z = await frame.evaluate((el) => Number(getComputedStyle(el).zIndex));
     const next = await column
       .getByTestId('g2-rig')
       .nth(1)
       .evaluate((el) => Number(getComputedStyle(el).zIndex));
+
     expect(z).toBeGreaterThan(next);
 
     await items.getByTestId('g2-fake-restore').click();

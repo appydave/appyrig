@@ -54,16 +54,20 @@ if (!env.isTest) {
   // Never kill whatever holds the port: lanes and QA copies share this machine (MISSION ports).
   const start = async () => {
     const loaded = await hub.load();
+
     logger.info(
       { dataDir, machines: loaded.map((m) => `${m.machine.id}:${m.liveness}`) },
       'Loaded last-known fleet'
     );
+
     const hosts = parseHosts(env.HUB_BIND_HOSTS);
     const bound = await hub.listen(env.PORT, hosts);
+
     hub.start();
     logger.info(`Hub listening on ${bound.hosts.map((h) => `${h}:${bound.port}`).join(', ')}`);
     logger.info(`Client URL: ${env.CLIENT_URL}`);
   };
+
   start().catch((err: NodeJS.ErrnoException) => {
     logger.fatal(
       { err },

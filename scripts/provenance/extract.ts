@@ -18,17 +18,22 @@ function strings(text: string): string[] {
 function balanced(text: string, open: number): string | null {
   const pair: Record<string, string> = { '[': ']', '{': '}', '(': ')' };
   const first = text[open];
+
   if (!first || !pair[first]) {
     return null;
   }
+
   let depth = 0;
+
   for (let i = open; i < text.length; i++) {
     const c = text[i];
+
     if (c === '[' || c === '{' || c === '(') {
       depth++;
     } else if (c === ']' || c === '}' || c === ')') {
       depth--;
     }
+
     if (depth === 0) {
       return text.slice(open + 1, i);
     }
@@ -42,9 +47,11 @@ export function constList(text: string, name: string): string[] | null {
   const m = new RegExp(`\\bconst\\s+${name}\\b[^=]*=\\s*(?:new Set(?:<[^>]*>)?\\(\\s*)?\\[`).exec(
     text
   );
+
   if (!m) {
     return null;
   }
+
   const body = balanced(text, m.index + m[0].length - 1);
 
   return body === null ? null : strings(body);
@@ -53,10 +60,13 @@ export function constList(text: string, name: string): string[] | null {
 /** `const NAME = new Map([["key", ...], ...])`: the keys. */
 export function mapKeys(text: string, name: string): string[] | null {
   const m = new RegExp(`\\bconst\\s+${name}\\b[^=]*=\\s*new Map(?:<[^>]*>)?\\(\\s*\\[`).exec(text);
+
   if (!m) {
     return null;
   }
+
   const body = balanced(text, m.index + m[0].length - 1);
+
   if (body === null) {
     return null;
   }
@@ -67,10 +77,13 @@ export function mapKeys(text: string, name: string): string[] | null {
 /** `interface NAME { a: …; b?: … }`: the field names, in order. */
 export function interfaceFields(text: string, name: string): string[] | null {
   const m = new RegExp(`\\binterface\\s+${name}\\b[^{]*\\{`).exec(text);
+
   if (!m) {
     return null;
   }
+
   const body = balanced(text, m.index + m[0].length - 1);
+
   if (body === null) {
     return null;
   }
@@ -98,14 +111,18 @@ export function stringConst(text: string, name: string): string | null {
  */
 export function functionKeys(text: string, fnName: string, variable: string): string[] | null {
   const m = new RegExp(`\\bfunction\\s+${fnName}\\s*\\(`).exec(text);
+
   if (!m) {
     return null;
   }
+
   const brace = text.indexOf('{', text.indexOf(')', m.index));
   const body = balanced(text, brace);
+
   if (body === null) {
     return null;
   }
+
   const re = new RegExp(`\\b${variable}(?:\\?\\.)?\\["([a-z_]+)"\\]`, 'g');
 
   return unique([...body.matchAll(re)].map((x) => x[1] ?? ''));
@@ -114,13 +131,17 @@ export function functionKeys(text: string, fnName: string, variable: string): st
 /** The `UPPER.md` names written in backticks between two markers of a Markdown doc. */
 export function docMdNames(text: string, from: string, to: string): string[] | null {
   const a = text.indexOf(from);
+
   if (a < 0) {
     return null;
   }
+
   const b = text.indexOf(to, a + from.length);
+
   if (b < 0) {
     return null;
   }
+
   const slice = text.slice(a, b);
 
   return unique([...slice.matchAll(/`([A-Z][A-Z0-9_-]*\.md)`/g)].map((x) => x[1] ?? ''));

@@ -26,6 +26,7 @@ describe('D09 W3 seat cards (collector)', () => {
 
   it('role is the last folder of agent_ref; a plain tmux session gets nothing', () => {
     const out = withSeatCards(seats, { agentRefs, names, config: {} });
+
     expect(out.map((s) => s.agentRole)).toEqual(['implementer', 'qa', undefined]);
     expect(out.every((s) => !('keySkills' in s))).toBe(true);
   });
@@ -47,6 +48,7 @@ describe('D09 W3 seat cards (collector)', () => {
         'dev-qa@d09-crew': { keySkills: ['recipe'] },
       },
     });
+
     expect(out[0]!.keySkills).toEqual([
       'recipe',
       'openrig-core:development-team',
@@ -65,6 +67,7 @@ describe('D09 W3 seat cards (collector)', () => {
   it('a 6th skill or a bad entry on one seat costs only that seat, never the others (r1 W3 MEDIUM-1)', () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-seatcfg-'));
     const file = join(dir, 'config.json');
+
     writeFileSync(
       file,
       JSON.stringify({
@@ -76,8 +79,10 @@ describe('D09 W3 seat cards (collector)', () => {
         },
       })
     );
+
     const errors: string[] = [];
     const cfg = seatConfigReader({ APPYRIG_CONFIG: file }, (m) => errors.push(m))();
+
     expect(cfg['a@r']).toEqual({ keySkills: ['x'] });
     expect(cfg['b@r']!.keySkills).toHaveLength(6); // kept; the card keeps at most five
     expect(cfg['c@r']).toEqual({});
@@ -91,6 +96,7 @@ describe('D09 W3 seat cards (collector)', () => {
       names: new Map(),
       config: {},
     });
+
     expect(out[0]!.agentRole).toBe('terminal');
   });
 
@@ -99,6 +105,7 @@ describe('D09 W3 seat cards (collector)', () => {
     const file = join(dir, 'config.json');
     const errors: string[] = [];
     const read = seatConfigReader({ APPYRIG_CONFIG: file }, (m) => errors.push(m));
+
     expect(read()).toEqual({});
     writeFileSync(file, JSON.stringify({ seats: { 'a@r': { keySkills: ['x'] } } }));
     expect(read()).toEqual({ 'a@r': { keySkills: ['x'] } });

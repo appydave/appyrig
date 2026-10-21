@@ -9,9 +9,11 @@ export function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
   }
+
   if (target.isContentEditable) {
     return true;
   }
+
   if (target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
     return true;
   }

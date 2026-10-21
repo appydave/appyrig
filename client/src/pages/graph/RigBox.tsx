@@ -29,10 +29,13 @@ export function lastWords(rig: GraphRig, now: number): string {
   if (!rig.ref) {
     return 'Sessions on this machine that belong to no rig';
   }
+
   const l = rig.last;
+
   if (!l) {
     return 'No handoffs yet';
   }
+
   const age = ago(Math.max(0, now - Date.parse(l.at)));
 
   return `${l.from} → ${l.to}${l.summary ? ` · ${l.summary}` : ''} · ${age} ago`;
@@ -201,28 +204,35 @@ function RigMenu({
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+
   useEffect(() => onOpenChange(open), [open, onOpenChange]);
+
   // A button closes the menu after raising its ask, not during the click: unmounting the button
   // mid-click swallowed the click in a real browser.
   const close = () => setOpen(false);
+
   useEffect(() => {
     if (!open) {
       return;
     }
+
     const away = (e: PointerEvent) => {
       if (!wrap.current?.contains(e.target as Node)) {
         setOpen(false);
       }
     };
+
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') {
         return;
       }
+
       e.preventDefault();
       e.stopPropagation();
       setOpen(false);
       trigger.current?.focus();
     };
+
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc, true);
 

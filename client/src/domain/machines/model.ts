@@ -8,14 +8,18 @@ import { pressureOf, value, type PressureView } from '../fleet/health.js';
  */
 export function newestVersion(list: (string | null | undefined)[]): string | null {
   let best: string | null = null;
+
   for (const v of list) {
     if (!v) {
       continue;
     }
+
     const a = parseVersion(v);
+
     if (!a) {
       continue;
     }
+
     if (!best || versionState(best, v) === 'behind') {
       best = v;
     }
@@ -41,22 +45,28 @@ export type VersionState = 'current' | 'behind' | 'ahead' | 'unknown';
 export function versionState(installed: string | null | undefined, latest: string): VersionState {
   const a = parseVersion(installed);
   const b = parseVersion(latest);
+
   if (!a || !b) {
     return 'unknown';
   }
+
   for (let i = 0; i < 3; i++) {
     if (a[i]! < b[i]!) {
       return 'behind';
     }
+
     if (a[i]! > b[i]!) {
       return 'ahead';
     }
   }
+
   const pa = isPrerelease(installed);
   const pb = isPrerelease(latest);
+
   if (pa && !pb) {
     return 'behind';
   }
+
   if (!pa && pb) {
     return 'ahead';
   }
@@ -68,16 +78,21 @@ export function versionState(installed: string | null | undefined, latest: strin
 export function behindWords(installed: string | null | undefined, latest: string): string {
   const a = parseVersion(installed);
   const b = parseVersion(latest);
+
   if (!a || !b) {
     return 'version not reported';
   }
+
   if (a[0] !== b[0]) {
     return `major ${a[0]} vs ${b[0]}`;
   }
+
   if (a[1] !== b[1]) {
     return `${Math.abs(b[1]! - a[1]!)} minor release${Math.abs(b[1]! - a[1]!) === 1 ? '' : 's'} ${a[1]! < b[1]! ? 'behind' : 'ahead'}`;
   }
+
   const d = b[2]! - a[2]!;
+
   if (d === 0) {
     if (isPrerelease(installed) && !isPrerelease(latest)) {
       return 'a pre-release of the latest';

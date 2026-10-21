@@ -64,12 +64,15 @@ export function verdictFor(
     if (c.refusal) {
       return cannot([`The hub did not answer health.findings: ${trim(c.refusal)}.`]);
     }
+
     if (!m && c.missing) {
       return cannot(['The hub answered, but its answer did not include this machine.']);
     }
+
     if (!m) {
       return { kind: 'asking', glyph: '…', headline: 'Asking the hub', reasons: [] };
     }
+
     if (m.status === 'pending') {
       return cannot([
         m.reason
@@ -77,6 +80,7 @@ export function verdictFor(
           : "This machine's collector has not sent health data yet (an older collector, or not collected this round).",
       ]);
     }
+
     if (m.status !== 'ok') {
       return cannot([
         m.reason
@@ -84,9 +88,11 @@ export function verdictFor(
           : "This machine's OpenRig has no health findings, so there is nothing to read.",
       ]);
     }
+
     if (m.assessment === 'unknown') {
       return cannot(m.caveats.length ? m.caveats : ['The findings could not be read.']);
     }
+
     if (m.assessment === 'findings') {
       const n = m.data?.findingsTotal ?? m.data?.findings?.length ?? 0;
 
@@ -99,7 +105,9 @@ export function verdictFor(
           : [],
       };
     }
+
     const caveats = caveatsOf(m);
+
     if (caveats.length) {
       return {
         kind: 'not-all-clear',
@@ -116,6 +124,7 @@ export function verdictFor(
       reasons: [coverageLine(m.data)],
     };
   })();
+
   if (!c.stale || v.kind === 'asking') {
     return v;
   }
@@ -143,9 +152,11 @@ export function coverageLine(d: HealthData | null): string {
 /** "last reading, machine asleep" when the machine is not reporting live; null when it is. */
 export function staleWords(fm: FleetMachine, now: number, hubConnected: boolean): string | null {
   const f = freshness(fm, now, hubConnected);
+
   if (f.level === 'asleep') {
     return 'last reading, machine asleep';
   }
+
   if (f.level === 'stale') {
     return 'last reading, machine not reporting';
   }
@@ -197,16 +208,20 @@ export function thresholdsFor(d: HealthData | null, s: SettingsRow | undefined):
   const t = d?.policy?.thresholds ?? {};
   const pc = fromRecord(t, /crit/i);
   const pw = fromRecord(t, /warn/i);
+
   if (validThresholds(pc, pw)) {
     return { critical: pc!, warning: pw!, source: 'policy' };
   }
+
   const num = (key: string) => {
     const v = s?.settings.find((x) => x.key === key)?.value;
 
     return typeof v === 'number' ? v : null;
   };
+
   const sc = num('health.context_pressure.critical_percent');
   const sw = num('health.context_pressure.warning_percent');
+
   if (validThresholds(sc, sw)) {
     return { critical: sc!, warning: sw!, source: 'settings' };
   }
@@ -266,6 +281,7 @@ export function reconcile(
   if (!theirs) {
     return null;
   }
+
   const same = theirs.critical === ours.critical && theirs.warning === ours.warning;
 
   return `OpenRig counts ${theirs.critical ?? '?'} critical, ${theirs.warning ?? '?'} warning of ${theirs.total ?? '?'}${
@@ -276,6 +292,7 @@ export function reconcile(
 /** Is the OpenRig daemon answering the collector? Real, from the snapshot's sources. */
 export function daemonReach(fm: FleetMachine): { ok: boolean; words: string } {
   const d = fm.snapshot.sources.daemon;
+
   if (fm.liveness === 'asleep') {
     return {
       ok: false,

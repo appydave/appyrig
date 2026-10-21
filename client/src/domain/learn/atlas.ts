@@ -64,11 +64,14 @@ export function atlasGroups(
   atlas: Atlas = ATLAS
 ): { world: string; group: string; terms: AtlasTerm[] }[] {
   const out = new Map<string, { world: string; group: string; terms: AtlasTerm[] }>();
+
   for (const t of atlas.terms) {
     const key = `${t.world}/${t.group}`;
+
     if (!out.has(key)) {
       out.set(key, { world: t.world, group: t.group, terms: [] });
     }
+
     out.get(key)!.terms.push(t);
   }
 

@@ -49,6 +49,7 @@ export function clockAheadText(a: SampleAge): string | null {
   if (!a.clockAhead) {
     return null;
   }
+
   const s = Math.round(a.skewMs / 1000);
 
   return s < 120 ? `clock ahead ${s}s` : `clock ahead ${Math.round(s / 60)} min`;

@@ -13,6 +13,7 @@ router.get('/api/info', (_req, res) => {
     clientUrl: env.CLIENT_URL,
     uptime: process.uptime(),
   };
+
   apiSuccess(res, data);
 });
 

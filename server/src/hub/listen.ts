@@ -20,6 +20,7 @@ export interface Listening {
 function listenOnce(server: NetServer | HttpServer, port: number, host: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const onError = (err: Error) => reject(err);
+
     server.once('error', onError);
     server.listen(port, host, () => {
       server.off('error', onError);
@@ -33,6 +34,7 @@ export function parseHosts(value: string): string[] {
     .split(',')
     .map((h) => h.trim())
     .filter(Boolean);
+
   if (hosts.length === 0) {
     throw new Error('HUB_BIND_HOSTS names no address');
   }
@@ -46,15 +48,20 @@ export async function listenOnHosts(
   hosts: string[]
 ): Promise<Listening> {
   const [first, ...rest] = hosts;
+
   if (!first) {
     throw new Error('listenOnHosts needs at least one host');
   }
+
   await listenOnce(http, port, first);
+
   const actualPort = (http.address() as AddressInfo).port; // port 0 → the one the OS picked
   const extras: NetServer[] = [];
+
   try {
     for (const host of rest) {
       const extra = createNetServer((socket) => http.emit('connection', socket));
+
       await listenOnce(extra, actualPort, host);
       extras.push(extra);
     }

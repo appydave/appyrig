@@ -26,12 +26,15 @@ const running: RunningHub[] = [];
 const dirs: string[] = [];
 const start = async (...args: Parameters<typeof startHub>) => {
   const h = await startHub(...args);
+
   running.push(h);
 
   return h;
 };
+
 const tempDir = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-hub-'));
+
   dirs.push(d);
 
   return d;
@@ -46,6 +49,7 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
   it('a browser socket gets fleet:update within 1 s of a collector push', async () => {
     const h = await start();
     const browser = h.browser();
+
     expect(await nextUpdate(browser)).toMatchObject({ full: true, machines: [] });
 
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
@@ -64,9 +68,12 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
 
   it('a new browser gets every known machine on connect (full: true)', async () => {
     const h = await start();
+
     await push(h.collector({ token: TOKEN, machineId: 'roamy' }), loadSnapshot('roamy'));
     await push(h.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'));
+
     const first = await nextUpdate(h.browser());
+
     expect(first.full).toBe(true);
     expect(first.machines.map((m) => m.machine.id)).toEqual(['m2', 'roamy']);
   });
@@ -74,25 +81,32 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
   it('refuses a collector with no token, and one with a wrong token', async () => {
     const h = await start();
     const none = await connectError(h.collector({ machineId: 'roamy' }));
+
     expect(none.message).toBe(AUTH_ERRORS.collectorToken);
+
     const wrong = await connectError(h.collector({ token: 'x'.repeat(25), machineId: 'roamy' }));
+
     expect(wrong.message).toBe(AUTH_ERRORS.collectorToken);
   });
 
   it('refuses every collector when the hub has no token', async () => {
     const h = await start({ hubToken: undefined });
     const err = await connectError(h.collector({ token: TOKEN, machineId: 'roamy' }));
+
     expect(err.message).toBe(AUTH_ERRORS.collectorToken);
   });
 
   it("D09 W2: a rig's planned edges reach the browser; a snapshot without them still loads", async () => {
     const h = await start();
     const browser = h.browser();
+
     await nextUpdate(browser);
+
     const snap = loadSnapshot('roamy');
     const edges = [{ from: 'a@kernel', to: 'b@kernel', kind: 'delegates_to' }];
     const withEdges = { ...snap, rigs: [{ ...snap.rigs[0]!, edges }, ...snap.rigs.slice(1)] };
     const update = nextUpdate(browser);
+
     expect(await push(h.collector({ token: TOKEN, machineId: 'roamy' }), withEdges)).toMatchObject({
       ok: true,
     });
@@ -101,8 +115,10 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     expect(
       await push(h.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'))
     ).toMatchObject({ ok: true });
+
     // A malformed edge is refused like any other bad field, not stored.
     const bad = { ...snap, rigs: [{ ...snap.rigs[0]!, edges: [{ from: 'a' }] }] };
+
     expect(await push(h.collector({ token: TOKEN, machineId: 'roamy' }), bad)).toMatchObject({
       ok: false,
       failureMode: 'invalid_snapshot',
@@ -112,7 +128,9 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
   it("spec fields: a rig's pods (OpenRig PodSpec shape) and cross-pod edges reach the browser; a full member spec or a bad edge kind is refused", async () => {
     const h = await start();
     const browser = h.browser();
+
     await nextUpdate(browser);
+
     const snap = loadSnapshot('roamy');
     const pods = [
       {
@@ -127,6 +145,7 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     const specEdges = [{ kind: 'escalates_to' as const, from: 'dev.qa', to: 'review.lead' }];
     const rig = { ...snap.rigs[0]!, specValid: true, pods, specEdges };
     const update = nextUpdate(browser);
+
     expect(
       await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, rigs: [rig] })
     ).toMatchObject({ ok: true });
@@ -145,16 +164,21 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
   it("D09 W3: a seat's agentRole and keySkills reach the browser; more than five is refused", async () => {
     const h = await start();
     const browser = h.browser();
+
     await nextUpdate(browser);
+
     const snap = loadSnapshot('roamy');
     const card = { agentRole: 'implementer', keySkills: ['recipe', 'dev-team:audit-test-quality'] };
     const seats = [{ ...snap.seats[0]!, ...card }, ...snap.seats.slice(1)];
     const update = nextUpdate(browser);
+
     expect(
       await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, seats })
     ).toMatchObject({ ok: true });
     expect((await update).machines[0]!.snapshot.seats[0]).toMatchObject(card);
+
     const six = [{ ...snap.seats[0]!, keySkills: ['a', 'b', 'c', 'd', 'e', 'f'] }];
+
     expect(
       await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, seats: six })
     ).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
@@ -163,6 +187,7 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
   it('refuses an invalid snapshot and a machine mismatch as data, storing neither', async () => {
     const h = await start();
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     expect(await push(collector, { schemaVersion: 1 })).toMatchObject({
       ok: false,
       failureMode: 'invalid_snapshot',
@@ -180,11 +205,14 @@ describe('AC 6 — liveness', () => {
     const clock = manualClock();
     const h = await start({ now: clock.now });
     const browser = h.browser();
+
     await nextUpdate(browser);
+
     const snapshot = loadSnapshot('roamy');
     const live = nextUpdate(browser);
     const ack = await push(h.collector({ token: TOKEN, machineId: 'roamy' }), snapshot);
     const lastSeen = ack.receivedAt;
+
     // The push's ack (collector socket) and its fleet:update (browser socket) are independent, and a
     // compressed frame can reach the browser after the ack. Wait for that update before sweeping.
     expect((await live).machines[0]?.liveness).toBe('live');
@@ -193,13 +221,19 @@ describe('AC 6 — liveness', () => {
     expect(h.hub.sweep()).toEqual([]);
 
     const update = nextUpdate(browser);
+
     clock.advance(1);
+
     const changed = h.hub.sweep();
+
     expect(changed.map((m) => m.machine.id)).toEqual(['roamy']);
 
     const got = await update;
+
     expect(got.full).toBe(false);
+
     const roamy = got.machines[0]!;
+
     expect(roamy.liveness).toBe('asleep');
     expect(roamy.lastSeen).toBe(lastSeen);
     // Seats keep their last-known state; the hub never rewrites them as idle.
@@ -214,34 +248,46 @@ describe('AC 6 — liveness', () => {
     const clock = manualClock();
     const h = await start({ now: clock.now });
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(collector, loadSnapshot('roamy'));
     clock.advance(ASLEEP_AFTER_MS);
     h.hub.sweep();
     expect(h.hub.store.get('roamy')?.liveness).toBe('asleep');
 
     const browser = h.browser();
+
     await nextUpdate(browser);
+
     const update = nextUpdate(browser);
+
     await push(collector, loadSnapshot('roamy'));
     expect((await update).machines[0]).toMatchObject({ liveness: 'live' });
   });
 
   it('the timer does the sweep on its own once started (real clock, short threshold)', async () => {
     const h = await start({ asleepAfterMs: 200, livenessIntervalMs: 25 });
+
     h.hub.start();
+
     const browser = h.browser();
+
     await nextUpdate(browser);
+
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(collector, loadSnapshot('roamy'));
     collector.close(); // the collector stops
+
     const got = await new Promise<string>((resolve) =>
       browser.on('fleet:update', (u) => {
         const m = u.machines.find((x: { machine: { id: string } }) => x.machine.id === 'roamy');
+
         if (m?.liveness === 'asleep') {
           resolve(m.liveness);
         }
       })
     );
+
     expect(got).toBe('asleep');
   });
 });
@@ -249,27 +295,35 @@ describe('AC 6 — liveness', () => {
 describe('AC 18 — browser auth', () => {
   it('refuses HTTP / and the browser socket without a session', async () => {
     const h = await start();
+
     for (const path of ['/', '/api/info', '/anything']) {
       const res = await request(h.url).get(path);
+
       expect(res.status, path).toBe(401);
       expect(res.body.error).toBe(AUTH_ERRORS.browserSession);
     }
+
     const err = await connectError(h.browser(''));
+
     expect(err.message).toBe(AUTH_ERRORS.browserSession);
   });
 
   it('a one-time /?token= visit sets the session cookie, which then opens HTTP and the socket', async () => {
     const h = await start();
     const login = await request(h.url).get(`/?token=${TOKEN}`);
+
     expect(login.status).toBe(303);
     expect(login.headers.location).not.toContain(TOKEN);
+
     const setCookie = String(login.headers['set-cookie']);
+
     expect(setCookie).toContain(`${SESSION_COOKIE}=`);
     expect(setCookie).toMatch(/HttpOnly/);
     expect(setCookie).toMatch(/SameSite=Lax/);
     expect(setCookie).not.toContain(TOKEN);
 
     const cookie = setCookie.split(';')[0]!;
+
     expect(cookie).toBe(COOKIE);
     expect((await request(h.url).get('/api/info').set('Cookie', cookie)).status).toBe(200);
     expect((await nextUpdate(h.browser(cookie))).full).toBe(true);
@@ -278,36 +332,46 @@ describe('AC 18 — browser auth', () => {
   it('a wrong /?token= is refused and sets nothing', async () => {
     const h = await start();
     const res = await request(h.url).get('/?token=wrong-token-0123456789');
+
     expect(res.status).toBe(401);
     expect(res.headers['set-cookie']).toBeUndefined();
   });
 
   it('a forged or stale cookie is refused (cookie is bound to the hub token)', async () => {
     const h = await start({ hubToken: 'another-hub-token-987654321' });
+
     expect((await request(h.url).get('/api/info').set('Cookie', COOKIE)).status).toBe(401);
+
     const err = await connectError(h.browser(`${SESSION_COOKIE}=forged`));
+
     expect(err.message).toBe(AUTH_ERRORS.browserSession);
   });
 
   it('agents may use Authorization: Bearer <hub token> instead of a cookie', async () => {
     const h = await start();
     const ok = await request(h.url).get('/api/info').set('Authorization', `Bearer ${TOKEN}`);
+
     expect(ok.status).toBe(200);
+
     const bad = await request(h.url).get('/api/info').set('Authorization', 'Bearer nope');
+
     expect(bad.status).toBe(401);
   });
 
   it('with no hub token at all, no login is possible', async () => {
     const h = await start({ hubToken: undefined });
+
     expect((await request(h.url).get(`/?token=${TOKEN}`)).status).toBe(401);
     expect((await request(h.url).get('/api/info').set('Cookie', COOKIE)).status).toBe(401);
   });
 
   it('the open doors pass without a session and carry no fleet data', async () => {
     const h = await start();
+
     await push(h.collector({ token: TOKEN, machineId: 'roamy' }), loadSnapshot('roamy'));
     for (const path of ['/v1/docs', '/v1/openrpc.json', '/v1/health', '/health']) {
       const res = await request(h.url).get(path);
+
       expect(res.status, path).not.toBe(401);
       expect(res.text, path).not.toContain('roamy');
       expect(res.text, path).not.toContain(TOKEN);
@@ -324,30 +388,42 @@ describe('S8 — disk store: a restarted hub shows last-known state at once', ()
       first.collector({ token: TOKEN, machineId: 'roamy' }),
       loadSnapshot('roamy')
     );
+
     await first.hub.store.flush();
+
     const stored = JSON.parse(readFileSync(join(dataDir, 'snapshots', 'roamy.json'), 'utf8'));
+
     expect(stored.lastSeen).toBe(ack.receivedAt);
     expect(stored.snapshot.machine.id).toBe('roamy');
     expect(stored).not.toHaveProperty('liveness'); // derived on load, never stored
 
     // Restart 5 s later: still within the window → live.
     clock.advance(5_000);
+
     const second = await start({ dataDir, now: clock.now });
+
     await second.hub.load();
+
     const update = await nextUpdate(second.browser());
+
     expect(update.machines[0]).toMatchObject({ liveness: 'live', lastSeen: ack.receivedAt });
 
     // Restart an hour later: asleep from the first paint, with the real lastSeen.
     clock.advance(3_600_000);
+
     const third = await start({ dataDir, now: clock.now });
+
     await third.hub.load();
+
     const later = await nextUpdate(third.browser());
+
     expect(later.machines[0]).toMatchObject({ liveness: 'asleep', lastSeen: ack.receivedAt });
   });
 
   it('skips and reports a corrupt file or one named for another machine', async () => {
     const dataDir = tempDir();
     const snaps = join(dataDir, 'snapshots');
+
     mkdirSync(snaps, { recursive: true });
     writeFileSync(join(snaps, 'broken.json'), '{ not json');
     writeFileSync(
@@ -358,9 +434,11 @@ describe('S8 — disk store: a restarted hub shows last-known state at once', ()
       join(snaps, 'm2.json'),
       JSON.stringify({ lastSeen: '2026-10-09T12:00:00.000Z', snapshot: loadSnapshot('m2') })
     );
+
     const errors: string[] = [];
     const h = await start({ dataDir, onDiskError: (m) => errors.push(m) });
     const loaded = await h.hub.load();
+
     expect(loaded.map((m) => m.machine.id)).toEqual(['m2']);
     expect(errors).toHaveLength(2);
     expect(errors.join('\n')).toMatch(/broken\.json/);
@@ -373,6 +451,7 @@ describe('S8 — disk store: a restarted hub shows last-known state at once', ()
       dataDir: join(tempDir(), 'never-created'),
       onDiskError: (m) => errors.push(m),
     });
+
     expect(await h.hub.load()).toEqual([]);
     expect(errors).toEqual([]);
   });
@@ -382,6 +461,7 @@ describe('seat.get timeout (BUG-seatget) — fleet pushes are compressed', () =>
   it('negotiates permessage-deflate on the browser websocket', async () => {
     const h = await start();
     const browser = h.browser();
+
     await nextUpdate(browser);
     // The engine upgrades polling → websocket; wait for it, then read the negotiated extensions.
     await new Promise<void>((resolve) => {
@@ -391,7 +471,9 @@ describe('seat.get timeout (BUG-seatget) — fleet pushes are compressed', () =>
         browser.io.engine.once('upgrade', () => resolve());
       }
     });
+
     const ws = (browser.io.engine.transport as unknown as { ws: { extensions: string } }).ws;
+
     expect(ws.extensions).toContain('permessage-deflate');
   });
 });
@@ -415,14 +497,19 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
     const h = await start();
     const snapshot = loadSnapshot('roamy');
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(collector, snapshot);
+
     const id = snapshot.queue[0]!.id;
 
     const before = h.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id });
+
     expect(before).toMatchObject({ ok: true, value: { id, body: null, bodyStatus: 'pending' } });
 
     expect((await sendBodies(collector, bodies('roamy', [id]))).ok).toBe(true);
+
     const after = h.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id });
+
     expect(after).toMatchObject({
       ok: true,
       value: {
@@ -441,6 +528,7 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
   it('refuses bodies for another machine and malformed bodies, storing neither', async () => {
     const h = await start();
     const collector = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(collector, loadSnapshot('roamy'));
     expect(await sendBodies(collector, bodies('m2', ['q']))).toMatchObject({
       ok: false,
@@ -458,6 +546,7 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
     const id = snapshot.queue[0]!.id;
     const h1 = await start({ dataDir: dir });
     const c = h1.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(c, snapshot);
     await sendBodies(c, bodies('roamy', [id]));
     await h1.hub.store.flush();
@@ -465,6 +554,7 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
     running.splice(running.indexOf(h1), 1);
 
     const h2 = await start({ dataDir: dir });
+
     await h2.hub.load();
     expect(h2.hub.core.call('cli', 'handoff.get', { machine: 'roamy', id })).toMatchObject({
       ok: true,
@@ -475,7 +565,9 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
   it('old collector → new hub: a snapshot and a history without origin are accepted; new → old is refused', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(c, loadSnapshot('roamy'));
+
     const oldEvent = { at: '2026-10-11T09:00:00.000Z', kind: 'prompt', text: 'hi' };
     const ack = await new Promise<{ ok: boolean }>((resolve) =>
       c.emit(
@@ -490,9 +582,12 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
         resolve
       )
     );
+
     expect(ack.ok).toBe(true);
+
     // The pre-v1.4 strict event shape refuses `origin`: an old hub would reject a new collector's history.
     const oldShape = SeatHistoryEventSchema.omit({ origin: true });
+
     expect(oldShape.safeParse({ ...oldEvent, origin: 'typed' }).success).toBe(false);
     expect(oldShape.safeParse(oldEvent).success).toBe(true);
   });
@@ -502,6 +597,7 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
     const snapshot = loadSnapshot('roamy');
     const seat = snapshot.seats.find((s) => s.rig !== null)!;
     const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(c, snapshot);
     await new Promise((resolve) =>
       c.emit(
@@ -519,7 +615,9 @@ describe('v1.4 S4 — queue bodies and rig.entry over the hub', () => {
         resolve
       )
     );
+
     const out = h.hub.core.call('cli', 'rig.entry', { machine: 'roamy', rig: seat.rig });
+
     expect(out).toMatchObject({
       ok: true,
       value: { entry: { status: 'outside-queue', entry: { seat: seat.id, excerpt: 'Fix it.' } } },
@@ -556,6 +654,7 @@ describe('v1.4 S6 — machine health', () => {
 
   it('an old-shape snapshot (no health) answers no-data with a reason, not an error and not zeros', async () => {
     const h = await start();
+
     await push(h.collector({ token: TOKEN, machineId: 'roamy' }), loadSnapshot('roamy'));
     expect(h.hub.core.call('cli', 'health.get', {})).toMatchObject({
       ok: true,
@@ -582,12 +681,15 @@ describe('v1.4 S6 — machine health', () => {
       collectedAt: clock.now().toISOString(),
       health: health(sampled),
     });
+
     expect(ack.ok).toBe(true);
+
     const row = (
       h.hub.core.call('cli', 'health.get', { machine: 'm2' }) as {
         value: { status: string; sampleAgeMs: number; health: ReturnType<typeof health> }[];
       }
     ).value[0]!;
+
     expect(row).toMatchObject({ status: 'ok', sampleAgeMs: 25_000 });
     expect(row.health.memory.swapTotalBytes).toMatchObject({ status: 'unavailable' });
     expect(row.health.processes.terminalApps).toMatchObject({ status: 'ok' });
@@ -604,12 +706,15 @@ describe('v1.4 S6 — machine health', () => {
   it('both directions: old collector → new hub accepted; new collector → old hub refused (hub first)', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     expect((await push(c, loadSnapshot('m2'))).ok).toBe(true);
     expect(
       (await push(c, { ...loadSnapshot('m2'), health: health('2026-10-11T12:00:00.000Z') })).ok
     ).toBe(true);
+
     // The pre-1.4 snapshot schema is strict and has no `health`: an old hub would refuse the push.
     const v13 = MachineSnapshotSchema.omit({ health: true });
+
     expect(
       v13.safeParse({ ...loadSnapshot('m2'), health: health('2026-10-11T12:00:00.000Z') }).success
     ).toBe(false);
@@ -626,6 +731,7 @@ describe('v1.4 S6 — machine health', () => {
       ...loadSnapshot('m2'),
       health: bad,
     });
+
     expect(ack).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
   });
 });
@@ -659,9 +765,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
 
     return { snap: { ...snap, rigs: [rig, ...snap.rigs.slice(1)] }, name: rig.name };
   };
+
   // Loosely typed on purpose: these tests poke at verb answers by shape.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   type Answer = { ok: boolean; value?: any; error?: { failureMode: string } };
+
   const call = (
     h: { hub: { core: { call: (p: string, v: string, i: unknown) => unknown } } },
     verb: string,
@@ -672,6 +780,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const { snap, name } = rigOf('m2');
+
     await push(c, snap);
     expect(call(h, 'rig.files', { machine: 'm2', rig: name }).value).toMatchObject({
       status: 'pending',
@@ -685,8 +794,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       replace: true,
       files: [file('spec:rig.yaml'), file('mission:MISSION.md', '# m')],
     });
+
     expect(ack.ok).toBe(true);
+
     const list = call(h, 'rig.files', { machine: 'm2', rig: name }).value;
+
     expect(list).toMatchObject({ status: 'ok', reason: null });
     expect(list.files.map((f: { id: string }) => f.id)).toEqual([
       'spec:rig.yaml',
@@ -699,11 +811,14 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     ).toBe('# m');
 
     const none = rigOf('roamy', { specStatus: 'not-found', specPath: null });
+
     await push(h.collector({ token: TOKEN, machineId: 'roamy' }), none.snap);
     expect(call(h, 'rig.files', { machine: 'roamy', rig: none.name }).value).toMatchObject({
       status: 'no-spec',
     });
+
     const old = loadSnapshot('roamy');
+
     await push(h.collector({ token: TOKEN, machineId: 'roamy' }), old);
     expect(call(h, 'rig.files', { machine: 'roamy', rig: old.rigs[0]!.name }).value).toMatchObject({
       status: 'no-data',
@@ -714,8 +829,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const { snap, name } = rigOf('m2');
+
     await push(c, snap);
+
     const base = { machineId: 'm2', collectedAt: '2026-10-11T12:00:00.000Z', rig: name };
+
     await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [file('spec:rig.yaml')] });
     await emit(c, 'collector:rigfiles', {
       ...base,
@@ -731,15 +849,20 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const { snap, name } = rigOf('m2');
+
     await push(c, snap);
+
     const base = { machineId: 'm2', collectedAt: '2026-10-11T12:00:00.000Z', rig: name };
     const allow = Array.from({ length: 16 }, (_, i) => file(`spec:LEARNED-${i}.md`));
     const named = Array.from({ length: 16 }, (_, i) => file(`rig:guidance/g${i}.md`, `# g${i}`));
+
     expect(
       (await emit(c, 'collector:rigfiles', { ...base, replace: true, files: [...allow, ...named] }))
         .ok
     ).toBe(true);
+
     const list = call(h, 'rig.files', { machine: 'm2', rig: name }).value;
+
     expect(list.files).toHaveLength(16);
     expect(list.files.every((f: { scope: string }) => f.scope === 'spec')).toBe(true);
     expect(list.specFiles).toHaveLength(16);
@@ -757,6 +880,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     for (const fileId of ['rig:../x.md', 'rig:/etc/hosts', 'rig:a//b.md']) {
       expect(call(h, 'rig.file', { machine: 'm2', rig: name, fileId }).ok, fileId).toBe(false);
     }
+
     expect(
       (
         await emit(c, 'collector:rigfiles', {
@@ -772,6 +896,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const { snap, name } = rigOf('m2');
+
     await push(c, snap);
     await emit(c, 'collector:rigfiles', {
       machineId: 'm2',
@@ -794,11 +919,14 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       'spec:rig.yaml/../../x',
     ]) {
       const r = call(h, 'rig.file', { machine: 'm2', rig: name, fileId });
+
       expect(r.ok, fileId).toBe(false);
       expect(r.error?.failureMode, fileId).toBe('invalid-input');
     }
+
     // a well-formed id nobody pushed is simply not found, and the answer lists what exists
     const missing = call(h, 'rig.file', { machine: 'm2', rig: name, fileId: 'spec:shadow.md' });
+
     expect(missing.error?.failureMode).toBe('file-not-found');
     // an extra field (a smuggled path) is refused by the strict input
     expect(
@@ -814,8 +942,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
   it('refuses malformed pushes, another machine, and a file id that is a path', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
+
     const base = { collectedAt: '2026-10-11T12:00:00.000Z', rig: 'r', replace: true };
+
     expect(
       await emit(c, 'collector:rigfiles', { ...base, machineId: 'roamy', files: [] })
     ).toMatchObject({ failureMode: 'machine_mismatch' });
@@ -837,12 +968,16 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const snap = loadSnapshot('m2');
+
     expect(await push(c, snap)).toMatchObject({ ok: true });
+
     const seat = snap.seats.find((s) => s.runtime === 'claude-code')!.id;
+
     expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',
       loadout: null,
     });
+
     const loadout = {
       machineId: 'm2',
       seat,
@@ -864,20 +999,25 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       skills: [{ name: 'recipe', source: 'repo', plugin: null, alsoIn: [] }],
       layers: [],
     };
+
     expect(await emit(c, 'collector:loadout', loadout)).toMatchObject({ ok: true });
     expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value).toMatchObject({
       status: 'ok',
       loadout: { skills: [{ name: 'recipe', source: 'repo' }] },
     });
+
     // the snapshot keeps flowing alongside; with the pill's optional skillCount it is accepted and served
     const withPill = {
       ...snap,
       seats: snap.seats.map((s) => (s.id === seat ? { ...s, skillCount: 313 } : s)),
     };
+
     expect(await push(c, withPill)).toMatchObject({ ok: true });
+
     const listed: { seat: { id: string; skillCount?: number } }[] = call(h, 'seat.list', {
       machine: 'm2',
     }).value;
+
     expect(listed.find((r) => r.seat.id === seat)!.seat.skillCount).toBe(313);
     expect(await push(c, snap)).toMatchObject({ ok: true });
     expect(await emit(c, 'collector:loadout', { ...loadout, machineId: 'roamy' })).toMatchObject({
@@ -912,6 +1052,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       },
       agentSpec: { name: 'impl', version: '1.0', profileName: 'default', profile: null },
     };
+
     expect(await emit(c, 'collector:loadout', given)).toMatchObject({ ok: true });
     expect(call(h, 'seat.loadout', { machine: 'm2', seat }).value.loadout).toMatchObject({
       member: { id: 'build', pod: 'dev' },
@@ -934,7 +1075,9 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const snap = loadSnapshot('m2');
+
     await push(c, snap);
+
     const rig = snap.rigs[0]!.name;
     const ask = (path: string) =>
       call(h, 'mission.file', { machine: 'm2', rig, path }).value as {
@@ -942,10 +1085,13 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
         text: string | null;
         base64: string | null;
       };
+
     // an older collector has sent no list: no-data, never a guess
     expect(ask('/a/spec.md')).toMatchObject({ status: 'no-data' });
+
     const at = '2026-10-19T00:00:00.000Z';
     const mf = 'collector:missionfiles';
+
     expect(
       await emit(c, mf, {
         kind: 'manifest',
@@ -955,6 +1101,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
         paths: ['/a/spec.md', '/a/gone.md', '/a/big.md', '/a/pic.png', '/a/later.md'],
       })
     ).toMatchObject({ ok: true });
+
     const file = (path: string, more: object) => ({
       kind: 'file',
       machineId: 'm2',
@@ -966,6 +1113,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       parts: 1,
       ...more,
     });
+
     await emit(c, mf, file('/a/spec.md', { mime: 'text/markdown', text: '# hi' }));
     await emit(c, mf, file('/a/gone.md', { status: 'missing' }));
     await emit(c, mf, file('/a/big.md', { status: 'too_large', bytes: 300000 }));
@@ -982,6 +1130,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     for (const p of ['/etc/passwd', '/a/../etc/passwd', '/a/other.md']) {
       expect(ask(p)).toMatchObject({ status: 'refused', text: null, base64: null });
     }
+
     // a file pushed for an unlisted path is dropped, not served
     await emit(c, mf, file('/a/sneak.md', { text: 'nope' }));
     expect(ask('/a/sneak.md')).toMatchObject({ status: 'refused', text: null });
@@ -1014,7 +1163,9 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const snap = loadSnapshot('m2');
+
     await push(c, snap);
+
     const rig = snap.rigs[0]!.name;
     const ask = (path: string) =>
       call(h, 'mission.file', { machine: 'm2', rig, path }).value as {
@@ -1024,6 +1175,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       };
     const at = '2026-10-19T00:00:00.000Z';
     const mf = 'collector:missionfiles';
+
     await emit(c, mf, {
       kind: 'manifest',
       machineId: 'm2',
@@ -1057,8 +1209,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
     const announced: string[][] = [];
+
     c.on('hub:caps', (x: string[]) => announced.push(x));
+
     const snap = loadSnapshot('m2');
+
     // the ack tells the collector what this hub understands; an older hub sends no caps
     expect(await push(c, snap)).toMatchObject({
       ok: true,
@@ -1086,11 +1241,14 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
         'rig-commands',
       ],
     ]);
+
     const seat = snap.seats.find((s) => s.source === 'openrig')!.id;
+
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({
       status: 'pending',
       detail: null,
     });
+
     const body = {
       kind: 'seatdetail',
       machineId: 'm2',
@@ -1107,6 +1265,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
         installedResources: [],
       },
     };
+
     expect(await emit(c, 'collector:daemondata', body)).toMatchObject({ ok: true });
     expect(call(h, 'seat.detail', { machine: 'm2', seat }).value).toMatchObject({ status: 'ok' });
     expect(await emit(c, 'collector:daemondata', { ...body, machineId: 'roamy' })).toMatchObject({
@@ -1142,6 +1301,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
   it('db.schema: baseline on the first version, then a diff when the OpenRig version changes', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
     expect(call(h, 'db.schema', { machine: 'm2' }).value).toMatchObject({
       status: 'no-data',
@@ -1163,7 +1323,9 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     ).toEqual(['id', 'name']);
 
     await emit(c, 'collector:schema', schemaPush('0.7.0 (abc12345)', ['id', 'name', 'owner']));
+
     const v = call(h, 'db.schema', { machine: 'm2' }).value;
+
     expect(v.openrigVersion).toBe('0.7.0 (abc12345)');
     expect(v.changes).toMatchObject({
       status: 'changed',
@@ -1189,6 +1351,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
   it('db.schema: no-openrig and unreadable keep their reason and list no tables; a bad status is refused', async () => {
     const h = await start();
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
     await emit(
       c,
@@ -1214,13 +1377,16 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     const dir = tempDir();
     const h1 = await start({ dataDir: dir });
     const c = h1.collector({ token: TOKEN, machineId: 'm2' });
+
     await push(c, loadSnapshot('m2'));
     await emit(c, 'collector:schema', schemaPush('0.6.6', ['id']));
     await emit(c, 'collector:schema', schemaPush('0.7.0', ['id', 'n']));
     await h1.hub.store.flush();
     await h1.stop();
     running.splice(running.indexOf(h1), 1);
+
     const h2 = await start({ dataDir: dir });
+
     await h2.hub.load();
     await push(h2.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'));
     expect(call(h2, 'db.schema', { machine: 'm2' }).value).toMatchObject({
@@ -1231,17 +1397,21 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
 
   it('db.schema: an unknown machine is refused', async () => {
     const h = await start();
+
     expect(call(h, 'db.schema', { machine: 'nope' }).error?.failureMode).toBe('machine-not-found');
   });
 
   it('both directions: pre-1.4 hubs know neither event (no listener, no ack); a new hub accepts old collectors, which send neither', async () => {
     // New hub, old collector: simply never sends these. Nothing to refuse; the verbs say so.
     const h = await start();
+
     await push(h.collector({ token: TOKEN, machineId: 'm2' }), loadSnapshot('m2'));
     expect(call(h, 'db.schema', { machine: 'm2' }).value.status).toBe('no-data');
+
     // New collector, old hub: the event has no listener there, so no ack comes back. The pusher
     // treats that as "hub older than v1.4" (pusher tests) and the connection stays up.
     const c = h.collector({ token: TOKEN, machineId: 'm2' });
+
     expect((await emit(c, 'collector:no-such-event-on-an-old-hub', {})).failureMode).toBe(
       'timeout'
     );
@@ -1261,10 +1431,12 @@ describe('run card R2 — rig.waiting over the hub', () => {
   it('lists gates the newest mention still calls open (with a carried link), and the ssh address', async () => {
     const dir = tempDir();
     const configPath = join(dir, 'config.json');
+
     writeFileSync(
       configPath,
       JSON.stringify({ machines: { roamy: { ssh: 'davidcruwys@100.89.32.35' } } })
     );
+
     const h = await start({ configPath });
     const snap = loadSnapshot('roamy');
     const rig = snap.rigs[0]!.name;
@@ -1307,6 +1479,7 @@ describe('run card R2 — rig.waiting over the hub', () => {
       },
     ];
     const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(c, { ...snap, queue });
     await sendBodies(c, {
       machineId: 'roamy',
@@ -1319,6 +1492,7 @@ describe('run card R2 — rig.waiting over the hub', () => {
         },
       ],
     });
+
     const out = h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig }) as {
       ok: boolean;
       value: {
@@ -1328,6 +1502,7 @@ describe('run card R2 — rig.waiting over the hub', () => {
         bodiesMissing: number;
       };
     };
+
     expect(out.ok).toBe(true);
     expect(out.value.ssh).toBe('davidcruwys@100.89.32.35');
     // g_d03e… was opened then closed; g_aaaa… was never called open; g_bbbb… is another rig's.
@@ -1349,6 +1524,7 @@ describe('run card R2 — rig.waiting over the hub', () => {
   it('ssh is null when AppyRig config names no address for the machine', async () => {
     const h = await start();
     const snap = loadSnapshot('roamy');
+
     await push(h.collector({ token: TOKEN, machineId: 'roamy' }), snap);
     expect(
       h.hub.core.call('cli', 'rig.waiting', { machine: 'roamy', rig: snap.rigs[0]!.name })
@@ -1381,6 +1557,7 @@ describe('run card R4 — rig.outputs over the hub', () => {
       { ...item('q5', 5, 'other rig commit 9999abc'), source: 'x@else', destination: 'y@else' },
     ];
     const c = h.collector({ token: TOKEN, machineId: 'roamy' });
+
     await push(c, { ...snap, queue });
     await new Promise<{ ok: boolean }>((resolve) =>
       c.timeout(2_000).emit(
@@ -1399,6 +1576,7 @@ describe('run card R4 — rig.outputs over the hub', () => {
         (err: unknown, ack: never) => resolve(err ? { ok: false } : ack)
       )
     );
+
     const out = h.hub.core.call('cli', 'rig.outputs', { machine: 'roamy', rig }) as {
       ok: boolean;
       value: {
@@ -1407,6 +1585,7 @@ describe('run card R4 — rig.outputs over the hub', () => {
         scanned: number;
       };
     };
+
     expect(out.ok).toBe(true);
     expect(out.value.commits.map((x) => [x.sha, x.itemId, x.mentions])).toEqual([
       ['bdf1d05', 'q3', 1],

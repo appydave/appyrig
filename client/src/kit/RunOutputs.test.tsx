@@ -129,6 +129,7 @@ describe('Run card R4 · outputs', () => {
         socket={hub({})}
       />
     );
+
     await waitFor(() =>
       expect(screen.getByTestId('run-out-files')).toHaveTextContent('not received yet')
     );

@@ -57,12 +57,16 @@ export function useRead<T>(
 ): Got<T> {
   const dep = JSON.stringify(input);
   const [got, setGot] = useState<Got<T>>({ state: input ? 'loading' : 'na' });
+
   useEffect(() => {
     if (!input) {
       return setGot({ state: 'na' });
     }
+
     setGot({ state: 'loading' });
+
     let live = true;
+
     void callVerb<T>(getSocket(), verb, input).then((a) => {
       if (live) {
         setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
@@ -117,6 +121,7 @@ export function useDocsData(getSocket: () => FleetSocket, t: DocsTarget) {
   }, [loadout, detail, files, missionKey]);
   const loading = [loadout, detail, files].some((g) => g.state === 'loading');
   let note: string | null = null;
+
   if (!loading && items.length === 0) {
     note =
       files.state === 'ok' && files.value.status !== 'ok'
@@ -149,24 +154,32 @@ function useContent(
   const [c, setC] = useState<Content>({ state: 'loading' });
   const fileId = src?.kind === 'rig' ? src.fileId : null;
   const path = src?.kind === 'mission' ? src.path : null;
+
   useEffect(() => {
     if (!item || !src) {
       return setC({ state: 'why', why: 'Pick a file on the left.' });
     }
+
     if (src.kind === 'text') {
       return setC({ state: 'ok', text: src.text });
     }
+
     if (src.kind === 'unsent') {
       return setC({ state: 'why', why: src.why });
     }
+
     if (src.kind === 'absent') {
       return setC({ state: 'why', why: 'Not present for this agent.' });
     }
+
     if (!rig) {
       return setC({ state: 'why', why: 'No rig to read this from.' });
     }
+
     setC({ state: 'loading' });
+
     let live = true;
+
     if (fileId) {
       void callVerb<RigFileOutput>(getSocket(), 'rig.file', {
         machine: machineId,
@@ -176,6 +189,7 @@ function useContent(
         if (!live) {
           return;
         }
+
         setC(
           a.ok
             ? { state: 'ok', text: a.value.file.content }
@@ -191,6 +205,7 @@ function useContent(
         if (!live) {
           return;
         }
+
         if (!a.ok) {
           return setC({
             state: 'why',
@@ -200,7 +215,9 @@ function useContent(
                 : 'The hub did not answer.',
           });
         }
+
         const v = a.value;
+
         if (v.status === 'ok') {
           setC({
             state: 'ok',
@@ -249,6 +266,7 @@ export function DocReader({
   const [source, setSource] = useState(false);
   const kind = item ? docKind(item.name) : 'text';
   let body: ReactNode;
+
   if (!item) {
     body = <p className="quiet">Pick a file on the left.</p>;
   } else if (c.state === 'loading') {
@@ -351,6 +369,7 @@ export function DocsLayout({
         )}
         {DOC_GROUPS.map((g) => {
           const rows = items.filter((x) => x.group === g.id);
+
           if (rows.length === 0) {
             return null;
           }
@@ -406,14 +425,17 @@ export function DocsDrawer({
       if (e.key !== 'Escape') {
         return;
       }
+
       e.preventDefault();
       e.stopImmediatePropagation();
       onClose();
     };
+
     window.addEventListener('keydown', k, true);
 
     return () => window.removeEventListener('keydown', k, true);
   }, [onClose]);
+
   const top = useTopOffset();
   const rig = target.rig ?? target.seat?.rig ?? null;
   const title = target.seat ? seatName(target.seat) : (rig ?? 'Documents');

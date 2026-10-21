@@ -65,6 +65,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const seatCount = allMachines.reduce((n, m) => n + m.snapshot.seats.length, 0);
   const hubConnected = link === 'connected';
   const rigs = useMemo(() => listRigs(allMachines), [allMachines]);
+
   // The chosen rig HOLDS: the busiest rig is chosen once and kept; it changes only on a pick. A chosen
   // rig that stops being reported shows nothing in its place, and comes back if it returns.
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       setRigKey(busiestRig(rigs)!.key);
     }
   }, [rigKey, rigs]);
+
   const goneRig = rigKey !== null && rigs.length > 0 && !rigs.some((r) => r.key === rigKey);
   const activeRig = goneRig ? null : (rigs.find((r) => r.key === rigKey) ?? busiestRig(rigs));
   /** Bumped on every rig pick (even a repeat), so a fleet page can re-focus the rig. */
@@ -85,12 +87,15 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
 
   const openFiles = useCallback((machineId: string, rig: string) => {
     const active = document.activeElement;
+
     filesOpener.current = active instanceof HTMLElement && active !== document.body ? active : null;
     setFilesFor({ machineId, rig });
   }, []);
   const closeFiles = useCallback(() => {
     setFilesFor(null);
+
     const back = filesOpener.current;
+
     if (back?.isConnected) {
       back.focus();
     }
@@ -143,6 +148,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       string,
       'on' | 'off'
     >;
+
     setLegend(next);
     remember(LEGEND2_KEY, JSON.stringify(next));
   }, [frame.page, legend]);
@@ -175,15 +181,18 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
         drawerTile.seat.rig ? `rig ${drawerTile.seat.rig}` : 'plain tmux'
       } · ${drawerTile.machine.machine.label}`;
     }
+
     if (!drawerRig) {
       return 'Whole fleet · pick a rig to focus it';
     }
+
     const label = `${drawerRig.displayName ?? drawerRig.name} · ${drawerRig.machineLabel}`;
 
     return SHOWING_PAGES.includes(frame.page)
       ? `Showing ${label}`
       : `Focused on ${label} in the whole fleet`;
   })();
+
   // `open=` is the Graph's alone: written while it is on screen, removed everywhere else.
   useEffect(() => {
     writeParams(
@@ -198,13 +207,16 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   useLayoutEffect(() => {
     const root = document.documentElement;
     const header = document.querySelector<HTMLElement>('.app-header');
+
     if (!header) {
       return;
     }
+
     const measure = () => {
       const r = header.getBoundingClientRect();
       const next = `${Math.max(0, Math.round(r.bottom))}px`;
       const changed = root.style.getPropertyValue('--ar-top-offset') !== next;
+
       root.style.setProperty('--ar-top-offset', next);
       root.style.setProperty('--ar-bar-h', `${Math.round(r.height)}px`);
       // a slide-out that read the old value (a panel cold-loaded from its link) follows the bar
@@ -212,18 +224,24 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
         window.dispatchEvent(new Event('appyrig:top-offset'));
       }
     };
+
     measure();
+
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+
     ro?.observe(header);
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, { passive: true });
+
     // The bar can wrap to another row when the page gains a scrollbar or the panel opens, a moment
     // after the panel lands: measure again once things settle, so the panel never starts under the bar.
     const settle = () => {
       requestAnimationFrame(measure);
       window.setTimeout(measure, 250);
     };
+
     const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(settle);
+
     mo?.observe(root, { attributes: true, attributeFilter: ['data-agent-panel'] });
     void document.fonts?.ready.then(measure);
 
@@ -236,6 +254,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       root.style.removeProperty('--ar-bar-h');
     };
   }, []);
+
   const [welcome, setWelcome] = useState<boolean>(() => {
     try {
       return localStorage.getItem(WELCOME_KEY) !== 'seen';
@@ -247,6 +266,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     setWelcome(false);
     remember(WELCOME_KEY, 'seen');
   };
+
   const machineWords = allMachines.length
     ? allMachines
         .map((m) => m.machine.label)
@@ -263,6 +283,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     if (filesFor) {
       return;
     }
+
     // Esc closes the open legend like any other panel; it never navigates anywhere.
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'l' || e.key === 'L') && !isShortcutBlocked(e)) {
@@ -276,6 +297,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
         toggleLegend();
       }
     };
+
     window.addEventListener('keydown', onKey);
 
     return () => window.removeEventListener('keydown', onKey);

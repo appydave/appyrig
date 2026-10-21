@@ -29,9 +29,11 @@ export function dotState(state: string): DotState {
   if (state === 'done' || state === 'closed') {
     return 'done';
   }
+
   if (state === 'handed-off') {
     return 'handed-on';
   }
+
   if (/^(blocked|failed|denied|rejected|cancell?ed|expired)$/.test(state)) {
     return 'stopped';
   }
@@ -94,9 +96,11 @@ export interface Timeline {
  */
 export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timeline | null {
   const items = [...rigQueue(fm, rig)].sort(byCreated);
+
   if (!items.length) {
     return null;
   }
+
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
 
   const order: string[] = [];
@@ -108,24 +112,29 @@ export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timel
         order.push(lane);
       }
     }
+
     laneItems.get(lane)!.push(q);
   };
 
   const marks: TimelineMark[] = [];
+
   for (const q of items) {
     const at = ms(q.createdAt);
     const state = dotState(q.state);
     const fromIn = inRig(q.source);
     const toIn = inRig(q.destination);
+
     if (fromIn) {
       add(bare(q.source), q);
       marks.push({ item: q, lane: bare(q.source), at, state, flag: null });
     }
+
     if (!fromIn || !toIn) {
       add(OUTSIDE_LANE, q);
       marks.push({ item: q, lane: OUTSIDE_LANE, at, state, flag: fromIn ? 'out' : 'in' });
     }
   }
+
   // Seats of the rig that never sent anything still get a lane, after the ones that did.
   for (const s of fm.snapshot.seats) {
     if (s.rig === rig && !laneItems.has(seatName(s))) {
@@ -135,6 +144,7 @@ export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timel
   }
 
   const lanes: TimelineLane[] = [];
+
   if (laneItems.has(OUTSIDE_LANE)) {
     lanes.push({
       id: OUTSIDE_LANE,
@@ -143,14 +153,17 @@ export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timel
       items: laneItems.get(OUTSIDE_LANE)!,
     });
   }
+
   for (const id of order) {
     lanes.push({ id, label: id, outside: false, items: laneItems.get(id) ?? [] });
   }
 
   const phases: TimelinePhase[] = [];
+
   for (const q of items) {
     const t = ms(q.createdAt);
     const last = phases[phases.length - 1];
+
     if (last && t - last.end <= PHASE_GAP_MS) {
       last.end = t;
       last.count += 1;
@@ -173,6 +186,7 @@ export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timel
 
 /** Space kept either side of a phase, and the fixed width of the break between two phases. */
 const PHASE_PAD_MS = 3 * 60_000;
+
 export const BREAK_PX = 56;
 
 export interface TimeScale {
@@ -193,20 +207,26 @@ export function timeScale(phases: TimelinePhase[], pxPerMin: number): TimeScale 
   const spans: TimeScale['spans'] = [];
   const breaks: TimeScale['breaks'] = [];
   let x = 0;
+
   phases.forEach((p, i) => {
     if (i > 0) {
       breaks.push({ x: x + BREAK_PX / 2, gapMs: p.start - phases[i - 1]!.end });
       x += BREAK_PX;
     }
+
     const w = (p.end - p.start + 2 * PHASE_PAD_MS) * k;
+
     spans.push({ phase: p, x0: x, x1: x + w });
     x += w;
   });
+
   const xOf = (t: number) => {
     const s = spans.find((sp) => t <= sp.phase.end + PHASE_PAD_MS) ?? spans[spans.length - 1];
+
     if (!s) {
       return 0;
     }
+
     const raw = s.x0 + (t - s.phase.start + PHASE_PAD_MS) * k;
 
     return Math.max(s.x0, Math.min(s.x1, raw));
@@ -219,10 +239,12 @@ export function timeScale(phases: TimelinePhase[], pxPerMin: number): TimeScale 
 export function timeTicks(phases: TimelinePhase[], pxPerMin: number): number[] {
   const step = pxPerMin >= 12 ? 5 : pxPerMin >= 6 ? 10 : pxPerMin >= 3 ? 15 : 30;
   const out: number[] = [];
+
   for (const p of phases) {
     const from = p.start - PHASE_PAD_MS;
     const to = p.end + PHASE_PAD_MS;
     const d = new Date(from);
+
     d.setSeconds(0, 0);
     d.setMinutes(Math.ceil(d.getMinutes() / step) * step);
     for (let t = d.getTime(); t <= to; t += step * 60_000) {
@@ -248,9 +270,11 @@ export function stackRows(
     const px = x(m.at);
     const used = lastX.get(m.lane) ?? [];
     let row = used.findIndex((u) => px - u >= minPx);
+
     if (row === -1) {
       row = used.length;
     }
+
     used[row] = px;
     lastX.set(m.lane, used);
 
@@ -291,8 +315,10 @@ const hasFamily = (q: QueueItem, tag: string) =>
 /** A reply or hand-on: an item sent by someone an earlier item in the group was sent to. */
 function replyLinks(group: QueueItem[]): number {
   let n = 0;
+
   for (let i = 1; i < group.length; i++) {
     const src = group[i]!.source;
+
     if (group.slice(0, i).some((p) => p.destination === src)) {
       n += 1;
     }
@@ -328,9 +354,11 @@ function titleWords(q: QueueItem): string[] {
 export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkChain | null {
   const items = [...rigQueue(fm, rig)].sort(byCreated);
   const me = items.find((q) => q.id === itemId);
+
   if (!me) {
     return null;
   }
+
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
 
   let rule: ChainRule = 'alone';
@@ -342,12 +370,14 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
   // same chain.
   const parents = (tag: string) => {
     const out: string[] = [];
+
     for (let t = tag; t.includes('-');) {
       out.push((t = t.slice(0, t.lastIndexOf('-'))));
     }
 
     return out;
   };
+
   // A chain (and any one family) never takes more than a quarter of the run.
   const limit = Math.max(12, Math.ceil(items.length / 4));
   const qualifying = [...new Set(me.tags.flatMap((t) => [t, ...parents(t)]))]
@@ -363,6 +393,7 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
         !qualifying.some((ch) => under(ch, c) && ch.group.length === c.group.length)
     )
     .sort((a, b) => a.group.length - b.group.length || replyLinks(b.group) - replyLinks(a.group));
+
   if (tagged[0]) {
     // r1 LOW-1: families tied on size and reply links are both used, never settled by tag order.
     const best = tagged[0];
@@ -373,38 +404,46 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
     // ...and so are families no larger that share two or more steps with the chain, so a step
     // carrying only one of two tied tags still finds the same chain.
     const size = best.group.length;
+
     for (const q of items.filter((x) => tied.some((c) => c.group.includes(x)))) {
       for (const tag of q.tags) {
         if (tied.some((c) => c.tag === tag || tag.startsWith(`${c.tag}-`))) {
           continue;
         }
+
         const fam = items.filter((x) => hasFamily(x, tag));
         const shared = fam.filter((x) => tied.some((c) => c.group.includes(x))).length;
+
         if (fam.length <= size && shared >= 2 && replyLinks(fam) > 0) {
           tied.push({ tag, group: fam });
         }
       }
     }
+
     // r1 MEDIUM-3: the merged chain obeys the same quarter-of-the-run bound; past it, fall back to
     // the exact ties, then to the single rarest family.
     const union = (fams: { group: QueueItem[] }[]) =>
       items.filter((q) => fams.some((c) => c.group.includes(q)));
     const chosen = [tied, exact, [best]].find((fams) => union(fams).length <= limit) ?? [best];
+
     rule = 'tag';
     key = chosen.map((c) => c.tag).sort();
     group = union(chosen);
   } else {
     const phase = phaseOf(items, me);
     const df = new Map<string, number>();
+
     for (const q of items) {
       for (const w of titleWords(q)) {
         df.set(w, (df.get(w) ?? 0) + 1);
       }
     }
+
     const rare = titleWords(me).filter((w) => (df.get(w) ?? 0) <= Math.max(3, items.length / 10));
     const near = phase.filter(
       (q) => q === me || titleWords(q).filter((w) => rare.includes(w)).length >= 2
     );
+
     if (near.length >= 2 && rare.length >= 2) {
       rule = 'words';
       key = rare.filter((w) => near.some((q) => q !== me && titleWords(q).includes(w)));
@@ -422,9 +461,11 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
     .find(
       (q) => !ids.has(q.id) && q.destination === first.source && q.createdAt <= first.createdAt
     );
+
   if (came) {
     steps.unshift({ item: came, role: 'in' });
   }
+
   const went = phaseOf(items, last).find(
     (q) =>
       !ids.has(q.id) &&
@@ -433,6 +474,7 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
       inRig(q.source) &&
       !inRig(q.destination)
   );
+
   if (went) {
     steps.push({ item: went, role: 'out' });
   }
@@ -459,9 +501,11 @@ function phaseOf(sorted: QueueItem[], q: QueueItem): QueueItem[] {
   const i = sorted.indexOf(q);
   let a = i;
   let b = i;
+
   while (a > 0 && ms(sorted[a]!.createdAt) - ms(sorted[a - 1]!.createdAt) <= PHASE_GAP_MS) {
     a -= 1;
   }
+
   while (
     b < sorted.length - 1 &&
     ms(sorted[b + 1]!.createdAt) - ms(sorted[b]!.createdAt) <= PHASE_GAP_MS

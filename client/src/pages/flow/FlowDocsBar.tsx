@@ -20,6 +20,7 @@ export default function FlowDocsBar({
   const seats = seatKeys
     .map((k) => machine.snapshot.seats.find((s) => seatKey(machine.machine.id, s.id) === k))
     .filter((s): s is NonNullable<typeof s> => !!s);
+
   if (!socket || seats.length === 0) {
     return null;
   }

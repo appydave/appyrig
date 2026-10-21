@@ -7,9 +7,11 @@ import { join } from 'node:path';
 const src =
   process.env.ATLAS_SRC ?? join(homedir(), 'dev/ad/brains/openrig/atlas/concept-atlas.json');
 const dst = new URL('../client/src/domain/learn/atlas.json', import.meta.url);
+
 if (!existsSync(src)) {
   console.error(`atlas:sync: no atlas at ${src}`);
   process.exit(1);
 }
+
 copyFileSync(src, dst);
 console.log(`atlas:sync: ${src} -> client/src/domain/learn/atlas.json`);

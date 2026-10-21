@@ -33,6 +33,7 @@ export default function FocusTerminal({ lines, hidden }: Props) {
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<{ fit: () => void } | null>(null);
   const linesRef = useRef(lines);
+
   linesRef.current = lines;
 
   useEffect(() => {
@@ -47,9 +48,11 @@ export default function FocusTerminal({ lines, hidden }: Props) {
         import('@xterm/addon-fit'),
       ]);
       const host = hostRef.current;
+
       if (cancelled || !host) {
         return;
       }
+
       term = new Terminal({
         disableStdin: true,
         convertEol: true,
@@ -70,7 +73,9 @@ export default function FocusTerminal({ lines, hidden }: Props) {
       term.attachCustomKeyEventHandler(
         (e) => !(e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey)))
       );
+
       const fit = new FitAddon();
+
       term.loadAddon(fit);
       term.open(host);
       fitRef.current = fit;

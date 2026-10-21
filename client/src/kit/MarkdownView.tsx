@@ -37,6 +37,7 @@ function blocks(list: Block[]): ReactNode {
 
         return <H key={i}>{inline(b.inline)}</H>;
       }
+
       case 'para':
         return <p key={i}>{inline(b.inline)}</p>;
       case 'code':
@@ -61,6 +62,7 @@ function blocks(list: Block[]): ReactNode {
           </L>
         );
       }
+
       case 'quote':
         return <blockquote key={i}>{blocks(b.children)}</blockquote>;
       case 'hr':

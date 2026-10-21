@@ -29,26 +29,33 @@ const doc = apiDocument(identity);
 
 // ── invariants the generated files must keep (AC 8, AC 9, B14) ───────────────────────────────────
 const verbNames = Object.keys(VERBS);
+
 if (verbNames.length === 0) {
   problems.push('the verb registry is empty');
 }
+
 for (const [name, v] of Object.entries(VERBS)) {
   if (!(v.sideEffects === 'read-only' && v.kind === 'query')) {
     problems.push(`verb ${name} is not a read-only query (AC 9)`);
   }
 }
+
 const methodNames = (doc.methods ?? []).map((m: { name: string }) => m.name).sort();
+
 if (JSON.stringify(methodNames) !== JSON.stringify([...verbNames].sort())) {
   problems.push('OpenRPC methods do not match the verb registry');
 }
+
 if (doc.info.version !== identity.version) {
   problems.push(
     `OpenRPC info.version ${doc.info.version} is not the package version ${identity.version}`
   );
 }
+
 // The spec is served with no session: it must carry shapes, never fleet data. Fixture seat and
 // machine names are the tell.
 const text = openRpcText(doc);
+
 for (const leak of ['dev-build@starter', 'advisor-lead@kernel', '/Users/', 'gho_']) {
   if (text.includes(leak)) {
     problems.push(`openrpc.json contains fleet-looking data: ${leak}`);
@@ -58,8 +65,10 @@ for (const leak of ['dev-build@starter', 'advisor-lead@kernel', '/Users/', 'gho_
 // ── the two committed files ──────────────────────────────────────────────────────────────────────
 function emit(rel: string, content: string) {
   const path = resolve(apiDir, rel);
+
   if (check) {
     const current = existsSync(path) ? readFileSync(path, 'utf8') : '';
+
     if (current !== content) {
       problems.push(`api/${rel} is stale: run npm run api:gen`);
     }
@@ -83,6 +92,7 @@ const page = (date: string) =>
   });
 const committedDate = /"generatedAt":"(\d{4}-\d{2}-\d{2})"/.exec(currentPage)?.[1];
 const unchanged = committedDate !== undefined && page(committedDate) === currentPage;
+
 emit(
   'reference.html',
   unchanged
@@ -94,6 +104,7 @@ if (problems.length > 0) {
   console.error(`api:check FAILED\n - ${problems.join('\n - ')}`);
   process.exit(1);
 }
+
 console.log(
   check
     ? `api:check ok (${verbNames.length} verbs, all read-only queries; api/ is current)`

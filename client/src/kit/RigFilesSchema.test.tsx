@@ -23,7 +23,9 @@ function socketWith(onCall: Handler) {
         ack: (e: Error | null, a?: Answer) => void
       ) => {
         calls.push(request);
+
         const a = onCall(request);
+
         if (a) {
           queueMicrotask(() => ack(null, a));
         }
@@ -63,9 +65,11 @@ function rigFilesSocket(
         value: { machine: 'm2', rig: 'flicut-ab', status: 'ok', reason: null, files, ...over.list },
       };
     }
+
     if (req.verb === 'rig.file') {
       const id = String(req.input?.fileId);
       const m = files.find((f) => f.id === id);
+
       if (!m) {
         return { ok: false, error: { failureMode: 'file-not-found', message: 'No such file.' } };
       }
@@ -102,6 +106,7 @@ const renderFiles = (s: ReturnType<typeof rigFilesSocket>, onClose = vi.fn()) =>
 describe('RigFiles', () => {
   it('lists the files, opens rig.yaml first, and asks only by rig + file id', async () => {
     const s = rigFilesSocket();
+
     renderFiles(s);
     await waitFor(() => expect(screen.getByTestId('yaml-view')).toBeInTheDocument());
     expect(screen.getAllByTestId('rig-file-item').map((b) => b.dataset.fileId)).toEqual([
@@ -121,12 +126,16 @@ describe('RigFiles', () => {
     renderFiles(rigFilesSocket());
     await waitFor(() => screen.getByTestId('yaml-view'));
     fireEvent.click(screen.getAllByTestId('rig-file-item')[1]!);
+
     const md = await screen.findByTestId('markdown-view');
+
     expect(within(md).getByRole('heading', { level: 1 })).toHaveTextContent('Mission');
     expect(within(md).getByRole('table')).toBeInTheDocument();
     expect(within(md).getByText('two').tagName).toBe('STRONG');
     expect(md.querySelector('pre code')).toHaveTextContent('rig up');
+
     const links = md.querySelectorAll('a');
+
     expect(links).toHaveLength(1); // the javascript: link is text, not an anchor
     expect(links[0]).toHaveAttribute('href', 'https://x.test');
     expect(links[0]).toHaveAttribute('rel', 'noopener noreferrer');
@@ -145,6 +154,7 @@ describe('RigFiles', () => {
           value: { machine: 'm2', rig: 'flicut-ab', status: 'ok', reason: null, files },
         };
       }
+
       if (req.verb === 'rig.file' && req.input?.fileId === 'spec:rig.yaml') {
         return {
           ok: true,
@@ -154,6 +164,7 @@ describe('RigFiles', () => {
 
       return undefined; // MISSION.md never answers
     });
+
     renderFiles({ ...rigFilesSocket(), socket: s.socket, calls: s.calls });
     await screen.findByTestId('yaml-view');
     fireEvent.click(screen.getAllByTestId('rig-file-item')[1]!);
@@ -186,7 +197,9 @@ describe('RigFiles', () => {
         value: { machine: 'm2', rig: 'flicut-ab', status, reason: null, files: [] },
       }))
     );
+
     const box = await screen.findByTestId('rig-files-status');
+
     expect(box).toHaveAttribute('data-status', status);
     expect(box.textContent).toMatch(text);
     expect(screen.queryByTestId('rig-file-item')).toBeNull();
@@ -208,8 +221,11 @@ describe('RigFiles', () => {
   it('Esc closes (and only the viewer: the screen under it never sees the key); arrows move between files', async () => {
     const s = rigFilesSocket();
     const onClose = renderFiles(s);
+
     await waitFor(() => screen.getByTestId('yaml-view'));
+
     const underneath = vi.fn();
+
     window.addEventListener('keydown', underneath);
     fireEvent.keyDown(window, { key: 'ArrowDown' });
     await screen.findByTestId('markdown-view');
@@ -224,7 +240,9 @@ describe('RigFiles', () => {
 
   it('is a modal dialog with a labelled close button focused first', async () => {
     renderFiles(rigFilesSocket());
+
     const dlg = await screen.findByRole('dialog');
+
     expect(dlg).toHaveAttribute('aria-modal', 'true');
     await waitFor(() => expect(screen.getByTestId('rig-files-close')).toHaveFocus());
   });
@@ -233,14 +251,18 @@ describe('RigFiles', () => {
 describe('YamlView', () => {
   it('colours tokens, numbers lines, and folds a section and unfolds it again', () => {
     render(<YamlView source={RIG_YAML} />);
+
     const lines = () => document.querySelectorAll('.yaml-line');
+
     expect(lines()).toHaveLength(9);
     expect(document.querySelector('.y-key')).toHaveTextContent('version');
     expect(document.querySelector('.y-string')).toHaveTextContent('"0.2"');
     expect(document.querySelector('.y-comment')).toHaveTextContent('# end');
+
     const folds = screen.getAllByTestId('yaml-fold');
     // fold "pods:" (line 5): hides lines 6-8
     const pods = folds.find((b) => b.getAttribute('aria-label')?.includes('lines 5 to 8'))!;
+
     fireEvent.click(pods);
     expect(pods).toHaveAttribute('aria-expanded', 'false');
     expect(lines()).toHaveLength(6);
@@ -345,6 +367,7 @@ const renderSchema = (
           }),
         }
   );
+
   render(
     <SchemaView
       socket={s.socket}
@@ -359,6 +382,7 @@ const renderSchema = (
 describe('SchemaView', () => {
   it('names the OpenRig version, counts tables and views, and says baseline on the first version', async () => {
     const s = renderSchema({ m2: {} });
+
     expect(await screen.findByTestId('schema-version')).toHaveTextContent('0.6.6 (2620dea8)');
     expect(screen.getByTestId('schema-count')).toHaveTextContent(
       '2 tables · 1 views · read 12 s ago'
@@ -374,11 +398,15 @@ describe('SchemaView', () => {
     renderSchema({ m2: {} });
     await screen.findByTestId('schema-detail');
     fireEvent.click(document.querySelector('[data-testid="schema-table"][data-table="nodes"]')!);
+
     const cols = screen.getByTestId('schema-columns');
+
     expect(within(cols).getAllByRole('row')).toHaveLength(3); // head + 2
     expect(within(cols).getByTestId('schema-pk')).toHaveTextContent('PK');
     expect(within(cols).getByText('NOT NULL')).toBeInTheDocument();
+
     const fk = within(cols).getByTestId('schema-fk');
+
     expect(fk).toHaveTextContent('→ rigs.id');
     fireEvent.click(fk);
     expect(screen.getByTestId('schema-detail')).toHaveAttribute('data-table', 'rigs');
@@ -407,7 +435,9 @@ describe('SchemaView', () => {
     renderSchema({ m2: {} });
     await screen.findByTestId('schema-detail');
     fireEvent.keyDown(window, { key: '/' });
+
     const box = screen.getByTestId('schema-search');
+
     expect(box).toHaveFocus();
     fireEvent.change(box, { target: { value: 'rig' } });
     fireEvent.keyDown(box, { key: 'Escape' });
@@ -438,12 +468,16 @@ describe('SchemaView', () => {
         },
       },
     });
+
     const note = await screen.findByTestId('schema-changes');
+
     expect(note).toHaveTextContent('Changed since 0.6.5 (aaaa1111)');
     expect(note).toHaveTextContent('1 table added, 1 removed, 1 changed');
     expect(screen.getByTestId('schema-diff')).toHaveTextContent('old_thing');
     expect(screen.getByTestId('schema-diff')).toHaveTextContent('name TEXT NULL → TEXT NOT NULL');
+
     const rigsBtn = document.querySelector('[data-table="rigs"]')!;
+
     expect(rigsBtn.textContent).toContain('~');
     expect(document.querySelector('[data-table="running_nodes"]')!.textContent).toContain('+');
   });
@@ -485,7 +519,9 @@ describe('SchemaView', () => {
     renderSchema({
       m2: { status, reason: 'because', tables: [], changes: null, openrigVersion: null },
     });
+
     const box = await screen.findByTestId('schema-status');
+
     expect(box).toHaveAttribute('data-status', status);
     expect(box.textContent).toMatch(text);
     expect(box.textContent).toContain('because');

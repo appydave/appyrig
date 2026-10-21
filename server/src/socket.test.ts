@@ -14,6 +14,7 @@ function waitFor<T>(fn: () => T | Promise<T>, timeoutMs = 3000): Promise<T> {
     const check = async () => {
       try {
         const result = await fn();
+
         resolve(result);
       } catch (err) {
         if (Date.now() - start > timeoutMs) {
@@ -23,6 +24,7 @@ function waitFor<T>(fn: () => T | Promise<T>, timeoutMs = 3000): Promise<T> {
         }
       }
     };
+
     check();
   });
 }

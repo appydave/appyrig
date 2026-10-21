@@ -17,6 +17,7 @@ describe('seat documents (were "loadout layers")', () => {
   it('shares no name with OpenRig startup layers except culture, which really is the same file', () => {
     const docs: readonly string[] = shared.SeatDocIdSchema.options;
     const clash = shared.OpenRig.STARTUP_LAYERS.filter((l) => docs.includes(l));
+
     // `culture` is the rig's culture_file (OpenRig's culture layer); every other id is AppyRig's own
     expect(clash).toEqual(['culture']);
   });

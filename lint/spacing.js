@@ -22,5 +22,9 @@ export const spacingRules = {
     { blankLine: 'always', prev: '*', next: 'return' },
     { blankLine: 'always', prev: '*', next: ['function', 'class'] },
     { blankLine: 'always', prev: ['function', 'class'], next: '*' },
+    { blankLine: 'always', prev: ['const', 'let', 'var'], next: '*' },
+    { blankLine: 'always', prev: '*', next: ['const', 'let', 'var'] },
+    { blankLine: 'any', prev: ['const', 'let', 'var'], next: ['const', 'let', 'var'] },
+    { blankLine: 'always', prev: 'block-like', next: '*' },
   ],
 };

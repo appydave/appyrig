@@ -55,6 +55,7 @@ const run =
       bin in over
         ? over[bin]
         : { sysctl: SYSCTL, vm_stat: VM_STAT, memory_pressure: PRESSURE, ps: PS }[bin];
+
     if (v instanceof Error) {
       throw v;
     }
@@ -87,6 +88,7 @@ describe('parsers', () => {
   });
   it('ps: counts claude binaries (incl. versioned paths), shells on a tty, and terminal apps by memory', () => {
     const p = parsePs(PS)!;
+
     expect(p.claude).toBe(3); // `claude` and two versioned paths; Claude.app's helper is not one
     expect(p.terminalShells).toBe(2); // -zsh and /bin/zsh on a tty; a tty-less zsh and a tool-wrapper sh do not count
     expect(p.terminalApps.map((a) => [a.app, a.processes])).toEqual([
@@ -103,24 +105,31 @@ describe('parsers', () => {
 
 describe('sampleHealth', () => {
   const now = new Date('2026-10-11T12:00:00.000Z');
+
   it('a good sample validates against the shared schema', async () => {
     const s = await sampleHealth(run(), now, 'darwin');
+
     expect(s.memory.totalBytes).toEqual({ status: 'ok', value: 34359738368 });
     expect(s.memory.pressureLevel).toEqual({ status: 'ok', value: 'normal' });
     expect(s.memory.freePct).toEqual({ status: 'ok', value: 87 });
     expect(s.processes.claude).toEqual({ status: 'ok', value: 3 });
+
     const full = { ...s, processes: { ...s.processes, tmuxSessions: { status: 'ok', value: 1 } } };
+
     expect(MachineHealthSchema.safeParse(full).success).toBe(true);
   });
 
   it('a command that fails makes only its own readings unavailable, with the reason, never 0', async () => {
     const s = await sampleHealth(run({ vm_stat: new Error('vm_stat not found') }), now, 'darwin');
+
     expect(s.memory.usedBytes).toEqual({
       status: 'unavailable',
       reason: 'vm_stat: vm_stat not found',
     });
     expect(s.memory.totalBytes.status).toBe('ok');
+
     const noPs = await sampleHealth(run({ ps: new Error('ps timed out') }), now, 'darwin');
+
     expect(noPs.processes.claude).toMatchObject({
       status: 'unavailable',
       reason: expect.stringContaining('ps timed out'),
@@ -134,6 +143,7 @@ describe('sampleHealth', () => {
       now,
       'darwin'
     );
+
     expect(s.memory.totalBytes.status).toBe('unavailable');
     expect(s.memory.swapUsedBytes.status).toBe('unavailable');
     expect(s.memory.pressureLevel.status).toBe('unavailable');
@@ -142,6 +152,7 @@ describe('sampleHealth', () => {
 
   it('a machine that is not macOS says so for every reading', async () => {
     const s = await sampleHealth(run(), now, 'linux');
+
     expect(JSON.stringify(s)).not.toContain('"ok"');
     expect(s.memory.usedBytes).toMatchObject({
       status: 'unavailable',
@@ -160,6 +171,7 @@ describe('createHealthSampler', () => {
       if (bin === 'sysctl') {
         calls++;
       }
+
       if (bin === 'ps' && calls >= 2) {
         await gate;
       } // the second round hangs until released
@@ -170,8 +182,10 @@ describe('createHealthSampler', () => {
         code: 0,
       };
     };
+
     const sample = createHealthSampler(slow, 30_000, () => new Date(t), 'darwin');
     const first = await sample();
+
     expect(calls).toBe(1);
     t += 10_000;
     expect(await sample()).toBe(first); // inside the ttl
@@ -185,21 +199,25 @@ describe('createHealthSampler', () => {
 
 describe('builder: tmux sessions come from the pane list, and health is only sent by collectors that have it', () => {
   const cfg = { machine: { id: 'roamy', label: 'Roamy', hostname: null }, version: 't', pid: null };
+
   it('adds tmuxSessions from the panes; an unreadable tmux is unavailable, not 0', async () => {
     const base = fixtureSources({ machine: 'roamy' });
     const withHealth = { ...base, health: () => sampleHealth(run(), new Date(), 'darwin') };
     const snap = await buildSnapshot(withHealth, cfg);
     const panes = await base.tmuxPanes();
+
     expect(snap.health?.processes.tmuxSessions).toEqual({ status: 'ok', value: panes.length });
 
     const broken = await buildSnapshot(
       { ...withHealth, tmuxPanes: () => Promise.reject(new Error('no server')) },
       cfg
     );
+
     expect(broken.health?.processes.tmuxSessions).toMatchObject({ status: 'unavailable' });
   });
   it('a collector without a health source sends no health at all (old shape)', async () => {
     const snap = await buildSnapshot(fixtureSources({ machine: 'roamy' }), cfg);
+
     expect(snap).not.toHaveProperty('health');
   });
 });

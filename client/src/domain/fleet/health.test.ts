@@ -31,6 +31,7 @@ function machine(
 describe('C2 (F26): the Machines badge tells the truth', () => {
   it("Roamy's case: macOS says normal, swap 12.8 of 14 GB (91%): under pressure, never green normal", () => {
     const p = pressureOf(machine('normal', 12.8, 14));
+
     expect(p).toMatchObject({ kind: 'critical', word: 'under pressure', glyph: '■' });
     expect(p.basis).toContain('macOS memory pressure says "normal"');
     expect(p.basis).toContain('swap 12.8 GB of 14 GB used (91%)');
@@ -66,10 +67,12 @@ describe('F3 (resilience case 5): sample age survives a skewed collector clock',
       },
     };
   };
+
   const age = (fm: FleetMachine) => healthAge(fm, fm.snapshot.health!, NOW);
 
   it('a clock 10 min behind: a fresh reading reads fresh, not "10m ago old reading"', () => {
     const a = age(skewed(-10 * MIN, 5_000));
+
     expect(a.ageMs).toBe(7_000);
     expect(a.ageMs).toBeLessThan(HEALTH_STALE_MS);
     expect(a.clockAhead).toBe(false);
@@ -77,9 +80,12 @@ describe('F3 (resilience case 5): sample age survives a skewed collector clock',
 
   it('a clock 15 min ahead: says "clock ahead 15 min", and an old reading is still old (never 0s)', () => {
     const fresh = age(skewed(15 * MIN, 5_000));
+
     expect(fresh.ageMs).toBe(7_000);
     expect(clockAheadText(fresh)).toBe('clock ahead 15 min');
+
     const old = age(skewed(15 * MIN, 2 * MIN));
+
     expect(old.ageMs).toBe(2 * MIN + 2_000);
     expect(old.ageMs).toBeGreaterThan(HEALTH_STALE_MS);
   });
@@ -123,12 +129,14 @@ describe('F4 (resilience: worst dishonesty): stale never looks green', () => {
   it('c1, collector stopped (machine asleep): "○ asleep", the last verdict only on hover', () => {
     const fm = { ...at('normal', 1, 45_000), liveness: 'asleep' as const };
     const p = pressureOf(fm, NOW);
+
     expect(p).toMatchObject({ kind: 'stale', glyph: '○', word: 'asleep', last: 'normal' });
     expect(p.basis).toMatch(/Not current: the last reading, 46s ago, said "normal"/);
   });
 
   it('c3, a frozen feed (live pushes, reading 2 min old): "○ old reading", not green', () => {
     const p = pressureOf(at('normal', 1, 2_000, 2 * 60_000), NOW);
+
     expect(p).toMatchObject({ kind: 'stale', word: 'old reading', last: 'normal' });
   });
 

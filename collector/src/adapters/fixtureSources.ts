@@ -42,6 +42,7 @@ export function recordedDaemon(machine: 'roamy' | 'm2'): DaemonRead {
     const file = files.find(
       (f) => f.startsWith(`${machine}--api-rig-`) && f.includes(`-${rig.id}-nodes.json`)
     );
+
     if (!file) {
       throw new Error(`no recorded nodes fixture for rig ${rig.name} (${rig.id})`);
     }
@@ -69,6 +70,7 @@ export function fixtureSources(opts: FixtureOptions): Sources {
     tmuxPanes: async () => panes,
     capture: async (paneId) => {
       const session = byPaneId.get(paneId);
+
       if (!session) {
         throw new Error(`no such pane ${paneId}`);
       }

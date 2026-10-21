@@ -43,9 +43,11 @@ export function guardPortFor(
 /** True when the request comes from a page on this dev server (same machine, same port). */
 export function isLocalDevRequest(headers: Headers, port: number): boolean {
   const origin = first(headers.origin);
+
   if (origin !== undefined) {
     return localUrl(origin, port);
   }
+
   const host = first(headers.host);
 
   return host !== undefined && localUrl(`http://${host}`, port);

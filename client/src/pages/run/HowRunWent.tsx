@@ -26,9 +26,11 @@ export default function HowRunWent({
   const tenMin = Math.floor(now / 600_000) * 600_000;
   const tl = useMemo(() => buildTimeline(fm, rig, tenMin), [fm, rig, tenMin]);
   const doneJobs = run.jobs.filter((j) => j.status === 'done');
+
   if (run.sample || doneJobs.length === 0) {
     return null;
   }
+
   const peak = tl?.timeline.peak ?? null;
 
   return (

@@ -57,6 +57,7 @@ const num = (v: string | undefined): number | null => {
   if (v === undefined || v.trim() === '') {
     return null;
   }
+
   const n = Number(v);
 
   return Number.isFinite(n) ? n : null;
@@ -91,9 +92,11 @@ export function parseUsageLog(text: string): UsageReading {
     .map((l) => l.trim())
     .filter((l) => /^\d+,/.test(l))
     .map((l) => l.split(','));
+
   if (!rows.length) {
     return NO_READING;
   }
+
   const last = rows[rows.length - 1]!;
   const lastWith = (col: number) => [...rows].reverse().find((r) => num(r[col]) !== null);
   const five = lastWith(2);
@@ -112,10 +115,13 @@ export function parseUsageLog(text: string): UsageReading {
 async function readTail(path: string, bytes = 16_384): Promise<string> {
   const size = (await stat(path)).size;
   const fh = await open(path, 'r');
+
   try {
     const start = Math.max(0, size - bytes);
     const buf = Buffer.alloc(size - start);
+
     await fh.read(buf, 0, buf.length, start);
+
     const text = buf.toString('utf8');
 
     // Drop a partial first line when the read started mid-file.
@@ -130,15 +136,19 @@ export async function readAccount(
   paths: AccountPaths = defaultAccountPaths()
 ): Promise<AccountUsage | null> {
   let identity: ReturnType<typeof parseAccountIdentity>;
+
   try {
     identity = parseAccountIdentity(await readFile(paths.claudeJson, 'utf8'));
   } catch {
     return null;
   }
+
   if (!identity.email) {
     return null;
   }
+
   let reading = NO_READING;
+
   try {
     reading = parseUsageLog(await readTail(paths.usageLog));
   } catch {

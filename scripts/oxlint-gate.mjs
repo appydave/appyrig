@@ -21,8 +21,10 @@ const RULE_PREFIX = /^anti-slop\((.*)\)$/;
 /** Findings per file per rule: { 'server/src/x.ts': { 'no-unknown-parameters': 2 } }. */
 export function countFindings(report) {
   const counts = {};
+
   for (const d of report.diagnostics ?? []) {
     const rule = RULE_PREFIX.exec(d.code ?? '')?.[1] ?? d.code ?? 'unknown-rule';
+
     counts[d.filename] ??= {};
     counts[d.filename][rule] = (counts[d.filename][rule] ?? 0) + 1;
   }
@@ -41,16 +43,20 @@ export function compare(actual, baseline) {
   const seen = new Map(flat(actual).map((r) => [`${r.file}\t${r.rule}`, r.n]));
   const grown = [];
   const shrunk = [];
+
   for (const [key, n] of seen) {
     const was = allowed.get(key) ?? 0;
     const [file, rule] = key.split('\t');
+
     if (n > was) {
       grown.push({ file, rule, now: n, was });
     }
   }
+
   for (const [key, was] of allowed) {
     const n = seen.get(key) ?? 0;
     const [file, rule] = key.split('\t');
+
     if (n < was) {
       shrunk.push({ file, rule, now: n, was });
     }
@@ -67,11 +73,13 @@ export function compare(actual, baseline) {
 export function findDisableDirectives(text) {
   const found = [];
   const re = /(?:oxlint|eslint)-disable(?:-next-line|-line)?([^\n]*)/g;
+
   for (const m of text.matchAll(re)) {
     const rules = m[1]
       .replace(/--.*$/, '')
       .replace(/\*\/.*$/, '')
       .trim();
+
     if (rules === '' || rules.includes('anti-slop')) {
       found.push({
         line: text.slice(0, m.index).split('\n').length,
@@ -98,6 +106,7 @@ export const MARKER_HOMES = ['oxlint.config.ts', 'scripts/oxlint-gate.mjs'];
 /** Lines that use the marker to try to exempt a cast. */
 export function findCastExemptions(text) {
   const found = [];
+
   text.split('\n').forEach((line, i) => {
     if (line.includes(CAST_MARKER)) {
       found.push({ line: i + 1, text: line.trim().slice(0, 100) });
@@ -122,6 +131,7 @@ export function messageFor(rule, pluginMessage) {
 /** Findings per rule across all files: a move keeps these, a new lie raises them. */
 export function ruleTotals(counts) {
   const totals = {};
+
   for (const { rule, n } of flat(counts)) {
     totals[rule] = (totals[rule] ?? 0) + n;
   }
@@ -149,6 +159,7 @@ export function reportProblem(report) {
   if (!(report.number_of_files > 0)) {
     return 'oxlint checked 0 files';
   }
+
   if (!(report.number_of_rules > 0)) {
     return 'oxlint loaded 0 rules (is the anti-slop plugin installed?)';
   }
@@ -164,6 +175,7 @@ function run() {
     maxBuffer: 64 * 1024 * 1024,
   });
   let report;
+
   try {
     report = JSON.parse(r.stdout);
   } catch {
@@ -171,7 +183,9 @@ function run() {
       error: `oxlint printed no JSON (exit ${r.status}): ${(r.stderr || r.stdout).slice(0, 400)}`,
     };
   }
+
   const problem = reportProblem(report);
+
   if (problem) {
     return { error: problem };
   }
@@ -193,10 +207,12 @@ export const NOT_SCANNED = [
  */
 export function scanTexts(files) {
   const diagnostics = [];
+
   for (const { name, text } of files) {
     if (NOT_SCANNED.some((p) => name.startsWith(p))) {
       continue;
     }
+
     for (const d of findDisableDirectives(text)) {
       diagnostics.push({
         filename: name,
@@ -205,9 +221,11 @@ export function scanTexts(files) {
         labels: [{ span: { line: d.line } }],
       });
     }
+
     if (MARKER_HOMES.includes(name)) {
       continue;
     }
+
     for (const d of findCastExemptions(text)) {
       diagnostics.push({
         filename: name,
@@ -247,21 +265,26 @@ function main() {
   const update = process.argv.includes('--update');
   const init = process.argv.includes('--init');
   const out = run();
+
   if (out.error) {
     console.error(`oxlint-gate: the run failed, so nothing was checked.\n${out.error}`);
     process.exit(2);
   }
+
   out.report.diagnostics = [...(out.report.diagnostics ?? []), ...scanDisableDirectives()];
+
   const actual = countFindings(out.report);
   const total = flat(actual).reduce((s, r) => s + r.n, 0);
   const file = join(ROOT, BASELINE_FILE);
   const hasBaseline = existsSync(file);
+
   if (!hasBaseline && !init) {
     console.error(
       `oxlint-gate: ${BASELINE_FILE} is missing. Create it once with: node scripts/oxlint-gate.mjs --init`
     );
     process.exit(2);
   }
+
   const baseline = hasBaseline ? JSON.parse(readFileSync(file, 'utf8')).findings : {};
   const { grown, shrunk } = compare(actual, baseline);
 
@@ -269,6 +292,7 @@ function main() {
     const before = ruleTotals(baseline);
     const after = ruleTotals(actual);
     const worse = rulesThatGrew(baseline, actual);
+
     if (worse.length && !init) {
       console.error(
         `oxlint-gate: refusing to grow the baseline. More findings than before for: ${worse
@@ -278,6 +302,7 @@ function main() {
       );
       process.exit(1);
     }
+
     writeFileSync(
       file,
       `${JSON.stringify({ about: 'Findings recorded when G02 was added: per file, per anti-slop rule. It may shrink, never grow. Rewrite with npm run oxlint:baseline.', findings: sorted(actual) }, null, 2)}\n`
@@ -291,15 +316,21 @@ function main() {
 
   if (grown.length) {
     console.error(`oxlint-gate FAILED: ${grown.length} count(s) above the baseline\n`);
+
     const byKey = new Set(grown.map((g) => `${g.file}\t${g.rule}`));
+
     for (const d of out.report.diagnostics) {
       const rule = RULE_PREFIX.exec(d.code ?? '')?.[1] ?? d.code;
+
       if (!byKey.has(`${d.filename}\t${rule}`)) {
         continue;
       }
+
       const line = d.labels?.[0]?.span?.line ?? '?';
+
       console.error(`${d.filename}:${line} [${rule}] ${messageFor(rule, d.message)}`);
     }
+
     console.error(
       '\nIf you only moved or renamed a file, the same findings are at its new path: run npm run oxlint:baseline.\n' +
         'Otherwise fix the new finding: give the function a named domain type and parse the input where it enters ' +
@@ -308,6 +339,7 @@ function main() {
     );
     process.exit(1);
   }
+
   if (shrunk.length) {
     console.error(
       `oxlint-gate FAILED: the baseline is out of date, ${shrunk.length} count(s) went down. Good: record it with npm run oxlint:baseline.\n` +
@@ -315,6 +347,7 @@ function main() {
     );
     process.exit(1);
   }
+
   console.log(
     `oxlint-gate ok: ${total} findings, all in the baseline (${out.report.number_of_files} files, ${out.report.number_of_rules} rules). Type casts in production code: ${ruleTotals(actual)[CAST_RULE] ?? 0}`
   );

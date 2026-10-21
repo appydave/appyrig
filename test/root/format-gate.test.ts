@@ -35,16 +35,21 @@ describe('Feature: the format gate does not hide app source', () => {
       .split('\n')
       .filter(Boolean);
     const ignored: string[] = [];
+
     for (const f of tracked) {
       const info = await prettierApi.getFileInfo(join(ROOT, f), {
         ignorePath: join(ROOT, '.prettierignore'),
       });
+
       if (info.ignored) {
         ignored.push(f);
       }
     }
+
     expect(ignored.length, 'the ignore file should ignore something').toBeGreaterThan(0);
+
     const hidden = ignored.filter((f) => !MAY_BE_IGNORED.some((p) => f === p || f.startsWith(p)));
+
     expect(hidden, 'files hidden from the format gate').toEqual([]);
   });
 });

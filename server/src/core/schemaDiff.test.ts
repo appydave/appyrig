@@ -51,6 +51,7 @@ describe('diffSchemas', () => {
       table('profiles', [col('id')]), // new
     ];
     const d = diffSchemas({ version: '0.6.6', tables: v1 }, v2);
+
     expect(d.status).toBe('changed');
     expect(d.addedTables).toEqual(['profiles']);
     expect(d.removedTables).toEqual([]);
@@ -80,6 +81,7 @@ describe('diffSchemas', () => {
       { version: 'a', tables: [table('t', [col('n', 'INTEGER'), col('id', 'TEXT')])] },
       [table('t', [col('n', 'TEXT'), col('id', 'TEXT', { pk: 1 })])]
     );
+
     expect(d.changedTables[0]!.changedColumns.map((c) => c.name)).toEqual(['n', 'id']);
   });
 });

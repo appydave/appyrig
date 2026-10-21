@@ -15,7 +15,9 @@ function* walk(dir: string): Generator<string> {
     if (name === 'node_modules' || name === 'dist') {
       continue;
     }
+
     const p = join(dir, name);
+
     if (statSync(p).isDirectory()) {
       yield* walk(p);
     } else if (/\.(ts|tsx|js|mjs|cjs|json|sh|plist)$/.test(name)) {
@@ -27,10 +29,13 @@ function* walk(dir: string): Generator<string> {
 describe('collector never calls the transcript route (AC 4)', () => {
   it.each(['collector', 'server'])('%s has no reference to the route', (dir) => {
     const files = [...walk(join(ROOT, dir))];
+
     expect(files.length).toBeGreaterThan(0);
+
     const hits = files
       .filter((f) => readFileSync(f, 'utf8').includes(NEEDLE))
       .map((f) => relative(ROOT, f));
+
     expect(hits).toEqual([]);
   });
 

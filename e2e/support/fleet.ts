@@ -11,6 +11,7 @@ export const E2E_SCENARIOS = ['roamy--blocked', 'm2', 'fit'];
 /** Collects console errors and uncaught page errors from the moment it is called. */
 export function watchErrors(page: Page): string[] {
   const errors: string[] = [];
+
   page.on('console', (msg) => {
     if (msg.type() === 'error') {
       errors.push(`console: ${msg.text()}`);
@@ -28,9 +29,11 @@ export function watchErrors(page: Page): string[] {
 export async function signIn(page: Page): Promise<void> {
   const hub = process.env.E2E_HUB_URL;
   const token = process.env.E2E_HUB_TOKEN;
+
   if (!hub || !token) {
     throw new Error('E2E_HUB_URL / E2E_HUB_TOKEN unset: run through playwright.config.ts');
   }
+
   await page
     .context()
     .request.get(`${hub}/?token=${encodeURIComponent(token)}`, { maxRedirects: 0 });
@@ -43,9 +46,11 @@ export async function signIn(page: Page): Promise<void> {
 export async function chooseRigInDrawer(page: Page, rigKey: string): Promise<void> {
   const panel = page.getByTestId('rig-drawer-panel');
   const wasOpen = await panel.isVisible();
+
   if (!wasOpen) {
     await page.getByTestId('rig-drawer-tab').click();
   }
+
   await page.locator(`[data-testid="drawer-rig"][data-rig-key="${rigKey}"]`).click();
   if (!wasOpen) {
     await page.getByTestId('rig-drawer-tab').click();

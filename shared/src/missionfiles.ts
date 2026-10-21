@@ -33,6 +33,7 @@ export const MISSION_MIME: Record<string, string> = {
 };
 
 const isoDate = z.iso.datetime({ offset: true });
+
 export const MissionPathSchema = z
   .string()
   .min(2)

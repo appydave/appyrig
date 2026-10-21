@@ -14,6 +14,7 @@ describe('listenOnHosts — bind only the named addresses', () => {
   it('serves the same app on every named address and one port', async () => {
     const http = createServer((_req, res) => res.end('ok'));
     const bound = await listenOnHosts(http, 0, ['127.0.0.1', '::1']);
+
     try {
       expect(bound.hosts).toEqual(['127.0.0.1', '::1']);
       expect(await fetchStatus('127.0.0.1', bound.port)).toBe(200);
@@ -27,6 +28,7 @@ describe('listenOnHosts — bind only the named addresses', () => {
   it('is not reachable on an address it was not given', async () => {
     const http = createServer((_req, res) => res.end('ok'));
     const bound = await listenOnHosts(http, 0, ['127.0.0.1']);
+
     try {
       await expect(fetchStatus('::1', bound.port)).rejects.toThrow(/ECONNREFUSED/);
     } finally {
@@ -37,6 +39,7 @@ describe('listenOnHosts — bind only the named addresses', () => {
 
   it('fails loudly when an address is not on this machine, leaving nothing listening', async () => {
     const http = createServer();
+
     // 192.0.2.1 is TEST-NET-1: never assigned to a local interface.
     await expect(listenOnHosts(http, 0, ['127.0.0.1', '192.0.2.1'])).rejects.toMatchObject({
       code: 'EADDRNOTAVAIL',

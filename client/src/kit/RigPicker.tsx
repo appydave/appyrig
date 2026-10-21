@@ -35,9 +35,11 @@ export default function RigPicker({ rigs, selected, onSelect, onOpenFiles, info 
     (r) => r.status,
     over
   );
+
   if (!rigs.length) {
     return <p className="empty">No rigs reported by any machine.</p>;
   }
+
   const shown = rigs.find((r) => r.key === selected) ?? null;
 
   return (

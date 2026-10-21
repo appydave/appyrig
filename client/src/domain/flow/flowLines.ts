@@ -84,6 +84,7 @@ export function pairPath(
   const x1 = L.x(l);
   const x2 = L.x(r);
   const gap = Math.abs(L.idx(r) - L.idx(l));
+
   if (gap <= 1) {
     const s = { x: x1 + L.boxW / 2, y: rowY };
     const e = { x: x2 - L.boxW / 2, y: rowY };
@@ -98,6 +99,7 @@ export function pairPath(
       aLeft,
     };
   }
+
   const y0 = rowY - boxH / 2;
   const rise = 40 + gap * 30 + level * 26;
   const s = { x: x1, y: y0 };

@@ -87,10 +87,13 @@ function allowedName(
   if (!EXT.test(name)) {
     return false;
   }
+
   if (scope === 'spec' && /\.ya?ml$/.test(name)) {
     return name === ownSpec;
   }
+
   const doc = VARIANT_DOC.exec(name)?.[1];
+
   if (doc !== undefined) {
     if (variant) {
       return doc === variant || doc.startsWith(`${variant}-`);
@@ -98,9 +101,11 @@ function allowedName(
 
     return !siblings.some((v) => doc === v || doc.startsWith(`${v}-`));
   }
+
   if (variant && scope === 'spec' && /^(MISSION|REPORT)\.md$/.test(name)) {
     return false;
   }
+
   if (BRIEF.test(name)) {
     return true;
   }
@@ -115,17 +120,21 @@ function allowedName(
 export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   let root: string;
   let specDir: string;
+
   try {
     root = await realpath(spec.root);
     specDir = await realpath(dirname(spec.path));
   } catch {
     return [];
   }
+
   if (!isUnder(specDir, root)) {
     return [];
   }
+
   const folders: { scope: 'spec' | 'mission'; dir: string }[] = [{ scope: 'spec', dir: specDir }];
   const parent = dirname(specDir);
+
   // The mission folder is the spec folder's parent, and only when that is still inside the configured folder.
   // QA R3 LOW-2: the configured folder itself (openrig/rigs/) is every rig's parent, not a
   // mission folder: its MISSION-TEMPLATE.md belongs to no rig.
@@ -136,19 +145,25 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   const ownSpec = basename(spec.path);
   const variant = specVariant(ownSpec);
   const out: Candidate[] = [];
+
   for (const { scope, dir } of folders) {
     let names: string[];
+
     try {
       names = await readdir(dir);
     } catch {
       continue;
     }
+
     const siblings = names.map(specVariant).filter((v): v is string => v !== null);
+
     for (const name of names.sort()) {
       if (!allowedName(scope, name, { variant, ownSpec, siblings })) {
         continue;
       }
+
       let real: string;
+
       try {
         real = await realpath(join(dir, name));
         if (!(await lstat(real)).isFile()) {
@@ -157,15 +172,19 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
       } catch {
         continue; // broken link, vanished file, permission
       }
+
       if (!isUnder(dirname(real), root)) {
         continue;
       } // a link out of the configured folder
+
       out.push({ id: `${scope}:${name}`, name, scope, path: real });
     }
   }
+
   if (out.length <= RIG_FILES_MAX) {
     return out;
   }
+
   // Over the cap: keep the run card's sources first, in their listed order.
   const keep = new Set(
     out
@@ -181,9 +200,11 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
 /** Every path the rig.yaml names, in OpenRig's layer order, each once. */
 export function specNamedPaths(spec: SpecInfo): string[] {
   const s = spec.spec;
+
   if (!s) {
     return [];
   }
+
   const paths = [
     ...(s.culture_file ? [s.culture_file] : []),
     ...(s.docs ?? []).map((d) => d.path),
@@ -200,18 +221,24 @@ export function specNamedPaths(spec: SpecInfo): string[] {
 /** The files a rig's validated rig.yaml names (scope `rig`), each checked as described above. */
 export async function specCandidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   let rigRoot: string;
+
   try {
     rigRoot = await realpath(dirname(spec.path));
   } catch {
     return [];
   }
+
   const out: Candidate[] = [];
+
   for (const rel of specNamedPaths(spec)) {
     const id = `rig:${rel}`;
+
     if (!EXT.test(rel) || !RigFileIdSchema.safeParse(id).success) {
       continue;
     } // absolute, `..`, odd names
+
     let real: string;
+
     try {
       real = await realpath(join(rigRoot, rel));
       if (!(await lstat(real)).isFile()) {
@@ -220,9 +247,11 @@ export async function specCandidatesFor(spec: SpecInfo): Promise<Candidate[]> {
     } catch {
       continue; // named but absent: nothing to show
     }
+
     if (!isUnder(real, rigRoot)) {
       continue;
     } // a link out of the rig root
+
     out.push({ id, name: rel, scope: 'rig', path: real });
     if (out.length >= RIG_SPEC_FILES_MAX) {
       break;
@@ -236,16 +265,21 @@ async function readCapped(
   path: string
 ): Promise<{ text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
   let fh;
+
   try {
     fh = await open(path, 'r');
+
     const st = await fh.stat();
+
     if (!st.isFile()) {
       return null;
     }
+
     const want = Math.min(st.size, RIG_FILE_MAX_BYTES);
     const buf = Buffer.alloc(want);
     const { bytesRead } = await fh.read(buf, 0, want, 0);
     const slice = buf.subarray(0, bytesRead);
+
     if (slice.includes(0)) {
       return null;
     } // binary, not a text file
@@ -269,11 +303,14 @@ export async function readRigFiles(spec: SpecInfo, withSpecFiles = false): Promi
     ...(await candidatesFor(spec)),
     ...(withSpecFiles ? await specCandidatesFor(spec) : []),
   ];
+
   for (const c of cands) {
     const r = await readCapped(c.path);
+
     if (!r) {
       continue;
     }
+
     files.push({
       id: c.id,
       name: c.name,
@@ -296,12 +333,15 @@ export function chunkRigFiles(
 ): RigFilesPush[] {
   const chunks: RigFile[][] = [[]];
   let size = 0;
+
   for (const f of files) {
     const n = Buffer.byteLength(f.content);
+
     if (size + n > RIG_FILES_CHUNK_BYTES && chunks[chunks.length - 1]!.length > 0) {
       chunks.push([]);
       size = 0;
     }
+
     chunks[chunks.length - 1]!.push(f);
     size += n;
   }
@@ -349,10 +389,12 @@ export class RigFilesReader {
     if (this.now().getTime() - this.lastScan < this.ttlMs) {
       return null;
     }
+
     const pushes: RigFilesPush[] = [];
     const sigs = new Map<string, string>();
     let bytes = 0;
     let leftOver = false;
+
     for (const [rig, spec] of specs) {
       const cands = [
         ...(await candidatesFor(spec)),
@@ -371,24 +413,30 @@ export class RigFilesReader {
           })
         )
       ).join('|')}`;
+
       if (this.sent.get(rig) === sig) {
         continue;
       }
+
       if (bytes >= RIG_FILES_TICK_BYTES) {
         leftOver = true; // the budget is spent: this rig goes out on the next tick
         continue;
       }
+
       const files = await readRigFiles(spec, withSpecFiles);
+
       bytes += files.reduce((n, f) => n + Buffer.byteLength(f.content), 0);
       pushes.push(
         ...chunkRigFiles({ machineId: this.machineId, rig }, files, this.now().toISOString())
       );
       sigs.set(rig, sig);
     }
+
     // Only a scan that found nothing left over waits for the rescan interval.
     if (!leftOver) {
       this.lastScan = this.now().getTime();
     }
+
     if (pushes.length === 0) {
       return null;
     }

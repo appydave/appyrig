@@ -54,6 +54,7 @@ export async function startHub(opts: Partial<HubOptions> = {}): Promise<RunningH
       forceNew: true,
       ...extra,
     });
+
     sockets.push(s);
 
     return s;

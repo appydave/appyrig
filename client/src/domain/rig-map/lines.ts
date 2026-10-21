@@ -25,9 +25,11 @@ export function mapPairs(map: RigMap): MapPair[] {
     ...(map.planned ?? []).map((e) => ({ from: e.from, to: e.to, count: 0, planned: true })),
   ];
   const kinds = new Map<string, string[]>();
+
   for (const e of map.planned ?? []) {
     const k = e.from < e.to ? `${e.from}\u0000${e.to}` : `${e.to}\u0000${e.from}`;
     const word = plannedWord(e.planned ?? '');
+
     kinds.set(k, [...new Set([...(kinds.get(k) ?? []), word])]);
   }
 
@@ -93,14 +95,18 @@ const sameRow = (a: Box, b: Box) => Math.abs(a.y - b.y) < 20;
 export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
   const out: PlannedLine[] = [];
   const rails = new Map<string, { pod: [string, string]; members: MapPair[] }>();
+
   for (const p of pairs) {
     const ca = look.card(p.a);
     const cb = look.card(p.b);
+
     if (!ca || !cb) {
       continue;
     }
+
     const pa = look.pod(p.a);
     const pb = look.pod(p.b);
+
     if (sameRow(ca, cb) || p.planned || !pa || !pb || pa === pb) {
       out.push({
         key: `${p.a}→${p.b}`,
@@ -119,12 +125,15 @@ export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
       });
       continue;
     }
+
     const [x, y] = pa < pb ? [pa, pb] : [pb, pa];
     const k = `${x}\u0000${y}`;
     const r = rails.get(k) ?? { pod: [x, y] as [string, string], members: [] };
+
     r.members.push(p);
     rails.set(k, r);
   }
+
   for (const { pod, members } of rails.values()) {
     const rep = [...members].sort((m, n) => n.total - m.total)[0]!;
     // the kit merges the members into ONE rail between the two pods, with the totals each way
@@ -143,6 +152,7 @@ export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
     const { aToB, bToA } = rail;
     // draw it from pod[0]'s card of the representative pair to pod[1]'s
     const [from, to] = look.pod(rep.a) === pod[0] ? [rep.a, rep.b] : [rep.b, rep.a];
+
     out.push({
       key: `${from}→${to}`,
       a: from,

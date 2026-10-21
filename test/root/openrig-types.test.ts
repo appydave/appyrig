@@ -34,11 +34,13 @@ describe('OpenRig RigSpec (rig.yaml)', () => {
 
   it.each(rigFiles.map((f) => [f.slice(FX.length), f]))('accepts %s', (_name, f) => {
     const r = OpenRig.RigSpecSchema.safeParse(load(f));
+
     expect(r.success, why(r)).toBe(true);
   });
 
   it('reads d09-crew as two pods, three seats, culture and managed blocks', () => {
     const rig = OpenRig.RigSpecSchema.parse(load(join(FX, 'd09-crew/rig.yaml')));
+
     expect(rig.name).toBe('d09-crew');
     expect(rig.culture_file).toBe('CULTURE.md');
     expect(rig.managed_blocks?.['claude-code']).toBe('CLAUDE.local.md');
@@ -59,13 +61,18 @@ describe('OpenRig RigSpec (rig.yaml)', () => {
     const base = load(join(FX, 'd09-crew/rig.yaml')) as Record<string, unknown> & {
       pods: Record<string, unknown>[];
     };
+
     expect(OpenRig.RigSpecSchema.safeParse({ ...base, mission: 'MISSION.md' }).success).toBe(false);
+
     const pod = { ...base.pods[0]!, jobs: [] };
+
     expect(OpenRig.RigSpecSchema.safeParse({ ...base, pods: [pod] }).success).toBe(false);
+
     const members = (base.pods[0]!.members as Record<string, unknown>[]).map((m) => ({
       ...m,
       shots: 'shots/',
     }));
+
     expect(
       OpenRig.RigSpecSchema.safeParse({ ...base, pods: [{ ...base.pods[0]!, members }] }).success
     ).toBe(false);
@@ -84,6 +91,7 @@ describe('OpenRig RigSpec (rig.yaml)', () => {
 describe('OpenRig AgentSpec (agent.yaml)', () => {
   it.each(agentFiles.map((f) => [f.slice(FX.length), f]))('accepts %s', (_name, f) => {
     const r = OpenRig.AgentSpecSchema.safeParse(load(f));
+
     expect(r.success, why(r)).toBe(true);
   });
 
@@ -91,6 +99,7 @@ describe('OpenRig AgentSpec (agent.yaml)', () => {
     const a = OpenRig.AgentSpecSchema.parse(
       load(join(FX, 'specs/agents/development/implementer/agent.yaml'))
     );
+
     expect(a.startup?.files?.[0]).toMatchObject({
       path: 'guidance/role.md',
       delivery_hint: 'send_text',
@@ -123,10 +132,13 @@ describe('the chain-file trees', () => {
       depends_on: [],
       owner: 'anyone',
     });
+
     expect(fm.depends_on).toEqual([]);
+
     const m = OpenRig.MissionYamlSchema.parse({
       arrangement: { waves: [{ id: 'w1', slices: ['a', 'b'] }] },
     });
+
     expect(m.arrangement?.waves?.[0]?.slices).toEqual(['a', 'b']);
   });
 });

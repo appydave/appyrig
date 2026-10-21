@@ -95,11 +95,14 @@ export interface RunModel {
 /** Missions seen on this rig's queue, newest activity first. */
 export function missionsOnRig(fm: FleetMachine, rig: string): string[] {
   const last = new Map<string, string>();
+
   for (const q of rigQueue(fm, rig)) {
     const m = missionOf(q.tags);
+
     if (!m || isSweep(q)) {
       continue;
     }
+
     if ((last.get(m) ?? '') < q.updatedAt) {
       last.set(m, q.updatedAt);
     }
@@ -129,12 +132,15 @@ export function buildRun(
     .sort(byCreated);
   const verdictTagged = all.some((q) => verdictOf(q.tags) !== null);
   const bySlice = new Map<string, QueueItem[]>();
+
   for (const q of all) {
     const s = sliceOf(q.tags);
+
     if (s) {
       bySlice.set(s, [...(bySlice.get(s) ?? []), q]);
     }
   }
+
   const started = jobs.some((j) => bySlice.has(j.slice));
   const lastStarted = jobs.reduce((n, j, i) => (bySlice.has(j.slice) ? i : n), -1);
 
@@ -167,6 +173,7 @@ export function buildRun(
   const firstNotDone = states.findIndex((s) => s.status !== 'done');
   const finished = started && jobs.length > 0 && firstNotDone === -1;
   const currentIndex = started && !finished ? firstNotDone : null;
+
   if (currentIndex !== null) {
     states[currentIndex]!.status = 'current';
   }
@@ -204,21 +211,26 @@ export function buildRun(
   });
   const forward = new Map<string, number>();
   const back = new Map<string, number>();
+
   for (const q of curItems) {
     const a = bare(q.source);
     const b = bare(q.destination);
     const sa = stations.find((s) => s.seat === a);
     const sb = stations.find((s) => s.seat === b);
+
     if (!sa || !sb || sa === sb) {
       continue;
     }
+
     const k = `${sa.seat}>${sb.seat}`;
+
     if (RANK[sb.stage] > RANK[sa.stage]) {
       forward.set(k, (forward.get(k) ?? 0) + 1);
     } else if (SENT_BACK.includes(verdictOf(q.tags) as Verdict)) {
       back.set(k, (back.get(k) ?? 0) + 1);
     }
   }
+
   const arrows = (m: Map<string, number>): Arrow[] =>
     [...m.entries()].map(([k, count]) => ({ from: k.split('>')[0]!, to: k.split('>')[1]!, count }));
 
@@ -296,7 +308,9 @@ export function clock(ms: number | null): string {
   if (ms === null) {
     return '';
   }
+
   const m = Math.round(ms / 60_000);
+
   if (m < 60) {
     return `${m} min`;
   }
@@ -307,23 +321,29 @@ export function clock(ms: number | null): string {
 /** The one-sentence top line. Pre-GO it names no number it does not have. */
 export function topLine(r: RunModel): string {
   const m = r.jobs.length;
+
   if (r.phase === 'no-jobs') {
     return 'No jobs table found in this rig’s MISSION.md';
   }
+
   if (r.phase === 'waiting') {
     return `Waiting for GO · ${m} ${m === 1 ? 'job' : 'jobs'} planned`;
   }
+
   if (r.phase === 'finished') {
     return `Finished · ${m} of ${m} jobs · ${clock(r.runMs)}`;
   }
+
   const cur = r.currentIndex !== null ? r.jobs[r.currentIndex]! : null;
   const holder = r.stations.find((s) => s.holds > 0) ?? null;
   const parts = [`Job ${(r.currentIndex ?? 0) + 1} of ${m}`];
+
   if (holder) {
     parts.push(`with ${holder.word}`);
   } else if (cur?.holder) {
     parts.push(`last with ${cur.holder}`);
   }
+
   parts.push(
     r.verdictTagged
       ? `${r.reworkTotal} ${r.reworkTotal === 1 ? 'rework' : 'reworks'} so far`
@@ -344,6 +364,7 @@ export interface DoneCheck {
   before_after: string | null;
   duration: string | null;
 }
+
 const FIELDS: (keyof DoneCheck)[] = ['proof', 'test_audit', 'before_after', 'duration'];
 
 /**
@@ -359,21 +380,26 @@ export function parseDoneCheck(md: string): DoneCheck {
       .toLowerCase()
       .replace(/[\s-]+/g, '_')
       .replace(/[^a-z_]/g, '');
+
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]!.trim();
     const row = /^\|\s*`?\*{0,2}([A-Za-z _-]+?)\*{0,2}`?\s*\|\s*(.+?)\s*\|?$/.exec(l);
     const kv = /^(?:[-*]\s*)?\*{0,2}`?([A-Za-z _-]+?)`?\*{0,2}\s*:\s*\*{0,2}\s*(.*)$/.exec(l);
     const head = /^#{1,6}\s+`?([A-Za-z _-]+?)`?\s*$/.exec(l);
     const hit = row ?? kv;
+
     if (hit) {
       const k = norm(hit[1]!) as keyof DoneCheck;
+
       if (FIELDS.includes(k) && out[k] === null && hit[2]!.trim()) {
         out[k] = hit[2]!.trim();
       }
     } else if (head) {
       const k = norm(head[1]!) as keyof DoneCheck;
+
       if (FIELDS.includes(k) && out[k] === null) {
         const body: string[] = [];
+
         // The heading's own paragraph: up to the next heading or the first blank line after text.
         for (let j = i + 1; j < lines.length && !/^#{1,6}\s/.test(lines[j]!); j++) {
           if (lines[j]!.trim()) {
@@ -382,6 +408,7 @@ export function parseDoneCheck(md: string): DoneCheck {
             break;
           }
         }
+
         if (body.length) {
           out[k] = body.join(' ');
         }

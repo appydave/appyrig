@@ -28,7 +28,9 @@ function* walk(dir) {
     if (SKIP.has(name)) {
       continue;
     }
+
     const p = join(dir, name);
+
     if (statSync(p).isDirectory()) {
       yield* walk(p);
     } else if (EXT.test(name)) {
@@ -38,18 +40,23 @@ function* walk(dir) {
 }
 
 const hits = [];
+
 for (const r of ROOTS) {
   let files;
+
   try {
     files = [...walk(join(root, r))];
   } catch {
     continue;
   }
+
   for (const file of files) {
     const rel = relative(root, file);
+
     if (rel.startsWith(ALLOWED)) {
       continue;
     }
+
     readFileSync(file, 'utf8')
       .split('\n')
       .forEach((line, i) => {
@@ -70,4 +77,5 @@ if (hits.length) {
   );
   process.exit(1);
 }
+
 console.log(`arch:check strings ok (${FORBIDDEN.join(', ')} only under ${ALLOWED})`);

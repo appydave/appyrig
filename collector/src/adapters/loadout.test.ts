@@ -36,11 +36,14 @@ import { parseSpec, type SpecInfo } from './specs.js';
 const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-lo-'));
+
   dirs.push(d);
 
   return d;
 };
+
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
+
 const put = (path: string, text = 'x\n') => {
   mkdirSync(join(path, '..'), { recursive: true });
   writeFileSync(path, text);
@@ -109,6 +112,7 @@ describe('foldListing: the initial listing plus later deltas (QA D1)', () => {
 
   it('the real shape: 307 initial, then deltas of 3 and 1, is 311 shown, not 1', () => {
     let s = foldListing(null, l(many(307), true));
+
     s = foldListing(
       s,
       l(['agent-browser', 'development-team', 'dogfood'], false, '2026-10-09T13:48:26.880Z')
@@ -127,6 +131,7 @@ describe('foldListing: the initial listing plus later deltas (QA D1)', () => {
 
   it('a later full listing starts the set again', () => {
     let s = foldListing(null, l(many(5), true));
+
     s = foldListing(s, l(['extra'], false));
     s = foldListing(s, l(['only', 'these'], true));
     expect(s).toMatchObject({ names: ['only', 'these'], skillCount: 2, deltas: 0 });
@@ -134,6 +139,7 @@ describe('foldListing: the initial listing plus later deltas (QA D1)', () => {
 
   it('a name repeated in a delta is kept once; the summed count then disagrees, which the view flags', () => {
     let s = foldListing(null, l(['a', 'b'], true));
+
     s = foldListing(s, l(['b'], false));
     expect(s.names).toEqual(['a', 'b']);
     expect(s.skillCount).toBe(2); // the union, per the ruling
@@ -142,6 +148,7 @@ describe('foldListing: the initial listing plus later deltas (QA D1)', () => {
 
   it('deltas with no full listing before them say so', () => {
     let s = foldListing(null, l(['x'], false));
+
     s = foldListing(s, l(['y'], false));
     expect(s).toMatchObject({ names: ['x', 'y'], isInitial: false, deltas: 1, skillCount: 2 });
   });
@@ -150,9 +157,12 @@ describe('foldListing: the initial listing plus later deltas (QA D1)', () => {
 describe('ListingTracker: the latest listing, read incrementally', () => {
   it('finds the latest listing and counts them, reading only appended bytes', async () => {
     const path = join(tmp(), 't.jsonl');
+
     writeFileSync(path, `${titleLine('a@b')}\n${listingLine(['one'], '2026-10-11T01:00:00Z')}\n`);
+
     const tracker = new ListingTracker();
     let r = await tracker.latest(fileOf(path));
+
     expect(r?.listing.names).toEqual(['one']);
     expect(r?.count).toBe(1);
 
@@ -165,8 +175,11 @@ describe('ListingTracker: the latest listing, read incrementally', () => {
   it('leaves a line still being written for the next scan', async () => {
     const path = join(tmp(), 't.jsonl');
     const line = listingLine(['late']);
+
     writeFileSync(path, `${titleLine('a@b')}\n${line.slice(0, 40)}`);
+
     const tracker = new ListingTracker();
+
     expect(await tracker.latest(fileOf(path))).toBeNull();
     appendFileSync(path, `${line.slice(40)}\n`);
     expect((await tracker.latest(fileOf(path)))?.listing.names).toEqual(['late']);
@@ -174,11 +187,16 @@ describe('ListingTracker: the latest listing, read incrementally', () => {
 
   it('reads a file again from the start when it shrank', async () => {
     const path = join(tmp(), 't.jsonl');
+
     writeFileSync(path, `${listingLine(['a', 'b', 'c', 'd'])}\n`);
+
     const tracker = new ListingTracker();
+
     await tracker.latest(fileOf(path));
     writeFileSync(path, `${listingLine(['z'])}\n`);
+
     const r = await tracker.latest(fileOf(path));
+
     expect(r?.listing.names).toEqual(['z']);
     expect(r?.count).toBe(1);
   });
@@ -186,6 +204,7 @@ describe('ListingTracker: the latest listing, read incrementally', () => {
   it('handles a listing line longer than one read block', async () => {
     const names = Array.from({ length: 40_000 }, (_, i) => `skill-number-${i}`);
     const path = join(tmp(), 't.jsonl');
+
     writeFileSync(path, `${titleLine('a@b')}\n${listingLine(names)}\n`);
     expect((await new ListingTracker().latest(fileOf(path)))?.listing.names.length).toBe(40_000);
   });
@@ -244,6 +263,7 @@ describe('classifySkills', () => {
 describe('skill folders on disk', () => {
   it('counts only folders that hold a SKILL.md', async () => {
     const d = tmp();
+
     put(join(d, 'real', 'SKILL.md'));
     mkdirSync(join(d, 'empty'));
     put(join(d, 'loose.skill'));
@@ -262,15 +282,18 @@ describe('skill folders on disk', () => {
         code: 0,
       };
     };
+
     expect(await trackedSkills(ok, '/w')).toEqual({
       isRepo: true,
       tracked: new Set(['recipe', 'app-idea']),
     });
+
     const notRepo: Exec = async () => ({
       stdout: '',
       stderr: 'fatal: not a git repository',
       code: 128,
     });
+
     expect(await trackedSkills(notRepo, '/w')).toEqual({ isRepo: false, tracked: new Set() });
   });
 });
@@ -290,14 +313,18 @@ describe('seat documents', () => {
       '      - { id: lead, agent_ref: "local:agent", profile: default, runtime: claude-code, cwd: . }',
       '',
     ].join('\n');
+
     put(join(team, 'rig.yaml'), rigYaml);
     put(join(team, 'TEAM-CULTURE.md'), '# culture\n');
     // crew copies beside rig.yaml and in the cwd: NOT OpenRig's place, so never read
     put(join(team, 'LEARNED-orch-lead.md'), '# crew learned\n');
     put(join(team, 'RECAP.md'), '# crew recap\n');
+
     // OpenRig's topology tree: seats/<member leg of the session name>/
     const topo = tmp();
+
     put(join(topo, 'rigs', 'demo', 'seats', 'orch-lead', 'LEARNED.md'), '# learned\n');
+
     const spec: SpecInfo = {
       path: join(team, 'rig.yaml'),
       root,
@@ -305,14 +332,18 @@ describe('seat documents', () => {
       spec: parseSpec(rigYaml)!.spec,
     };
     const cwd = tmp();
+
     put(join(cwd, 'CLAUDE.md'), '# claude\n');
     put(join(cwd, 'CLAUDE.local.md'), 'token: sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n');
+
     const agent = tmp();
+
     put(
       join(agent, 'agent.yaml'),
       'name: orch\nversion: "1.0"\nstartup:\n  files:\n    - path: guidance/role.md\n'
     );
     put(join(agent, 'guidance', 'role.md'), '# Role: Orchestrator\n');
+
     const seat: LoadoutSeat = {
       id: 'orch-lead@demo',
       rig: 'demo',
@@ -327,6 +358,7 @@ describe('seat documents', () => {
   it('finds each layer in its fixed place, in order, and says where it looked for an absent one', async () => {
     const w = world();
     const layers = await readSeatDocs(w.seat, w.spec, w.agent, w.topo);
+
     expect(layers.map((l) => [l.id, l.name, l.present])).toEqual([
       ['culture', 'TEAM-CULTURE.md', true],
       ['role', 'role.md', true],
@@ -335,7 +367,9 @@ describe('seat documents', () => {
       ['recap', 'RECAP.md', false],
       ['learned', 'LEARNED.md', true],
     ]);
+
     const seatDir = join(w.topo, 'rigs', 'demo', 'seats', 'orch-lead');
+
     expect(layers[4]?.looked).toEqual([join(seatDir, 'RECAP.md')]);
     expect(layers[5]).toMatchObject({ path: join(seatDir, 'LEARNED.md'), content: '# learned\n' });
     expect(layers[1]?.content).toBe('# Role: Orchestrator\n');
@@ -343,14 +377,19 @@ describe('seat documents', () => {
 
   it("RECAP and LEARNED come only from OpenRig's topology seat folder, never the crew copies beside rig.yaml or in the cwd", async () => {
     const w = world();
+
     put(join(w.cwd, 'RECAP.md'), '# cwd recap\n');
     put(join(w.cwd, 'LEARNED.md'), '# cwd learned\n');
     rmSync(join(w.topo, 'rigs'), { recursive: true });
+
     const layers = await readSeatDocs(w.seat, w.spec, w.agent, w.topo);
+
     expect(layers.find((l) => l.id === 'recap')?.present).toBe(false);
     expect(layers.find((l) => l.id === 'learned')?.present).toBe(false);
+
     // no topology root at all: absent, saying why
     const none = await readSeatDocs(w.seat, w.spec, w.agent, null);
+
     expect(none.find((l) => l.id === 'learned')?.looked.join(' ')).toMatch(
       /no OpenRig topology root/
     );
@@ -361,6 +400,7 @@ describe('seat documents', () => {
     const local = (await readSeatDocs(w.seat, w.spec, w.agent)).find(
       (l) => l.id === 'claude-local'
     );
+
     expect(local?.content).not.toContain('sk-ant-api03');
   });
 
@@ -368,8 +408,11 @@ describe('seat documents', () => {
     const w = world();
     // plain words: a long unbroken run would be redacted as if it were a token
     const text = 'some words. '.repeat(Math.ceil(SEAT_DOC_MAX_BYTES / 12) + 10);
+
     put(join(w.cwd, 'CLAUDE.md'), text);
+
     const md = (await readSeatDocs(w.seat, w.spec, w.agent)).find((l) => l.id === 'claude-md');
+
     expect(md).toMatchObject({ truncated: true, bytes: text.length });
     expect(md?.content?.length).toBe(SEAT_DOC_MAX_BYTES);
   });
@@ -377,16 +420,21 @@ describe('seat documents', () => {
   it('never follows a link out of its folder, nor a culture_file with a path in it', async () => {
     const w = world();
     const outside = tmp();
+
     put(join(outside, 'secret.md'), 'secret\n');
     rmSync(join(w.cwd, 'CLAUDE.md'));
     symlinkSync(join(outside, 'secret.md'), join(w.cwd, 'CLAUDE.md'));
+
     const yaml = readFileSync(join(w.team, 'rig.yaml'), 'utf8').replace(
       'TEAM-CULTURE.md',
       '../../../etc/passwd'
     );
     const spec = { ...w.spec, spec: parseSpec(yaml)!.spec };
+
     expect(spec.spec?.culture_file).toBe('../../../etc/passwd');
+
     const layers = await readSeatDocs(w.seat, spec, w.agent);
+
     expect(layers.find((l) => l.id === 'claude-md')?.present).toBe(false);
     // the bad culture_file falls back to the default name, which is absent here
     expect(layers.find((l) => l.id === 'culture')).toMatchObject({
@@ -398,6 +446,7 @@ describe('seat documents', () => {
   it('takes culture_file only from a rig.yaml OpenRig would accept (a refused spec gets the default name)', async () => {
     const w = world();
     const refused = { ...w.spec, spec: null };
+
     expect((await readSeatDocs(w.seat, refused, w.agent))[0]).toMatchObject({
       name: 'CULTURE.md',
       present: false,
@@ -406,6 +455,7 @@ describe('seat documents', () => {
 
   it("finds the role file by OpenRig's `orientation: role` marker, whatever it is called", async () => {
     const w = world();
+
     put(
       join(w.agent, 'agent.yaml'),
       [
@@ -420,7 +470,9 @@ describe('seat documents', () => {
       ].join('\n')
     );
     put(join(w.agent, 'guidance', 'orchestrator.md'), '# Role: the real one\n');
+
     const role = (await readSeatDocs(w.seat, w.spec, w.agent)).find((l) => l.id === 'role');
+
     expect(role?.content).toBe('# Role: the real one\n');
   });
 
@@ -430,6 +482,7 @@ describe('seat documents', () => {
       undefined,
       undefined
     );
+
     expect(layers.every((l) => !l.present)).toBe(true);
     expect(layers[0]?.looked.join(' ')).toMatch(/no rig.yaml/);
     expect(layers[1]?.looked.join(' ')).toMatch(/no agent spec folder/);
@@ -441,11 +494,16 @@ describe('LoadoutReader', () => {
   function setup() {
     const projects = tmp();
     const home = tmp();
+
     put(join(home, '.claude', 'skills', 'jump', 'SKILL.md'));
+
     const cwd = tmp();
+
     put(join(cwd, '.claude', 'skills', 'recipe', 'SKILL.md'));
     put(join(cwd, '.claude', 'skills', 'queue-handoff', 'SKILL.md'));
+
     const transcript = join(projects, '-w', 's1.jsonl');
+
     put(
       transcript,
       `${titleLine('dev-build@demo')}\n${listingLine(['recipe', 'queue-handoff', 'jump', 'loop', 'canvas:x'])}\n`
@@ -454,6 +512,7 @@ describe('LoadoutReader', () => {
       join(projects, '-w', 'other.jsonl'),
       `${titleLine('someone-else@x')}\n${listingLine(['secret'])}\n`
     );
+
     const exec: Exec = async () => ({
       stdout: '.claude/skills/recipe/SKILL.md\0',
       stderr: '',
@@ -479,11 +538,14 @@ describe('LoadoutReader', () => {
   it('builds a valid loadout per seat, sorted by source; a Codex seat is "not-claude", never empty skills pretending', async () => {
     const { reader, seats } = setup();
     const p = await reader.next(seats, new Map(), new Map());
+
     expect(p?.loadouts).toHaveLength(2);
     for (const l of p!.loadouts) {
       expect(SeatLoadoutSchema.safeParse(l).success).toBe(true);
     }
+
     const [claude, codex] = p!.loadouts;
+
     expect(claude).toMatchObject({ status: 'ok', cwdIsGitRepo: true });
     expect(claude?.listing).toMatchObject({ skillCount: 5, isInitial: true, listings: 1 });
     expect(Object.fromEntries(claude!.skills.map((s) => [s.name, s.source]))).toEqual({
@@ -499,6 +561,7 @@ describe('LoadoutReader', () => {
   it('only reads transcripts titled as a known seat', async () => {
     const { reader, seats } = setup();
     const p = await reader.next(seats, new Map(), new Map());
+
     expect(JSON.stringify(p)).not.toContain('secret');
   });
 
@@ -509,25 +572,31 @@ describe('LoadoutReader', () => {
       new Map(),
       new Map()
     );
+
     expect(p?.loadouts[0]).toMatchObject({ status: 'no-listing', listing: null, skills: [] });
   });
 
   it('waits for its interval, sends only what changed once accepted, and resends after reset', async () => {
     const { reader, seats, clock, transcript } = setup();
     const first = await reader.next(seats, new Map(), new Map());
+
     expect(await reader.next(seats, new Map(), new Map())).toBeNull(); // within the interval
     clock.tick(30_000);
     // not marked sent: everything goes again
     expect((await reader.next(seats, new Map(), new Map()))?.loadouts).toHaveLength(2);
     first!.markSent();
     clock.tick(30_000);
+
     const again = await reader.next(seats, new Map(), new Map());
+
     again?.markSent();
     clock.tick(30_000);
     expect(await reader.next(seats, new Map(), new Map())).toBeNull(); // nothing changed
     appendFileSync(transcript, `${listingLine(['recipe'], '2026-10-12T01:00:00Z', false)}\n`);
     clock.tick(30_000);
+
     const changed = await reader.next(seats, new Map(), new Map());
+
     expect(changed?.loadouts.map((l) => l.seat)).toEqual(['dev-build@demo']);
     // a later non-initial listing is a delta: it adds to the set, it does not replace it (QA D1)
     expect(changed?.loadouts[0]?.listing).toMatchObject({
@@ -547,12 +616,15 @@ describe('LoadoutReader', () => {
 describe('the skill-count pill', () => {
   it('the reader keeps the latest skillCount per scanned seat: a number, or null for Codex / no listing', async () => {
     const projects = tmp();
+
     put(
       join(projects, '-w', 's.jsonl'),
       `${titleLine('a@demo')}\n${listingLine(['x', 'y', 'z'])}\n`
     );
+
     const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
     const reader = new LoadoutReader('m2', { projectsDir: projects, home: tmp(), exec });
+
     expect(reader.skillCounts().size).toBe(0);
     await reader.next(
       [
@@ -578,6 +650,7 @@ describe('the skill-count pill', () => {
         ['b', null],
       ])
     );
+
     expect(out).toEqual([
       { id: 'a', skillCount: 313 },
       { id: 'b', skillCount: null },
@@ -590,6 +663,7 @@ describe('the skill-count pill', () => {
 describe('a seat with several transcripts (ruling: one transcript, never mixed)', () => {
   it('takes the file whose set starts from the newest full listing; its deltas only', async () => {
     const projects = tmp();
+
     // older session: a full listing, then a delta written AFTER the newer session started
     put(
       join(projects, '-w', 'old.jsonl'),
@@ -599,6 +673,7 @@ describe('a seat with several transcripts (ruling: one transcript, never mixed)'
       join(projects, '-w', 'new.jsonl'),
       `${titleLine('s@demo')}\n${listingLine(['x', 'y', 'z'], '2026-10-02T00:00:00Z')}\n${listingLine(['w'], '2026-10-02T01:00:00Z', false)}\n`
     );
+
     const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
     const reader = new LoadoutReader('m2', { projectsDir: projects, home: tmp(), exec });
     const p = await reader.next(
@@ -607,6 +682,7 @@ describe('a seat with several transcripts (ruling: one transcript, never mixed)'
       new Map()
     );
     const l = p!.loadouts[0]!;
+
     expect(l.skills.map((s) => s.name)).toEqual(['x', 'y', 'z', 'w']);
     expect(l.listing).toMatchObject({ skillCount: 4, deltas: 1, listings: 2 });
     expect(l.listing?.transcript).toMatch(/new\.jsonl$/);
@@ -625,6 +701,7 @@ describe('a seat with several transcripts (ruling: one transcript, never mixed)'
       isInitial: false,
       names: ['b'],
     });
+
     expect(newerSet(full, deltasOnly)).toBe(true);
     expect(newerSet(deltasOnly, full)).toBe(false);
   });
@@ -634,11 +711,13 @@ describe('QA D3: a seat whose folder is gone', () => {
   it('never counts unplaceable names as built-in, and says the folder is gone', async () => {
     const projects = tmp();
     const home = tmp();
+
     put(join(home, '.claude', 'skills', 'jump', 'SKILL.md'));
     put(
       join(projects, '-w', 's.jsonl'),
       `${titleLine('gone@demo')}\n${listingLine(['recipe', 'jump', 'canvas:x', 'loop'])}\n`
     );
+
     const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
     const reader = new LoadoutReader('m2', { projectsDir: projects, home, exec });
     const p = await reader.next(
@@ -647,6 +726,7 @@ describe('QA D3: a seat whose folder is gone', () => {
       new Map()
     );
     const l = p!.loadouts[0]!;
+
     expect(l).toMatchObject({ cwdExists: false, cwdIsGitRepo: null });
     expect(Object.fromEntries(l.skills.map((s) => [s.name, s.source]))).toEqual({
       recipe: 'unplaced',
@@ -726,6 +806,7 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
 
   it('chain files at every altitude, root first; RECAP only at the seat; links out of the root refused', async () => {
     const topo = tmp();
+
     put(join(topo, 'CRAFT.md'), '# instance craft\n');
     put(join(topo, 'rigs', 'demo', 'ORCHESTRATION-CRAFT.md'), '# rig orch\n');
     put(join(topo, 'rigs', 'demo', 'RECAP.md'), '# not a rig file\n');
@@ -733,13 +814,17 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
     put(join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'RECAP.md'), '# seat recap\n');
     put(join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'NOTES.md'), '# not a chain name\n');
     put(join(topo, 'rigs', 'other', 'seats', 'dev-build', 'LEARNED.md'), '# other rig\n');
+
     const outside = tmp();
+
     put(join(outside, 'secret.md'), 'secret\n');
     symlinkSync(
       join(outside, 'secret.md'),
       join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'CRAFT.md')
     );
+
     const docs = await readTopologyDocs(seat, topo);
+
     expect(docs.map((d) => [d.altitude, d.name])).toEqual([
       ['instance', 'CRAFT.md'],
       ['rig', 'ORCHESTRATION-CRAFT.md'],
@@ -755,6 +840,7 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
 
   it("member: the seat's own rig.yaml entry with its pod, env as names only; null when no validated spec names it", () => {
     const m = memberOf(spec(), 'dev.build');
+
     expect(m).toMatchObject({
       id: 'build',
       pod: 'dev',
@@ -772,8 +858,11 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
 
   it('AgentSpec: resources and startup as authored, only the profile the member picked', async () => {
     const dir = tmp();
+
     put(join(dir, 'agent.yaml'), AGENT);
+
     const a = await agentSpecOf(dir, 'reviewer');
+
     expect(a).toMatchObject({
       name: 'implementer',
       profileName: 'reviewer',
@@ -790,9 +879,13 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
 
   it('the reader puts all of it on every seat it reports (Codex too), valid against the contract', async () => {
     const topo = tmp();
+
     put(join(topo, 'rigs', 'demo', 'seats', 'dev-build', 'LEARNED.md'), '# learned\n');
+
     const agent = tmp();
+
     put(join(agent, 'agent.yaml'), AGENT);
+
     const exec: Exec = async () => ({ stdout: '', stderr: '', code: 128 });
     const reader = new LoadoutReader('m2', {
       projectsDir: tmp(),
@@ -806,9 +899,11 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
       new Map([[seat.id, agent]])
     );
     const [claude, codex] = p!.loadouts;
+
     for (const l of p!.loadouts) {
       expect(SeatLoadoutSchema.parse(l)).toEqual(l);
     }
+
     expect(claude).toMatchObject({
       topologyRoot: topo,
       member: { id: 'build', pod: 'dev' },

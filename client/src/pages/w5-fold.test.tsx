@@ -43,6 +43,7 @@ describe('History fold: loaded rows are shown, filters go to the hub', () => {
           ? { machines: header(300), rows: rows(151, 150), total: 300, nextCursor: null }
           : { machines: header(300), rows: rows(1, 150), total: 300, nextCursor: 'cur_1' },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(150));
     expect(screen.getByTestId('hist-count')).toHaveTextContent('150 on screen · 150 loaded');
@@ -68,6 +69,7 @@ describe('History fold: loaded rows are shown, filters go to the hub', () => {
         };
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(5));
     fireEvent.click(screen.getByTestId('hist-older'));
@@ -78,8 +80,10 @@ describe('History fold: loaded rows are shown, filters go to the hub', () => {
     await waitFor(() => expect(asked.at(-1)).toMatchObject({ state: 'done' }));
     expect(asked.at(-1)).not.toHaveProperty('before');
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(5));
+
     // the box is debounced, and searches the field chosen
     const before = asked.length;
+
     fireEvent.change(screen.getByTestId('hist-by'), { target: { value: 'seat' } });
     fireEvent.change(screen.getByTestId('hist-search'), { target: { value: 'dev' } });
     fireEvent.change(screen.getByTestId('hist-search'), { target: { value: 'dev-qa' } });
@@ -99,10 +103,13 @@ describe('History fold: loaded rows are shown, filters go to the hub', () => {
     const a = answeringSocket(answers);
     const ctxA = pageCtx(machines(), a.socket, NOW);
     const { rerender } = render(<history.component ctx={ctxA} />);
+
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(5));
+
     const b = answeringSocket({
       'history.transitions': { machines: header(2), rows: rows(1, 2), total: 2, nextCursor: null },
     });
+
     rerender(<history.component ctx={{ ...ctxA, getSocket: () => b.socket }} />);
     await waitFor(() => expect(screen.getAllByTestId('hist-row')).toHaveLength(2));
     expect(b.sent).toContain('history.transitions');
@@ -126,6 +133,7 @@ describe('Library fold: unread is not zero', () => {
         truncated: false,
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('lib-unread-skill')).toBeInTheDocument());
     expect(screen.getByTestId('lib-unread-skill')).toHaveTextContent('not read on M2');
@@ -146,6 +154,7 @@ describe('Library fold: unread is not zero', () => {
       ],
       (id) => id.toUpperCase()
     );
+
     expect(u.workflow).toEqual(['M4']);
     expect(u.rig).toEqual(['M4']);
     expect(u.skill).toEqual([]);
@@ -178,6 +187,7 @@ describe('Workflows fold: per machine reads', () => {
         instances: [],
       },
     });
+
     render(<Page ctx={pageCtx(machines(), socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('wf-no-runs')).toBeInTheDocument());
     expect(screen.getByTestId('wf-no-runs')).toHaveTextContent('run on M2');

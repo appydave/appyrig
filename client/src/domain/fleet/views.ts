@@ -62,9 +62,11 @@ export function seatAnswersTo(seat: Seat, raw: string): boolean {
  */
 export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): Endpoint {
   const own = home.snapshot.seats.find((s) => s.id === raw);
+
   if (own) {
     return endpointOf(raw, home, own);
   }
+
   // The same seat can be addressed by its OpenRig logical id (`desk.planner@ylo-desk`). It resolves
   // to the same key as the session-name form, so edges merge. A logical id is unique only per rig, so
   // pick deterministically: home wins; else the single machine that has it; else the single live one;
@@ -81,33 +83,44 @@ export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachi
     seat: null,
   });
   const hits: { fm: FleetMachine; seat: Seat }[] = [];
+
   for (const fm of [home, ...all.filter((m) => m !== home)]) {
     const found = fm.snapshot.seats.filter((x) => logicalAddresses(x).includes(raw));
+
     if (found.length > 1 && fm === home) {
       return unplaced();
     }
+
     for (const seat of found) {
       hits.push({ fm, seat });
     }
   }
+
   const homeHit = hits.find((h) => h.fm === home);
+
   if (homeHit) {
     return endpointOf(raw, homeHit.fm, homeHit.seat);
   }
+
   const live = hits.filter((h) => h.fm.liveness === 'live');
   const pick = hits.length === 1 ? hits : live;
+
   if (pick.length === 1) {
     return endpointOf(raw, pick[0]!.fm, pick[0]!.seat);
   }
+
   if (hits.length > 1) {
     return unplaced();
   }
+
   const at = raw.lastIndexOf('@');
+
   if (at > 0) {
     const name = raw.slice(0, at);
     const where = raw.slice(at + 1);
     const fm = all.find((m) => m.machine.id === where);
     const seat = fm?.snapshot.seats.find((s) => s.id === name || s.id.split('@')[0] === name);
+
     if (fm && seat) {
       return endpointOf(raw, fm, seat);
     }
@@ -172,12 +185,15 @@ export function rigState(
   if (liveness === 'asleep') {
     return 'asleep';
   }
+
   if (status !== 'running') {
     return 'stopped';
   }
+
   if (attentionCount > 0 || seatPips.includes('blocked')) {
     return 'attention';
   }
+
   if (seatPips.includes('working')) {
     return 'working';
   }
@@ -208,6 +224,7 @@ export interface RigRef {
 /** Every rig on every machine: running first, then the most recent sign of life (a queue row or a seat). */
 export function listRigs(machines: FleetMachine[]): RigRef[] {
   const out: RigRef[] = [];
+
   for (const fm of machines) {
     for (const rig of fm.snapshot.rigs) {
       const items = rigQueue(fm, rig.name);
@@ -216,6 +233,7 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
       const last = [...items.map((q) => q.updatedAt), ...seats.map(agentActivityOf)].reduce<
         string | null
       >((acc, at) => (at && (acc === null || at > acc) ? at : acc), null);
+
       out.push({
         key: `${fm.machine.id}:${rig.name}`,
         machineId: fm.machine.id,
@@ -241,6 +259,7 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
       });
     }
   }
+
   // S3: every rig list reads running first, then most recent (Wall groups, Map and Flow chips).
   const running = (r: RigRef) => (r.status === 'running' ? 0 : 1);
 
@@ -267,7 +286,9 @@ export function endpointRig(fm: FleetMachine, raw: string | null): string | null
   if (!raw || bare(raw) === 'human') {
     return null;
   }
+
   let rigs = seatRigs.get(fm.snapshot);
+
   if (!rigs) {
     rigs = new Map<string, string | null>();
     // A logical form shared by seats in different rigs is ambiguous: null, same as resolveEndpoint.
@@ -276,9 +297,11 @@ export function endpointRig(fm: FleetMachine, raw: string | null): string | null
         rigs.set(a, rigs.has(a) && rigs.get(a) !== s.rig ? null : s.rig);
       }
     }
+
     for (const s of fm.snapshot.seats) {
       rigs.set(s.id, s.rig);
     }
+
     seatRigs.set(fm.snapshot, rigs);
   }
 
@@ -366,9 +389,11 @@ export function plannedWord(kind: string): string {
   if (kind.includes(',')) {
     return kind.split(',').map(plannedWord).join(' · ');
   }
+
   if (kind === 'delegates_to') {
     return 'delegates';
   }
+
   if (kind === 'can_observe') {
     return 'observes';
   }
@@ -403,6 +428,7 @@ interface OpenCount {
   stale: number;
   oldestStaleMs: number | null;
 }
+
 const NONE: OpenCount = { open: 0, stale: 0, oldestStaleMs: null };
 
 function mapSeat(fm: FleetMachine, seat: Seat, c: OpenCount): MapSeat {
@@ -437,6 +463,7 @@ export function buildRigMap(
 ): RigMap | null {
   const rig = listRigs(machines).find((r) => r.key === rigKey);
   const home = machines.find((m) => m.machine.id === rig?.machineId);
+
   if (!rig || !home) {
     return null;
   }
@@ -450,10 +477,13 @@ export function buildRigMap(
     if (!q.source || !q.destination) {
       continue;
     }
+
     const from = resolveEndpoint(q.source, home, machines);
     const to = resolveEndpoint(q.destination, home, machines);
+
     for (const ep of [from, to]) {
       const inRig = ep.machineId === home.machine.id && ep.seat?.rig === rig.name;
+
       if (!inRig) {
         outside.set(ep.key, {
           fm: machines.find((m) => m.machine.id === ep.machineId) ?? null,
@@ -461,6 +491,7 @@ export function buildRigMap(
         });
       }
     }
+
     const k = `${from.key}→${to.key}`;
     const e = edgeMap.get(k) ?? {
       from: from.key,
@@ -471,11 +502,13 @@ export function buildRigMap(
       self: from.key === to.key,
       items: [] as QueueItem[],
     };
+
     e.count += 1;
     e.items.push(q);
     if (isOpen(q)) {
       const age = now - ms(q.createdAt);
       const c = { ...(openAt.get(to.key) ?? NONE) };
+
       if (age > STALE_MS) {
         e.stale += 1;
         c.stale += 1;
@@ -484,18 +517,23 @@ export function buildRigMap(
         e.open += 1;
         c.open += 1;
       }
+
       openAt.set(to.key, c);
     }
+
     edgeMap.set(k, e);
   }
 
   const pods = new Map<string, MapPod>();
+
   for (const seat of home.snapshot.seats.filter((s) => s.rig === rig.name)) {
     const pod = seat.pod ?? 'seats';
     const p = pods.get(pod) ?? { name: pod, seats: [] };
+
     p.seats.push(mapSeat(home, seat, openAt.get(seatKey(home.machine.id, seat.id)) ?? NONE));
     pods.set(pod, p);
   }
+
   const lanes: MapLane[] = [
     {
       machineId: home.machine.id,
@@ -510,11 +548,13 @@ export function buildRigMap(
 
   // Outside endpoints: grouped by their machine (or "not placed" when we cannot find them).
   const byMachine = new Map<string, MapLane>();
+
   for (const { fm, ep } of outside.values()) {
     const id = fm?.machine.id ?? '?';
     const sameMachine = id === home.machine.id;
     const laneKey = sameMachine ? `${id}:other` : id;
     let lane = byMachine.get(laneKey);
+
     if (!lane) {
       lane = {
         machineId: laneKey,
@@ -529,13 +569,16 @@ export function buildRigMap(
       };
       byMachine.set(laneKey, lane);
     }
+
     // Group by the seat's real pod; 'seats' is only the fallback when the pod is unknown.
     const podName = ep.seat?.pod ?? 'seats';
     let outPod = lane.pods.find((p) => p.name === podName);
+
     if (!outPod) {
       outPod = { name: podName, seats: [] };
       lane.pods.push(outPod);
     }
+
     outPod.seats.push(
       fm && ep.seat
         ? mapSeat(fm, ep.seat, openAt.get(ep.key) ?? NONE)
@@ -556,9 +599,11 @@ export function buildRigMap(
           }
     );
   }
+
   for (const lane of byMachine.values()) {
     lane.pods.sort((a, b) => podRank(a.name) - podRank(b.name) || a.name.localeCompare(b.name));
   }
+
   lanes.push(...byMachine.values());
 
   // r1 HIGH-1: the collector delivers queue rows newest first, but a line's items are read
@@ -585,6 +630,7 @@ export function buildRigMap(
           // line carrying both words, never just the first.
           .reduce<{ from: string; to: string; kind: string }[]>((acc, e) => {
             const same = acc.find((x) => x.from === e.from && x.to === e.to);
+
             if (!same) {
               acc.push({ ...e });
             } else if (!same.kind.split(',').includes(e.kind)) {
@@ -637,12 +683,15 @@ export const STAGE_LABEL: Record<Stage, string> = {
 /** Role from the seat's name: the convention every rig so far follows (orch-lead, dev-qa, review-r1). */
 export function stageOf(name: string): Stage {
   const n = name.toLowerCase();
+
   if (/(^|-)qa(-|$)|tester/.test(n)) {
     return 'qa';
   }
+
   if (/(^|-)review|(^|-)r\d+$/.test(n)) {
     return 'review';
   }
+
   if (/orch|lead|boss|operator|advisor|kernel/.test(n)) {
     return 'lead';
   }
@@ -730,8 +779,10 @@ export function flowRange(items: QueueItem[]): { start: number; end: number } | 
   if (!items.length) {
     return null;
   }
+
   let start = Infinity;
   let end = -Infinity;
+
   for (const q of items) {
     start = Math.min(start, ms(q.createdAt));
     end = Math.max(end, ms(q.updatedAt));
@@ -778,9 +829,11 @@ export function buildFlow(
 ): FlowView | null {
   const items = rigQueue(fm, rig);
   const range = flowRange(items);
+
   if (!range) {
     return null;
   }
+
   const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
   // An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name.
@@ -789,6 +842,7 @@ export function buildFlow(
 
     return seat ? seatName(seat) : bare(raw);
   };
+
   const mode = flowModeOf([
     ...rigSeats.map(seatName),
     ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(nameOf)),
@@ -798,22 +852,28 @@ export function buildFlow(
   // shares an "others" node.
   const seatOrder: string[] = [];
   const nodeOfRaw = (raw: string | null) => (inRig(raw) ? nameOf(raw) : (raw ?? '?'));
+
   if (mode === 'seats') {
     const counts = new Map<string, number>();
+
     for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
       for (const raw of [q.source, q.destination]) {
         const id = nodeOfRaw(raw);
+
         if (!counts.has(id)) {
           seatOrder.push(id);
         }
+
         counts.set(id, (counts.get(id) ?? 0) + 1);
       }
     }
+
     for (const s of rigSeats) {
       if (!counts.has(seatName(s))) {
         seatOrder.push(seatName(s));
       }
     }
+
     if (seatOrder.length > MAX_SEAT_BOXES) {
       const keep = new Set(
         [...seatOrder]
@@ -821,10 +881,12 @@ export function buildFlow(
           .slice(0, MAX_SEAT_BOXES - 1)
       );
       const kept = seatOrder.filter((id) => keep.has(id));
+
       seatOrder.length = 0;
       seatOrder.push(...kept, 'others');
     }
   }
+
   // Roles mode: anyone outside the rig gets their own box, at the left edge (only when there is one).
   const hasOutside =
     mode === 'roles' && items.some((q) => !inRig(q.source) || !inRig(q.destination));
@@ -832,10 +894,12 @@ export function buildFlow(
     if (mode === 'roles') {
       return inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE;
     }
+
     const id = nodeOfRaw(raw);
 
     return seatOrder.includes(id) ? id : 'others';
   };
+
   const order: string[] =
     mode === 'roles' ? (hasOutside ? [OUTSIDE, ...STAGES] : STAGES) : seatOrder;
 
@@ -850,10 +914,13 @@ export function buildFlow(
 
   for (const q of items) {
     const created = ms(q.createdAt);
+
     if (created > at) {
       continue;
     }
+
     total += 1;
+
     const from = nodeOf(q.source);
     const to = nodeOf(q.destination);
     const back = byVerdict
@@ -862,37 +929,49 @@ export function buildFlow(
         order.indexOf(to) < order.indexOf(from) &&
         to !== 'lead' &&
         to !== OUTSIDE;
+
     if (back) {
       rework += 1;
     }
+
     const k = `${from}→${to}`;
     const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], items: [], rework: back };
+
     // By stage every item on one edge agrees; by verdict one sent-back item marks the edge, and
     // `back` (set only when a rule was asked for) says how many of its items were.
     if (back) {
       e.rework = true;
     }
+
     if (opts.sentBack) {
       e.back = (e.back ?? 0) + (back ? 1 : 0);
     }
+
     e.count += 1;
     e.items.push(q);
+
     const closedAt = isOpen(q) ? now : ms(q.updatedAt);
+
     // Still open = still in flight, even when the replay time is "now".
     if (isOpen(q) || closedAt > at) {
       e.inFlight.push(q);
+
       const bucket = at - created > STALE_MS ? stale : waiting;
+
       bucket.set(to, [...(bucket.get(to) ?? []), q]);
     } else if (!isOpen(q)) {
       closedTurn.push((closedAt - created) / 60_000);
     }
+
     edgeMap.set(k, e);
   }
 
   const seatsBy = new Map<string, FlowStageView['seats']>();
+
   for (const s of rigSeats) {
     const id = mode === 'roles' ? stageOf(seatName(s)) : nodeOf(`${seatName(s)}@${rig}`);
     const chip = modelChip(s);
+
     seatsBy.set(id, [
       ...(seatsBy.get(id) ?? []),
       {
@@ -977,14 +1056,17 @@ export function flowChapters(
 ): Chapter[] {
   const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const range = flowRange(items);
+
   if (!range) {
     return [];
   }
+
   const label = (flow: FlowView, id: string) =>
     flow.stages.find((s) => s.stage === id)?.label ?? id;
   const out: Chapter[] = [];
 
   const first = items[0]!;
+
   out.push({
     at: ms(first.createdAt),
     kind: 'start',
@@ -994,9 +1076,11 @@ export function flowChapters(
 
   let reworkSeen = false;
   let peak: { at: number; n: number; where: string; flow: FlowView } | null = null;
+
   for (const q of items) {
     const t = ms(q.createdAt);
     const flow = buildFlow(fm, rig, t, now, opts)!;
+
     if (!reworkSeen && flow.rework > 0) {
       reworkSeen = true;
       out.push({
@@ -1006,11 +1090,14 @@ export function flowChapters(
         text: `${hhmm(t)} · ${bare(q.source)} sends an item back to ${bare(q.destination)}: a verdict, an answer or rework.`,
       });
     }
+
     const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
+
     if (top && top.waiting > (peak?.n ?? 1)) {
       peak = { at: t, n: top.waiting, where: top.stage, flow };
     }
   }
+
   if (peak) {
     out.push({
       at: peak.at,
@@ -1027,8 +1114,10 @@ export function flowChapters(
     .filter((x) => x.w <= STALE_MS)
     .sort((a, b) => b.w - a.w);
   const longest = waits[0];
+
   if (longest && longest.w >= 5 * 60_000) {
     const mins = Math.round(longest.w / 60_000);
+
     out.push({
       at: ms(longest.q.createdAt),
       kind: 'longest-wait',
@@ -1038,6 +1127,7 @@ export function flowChapters(
   }
 
   const endFlow = buildFlow(fm, rig, range.end, now, opts)!;
+
   out.push({
     at: range.end,
     kind: 'end',
@@ -1072,11 +1162,14 @@ export function consoleLines(
 ): ConsoleLine[] {
   const me = (raw: string | null) => raw === `${seatName}@${rig}` || bare(raw) === seatName;
   const lines: ConsoleLine[] = [];
+
   for (const q of items) {
     if (ms(q.createdAt) > at) {
       continue;
     }
+
     const msg = q.summary ?? '(no message)';
+
     if (me(q.source) && !me(q.destination)) {
       lines.push({ at: q.createdAt, kind: 'sent', text: `→ ${bare(q.destination)}: ${msg}` });
     } else if (me(q.destination) && !me(q.source)) {
@@ -1085,6 +1178,7 @@ export function consoleLines(
       lines.push({ at: q.createdAt, kind: 'sent', text: `↺ note to self: ${msg}` });
     }
   }
+
   for (const e of history ?? []) {
     if (ms(e.at) <= at) {
       lines.push(e);
@@ -1105,6 +1199,7 @@ export function median(xs: number[]): number | null {
   if (!xs.length) {
     return null;
   }
+
   const s = [...xs].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
 
@@ -1178,8 +1273,10 @@ export function buildAccounts(machines: FleetMachine[]): {
 } {
   const accounts = new Map<string, AccountView>();
   const unknown: UnreportedMachine[] = [];
+
   for (const fm of machines) {
     const acct = fm.snapshot.account;
+
     if (!acct?.email) {
       unknown.push({
         label: fm.machine.label,
@@ -1187,6 +1284,7 @@ export function buildAccounts(machines: FleetMachine[]): {
       });
       continue;
     }
+
     const v =
       accounts.get(acct.email) ??
       ({
@@ -1199,10 +1297,12 @@ export function buildAccounts(machines: FleetMachine[]): {
         derived: null,
         profiles: [],
       } satisfies AccountView);
+
     // The hub derives one answer per account; take the one with a reading if machines differ.
     if (acct.derived && (!v.derived || (!v.derived.readingFrom && acct.derived.readingFrom))) {
       v.derived = acct.derived;
     }
+
     v.machines.push(fm.machine.label);
     v.profiles.push({ machine: fm.machine.label, fetchedAt: acct.profileFetchedAt });
     if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
@@ -1213,13 +1313,16 @@ export function buildAccounts(machines: FleetMachine[]): {
         asleep: fm.liveness === 'asleep',
       };
     }
+
     if (fm.liveness === 'live') {
       const seats = fm.snapshot.seats.filter((s) => s.status !== 'stopped' && isClaudeSeat(s));
+
       if (seats.length) {
         v.drawers.push({ machineLabel: fm.machine.label, seats: seats.map(seatName) });
         v.activeSeats += seats.length;
       }
     }
+
     accounts.set(acct.email, v);
   }
 
@@ -1243,9 +1346,11 @@ export function mostHeadroom(
   now: number = Date.now()
 ): AccountView | null {
   const read = accounts.filter((a) => a.reading?.fiveHourPct != null);
+
   if (!read.length) {
     return null;
   }
+
   const warns = (a: AccountView) =>
     a.derived
       ? Math.max(
@@ -1259,6 +1364,7 @@ export function mostHeadroom(
   // cut-off; the card below is dimmed) ranks after every current one.
   const stale = (a: AccountView) => {
     const r = a.reading!;
+
     if (r.asleep) {
       return 1;
     }
@@ -1280,12 +1386,16 @@ export function resetsIn(iso: string | null, now: number): string | null {
   if (!iso) {
     return null;
   }
+
   const m = Math.round((ms(iso) - now) / 60_000);
+
   if (m <= 0) {
     return 'now';
   }
+
   const h = Math.floor(m / 60);
   const d = Math.floor(h / 24);
+
   if (d >= 1) {
     return `in ${d}d ${h % 24}h`;
   }

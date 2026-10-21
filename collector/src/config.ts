@@ -31,34 +31,44 @@ export function loadSettings(
 ): CollectorSettings {
   const need = (key: string): string => {
     const v = env[key]?.trim();
+
     if (!v) {
       throw new Error(`${key} is not set`);
     }
 
     return v;
   };
+
   const hubUrl = need('APPYRIG_HUB_URL').replace(/\/+$/, '');
   const id = need('APPYRIG_MACHINE_ID');
+
   if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
     throw new Error(`APPYRIG_MACHINE_ID "${id}" must be a lower-case slug`);
   }
+
   const token =
     env.APPYRIG_TOKEN?.trim() ||
     (env.APPYRIG_TOKEN_FILE ? readFile(env.APPYRIG_TOKEN_FILE).trim() : '');
+
   if (!token) {
     throw new Error('hub token missing: set APPYRIG_TOKEN_FILE (or APPYRIG_TOKEN)');
   }
+
   const sources: SourceOptions = { env };
+
   sources.specFolders = specFoldersOf(env, readFile);
   if (env.APPYRIG_DAEMON_URL) {
     sources.daemonUrl = env.APPYRIG_DAEMON_URL;
   }
+
   if (env.APPYRIG_RIG_BIN) {
     sources.rigBin = env.APPYRIG_RIG_BIN;
   }
+
   if (env.APPYRIG_TMUX_BIN) {
     sources.tmuxBin = env.APPYRIG_TMUX_BIN;
   }
+
   if (env.APPYRIG_VIEWER_BIN) {
     sources.viewerBin = env.APPYRIG_VIEWER_BIN;
   }
@@ -82,8 +92,10 @@ export function loadSettings(
  */
 export function specFoldersOf(env: NodeJS.ProcessEnv, readFile: (p: string) => string): string[] {
   const file = env.APPYRIG_CONFIG?.trim() || join(homedir(), '.config', 'appyrig', 'config.json');
+
   try {
     const cfg = AppConfigSchema.parse(JSON.parse(readFile(file)));
+
     if (cfg.specFolders?.length) {
       return cfg.specFolders;
     }
@@ -102,12 +114,16 @@ export function missionRootsOf(env: NodeJS.ProcessEnv, readFile: (p: string) => 
   const fromEnv = env.APPYRIG_MISSION_ROOTS?.split(':')
     .map((x) => x.trim())
     .filter(Boolean);
+
   if (fromEnv?.length) {
     return fromEnv;
   }
+
   const file = env.APPYRIG_CONFIG?.trim() || join(homedir(), '.config', 'appyrig', 'config.json');
+
   try {
     const cfg = AppConfigSchema.parse(JSON.parse(readFile(file)));
+
     if (cfg.missionRoots?.length) {
       return cfg.missionRoots;
     }

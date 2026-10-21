@@ -51,6 +51,7 @@ const look = {
 describe('Rig Map v2 line plan', () => {
   it('pairs in one row stay one arc each', () => {
     const lines = planLines([pair('a1', 'a2', 14, 8), pair('a1', 'c1', 3, 0)], look);
+
     expect(lines.map((l) => [l.a, l.b, l.aToB, l.bToA, l.rail])).toEqual([
       ['a1', 'a2', 14, 8, false],
       ['a1', 'c1', 3, 0, false],
@@ -66,8 +67,11 @@ describe('Rig Map v2 line plan', () => {
       ],
       look
     );
+
     expect(lines).toHaveLength(1);
+
     const rail = lines[0]!;
+
     expect(rail.rail).toBe(true);
     expect(rail.pairs).toBe(3);
     // P1 to P2: a1→b1 5, a2→b2 7, a2→b1 3 = 15; back: b1→a1 2, b1→a2 1 = 3
@@ -82,6 +86,7 @@ describe('Rig Map v2 line plan', () => {
       [pair('a1', 'b1', 0, 0, { planned: true, plannedWords: 'observes' })],
       look
     );
+
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatchObject({ planned: 'observes', rail: false });
   });

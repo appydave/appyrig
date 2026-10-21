@@ -37,6 +37,7 @@ const read = (key: string): string | null => {
     return null;
   }
 };
+
 const write = (key: string, v: string) => {
   try {
     localStorage.setItem(key, v);
@@ -65,12 +66,15 @@ function Pane({
   const body = useRef<HTMLDivElement>(null);
   const shown = lines.slice(-VISIBLE_LINES);
   const newest = shown.at(-1)?.at;
+
   useLayoutEffect(() => {
     const el = body.current;
+
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
   }, [shown.length, newest]);
+
   const source =
     hist?.state === 'ok' && hist.value.available
       ? `transcript + handoffs${hist.value.truncated ? ' · earliest dropped' : ''}`
@@ -124,6 +128,7 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
   const [hist, setHist] = useState<Record<string, Hist>>({});
   const names = useMemo(() => seats.map(seatName), [seats]);
   const followKey = follow.filter((n) => names.includes(n)).join(',');
+
   // Remember the last handoff followed, so the consoles do not empty between steps.
   useEffect(() => {
     if (followKey) {
@@ -136,20 +141,25 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
     setLastFollow([]);
     setHist({});
   }, [rig]);
+
   const shown = pinned ?? lastFollow;
 
   useEffect(() => {
     if (!open || !socket) {
       return;
     }
+
     for (const name of shown) {
       if (hist[name]) {
         continue;
       }
+
       const seat = seats.find((s) => seatName(s) === name);
+
       if (!seat) {
         continue;
       }
+
       setHist((h) => ({ ...h, [name]: { state: 'loading' } }));
       void callVerb<SeatHistoryOutput>(socket, 'seat.history', {
         machine: machine.machine.id,
@@ -167,8 +177,10 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
     write(OPEN_KEY, open ? 'off' : 'on');
     setOpen(!open);
   };
+
   const toggleSeat = (name: string) => {
     const base = pinned ?? lastFollow;
+
     setPinned(base.includes(name) ? base.filter((n) => n !== name) : [...base, name]);
   };
 

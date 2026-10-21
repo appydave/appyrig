@@ -11,10 +11,13 @@ const NOW = Date.parse('2026-10-19T12:00:00.000Z');
 function setup(over: { tab?: AgentPanelTab } = {}) {
   const m = fleetMachine(snapshot('roamy'));
   const seat = m.snapshot.seats.find((s) => s.rig && s.tail)!;
+
   seat.tail = { lines: ['\u001b[31mred line\u001b[0m', 'plain line'], ansi: true } as never;
+
   const { socket } = answeringSocket({});
   const onClose = vi.fn();
   const onOpenPage = vi.fn();
+
   render(
     <AgentPanel
       machineId={m.machine.id}
@@ -32,6 +35,7 @@ function setup(over: { tab?: AgentPanelTab } = {}) {
 describe('AgentPanel', () => {
   it('shows the identity block and opens on Documents with its list + reader', () => {
     const { seat } = setup();
+
     expect(screen.getByTestId('apanel-address')).toHaveTextContent(seat.id);
     expect(screen.getByTestId('apanel-identity')).toHaveTextContent('Harness');
     expect(screen.getByTestId('apanel-tab-documents')).toHaveAttribute('aria-selected', 'true');
@@ -40,7 +44,9 @@ describe('AgentPanel', () => {
 
   it('Terminal shows the last lines with colour codes stripped', () => {
     setup({ tab: 'terminal' });
+
     const term = screen.getByTestId('apanel-terminal');
+
     expect(term).toHaveTextContent('red line');
     // eslint-disable-next-line no-control-regex
     expect(term.textContent).not.toMatch(/\[31m|\u001b/);
@@ -54,6 +60,7 @@ describe('AgentPanel', () => {
 
   it('× and Esc close; "Open full agent page" asks the host', async () => {
     const { onClose, onOpenPage, seat } = setup();
+
     fireEvent.click(screen.getByTestId('apanel-open-page'));
     expect(onOpenPage).toHaveBeenCalledWith(expect.stringContaining(seat.id));
     fireEvent.click(screen.getByTestId('apanel-close'));
@@ -88,7 +95,9 @@ describe('AgentPanel', () => {
 
   it('opens as a narrow peek; Expand widens it and Narrow goes back; × is a labelled button', () => {
     setup();
+
     const panel = screen.getByTestId('agent-panel');
+
     expect(panel).not.toHaveAttribute('data-wide');
     fireEvent.click(screen.getByTestId('apanel-expand'));
     expect(panel).toHaveAttribute('data-wide');
@@ -106,6 +115,7 @@ describe('AgentPanel', () => {
   it('says so when the agent is gone', () => {
     const m = fleetMachine(snapshot('roamy'));
     const { socket } = answeringSocket({});
+
     render(
       <AgentPanel
         machineId="roamy"

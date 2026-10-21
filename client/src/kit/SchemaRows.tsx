@@ -21,6 +21,7 @@ export function rowsCaption(out: DbRowsOutput): string {
   if (out.held === 0) {
     return out.total === 0 ? 'This table is empty.' : 'No rows held.';
   }
+
   const from = out.offset + 1;
   const to = out.offset + out.rows.length;
   const order = out.order === 'rowid' ? 'newest first' : 'in stored order';
@@ -51,9 +52,12 @@ export default function SchemaRows({
   const [got, setGot] = useState<State & { key: string }>({ state: 'loading', key: '' });
   const want = `${machineId}\u0000${table}\u0000${offset}`;
   const latest = useRef(want);
+
   latest.current = want;
+
   const load = useCallback(() => {
     const key = `${machineId}\u0000${table}\u0000${offset}`;
+
     void callVerb<DbRowsOutput>(socket, 'db.rows', {
       machine: machineId,
       table,
@@ -64,9 +68,11 @@ export default function SchemaRows({
       if (latest.current !== key) {
         return;
       }
+
       setGot(a.ok ? { state: 'ok', out: a.value, key } : { state: 'refused', error: a.error, key });
     });
   }, [socket, machineId, table, offset]);
+
   useEffect(() => setOffset(0), [machineId, table]);
   useEffect(() => load(), [load]);
 

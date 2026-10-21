@@ -9,15 +9,20 @@ export function measureTopOffset(): number {
   try {
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--ar-top-offset');
     const px = parseFloat(raw);
+
     if (Number.isFinite(px) && px > 0) {
       return px;
     }
+
     // before the shell has published the variable: the whole sticky bar (it can be two rows), not just its nav
     const bar = document.querySelector('.app-header');
+
     if (bar) {
       return Math.max(0, Math.round(bar.getBoundingClientRect().bottom));
     }
+
     const nav = document.querySelector('[data-testid="ar-nav"]');
+
     if (nav) {
       return Math.max(0, Math.round(nav.getBoundingClientRect().bottom));
     }
@@ -30,8 +35,10 @@ export function measureTopOffset(): number {
 
 export function useTopOffset(): number {
   const [top, setTop] = useState(measureTopOffset);
+
   useEffect(() => {
     const on = () => setTop(measureTopOffset());
+
     on();
     window.addEventListener('resize', on);
     window.addEventListener('scroll', on, true);
