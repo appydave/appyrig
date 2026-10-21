@@ -41,10 +41,10 @@ const BAD: Array<[string, string, string]> = [
   ],
 ];
 
-async function ruleIds(code: string, name: string): Promise<Array<string | null>> {
+async function ruleIds(code: string, name: string, ext = 'ts'): Promise<Array<string | null>> {
   const eslint = new ESLint({ cwd: ROOT });
   const [result] = await eslint.lintText(code, {
-    filePath: resolve(ROOT, `server/src/${name}.ts`),
+    filePath: resolve(ROOT, `server/src/${name}.${ext}`),
   });
 
   return result?.messages.map((m) => m.ruleId) ?? [];
@@ -59,5 +59,21 @@ describe('G04 size limits', () => {
     const good = `export function f(a: number, b: number, c: number) {\n${steps(36)}\n\n  return a + b + c;\n}\n`;
 
     expect(await ruleIds(good, 'g04-good-example')).toEqual([]);
+  });
+
+  it('lets a test file hold a 41-line describe() callback', async () => {
+    const callback = `export function suite() {\n${steps(39)}\n}\n`;
+
+    expect(await ruleIds(callback, 'g04-describe', 'test.ts')).not.toContain(
+      'max-lines-per-function'
+    );
+    expect(await ruleIds(callback, 'g04-describe-source')).toContain('max-lines-per-function');
+  });
+
+  it('still limits parameters in a test file', async () => {
+    const wide =
+      'export function f(a: number, b: number, c: number, d: number) {\n  return a + b + c + d;\n}\n';
+
+    expect(await ruleIds(wide, 'g04-wide', 'test.ts')).toContain('max-params');
   });
 });

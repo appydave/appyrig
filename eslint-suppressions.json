@@ -18,9 +18,6 @@
   "client/src/app/app.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
     }
   },
   "client/src/app/frozen/frozenSocket.ts": {
@@ -39,25 +36,14 @@
   "client/src/app/ux-pages-a.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
     }
   },
   "client/src/app/w2.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 7
     }
   },
   "client/src/domain/docs/model.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "client/src/domain/fleet/accountWindow.test.ts": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -73,9 +59,6 @@
     }
   },
   "client/src/domain/fleet/health.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    },
     "max-params": {
       "count": 1
     }
@@ -89,9 +72,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
@@ -102,9 +82,6 @@
     }
   },
   "client/src/domain/fleet/plan.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    },
     "max-params": {
       "count": 1
     }
@@ -117,25 +94,12 @@
       "count": 2
     }
   },
-  "client/src/domain/fleet/runcard.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/domain/fleet/runcard.ts": {
     "max-lines-per-function": {
       "count": 1
     }
   },
-  "client/src/domain/fleet/store.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/domain/fleet/timeline.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    },
     "max-params": {
       "count": 1
     }
@@ -154,9 +118,6 @@
   "client/src/domain/fleet/views.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 10
     },
     "max-params": {
       "count": 2
@@ -269,11 +230,6 @@
       "count": 1
     }
   },
-  "client/src/kit/AgentPanel.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/kit/AgentPanel.tsx": {
     "max-lines-per-function": {
       "count": 2
@@ -287,11 +243,6 @@
       "count": 6
     },
     "max-params": {
-      "count": 1
-    }
-  },
-  "client/src/kit/ErrorFallback.test.tsx": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -346,11 +297,6 @@
       "count": 2
     }
   },
-  "client/src/kit/PlanStrip.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/kit/PlanStrip.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -367,14 +313,6 @@
   "client/src/kit/RigFilesSchema.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "client/src/kit/RigInfo.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "client/src/kit/RigInfo.tsx": {
@@ -387,22 +325,12 @@
       "count": 1
     }
   },
-  "client/src/kit/RunCard.test.tsx": {
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
   "client/src/kit/RunCard.tsx": {
     "max-lines": {
       "count": 1
     },
     "max-lines-per-function": {
       "count": 3
-    }
-  },
-  "client/src/kit/RunOutputs.test.tsx": {
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "client/src/kit/RunOutputs.tsx": {
@@ -433,27 +361,12 @@
       "count": 1
     }
   },
-  "client/src/kit/TerminalCard.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/kit/TerminalCard.tsx": {
     "max-lines-per-function": {
       "count": 1
     }
   },
-  "client/src/kit/V1Archive.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/kit/V1Archive.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "client/src/kit/WaitingOnDavid.test.tsx": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -478,31 +391,13 @@
       "count": 1
     }
   },
-  "client/src/kit/docs.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/kit/handoffLines.test.tsx": {
     "max-lines": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "client/src/kit/legend2.test.tsx": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
   "client/src/kit/legendData.ts": {
     "max-lines": {
-      "count": 1
-    }
-  },
-  "client/src/lib/markdown.test.ts": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -516,11 +411,6 @@
       "count": 1
     },
     "max-params": {
-      "count": 1
-    }
-  },
-  "client/src/lib/yamlLines.test.ts": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -572,17 +462,11 @@
     }
   },
   "client/src/pages/flow/clean.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
   },
   "client/src/pages/flow/flowLines.test.tsx": {
-    "max-lines-per-function": {
-      "count": 2
-    },
     "max-params": {
       "count": 1
     }
@@ -622,9 +506,6 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 7
-    },
     "max-params": {
       "count": 1
     }
@@ -637,11 +518,6 @@
       "count": 5
     },
     "max-params": {
-      "count": 1
-    }
-  },
-  "client/src/pages/headers.test.tsx": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -685,17 +561,11 @@
     }
   },
   "client/src/pages/missions/machines.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
   },
   "client/src/pages/missions/missions.test.tsx": {
-    "max-lines-per-function": {
-      "count": 2
-    },
     "max-params": {
       "count": 1
     }
@@ -712,19 +582,11 @@
     "max-lines": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 5
-    },
     "max-params": {
       "count": 1
     }
   },
   "client/src/pages/rig-map/index.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "client/src/pages/rig-map/rigmap.test.tsx": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -745,9 +607,6 @@
   "client/src/pages/run/run.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
     },
     "max-params": {
       "count": 2
@@ -793,9 +652,6 @@
   "client/src/pages/specs/specs.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 5
     }
   },
   "client/src/pages/timeline/index.tsx": {
@@ -803,28 +659,12 @@
       "count": 2
     }
   },
-  "client/src/pages/ux-b.test.tsx": {
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
   "client/src/pages/w4.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 5
-    }
-  },
-  "client/src/pages/w5-fold.test.tsx": {
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "client/src/pages/w5.test.tsx": {
-    "max-lines-per-function": {
-      "count": 3
-    },
     "max-params": {
       "count": 1
     }
@@ -832,9 +672,6 @@
   "client/src/pages/w5b.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 6
     }
   },
   "client/src/pages/wall/TeamPicker.tsx": {
@@ -853,9 +690,6 @@
   "client/src/pages/wall/wall.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "client/src/pages/workflows/index.tsx": {
@@ -881,22 +715,9 @@
       "count": 1
     }
   },
-  "client/src/shell/agentRig.test.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "client/src/shell/nav.test.tsx": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
   "client/src/shell/shell.test.tsx": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "client/vite.config.ts": {
@@ -904,22 +725,9 @@
       "count": 1
     }
   },
-  "collector/src/adapters/account.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "collector/src/adapters/contract.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
   "collector/src/adapters/daemon.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
     }
   },
   "collector/src/adapters/daemon.ts": {
@@ -930,9 +738,6 @@
   "collector/src/adapters/daemondata.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 9
     }
   },
   "collector/src/adapters/daemondata.ts": {
@@ -943,11 +748,6 @@
       "count": 8
     }
   },
-  "collector/src/adapters/dbrows.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "collector/src/adapters/dbrows.ts": {
     "max-lines-per-function": {
       "count": 2
@@ -956,31 +756,11 @@
       "count": 1
     }
   },
-  "collector/src/adapters/dbschema.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "collector/src/adapters/handoffs.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "collector/src/adapters/health.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "collector/src/adapters/health.ts": {
     "max-lines-per-function": {
       "count": 1
     },
     "max-params": {
-      "count": 1
-    }
-  },
-  "collector/src/adapters/history.test.ts": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -995,9 +775,6 @@
   "collector/src/adapters/loadout.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 9
     }
   },
   "collector/src/adapters/loadout.ts": {
@@ -1011,17 +788,9 @@
       "count": 2
     }
   },
-  "collector/src/adapters/missionJobs.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
   "collector/src/adapters/missionfiles.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
     }
   },
   "collector/src/adapters/missionfiles.ts": {
@@ -1040,11 +809,6 @@
       "count": 1
     }
   },
-  "collector/src/adapters/rigcommands.test.ts": {
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
   "collector/src/adapters/rigcommands.ts": {
     "max-params": {
       "count": 2
@@ -1053,9 +817,6 @@
   "collector/src/adapters/rigfiles.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 4
     }
   },
   "collector/src/adapters/rigfiles.ts": {
@@ -1069,17 +830,7 @@
       "count": 2
     }
   },
-  "collector/src/adapters/rigspecs.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "collector/src/adapters/rigspecs.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "collector/src/adapters/seatcard.test.ts": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -1087,16 +838,6 @@
   "collector/src/adapters/sources.ts": {
     "max-lines-per-function": {
       "count": 2
-    }
-  },
-  "collector/src/adapters/specs.test.ts": {
-    "max-lines-per-function": {
-      "count": 5
-    }
-  },
-  "collector/src/adapters/tmux.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "collector/src/adapters/tmux.ts": {
@@ -1107,9 +848,6 @@
   "collector/src/builder.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 4
     },
     "max-params": {
       "count": 1
@@ -1131,11 +869,6 @@
       "count": 1
     }
   },
-  "collector/src/install.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "collector/src/main.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -1144,9 +877,6 @@
   "collector/src/pusher.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 9
     }
   },
   "collector/src/pusher.ts": {
@@ -1163,74 +893,11 @@
   "collector/src/redact.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
     }
   },
   "collector/src/redact.ts": {
     "max-lines-per-function": {
       "count": 1
-    }
-  },
-  "e2e/docs.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "e2e/esc.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "e2e/flow-steady.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "e2e/graph-menu.spec.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "e2e/graph-open.spec.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "e2e/headers.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "e2e/more-menu.spec.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "e2e/panel-narrow.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "e2e/run-board.spec.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "e2e/shell.spec.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "e2e/tour.spec.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
-  "e2e/wall.spec.ts": {
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "scripts/customize.ts": {
@@ -1264,22 +931,9 @@
       "count": 2
     }
   },
-  "server/src/app.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/config/env.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "server/src/core/core.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 15
     }
   },
   "server/src/core/core.ts": {
@@ -1288,11 +942,6 @@
     },
     "max-params": {
       "count": 2
-    }
-  },
-  "server/src/core/doors.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
     }
   },
   "server/src/core/doors.ts": {
@@ -1307,19 +956,11 @@
     }
   },
   "server/src/core/rigEntry.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
   },
   "server/src/core/rigEntry.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/core/schemaDiff.test.ts": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -1338,9 +979,6 @@
   "server/src/hub/accounts.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 5
     }
   },
   "server/src/hub/accounts.ts": {
@@ -1349,11 +987,6 @@
     },
     "max-params": {
       "count": 3
-    }
-  },
-  "server/src/hub/appConfig.test.ts": {
-    "max-lines-per-function": {
-      "count": 2
     }
   },
   "server/src/hub/collectorIngest.ts": {
@@ -1371,11 +1004,6 @@
       "count": 1
     }
   },
-  "server/src/hub/fleetStore.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "server/src/hub/fleetStore.ts": {
     "max-lines": {
       "count": 1
@@ -1387,17 +1015,9 @@
       "count": 1
     }
   },
-  "server/src/hub/handoffStore.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "server/src/hub/hub.test.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 17
     }
   },
   "server/src/hub/missionFileStore.ts": {
@@ -1405,27 +1025,7 @@
       "count": 1
     }
   },
-  "server/src/hub/rigspecs.test.ts": {
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
   "server/src/hub/schemaStore.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/hub/v1Archive.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/hubService.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/middleware/errorHandler.test.ts": {
     "max-lines-per-function": {
       "count": 1
     }
@@ -1435,32 +1035,9 @@
       "count": 1
     }
   },
-  "server/src/middleware/rateLimiter.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/middleware/requestLogger.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "server/src/middleware/validate.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
-    }
-  },
-  "server/src/shutdown.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "server/src/socket.test.ts": {
-    "max-lines-per-function": {
-      "count": 3
     }
   },
   "shared/src/daemondata.ts": {
@@ -1486,38 +1063,12 @@
       "count": 1
     }
   },
-  "test/root/cli.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "test/root/openrig-types.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "test/root/oxlint-gate.test.ts": {
-    "max-lines-per-function": {
-      "count": 3
-    }
-  },
-  "test/root/provenance.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "test/root/test-trust.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
   },
   "test/root/wire-compat.test.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "max-params": {
       "count": 1
     }
