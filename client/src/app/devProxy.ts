@@ -17,6 +17,7 @@ function first(v: string | string[] | undefined): string | undefined {
 function localUrl(raw: string, port: number): boolean {
   try {
     const u = new URL(raw);
+
     return LOCAL_HOSTS.has(u.hostname) && Number(u.port || 80) === port;
   } catch {
     return false;
@@ -32,14 +33,20 @@ export function guardPortFor(
   resolved: number | undefined,
   fromEnv: number
 ): number {
-  if (listening && typeof listening === 'object' && listening.port > 0) return listening.port;
+  if (listening && typeof listening === 'object' && listening.port > 0) {
+    return listening.port;
+  }
+
   return resolved && resolved > 0 ? resolved : fromEnv;
 }
 
 /** True when the request comes from a page on this dev server (same machine, same port). */
 export function isLocalDevRequest(headers: Headers, port: number): boolean {
   const origin = first(headers.origin);
-  if (origin !== undefined) return localUrl(origin, port);
+  if (origin !== undefined) {
+    return localUrl(origin, port);
+  }
   const host = first(headers.host);
+
   return host !== undefined && localUrl(`http://${host}`, port);
 }

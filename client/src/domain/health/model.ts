@@ -45,6 +45,7 @@ const trim = (s: string) => s.replace(/\.+$/, '');
 /** Hub caveats first, then any the row's own data adds; each once. */
 export function caveatsOf(m: HealthFindingsMachine): string[] {
   const own = m.data ? healthCaveats(m.data) : [];
+
   return [...new Set([...m.caveats, ...own])];
 }
 
@@ -60,26 +61,35 @@ export function verdictFor(
     reasons: why,
   });
   const v = ((): Verdict => {
-    if (c.refusal) return cannot([`The hub did not answer health.findings: ${trim(c.refusal)}.`]);
-    if (!m && c.missing)
+    if (c.refusal) {
+      return cannot([`The hub did not answer health.findings: ${trim(c.refusal)}.`]);
+    }
+    if (!m && c.missing) {
       return cannot(['The hub answered, but its answer did not include this machine.']);
-    if (!m) return { kind: 'asking', glyph: '…', headline: 'Asking the hub', reasons: [] };
-    if (m.status === 'pending')
+    }
+    if (!m) {
+      return { kind: 'asking', glyph: '…', headline: 'Asking the hub', reasons: [] };
+    }
+    if (m.status === 'pending') {
       return cannot([
         m.reason
           ? `No health data yet: ${trim(m.reason)}.`
           : "This machine's collector has not sent health data yet (an older collector, or not collected this round).",
       ]);
-    if (m.status !== 'ok')
+    }
+    if (m.status !== 'ok') {
       return cannot([
         m.reason
           ? `Nothing to read: ${trim(m.reason)}.`
           : "This machine's OpenRig has no health findings, so there is nothing to read.",
       ]);
-    if (m.assessment === 'unknown')
+    }
+    if (m.assessment === 'unknown') {
       return cannot(m.caveats.length ? m.caveats : ['The findings could not be read.']);
+    }
     if (m.assessment === 'findings') {
       const n = m.data?.findingsTotal ?? m.data?.findings?.length ?? 0;
+
       return {
         kind: 'findings',
         glyph: '▲',
@@ -90,13 +100,15 @@ export function verdictFor(
       };
     }
     const caveats = caveatsOf(m);
-    if (caveats.length)
+    if (caveats.length) {
       return {
         kind: 'not-all-clear',
         glyph: '○',
         headline: 'No findings — but that is not all-clear',
         reasons: caveats,
       };
+    }
+
     return {
       kind: 'none-found',
       glyph: '○',
@@ -104,7 +116,10 @@ export function verdictFor(
       reasons: [coverageLine(m.data)],
     };
   })();
-  if (!c.stale || v.kind === 'asking') return v;
+  if (!c.stale || v.kind === 'asking') {
+    return v;
+  }
+
   return {
     ...v,
     headline: `${v.headline} · ${c.stale}`,
@@ -113,7 +128,10 @@ export function verdictFor(
 }
 
 export function coverageLine(d: HealthData | null): string {
-  if (!d || !d.coverage.length) return 'No coverage reported.';
+  if (!d || !d.coverage.length) {
+    return 'No coverage reported.';
+  }
+
   return d.coverage
     .map(
       (c) =>
@@ -125,8 +143,13 @@ export function coverageLine(d: HealthData | null): string {
 /** "last reading, machine asleep" when the machine is not reporting live; null when it is. */
 export function staleWords(fm: FleetMachine, now: number, hubConnected: boolean): string | null {
   const f = freshness(fm, now, hubConnected);
-  if (f.level === 'asleep') return 'last reading, machine asleep';
-  if (f.level === 'stale') return 'last reading, machine not reporting';
+  if (f.level === 'asleep') {
+    return 'last reading, machine asleep';
+  }
+  if (f.level === 'stale') {
+    return 'last reading, machine not reporting';
+  }
+
   return null;
 }
 
@@ -153,6 +176,7 @@ const fromRecord = (rec: Record<string, number>, word: RegExp): number | null =>
   const pick = Object.keys(rec).find(
     (k) => word.test(k) && /context|pressure/i.test(k) && !/count|seats|number/i.test(k)
   );
+
   return pick === undefined ? null : (rec[pick] ?? null);
 };
 
@@ -173,14 +197,20 @@ export function thresholdsFor(d: HealthData | null, s: SettingsRow | undefined):
   const t = d?.policy?.thresholds ?? {};
   const pc = fromRecord(t, /crit/i);
   const pw = fromRecord(t, /warn/i);
-  if (validThresholds(pc, pw)) return { critical: pc!, warning: pw!, source: 'policy' };
+  if (validThresholds(pc, pw)) {
+    return { critical: pc!, warning: pw!, source: 'policy' };
+  }
   const num = (key: string) => {
     const v = s?.settings.find((x) => x.key === key)?.value;
+
     return typeof v === 'number' ? v : null;
   };
   const sc = num('health.context_pressure.critical_percent');
   const sw = num('health.context_pressure.warning_percent');
-  if (validThresholds(sc, sw)) return { critical: sc!, warning: sw!, source: 'settings' };
+  if (validThresholds(sc, sw)) {
+    return { critical: sc!, warning: sw!, source: 'settings' };
+  }
+
   return { critical: ASSUMED_CRITICAL, warning: ASSUMED_WARNING, source: 'assumed' };
 }
 
@@ -208,6 +238,7 @@ export function contextRollup(
   const pct = (s: (typeof read)[number]) => s.contextUsedPct ?? 0;
   const critical = read.filter((s) => pct(s) >= t.critical).length;
   const warning = read.filter((s) => pct(s) >= t.warning && pct(s) < t.critical).length;
+
   return {
     live: live.length,
     read: read.length,
@@ -232,8 +263,11 @@ export function reconcile(
   ours: ContextRollup,
   theirs: HealthData['contextSummary'] | undefined
 ): string | null {
-  if (!theirs) return null;
+  if (!theirs) {
+    return null;
+  }
   const same = theirs.critical === ours.critical && theirs.warning === ours.warning;
+
   return `OpenRig counts ${theirs.critical ?? '?'} critical, ${theirs.warning ?? '?'} warning of ${theirs.total ?? '?'}${
     theirs.stale ? ` (${theirs.stale} stale)` : ''
   }${same ? ': the same as AppyRig' : `; AppyRig counts ${ours.critical} and ${ours.warning} of ${ours.read} (OpenRig reads its own seat list)`}`;
@@ -242,11 +276,13 @@ export function reconcile(
 /** Is the OpenRig daemon answering the collector? Real, from the snapshot's sources. */
 export function daemonReach(fm: FleetMachine): { ok: boolean; words: string } {
   const d = fm.snapshot.sources.daemon;
-  if (fm.liveness === 'asleep')
+  if (fm.liveness === 'asleep') {
     return {
       ok: false,
       words: `${fm.machine.label} is asleep: its last report said ${d.ok ? 'reachable' : 'not reachable'}`,
     };
+  }
+
   return d.ok
     ? { ok: true, words: `answering${d.version ? ` · OpenRig ${d.version}` : ''}` }
     : { ok: false, words: `not answering${d.error ? `: ${d.error}` : ''}` };
@@ -259,6 +295,7 @@ export function sampleFindings(
   const rig = fm.snapshot.rigs.find((r) => r.status === 'running') ?? fm.snapshot.rigs[0];
   const seats = fm.snapshot.seats.filter((s) => s.rig === rig?.name).map(seatName);
   const [a = 'dev-build', b = 'dev-qa'] = seats;
+
   return [
     {
       detector: 'review-carousel',

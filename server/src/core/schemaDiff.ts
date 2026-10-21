@@ -37,6 +37,7 @@ function diffTable(before: DbTable, after: DbTable): TableChange | null {
     !changedColumns.length &&
     !addedForeignKeys.length &&
     !removedForeignKeys.length;
+
   return none
     ? null
     : {
@@ -72,6 +73,7 @@ export function diffSchemas(
     .map((t) => diffTable(b.get(t.name)!, t))
     .filter((c): c is TableChange => c !== null);
   const changed = addedTables.length > 0 || removedTables.length > 0 || changedTables.length > 0;
+
   return {
     status: changed ? 'changed' : 'unchanged',
     comparedTo: before.version,

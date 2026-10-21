@@ -23,14 +23,18 @@ export function parseSysctl(text: string): Map<string, string> {
   const out = new Map<string, string>();
   for (const line of text.split('\n')) {
     const i = line.indexOf(':');
-    if (i > 0) out.set(line.slice(0, i).trim(), line.slice(i + 1).trim());
+    if (i > 0) {
+      out.set(line.slice(0, i).trim(), line.slice(i + 1).trim());
+    }
   }
+
   return out;
 }
 
 /** hw.memsize → bytes. */
 export function parseMemsize(v: string | undefined): number | null {
   const n = Number(v);
+
   return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
 }
 
@@ -46,6 +50,7 @@ const toBytes = (num: string, unit: string): number =>
 /** vm.swapusage: "total = 2048.00M  used = 821.50M  free = 1226.50M  (encrypted)". */
 export function parseSwap(v: string | undefined): { total: number; used: number } | null {
   const m = /total = ([\d.]+)([KMGT])\s+used = ([\d.]+)([KMGT])/.exec(v ?? '');
+
   return m ? { total: toBytes(m[1]!, m[2]!), used: toBytes(m[3]!, m[4]!) } : null;
 }
 
@@ -54,20 +59,24 @@ export function parseVmStat(text: string): { used: number } | null {
   const size = /page size of (\d+) bytes/.exec(text)?.[1];
   const pages = (label: string): number | null => {
     const m = new RegExp(`^${label}:\\s+(\\d+)\\.`, 'm').exec(text);
+
     return m ? Number(m[1]) : null;
   };
   const anon = pages('Anonymous pages');
   const purgeable = pages('Pages purgeable');
   const wired = pages('Pages wired down');
   const compressor = pages('Pages occupied by compressor');
-  if (!size || anon === null || purgeable === null || wired === null || compressor === null)
+  if (!size || anon === null || purgeable === null || wired === null || compressor === null) {
     return null;
+  }
+
   return { used: Math.max(0, anon - purgeable + wired + compressor) * Number(size) };
 }
 
 /** `memory_pressure`: "System-wide memory free percentage: 87%". */
 export function parseFreePct(text: string): number | null {
   const m = /memory free percentage:\s*(\d+)%/.exec(text);
+
   return m ? Math.min(100, Number(m[1])) : null;
 }
 
@@ -103,13 +112,19 @@ export function parsePs(text: string): ProcessSummary | null {
   const apps = new Map<string, TerminalApp>();
   for (const line of text.split('\n')) {
     const m = /^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.+)$/.exec(line);
-    if (!m) continue;
+    if (!m) {
+      continue;
+    }
     rows++;
     const rssKb = Number(m[2]);
     const tty = m[3]!;
     const comm = m[4]!.trim();
-    if (CLAUDE.test(comm)) claude++;
-    if (tty !== '??' && SHELL.test(comm.replace(/^.*\//, ''))) shells++;
+    if (CLAUDE.test(comm)) {
+      claude++;
+    }
+    if (tty !== '??' && SHELL.test(comm.replace(/^.*\//, ''))) {
+      shells++;
+    }
     const app = TERMINAL_APPS.find(([re]) => re.test(comm))?.[1];
     if (app) {
       const cur = apps.get(app) ?? { app, processes: 0, rssBytes: 0 };
@@ -118,7 +133,10 @@ export function parsePs(text: string): ProcessSummary | null {
       apps.set(app, cur);
     }
   }
-  if (rows === 0) return null; // an empty ps is a failure to read, not "nothing is running"
+  if (rows === 0) {
+    return null;
+  } // an empty ps is a failure to read, not "nothing is running"
+
   return {
     claude,
     terminalShells: shells,
@@ -153,6 +171,7 @@ export async function sampleHealth(
 ): Promise<HealthSample> {
   if (platform !== 'darwin') {
     const why = `health sampling is macOS-only (this machine is ${platform})`;
+
     return {
       sampledAt: now.toISOString(),
       memory: {
@@ -245,11 +264,17 @@ export function createHealthSampler(
       .finally(() => {
         inflight = null;
       });
+
     return inflight;
   };
+
   return async () => {
-    if (!current) await refresh();
-    else if (now().getTime() - takenAt >= ttlMs) void refresh();
+    if (!current) {
+      await refresh();
+    } else if (now().getTime() - takenAt >= ttlMs) {
+      void refresh();
+    }
+
     return current!;
   };
 }

@@ -14,6 +14,7 @@ import { deriveMissions } from '../../domain/missions/model.js';
  */
 
 const T = '2026-10-18T10:00:00.000Z';
+
 function q(id: string, tags: string[], dest: string, state = 'pending'): QueueItem {
   return {
     id,
@@ -43,6 +44,7 @@ function twoMachines(): FleetMachine[] {
       q('r-b', ['mission:d09', 'slice:1'], 'dev-review@starter'),
     ],
   };
+
   return [m2, roamy];
 }
 
@@ -63,6 +65,7 @@ function ctxFor(ms: FleetMachine[], calls: { verb: string; input: Record<string,
       },
     })),
   } as unknown as FleetSocket;
+
   return {
     machines: ms,
     allMachines: ms,
@@ -114,7 +117,9 @@ describe('Missions keeps machines apart', () => {
       const chip = within(card).getByTestId('ms-machine').textContent;
       const toggle = within(card).getByTestId('ms-toggle');
       // close it if it is the one open by default, then open it: a fresh read
-      if (toggle.getAttribute('aria-expanded') === 'true') fireEvent.click(toggle);
+      if (toggle.getAttribute('aria-expanded') === 'true') {
+        fireEvent.click(toggle);
+      }
       fireEvent.click(toggle);
       await waitFor(() => expect(calls.some((c) => c.verb === 'rig.files')).toBe(true));
       const asked = calls.filter((c) => c.verb === 'rig.files').map((c) => c.input.machine);

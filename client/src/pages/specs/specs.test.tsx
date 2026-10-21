@@ -137,6 +137,7 @@ function setup(commands: () => RigCommandsOutput) {
   });
   const ctx = pageCtx([m2], socket, NOW);
   render(<specsPage.component ctx={ctx} />);
+
   return { ctx, sent, launched };
 }
 

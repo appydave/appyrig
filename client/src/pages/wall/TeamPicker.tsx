@@ -22,17 +22,24 @@ export default function TeamPicker({
   const [q, setQ] = useState('');
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const onDown = (e: PointerEvent) => {
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+      if (box.current && !box.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (e.key !== 'Escape' || e.defaultPrevented) {
+        return;
+      }
       e.preventDefault();
       setOpen(false);
     };
     document.addEventListener('pointerdown', onDown);
     window.addEventListener('keydown', onKey, true);
+
     return () => {
       document.removeEventListener('pointerdown', onDown);
       window.removeEventListener('keydown', onKey, true);
@@ -42,6 +49,7 @@ export default function TeamPicker({
   const shown = matchTeams(teams, q);
   const places = [...new Set(shown.map((t) => t.where))];
   const off = teams.filter((t) => hidden.has(t.key)).length;
+
   return (
     <div className="ar-wall-teampick" ref={box} data-testid="ar-team-picker">
       <button

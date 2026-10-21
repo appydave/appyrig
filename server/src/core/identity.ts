@@ -23,5 +23,6 @@ export function readIdentity(
   if (pkg.name !== ROOT_PACKAGE || typeof pkg.version !== 'string') {
     throw new Error(`${packageJson} is not ${ROOT_PACKAGE} (found ${pkg.name ?? 'no name'})`);
   }
+
   return { name: pkg.name, title: 'AppyRig', version: pkg.version };
 }

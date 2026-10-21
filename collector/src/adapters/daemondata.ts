@@ -74,8 +74,11 @@ export const isRec = (v: unknown): v is Record<string, unknown> =>
 
 /** A non-empty string cut to `max`, else null. `redact` for free text. */
 export function txt(v: unknown, max: number, redact = false): string | null {
-  if (typeof v !== 'string') return null;
+  if (typeof v !== 'string') {
+    return null;
+  }
   const t = (redact ? redactString(v) : v).trim();
+
   return t ? t.slice(0, max) : null;
 }
 
@@ -98,7 +101,9 @@ export const isNotFound = (e: unknown): boolean => /HTTP 404\b/.test((e as Error
  * identity evidence and every other field.
  */
 export function parseSeatDetail(raw: unknown): SeatDetailData {
-  if (!isRec(raw)) throw new Error('node detail: expected a JSON object');
+  if (!isRec(raw)) {
+    throw new Error('node detail: expected a JSON object');
+  }
   const compact = isRec(raw.compactSpec) ? raw.compactSpec : {};
   const specName = txt(raw.resolvedSpecName, 120) ?? txt(compact.name, 120);
   const specVersion = txt(raw.resolvedSpecVersion, 60) ?? txt(compact.version, 60);
@@ -115,12 +120,18 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
   ]
     .filter((n): n is string => n !== null)
     .slice(0, 10);
+
   return SeatDetailDataSchema.parse({
     spec,
     startupFiles: list(raw.startupFiles).flatMap((f) => {
-      if (!isRec(f)) return [];
+      if (!isRec(f)) {
+        return [];
+      }
       const path = txt(f.path, 400);
-      if (!path) return [];
+      if (!path) {
+        return [];
+      }
+
       return [
         {
           path,
@@ -134,9 +145,14 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       ];
     }),
     startupActions: list(raw.startupActions).flatMap((a) => {
-      if (!isRec(a)) return [];
+      if (!isRec(a)) {
+        return [];
+      }
       const type = txt(a.type, 60);
-      if (!type) return [];
+      if (!type) {
+        return [];
+      }
+
       return [
         {
           type,
@@ -146,9 +162,14 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       ];
     }),
     peers: list(raw.peers).flatMap((p) => {
-      if (!isRec(p)) return [];
+      if (!isRec(p)) {
+        return [];
+      }
       const logicalId = txt(p.logicalId, 200);
-      if (!logicalId) return [];
+      if (!logicalId) {
+        return [];
+      }
+
       return [
         {
           logicalId,
@@ -159,8 +180,11 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
     }),
     recoveryNotes: notes,
     installedResources: list(raw.installedResources).flatMap((r) => {
-      if (!isRec(r)) return [];
+      if (!isRec(r)) {
+        return [];
+      }
       const id = txt(r.id, 200);
+
       return id ? [{ id, category: txt(r.category, 80) }] : [];
     }),
   });
@@ -187,17 +211,26 @@ function pickFacts(r: Record<string, unknown>, keys: string[]): LibraryRow['fact
   const out: LibraryRow['facts'] = {};
   for (const k of keys) {
     const v = r[k];
-    if (typeof v === 'string') out[k] = v.slice(0, FACT_TEXT_MAX);
-    else if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
-    else if (typeof v === 'boolean') out[k] = v;
+    if (typeof v === 'string') {
+      out[k] = v.slice(0, FACT_TEXT_MAX);
+    } else if (typeof v === 'number' && Number.isFinite(v)) {
+      out[k] = v;
+    } else if (typeof v === 'boolean') {
+      out[k] = v;
+    }
   }
+
   return out;
 }
 
 /** An array of rows, or a `{<wrapper>: [...]}` envelope: lenient about which. */
 function rowsOf(raw: unknown, wrapper: string): unknown[] {
-  if (Array.isArray(raw)) return raw;
-  if (isRec(raw) && Array.isArray(raw[wrapper])) return raw[wrapper] as unknown[];
+  if (Array.isArray(raw)) {
+    return raw;
+  }
+  if (isRec(raw) && Array.isArray(raw[wrapper])) {
+    return raw[wrapper] as unknown[];
+  }
   throw new Error(`expected a JSON array (or {${wrapper}: [...]})`);
 }
 
@@ -205,10 +238,15 @@ function rowsOf(raw: unknown, wrapper: string): unknown[] {
 export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
   return rowsOf(raw, 'specs')
     .flatMap((r): LibraryRow[] => {
-      if (!isRec(r)) return [];
+      if (!isRec(r)) {
+        return [];
+      }
       const id = txt(r.id, 300);
       const name = txt(r.name, 200);
-      if (!id || !name) return [];
+      if (!id || !name) {
+        return [];
+      }
+
       return [
         {
           id,
@@ -238,17 +276,27 @@ export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
 export function parseLibrarySkills(raw: unknown): LibraryRow[] {
   return rowsOf(raw, 'skills')
     .flatMap((r): LibraryRow[] => {
-      if (!isRec(r)) return [];
+      if (!isRec(r)) {
+        return [];
+      }
       const id = txt(r.id, 300);
       const name = txt(r.name, 200);
-      if (!id || !name) return [];
+      if (!id || !name) {
+        return [];
+      }
       const files = list(r.files).flatMap((f) => {
-        if (!isRec(f)) return [];
+        if (!isRec(f)) {
+          return [];
+        }
         const fname = txt(f.name, 200);
-        if (!fname) return [];
+        if (!fname) {
+          return [];
+        }
         const size = num(f.size);
+
         return [{ name: fname, size: size !== null && size >= 0 ? Math.round(size) : null }];
       });
+
       return [
         {
           id,
@@ -274,11 +322,16 @@ export function parseLibrarySkills(raw: unknown): LibraryRow[] {
 export function parseLibraryPacks(raw: unknown): LibraryRow[] {
   return rowsOf(raw, 'contextPacks')
     .flatMap((r): LibraryRow[] => {
-      if (!isRec(r)) return [];
+      if (!isRec(r)) {
+        return [];
+      }
       const id = txt(r.id, 300);
       const name = txt(r.name, 200);
-      if (!id || !name) return [];
+      if (!id || !name) {
+        return [];
+      }
       const tokens = num(r.manifestEstimatedTokens) ?? num(r.derivedEstimatedTokens);
+
       return [
         {
           id,
@@ -305,7 +358,9 @@ export const TRANSITIONS_PAGE = 128;
 const TRANSITIONS_PAGES_PER_ROUND = 12;
 
 export function parseTransitionRow(r: unknown): TransitionRow | null {
-  if (!isRec(r)) return null;
+  if (!isRec(r)) {
+    return null;
+  }
   const rawId = r.transitionId;
   const id =
     typeof rawId === 'string' ? rawId.trim() : typeof rawId === 'number' ? String(rawId) : '';
@@ -313,7 +368,10 @@ export function parseTransitionRow(r: unknown): TransitionRow | null {
   const state = txt(r.state, 60);
   const when = txt(r.originalTimestamp, 60) ?? txt(r.createdAt, 60);
   const ms = when ? Date.parse(when) : NaN;
-  if (!id || id.length > 30 || !qitemId || !state || !Number.isFinite(ms)) return null;
+  if (!id || id.length > 30 || !qitemId || !state || !Number.isFinite(ms)) {
+    return null;
+  }
+
   return {
     id,
     qitemId,
@@ -334,15 +392,18 @@ export function parseTransitionsPage(raw: unknown): {
   hostId: string | null;
   bootEpoch: string | null;
 } {
-  if (!isRec(raw) || !Array.isArray(raw.rows) || !isRec(raw.page))
+  if (!isRec(raw) || !Array.isArray(raw.rows) || !isRec(raw.page)) {
     throw new Error('queue-transitions: expected {rows, page}');
+  }
   const source = isRec(raw.source) ? raw.source : {};
+
   return {
     rows: raw.rows.flatMap((r) => parseTransitionRow(r) ?? []),
     nextCursor: txt(raw.page.nextCursor, 2000),
     hasMore: raw.page.hasMore === true,
     retainedHigh: (() => {
       const h = Number(raw.page.retainedHighWatermark);
+
       return Number.isFinite(h) && h >= 0 ? Math.round(h) : null;
     })(),
     hostId: txt(source.hostId, 100),
@@ -355,9 +416,14 @@ export function parseTransitionsPage(raw: unknown): {
 export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['specs']> {
   return rowsOf(raw, 'specs')
     .flatMap((r) => {
-      if (!isRec(r)) return [];
+      if (!isRec(r)) {
+        return [];
+      }
       const name = txt(r.name, 200);
-      if (!name) return [];
+      if (!name) {
+        return [];
+      }
+
       return [
         {
           name,
@@ -376,11 +442,16 @@ export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['spe
 export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData['instances']> {
   return rowsOf(raw, 'instances')
     .flatMap((r) => {
-      if (!isRec(r)) return [];
+      if (!isRec(r)) {
+        return [];
+      }
       const instanceId = txt(r.instanceId, 200);
-      if (!instanceId) return [];
+      if (!instanceId) {
+        return [];
+      }
       const hops = num(r.hopCount);
       const deadline = isRec(r.deadline) ? r.deadline : {};
+
       return [
         {
           instanceId,
@@ -402,6 +473,7 @@ export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData[
 
 const countOrNull = (v: unknown): number | null => {
   const n = num(v);
+
   return n !== null && n >= 0 ? Math.round(n) : null;
 };
 
@@ -409,11 +481,17 @@ const countOrNull = (v: unknown): number | null => {
 export function parseHealthFindings(
   raw: unknown
 ): Pick<HealthData, 'findings' | 'findingsTotal' | 'findingsTruncated' | 'coverage'> {
-  if (!isRec(raw)) throw new Error('health: expected a JSON object');
+  if (!isRec(raw)) {
+    throw new Error('health: expected a JSON object');
+  }
+
   return {
     findings: list(raw.records)
       .flatMap((r, i) => {
-        if (!isRec(r)) return [];
+        if (!isRec(r)) {
+          return [];
+        }
+
         return [
           {
             id: txt(r.id, 200) ?? txt(r.findingId, 200) ?? `finding-${i}`,
@@ -430,9 +508,14 @@ export function parseHealthFindings(
     findingsTruncated: bool(raw.truncated),
     coverage: list(raw.coverage)
       .flatMap((c) => {
-        if (!isRec(c)) return [];
+        if (!isRec(c)) {
+          return [];
+        }
         const source = txt(c.source, 120);
-        if (!source) return [];
+        if (!source) {
+          return [];
+        }
+
         return [
           {
             source,
@@ -450,7 +533,9 @@ export function parseHealthFindings(
 }
 
 export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
-  if (!isRec(raw) || !isRec(raw.policy)) throw new Error('health policy: expected {policy}');
+  if (!isRec(raw) || !isRec(raw.policy)) {
+    throw new Error('health policy: expected {policy}');
+  }
   const p = raw.policy;
   const diagnosis = isRec(p.diagnosis) ? p.diagnosis : {};
   const names = (v: unknown) =>
@@ -458,9 +543,14 @@ export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
       .flatMap((x) => txt(x, 120) ?? [])
       .slice(0, 40);
   const thresholds: Record<string, number> = {};
-  if (isRec(p.thresholds))
-    for (const [k, v] of Object.entries(p.thresholds))
-      if (typeof v === 'number' && Number.isFinite(v)) thresholds[k.slice(0, 60)] = v;
+  if (isRec(p.thresholds)) {
+    for (const [k, v] of Object.entries(p.thresholds)) {
+      if (typeof v === 'number' && Number.isFinite(v)) {
+        thresholds[k.slice(0, 60)] = v;
+      }
+    }
+  }
+
   return {
     diagnosisEnabled: bool(diagnosis.enabled),
     disabledDetectors: names(p.disabledDetectors),
@@ -470,7 +560,10 @@ export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
 }
 
 export function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
-  if (!isRec(raw)) throw new Error('health summary: expected a JSON object');
+  if (!isRec(raw)) {
+    throw new Error('health summary: expected a JSON object');
+  }
+
   return {
     total: countOrNull(raw.total),
     critical: countOrNull(raw.critical),
@@ -480,8 +573,11 @@ export function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
 }
 
 export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
-  if (!isRec(raw)) throw new Error('restore check: expected a JSON object');
+  if (!isRec(raw)) {
+    throw new Error('restore check: expected a JSON object');
+  }
   const c = isRec(raw.counts) ? raw.counts : {};
+
   return {
     verdict: txt(raw.verdict, 60),
     red: countOrNull(c.red),
@@ -491,9 +587,12 @@ export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
 }
 
 export function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
-  if (!isRec(raw)) throw new Error('healthz: expected a JSON object');
+  if (!isRec(raw)) {
+    throw new Error('healthz: expected a JSON object');
+  }
   const loop = isRec(raw.eventLoop) ? raw.eventLoop : {};
   const lag = num(loop.lagP99Ms);
+
   return {
     semver: txt(raw.semver, 60),
     commit: txt(raw.commit, 60),
@@ -569,37 +668,54 @@ const isAllowed = (key: string): boolean => SETTINGS_ALLOW.includes(key);
 
 /** GET /api/config: the allowlisted settings, with path-like values replaced and text redacted. */
 export function parseSettings(raw: unknown): SettingsData {
-  if (!isRec(raw) || !isRec(raw.settings)) throw new Error('config: expected {settings}');
+  if (!isRec(raw) || !isRec(raw.settings)) {
+    throw new Error('config: expected {settings}');
+  }
   const settings: SettingsData['settings'] = {};
   let withheld = 0;
   let pathsHidden = 0;
   const value = (v: unknown): string | number | boolean | null | undefined => {
-    if (v === null) return null;
-    if (typeof v === 'boolean') return v;
-    if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+    if (v === null) {
+      return null;
+    }
+    if (typeof v === 'boolean') {
+      return v;
+    }
+    if (typeof v === 'number') {
+      return Number.isFinite(v) ? v : undefined;
+    }
     const text =
       typeof v === 'string' ? v : Array.isArray(v) || isRec(v) ? JSON.stringify(v) : null;
-    if (text === null) return undefined;
+    if (text === null) {
+      return undefined;
+    }
     if (PATH_LIKE.test(text)) {
       pathsHidden += 1;
+
       return SETTING_PATH_HIDDEN;
     }
+
     return redactString(text).slice(0, 200);
   };
   for (const [key, entry] of Object.entries(raw.settings)) {
-    if (!isRec(entry)) continue;
+    if (!isRec(entry)) {
+      continue;
+    }
     if (!isAllowed(key) || WITHHELD_KEY.test(key) || key.length > 120) {
       withheld += 1;
       continue;
     }
     const v = value(entry.value);
-    if (v === undefined) continue;
+    if (v === undefined) {
+      continue;
+    }
     settings[key] = {
       value: v,
       source: txt(entry.source, 40),
       defaultValue: value(entry.defaultValue) ?? null,
     };
   }
+
   return { settings, withheld, pathsHidden };
 }
 
@@ -677,8 +793,11 @@ export class DaemonDataReader {
    */
   forgetSeatsNotIn(ids: Set<string>): void {
     const prefix = 'seatdetail\u0000';
-    for (const k of [...this.sent.keys()])
-      if (k.startsWith(prefix) && !ids.has(k.slice(prefix.length))) this.sent.delete(k);
+    for (const k of [...this.sent.keys()]) {
+      if (k.startsWith(prefix) && !ids.has(k.slice(prefix.length))) {
+        this.sent.delete(k);
+      }
+    }
   }
 
   /** Forget what was sent (a reconnect: the hub may have restarted and holds nothing). */
@@ -702,10 +821,15 @@ export class DaemonDataReader {
     // list is missing too, which means the route itself is not there on this OpenRig.
     const routeMissing = new Map<string, boolean>();
     const probe = async (rigId: string): Promise<boolean | null> => {
-      if (routeMissing.has(rigId)) return routeMissing.get(rigId)!;
+      if (routeMissing.has(rigId)) {
+        return routeMissing.get(rigId)!;
+      }
       const r = await settle(this.get, `/api/rigs/${encodeURIComponent(rigId)}/nodes`);
-      if (!r.ok && !r.notFound) return null;
+      if (!r.ok && !r.notFound) {
+        return null;
+      }
       routeMissing.set(rigId, !r.ok);
+
       return !r.ok;
     };
     for (const t of this.targets) {
@@ -736,12 +860,15 @@ export class DaemonDataReader {
         }
       }
     }
-    if (failed > 0)
+    if (failed > 0) {
       this.fail(
         'seatdetail:seats',
         `seat detail unreadable for ${failed} seat(s), first ${firstError}`
       );
-    else this.failing.delete('seatdetail:seats');
+    } else {
+      this.failing.delete('seatdetail:seats');
+    }
+
     return out;
   }
 
@@ -758,7 +885,7 @@ export class DaemonDataReader {
     const names = Object.keys(reads) as (keyof T & string)[];
     const settled = await Promise.all(names.map((n) => settle(this.get, reads[n].path)));
     if (settled.every((r) => !r.ok)) {
-      if (settled.every((r) => !r.ok && r.notFound))
+      if (settled.every((r) => !r.ok && r.notFound)) {
         return [
           {
             key: '',
@@ -767,6 +894,7 @@ export class DaemonDataReader {
             data: null,
           },
         ];
+      }
       const bad = settled.find((r) => !r.ok && !r.notFound);
       throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
     }
@@ -775,7 +903,9 @@ export class DaemonDataReader {
       const r = settled[i]!;
       const key = `${label}:${n}`;
       try {
-        if (!r.ok) throw new Error(r.error);
+        if (!r.ok) {
+          throw new Error(r.error);
+        }
         data[n] = reads[n].parse(r.value);
         this.failing.delete(key);
       } catch (e) {
@@ -783,6 +913,7 @@ export class DaemonDataReader {
         data[n] = null as T[typeof n];
       }
     });
+
     return [{ key: '', status: 'ok', reason: null, data }];
   }
 
@@ -805,10 +936,14 @@ export class DaemonDataReader {
       }),
     ]);
     const other = rest[0]!;
-    if (!findings.ok && findings.notFound && other.status === 'unsupported') return rest;
+    if (!findings.ok && findings.notFound && other.status === 'unsupported') {
+      return rest;
+    }
     let parsed: ReturnType<typeof parseHealthFindings> | null = null;
     try {
-      if (!findings.ok) throw new Error(findings.error);
+      if (!findings.ok) {
+        throw new Error(findings.error);
+      }
       parsed = parseHealthFindings(findings.value);
       this.failing.delete('health:findings');
     } catch (e) {
@@ -823,15 +958,17 @@ export class DaemonDataReader {
         ? (other.data as Rest)
         : { policy: null, contextSummary: null, restore: null, daemon: null }),
     };
+
     return [{ key: '', status: 'ok', reason: null, data }];
   }
 
   private async settingsRead(): Promise<Outcome[]> {
     try {
       const data = parseSettings(await this.get('/api/config'));
+
       return [{ key: '', status: 'ok', reason: null, data }];
     } catch (e) {
-      if (isNotFound(e))
+      if (isNotFound(e)) {
         return [
           {
             key: '',
@@ -840,6 +977,7 @@ export class DaemonDataReader {
             data: null,
           },
         ];
+      }
       throw e;
     }
   }
@@ -861,7 +999,7 @@ export class DaemonDataReader {
           await this.get(`/api/telemetry/v1/queue-transitions?limit=${TRANSITIONS_PAGE}&${q}`)
         );
       } catch (e) {
-        if (isNotFound(e))
+        if (isNotFound(e)) {
           return [
             {
               key: '',
@@ -870,6 +1008,7 @@ export class DaemonDataReader {
               data: null,
             },
           ];
+        }
         // Start over ONLY when the daemon rejected our cursor (400/410: its epoch or history
         // changed). A timeout or 5xx says nothing about the cursor: keep what we hold, retry.
         if (st.cursor && /HTTP (400|410)\b/.test((e as Error).message)) {
@@ -889,8 +1028,12 @@ export class DaemonDataReader {
       // L2: a row is held once, whichever page it arrives on
       const have = new Set(st.rows.map((r) => r.id));
       st.rows = [...st.rows, ...got.rows.filter((r) => !have.has(r.id))].slice(-TRANSITIONS_MAX);
-      if (got.nextCursor) st.cursor = got.nextCursor;
-      if (!got.hasMore || got.rows.length === 0) break;
+      if (got.nextCursor) {
+        st.cursor = got.nextCursor;
+      }
+      if (!got.hasMore || got.rows.length === 0) {
+        break;
+      }
     }
     const data: TransitionsData = {
       rows: st.rows,
@@ -901,6 +1044,7 @@ export class DaemonDataReader {
       hostId: st.hostId,
       bootEpoch: st.bootEpoch,
     };
+
     return [{ key: '', status: 'ok', reason: null, data }];
   }
 
@@ -917,7 +1061,7 @@ export class DaemonDataReader {
     ]);
     const lists = [specs, skills, packs];
     if (lists.every((l) => !l.ok)) {
-      if (lists.every((l) => !l.ok && l.notFound))
+      if (lists.every((l) => !l.ok && l.notFound)) {
         return [
           {
             key: '',
@@ -926,20 +1070,24 @@ export class DaemonDataReader {
             data: null,
           },
         ];
+      }
       const bad = lists.find((l) => !l.ok && !l.notFound);
       throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
     }
     const one = (name: string, r: Settled, parse: (raw: unknown) => LibraryRow[]) => {
       if (!r.ok) {
         this.fail(`library:${name}`, `library ${name} unreadable: ${r.error}`);
+
         return null;
       }
       try {
         const rows = parse(r.value);
         this.failing.delete(`library:${name}`);
+
         return rows;
       } catch (e) {
         this.fail(`library:${name}`, `library ${name} unreadable: ${(e as Error).message}`);
+
         return null;
       }
     };
@@ -950,6 +1098,7 @@ export class DaemonDataReader {
       skills: one('skills', skills, parseLibrarySkills),
       contextPacks: one('context packs', packs, parseLibraryPacks),
     };
+
     return [{ key: '', status: 'ok', reason: null, data }];
   }
 
@@ -963,7 +1112,9 @@ export class DaemonDataReader {
     const pushes: DaemonDataPush[] = [];
     const sigs = new Map<string, string>();
     for (const job of this.jobs) {
-      if (t - (this.lastRun.get(job.kind) ?? -Infinity) < job.everyMs) continue;
+      if (t - (this.lastRun.get(job.kind) ?? -Infinity) < job.everyMs) {
+        continue;
+      }
       this.lastRun.set(job.kind, t);
       let outcomes: Outcome[];
       try {
@@ -976,7 +1127,9 @@ export class DaemonDataReader {
       for (const o of outcomes) {
         const k = `${job.kind}\u0000${o.key}`;
         const sig = sigOf(o);
-        if (this.sent.get(k) === sig) continue;
+        if (this.sent.get(k) === sig) {
+          continue;
+        }
         const parsed = DaemonDataPushSchema.safeParse({
           kind: job.kind,
           machineId: this.machineId,
@@ -998,8 +1151,11 @@ export class DaemonDataReader {
         sigs.set(k, sig);
       }
     }
-    if (pushes.length === 0) return null;
+    if (pushes.length === 0) {
+      return null;
+    }
     const skipped = new Set<string>();
+
     return {
       pushes,
       // A payload the pusher refused to send (too large) is not recorded as sent: it is offered

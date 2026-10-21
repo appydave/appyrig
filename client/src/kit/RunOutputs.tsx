@@ -29,12 +29,14 @@ export default function RunOutputs({ machineId, rig, files, socket }: Props) {
     setOut('loading');
     if (!socket) {
       setOut(null);
+
       return;
     }
     let live = true;
     void callVerb<RigOutputsOutput>(socket, 'rig.outputs', { machine: machineId, rig }).then(
       (a) => live && setOut(a.ok ? a.value : null)
     );
+
     return () => {
       live = false;
     };

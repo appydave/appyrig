@@ -15,6 +15,7 @@ const SHOWN = 40;
 
 function CopyButton({ text }: { text: string }) {
   const [said, setSaid] = useState<string | null>(null);
+
   return (
     <button
       type="button"
@@ -35,6 +36,7 @@ function CopyButton({ text }: { text: string }) {
 
 function CommandRow({ c }: { c: RigCommand }) {
   const line = c.example ?? c.command;
+
   return (
     <li className="w4-card lr2-cmd" data-testid="lr2-command" data-effect={c.effect}>
       <div className="lr2-cmd-head">
@@ -84,14 +86,20 @@ export function CommandsPanel({ load = loadCommands }: { load?: () => Promise<Ri
       (d) => live && setData(d),
       () => live && setFailed(true)
     );
+
     return () => {
       live = false;
     };
   }, [load]);
-  if (failed) return <p className="empty">The command list could not be loaded.</p>;
-  if (!data) return <p className="quiet">Loading the command list…</p>;
+  if (failed) {
+    return <p className="empty">The command list could not be loaded.</p>;
+  }
+  if (!data) {
+    return <p className="quiet">Loading the command list…</p>;
+  }
   const hits = filterCommands(data.commands, { q, group, curatedOnly });
   const pool = curatedOnly ? data.commands.filter((c) => c.curated) : data.commands;
+
   return (
     <section className="w4-section" data-testid="lr2-commands">
       <p className="quiet">
@@ -165,6 +173,7 @@ export function CommandsPanel({ load = loadCommands }: { load?: () => Promise<Ri
  */
 function LearnPage({ ctx }: PageProps) {
   const [tab, setTab] = useState<'commands' | 'lessons'>('commands');
+
   return (
     <main className="view w4-page" data-testid="ar-learn">
       <div className="lr2-tabs" role="tablist" aria-label="Learn">

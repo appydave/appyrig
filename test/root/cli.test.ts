@@ -45,12 +45,14 @@ async function stubHub(answer: (seen: Seen) => { status?: number; json: unknown 
     });
   });
   await new Promise<void>((r) => server!.listen(0, '127.0.0.1', r));
+
   return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, seen };
 }
 
 function tokenFile() {
   const f = join(mkdtempSync(join(tmpdir(), 'appyrig-cli-')), 'token');
   writeFileSync(f, 'cli-token-0123456789\n');
+
   return f;
 }
 
@@ -214,8 +216,9 @@ describe('api:check (B12 drift gate)', () => {
 
   it('fails and says which file when one is stale, passes again once regenerated', () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-api-'));
-    for (const f of ['openrpc.json', 'reference.html'])
+    for (const f of ['openrpc.json', 'reference.html']) {
       copyFileSync(join(ROOT, 'api', f), join(dir, f));
+    }
     expect(gen(['--check', '--dir', dir]).status).toBe(0);
 
     writeFileSync(

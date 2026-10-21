@@ -27,19 +27,28 @@ type Loaded =
 /** How long ago, in words a person reads. */
 export const ago = (ms: number): string => {
   const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 90) return `${s} s ago`;
+  if (s < 90) {
+    return `${s} s ago`;
+  }
   const m = Math.round(s / 60);
-  if (m < 90) return `${m} min ago`;
+  if (m < 90) {
+    return `${m} min ago`;
+  }
+
   return `${Math.round(m / 60)} h ago`;
 };
 
 /** Pure: what the "changed" line says. */
 export function changeSummary(c: SchemaChanges | null, version: string | null): string {
-  if (!c) return 'No comparison available.';
-  if (c.status === 'baseline')
+  if (!c) {
+    return 'No comparison available.';
+  }
+  if (c.status === 'baseline') {
     return 'Baseline: this is the first OpenRig version seen on this machine, so there is nothing to compare yet.';
-  if (c.status === 'unchanged')
+  }
+  if (c.status === 'unchanged') {
     return `Same tables and columns as the previous version (${c.comparedTo}).`;
+  }
   const bits = [
     c.addedTables.length
       ? `${c.addedTables.length} table${c.addedTables.length === 1 ? '' : 's'} added`
@@ -47,6 +56,7 @@ export function changeSummary(c: SchemaChanges | null, version: string | null): 
     c.removedTables.length ? `${c.removedTables.length} removed` : '',
     c.changedTables.length ? `${c.changedTables.length} changed` : '',
   ].filter(Boolean);
+
   return `Changed since ${c.comparedTo ?? 'the previous version'}${version ? ` (now ${version})` : ''}: ${bits.join(', ')}.`;
 }
 
@@ -96,31 +106,44 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
     );
     list.forEach(load);
     const t = setInterval(() => list.forEach(load), 30_000);
+
     return () => clearInterval(t);
   }, [ids, load]);
   useEffect(() => {
-    if (chosen.current) return;
+    if (chosen.current) {
+      return;
+    }
     const withDb = machines.find((m) => {
       const l = loaded[m.id];
+
       return l?.state === 'ok' && l.out.status === 'ok';
     });
-    if (withDb && withDb.id !== machineId) setMachineId(withDb.id);
-    else if (!machineId && machines[0]) setMachineId(machines[0].id);
+    if (withDb && withDb.id !== machineId) {
+      setMachineId(withDb.id);
+    } else if (!machineId && machines[0]) {
+      setMachineId(machines[0].id);
+    }
   }, [loaded, machines, machineId]);
 
   useEffect(() => {
-    if (!keys) return;
+    if (!keys) {
+      return;
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isTextEntry(e.target)) {
         e.preventDefault();
         search.current?.focus();
       } else if (e.key === 'Escape' && document.activeElement === search.current) {
         e.preventDefault();
-        if (filter) setFilter('');
-        else search.current?.blur();
+        if (filter) {
+          setFilter('');
+        } else {
+          search.current?.blur();
+        }
       }
     };
     window.addEventListener('keydown', onKey);
+
     return () => window.removeEventListener('keydown', onKey);
   }, [keys, filter]);
 
@@ -139,7 +162,9 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
   const machineLabel = machines.find((m) => m.id === machineId)?.label ?? machineId ?? '';
   const ageMs = out?.sampledAt ? Math.max(0, now - Date.parse(out.sampledAt)) : null;
 
-  if (machines.length === 0) return <p className="empty">No machines have reported yet.</p>;
+  if (machines.length === 0) {
+    return <p className="empty">No machines have reported yet.</p>;
+  }
 
   return (
     <section className="schema" data-testid="schema" aria-label="OpenRig database">
@@ -334,6 +359,7 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
                   <tbody>
                     {table.columns.map((c) => {
                       const fk = table.foreignKeys.find((k) => k.from === c.name);
+
                       return (
                         <tr key={c.name} data-column={c.name}>
                           <td>
@@ -384,6 +410,7 @@ export default function SchemaView({ socket, machines, now, keys = true }: Props
                 )}
                 {(() => {
                   const inbound = linkedFrom(tables, table.name);
+
                   return inbound.length > 0 ? (
                     <div className="schema-inbound" data-testid="schema-inbound">
                       <p className="label">Linked from</p>

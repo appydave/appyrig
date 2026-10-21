@@ -19,6 +19,7 @@ export const SENT_BACK: Verdict[] = ['changes', 'fail'];
 export function verdictOf(tags: string[]): Verdict | null {
   const t = tags.find((x) => x.startsWith('verdict:'));
   const v = t?.slice('verdict:'.length).toLowerCase();
+
   return VERDICTS.find((x) => x === v) ?? null;
 }
 
@@ -96,9 +97,14 @@ export function missionsOnRig(fm: FleetMachine, rig: string): string[] {
   const last = new Map<string, string>();
   for (const q of rigQueue(fm, rig)) {
     const m = missionOf(q.tags);
-    if (!m || isSweep(q)) continue;
-    if ((last.get(m) ?? '') < q.updatedAt) last.set(m, q.updatedAt);
+    if (!m || isSweep(q)) {
+      continue;
+    }
+    if ((last.get(m) ?? '') < q.updatedAt) {
+      last.set(m, q.updatedAt);
+    }
   }
+
   return [...last.entries()].sort((a, b) => b[1].localeCompare(a[1])).map(([m]) => m);
 }
 
@@ -125,7 +131,9 @@ export function buildRun(
   const bySlice = new Map<string, QueueItem[]>();
   for (const q of all) {
     const s = sliceOf(q.tags);
-    if (s) bySlice.set(s, [...(bySlice.get(s) ?? []), q]);
+    if (s) {
+      bySlice.set(s, [...(bySlice.get(s) ?? []), q]);
+    }
   }
   const started = jobs.some((j) => bySlice.has(j.slice));
   const lastStarted = jobs.reduce((n, j, i) => (bySlice.has(j.slice) ? i : n), -1);
@@ -139,6 +147,7 @@ export function buildRun(
     const end = accepted.at(-1);
     const open = items.filter(isOpen);
     const holderItem = open.at(-1) ?? items.at(-1);
+
     return {
       job,
       status: done ? 'done' : 'waiting',
@@ -158,7 +167,9 @@ export function buildRun(
   const firstNotDone = states.findIndex((s) => s.status !== 'done');
   const finished = started && jobs.length > 0 && firstNotDone === -1;
   const currentIndex = started && !finished ? firstNotDone : null;
-  if (currentIndex !== null) states[currentIndex]!.status = 'current';
+  if (currentIndex !== null) {
+    states[currentIndex]!.status = 'current';
+  }
 
   const cur = currentIndex !== null ? states[currentIndex]! : null;
   const curItems = cur?.items ?? [];
@@ -173,6 +184,7 @@ export function buildRun(
         .map((l) => l.replace(/\u001b?\[[0-9;?]*[ -/]*[@-~]/g, '').trim())
         .filter(Boolean)
         .at(-1) ?? null;
+
     return {
       key: seat.id,
       seat: name,
@@ -197,10 +209,15 @@ export function buildRun(
     const b = bare(q.destination);
     const sa = stations.find((s) => s.seat === a);
     const sb = stations.find((s) => s.seat === b);
-    if (!sa || !sb || sa === sb) continue;
+    if (!sa || !sb || sa === sb) {
+      continue;
+    }
     const k = `${sa.seat}>${sb.seat}`;
-    if (RANK[sb.stage] > RANK[sa.stage]) forward.set(k, (forward.get(k) ?? 0) + 1);
-    else if (SENT_BACK.includes(verdictOf(q.tags) as Verdict)) back.set(k, (back.get(k) ?? 0) + 1);
+    if (RANK[sb.stage] > RANK[sa.stage]) {
+      forward.set(k, (forward.get(k) ?? 0) + 1);
+    } else if (SENT_BACK.includes(verdictOf(q.tags) as Verdict)) {
+      back.set(k, (back.get(k) ?? 0) + 1);
+    }
   }
   const arrows = (m: Map<string, number>): Arrow[] =>
     [...m.entries()].map(([k, count]) => ({ from: k.split('>')[0]!, to: k.split('>')[1]!, count }));
@@ -208,6 +225,7 @@ export function buildRun(
   const startedAt = started ? (all.find((q) => sliceOf(q.tags))?.createdAt ?? null) : null;
   const lastAccept = [...all].reverse().find((q) => verdictOf(q.tags) === 'accept');
   const endedAt = finished ? (lastAccept?.updatedAt ?? null) : null;
+
   return {
     phase: jobs.length === 0 ? 'no-jobs' : finished ? 'finished' : started ? 'running' : 'waiting',
     missionId,
@@ -257,6 +275,7 @@ export function sampleRun(real: RunModel, fm: FleetMachine, rig: string): RunMod
     doing: i === mid ? 'testing a clean copy; taking the after screenshot' : null,
   }));
   const name = (i: number) => stations[i]?.seat ?? '';
+
   return {
     ...real,
     phase: 'running',
@@ -274,29 +293,46 @@ export function sampleRun(real: RunModel, fm: FleetMachine, rig: string): RunMod
 }
 
 export function clock(ms: number | null): string {
-  if (ms === null) return '';
+  if (ms === null) {
+    return '';
+  }
   const m = Math.round(ms / 60_000);
-  if (m < 60) return `${m} min`;
+  if (m < 60) {
+    return `${m} min`;
+  }
+
   return `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
 }
 
 /** The one-sentence top line. Pre-GO it names no number it does not have. */
 export function topLine(r: RunModel): string {
   const m = r.jobs.length;
-  if (r.phase === 'no-jobs') return 'No jobs table found in this rig’s MISSION.md';
-  if (r.phase === 'waiting') return `Waiting for GO · ${m} ${m === 1 ? 'job' : 'jobs'} planned`;
-  if (r.phase === 'finished') return `Finished · ${m} of ${m} jobs · ${clock(r.runMs)}`;
+  if (r.phase === 'no-jobs') {
+    return 'No jobs table found in this rig’s MISSION.md';
+  }
+  if (r.phase === 'waiting') {
+    return `Waiting for GO · ${m} ${m === 1 ? 'job' : 'jobs'} planned`;
+  }
+  if (r.phase === 'finished') {
+    return `Finished · ${m} of ${m} jobs · ${clock(r.runMs)}`;
+  }
   const cur = r.currentIndex !== null ? r.jobs[r.currentIndex]! : null;
   const holder = r.stations.find((s) => s.holds > 0) ?? null;
   const parts = [`Job ${(r.currentIndex ?? 0) + 1} of ${m}`];
-  if (holder) parts.push(`with ${holder.word}`);
-  else if (cur?.holder) parts.push(`last with ${cur.holder}`);
+  if (holder) {
+    parts.push(`with ${holder.word}`);
+  } else if (cur?.holder) {
+    parts.push(`last with ${cur.holder}`);
+  }
   parts.push(
     r.verdictTagged
       ? `${r.reworkTotal} ${r.reworkTotal === 1 ? 'rework' : 'reworks'} so far`
       : 'rework not counted (handoffs carry no verdict tag)'
   );
-  if (r.runMs !== null) parts.push(clock(r.runMs));
+  if (r.runMs !== null) {
+    parts.push(clock(r.runMs));
+  }
+
   return parts.join(' · ');
 }
 
@@ -331,19 +367,27 @@ export function parseDoneCheck(md: string): DoneCheck {
     const hit = row ?? kv;
     if (hit) {
       const k = norm(hit[1]!) as keyof DoneCheck;
-      if (FIELDS.includes(k) && out[k] === null && hit[2]!.trim()) out[k] = hit[2]!.trim();
+      if (FIELDS.includes(k) && out[k] === null && hit[2]!.trim()) {
+        out[k] = hit[2]!.trim();
+      }
     } else if (head) {
       const k = norm(head[1]!) as keyof DoneCheck;
       if (FIELDS.includes(k) && out[k] === null) {
         const body: string[] = [];
         // The heading's own paragraph: up to the next heading or the first blank line after text.
         for (let j = i + 1; j < lines.length && !/^#{1,6}\s/.test(lines[j]!); j++) {
-          if (lines[j]!.trim()) body.push(lines[j]!.trim());
-          else if (body.length) break;
+          if (lines[j]!.trim()) {
+            body.push(lines[j]!.trim());
+          } else if (body.length) {
+            break;
+          }
         }
-        if (body.length) out[k] = body.join(' ');
+        if (body.length) {
+          out[k] = body.join(' ');
+        }
       }
     }
   }
+
   return out;
 }

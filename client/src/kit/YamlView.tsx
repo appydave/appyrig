@@ -19,8 +19,12 @@ export default function YamlView({ source, plain = false }: Props) {
   const toggle = (n: number) =>
     setFolded((cur) => {
       const next = new Set(cur);
-      if (next.has(n)) next.delete(n);
-      else next.add(n);
+      if (next.has(n)) {
+        next.delete(n);
+      } else {
+        next.add(n);
+      }
+
       return next;
     });
   const foldTop = () => setFolded(new Set(foldable.filter((l) => l.indent === 0).map((l) => l.n)));
@@ -30,9 +34,12 @@ export default function YamlView({ source, plain = false }: Props) {
     const hide = new Set<number>();
     for (const l of lines) {
       if (folded.has(l.n) && l.foldTo !== null && !hide.has(l.n)) {
-        for (let n = l.n + 1; n <= l.foldTo; n++) hide.add(n);
+        for (let n = l.n + 1; n <= l.foldTo; n++) {
+          hide.add(n);
+        }
       }
     }
+
     return hide;
   })();
 
@@ -56,8 +63,11 @@ export default function YamlView({ source, plain = false }: Props) {
       )}
       <pre className="yaml-body" tabIndex={0} aria-label="YAML source">
         {lines.map((l) => {
-          if (hiddenUntil.has(l.n)) return null;
+          if (hiddenUntil.has(l.n)) {
+            return null;
+          }
           const isFolded = folded.has(l.n);
+
           return (
             <div
               key={l.n}

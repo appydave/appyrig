@@ -3,6 +3,7 @@ import { tokenizeYaml } from './yamlLines.js';
 
 const kinds = (src: string, line = 0) => {
   const l = tokenizeYaml(src)[line]!;
+
   return l.tokens.filter((t) => t.kind !== 'indent').map((t) => `${t.kind}:${t.text.trim()}`);
 };
 

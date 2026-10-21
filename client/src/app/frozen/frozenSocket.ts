@@ -37,7 +37,10 @@ export interface FrozenMeta {
  */
 export function frozenNow(real: number, meta: FrozenMeta | undefined): number {
   const at = meta?.recordedAt ? Date.parse(meta.recordedAt) : NaN;
-  if (Number.isNaN(at)) return real;
+  if (Number.isNaN(at)) {
+    return real;
+  }
+
   return at + Math.max(0, real - (meta!.loadedAt ?? real));
 }
 
@@ -45,16 +48,23 @@ export function frozenNow(real: number, meta: FrozenMeta | undefined): number {
 export function callKey(verb: string, input: unknown): string {
   const obj = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
   const sorted = Object.fromEntries(Object.entries(obj).sort(([a], [b]) => a.localeCompare(b)));
+
   return `${verb} ${JSON.stringify(sorted)}`;
 }
 
 function resolveRefs(v: unknown, refs: Record<string, unknown>): unknown {
-  if (Array.isArray(v)) return v.map((x) => resolveRefs(x, refs));
+  if (Array.isArray(v)) {
+    return v.map((x) => resolveRefs(x, refs));
+  }
   if (v && typeof v === 'object') {
     const ref = (v as { $frozenRef?: unknown }).$frozenRef;
-    if (typeof ref === 'string' && Object.keys(v).length === 1) return resolveRefs(refs[ref], refs);
+    if (typeof ref === 'string' && Object.keys(v).length === 1) {
+      return resolveRefs(refs[ref], refs);
+    }
+
     return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, resolveRefs(x, refs)]));
   }
+
   return v;
 }
 
@@ -69,6 +79,7 @@ export function frozenAnswer(file: FrozenFile, req: CoreCallRequest): CallAnswer
       },
     };
   }
+
   return resolveRefs(hit, file.refs ?? {}) as CallAnswer;
 }
 
@@ -84,7 +95,10 @@ export function createFrozenSocket(file: FrozenFile): FleetSocket {
     setTimeout(() => ack(null, frozenAnswer(file, req)), 0);
   };
   const emit = (event: string, request: unknown, ack?: Ack) => {
-    if (event === FLEET_EVENTS.CALL && typeof ack === 'function') answer(request, ack);
+    if (event === FLEET_EVENTS.CALL && typeof ack === 'function') {
+      answer(request, ack);
+    }
+
     return fake;
   };
   const fake = {
@@ -92,14 +106,23 @@ export function createFrozenSocket(file: FrozenFile): FleetSocket {
     frozen: file.name,
     on(event: string, fn: Handler) {
       let set = handlers.get(event);
-      if (!set) handlers.set(event, (set = new Set()));
+      if (!set) {
+        handlers.set(event, (set = new Set()));
+      }
       set.add(fn);
-      if (event === FLEET_EVENTS.UPDATE) setTimeout(() => set!.has(fn) && fn(file.update), 0);
+      if (event === FLEET_EVENTS.UPDATE) {
+        setTimeout(() => set!.has(fn) && fn(file.update), 0);
+      }
+
       return fake;
     },
     off(event: string, fn?: Handler) {
-      if (fn) handlers.get(event)?.delete(fn);
-      else handlers.delete(event);
+      if (fn) {
+        handlers.get(event)?.delete(fn);
+      } else {
+        handlers.delete(event);
+      }
+
       return fake;
     },
     timeout() {
@@ -116,5 +139,6 @@ export function createFrozenSocket(file: FrozenFile): FleetSocket {
       return fake;
     },
   };
+
   return fake as unknown as FleetSocket;
 }

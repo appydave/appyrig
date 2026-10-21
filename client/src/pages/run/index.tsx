@@ -124,9 +124,11 @@ function JobTile({ j, picked, onSelect }: { j: JobState; picked: boolean; onSele
 // ---------------------------------------------------------------- stations
 
 function Stations({ run, onDocs }: { run: RunModel; onDocs?: (seatId: string) => void }) {
-  if (run.stations.length === 0)
+  if (run.stations.length === 0) {
     return <p className="quiet">This rig has no seats the machine reports.</p>;
+  }
   const arrow = (a: string, b: string) => run.forward.find((x) => x.from === a && x.to === b);
+
   return (
     <div className="run-stations" data-testid="run-stations">
       {run.stations.map((s, i) => (
@@ -188,14 +190,15 @@ function StationBox({
 // ---------------------------------------------------------------- documents
 
 function FileView({ r, kind }: { r: MissionFileResult; kind: MissionFileKind }) {
-  if (r.status !== 'ok')
+  if (r.status !== 'ok') {
     return (
       <p className="quiet" data-testid="run-doc-missing">
         {whyNot(r, kind)}
       </p>
     );
+  }
   const isHtml = (r.mime ?? '').includes('html') || /\.html?$/i.test(r.path);
-  if (isHtml)
+  if (isHtml) {
     return (
       <iframe
         title={r.path}
@@ -205,6 +208,8 @@ function FileView({ r, kind }: { r: MissionFileResult; kind: MissionFileKind }) 
         data-testid="run-doc-html"
       />
     );
+  }
+
   return (
     <div className="run-md" data-testid="run-doc-md">
       <MarkdownView source={r.text ?? ''} />
@@ -228,6 +233,7 @@ function SpecPanel({
 }) {
   const [pick, setPick] = useState(0);
   const path = job.specPaths[pick] ?? null;
+
   return (
     <div className="run-doc" data-testid="run-doc-spec">
       <div className="run-doc-head">
@@ -322,6 +328,7 @@ function RigDocs({
   const rigYaml = useRigDoc(g, machine, rig, RIG_FILE.rig, on.rig);
   const culture = useRigDoc(g, machine, rig, RIG_FILE.culture, on.culture);
   const mission = useRigDoc(g, machine, rig, RIG_FILE.mission, on.mission);
+
   return (
     <>
       {on.rig && <RigFilePanel doc={rigYaml} which="rig" name="rig.yaml" />}
@@ -347,6 +354,7 @@ function Shot({
   label: string;
 }) {
   const r = useMissionFile(getSocket, machine, rig, path);
+
   return (
     <figure className="run-shot" data-testid="run-shot">
       {r.status === 'ok' && r.base64 ? (
@@ -380,6 +388,7 @@ function DoneCheck({
       <div className="run-chk-v">{v ?? whyNot(r, 'qa')}</div>
     </div>
   );
+
   return (
     <div className="run-check" data-testid="run-check">
       {cell('proof', d?.proof)}
@@ -411,6 +420,7 @@ function JobPanel({
     culture: tab === 'culture',
     mission: tab === 'mission',
   };
+
   return (
     <section className="run-detail" data-testid="run-detail" data-job={j.job.slice}>
       <div className="run-detail-head">
@@ -517,6 +527,7 @@ function Ledger({
           exact: true,
         }));
     }
+
     return items.map((q) => ({
       key: q.id,
       at: q.createdAt,
@@ -528,6 +539,7 @@ function Ledger({
   }, [t, items, byId]);
   const sorted = [...rows].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60);
   void fm;
+
   return (
     <section data-testid="run-ledger">
       <div className="run-label">What just happened</div>
@@ -537,6 +549,7 @@ function Ledger({
         <ul className="run-ledger">
           {sorted.map((r) => {
             const v = verdictOf(r.q.tags);
+
             return (
               <li key={r.key} data-testid="run-ledger-row">
                 <span className="mono quiet" title={r.at}>
@@ -706,12 +719,13 @@ function RunBoard({ ctx }: PageProps) {
             run={run}
             onDocs={(seatId) => {
               // An agent's documents live in the Agent panel (deep-linkable, Esc closes only it).
-              if (fm.snapshot.seats.some((x) => x.id === seatId))
+              if (fm.snapshot.seats.some((x) => x.id === seatId)) {
                 return ctx.openAgentPanel({
                   machineId: machine,
                   seatKey: `${machine}/${seatId}`,
                   tab: 'documents',
                 });
+              }
               // No agent behind the station: the rig-level overlay (Rig + Mission files).
               openDocs({
                 machineId: machine,

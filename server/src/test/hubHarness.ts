@@ -18,6 +18,7 @@ export const loadSnapshot = (name: string): MachineSnapshot =>
 /** A clock tests move by hand. */
 export function manualClock(start = '2026-10-09T12:00:00.000Z') {
   let t = Date.parse(start);
+
   return {
     now: () => new Date(t),
     advance: (ms: number) => {
@@ -54,8 +55,10 @@ export async function startHub(opts: Partial<HubOptions> = {}): Promise<RunningH
       ...extra,
     });
     sockets.push(s);
+
     return s;
   };
+
   return {
     hub,
     url,

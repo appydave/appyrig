@@ -42,19 +42,26 @@ export function sliceTable(md: string): PlanStep[] {
   const out: PlanStep[] = [];
   for (let i = 0; i < lines.length; i++) {
     const head = lines[i]!;
-    if (!/^\|\s*#\s*\|/.test(head) || !/^\|[\s|:-]+\|?\s*$/.test(lines[i + 1] ?? '')) continue;
+    if (!/^\|\s*#\s*\|/.test(head) || !/^\|[\s|:-]+\|?\s*$/.test(lines[i + 1] ?? '')) {
+      continue;
+    }
     for (let j = i + 2; j < lines.length && lines[j]!.startsWith('|'); j++) {
       const cells = lines[j]!.split('|')
         .slice(1, -1)
         .map((c) => c.trim());
       const id = plain(cells[0] ?? '');
-      if (!SLICE_ID.test(id)) continue;
+      if (!SLICE_ID.test(id)) {
+        continue;
+      }
       const bold = /\*\*(.+?)\*\*/.exec(cells.slice(1).join(' | '))?.[1];
       const title = bold ?? cells.slice(1).find((c) => c.length > 3) ?? '';
       out.push({ id, title: clip(plain(title).replace(/[.:]$/, ''), 80) });
     }
-    if (out.length) return out;
+    if (out.length) {
+      return out;
+    }
   }
+
   return out;
 }
 
@@ -62,21 +69,31 @@ export function sliceTable(md: string): PlanStep[] {
 export function numberedSteps(md: string): PlanStep[] {
   const lines = md.replace(/\r/g, '').split('\n');
   const at = lines.findIndex((l) => /^#{1,4}\s+.*\b(steps?|plan|order)\b/i.test(l));
-  if (at < 0) return [];
+  if (at < 0) {
+    return [];
+  }
   const out: PlanStep[] = [];
   for (const l of lines.slice(at + 1)) {
-    if (/^#{1,4}\s/.test(l)) break;
+    if (/^#{1,4}\s/.test(l)) {
+      break;
+    }
     const m = /^\s*(\d{1,2}[a-z]?)[.)]\s+(.+)$/.exec(l);
-    if (m) out.push({ id: m[1]!, title: clip(plain(m[2]!), 80) });
+    if (m) {
+      out.push({ id: m[1]!, title: clip(plain(m[2]!), 80) });
+    }
   }
+
   return out.length >= 2 ? out : [];
 }
 
 /** The plan in one file, slice table first. Null: none. */
 export function planIn(md: string, file: string): PlanSource | null {
   const slices = sliceTable(md);
-  if (slices.length >= 2) return { file, kind: 'slices', steps: slices };
+  if (slices.length >= 2) {
+    return { file, kind: 'slices', steps: slices };
+  }
   const steps = numberedSteps(md);
+
   return steps.length ? { file, kind: 'steps', steps } : null;
 }
 
@@ -90,7 +107,10 @@ export function changeOrders(names: string[], baseTitle: string | null): PlanSou
     .filter((m): m is RegExpExecArray => !!m)
     .map((m) => ({ id: `change ${m[1]!.padStart(2, '0')}`, title: m[2]!.replace(/[-_]+/g, ' ') }))
     .sort((a, b) => a.id.localeCompare(b.id));
-  if (!changes.length) return null;
+  if (!changes.length) {
+    return null;
+  }
+
   return {
     file: 'its change-order files (MISSION-…-change-NN-….md)',
     kind: 'changes',
@@ -107,12 +127,17 @@ const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function spots(text: string, step: PlanStep, kind: PlanKind): number[] {
   const at = (re: RegExp) => [...text.matchAll(re)].map((m) => m.index ?? 0);
   if (kind === 'changes') {
-    if (step.id === 'mission') return at(/\bstep \d/gi);
+    if (step.id === 'mission') {
+      return at(/\bstep \d/gi);
+    }
+
     return at(new RegExp(`\\bchange[ -]?0?${Number(step.id.slice(7))}\\b`, 'gi'));
   }
   // r1 R3 LOW-2: a bare number is not a step id in prose; it needs "step N" or "slice N".
-  if (kind === 'steps' || /^\d/.test(step.id))
+  if (kind === 'steps' || /^\d/.test(step.id)) {
     return at(new RegExp(`\\b(?:step|slice)[ -]?${esc(step.id)}\\b`, 'gi'));
+  }
+
   return [
     ...at(new RegExp(`(?<![A-Za-z0-9-])${esc(step.id)}(?![A-Za-z0-9])`, 'g')),
     ...rangeSpots(text, step.id),
@@ -132,13 +157,16 @@ export function names(q: QueueItem, step: PlanStep, kind: PlanKind): boolean {
         ? tags.includes(`step-${id}`)
         : // r1 R3 LOW-2: a tag "r1"/"r2" is the reviewer seat, not slice R1.
           !/^r\d$/.test(id) && tags.some((t) => t === id || t === id.replace(/-/g, ''));
+
   return byTag || spots(q.summary ?? '', step, kind).length > 0;
 }
 
 /** "R1-R4", "F1–F4", "R2 to R4" name every slice between: where in the text such ranges name `id`. */
 function rangeSpots(text: string, id: string): number[] {
   const m = /^([A-Z]+)(\d+)$/.exec(id);
-  if (!m) return [];
+  if (!m) {
+    return [];
+  }
   const [, pre, n] = m;
   const re = new RegExp(
     `(?<![A-Za-z0-9-])${pre}(\\d+)\\s*(?:[-–]|to)\\s*${pre}?(\\d+)(?![A-Za-z0-9])`,
@@ -148,8 +176,11 @@ function rangeSpots(text: string, id: string): number[] {
   for (const r of text.matchAll(re)) {
     const lo = Number(r[1]);
     const hi = Number(r[2]);
-    if (lo < hi && Number(n) >= lo && Number(n) <= hi) out.push(r.index ?? 0);
+    if (lo < hi && Number(n) >= lo && Number(n) <= hi) {
+      out.push(r.index ?? 0);
+    }
   }
+
   return out;
 }
 
@@ -171,32 +202,45 @@ const OWED = /^\S+\s+(next|pending|to do|todo|NOT YET|in progress|WIP)\b/i;
 export function acceptance(q: QueueItem, step: PlanStep, kind: PlanKind): string | null {
   const text = q.summary ?? '';
   const where = spots(text, step, kind);
-  if (!where.length) return null;
+  if (!where.length) {
+    return null;
+  }
   const words = [...text.matchAll(ACCEPTED), ...text.matchAll(REPORT_WORD)].sort(
     (a, b) => (a.index ?? 0) - (b.index ?? 0)
   );
   for (const m of words) {
     const at = m.index ?? 0;
     const word = m[0];
-    if (/^report$/i.test(word) && /^[.\-_]\w/.test(text.slice(at + word.length))) continue;
-    if (NEGATED.test(text.slice(Math.max(0, at - 30), at))) continue;
+    if (/^report$/i.test(word) && /^[.\-_]\w/.test(text.slice(at + word.length))) {
+      continue;
+    }
+    if (NEGATED.test(text.slice(Math.max(0, at - 30), at))) {
+      continue;
+    }
     // "r1 PASS with 2 MEDIUM to fold", "QA PASS but NOT merged": a pass with work still owed.
-    if (QUALIFIED.test(text.slice(at + word.length, at + word.length + 40))) continue;
+    if (QUALIFIED.test(text.slice(at + word.length, at + word.length + 40))) {
+      continue;
+    }
     const before = text.slice(0, at);
-    if ((before.match(/\(/g)?.length ?? 0) > (before.match(/\)/g)?.length ?? 0)) continue;
+    if ((before.match(/\(/g)?.length ?? 0) > (before.match(/\)/g)?.length ?? 0)) {
+      continue;
+    }
     // QA R3: the word and the id share a clause ("V1+V2+K deployed" accepts all three; in
     // "F2 deployed (…); F4 next" the ";" ends F2's clause), and the id itself is not owed work.
     const same = (w: number) => {
       const between = text.slice(Math.min(w, at), Math.max(w, at));
+
       return !/[;.\n]\s|[;\n]| [—–] /.test(between);
     };
     const owed = (w: number) => OWED.test(text.slice(w, w + step.id.length + 16));
-    if (where.some((w) => Math.abs(w - at) <= NEAR && same(w) && !owed(w)))
+    if (where.some((w) => Math.abs(w - at) <= NEAR && same(w) && !owed(w))) {
       return text
         .slice(Math.max(0, at - 12), at + word.length + 12)
         .replace(/\s+/g, ' ')
         .trim();
+    }
   }
+
   return null;
 }
 
@@ -216,6 +260,7 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const scored = sources.map((s) => {
     const naming = work.filter((q) => s.steps.some((st) => names(q, st, s.kind)));
+
     return { s, naming };
   });
   const named = scored.filter((x) => x.naming.length);
@@ -230,7 +275,9 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
       b.naming.length - a.naming.length
   )[0];
   const chosen = pick ?? (scored.length === 1 ? scored[0] : undefined);
-  if (!chosen) return null;
+  if (!chosen) {
+    return null;
+  }
   const { s, naming } = chosen;
   const newest = naming[0];
   // The live step: of the steps the newest naming handoff names, the latest in the plan.
@@ -238,7 +285,7 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
     ? [...s.steps].reverse().find((st) => names(newest, st, s.kind))
     : undefined;
   const done = new Map<string, { phrase: string; item: QueueItem }>();
-  for (const st of s.steps)
+  for (const st of s.steps) {
     for (const q of naming) {
       const phrase = acceptance(q, st, s.kind);
       if (phrase) {
@@ -246,6 +293,8 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
         break; // naming is newest first: the newest acceptance is shown
       }
     }
+  }
+
   return {
     ...s,
     live: liveStep && newest ? { id: liveStep.id, item: newest } : null,

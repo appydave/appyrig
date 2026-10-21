@@ -20,8 +20,9 @@ afterEach(() => {
 describe('V1 archive manifest', () => {
   it('has the 32 parity rows, in order, with V1-safe file names', () => {
     expect(V1_ARCHIVE_ROWS.map((r) => r.row)).toEqual(Array.from({ length: 32 }, (_, i) => i + 1));
-    for (const f of V1_ARCHIVE_ROWS.flatMap((r) => r.files))
+    for (const f of V1_ARCHIVE_ROWS.flatMap((r) => r.files)) {
       expect(f).toMatch(/^v1-[a-z0-9-]+\.png$/);
+    }
     expect(v1ArchiveSlides().length).toBeGreaterThanOrEqual(32);
   });
 });

@@ -7,6 +7,7 @@ function buildApp(thrower: (req: Request, res: Response, next: NextFunction) => 
   const app = express();
   app.get('/test', thrower);
   app.use(errorHandler);
+
   return app;
 }
 

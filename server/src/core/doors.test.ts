@@ -23,6 +23,7 @@ async function hubWithFleet() {
   const h = await startHub({ liveHosts: ['127.0.0.1', '100.126.70.25'] });
   running.push(h);
   await push(h.collector({ token: TOKEN, machineId: 'roamy' }), loadSnapshot('roamy'));
+
   return h;
 }
 

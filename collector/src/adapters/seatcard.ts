@@ -19,9 +19,14 @@ export function keySkillsOf(allow: string[], listed: string[]): string[] {
     const hit =
       listed.find((n) => n === want) ??
       (want.includes(':') ? undefined : listed.find((n) => short(n) === want));
-    if (hit && !out.includes(hit)) out.push(hit);
-    if (out.length === KEY_SKILLS_MAX) break;
+    if (hit && !out.includes(hit)) {
+      out.push(hit);
+    }
+    if (out.length === KEY_SKILLS_MAX) {
+      break;
+    }
   }
+
   return out;
 }
 
@@ -35,7 +40,9 @@ export function withSeatCards<T extends { id: string; rig: string | null }>(
   }
 ): (T & { agentRole?: string | null; keySkills?: string[] })[] {
   return seats.map((s) => {
-    if (s.rig === null) return s;
+    if (s.rig === null) {
+      return s;
+    }
     // QA LOW-3, r1 LOW-1: any scheme (`path:`, `local:`, `builtin:terminal`) ends in the agent's name.
     const ref = input.agentRefs.get(s.id)?.replace(/^[a-z][\w-]*:/i, '');
     const out: T & { agentRole?: string | null; keySkills?: string[] } = {
@@ -44,7 +51,10 @@ export function withSeatCards<T extends { id: string; rig: string | null }>(
     };
     const allow = Object.hasOwn(input.config, s.id) ? input.config[s.id]?.keySkills : undefined;
     const listed = input.names.get(s.id);
-    if (allow?.length && listed) out.keySkills = keySkillsOf(allow, listed);
+    if (allow?.length && listed) {
+      out.keySkills = keySkillsOf(allow, listed);
+    }
+
     return out;
   });
 }
@@ -57,6 +67,7 @@ export function seatConfigReader(
   const file = env.APPYRIG_CONFIG?.trim() || join(homedir(), '.config', 'appyrig', 'config.json');
   let mtime = -1;
   let value: Record<string, SeatConfig> = {};
+
   return () => {
     let m = 0;
     try {
@@ -64,10 +75,14 @@ export function seatConfigReader(
     } catch {
       m = 0;
     }
-    if (m === mtime) return value;
+    if (m === mtime) {
+      return value;
+    }
     mtime = m;
     value = {};
-    if (m === 0) return value;
+    if (m === 0) {
+      return value;
+    }
     try {
       value = AppConfigSchema.parse(JSON.parse(readFileSync(file, 'utf8'))).seats ?? {};
     } catch (e) {
@@ -77,6 +92,7 @@ export function seatConfigReader(
         `${file} is not a valid AppyRig config; key skills off: ${(e as Error).message.slice(0, 200)}`
       );
     }
+
     return value;
   };
 }

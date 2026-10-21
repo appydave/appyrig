@@ -29,6 +29,7 @@ function TimelinePage({ ctx }: PageProps) {
 
   const seat = (name: string) => {
     const key = run?.seatOf[name];
+
     return key ? (
       <button
         type="button"
@@ -188,6 +189,7 @@ function Strip({ run }: { run: NonNullable<ReturnType<typeof buildRun>> }) {
   const scale = timeScale(timeline.phases, pxPerMin);
   const lanes = timeline.lanes;
   const h = lanes.length * LANE_H + 26;
+
   return (
     <section className="w4-section">
       <h3 className="w4-h">The run on one strip</h3>
@@ -233,6 +235,7 @@ function Strip({ run }: { run: NonNullable<ReturnType<typeof buildRun>> }) {
           ))}
           {timeline.marks.map((m, i) => {
             const li = lanes.findIndex((l) => l.id === m.lane);
+
             return (
               <circle
                 key={`${m.item.id}-${m.lane}-${i}`}

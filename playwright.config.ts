@@ -25,6 +25,7 @@ const get = (key: string) => {
         `and Vite the environment. Unset ${key} in the shell.`
     );
   }
+
   return fromFile ?? fromShell;
 };
 

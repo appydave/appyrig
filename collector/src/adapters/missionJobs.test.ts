@@ -47,7 +47,9 @@ describe('parseMissionJobs on the real d09-crew MISSION.md', () => {
     const jobs = parseMissionJobs(real);
     for (const j of jobs) {
       expect(j.specPaths.length, `slice ${j.slice}`).toBeGreaterThan(0);
-      for (const p of j.specPaths) expect(p.startsWith('/')).toBe(true);
+      for (const p of j.specPaths) {
+        expect(p.startsWith('/')).toBe(true);
+      }
     }
     expect(jobs[2]!.specNote).toContain('requirements-bundle-2026-10-09');
     // slice 8's second file is a relative path with a "/": never guessed into an absolute path

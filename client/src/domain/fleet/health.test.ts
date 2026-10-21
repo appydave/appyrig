@@ -24,6 +24,7 @@ function machine(
       swapTotalBytes: ok(swapTotalGb * GB),
     },
   } as unknown as MachineHealth;
+
   return { ...fm, snapshot: { ...fm.snapshot, health } };
 }
 
@@ -54,6 +55,7 @@ describe('F3 (resilience case 5): sample age survives a skewed collector clock',
     const fm = machine('normal', 1, 14);
     const receivedAt = NOW - 2_000;
     const collectedAt = receivedAt + skew;
+
     return {
       ...fm,
       lastSeen: new Date(receivedAt).toISOString(),
@@ -99,6 +101,7 @@ describe('F4 (resilience: worst dishonesty): stale never looks green', () => {
   ) => {
     const fm = machine(level, swapGb, 14);
     const received = NOW - seen;
+
     return {
       ...fm,
       lastSeen: new Date(received).toISOString(),

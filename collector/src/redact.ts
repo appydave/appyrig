@@ -68,9 +68,14 @@ const LABELLED_VALUE =
 const hasAll = (t: string, ...res: RegExp[]) => res.every((re) => re.test(t));
 const entropy = (t: string): number => {
   const counts = new Map<string, number>();
-  for (const c of t) counts.set(c, (counts.get(c) ?? 0) + 1);
+  for (const c of t) {
+    counts.set(c, (counts.get(c) ?? 0) + 1);
+  }
   let h = 0;
-  for (const n of counts.values()) h -= (n / t.length) * Math.log2(n / t.length);
+  for (const n of counts.values()) {
+    h -= (n / t.length) * Math.log2(n / t.length);
+  }
+
   return h;
 };
 
@@ -93,16 +98,21 @@ const ANSI = /\x1b(?:\[[0-?]*[ -/]*[@-~]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[@-Z\\-_]
  * line keeps them.
  */
 export function redactString(input: string): string {
-  if (!input.includes('\x1b')) return redactPlain(input);
+  if (!input.includes('\x1b')) {
+    return redactPlain(input);
+  }
   const plain = input.replace(ANSI, '');
   const out = redactPlain(plain);
+
   return out === plain ? input : out;
 }
 
 function redactPlain(input: string): string {
   // The key block first: the line-level patterns below would otherwise chew its header and leave the body.
   let out = input.replace(PRIVATE_KEY_BLOCK, REDACTED);
-  for (const re of PATTERNS) out = out.replace(re, REDACTED);
+  for (const re of PATTERNS) {
+    out = out.replace(re, REDACTED);
+  }
   out = out.replace(URL_CREDENTIALS, REDACTED);
   out = out.replace(BASIC_AUTH, (m) =>
     /^authorization/i.test(m) ? `Authorization: Basic ${REDACTED}` : `Basic ${REDACTED}`
@@ -112,6 +122,7 @@ function redactPlain(input: string): string {
     value === REDACTED || label.endsWith(REDACTED) ? _m : `${label}${REDACTED}`
   );
   out = out.replace(BARE_SECRET, (m) => (looksLikeBareSecret(m) ? REDACTED : m));
+
   return out;
 }
 
@@ -155,8 +166,9 @@ export function redactWrapped(lines: string[], paneWidth?: number | null): strin
       plain[end]!.trimEnd().length >= full &&
       ENDS_IN_RUN.test(plain[end]!.trimEnd()) &&
       STARTS_WITH_RUN.test(plain[end + 1]!.trimStart())
-    )
+    ) {
       end++;
+    }
     if (end === i) {
       i++;
       continue;
@@ -178,21 +190,26 @@ export function redactWrapped(lines: string[], paneWidth?: number | null): strin
     if (red !== joined) {
       // The changed span: common prefix and suffix of before and after.
       let a = 0;
-      while (a < joined.length && a < red.length && joined[a] === red[a]) a++;
+      while (a < joined.length && a < red.length && joined[a] === red[a]) {
+        a++;
+      }
       let b = 0;
       while (
         b < joined.length - a &&
         b < red.length - a &&
         joined[joined.length - 1 - b] === red[red.length - 1 - b]
-      )
+      ) {
         b++;
+      }
       const spanEnd = joined.length - b;
       const crosses = parts.some((p, k) => k > 0 && p.start > a && p.start < spanEnd);
       if (crosses) {
         parts.forEach((p, k) => {
           const s = Math.max(a, p.start);
           const e = Math.min(spanEnd, p.start + p.text.length);
-          if (s >= e) return; // this row is outside the secret: untouched
+          if (s >= e) {
+            return;
+          } // this row is outside the secret: untouched
           const local = p.text.slice(0, s - p.start) + REDACTED + p.text.slice(e - p.start);
           out[i + k] = redactPlain(p.indent + local);
         });
@@ -200,17 +217,26 @@ export function redactWrapped(lines: string[], paneWidth?: number | null): strin
     }
     i = end + 1;
   }
+
   return out;
 }
 
 /** Redacts every string leaf of a JSON-like value. Keys are left alone. */
 export function redactDeep<T>(value: T): T {
-  if (typeof value === 'string') return redactString(value) as T;
-  if (Array.isArray(value)) return value.map((v) => redactDeep(v)) as T;
+  if (typeof value === 'string') {
+    return redactString(value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((v) => redactDeep(v)) as T;
+  }
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = redactDeep(v);
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = redactDeep(v);
+    }
+
     return out as T;
   }
+
   return value;
 }

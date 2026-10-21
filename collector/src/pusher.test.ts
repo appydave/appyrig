@@ -50,8 +50,10 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
         : next(new Error('collector token missing or invalid'))
     )
     .on('connection', (socket) => {
-      if (hopts.caps && !hopts.ackOnly) socket.emit('hub:caps', hopts.caps);
-      if (modern)
+      if (hopts.caps && !hopts.ackOnly) {
+        socket.emit('hub:caps', hopts.caps);
+      }
+      if (modern) {
         for (const event of [
           'collector:rigfiles',
           'collector:schema',
@@ -60,11 +62,13 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
           'collector:loadout',
           'collector:rigspecs',
           'collector:rigcommands',
-        ])
+        ]) {
           socket.on(event, (payload, ack: (a: CollectorAck) => void) => {
             extra.push({ event, payload });
             ack({ ok: true, receivedAt: new Date().toISOString() });
           });
+        }
+      }
       socket.on('collector:snapshot', (raw, ack: (a: CollectorAck) => void) => {
         if (hopts.strictV15) {
           const bad = [...V2_SEAT_KEYS, ...V2_QUEUE_KEYS].find((k) =>
@@ -76,6 +80,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
               failureMode: 'invalid_snapshot',
               message: `seats.0: Unrecognized key: "${bad}"`,
             });
+
             return;
           }
         }
@@ -87,11 +92,14 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
               failureMode: 'invalid_snapshot',
               message: `rigs.0: Unrecognized key: "${bad}"`,
             });
+
             return;
           }
         }
         const r = MachineSnapshotSchema.safeParse(raw);
-        if (r.success) received.push(r.data);
+        if (r.success) {
+          received.push(r.data);
+        }
         ack(
           r.success
             ? {
@@ -105,6 +113,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
     });
   await new Promise<void>((r) => http.listen(port, '127.0.0.1', r));
   const actual = (http.address() as AddressInfo).port;
+
   return {
     url: `http://127.0.0.1:${actual}`,
     received,
@@ -119,7 +128,9 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
 const until = async (cond: () => boolean, ms = 4000) => {
   const t0 = Date.now();
   while (!cond()) {
-    if (Date.now() - t0 > ms) throw new Error('timed out waiting');
+    if (Date.now() - t0 > ms) {
+      throw new Error('timed out waiting');
+    }
     await new Promise((r) => setTimeout(r, 20));
   }
 };
@@ -250,6 +261,7 @@ describe('pusher', () => {
       log: (l) => lines.push(l),
       handoffs: async () => {
         batches++;
+
         return {
           bodies: { machineId: 'roamy', collectedAt: new Date().toISOString(), items: [] },
           markSent: () => {},
@@ -275,6 +287,7 @@ describe('pusher', () => {
       schemaIntervalMs: 40,
       rigFiles: async () => {
         fileTakes++;
+
         return marked === 0
           ? {
               pushes: [
@@ -324,6 +337,7 @@ describe('pusher', () => {
       rigFilesIntervalMs: 30,
       rigFiles: async () => {
         takes++;
+
         return {
           pushes: [
             {
@@ -349,6 +363,7 @@ describe('pusher', () => {
   // protects an older strict hub: the pusher sends v2 keys only to a hub that advertised them.
   const withV2 = async (): Promise<MachineSnapshot> => {
     const snap = await build();
+
     return {
       ...snap,
       seats: snap.seats.map((x) => ({ ...x, tmuxAttachCommand: 'tmux attach -t x' })),
@@ -452,6 +467,7 @@ describe('pusher', () => {
   // Spec fields (pods, spec edges, from rig.yaml) ride the same rule: only to a hub that said so.
   const withSpec = async (): Promise<MachineSnapshot> => {
     const snap = await withV2();
+
     return {
       ...snap,
       rigs: snap.rigs.map((r) => ({
@@ -512,6 +528,7 @@ describe('pusher', () => {
       log: () => {},
       rigFiles: async (caps) => {
         seen.push(caps.has(HUB_CAPS.SPEC_FILES));
+
         return null;
       },
     });
@@ -580,6 +597,7 @@ describe('pusher', () => {
       daemonDataIntervalMs: 20,
       daemonData: async () => {
         takes++;
+
         return null;
       },
     });
@@ -602,6 +620,7 @@ describe('pusher', () => {
       missionFilesIntervalMs: 20,
       missionFiles: async () => {
         takes++;
+
         return null;
       },
     });
@@ -625,7 +644,10 @@ describe('pusher', () => {
       missionFilesIntervalMs: 20,
       missionFiles: async () => {
         n++;
-        if (n % 2 === 1) throw new Error('mission files exploded');
+        if (n % 2 === 1) {
+          throw new Error('mission files exploded');
+        }
+
         return {
           pushes: [
             {
@@ -657,6 +679,7 @@ describe('pusher', () => {
       rigSpecsIntervalMs: 20,
       rigSpecs: async () => {
         reads.specs++;
+
         return {
           push: { machineId: 'roamy', collectedAt: new Date().toISOString(), specs: [] },
           markSent: () => {},
@@ -665,6 +688,7 @@ describe('pusher', () => {
       rigCommandsIntervalMs: 20,
       rigCommands: async () => {
         reads.cmds++;
+
         return {
           push: {
             machineId: 'roamy',
@@ -744,7 +768,10 @@ describe('pusher', () => {
       daemonDataIntervalMs: 20,
       daemonData: async () => {
         takes++;
-        if (takes % 2 === 1) throw new Error('daemon exploded');
+        if (takes % 2 === 1) {
+          throw new Error('daemon exploded');
+        }
+
         return {
           pushes: [huge, pushOf(1)],
           markSent: () => void marked++,
@@ -777,6 +804,7 @@ describe('pusher', () => {
         max = Math.max(max, running);
         await new Promise((r) => setTimeout(r, 60));
         running--;
+
         return build();
       },
     });

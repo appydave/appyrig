@@ -46,6 +46,7 @@ function ItemActions({ item }: { item: NeedItem }) {
       </span>
     );
   }
+
   return (
     <span className="ny-actions ar-fake" data-phase="idle">
       {ACTIONS.filter((a) => !a.kinds || a.kinds.includes(item.kind)).map((a) => (
@@ -68,6 +69,7 @@ function Card({ item, ctx }: { item: NeedItem; ctx: PageProps['ctx'] }) {
   const rigRef = item.rig
     ? ctx.rigs.find((r) => r.machineId === item.machineId && r.name === item.rig)
     : undefined;
+
   return (
     <li
       className={`ny-card ny-${item.kind}${item.stale ? ' ny-stale' : ''}`}
@@ -177,6 +179,7 @@ function useGates(ctx: PageProps['ctx']): GatesState {
   const { getSocket } = ctx;
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), GATES_REFRESH_MS);
+
     return () => clearInterval(id);
   }, []);
   useEffect(() => {
@@ -189,19 +192,23 @@ function useGates(ctx: PageProps['ctx']): GatesState {
         )
       )
     ).then((rows) => {
-      if (!live) return;
+      if (!live) {
+        return;
+      }
       setState({
         byRig: Object.fromEntries(rows.filter((r) => r.gates).map((r) => [r.key, r.gates!])),
         unread: rows.filter((r) => !r.gates).length,
         loaded: true,
       });
     });
+
     return () => {
       live = false;
     };
     // `sig` stands for `targets` (a new snapshot with the same rigs and activity asks nothing).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig, tick, getSocket]);
+
   return state;
 }
 

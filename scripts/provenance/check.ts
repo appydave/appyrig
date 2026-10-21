@@ -62,6 +62,7 @@ function fail(msg: string): never {
 
 function arg(name: string): string | undefined {
   const i = process.argv.indexOf(name);
+
   return i > 0 ? process.argv[i + 1] : undefined;
 }
 
@@ -84,6 +85,7 @@ function git(args: string[]): string {
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((n) => {
     const p = join(dir, n);
+
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
 }
@@ -91,10 +93,14 @@ function walk(dir: string): string[] {
 let resolvedRef = 'WORKTREE';
 let allFiles: string[];
 if (sourceDir) {
-  if (!existsSync(sourceDir)) fail(`--source ${sourceDir} does not exist`);
+  if (!existsSync(sourceDir)) {
+    fail(`--source ${sourceDir} does not exist`);
+  }
   allFiles = walk(sourceDir).map((p) => relative(sourceDir, p));
 } else {
-  if (!existsSync(repo)) fail(`OpenRig clone not found at ${repo} (set OPENRIG_SRC)`);
+  if (!existsSync(repo)) {
+    fail(`OpenRig clone not found at ${repo} (set OPENRIG_SRC)`);
+  }
   try {
     resolvedRef = git(['rev-parse', '--verify', `${ref}^{commit}`]).trim();
   } catch {
@@ -105,8 +111,13 @@ if (sourceDir) {
 const fileSet = new Set(allFiles);
 
 function read(path: string): string | null {
-  if (!fileSet.has(path)) return null;
-  if (sourceDir) return readFileSync(join(sourceDir, path), 'utf8');
+  if (!fileSet.has(path)) {
+    return null;
+  }
+  if (sourceDir) {
+    return readFileSync(join(sourceDir, path), 'utf8');
+  }
+
   return git(['show', `${resolvedRef}:${path}`]);
 }
 
@@ -129,6 +140,7 @@ const keys = (schema: { shape: Record<string, unknown> }) => Object.keys(schema.
 
 function fromFile(file: string, pick: (text: string) => string[] | null): string[] | null {
   const text = read(file);
+
   return text === null ? null : pick(text);
 }
 
@@ -330,7 +342,10 @@ const probes: Probe[] = [
       );
       const recap = read(`${DOMAIN}/context-packs/seat-recap-store.ts`);
       const recapName = recap === null ? null : stringConst(recap, 'RECAP_FILENAME');
-      if (doc === null || recapName === null) return null;
+      if (doc === null || recapName === null) {
+        return null;
+      }
+
       return unique([...doc, recapName, ...shippedTopologyNames]);
     })(),
     ours: OpenRig.TOPOLOGY_CHAIN_FILES,
@@ -377,7 +392,9 @@ function compare(p: Probe): ProbeResult {
     ignored: [] as string[],
     oursOnly: [] as string[],
   };
-  if (p.theirs === null || p.theirs.length === 0) return { ...base, status: 'anchor-missing' };
+  if (p.theirs === null || p.theirs.length === 0) {
+    return { ...base, status: 'anchor-missing' };
+  }
   const theirs = new Set(p.theirs);
   const ours = new Set(p.ours);
   const onlyTheirs = p.theirs.filter((x) => !ours.has(x));
@@ -389,6 +406,7 @@ function compare(p: Probe): ProbeResult {
     added.length === 1 && removed.length === 1 ? [{ from: removed[0]!, to: added[0]! }] : [];
   const common = p.theirs.filter((x) => ours.has(x));
   const reordered = !!p.ordered && common.join() !== p.ours.filter((x) => theirs.has(x)).join();
+
   return {
     ...base,
     status: added.length || removed.length || reordered ? 'drift' : 'ok',
@@ -441,7 +459,9 @@ const examples: ExampleResult[] = exampleFiles.map((file) => {
   const schema = kind === 'agent' ? OpenRig.AgentSpecSchema : OpenRig.RigSpecSchema;
   const r = schema.safeParse(parse(text));
   const out: ExampleResult = { file: file.slice(SPECS.length + 1), kind, ours: r.success };
-  if (!r.success) out.oursError = JSON.stringify(r.error.issues).slice(0, 300);
+  if (!r.success) {
+    out.oursError = JSON.stringify(r.error.issues).slice(0, 300);
+  }
   if (openrigValidator) {
     try {
       const v =
@@ -449,12 +469,15 @@ const examples: ExampleResult[] = exampleFiles.map((file) => {
           ? openrigValidator.validateAgentSpecFromYaml(text)
           : openrigValidator.validateRigSpecImport(text);
       out.openrig = v.valid;
-      if (!v.valid) out.openrigErrors = v.errors.slice(0, 3);
+      if (!v.valid) {
+        out.openrigErrors = v.errors.slice(0, 3);
+      }
     } catch (e) {
       out.openrig = false;
       out.openrigErrors = [(e as Error).message];
     }
   }
+
   return out;
 });
 // Drift: our schema refuses a file OpenRig ships, or disagrees with OpenRig's own validator.
@@ -479,6 +502,7 @@ const cites = unique(
   .filter((c) => c.includes('/') || /^[a-z]+(?:-[a-z]+)+\.ts$/.test(c));
 const citeResults = cites.map((c) => {
   const hits = allFiles.filter((f) => f === c || f.endsWith(`/${c}`));
+
   return { cite: c, found: hits.length > 0, at: hits.slice(0, 2) };
 });
 const citeDrift = citeResults.filter((c) => !c.found);
@@ -494,7 +518,9 @@ if (existsSync(clientDir)) {
     for (const m of text.matchAll(lineCite)) {
       const [cite, name, n] = [m[0], m[1]!, Number(m[2])];
       const hits = allFiles.filter((p) => p.endsWith(`/${name}`) && p.startsWith('packages/'));
-      if (hits.length === 0) continue; // not an OpenRig file
+      if (hits.length === 0) {
+        continue;
+      } // not an OpenRig file
       const where = relative(root, f);
       if (hits.length > 1) {
         clientCites.push({ where, cite, status: 'ambiguous' });
@@ -551,13 +577,16 @@ const report = {
 // The report goes to out/; when that cannot be written (a read-only tree), to the temp folder
 // instead, said once on stderr. Where the report lands never changes the exit code.
 let outDir = join(here, 'out');
+
 function writeReport(name: string, text: string): void {
   try {
     mkdirSync(outDir, { recursive: true });
     writeFileSync(join(outDir, name), text);
   } catch (e) {
     const fallback = join(tmpdir(), 'appyrig-provenance');
-    if (outDir === fallback) throw e;
+    if (outDir === fallback) {
+      throw e;
+    }
     console.error(
       `provenance: could not write ${relative(root, outDir) || outDir} (${(e as NodeJS.ErrnoException).code ?? (e as Error).message}); wrote the report to ${fallback}`
     );
@@ -565,6 +594,7 @@ function writeReport(name: string, text: string): void {
     writeReport(name, text);
   }
 }
+
 writeReport('report.json', `${JSON.stringify(report, null, 2)}\n`);
 
 const md: string[] = [
@@ -583,6 +613,7 @@ const md: string[] = [
       r.status === 'anchor-missing' ? `anchor not found: ${r.anchor}` : '',
       r.ignored.length ? `ignored: ${r.ignored.join(', ')}` : '',
     ].filter(Boolean);
+
     return `| ${r.id} | ${r.status} | ${d.join('; ')} |`;
   }),
   '',
@@ -611,7 +642,9 @@ if (process.argv.includes('--update-pin')) {
     pin.openrig.describe = git(['describe', '--tags', resolvedRef]).trim();
     pin.openrig.commitDate = git(['log', '-1', '--format=%cI', resolvedRef]).trim();
     const pkg = read('packages/cli/package.json');
-    if (pkg) pin.openrig.version = (JSON.parse(pkg) as { version: string }).version;
+    if (pkg) {
+      pin.openrig.version = (JSON.parse(pkg) as { version: string }).version;
+    }
     pin.checked = new Date().toISOString().slice(0, 10);
     writeFileSync(PIN_FILE, `${JSON.stringify(pin, null, 2)}\n`);
     console.log(`provenance: pin moved to ${resolvedRef.slice(0, 10)}`);

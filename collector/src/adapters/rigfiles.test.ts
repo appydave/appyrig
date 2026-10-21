@@ -23,6 +23,7 @@ const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-rf-'));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -38,8 +39,10 @@ function layout() {
   const team = join(mission, 'team');
   put(join(team, 'rig.yaml'), 'name: demo\nsummary: s\n');
   const spec: SpecInfo = { path: join(team, 'rig.yaml'), root, summary: 's', spec: null };
+
   return { root, mission, team, spec };
 }
+
 const ids = async (spec: SpecInfo) => (await candidatesFor(spec)).map((c) => c.id);
 
 describe('which files may be read (the boundary)', () => {
@@ -54,8 +57,9 @@ describe('which files may be read (the boundary)', () => {
       'secrets.md',
       'brief.md.bak',
       'brief.txt',
-    ])
+    ]) {
       put(join(team, n));
+    }
     for (const n of [
       'brief.md',
       'REPORT.md',
@@ -64,8 +68,9 @@ describe('which files may be read (the boundary)', () => {
       'rig.yaml',
       'other.yaml',
       'package.json',
-    ])
+    ]) {
       put(join(mission, n));
+    }
     expect(await ids(spec)).toEqual([
       'spec:CULTURE.md',
       'spec:LEARNED-dev-ui.md',
@@ -192,10 +197,11 @@ describe('chunking and change detection', () => {
     );
     expect(pushes.length).toBeGreaterThan(1);
     expect(pushes.map((p) => p.replace)).toEqual(pushes.map((_, i) => i === 0));
-    for (const p of pushes)
+    for (const p of pushes) {
       expect(p.files.reduce((n, f) => n + Buffer.byteLength(f.content), 0)).toBeLessThanOrEqual(
         RIG_FILES_CHUNK_BYTES
       );
+    }
     expect(pushes.flatMap((p) => p.files)).toHaveLength(5);
   });
 
@@ -273,7 +279,9 @@ describe('chunking and change detection', () => {
     let ticks = 0;
     for (; ticks < 10; ticks++) {
       const p = await r.next(specs);
-      if (!p) break;
+      if (!p) {
+        break;
+      }
       const bytes = p.pushes.reduce(
         (n, x) => n + x.files.reduce((m, f) => m + Buffer.byteLength(f.content), 0),
         0
@@ -312,8 +320,10 @@ describe('run card R3: variant specs, batch briefs, and the cap', () => {
       'CULTURE.md',
       'LEARNED-lead.md',
       'secrets.md',
-    ])
+    ]) {
       put(join(dir, n));
+    }
+
     return {
       d10: { path: join(dir, 'rig-d10.yaml'), root, summary: null, spec: null } as SpecInfo,
       base: { path: join(dir, 'rig.yaml'), root, summary: null, spec: null } as SpecInfo,
@@ -358,7 +368,9 @@ describe('run card R3: variant specs, batch briefs, and the cap', () => {
 
   it("over the cap, LEARNED files drop first; the run card's sources stay, in listed order", async () => {
     const { mission, team, spec } = layout();
-    for (let i = 0; i < 14; i++) put(join(team, `LEARNED-${String(i).padStart(2, '0')}.md`));
+    for (let i = 0; i < 14; i++) {
+      put(join(team, `LEARNED-${String(i).padStart(2, '0')}.md`));
+    }
     put(join(team, 'MISSION.md'));
     put(join(mission, 'views-brief.md'));
     put(join(mission, 'REPORT.md'));
@@ -423,8 +435,9 @@ describe('scope rig: the files the validated rig.yaml names (OpenRig resolves th
       'guidance/rig-start.md',
       'guidance/pod.md',
       'guidance/build-first-move.md',
-    ])
+    ]) {
       put(join(team, f), `# ${f}\n`);
+    }
     put(join(root, 'proj', 'outside.md'), 'not the rig root\n');
     const spec: SpecInfo = {
       path: join(team, 'rig.yaml'),
@@ -432,6 +445,7 @@ describe('scope rig: the files the validated rig.yaml names (OpenRig resolves th
       summary: null,
       spec: parseSpec(RIG_YAML)!.spec,
     };
+
     return { root, team, spec };
   }
 

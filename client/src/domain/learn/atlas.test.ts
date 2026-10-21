@@ -6,7 +6,9 @@ describe('concept atlas', () => {
     const ids = new Set(ATLAS.terms.map((t) => t.id));
     for (const t of ATLAS.terms) {
       expect(STATUS_LABEL[t.status]).toBeDefined();
-      for (const r of t.related) expect(ids.has(r.id)).toBe(true);
+      for (const r of t.related) {
+        expect(ids.has(r.id)).toBe(true);
+      }
     }
   });
 

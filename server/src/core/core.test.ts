@@ -28,6 +28,7 @@ function fleet() {
   store.put(loadSnapshot('roamy'));
   store.put(loadSnapshot('m2'));
   const core = createCore({ store, identity, now: clock.now });
+
   return { clock, store, core };
 }
 
@@ -126,18 +127,26 @@ describe('AC 9 — every verb is a read-only query', () => {
     const hits: string[] = [];
     const walk = (dir: string): string[] =>
       readdirSync(dir).flatMap((n) => {
-        if (n === 'node_modules' || n === 'dist') return [];
+        if (n === 'node_modules' || n === 'dist') {
+          return [];
+        }
         const p = join(dir, n);
+
         return statSync(p).isDirectory() ? walk(p) : [p];
       });
     for (const top of ['server/src', 'server/scripts', 'client/src', 'shared/src']) {
       for (const file of walk(join(root, top))) {
-        if (!/\.(ts|tsx|js|mjs)$/.test(file) || /\.test\.(ts|tsx)$/.test(file)) continue;
+        if (!/\.(ts|tsx|js|mjs)$/.test(file) || /\.test\.(ts|tsx)$/.test(file)) {
+          continue;
+        }
         readFileSync(file, 'utf8')
           .split('\n')
           .forEach((line, i) => {
-            for (const re of FORBIDDEN)
-              if (re.test(line)) hits.push(`${relative(root, file)}:${i + 1} ${re}`);
+            for (const re of FORBIDDEN) {
+              if (re.test(line)) {
+                hits.push(`${relative(root, file)}:${i + 1} ${re}`);
+              }
+            }
           });
       }
     }
@@ -150,16 +159,19 @@ describe('core.call — the one seam', () => {
     const { core } = fleet();
     const a = core.call(AGENT, 'fleet.get', {});
     expect(a.ok).toBe(true);
-    if (a.ok)
+    if (a.ok) {
       expect(
         (a.value as { machines: { machine: { id: string } }[] }).machines.map((m) => m.machine.id)
       ).toEqual(['m2', 'roamy']);
+    }
   });
 
   it('machine.list counts seats by every status', () => {
     const { core } = fleet();
     const a = core.call(AGENT, 'machine.list', {});
-    if (!a.ok) throw new Error(a.error.message);
+    if (!a.ok) {
+      throw new Error(a.error.message);
+    }
     const m2 = (
       a.value as {
         machine: { id: string };
@@ -177,7 +189,9 @@ describe('core.call — the one seam', () => {
     store.put(loadSnapshot('roamy--blocked'));
     const core = createCore({ store, identity, now: clock.now });
     const a = core.call(AGENT, 'seat.list', { status: 'blocked' });
-    if (!a.ok) throw new Error(a.error.message);
+    if (!a.ok) {
+      throw new Error(a.error.message);
+    }
     const seats = a.value as { seat: Record<string, unknown> & { status: string } }[];
     expect(seats.length).toBeGreaterThan(0);
     for (const s of seats) {
@@ -192,7 +206,9 @@ describe('core.call — the one seam', () => {
       .get('roamy')!
       .snapshot.seats.find((s) => s.tail && s.tail.lines.length > 3)!;
     const a = core.call(AGENT, 'seat.tail', { machine: 'roamy', seat: withTail.id, lines: 3 });
-    if (!a.ok) throw new Error(a.error.message);
+    if (!a.ok) {
+      throw new Error(a.error.message);
+    }
     expect(a.value).toMatchObject({ available: true, lines: withTail.tail!.lines.slice(-3) });
 
     const stopped = store.get('m2')!.snapshot.seats.find((s) => s.tail === null);
@@ -216,8 +232,9 @@ describe('core.call — the one seam', () => {
     });
     const noSeat = core.call(AGENT, 'seat.tail', { machine: 'roamy', seat: 'nope' });
     expect(noSeat).toMatchObject({ ok: false, error: { failureMode: 'seat-not-found' } });
-    if (!noSeat.ok)
+    if (!noSeat.ok) {
       expect((noSeat.error.details as { known: string[] }).known.length).toBeGreaterThan(0);
+    }
     expect(core.call(AGENT, 'seat.fly', {})).toMatchObject({
       ok: false,
       error: {
@@ -585,6 +602,7 @@ describe('v2 · library.list / library.get', () => {
     store.put(loadSnapshot('roamy'));
     store.put(loadSnapshot('m2'));
     const core = createCore({ store, identity, now: clock.now });
+
     return { store, core };
   };
   const put = (store: FleetStore, machineId: string, data: DaemonDataFor<'library'> | null) =>
@@ -678,8 +696,9 @@ describe('v2 · library.list / library.get', () => {
     const { core } = setup();
     const v = (core.call(AGENT, 'library.list', {}) as { value: LibraryListOutput }).value;
     expect(v.items).toEqual([]);
-    for (const m of v.machines)
+    for (const m of v.machines) {
       expect(m).toMatchObject({ status: 'pending', reason: expect.any(String) });
+    }
   });
 });
 
@@ -729,6 +748,7 @@ describe('v2 · history.transitions', () => {
         reason: null,
         data: { rows: more, retained: more.length, truncated: false, hostId: 'h', bootEpoch: 'b' },
       });
+
     return { call, core, replaceRows };
   };
 
@@ -831,6 +851,7 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
     const core = createCore({ store, identity, now: clock.now });
     const value = <T>(verb: string, input: object = {}) =>
       (core.call(AGENT, verb, input) as { value: T }).value;
+
     return { store, core, value };
   };
   const base = { machineId: 'roamy', key: '', collectedAt: '2026-10-18T12:00:00.000Z' } as const;
@@ -911,8 +932,9 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
       1
     );
     const pending = setup().value<WorkflowListOutput>('workflow.list');
-    for (const m of pending.machines)
+    for (const m of pending.machines) {
       expect(m).toMatchObject({ status: 'pending', specsRead: false, instancesRead: false });
+    }
   });
 
   const health = (over: Partial<DaemonDataFor<'health'>> = {}): DaemonDataFor<'health'> => ({
@@ -1079,7 +1101,7 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
 
   it('settings.get: filters by key or prefix, flags changed, and counts what was withheld', () => {
     const { store, value } = setup();
-    for (const machineId of ['roamy', 'm2'])
+    for (const machineId of ['roamy', 'm2']) {
       store.daemonData.put({
         ...base,
         machineId,
@@ -1104,6 +1126,7 @@ describe('v2 · workflow.list / health.findings / settings.get', () => {
           pathsHidden: 1,
         },
       });
+    }
     const all = value<SettingsGetOutput>('settings.get', { machine: 'm2' });
     expect(all.machines[0]).toMatchObject({ withheld: 4, pathsHidden: 1 });
     expect(all.machines[0]!.settings.map((s) => [s.key, s.changed])).toEqual([
@@ -1167,12 +1190,13 @@ describe('batch 1 · B5 — db.rows', () => {
         hiddenColumns: ['resume_token'],
       },
     });
-    if (a.ok)
+    if (a.ok) {
       expect((a.value as { rows: unknown[][] }).rows[0]).toEqual([
         70,
         'row 70',
         '(hidden: column name looks secret)',
       ]);
+    }
   });
 
   it('"pending" (never an empty table) when nothing came for it: an older collector', () => {

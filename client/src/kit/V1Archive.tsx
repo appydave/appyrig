@@ -18,13 +18,19 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
   // A screen is a row; its pictures are the consecutive slides sharing that row.
   const firstOfRow = (i: number) => {
     let j = i;
-    while (j > 0 && slides[j - 1]!.row.row === slides[i]!.row.row) j--;
+    while (j > 0 && slides[j - 1]!.row.row === slides[i]!.row.row) {
+      j--;
+    }
+
     return j;
   };
   const prevScreen = (i: number) => (firstOfRow(i) === 0 ? 0 : firstOfRow(firstOfRow(i) - 1));
   const nextScreen = (i: number) => {
     let j = i;
-    while (j < last && slides[j + 1]!.row.row === slides[i]!.row.row) j++;
+    while (j < last && slides[j + 1]!.row.row === slides[i]!.row.row) {
+      j++;
+    }
+
     return Math.min(last, j + 1);
   };
   const samePicture = (i: number, d: number) =>
@@ -35,9 +41,12 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
     fetch('/api/v1-archive', { credentials: 'same-origin' })
       .then((r) => (r.ok ? r.json() : { files: [] }))
       .then((j: { files?: unknown }) => {
-        if (live) setOnHub(new Set(Array.isArray(j.files) ? j.files.map(String) : []));
+        if (live) {
+          setOnHub(new Set(Array.isArray(j.files) ? j.files.map(String) : []));
+        }
       })
       .catch(() => live && setOnHub(new Set()));
+
     return () => {
       live = false;
     };
@@ -46,7 +55,9 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Tab') return;
+      if (e.key === 'Tab') {
+        return;
+      }
       // This layer owns the keyboard while it is open (F, L, ? and friends stay quiet).
       e.stopPropagation();
       if (e.key === 'Escape') {
@@ -67,6 +78,7 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
       }
     };
     window.addEventListener('keydown', onKey, true);
+
     return () => window.removeEventListener('keydown', onKey, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onClose, slides]);
@@ -173,6 +185,7 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
           <nav className="v1a-strip" aria-label="Jump to a V1 screen">
             {rowSlides.map(({ s, i }) => {
               const active = slide.row.row === s.row.row;
+
               return (
                 <button
                   key={s.row.row}

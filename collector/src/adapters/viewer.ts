@@ -22,9 +22,13 @@ export function parseAgentList(raw: unknown): ViewerAgent[] {
       `agent list: ${r.success ? 'no agents array' : issueMessages(r.error).join('; ')}`
     );
   }
+
   return rows.map((row, i) => {
     const r = LenientHerdrAgent.safeParse(row);
-    if (!r.success) throw new Error(`agent list[${i}]: ${issueMessages(r.error).join('; ')}`);
+    if (!r.success) {
+      throw new Error(`agent list[${i}]: ${issueMessages(r.error).join('; ')}`);
+    }
+
     return {
       paneId: r.data.pane_id,
       agent: r.data.agent,

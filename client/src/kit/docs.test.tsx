@@ -77,7 +77,9 @@ describe('groupSkills', () => {
     render(<SkillsPanel skills={[sk('a:x', 'a'), sk('b:z', 'b')]} />);
     expect(screen.getByTestId('ar-agent-skills-count')).toHaveTextContent('2 skills');
     expect(screen.getByTestId('skills-used-note')).toHaveTextContent(/isn.t recorded/);
-    for (const d of screen.getAllByTestId('skills-group')) expect(d).not.toHaveAttribute('open');
+    for (const d of screen.getAllByTestId('skills-group')) {
+      expect(d).not.toHaveAttribute('open');
+    }
     fireEvent.change(screen.getByTestId('skills-search'), { target: { value: 'z' } });
     expect(screen.getAllByTestId('skills-group')).toHaveLength(1);
   });

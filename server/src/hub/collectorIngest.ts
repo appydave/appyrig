@@ -60,6 +60,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     const auth = socket.handshake.auth as Partial<CollectorAuth>;
     if (!opts.hubToken || !sameSecret(auth.token, opts.hubToken)) {
       next(new Error(AUTH_ERRORS.collectorToken));
+
       return;
     }
     next();
@@ -82,6 +83,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
             .join('; '),
         };
         reply(result);
+
         return;
       }
       if (parsed.data.machine.id !== machineId) {
@@ -90,6 +92,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
           failureMode: 'machine_mismatch',
           message: `socket authenticated as ${machineId}, snapshot is for ${parsed.data.machine.id}`,
         });
+
         return;
       }
       const entry = opts.store.put(parsed.data);
@@ -115,6 +118,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
             .map((i) => `${i.path.join('.')}: ${i.message}`)
             .join('; '),
         });
+
         return;
       }
       if (parsed.data.machineId !== machineId) {
@@ -123,6 +127,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
           failureMode: 'machine_mismatch',
           message: `socket authenticated as ${machineId}, history is for ${parsed.data.machineId}`,
         });
+
         return;
       }
       opts.store.putHistory(parsed.data);
@@ -142,6 +147,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
             .map((i) => `${i.path.join('.')}: ${i.message}`)
             .join('; '),
         });
+
         return;
       }
       if (parsed.data.machineId !== machineId) {
@@ -150,6 +156,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
           failureMode: 'machine_mismatch',
           message: `socket authenticated as ${machineId}, queue bodies are for ${parsed.data.machineId}`,
         });
+
         return;
       }
       opts.store.putHandoffs(parsed.data);
@@ -181,6 +188,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
               .map((i) => `${i.path.join('.')}: ${i.message}`)
               .join('; '),
           });
+
           return;
         }
         if (parsed.data.machineId !== machineId) {
@@ -189,6 +197,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
             failureMode: 'machine_mismatch',
             message: `socket authenticated as ${machineId}, ${what} is for ${parsed.data.machineId}`,
           });
+
           return;
         }
         store(parsed.data as never);

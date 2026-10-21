@@ -247,6 +247,7 @@ describe('History', () => {
     const { socket } = answeringSocket({
       'history.transitions': (input: { before?: string }) => {
         asked.push(input);
+
         return input.before ? page([t('1', 'done')], null) : page([t('2', 'pending')], 'cur_abc');
       },
     });

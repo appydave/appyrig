@@ -53,6 +53,7 @@ function Row({
   const rigRef = rig
     ? ctx.rigs.find((x) => x.machineId === r.machineId && x.name === rig)
     : undefined;
+
   return (
     <li className="hist-row" data-testid="hist-row" data-state={r.state} data-origin={r.origin}>
       <div className="hist-main">
@@ -111,8 +112,10 @@ function useDebounced<T>(v: T, ms: number): T {
   const [d, setD] = useState(v);
   useEffect(() => {
     const id = setTimeout(() => setD(v), ms);
+
     return () => clearTimeout(id);
   }, [v, ms]);
+
   return d;
 }
 
@@ -167,7 +170,9 @@ function History({ ctx }: PageProps) {
       'history.transitions',
       toInput(JSON.parse(qKey) as Query)
     ).then((a) => {
-      if (gen !== generation.current) return;
+      if (gen !== generation.current) {
+        return;
+      }
       if (a.ok) {
         setFirst({ phase: 'ok', value: a.value });
         setCursor(a.value.nextCursor);
@@ -182,7 +187,9 @@ function History({ ctx }: PageProps) {
   const live = src.kind === 'live' ? src.value : null;
 
   const loadOlder = () => {
-    if (!cursor || busy) return;
+    if (!cursor || busy) {
+      return;
+    }
     const gen = generation.current;
     setBusy(true);
     setOlderErr(null);
@@ -191,9 +198,13 @@ function History({ ctx }: PageProps) {
       'history.transitions',
       toInput(query, cursor)
     ).then((a) => {
-      if (gen !== generation.current) return;
+      if (gen !== generation.current) {
+        return;
+      }
       setBusy(false);
-      if (!a.ok) return setOlderErr(a.error.message);
+      if (!a.ok) {
+        return setOlderErr(a.error.message);
+      }
       setOlder((o) => [...o, ...a.value.rows]);
       setCursor(a.value.nextCursor);
     });

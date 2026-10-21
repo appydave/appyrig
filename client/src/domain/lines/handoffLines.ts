@@ -33,8 +33,13 @@ export const LINE_WIDTH_CAP = 3;
 
 /** The width step for a handoff count: absolute cut-offs, not a share of the busiest pair. */
 export function lineStep(count: number): LineStep {
-  if (count >= LINE_HEAVY_FROM) return 'heavy';
-  if (count >= LINE_MEDIUM_FROM) return 'medium';
+  if (count >= LINE_HEAVY_FROM) {
+    return 'heavy';
+  }
+  if (count >= LINE_MEDIUM_FROM) {
+    return 'medium';
+  }
+
   return 'thin';
 }
 
@@ -75,7 +80,9 @@ export const pairKey = (a: string, b: string): string =>
 export function mergePairs(edges: RawEdge[]): LinePair[] {
   const map = new Map<string, LinePair>();
   for (const e of edges) {
-    if (e.from === e.to) continue;
+    if (e.from === e.to) {
+      continue;
+    }
     const [a, b] = e.from < e.to ? [e.from, e.to] : [e.to, e.from];
     const k = pairKey(a, b);
     const p = map.get(k) ?? {
@@ -88,14 +95,20 @@ export function mergePairs(edges: RawEdge[]): LinePair[] {
       leftOpen: 0,
       planned: true,
     };
-    if (e.from === a) p.aToB += e.count;
-    else p.bToA += e.count;
+    if (e.from === a) {
+      p.aToB += e.count;
+    } else {
+      p.bToA += e.count;
+    }
     p.total += e.count;
     p.waiting += e.open ?? 0;
     p.leftOpen += e.stale ?? 0;
-    if (e.count > 0 || !e.planned) p.planned = false;
+    if (e.count > 0 || !e.planned) {
+      p.planned = false;
+    }
     map.set(k, p);
   }
+
   return [...map.values()].sort(
     (x, y) => y.total - x.total || pairKey(x.a, x.b).localeCompare(pairKey(y.a, y.b))
   );
@@ -103,9 +116,16 @@ export function mergePairs(edges: RawEdge[]): LinePair[] {
 
 /** "14 ⇄ 8" both ways; "14 →" one way a to b; "← 8" one way b to a; "" for a planned line. */
 export function pairLabel(p: Pick<LinePair, 'aToB' | 'bToA'>): string {
-  if (p.aToB > 0 && p.bToA > 0) return `${p.aToB} ⇄ ${p.bToA}`;
-  if (p.aToB > 0) return `${p.aToB} →`;
-  if (p.bToA > 0) return `← ${p.bToA}`;
+  if (p.aToB > 0 && p.bToA > 0) {
+    return `${p.aToB} ⇄ ${p.bToA}`;
+  }
+  if (p.aToB > 0) {
+    return `${p.aToB} →`;
+  }
+  if (p.bToA > 0) {
+    return `← ${p.bToA}`;
+  }
+
   return '';
 }
 
@@ -168,8 +188,13 @@ export const lineFocusId = (a: string, b: string): string => `line:${pairKey(a, 
  * dimmed; with a line focused, only that line is lit.
  */
 export function lineFocusState(focus: string | null, a: string, b: string): LineFocusState {
-  if (focus === null) return 'faint';
-  if (focus.startsWith('line:')) return focus === lineFocusId(a, b) ? 'lit' : 'dimmed';
+  if (focus === null) {
+    return 'faint';
+  }
+  if (focus.startsWith('line:')) {
+    return focus === lineFocusId(a, b) ? 'lit' : 'dimmed';
+  }
+
   return focus === a || focus === b ? 'lit' : 'dimmed';
 }
 

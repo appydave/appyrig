@@ -30,6 +30,7 @@ function fleet(): FleetMachine[] {
       q('b', ['mission:beta', 'slice:1'], 'dev-qa@fliedit-team'),
     ],
   };
+
   return [m2];
 }
 

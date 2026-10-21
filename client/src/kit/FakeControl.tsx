@@ -25,7 +25,9 @@ export function useFakeAction(workMs = 1200): FakeAction {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
-      if (timer.current) clearTimeout(timer.current);
+      if (timer.current) {
+        clearTimeout(timer.current);
+      }
     },
     []
   );
@@ -33,6 +35,7 @@ export function useFakeAction(workMs = 1200): FakeAction {
     setPhase('working');
     timer.current = setTimeout(() => setPhase('done'), workMs);
   }, [workMs]);
+
   return {
     phase,
     ask: () => setPhase('confirm'),
@@ -58,6 +61,7 @@ export default function FakeControl({ label, question, result, workMs }: Props) 
   const box = useRef<HTMLSpanElement>(null);
   // walk #8: the page carries one "mocks" note; this control's own badge shows on hover / focus.
   useMockNote(box);
+
   return (
     <span ref={box} className="ar-fake" data-testid="fake-control" data-phase={a.phase}>
       {a.phase === 'idle' && (

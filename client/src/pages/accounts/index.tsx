@@ -26,12 +26,15 @@ function Window({
   now: number;
   perDay?: boolean;
 }) {
-  if (!w) return <p className="quiet">{label}: not reported by this hub.</p>;
+  if (!w) {
+    return <p className="quiet">{label}: not reported by this hub.</p>;
+  }
   const st = windowStory(w, now);
   const burn = burnPerHour(w);
   const empty = hoursToEmpty(w);
   const resetH = w.resetsAt ? (Date.parse(w.resetsAt) - now) / 3_600_000 : null;
   const outFirst = empty !== null && resetH !== null && empty < resetH;
+
   return (
     <div className="ac2-window" data-testid="ac2-window" data-kind={st.kind}>
       <div className="ac2-window-head">
@@ -91,6 +94,7 @@ const claudeSeats = (fm: FleetMachine) =>
 function AccountsPage({ ctx }: PageProps) {
   const now = ctx.now;
   const { accounts, unknown } = buildAccounts(ctx.allMachines);
+
   return (
     <main className="view w4-page" data-testid="ar-accounts">
       <p className="view-caption">
@@ -136,6 +140,7 @@ function AccountsPage({ ctx }: PageProps) {
           <tbody>
             {ctx.allMachines.map((fm) => {
               const acct = fm.snapshot.account;
+
               return (
                 <tr key={fm.machine.id} data-testid="ac2-machine">
                   <td>

@@ -10,6 +10,7 @@ const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-rigspecs-'));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -66,6 +67,7 @@ function rigFolder() {
   const rigs = join(root, 'appyrigs', 'rigs');
   write(join(rigs, 'spaghetti', 'rig.yaml'), RIG);
   write(join(rigs, 'spaghetti', 'agents', 'spaghetti', 'agent.yaml'), AGENT);
+
   return { root, rigs };
 }
 

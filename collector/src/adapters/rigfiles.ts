@@ -86,15 +86,27 @@ function allowedName(
   ownSpec: string,
   siblings: string[]
 ): boolean {
-  if (!EXT.test(name)) return false;
-  if (scope === 'spec' && /\.ya?ml$/.test(name)) return name === ownSpec;
+  if (!EXT.test(name)) {
+    return false;
+  }
+  if (scope === 'spec' && /\.ya?ml$/.test(name)) {
+    return name === ownSpec;
+  }
   const doc = VARIANT_DOC.exec(name)?.[1];
   if (doc !== undefined) {
-    if (variant) return doc === variant || doc.startsWith(`${variant}-`);
+    if (variant) {
+      return doc === variant || doc.startsWith(`${variant}-`);
+    }
+
     return !siblings.some((v) => doc === v || doc.startsWith(`${v}-`));
   }
-  if (variant && scope === 'spec' && /^(MISSION|REPORT)\.md$/.test(name)) return false;
-  if (BRIEF.test(name)) return true;
+  if (variant && scope === 'spec' && /^(MISSION|REPORT)\.md$/.test(name)) {
+    return false;
+  }
+  if (BRIEF.test(name)) {
+    return true;
+  }
+
   return (scope === 'spec' ? SPEC_NAMES : MISSION_NAMES).has(name) || LEARNED.test(name);
 }
 
@@ -111,14 +123,17 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   } catch {
     return [];
   }
-  if (!isUnder(specDir, root)) return [];
+  if (!isUnder(specDir, root)) {
+    return [];
+  }
   const folders: { scope: 'spec' | 'mission'; dir: string }[] = [{ scope: 'spec', dir: specDir }];
   const parent = dirname(specDir);
   // The mission folder is the spec folder's parent, and only when that is still inside the configured folder.
   // QA R3 LOW-2: the configured folder itself (openrig/rigs/) is every rig's parent, not a
   // mission folder: its MISSION-TEMPLATE.md belongs to no rig.
-  if (parent !== specDir && parent !== root && isUnder(parent, root))
+  if (parent !== specDir && parent !== root && isUnder(parent, root)) {
     folders.push({ scope: 'mission', dir: parent });
+  }
 
   const ownSpec = basename(spec.path);
   const variant = specVariant(ownSpec);
@@ -132,19 +147,27 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
     }
     const siblings = names.map(specVariant).filter((v): v is string => v !== null);
     for (const name of names.sort()) {
-      if (!allowedName(scope, name, variant, ownSpec, siblings)) continue;
+      if (!allowedName(scope, name, variant, ownSpec, siblings)) {
+        continue;
+      }
       let real: string;
       try {
         real = await realpath(join(dir, name));
-        if (!(await lstat(real)).isFile()) continue;
+        if (!(await lstat(real)).isFile()) {
+          continue;
+        }
       } catch {
         continue; // broken link, vanished file, permission
       }
-      if (!isUnder(dirname(real), root)) continue; // a link out of the configured folder
+      if (!isUnder(dirname(real), root)) {
+        continue;
+      } // a link out of the configured folder
       out.push({ id: `${scope}:${name}`, name, scope, path: real });
     }
   }
-  if (out.length <= RIG_FILES_MAX) return out;
+  if (out.length <= RIG_FILES_MAX) {
+    return out;
+  }
   // Over the cap: keep the run card's sources first, in their listed order.
   const keep = new Set(
     out
@@ -153,13 +176,16 @@ export async function candidatesFor(spec: SpecInfo): Promise<Candidate[]> {
       .slice(0, RIG_FILES_MAX)
       .map((x) => x.c)
   );
+
   return out.filter((c) => keep.has(c));
 }
 
 /** Every path the rig.yaml names, in OpenRig's layer order, each once. */
 export function specNamedPaths(spec: SpecInfo): string[] {
   const s = spec.spec;
-  if (!s) return [];
+  if (!s) {
+    return [];
+  }
   const paths = [
     ...(s.culture_file ? [s.culture_file] : []),
     ...(s.docs ?? []).map((d) => d.path),
@@ -169,6 +195,7 @@ export function specNamedPaths(spec: SpecInfo): string[] {
       ...p.members.flatMap((m) => (m.startup?.files ?? []).map((f) => f.path)),
     ]),
   ].map((p) => p.trim().replace(/^\.\//, ''));
+
   return [...new Set(paths)];
 }
 
@@ -183,18 +210,27 @@ export async function specCandidatesFor(spec: SpecInfo): Promise<Candidate[]> {
   const out: Candidate[] = [];
   for (const rel of specNamedPaths(spec)) {
     const id = `rig:${rel}`;
-    if (!EXT.test(rel) || !RigFileIdSchema.safeParse(id).success) continue; // absolute, `..`, odd names
+    if (!EXT.test(rel) || !RigFileIdSchema.safeParse(id).success) {
+      continue;
+    } // absolute, `..`, odd names
     let real: string;
     try {
       real = await realpath(join(rigRoot, rel));
-      if (!(await lstat(real)).isFile()) continue;
+      if (!(await lstat(real)).isFile()) {
+        continue;
+      }
     } catch {
       continue; // named but absent: nothing to show
     }
-    if (!isUnder(real, rigRoot)) continue; // a link out of the rig root
+    if (!isUnder(real, rigRoot)) {
+      continue;
+    } // a link out of the rig root
     out.push({ id, name: rel, scope: 'rig', path: real });
-    if (out.length >= RIG_SPEC_FILES_MAX) break;
+    if (out.length >= RIG_SPEC_FILES_MAX) {
+      break;
+    }
   }
+
   return out;
 }
 
@@ -205,12 +241,17 @@ async function readCapped(
   try {
     fh = await open(path, 'r');
     const st = await fh.stat();
-    if (!st.isFile()) return null;
+    if (!st.isFile()) {
+      return null;
+    }
     const want = Math.min(st.size, RIG_FILE_MAX_BYTES);
     const buf = Buffer.alloc(want);
     const { bytesRead } = await fh.read(buf, 0, want, 0);
     const slice = buf.subarray(0, bytesRead);
-    if (slice.includes(0)) return null; // binary, not a text file
+    if (slice.includes(0)) {
+      return null;
+    } // binary, not a text file
+
     return {
       text: slice.toString('utf8'),
       bytes: st.size,
@@ -232,7 +273,9 @@ export async function readRigFiles(spec: SpecInfo, withSpecFiles = false): Promi
   ];
   for (const c of cands) {
     const r = await readCapped(c.path);
-    if (!r) continue;
+    if (!r) {
+      continue;
+    }
     files.push({
       id: c.id,
       name: c.name,
@@ -243,6 +286,7 @@ export async function readRigFiles(spec: SpecInfo, withSpecFiles = false): Promi
       content: redactString(r.text),
     });
   }
+
   return files;
 }
 
@@ -264,6 +308,7 @@ export function chunkRigFiles(
     chunks[chunks.length - 1]!.push(f);
     size += n;
   }
+
   return chunks.map((c, i) => ({ machineId, collectedAt, rig, replace: i === 0, files: c }));
 }
 
@@ -304,7 +349,9 @@ export class RigFilesReader {
    * (an older hub's strict schema refuses a `rig:` id, and with it the whole push).
    */
   async next(specs: Map<string, SpecInfo>, withSpecFiles = false): Promise<PendingRigFiles | null> {
-    if (this.now().getTime() - this.lastScan < this.ttlMs) return null;
+    if (this.now().getTime() - this.lastScan < this.ttlMs) {
+      return null;
+    }
     const pushes: RigFilesPush[] = [];
     const sigs = new Map<string, string>();
     let bytes = 0;
@@ -319,6 +366,7 @@ export class RigFilesReader {
           cands.map(async (c) => {
             try {
               const st = await lstat(c.path);
+
               return `${c.id}:${st.size}:${st.mtimeMs}`;
             } catch {
               return `${c.id}:gone`;
@@ -326,7 +374,9 @@ export class RigFilesReader {
           })
         )
       ).join('|')}`;
-      if (this.sent.get(rig) === sig) continue;
+      if (this.sent.get(rig) === sig) {
+        continue;
+      }
       if (bytes >= RIG_FILES_TICK_BYTES) {
         leftOver = true; // the budget is spent: this rig goes out on the next tick
         continue;
@@ -337,8 +387,13 @@ export class RigFilesReader {
       sigs.set(rig, sig);
     }
     // Only a scan that found nothing left over waits for the rescan interval.
-    if (!leftOver) this.lastScan = this.now().getTime();
-    if (pushes.length === 0) return null;
+    if (!leftOver) {
+      this.lastScan = this.now().getTime();
+    }
+    if (pushes.length === 0) {
+      return null;
+    }
+
     return { pushes, markSent: () => sigs.forEach((sig, rig) => this.sent.set(rig, sig)) };
   }
 }

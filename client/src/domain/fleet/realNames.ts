@@ -13,6 +13,7 @@ export function realNames(machines: FleetMachine[]): RealNames {
       m.snapshot.rigs.map((r) => ({ machine: m.machine.label, name: r.name, status: r.status }))
     )
     .sort((a, b) => Number(b.status === 'running') - Number(a.status === 'running'));
+
   return {
     machines: machines.map((m) => ({ id: m.machine.id, label: m.machine.label })),
     rigs,

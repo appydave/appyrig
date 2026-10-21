@@ -20,3 +20,6 @@ test/root/fixtures
 
 # provenance check output
 scripts/provenance/out
+
+# ESLint rewrites this file itself (--prune-suppressions) in its own format.
+eslint-suppressions.json

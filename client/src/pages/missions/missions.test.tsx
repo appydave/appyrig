@@ -15,6 +15,7 @@ import {
 } from '../../domain/missions/model.js';
 
 const T = '2026-10-18T10:00:00.000Z';
+
 function q(id: string, tags: string[], state = 'pending', dest = 'dev-qa@fliedit-team'): QueueItem {
   return {
     id,
@@ -51,6 +52,7 @@ function machines(): FleetMachine[] {
       q('r2', ['mission:beta', 'slice-2'], 'pending', 'dev-review@starter'),
     ],
   };
+
   return [m2, roamy];
 }
 
@@ -66,6 +68,7 @@ function ctxFor(ms: FleetMachine[]): PageContext {
       emit: (_e: string, req: { verb: string }) => verbCalls.push(req.verb),
     })),
   } as unknown as FleetSocket;
+
   return {
     machines: ms,
     allMachines: ms,

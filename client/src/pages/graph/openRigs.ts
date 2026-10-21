@@ -18,7 +18,10 @@ let memory: string[] | null = null;
 function readStore(): string[] {
   try {
     const v = JSON.parse(localStorage.getItem(STORE_KEY) ?? 'null');
-    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+    if (Array.isArray(v)) {
+      return v.filter((x): x is string => typeof x === 'string');
+    }
+
     return [];
   } catch {
     // storage blocked: the in-memory copy still survives leaving and returning to the page
@@ -60,13 +63,15 @@ export function useOpenRigs(ctx: PageContext): [Open, (u: Open | ((o: Open) => O
       const base = Object.fromEntries(keys.map((k) => [k, true]));
       const next = typeof u === 'function' ? u(base) : u;
       const list = Object.keys(next).filter((k) => next[k]);
-      if (navOwned) setOpenRigs!(list);
-      else {
+      if (navOwned) {
+        setOpenRigs!(list);
+      } else {
         writeStore(list);
         setLocal(list);
       }
     },
     [keys, navOwned, setOpenRigs]
   );
+
   return [open, set];
 }

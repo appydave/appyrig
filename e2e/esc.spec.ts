@@ -14,9 +14,12 @@ async function open(page: Page) {
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
   for (const id of ['ar-welcome-dismiss']) {
     const b = page.getByTestId(id);
-    if (await b.count()) await b.click();
+    if (await b.count()) {
+      await b.click();
+    }
   }
 }
+
 const pageParam = (page: Page) => new URL(page.url()).searchParams.get('page');
 const historyLength = (page: Page) => page.evaluate(() => window.history.length);
 

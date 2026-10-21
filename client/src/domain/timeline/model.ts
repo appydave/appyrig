@@ -73,20 +73,26 @@ export interface RunView {
 
 const ms = (iso: string) => {
   const t = Date.parse(iso);
+
   return Number.isFinite(t) ? t : 0;
 };
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] ?? '?';
 
 const median = (xs: number[]) => {
-  if (!xs.length) return null;
+  if (!xs.length) {
+    return null;
+  }
   const s = [...xs].sort((a, b) => a - b);
   const m = Math.floor(s.length / 2);
+
   return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
 };
 
 export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | null {
   const timeline = buildTimeline(fm, rig, now);
-  if (!timeline) return null;
+  if (!timeline) {
+    return null;
+  }
   const items = timeline.marks
     .filter((m, i, all) => all.findIndex((x) => x.item.id === m.item.id) === i)
     .map((m) => m.item);
@@ -95,10 +101,14 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
   const phases: PhaseView[] = timeline.phases.map((p) => {
     const inPhase = items.filter((q) => {
       const t = ms(q.createdAt);
+
       return t >= p.start && t <= p.end;
     });
     const count = new Map<string, number>();
-    for (const q of inPhase) count.set(bare(q.source), (count.get(bare(q.source)) ?? 0) + 1);
+    for (const q of inPhase) {
+      count.set(bare(q.source), (count.get(bare(q.source)) ?? 0) + 1);
+    }
+
     return {
       index: p.index,
       start: p.start,
@@ -127,10 +137,14 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
     { from: string; to: string; closed: number[]; open: number; all: number[] }
   >();
   for (const q of items) {
-    if (!inRig(q.source) || !inRig(q.destination)) continue;
+    if (!inRig(q.source) || !inRig(q.destination)) {
+      continue;
+    }
     const from = bare(q.source);
     const to = bare(q.destination);
-    if (from === to) continue;
+    if (from === to) {
+      continue;
+    }
     const k = `${from}→${to}`;
     const p = pairs.get(k) ?? { from, to, closed: [], open: 0, all: [] };
     if (isOpen(q)) {
@@ -156,8 +170,11 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
     .sort((a, b) => b.totalMs - a.totalMs || a.from.localeCompare(b.from));
 
   const seatOf: Record<string, string> = {};
-  for (const s of fm.snapshot.seats)
-    if (s.rig === rig) seatOf[seatName(s)] = seatKey(fm.machine.id, s.id);
+  for (const s of fm.snapshot.seats) {
+    if (s.rig === rig) {
+      seatOf[seatName(s)] = seatKey(fm.machine.id, s.id);
+    }
+  }
 
   return {
     timeline,
@@ -174,12 +191,21 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
 
 /** "4 min", "2 h 10 min", "3 d 2 h". */
 export function dur(msv: number | null): string {
-  if (msv === null) return '—';
+  if (msv === null) {
+    return '—';
+  }
   const m = Math.round(msv / 60_000);
-  if (m < 1) return '<1 min';
-  if (m < 60) return `${m} min`;
+  if (m < 1) {
+    return '<1 min';
+  }
+  if (m < 60) {
+    return `${m} min`;
+  }
   const h = Math.floor(m / 60);
-  if (h < 48) return `${h} h${m % 60 ? ` ${m % 60} min` : ''}`;
+  if (h < 48) {
+    return `${h} h${m % 60 ? ` ${m % 60} min` : ''}`;
+  }
+
   return `${Math.floor(h / 24)} d ${h % 24} h`;
 }
 

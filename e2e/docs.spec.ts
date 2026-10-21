@@ -8,7 +8,9 @@ test.use({ viewport: { width: 1440, height: 900 } });
 
 async function quietIntro(page: import('@playwright/test').Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
 }
 
 test.describe('v2 documents (frozen busy snapshot)', () => {

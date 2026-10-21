@@ -19,6 +19,7 @@ function buildApp() {
   app.get('/redirect', (_req, res) => {
     res.status(301).redirect('/ok');
   });
+
   return app;
 }
 

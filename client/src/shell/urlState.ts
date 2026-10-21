@@ -27,21 +27,25 @@ export interface UrlState {
 /** `m2:d09-crew` to `d09-crew@m2`. */
 export function rigToParam(key: string): string {
   const i = key.indexOf(':');
+
   return i < 0 ? key : `${key.slice(i + 1)}@${key.slice(0, i)}`;
 }
 /** `d09-crew@m2` to `m2:d09-crew`; null when it has no machine. */
 export function rigFromParam(p: string): string | null {
   const i = p.lastIndexOf('@');
+
   return i <= 0 ? null : `${p.slice(i + 1)}:${p.slice(0, i)}`;
 }
 /** `m2/dev-build@d09-crew` to `dev-build@d09-crew@m2`. */
 export function agentToParam(tile: string): string {
   const i = tile.indexOf('/');
+
   return i < 0 ? tile : `${tile.slice(i + 1)}@${tile.slice(0, i)}`;
 }
 /** `dev-build@d09-crew@m2` to `m2/dev-build@d09-crew`; null when it has no machine. */
 export function agentFromParam(p: string): string | null {
   const i = p.lastIndexOf('@');
+
   return i <= 0 ? null : `${p.slice(i + 1)}/${p.slice(0, i)}`;
 }
 
@@ -49,6 +53,7 @@ export function readUrlState(search: string = window.location.search): UrlState 
   const p = new URLSearchParams(search);
   const rig = p.get('rig');
   const agent = p.get('agent');
+
   return {
     page: p.get('page'),
     rig: rig ? rigFromParam(rig) : null,
@@ -71,17 +76,27 @@ type Params = Record<string, string | null | undefined>;
 export function writeParams(params: Params, how: 'push' | 'replace', marker?: string): void {
   const p = new URLSearchParams(window.location.search);
   for (const [k, v] of Object.entries(params)) {
-    if (v === null || v === undefined || v === '') p.delete(k);
-    else p.set(k, v);
+    if (v === null || v === undefined || v === '') {
+      p.delete(k);
+    } else {
+      p.set(k, v);
+    }
   }
   const s = p.toString();
   const next = s ? `?${s}` : '';
-  if (next === window.location.search && how === 'replace' && !marker) return;
-  if (next === window.location.search && how === 'push') return;
+  if (next === window.location.search && how === 'replace' && !marker) {
+    return;
+  }
+  if (next === window.location.search && how === 'push') {
+    return;
+  }
   const url = `${window.location.pathname}${next}${window.location.hash}`;
   const state = marker ? { ...(window.history.state ?? {}), ar: marker } : window.history.state;
-  if (how === 'push') window.history.pushState(state, '', url);
-  else window.history.replaceState(state, '', url);
+  if (how === 'push') {
+    window.history.pushState(state, '', url);
+  } else {
+    window.history.replaceState(state, '', url);
+  }
   window.dispatchEvent(new Event(URL_EVENT));
 }
 
@@ -94,6 +109,7 @@ export function useUrlParam(name: string): [string | null, (v: string | null) =>
     window.addEventListener('popstate', sync);
     window.addEventListener(URL_EVENT, sync);
     sync();
+
     return () => {
       window.removeEventListener('popstate', sync);
       window.removeEventListener(URL_EVENT, sync);
@@ -106,5 +122,6 @@ export function useUrlParam(name: string): [string | null, (v: string | null) =>
     },
     [name]
   );
+
   return [value, set];
 }

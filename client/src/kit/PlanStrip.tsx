@@ -20,9 +20,10 @@ const clock = (iso: string) =>
  */
 export default function PlanStrip({ sources, items, why }: Props) {
   const plan = useMemo(() => (sources ? choosePlan(sources, items) : null), [sources, items]);
-  if (!sources)
+  if (!sources) {
     return <span className="run-from">{why ?? 'reading the rig’s mission and briefs…'}</span>;
-  if (!plan)
+  }
+  if (!plan) {
     return (
       <span className="run-from" data-testid="run-plan-none">
         {sources.length > 1
@@ -30,6 +31,8 @@ export default function PlanStrip({ sources, items, why }: Props) {
           : `no plan file: no slice table, numbered steps or change orders in its mission or briefs${why && !/next to its rig.yaml/.test(why) ? ` (${why})` : ''}`}
       </span>
     );
+  }
+
   return (
     <div data-testid="run-plan" data-kind={plan.kind}>
       <ol className="plan-strip" aria-label="Plan steps">
@@ -40,6 +43,7 @@ export default function PlanStrip({ sources, items, why }: Props) {
           // QA R3 MEDIUM-1: named by handoffs but never accepted is "worked on", not "not reached".
           const worked = !done && !live && plan.named.has(s.id);
           const mark = done ? 'done' : live ? 'live' : worked ? 'worked' : 'todo';
+
           return (
             <li
               key={s.id}

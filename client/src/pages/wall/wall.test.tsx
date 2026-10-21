@@ -22,6 +22,7 @@ beforeEach(() => {
 function renderWall() {
   const roamy = fleetMachine(snapshot('roamy'));
   const { socket } = answeringSocket({});
+
   return render(<Wall ctx={pageCtx([roamy], socket, NOW)} />);
 }
 
@@ -115,8 +116,9 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
   it('keeps V2 triage: Hide stopped and the Needs me / Stuck / Failing filters', () => {
     renderWall();
     expect(screen.getByTestId('ar-hide-stopped')).toBeInTheDocument();
-    for (const f of ['all', 'needs', 'stuck', 'failing'])
+    for (const f of ['all', 'needs', 'stuck', 'failing']) {
       expect(screen.getByTestId(`ar-filter-${f}`)).toBeInTheDocument();
+    }
   });
 });
 
@@ -131,6 +133,7 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
   ) {
     const { socket } = answeringSocket({});
     const ctx = pageCtx(machines, socket, NOW);
+
     return { ...ctx, pickedRig: pick ? (ctx.rigs.find((r) => r.key === pick) ?? null) : null };
   }
 
@@ -201,6 +204,7 @@ describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
           : this.dataset.testid === 'ar-page-head'
             ? 76 // two rows
             : 0;
+
         return { ...real.call(this), height: h } as DOMRect;
       });
     vi.useFakeTimers();
@@ -330,7 +334,9 @@ describe('machine order and card body', () => {
         ['stopped', 'asleep'].includes(groupState(g)) ? 'dead' : g.rig ? 'rig' : 'tmux'
       );
       const firstDead = kinds.indexOf('dead');
-      if (firstDead >= 0) expect(kinds.slice(firstDead).every((k) => k === 'dead')).toBe(true);
+      if (firstDead >= 0) {
+        expect(kinds.slice(firstDead).every((k) => k === 'dead')).toBe(true);
+      }
     }
     expect(machineCounts('M2', out[0]!.groups)).toMatch(/^M2 · \d+ seats/);
   });

@@ -62,7 +62,9 @@ export function seatAnswersTo(seat: Seat, raw: string): boolean {
  */
 export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): Endpoint {
   const own = home.snapshot.seats.find((s) => s.id === raw);
-  if (own) return endpointOf(raw, home, own);
+  if (own) {
+    return endpointOf(raw, home, own);
+  }
   // The same seat can be addressed by its OpenRig logical id (`desk.planner@ylo-desk`). It resolves
   // to the same key as the session-name form, so edges merge. A logical id is unique only per rig, so
   // pick deterministically: home wins; else the single machine that has it; else the single live one;
@@ -81,23 +83,36 @@ export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachi
   const hits: { fm: FleetMachine; seat: Seat }[] = [];
   for (const fm of [home, ...all.filter((m) => m !== home)]) {
     const found = fm.snapshot.seats.filter((x) => logicalAddresses(x).includes(raw));
-    if (found.length > 1 && fm === home) return unplaced();
-    for (const seat of found) hits.push({ fm, seat });
+    if (found.length > 1 && fm === home) {
+      return unplaced();
+    }
+    for (const seat of found) {
+      hits.push({ fm, seat });
+    }
   }
   const homeHit = hits.find((h) => h.fm === home);
-  if (homeHit) return endpointOf(raw, homeHit.fm, homeHit.seat);
+  if (homeHit) {
+    return endpointOf(raw, homeHit.fm, homeHit.seat);
+  }
   const live = hits.filter((h) => h.fm.liveness === 'live');
   const pick = hits.length === 1 ? hits : live;
-  if (pick.length === 1) return endpointOf(raw, pick[0]!.fm, pick[0]!.seat);
-  if (hits.length > 1) return unplaced();
+  if (pick.length === 1) {
+    return endpointOf(raw, pick[0]!.fm, pick[0]!.seat);
+  }
+  if (hits.length > 1) {
+    return unplaced();
+  }
   const at = raw.lastIndexOf('@');
   if (at > 0) {
     const name = raw.slice(0, at);
     const where = raw.slice(at + 1);
     const fm = all.find((m) => m.machine.id === where);
     const seat = fm?.snapshot.seats.find((s) => s.id === name || s.id.split('@')[0] === name);
-    if (fm && seat) return endpointOf(raw, fm, seat);
+    if (fm && seat) {
+      return endpointOf(raw, fm, seat);
+    }
   }
+
   return { key: `?/${raw}`, raw, name: raw.split('@')[0] || raw, machineId: null, seat: null };
 }
 
@@ -154,10 +169,19 @@ export function rigState(
   attentionCount: number,
   seatPips: PipKey[]
 ): RigState {
-  if (liveness === 'asleep') return 'asleep';
-  if (status !== 'running') return 'stopped';
-  if (attentionCount > 0 || seatPips.includes('blocked')) return 'attention';
-  if (seatPips.includes('working')) return 'working';
+  if (liveness === 'asleep') {
+    return 'asleep';
+  }
+  if (status !== 'running') {
+    return 'stopped';
+  }
+  if (attentionCount > 0 || seatPips.includes('blocked')) {
+    return 'attention';
+  }
+  if (seatPips.includes('working')) {
+    return 'working';
+  }
+
   return 'idle';
 }
 
@@ -219,6 +243,7 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
   }
   // S3: every rig list reads running first, then most recent (Wall groups, Map and Flow chips).
   const running = (r: RigRef) => (r.status === 'running' ? 0 : 1);
+
   return out.sort(
     (a, b) =>
       running(a) - running(b) ||
@@ -239,17 +264,24 @@ const seatRigs = new WeakMap<FleetMachine['snapshot'], Map<string, string | null
  * knows falls back to its `@rig` suffix.
  */
 export function endpointRig(fm: FleetMachine, raw: string | null): string | null {
-  if (!raw || bare(raw) === 'human') return null;
+  if (!raw || bare(raw) === 'human') {
+    return null;
+  }
   let rigs = seatRigs.get(fm.snapshot);
   if (!rigs) {
     rigs = new Map<string, string | null>();
     // A logical form shared by seats in different rigs is ambiguous: null, same as resolveEndpoint.
-    for (const s of fm.snapshot.seats)
-      for (const a of logicalAddresses(s))
+    for (const s of fm.snapshot.seats) {
+      for (const a of logicalAddresses(s)) {
         rigs.set(a, rigs.has(a) && rigs.get(a) !== s.rig ? null : s.rig);
-    for (const s of fm.snapshot.seats) rigs.set(s.id, s.rig);
+      }
+    }
+    for (const s of fm.snapshot.seats) {
+      rigs.set(s.id, s.rig);
+    }
     seatRigs.set(fm.snapshot, rigs);
   }
+
   return rigs.has(raw) ? (rigs.get(raw) ?? null) : suffix(raw) || null;
 }
 
@@ -331,9 +363,16 @@ export interface MapEdge {
 
 /** D09 W2: a spec edge kind in words, for the line's label ("delegates", "observes"). */
 export function plannedWord(kind: string): string {
-  if (kind.includes(',')) return kind.split(',').map(plannedWord).join(' · ');
-  if (kind === 'delegates_to') return 'delegates';
-  if (kind === 'can_observe') return 'observes';
+  if (kind.includes(',')) {
+    return kind.split(',').map(plannedWord).join(' · ');
+  }
+  if (kind === 'delegates_to') {
+    return 'delegates';
+  }
+  if (kind === 'can_observe') {
+    return 'observes';
+  }
+
   return kind.replace(/^can_/, '').replace(/_to$/, '').replace(/_/g, ' ');
 }
 
@@ -355,6 +394,7 @@ export interface RigMap {
 const POD_ORDER = ['orch', 'lead', 'dev', 'build', 'qa', 'review', 'research'];
 const podRank = (p: string) => {
   const i = POD_ORDER.indexOf(p);
+
   return i === -1 ? POD_ORDER.length : i;
 };
 
@@ -397,7 +437,9 @@ export function buildRigMap(
 ): RigMap | null {
   const rig = listRigs(machines).find((r) => r.key === rigKey);
   const home = machines.find((m) => m.machine.id === rig?.machineId);
-  if (!rig || !home) return null;
+  if (!rig || !home) {
+    return null;
+  }
 
   const items = rigQueue(home, rig.name);
   const openAt = new Map<string, OpenCount>();
@@ -405,7 +447,9 @@ export function buildRigMap(
   const outside = new Map<string, { fm: FleetMachine | null; ep: Endpoint }>();
 
   for (const q of items) {
-    if (!q.source || !q.destination) continue;
+    if (!q.source || !q.destination) {
+      continue;
+    }
     const from = resolveEndpoint(q.source, home, machines);
     const to = resolveEndpoint(q.destination, home, machines);
     for (const ep of [from, to]) {
@@ -541,8 +585,12 @@ export function buildRigMap(
           // line carrying both words, never just the first.
           .reduce<{ from: string; to: string; kind: string }[]>((acc, e) => {
             const same = acc.find((x) => x.from === e.from && x.to === e.to);
-            if (!same) acc.push({ ...e });
-            else if (!same.kind.split(',').includes(e.kind)) same.kind += `,${e.kind}`;
+            if (!same) {
+              acc.push({ ...e });
+            } else if (!same.kind.split(',').includes(e.kind)) {
+              same.kind += `,${e.kind}`;
+            }
+
             return acc;
           }, [])
           .map((e): MapEdge => ({
@@ -555,6 +603,7 @@ export function buildRigMap(
             items: [],
             planned: e.kind,
           }));
+
   return {
     rig,
     lanes,
@@ -588,9 +637,16 @@ export const STAGE_LABEL: Record<Stage, string> = {
 /** Role from the seat's name: the convention every rig so far follows (orch-lead, dev-qa, review-r1). */
 export function stageOf(name: string): Stage {
   const n = name.toLowerCase();
-  if (/(^|-)qa(-|$)|tester/.test(n)) return 'qa';
-  if (/(^|-)review|(^|-)r\d+$/.test(n)) return 'review';
-  if (/orch|lead|boss|operator|advisor|kernel/.test(n)) return 'lead';
+  if (/(^|-)qa(-|$)|tester/.test(n)) {
+    return 'qa';
+  }
+  if (/(^|-)review|(^|-)r\d+$/.test(n)) {
+    return 'review';
+  }
+  if (/orch|lead|boss|operator|advisor|kernel/.test(n)) {
+    return 'lead';
+  }
+
   return 'build';
 }
 
@@ -671,13 +727,16 @@ const ms = (iso: string) => Date.parse(iso);
 
 /** The time range of a rig's queue, for the replay scrubber. */
 export function flowRange(items: QueueItem[]): { start: number; end: number } | null {
-  if (!items.length) return null;
+  if (!items.length) {
+    return null;
+  }
   let start = Infinity;
   let end = -Infinity;
   for (const q of items) {
     start = Math.min(start, ms(q.createdAt));
     end = Math.max(end, ms(q.updatedAt));
   }
+
   return { start, end };
 }
 
@@ -706,6 +765,7 @@ export const SENT_BACK_VERDICTS = new Set(['changes', 'fail']);
 /** The `verdict:<word>` tag on a handoff, lower-cased; null when it has none. */
 export function verdictOf(q: Pick<QueueItem, 'tags'>): string | null {
   const t = q.tags.find((x) => x.startsWith('verdict:'));
+
   return t ? t.slice('verdict:'.length).trim().toLowerCase() : null;
 }
 
@@ -718,12 +778,15 @@ export function buildFlow(
 ): FlowView | null {
   const items = rigQueue(fm, rig);
   const range = flowRange(items);
-  if (!range) return null;
+  if (!range) {
+    return null;
+  }
   const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
   // An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name.
   const nameOf = (raw: string | null): string => {
     const seat = raw ? rigSeats.find((x) => seatAnswersTo(x, raw)) : undefined;
+
     return seat ? seatName(seat) : bare(raw);
   };
   const mode = flowModeOf([
@@ -740,11 +803,17 @@ export function buildFlow(
     for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
       for (const raw of [q.source, q.destination]) {
         const id = nodeOfRaw(raw);
-        if (!counts.has(id)) seatOrder.push(id);
+        if (!counts.has(id)) {
+          seatOrder.push(id);
+        }
         counts.set(id, (counts.get(id) ?? 0) + 1);
       }
     }
-    for (const s of rigSeats) if (!counts.has(seatName(s))) seatOrder.push(seatName(s));
+    for (const s of rigSeats) {
+      if (!counts.has(seatName(s))) {
+        seatOrder.push(seatName(s));
+      }
+    }
     if (seatOrder.length > MAX_SEAT_BOXES) {
       const keep = new Set(
         [...seatOrder]
@@ -760,8 +829,11 @@ export function buildFlow(
   const hasOutside =
     mode === 'roles' && items.some((q) => !inRig(q.source) || !inRig(q.destination));
   const nodeOf = (raw: string | null): string => {
-    if (mode === 'roles') return inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE;
+    if (mode === 'roles') {
+      return inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE;
+    }
     const id = nodeOfRaw(raw);
+
     return seatOrder.includes(id) ? id : 'others';
   };
   const order: string[] =
@@ -778,7 +850,9 @@ export function buildFlow(
 
   for (const q of items) {
     const created = ms(q.createdAt);
-    if (created > at) continue;
+    if (created > at) {
+      continue;
+    }
     total += 1;
     const from = nodeOf(q.source);
     const to = nodeOf(q.destination);
@@ -788,13 +862,19 @@ export function buildFlow(
         order.indexOf(to) < order.indexOf(from) &&
         to !== 'lead' &&
         to !== OUTSIDE;
-    if (back) rework += 1;
+    if (back) {
+      rework += 1;
+    }
     const k = `${from}→${to}`;
     const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], items: [], rework: back };
     // By stage every item on one edge agrees; by verdict one sent-back item marks the edge, and
     // `back` (set only when a rule was asked for) says how many of its items were.
-    if (back) e.rework = true;
-    if (opts.sentBack) e.back = (e.back ?? 0) + (back ? 1 : 0);
+    if (back) {
+      e.rework = true;
+    }
+    if (opts.sentBack) {
+      e.back = (e.back ?? 0) + (back ? 1 : 0);
+    }
     e.count += 1;
     e.items.push(q);
     const closedAt = isOpen(q) ? now : ms(q.updatedAt);
@@ -827,6 +907,7 @@ export function buildFlow(
   const oldest = (list: QueueItem[]) =>
     list.reduce<number | null>((acc, q) => {
       const age = at - ms(q.createdAt);
+
       return acc === null || age > acc ? age : acc;
     }, null);
 
@@ -839,6 +920,7 @@ export function buildFlow(
   const stages: FlowStageView[] = order.map((id) => {
     const w = waiting.get(id) ?? [];
     const st = stale.get(id) ?? [];
+
     return {
       stage: id,
       label: mode !== 'roles' ? id : id === OUTSIDE ? OUTSIDE_LABEL : STAGE_LABEL[id as Stage],
@@ -895,7 +977,9 @@ export function flowChapters(
 ): Chapter[] {
   const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const range = flowRange(items);
-  if (!range) return [];
+  if (!range) {
+    return [];
+  }
   const label = (flow: FlowView, id: string) =>
     flow.stages.find((s) => s.stage === id)?.label ?? id;
   const out: Chapter[] = [];
@@ -923,8 +1007,9 @@ export function flowChapters(
       });
     }
     const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
-    if (top && top.waiting > (peak?.n ?? 1))
+    if (top && top.waiting > (peak?.n ?? 1)) {
       peak = { at: t, n: top.waiting, where: top.stage, flow };
+    }
   }
   if (peak) {
     out.push({
@@ -959,6 +1044,7 @@ export function flowChapters(
     title: 'Where it ended',
     text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back` : ''}.`,
   });
+
   return out.sort((a, b) => a.at - b.at);
 }
 
@@ -987,7 +1073,9 @@ export function consoleLines(
   const me = (raw: string | null) => raw === `${seatName}@${rig}` || bare(raw) === seatName;
   const lines: ConsoleLine[] = [];
   for (const q of items) {
-    if (ms(q.createdAt) > at) continue;
+    if (ms(q.createdAt) > at) {
+      continue;
+    }
     const msg = q.summary ?? '(no message)';
     if (me(q.source) && !me(q.destination)) {
       lines.push({ at: q.createdAt, kind: 'sent', text: `→ ${bare(q.destination)}: ${msg}` });
@@ -997,7 +1085,12 @@ export function consoleLines(
       lines.push({ at: q.createdAt, kind: 'sent', text: `↺ note to self: ${msg}` });
     }
   }
-  for (const e of history ?? []) if (ms(e.at) <= at) lines.push(e);
+  for (const e of history ?? []) {
+    if (ms(e.at) <= at) {
+      lines.push(e);
+    }
+  }
+
   return lines.sort((a, b) => a.at.localeCompare(b.at));
 }
 
@@ -1009,9 +1102,12 @@ export function replaySteps(fm: FleetMachine, rig: string): QueueItem[] {
 }
 
 export function median(xs: number[]): number | null {
-  if (!xs.length) return null;
+  if (!xs.length) {
+    return null;
+  }
   const s = [...xs].sort((a, b) => a - b);
   const mid = Math.floor(s.length / 2);
+
   return s.length % 2 ? s[mid]! : (s[mid - 1]! + s[mid]!) / 2;
 }
 
@@ -1056,7 +1152,10 @@ const PLAN_LABEL: Record<string, string> = {
 };
 
 export function planLabel(plan: string | null): string {
-  if (!plan) return 'plan unknown';
+  if (!plan) {
+    return 'plan unknown';
+  }
+
   return PLAN_LABEL[plan] ?? plan;
 }
 
@@ -1123,6 +1222,7 @@ export function buildAccounts(machines: FleetMachine[]): {
     }
     accounts.set(acct.email, v);
   }
+
   return {
     accounts: [...accounts.values()].sort((a, b) => a.email.localeCompare(b.email)),
     unknown,
@@ -1143,7 +1243,9 @@ export function mostHeadroom(
   now: number = Date.now()
 ): AccountView | null {
   const read = accounts.filter((a) => a.reading?.fiveHourPct != null);
-  if (!read.length) return null;
+  if (!read.length) {
+    return null;
+  }
   const warns = (a: AccountView) =>
     a.derived
       ? Math.max(
@@ -1157,9 +1259,13 @@ export function mostHeadroom(
   // cut-off; the card below is dimmed) ranks after every current one.
   const stale = (a: AccountView) => {
     const r = a.reading!;
-    if (r.asleep) return 1;
+    if (r.asleep) {
+      return 1;
+    }
+
     return r.sampledAt && sampleAge(r.sampledAt, r.push, now).ageMs > STALE_READING_MS ? 1 : 0;
   };
+
   return read.sort(
     (a, b) =>
       stale(a) - stale(b) ||
@@ -1171,11 +1277,18 @@ export function mostHeadroom(
 
 /** "in 2h 10m" / "now" for a reset time. */
 export function resetsIn(iso: string | null, now: number): string | null {
-  if (!iso) return null;
+  if (!iso) {
+    return null;
+  }
   const m = Math.round((ms(iso) - now) / 60_000);
-  if (m <= 0) return 'now';
+  if (m <= 0) {
+    return 'now';
+  }
   const h = Math.floor(m / 60);
   const d = Math.floor(h / 24);
-  if (d >= 1) return `in ${d}d ${h % 24}h`;
+  if (d >= 1) {
+    return `in ${d}d ${h % 24}h`;
+  }
+
   return h ? `in ${h}h ${m % 60}m` : `in ${m}m`;
 }

@@ -40,14 +40,16 @@ function FakeEdit({
   const done = useRef(false);
   const { phase, reset } = a;
   useEffect(() => {
-    if (phase !== 'done' || done.current) return;
+    if (phase !== 'done' || done.current) {
+      return;
+    }
     done.current = true;
     onToast(`${line.key} = ${draft} on ${machineLabel} (pretend): nothing changed`);
     setEditing(false);
     reset();
     done.current = false;
   }, [phase, reset, onToast, line.key, draft, machineLabel]);
-  if (!editing)
+  if (!editing) {
     return (
       <button
         type="button"
@@ -58,6 +60,8 @@ function FakeEdit({
         Edit
       </button>
     );
+  }
+
   return (
     <span className="st2-editing" data-testid="st2-editing">
       <input
@@ -119,9 +123,12 @@ function SettingsPage({ ctx }: PageProps) {
   useEffect(() => {
     let live = true;
     void callVerb<SettingsGetOutput>(ctx.getSocket(), 'settings.get', {}).then((a) => {
-      if (!live) return;
+      if (!live) {
+        return;
+      }
       setLoaded(a.ok ? { state: 'ok', out: a.value } : { state: 'refused', why: a.error.message });
     });
+
     return () => {
       live = false;
     };
@@ -195,6 +202,7 @@ function SettingsPage({ ctx }: PageProps) {
                   </td>
                   {ids.map((id) => {
                     const v = l.byMachine[id];
+
                     return (
                       <td
                         key={id}
@@ -320,11 +328,13 @@ function ScheduleRun({ what, onToast }: { what: string; onToast: Toast }) {
   const a = useFakeAction(900);
   const { phase, reset } = a;
   useEffect(() => {
-    if (phase !== 'done') return;
+    if (phase !== 'done') {
+      return;
+    }
     onToast(`ran "${what}" (pretend): nothing ran`);
     reset();
   }, [phase, reset, onToast, what]);
-  if (phase === 'confirm')
+  if (phase === 'confirm') {
     return (
       <span>
         Run now?{' '}
@@ -341,7 +351,11 @@ function ScheduleRun({ what, onToast }: { what: string; onToast: Toast }) {
         </button>
       </span>
     );
-  if (phase === 'working') return <span className="ar-fake-bar" aria-label="running" />;
+  }
+  if (phase === 'working') {
+    return <span className="ar-fake-bar" aria-label="running" />;
+  }
+
   return (
     <button type="button" className="pill-btn" data-testid="st2-run" onClick={a.ask}>
       Run now

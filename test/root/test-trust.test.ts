@@ -15,6 +15,7 @@ const scratch = mkdtempSync(join(tmpdir(), 'test-trust-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 let n = 0;
+
 /** Writes `files` ({ 'dir/name': body }) into a fresh tree and runs the gate over it. */
 function gate(files: Record<string, string>) {
   const root = join(scratch, `tree-${n++}`);
@@ -24,6 +25,7 @@ function gate(files: Record<string, string>) {
     writeFileSync(full, body);
   }
   const r = spawnSync('node', [SCRIPT, '--root', root], { encoding: 'utf8' });
+
   return { status: r.status, out: `${r.stdout}${r.stderr}` };
 }
 

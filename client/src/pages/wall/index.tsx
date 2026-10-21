@@ -41,11 +41,13 @@ const OPEN_KEY = 'appyrig.v2.wallGroups';
 function readSet(key: string): Set<string> {
   try {
     const v = JSON.parse(localStorage.getItem(key) ?? '[]');
+
     return new Set(Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []);
   } catch {
     return new Set();
   }
 }
+
 function writeJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -53,14 +55,17 @@ function writeJson(key: string, value: unknown) {
     // per-viewer convenience only
   }
 }
+
 function readOpen(): Record<string, boolean> {
   try {
     const v = JSON.parse(localStorage.getItem(OPEN_KEY) ?? '{}');
+
     return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   } catch {
     return {};
   }
 }
+
 function readHideStopped(): boolean {
   try {
     return localStorage.getItem(STOPPED_KEY) !== 'off';
@@ -96,6 +101,7 @@ function statusCounts(g: WallGroup): { pip: PipKey; n: number }[] {
     const pip = pipFor(t.seat, t.machine);
     n.set(pip, (n.get(pip) ?? 0) + 1);
   }
+
   return PIP_ORDER.filter((p) => n.has(p)).map((pip) => ({ pip, n: n.get(pip)! }));
 }
 
@@ -132,13 +138,18 @@ const SeatCard = memo(function SeatCard({
   const [more, setMore] = useState(false);
   // The ⋯ popover closes on Escape or a click anywhere else, so it (and its tooltip) never lingers.
   useEffect(() => {
-    if (!more) return;
+    if (!more) {
+      return;
+    }
     const away = (e: PointerEvent) => {
-      if (!(e.target as HTMLElement).closest(`[data-owner="${tileKey}"]`)) setMore(false);
+      if (!(e.target as HTMLElement).closest(`[data-owner="${tileKey}"]`)) {
+        setMore(false);
+      }
     };
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMore(false);
     window.addEventListener('pointerdown', away);
     window.addEventListener('keydown', esc);
+
     return () => {
       window.removeEventListener('pointerdown', away);
       window.removeEventListener('keydown', esc);
@@ -149,6 +160,7 @@ const SeatCard = memo(function SeatCard({
   const name = seatName(seat);
   const flags = seatFlags(seat, machine, now);
   const body = cardBody(seat);
+
   return (
     <WallCard
       name={name}
@@ -259,8 +271,11 @@ function WallPage({ ctx }: PageProps) {
   const [orderParam, setOrderParam] = useUrlParam('order');
   const busyFirst = orderParam === 'busy';
   const sections = useMemo(() => {
-    if (busyFirst) return [{ machineId: '', label: '', groups }];
+    if (busyFirst) {
+      return [{ machineId: '', label: '', groups }];
+    }
     const label = new Map(view.machines.map((m) => [m.machine.id, m.machine.label]));
+
     return orderByMachine(
       groups,
       view.machines.map((m) => m.machine.id),
@@ -270,7 +285,9 @@ function WallPage({ ctx }: PageProps) {
 
   const toggleTeam = (key: string) => {
     const next = new Set(hiddenTeams);
-    if (!next.delete(key)) next.add(key);
+    if (!next.delete(key)) {
+      next.add(key);
+    }
     setHiddenTeams(next);
     writeJson(TEAMS_KEY, [...next]);
   };
@@ -307,13 +324,17 @@ function WallPage({ ctx }: PageProps) {
   useEffect(() => setOnly(false), [focusKey]);
   const present = focusKey !== null && groups.some((g) => g.key === focusKey);
   useEffect(() => {
-    if (!focusKey) return;
+    if (!focusKey) {
+      return;
+    }
     setOpenAt((o) => (o[focusKey] === true ? o : { ...o, [focusKey]: true }));
     const go = () => {
       const el = root.current?.querySelector(
         `[data-group-key="${focusKey}"]`
       ) as HTMLElement | null;
-      if (!el) return;
+      if (!el) {
+        return;
+      }
       // Leave room for what is stuck above the content: the shell's bar plus THIS page's header, whose
       // height changes (it wraps to two rows when the agent panel narrows the page). Measured now.
       const bar = document.querySelector('.app-header')?.getBoundingClientRect().height ?? 0;
@@ -326,6 +347,7 @@ function WallPage({ ctx }: PageProps) {
     // once the open group has laid out, and again after the page settles (the drawer closing reflows it)
     const id = requestAnimationFrame(() => requestAnimationFrame(go));
     const again = setTimeout(go, 500);
+
     return () => {
       cancelAnimationFrame(id);
       clearTimeout(again);
@@ -475,6 +497,7 @@ function WallPage({ ctx }: PageProps) {
               const plain = !g.rig;
               const title = plain ? `No rig \u00b7 ${g.where}` : (g.rig?.displayName ?? g.name);
               const state = groupState(g);
+
               return (
                 <section
                   key={g.key}

@@ -37,19 +37,26 @@ function noteElement(): HTMLElement {
   tag.setAttribute('aria-hidden', 'true');
   tag.textContent = 'mock';
   p.append(tag, ` ${MOCK_NOTE_TEXT}`);
+
   return p;
 }
 
 export function useMockNote(ref: RefObject<HTMLElement | null>) {
   useEffect(() => {
     // A control behind the ⋯ MockMenu needs no page note: the menu's button carries the MockMark.
-    if (ref.current?.closest('.ar-mock-menu')) return;
+    if (ref.current?.closest('.ar-mock-menu')) {
+      return;
+    }
     const main = ref.current?.closest('main');
-    if (!main) return;
+    if (!main) {
+      return;
+    }
     let h = auto.get(main);
     if (!h) {
       // The page drew its own note: nothing to add.
-      if (main.querySelector('[data-mock-note]')) return;
+      if (main.querySelector('[data-mock-note]')) {
+        return;
+      }
       const el = noteElement();
       main.insertBefore(el, main.firstChild);
       h = { el, users: 0 };
@@ -57,6 +64,7 @@ export function useMockNote(ref: RefObject<HTMLElement | null>) {
     }
     h.users += 1;
     const mine = h;
+
     return () => {
       mine.users -= 1;
       if (mine.users === 0) {

@@ -273,6 +273,7 @@ export interface V1ArchiveSlide {
 
 export function v1ArchiveSlides(rows: V1ArchiveRow[] = V1_ARCHIVE_ROWS): V1ArchiveSlide[] {
   const none = (row: V1ArchiveRow): V1ArchiveSlide[] => [{ row, file: null, part: 1, parts: 1 }];
+
   return rows.flatMap((row) =>
     row.files.length === 0
       ? none(row)

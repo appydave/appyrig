@@ -17,6 +17,7 @@ export function callVerb<T>(
   timeoutMs = CALL_TIMEOUT_MS
 ): Promise<CallAnswer<T>> {
   const request: CoreCallRequest = { verb, input };
+
   return new Promise((resolve) => {
     socket
       .timeout(timeoutMs)
@@ -29,6 +30,7 @@ export function callVerb<T>(
               message: `${verb}: no answer from the hub within ${Math.round(timeoutMs / 1000)}s`,
             },
           });
+
           return;
         }
         resolve(answer as CallAnswer<T>);

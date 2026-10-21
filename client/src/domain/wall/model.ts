@@ -18,7 +18,9 @@ export interface SeatFlags {
 }
 
 export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags {
-  if (fm.liveness === 'asleep') return { needs: false, stuck: false, failing: false };
+  if (fm.liveness === 'asleep') {
+    return { needs: false, stuck: false, failing: false };
+  }
   const pip = pipFor(seat, fm);
   const rig = seat.rig ? fm.snapshot.rigs.find((r) => r.name === seat.rig) : undefined;
   const attention = seat.lifecycleState === 'attention_required';
@@ -32,6 +34,7 @@ export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags 
     pip !== 'blocked' &&
     pip !== 'stopped' &&
     (attention || seat.work.blocked > 0 || (pip !== 'working' && open > 0 && quiet));
+
   return { needs: pip === 'blocked', stuck, failing };
 }
 
@@ -53,6 +56,7 @@ export interface Team {
 /** walk #10: what the compact team button says ("Teams: all", "Teams: 18 of 25 · 7 hidden"). */
 export function teamsLabel(teams: Team[], hidden: ReadonlySet<string>): string {
   const off = teams.filter((t) => hidden.has(t.key)).length;
+
   return off === 0
     ? 'Teams: all'
     : `Teams: ${teams.length - off} of ${teams.length} · ${off} hidden`;
@@ -61,6 +65,7 @@ export function teamsLabel(teams: Team[], hidden: ReadonlySet<string>): string {
 /** The teams a search matches, by name or machine. */
 export function matchTeams(teams: Team[], q: string): Team[] {
   const w = q.trim().toLowerCase();
+
   return w
     ? teams.filter((t) => t.name.toLowerCase().includes(w) || t.where.toLowerCase().includes(w))
     : teams;
@@ -103,7 +108,9 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
   for (const fm of machines) {
     const kept: Seat[] = [];
     for (const seat of fm.snapshot.seats) {
-      if (scope.hiddenTeams.has(teamKeyOf(fm, seat))) continue;
+      if (scope.hiddenTeams.has(teamKeyOf(fm, seat))) {
+        continue;
+      }
       const flags = seatFlags(seat, fm, now);
       // Hide stopped never hides a failing seat: a seat that is down while its rig runs is the news.
       if (scope.hideStopped && pipFor(seat, fm) === 'stopped' && !flags.failing) {
@@ -111,13 +118,24 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
         continue;
       }
       counts.all += 1;
-      if (flags.needs) counts.needs += 1;
-      if (flags.stuck) counts.stuck += 1;
-      if (flags.failing) counts.failing += 1;
-      if (matches(scope.filter, flags)) kept.push(seat);
+      if (flags.needs) {
+        counts.needs += 1;
+      }
+      if (flags.stuck) {
+        counts.stuck += 1;
+      }
+      if (flags.failing) {
+        counts.failing += 1;
+      }
+      if (matches(scope.filter, flags)) {
+        kept.push(seat);
+      }
     }
-    if (kept.length > 0) out.push({ ...fm, snapshot: { ...fm.snapshot, seats: kept } });
+    if (kept.length > 0) {
+      out.push({ ...fm, snapshot: { ...fm.snapshot, seats: kept } });
+    }
   }
+
   return { machines: out, counts, stoppedHidden };
 }
 
@@ -129,16 +147,25 @@ export function wallView(machines: FleetMachine[], scope: WallScope, now: number
  */
 export function wallTail(lines: readonly string[] | null | undefined): string {
   const raw = tailLine(lines);
-  if (!raw) return '\u2014';
+  if (!raw) {
+    return '\u2014';
+  }
   let s = raw
     .replace(/[\u2500-\u259f]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
   // a capture cut in the middle: a short fragment closed by a bracket that was never opened
   const cut = /^([^[\](){}]{1,14})[\])}]\s*/.exec(s);
-  if (cut) s = s.slice(cut[0].length);
-  if (!/[A-Za-z0-9]{2,}/.test(s)) return '\u2014';
-  if (s.length > 120) s = `${s.slice(0, 120).replace(/\s+\S*$/, '')}\u2026`;
+  if (cut) {
+    s = s.slice(cut[0].length);
+  }
+  if (!/[A-Za-z0-9]{2,}/.test(s)) {
+    return '\u2014';
+  }
+  if (s.length > 120) {
+    s = `${s.slice(0, 120).replace(/\s+\S*$/, '')}\u2026`;
+  }
+
   return s;
 }
 
@@ -166,9 +193,11 @@ export function orderByMachine(
     ...machineOrder,
     ...groups.map(machineOf).filter((id) => !machineOrder.includes(id)),
   ];
+
   return [...new Set(ids)]
     .map((machineId) => {
       const mine = groups.filter((g) => machineOf(g) === machineId);
+
       return {
         machineId,
         groups: [
@@ -185,13 +214,15 @@ export function orderByMachine(
 export function machineCounts(label: string, groups: WallGroup[]): string {
   const n = new Map<string, number>();
   let seats = 0;
-  for (const g of groups)
+  for (const g of groups) {
     for (const t of g.tiles) {
       seats += 1;
       const pip = pipFor(t.seat, t.machine);
       n.set(pip, (n.get(pip) ?? 0) + 1);
     }
+  }
   const order = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
+
   return [
     label,
     `${seats} seats`,
@@ -246,7 +277,10 @@ export function cardBody(seat: Seat): CardBody {
       break;
     }
   }
-  if (!folder && seat.cwd) folder = seat.cwd.replace(/^\/Users\/[^/]+/, '~');
+  if (!folder && seat.cwd) {
+    folder = seat.cwd.replace(/^\/Users\/[^/]+/, '~');
+  }
   const fb = wallTail(seat.tail?.lines);
+
   return { lastTyped, folder, branch, fallback: lastTyped || fb === '\u2014' ? [] : [fb] };
 }

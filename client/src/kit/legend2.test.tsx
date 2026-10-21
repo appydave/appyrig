@@ -63,8 +63,9 @@ describe('the V2 Legend', () => {
 
       /no OpenRig/i,
       /Click for the Machines view/i,
-    ])
+    ]) {
       expect(text).not.toMatch(stale);
+    }
   });
 
   it('the app renders only the V2 legend; the page ⓘ carries the same words', () => {

@@ -27,11 +27,13 @@ const dirs: string[] = [];
 const start = async (...args: Parameters<typeof startHub>) => {
   const h = await startHub(...args);
   running.push(h);
+
   return h;
 };
 const tempDir = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-hub-'));
   dirs.push(d);
+
   return d;
 };
 
@@ -133,10 +135,11 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
       { ...rig, pods: [{ ...pods[0]!, members: [{ id: 'build' }] }] },
       { ...rig, specEdges: [{ kind: 'feeds', from: 'dev.qa', to: 'review.lead' }] },
       { ...rig, pods: [{ ...pods[0]!, mission: 'x' }] },
-    ])
+    ]) {
       expect(
         await push(h.collector({ token: TOKEN, machineId: 'roamy' }), { ...snap, rigs: [bad] })
       ).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
+    }
   });
 
   it("D09 W3: a seat's agentRole and keySkills reach the browser; more than five is refused", async () => {
@@ -234,7 +237,9 @@ describe('AC 6 — liveness', () => {
     const got = await new Promise<string>((resolve) =>
       browser.on('fleet:update', (u) => {
         const m = u.machines.find((x: { machine: { id: string } }) => x.machine.id === 'roamy');
-        if (m?.liveness === 'asleep') resolve(m.liveness);
+        if (m?.liveness === 'asleep') {
+          resolve(m.liveness);
+        }
       })
     );
     expect(got).toBe('asleep');
@@ -380,8 +385,11 @@ describe('seat.get timeout (BUG-seatget) — fleet pushes are compressed', () =>
     await nextUpdate(browser);
     // The engine upgrades polling → websocket; wait for it, then read the negotiated extensions.
     await new Promise<void>((resolve) => {
-      if (browser.io.engine.transport.name === 'websocket') resolve();
-      else browser.io.engine.once('upgrade', () => resolve());
+      if (browser.io.engine.transport.name === 'websocket') {
+        resolve();
+      } else {
+        browser.io.engine.once('upgrade', () => resolve());
+      }
     });
     const ws = (browser.io.engine.transport as unknown as { ws: { extensions: string } }).ws;
     expect(ws.extensions).toContain('permessage-deflate');
@@ -648,6 +656,7 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       specPath: '/x/rig.yaml',
       ...over,
     };
+
     return { snap: { ...snap, rigs: [rig, ...snap.rigs.slice(1)] }, name: rig.name };
   };
   // Loosely typed on purpose: these tests poke at verb answers by shape.
@@ -745,8 +754,9 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
       'specFiles'
     );
     // still only ids: a rig: id that climbs out is refused as input and as a pushed file
-    for (const fileId of ['rig:../x.md', 'rig:/etc/hosts', 'rig:a//b.md'])
+    for (const fileId of ['rig:../x.md', 'rig:/etc/hosts', 'rig:a//b.md']) {
       expect(call(h, 'rig.file', { machine: 'm2', rig: name, fileId }).ok, fileId).toBe(false);
+    }
     expect(
       (
         await emit(c, 'collector:rigfiles', {
@@ -912,10 +922,11 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     for (const bad of [
       { ...given, member: { ...given.member, env: { A: 'secret' } } },
       { ...given, topologyDocs: [{ ...given.topologyDocs[0]!, altitude: 'mission' }] },
-    ])
+    ]) {
       expect(await emit(c, 'collector:loadout', bad)).toMatchObject({
         failureMode: 'invalid_snapshot',
       });
+    }
   });
 
   // Run board lane 1: the collector's list is the allowlist; the hub never reads a disk.
@@ -968,8 +979,9 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     expect(ask('/a/pic.png')).toMatchObject({ status: 'ok', base64: 'AAAABBBB' });
     expect(ask('/a/later.md')).toMatchObject({ status: 'pending' });
     // not on the list: refused, whatever it looks like
-    for (const p of ['/etc/passwd', '/a/../etc/passwd', '/a/other.md'])
+    for (const p of ['/etc/passwd', '/a/../etc/passwd', '/a/other.md']) {
       expect(ask(p)).toMatchObject({ status: 'refused', text: null, base64: null });
+    }
     // a file pushed for an unlisted path is dropped, not served
     await emit(c, mf, file('/a/sneak.md', { text: 'nope' }));
     expect(ask('/a/sneak.md')).toMatchObject({ status: 'refused', text: null });
@@ -1034,8 +1046,9 @@ describe('v1.4 S7 — rig files and the OpenRig database shape', () => {
     expect(ask('qa/1.md')).toMatchObject({ status: 'ok', text: '# qa', path: 'qa/1.md' });
     expect(ask('shots/1-before.png')).toMatchObject({ status: 'pending' });
     expect(ask('qa/2.md')).toMatchObject({ status: 'missing' });
-    for (const p of ['qa/../x.md', 'qa/a/b.md', 'etc/passwd', 'specs/x.md', 'qa/'])
+    for (const p of ['qa/../x.md', 'qa/a/b.md', 'etc/passwd', 'specs/x.md', 'qa/']) {
       expect(ask(p), p).toMatchObject({ status: 'refused', text: null });
+    }
   });
 
   // v2 data channels: hub first. An old collector (snapshot only) still pushes; the daemon-data

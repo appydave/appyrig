@@ -44,20 +44,28 @@ export function usePolledVerb<T>(
     let timer: number | undefined;
     const ask = () => {
       void callVerb<T>(getSocket(), verb, {}).then((a) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         if (a.ok) {
           last.current = a.value;
           setState({ phase: 'ok', value: a.value });
-        } else setState({ phase: 'refused', message: a.error.message, last: last.current });
+        } else {
+          setState({ phase: 'refused', message: a.error.message, last: last.current });
+        }
         timer = window.setTimeout(ask, everyMs);
       });
     };
     ask();
+
     return () => {
       live = false;
-      if (timer !== undefined) window.clearTimeout(timer);
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
     };
   }, [getSocket, verb, everyMs]);
+
   return state;
 }
 
@@ -95,6 +103,7 @@ function SpecDetail({
     ctx.goTo(page);
   };
   const seatCount = spec.pods?.reduce((n, p) => n + p.seats.length, 0) ?? 0;
+
   return (
     <section className="rs-detail" data-testid="rs-detail" data-state={spec.state}>
       <header className="rs-detail-head">
@@ -182,6 +191,7 @@ function SpecDetail({
                     const live = liveSeat(s.session);
                     const prof = profileSummary(spec.agents, s.agentRef, s.profile);
                     const model = seatModel(spec.agents, s);
+
                     return (
                       <li key={s.id} className="rs-seat" data-testid="rs-seat">
                         <span className="mono rs-session">{s.session}</span>
@@ -299,6 +309,7 @@ function Commands({
   label: (id: string) => string;
 }) {
   const shown = shownCommands(rows, selected, allRigs);
+
   return (
     <section className="rs-commands" data-testid="rs-commands">
       <header className="rs-commands-head">
@@ -331,6 +342,7 @@ function Commands({
         <ol className="rs-cmd-list">
           {shown.map((c, i) => {
             const out = shortOutput(c);
+
             return (
               <li
                 key={`${c.machine}:${c.ts}:${i}`}

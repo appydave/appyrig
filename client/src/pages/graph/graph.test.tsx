@@ -29,10 +29,15 @@ import RigBox, { lastWords } from './RigBox.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -85,22 +90,28 @@ function crossFleet(): FleetMachine[] {
     q({ id: 'm1', source: 'orch-lead@factory-claude', destination: 'gone-orch@roamy' }),
     q({ id: 'm2', source: 'orch-boss@control', destination: 'dev-build@starter' }),
   ]);
+
   return [m2, roamy];
 }
 
 type Handler = (...args: unknown[]) => void;
+
 function spySocket() {
   const handlers = new Map<string, Set<Handler>>();
   const sent: string[] = [];
   const s = {
     connected: true,
     on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      if (!handlers.has(ev)) {
+        handlers.set(ev, new Set());
+      }
       handlers.get(ev)!.add(h);
+
       return s;
     },
     off(ev: string, h: Handler) {
       handlers.get(ev)?.delete(h);
+
       return s;
     },
     emit: vi.fn((ev: string) => sent.push(ev)),
@@ -110,12 +121,14 @@ function spySocket() {
   };
   const fire = (ev: string, ...args: unknown[]) =>
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+
   return { socket: s as unknown as FleetSocket, fire, sent };
 }
 
 /** A socket whose verbs get an answer (the hub's), so a hover card's ssh lookup completes. */
 function ctxFor(machines: FleetMachine[], over: Partial<PageContext> = {}): PageContext {
   const spy = spySocket();
+
   return {
     machines,
     allMachines: machines,
@@ -157,6 +170,7 @@ function busy(): { machines: FleetMachine[]; now: number } {
       'utf8'
     )
   ) as FrozenFile;
+
   return { machines: (file.update as FleetUpdate).machines, now: Date.parse(file.recordedAt) };
 }
 
@@ -391,6 +405,7 @@ describe('Graph page', () => {
       const lab = screen
         .getAllByTestId('g2-cross-label')
         .find((l) => l.textContent?.startsWith('1 ⇄ 3'));
+
       return lab?.querySelector('[data-testid="hl-waiting"]') ?? null;
     };
     expect(waiting()).not.toBeNull(); // r3 is still pending: an amber badge, not a line style
@@ -510,8 +525,9 @@ describe('Graph page', () => {
     render(<Graph ctx={ctxFor(crossFleet())} />);
     expect(screen.getByTestId('g2-mock-note')).toHaveTextContent('controls on this page are mocks');
     expect(screen.getAllByTestId('mock-note')).toHaveLength(1);
-    for (const m of screen.getAllByTestId('mock-mark'))
+    for (const m of screen.getAllByTestId('mock-mark')) {
       expect(m.closest('.g2-menu-wrap, .ar-mock-menu')).not.toBeNull();
+    }
     expect(css()).toMatch(/\.g2-menu-wrap \.ar-mock-mark \{\s*display: none;/);
     expect(css()).toMatch(/\.g2-menu-wrap:hover \.ar-mock-mark/);
     expect(css()).toMatch(/\.g2-menu-wrap\[data-open\] \.ar-mock-mark/);
@@ -606,11 +622,13 @@ describe('Graph line routing', () => {
     );
     const ys = out.map((l) => Math.round(start(l.d)[1]));
     expect(new Set(ys).size).toBe(3);
-    for (let i = 0; i < out.length; i++)
-      for (let j = i + 1; j < out.length; j++)
+    for (let i = 0; i < out.length; i++) {
+      for (let j = i + 1; j < out.length; j++) {
         expect(
           Math.abs(out[i]!.lx - out[j]!.lx) >= 28 || Math.abs(out[i]!.ly - out[j]!.ly) >= 18
         ).toBe(true);
+      }
+    }
   });
 
   it('a pair with a box that is not on the page is skipped, not drawn to nowhere', () => {
@@ -624,6 +642,7 @@ describe('Graph in the app', () => {
       'ResizeObserver',
       class {
         observe() {}
+
         disconnect() {}
       }
     );
@@ -663,6 +682,7 @@ describe('Graph in the app', () => {
 describe('Graph: open rigs, zoom, people', () => {
   const openRig = (key: string) => {
     fireEvent.click(within(frame(key)).getByTestId('g2-rig-toggle'));
+
     return within(frame(key)).getByTestId('g2-inside');
   };
 
@@ -737,7 +757,9 @@ describe('Graph: open rigs, zoom, people', () => {
     render(<Graph ctx={ctx} />);
     const inside = openRig('roamy:starter');
     const cards = within(inside).getAllByTestId('g2-agent-card');
-    for (const c of cards) expect(c).toHaveAttribute('data-size', 'compact');
+    for (const c of cards) {
+      expect(c).toHaveAttribute('data-size', 'compact');
+    }
     const labels = within(inside).getAllByTestId('g2-inside-label');
     expect(labels).toHaveLength(1);
     expect(labels[0]).toHaveTextContent(/^(\d+ ⇄ \d+|\d+ →|← \d+)$/);
@@ -919,6 +941,7 @@ describe('Graph: acceptance fixes', () => {
     fireEvent.click(within(frame('roamy:starter')).getByTestId('g2-rig-toggle'));
     const inside = within(frame('roamy:starter')).getByTestId('g2-inside');
     fireEvent.pointerEnter(within(inside).getAllByTestId('g2-agent-card')[0]!.closest('.g2-cell')!);
+
     return inside;
   };
 

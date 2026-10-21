@@ -10,6 +10,7 @@ const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-db-'));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -27,6 +28,7 @@ function makeDb(extra = '') {
     ${extra}
   `);
   db.close();
+
   return path;
 }
 

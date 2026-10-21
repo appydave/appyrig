@@ -166,6 +166,7 @@ export default function RigInside({
         count: e.count,
       }))
       .sort((a, b) => b.count - a.count);
+
     return { from: from.slice(0, 2), total: from.reduce((n, f) => n + f.count, 0) };
   };
   const waitingOnYou = humans.reduce((n, h) => n + h.open, 0);
@@ -174,14 +175,18 @@ export default function RigInside({
     const el = box.current;
     if (!el) {
       setArcs([]);
+
       return;
     }
     const measure = () => {
       const base = el.getBoundingClientRect();
       const rect = (key: string): Rect | null => {
         const n = el.querySelector<HTMLElement>(`[data-node-key="${CSS.escape(key)}"]`);
-        if (!n) return null;
+        if (!n) {
+          return null;
+        }
         const r = n.getBoundingClientRect();
+
         return { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       };
       const placedPairs = pairs
@@ -241,10 +246,13 @@ export default function RigInside({
       setSize({ w: el.clientWidth, h: el.clientHeight });
     };
     measure();
-    if (typeof ResizeObserver === 'undefined') return;
+    if (typeof ResizeObserver === 'undefined') {
+      return;
+    }
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     el.querySelectorAll('[data-node-key]').forEach((n) => ro.observe(n));
+
     return () => ro.disconnect();
   }, [pairs, agentPods, LS, LB, big]);
 
@@ -257,13 +265,16 @@ export default function RigInside({
       machine: home,
       rig: map.rig.name,
     }).then((a) => live && a.ok && setSsh(a.value.ssh));
+
     return () => {
       live = false;
     };
   }, [socket, home, map.rig.name]);
 
   const keep = () => {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
     hideTimer.current = null;
   };
   const hide = () => {
@@ -273,22 +284,31 @@ export default function RigInside({
   useEffect(() => () => keep(), []);
   // a press anywhere outside the card, its menu and the hover card puts the hover card away
   useEffect(() => {
-    if (!hover) return;
+    if (!hover) {
+      return;
+    }
     const away = (e: PointerEvent) => {
       const t = e.target as Element | null;
-      if (t?.closest('.g2-hover, .g2-cell')) return;
+      if (t?.closest('.g2-hover, .g2-cell')) {
+        return;
+      }
       keep();
       setHover(null);
     };
     document.addEventListener('pointerdown', away);
+
     return () => document.removeEventListener('pointerdown', away);
   }, [hover]);
 
   const showHover = (s: MapSeat, node: HTMLElement) => {
     keep();
-    if (Date.now() < quietUntil.current) return;
+    if (Date.now() < quietUntil.current) {
+      return;
+    }
     const base = box.current?.getBoundingClientRect();
-    if (!base) return;
+    if (!base) {
+      return;
+    }
     const r = node.getBoundingClientRect();
     setHover({
       key: s.key,
@@ -377,6 +397,7 @@ export default function RigInside({
             {arcs.map(({ pair: p, d }) => {
               const state = lineFocusState(lf.focus, p.a, p.b);
               const planned = p.planned;
+
               return (
                 <g
                   key={`${p.a}|${p.b}`}
@@ -413,6 +434,7 @@ export default function RigInside({
                   : full;
               const w = Math.max(26, text.length * (roomy ? ROOMY.label : 7) + 12);
               const lh = roomy ? ROOMY.labelH : 18;
+
               return (
                 <g
                   key={`l:${p.a}|${p.b}`}
@@ -514,6 +536,7 @@ export default function RigInside({
               <div className="g2-pod-cards">
                 {humans.map((h) => {
                   const info = humanInfo(h);
+
                   return <HumanCard key={h.key} seat={h} from={info.from} fromTotal={info.total} />;
                 })}
               </div>
@@ -595,6 +618,7 @@ export function HumanCard({
   compact?: boolean;
 }) {
   const age = seat.oldestStaleMs !== null ? ago(seat.oldestStaleMs) : null;
+
   return (
     <div
       className="g2-human"
@@ -642,22 +666,30 @@ function CardMenu({ name, onDocuments }: { name: string; onDocuments: () => void
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const away = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrap.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     const esc = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape') {
+        return;
+      }
       e.stopPropagation();
       setOpen(false);
     };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc, true);
+
     return () => {
       document.removeEventListener('pointerdown', away);
       document.removeEventListener('keydown', esc, true);
     };
   }, [open]);
+
   return (
     <span className="g2-card-menu" ref={wrap} onClick={(e) => e.stopPropagation()}>
       <button
@@ -711,6 +743,7 @@ function RoomyCard({
     ? cardBody(tile.seat)
     : { lastTyped: null, folder: null, branch: null, fallback: [] };
   const stopped = s.pip === 'stopped';
+
   return (
     <WallCard
       name={s.name}

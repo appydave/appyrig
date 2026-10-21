@@ -39,9 +39,11 @@ describe('applyFleetUpdate', () => {
     const kept = s.machines.roamy.snapshot.seats[0].tail!.lines;
     expect(kept).toHaveLength(TAIL_MAX_LINES);
     expect(kept.at(-1)).toBe(`line ${TAIL_MAX_LINES + 74}`);
-    for (const m of Object.values(s.machines))
-      for (const seat of m.snapshot.seats)
+    for (const m of Object.values(s.machines)) {
+      for (const seat of m.snapshot.seats) {
         expect(seat.tail?.lines.length ?? 0).toBeLessThanOrEqual(TAIL_MAX_LINES);
+      }
+    }
   });
 
   it('refuses an invalid update loudly and keeps the last good fleet', () => {

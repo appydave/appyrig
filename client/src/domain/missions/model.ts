@@ -75,6 +75,7 @@ const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep')
 
 export function tagValue(tags: string[], prefix: string): string | null {
   const t = tags.find((x) => x.startsWith(`${prefix}:`));
+
   return t ? t.slice(prefix.length + 1) : null;
 }
 
@@ -90,10 +91,15 @@ export function missionOf(tags: string[]): string | null {
 const isLoose = (sliceId: string) => /^slice-\d+$/.test(sliceId);
 
 function rigOf(fm: FleetMachine, raw: string | null): string | null {
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
   const seat = fm.snapshot.seats.find((s) => s.id === raw);
-  if (seat) return seat.rig ?? null;
+  if (seat) {
+    return seat.rig ?? null;
+  }
   const at = raw.indexOf('@');
+
   return at >= 0 ? raw.slice(at + 1) : null;
 }
 
@@ -104,6 +110,7 @@ function jobRig(fm: FleetMachine, q: QueueItem): string | null {
 
 function jobFor(fm: FleetMachine, q: QueueItem): Job {
   const open = isOpen(q);
+
   return {
     item: q,
     machineId: fm.machine.id,
@@ -132,9 +139,13 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
   >();
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
-      if (isSweep(q)) continue;
+      if (isSweep(q)) {
+        continue;
+      }
       const mid = missionOf(q.tags);
-      if (!mid) continue;
+      if (!mid) {
+        continue;
+      }
       const s = sliceOf(q.tags);
       const rig = jobRig(fm, q);
       const key = `${fm.machine.id}:${rig ?? NO_RIG}:${mid}`;
@@ -152,6 +163,7 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
         const notDone = jobs.filter((j) => j.outcome === 'closed-not-done').length;
         const done = jobs.length - open - notDone;
         const lastAt = jobs.reduce((a, j) => (j.item.updatedAt > a ? j.item.updatedAt : a), '');
+
         return {
           id: sid,
           jobs: [...jobs].sort((a, b) => a.item.createdAt.localeCompare(b.item.createdAt)),
@@ -182,6 +194,7 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
       lastAt: list.reduce((a, x) => (x.lastAt > a ? x.lastAt : a), ''),
     });
   }
+
   return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt) || a.key.localeCompare(b.key));
 }
 
@@ -190,7 +203,9 @@ export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
   const groups = new Map<string, Unattributed>();
   for (const fm of machines) {
     for (const q of fm.snapshot.queue) {
-      if (isSweep(q) || missionOf(q.tags) || !sliceOf(q.tags)) continue;
+      if (isSweep(q) || missionOf(q.tags) || !sliceOf(q.tags)) {
+        continue;
+      }
       const rig = jobRig(fm, q) ?? '(no rig)';
       const key = `${fm.machine.id}:${rig}`;
       const g = groups.get(key) ?? {
@@ -203,6 +218,7 @@ export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
       groups.set(key, g);
     }
   }
+
   return [...groups.values()]
     .map((g) => ({
       ...g,
@@ -214,9 +230,14 @@ export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
 /** Items with a slice tag but no mission tag: the "unresolved tag" warning (C11). */
 export function untaggedMissionCount(machines: FleetMachine[]): number {
   let n = 0;
-  for (const fm of machines)
-    for (const q of fm.snapshot.queue)
-      if (!isSweep(q) && sliceOf(q.tags) && !missionOf(q.tags)) n += 1;
+  for (const fm of machines) {
+    for (const q of fm.snapshot.queue) {
+      if (!isSweep(q) && sliceOf(q.tags) && !missionOf(q.tags)) {
+        n += 1;
+      }
+    }
+  }
+
   return n;
 }
 
@@ -263,6 +284,7 @@ export function sampleMission(machines: FleetMachine[]): SampleMission {
     jobs,
     progress: jobs.filter((j) => j.state === 'done').length / jobs.length,
   });
+
   return {
     name: 'Ship the new inbox',
     slices: [
@@ -298,5 +320,6 @@ export function missionDocSummary(text: string): { title: string; lead: string }
   const title =
     fmTitle ?? (heading >= 0 ? lines[heading]!.replace(/^#+\s*/, '') : (lines[0] ?? ''));
   const rest = lines.filter((l) => !/^#+\s/.test(l));
+
   return { title, lead: rest.slice(0, 3).join(' ') };
 }

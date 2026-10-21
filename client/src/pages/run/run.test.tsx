@@ -59,6 +59,7 @@ function item(
 function machineWith(queue: QueueItem[]): FleetMachine {
   const m = fleetMachine(snapshot('m2'));
   m.snapshot = { ...m.snapshot, queue };
+
   return m;
 }
 
@@ -66,6 +67,7 @@ function ctxFor(m: FleetMachine, answers: Record<string, unknown> = {}) {
   const { socket, sent, emitted } = answeringSocket(answers);
   const c = pageCtx([m], socket, NOW);
   const ctx: PageContext = { ...c, activeRig: c.rigs.find((r) => r.name === RIG) ?? null };
+
   return { ctx, sent, emitted };
 }
 
@@ -304,8 +306,9 @@ describe('the job panel and its documents', () => {
       'too_large',
       'unread',
       'old-hub',
-    ] as const)
+    ] as const) {
       expect(whyNot(r(s), 'spec')).not.toMatch(/not written yet/);
+    }
   });
 
   it('the panel shows the words for the status the hub gave: no-data for a spec, missing for a spec', async () => {

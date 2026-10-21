@@ -34,6 +34,7 @@ function blocks(list: Block[]): ReactNode {
         );
       case 'heading': {
         const H = `h${Math.min(6, b.level)}` as 'h1';
+
         return <H key={i}>{inline(b.inline)}</H>;
       }
       case 'para':
@@ -48,6 +49,7 @@ function blocks(list: Block[]): ReactNode {
         );
       case 'list': {
         const L = b.ordered ? 'ol' : 'ul';
+
         return (
           <L key={i}>
             {b.items.map((it, j) => (
@@ -97,6 +99,7 @@ function blocks(list: Block[]): ReactNode {
 /** S7-ui: Markdown rendered as React elements (headings, tables, code, lists), never as raw HTML. */
 export default function MarkdownView({ source }: { source: string }) {
   const tree = useMemo(() => parseMarkdown(source), [source]);
+
   return (
     <div className="md" data-testid="markdown-view">
       {blocks(tree)}

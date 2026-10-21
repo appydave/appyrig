@@ -26,6 +26,7 @@ function Meter({
   testId: string;
 }) {
   const p = pct(used, total);
+
   return (
     <div className="mc2-meter" data-testid={testId}>
       <span className="mc2-meter-label">{label}</span>
@@ -44,6 +45,7 @@ function Meter({
 
 function Card({ m, newest }: { m: MachineView; newest: string | null }) {
   const load = sampleLoad(m);
+
   return (
     <section
       className="w4-card mc2-card"
@@ -152,6 +154,7 @@ function MachinesPage({ ctx }: PageProps) {
   const views = ctx.machines.map((fm) => machineView(fm, ctx.now, newest));
   const versions = [...new Set(views.map((v) => v.openrig).filter(Boolean))];
   const behind = views.filter((v) => v.version === 'behind').length;
+
   return (
     <main className="view w4-page" data-testid="ar-machines">
       <p className="mc2-watch" data-testid="mc2-watch">

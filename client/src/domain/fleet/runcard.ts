@@ -60,7 +60,9 @@ export const stepText = (q: QueueItem) =>
  */
 export function runCard(fm: FleetMachine, rig: string, now: number): RunCardModel | null {
   const summary = fm.snapshot.rigs.find((r) => r.name === rig);
-  if (!summary) return null;
+  if (!summary) {
+    return null;
+  }
   // OpenRig's stuck sweep files its own notices as queue items (tag stuck-sweep-finding); they are
   // about the queue, not the run's work, so the live step and David's list leave them out.
   const all = [...rigQueue(fm, rig)].sort(byCreated);
@@ -111,6 +113,7 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
       why: 'Running, no seat mid-turn, and its newest handoff is not an open item to David.',
     };
   }
+
   return {
     state,
     live: newest ? { item: newest, text: stepText(newest) } : null,
@@ -121,6 +124,7 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
 
 function ago(now: number, then: number): string {
   const m = Math.max(0, Math.round((now - then) / 60_000));
+
   return m < 60
     ? `${m} min`
     : m < 48 * 60
@@ -135,8 +139,11 @@ function body(md: string): string[] {
   const lines = md.replace(/\r/g, '').split('\n');
   if (lines[0]?.trim() === '---') {
     const end = lines.indexOf('---', 1);
-    if (end > 0) return lines.slice(end + 1);
+    if (end > 0) {
+      return lines.slice(end + 1);
+    }
   }
+
   return lines;
 }
 
@@ -151,16 +158,22 @@ export function plain(s: string): string {
 
 /** A long line cut at a sentence end (or a word) near `max`, with an ellipsis when cut. */
 export function clip(s: string, max = 220): string {
-  if (s.length <= max) return s;
+  if (s.length <= max) {
+    return s;
+  }
   const cut = s.slice(0, max);
   const stop = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf(': '));
+
   return `${(stop > max * 0.5 ? cut.slice(0, stop + 1) : cut.slice(0, cut.lastIndexOf(' '))).trim()} …`;
 }
 
 /** The mission in one line: the file's first `#` heading, "Mission:" dropped. Null: none. */
 export function missionLine(md: string): string | null {
   const h = body(md).find((l) => /^#\s+\S/.test(l));
-  if (!h) return null;
+  if (!h) {
+    return null;
+  }
+
   return clip(plain(h.replace(/^#\s+/, '').replace(/^mission\s*[:—-]\s*/i, '')));
 }
 
@@ -174,10 +187,17 @@ export function reportLine(md: string): string | null {
   const paras: string[][] = [[]];
   let fenced = false;
   for (const line of body(md)) {
-    if (/^\s*```/.test(line)) fenced = !fenced;
-    if (fenced || /^\s*```/.test(line)) continue;
-    if (line.trim()) paras[paras.length - 1]!.push(line);
-    else if (paras[paras.length - 1]!.length) paras.push([]);
+    if (/^\s*```/.test(line)) {
+      fenced = !fenced;
+    }
+    if (fenced || /^\s*```/.test(line)) {
+      continue;
+    }
+    if (line.trim()) {
+      paras[paras.length - 1]!.push(line);
+    } else if (paras[paras.length - 1]!.length) {
+      paras.push([]);
+    }
   }
   // A heading glued to its paragraph (no blank line after "# Title") is not part of it.
   const p = paras
@@ -188,5 +208,6 @@ export function reportLine(md: string): string | null {
         !/^\s*(\||>|-{3,})/.test(lines[0]!) &&
         !/^\s*\*\*(purpose|for agents)\*\*/i.test(lines[0]!)
     );
+
   return p ? clip(plain(p.join(' '))) : null;
 }

@@ -171,6 +171,7 @@ describe('QA D1: a stale sample is projected from its own moment, not from the c
 /** A fleet machine carrying just an account, for the pure account-level maths. */
 const machineWith = (id: string, account: AccountUsage): FleetMachine => {
   const snapshot = { ...loadSnapshot('roamy'), account };
+
   return {
     machine: { ...snapshot.machine, id },
     liveness: 'live',
@@ -473,6 +474,7 @@ describe('F3 (resilience case 5): a skewed machine clock cannot fake a readingâ€
   const skewed = (skew: number) => {
     const collectedAt = at(skew);
     const m = machineWith('m4', usage({ sampledAt: at(skew - 60_000) }));
+
     return { ...m, snapshot: { ...m.snapshot, collectedAt } };
   };
   const derived = (skew: number) =>

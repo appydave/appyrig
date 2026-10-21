@@ -12,6 +12,7 @@ const named = {
   context: 'pushed at bdf1d05',
   mentions: 1,
 };
+
 function hub(value: Partial<RigOutputsOutput>) {
   const answer = {
     ok: true,
@@ -25,6 +26,7 @@ function hub(value: Partial<RigOutputsOutput>) {
       ...value,
     },
   };
+
   return {
     emit: vi.fn(),
     timeout: () => ({
@@ -33,6 +35,7 @@ function hub(value: Partial<RigOutputsOutput>) {
     }),
   } as unknown as FleetSocket;
 }
+
 const files: RigFilesOutput = {
   machine: 'm2',
   rig: 'flicut-reapply',

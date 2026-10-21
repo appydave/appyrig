@@ -63,15 +63,21 @@ export interface HistFilters {
 
 /** The rig an address belongs to: the part after `@`, else what the machine's seat list says. */
 export function rigOfAddress(fm: FleetMachine | undefined, raw: string | null): string | null {
-  if (!raw) return null;
-  if (fm) return endpointRig(fm, raw);
+  if (!raw) {
+    return null;
+  }
+  if (fm) {
+    return endpointRig(fm, raw);
+  }
   const at = raw.indexOf('@');
+
   return at >= 0 ? raw.slice(at + 1) : null;
 }
 
 /** Search: seat, rig, closure reason, state, item id and summary text, all case-insensitive. */
 export function filterHistory(rows: HistRow[], f: HistFilters): HistRow[] {
   const q = f.text.trim().toLowerCase();
+
   return rows
     .filter(
       (r) =>
@@ -114,8 +120,10 @@ export function sampleEvents(machines: FleetMachine[], now: number): LaneEvent[]
     'agent.session_identity',
     'node.launched',
   ];
+
   return types.map((type, i) => {
     const s = seats[i % seats.length]!;
+
     return {
       at: now - (i + 1) * 47 * 60_000,
       type,

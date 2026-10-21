@@ -19,6 +19,7 @@ const tmp = () => {
   // realpath: macOS tmpdir is under /var -> /private/var, and the rule is "no symlink in the path"
   const d = realpathSync(mkdtempSync(join(tmpdir(), 'appyrig-mf-')));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -55,6 +56,7 @@ function layout() {
     summary: 's',
     spec: null,
   };
+
   return { root, repos, mission, spec, spec1, spec1b };
 }
 
@@ -80,8 +82,9 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
       join(mission, 'MISSION.md'), // a mission file is not a spec source: rig.file serves it
       join(mission, 'team', 'rig.yaml'),
       '/etc/passwd',
-    ])
+    ]) {
       expect(await checkPath(p, al), p).toEqual({ ok: false, why: 'refused' });
+    }
   });
 
   it('refuses ../ however it is spelled, and relative or malformed paths', async () => {
@@ -96,8 +99,9 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
       '../qa/qa-1.md',
       '',
       `${mission}/qa/qa-1.md\0.png`,
-    ])
+    ]) {
       expect((await checkPath(p, al)).ok, JSON.stringify(p)).toBe(false);
+    }
     expect(await checkPath(42, al)).toEqual({ ok: false, why: 'refused' });
   });
 
@@ -147,8 +151,9 @@ describe('the allowlist: which paths may be read (the boundary)', () => {
       join(mission, 'shots', 'doc.md'),
       join(mission, 'shots', 'x.gif'),
       join(mission, 'qa', 'sub', 'deep.md'),
-    ])
+    ]) {
       expect(await checkPath(p, al), p).toEqual({ ok: false, why: 'refused' });
+    }
   });
 
   it('a listed spec that is not on disk is missing, not refused', async () => {

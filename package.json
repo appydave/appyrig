@@ -61,7 +61,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,json,css,md}": "prettier --write",
-    "*.{ts,tsx,js}": "eslint --fix"
+    "*.{ts,tsx,js}": "eslint --fix --prune-suppressions"
   },
   "author": "David Cruwys",
   "license": "MIT",

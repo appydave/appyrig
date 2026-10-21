@@ -23,6 +23,7 @@ export function watchConfig(
 ): ConfigWatcher {
   let mtimeMs = -1; // -1 = not read yet; 0 = file absent
   let value: AppConfig = {};
+
   return {
     current() {
       let m: number;
@@ -31,15 +32,20 @@ export function watchConfig(
       } catch {
         m = 0;
       }
-      if (m === mtimeMs) return value;
+      if (m === mtimeMs) {
+        return value;
+      }
       mtimeMs = m;
       value = {};
-      if (m === 0) return value;
+      if (m === 0) {
+        return value;
+      }
       try {
         value = AppConfigSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
       } catch (err) {
         onError(`${path} is not a valid AppyRig config; ignored`, err);
       }
+
       return value;
     },
   };
@@ -49,21 +55,26 @@ export function watchConfig(
 export function applyRigLabels(machine: FleetMachine, config: AppConfig): FleetMachine {
   // displayName and owner belong to the hub's config. A collector that sends them is ignored: config wins.
   const labels = config.rigs ?? {};
-  if (machine.snapshot.rigs.length === 0) return machine;
+  if (machine.snapshot.rigs.length === 0) {
+    return machine;
+  }
   let changed = false;
   const rigs = machine.snapshot.rigs.map((rig) => {
     const label = Object.hasOwn(labels, rig.name) ? labels[rig.name] : undefined;
     const bare: Record<string, unknown> = { ...rig };
     delete bare.displayName;
     delete bare.owner;
-    if (!label?.displayName && !label?.owner && !('displayName' in rig) && !('owner' in rig))
+    if (!label?.displayName && !label?.owner && !('displayName' in rig) && !('owner' in rig)) {
       return rig;
+    }
     changed = true;
+
     return {
       ...(bare as typeof rig),
       ...(label?.displayName ? { displayName: label.displayName } : {}),
       ...(label?.owner ? { owner: label.owner } : {}),
     };
   });
+
   return changed ? { ...machine, snapshot: { ...machine.snapshot, rigs } } : machine;
 }

@@ -43,13 +43,18 @@ function cells(line: string): string[] {
   let tick = false;
   const body = line.trim().replace(/^\|/, '').replace(/\|$/, '');
   for (const ch of body) {
-    if (ch === '`') tick = !tick;
+    if (ch === '`') {
+      tick = !tick;
+    }
     if (ch === '|' && !tick) {
       out.push(cur.trim());
       cur = '';
-    } else cur += ch;
+    } else {
+      cur += ch;
+    }
   }
   out.push(cur.trim());
+
   return out;
 }
 
@@ -86,6 +91,7 @@ function specOf(cell: string): { paths: string[]; note: string } {
     .filter((x) => x.length > 0)
     .join(' · ')
     .trim();
+
   return { paths, note };
 }
 
@@ -96,9 +102,13 @@ export function parseMissionJobs(markdown: string): MissionJob[] {
   const lines = markdown.split(/\r?\n/);
   for (let i = 0; i < lines.length - 1; i++) {
     const head = lines[i]!;
-    if (!head.trim().startsWith('|') || !isSeparator(lines[i + 1]!)) continue;
+    if (!head.trim().startsWith('|') || !isSeparator(lines[i + 1]!)) {
+      continue;
+    }
     const names = cells(head).map((c) => noTicks(c).toLowerCase());
-    if (!(names[0] === 'slice' || names[0] === '#')) continue;
+    if (!(names[0] === 'slice' || names[0] === '#')) {
+      continue;
+    }
     const col = (...keys: string[]) => names.findIndex((n) => keys.some((k) => n.startsWith(k)));
     const iRepo = col('repo');
     const iTree = col('worktree');
@@ -109,7 +119,9 @@ export function parseMissionJobs(markdown: string): MissionJob[] {
       const row = cells(lines[j]!);
       const at = (k: number) => (k >= 0 ? (row[k] ?? '') : '');
       const slice = noTicks(row[0] ?? '');
-      if (!slice) continue;
+      if (!slice) {
+        continue;
+      }
       const repoCell = noTicks(at(iRepo));
       const spec = specOf(at(iSpec));
       jobs.push({
@@ -126,8 +138,10 @@ export function parseMissionJobs(markdown: string): MissionJob[] {
         specNote: spec.note,
       });
     }
+
     return jobs;
   }
+
   return [];
 }
 

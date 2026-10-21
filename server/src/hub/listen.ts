@@ -33,7 +33,10 @@ export function parseHosts(value: string): string[] {
     .split(',')
     .map((h) => h.trim())
     .filter(Boolean);
-  if (hosts.length === 0) throw new Error('HUB_BIND_HOSTS names no address');
+  if (hosts.length === 0) {
+    throw new Error('HUB_BIND_HOSTS names no address');
+  }
+
   return [...new Set(hosts)];
 }
 
@@ -43,7 +46,9 @@ export async function listenOnHosts(
   hosts: string[]
 ): Promise<Listening> {
   const [first, ...rest] = hosts;
-  if (!first) throw new Error('listenOnHosts needs at least one host');
+  if (!first) {
+    throw new Error('listenOnHosts needs at least one host');
+  }
   await listenOnce(http, port, first);
   const actualPort = (http.address() as AddressInfo).port; // port 0 → the one the OS picked
   const extras: NetServer[] = [];
@@ -58,6 +63,7 @@ export async function listenOnHosts(
     await new Promise((r) => http.close(r));
     throw err;
   }
+
   return {
     port: actualPort,
     hosts,

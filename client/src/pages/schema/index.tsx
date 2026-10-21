@@ -79,7 +79,9 @@ function SchemaPage({ ctx }: PageProps) {
     let live = true;
     for (const id of ids ? ids.split(',') : []) {
       void callVerb<DbSchemaOutput>(ctx.getSocket(), 'db.schema', { machine: id }).then((a) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setAnswers((cur) => ({
           ...cur,
           [id]: a.ok
@@ -88,6 +90,7 @@ function SchemaPage({ ctx }: PageProps) {
         }));
       });
     }
+
     return () => {
       live = false;
     };
@@ -106,6 +109,7 @@ function SchemaPage({ ctx }: PageProps) {
         {ctx.allMachines.map((fm) => {
           const a = answers[fm.machine.id];
           const o = a?.ok ? a.out : null;
+
           return (
             <li
               key={fm.machine.id}

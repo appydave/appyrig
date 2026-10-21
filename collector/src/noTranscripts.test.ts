@@ -12,10 +12,15 @@ const NEEDLE = ['/api', 'transcripts'].join('/');
 
 function* walk(dir: string): Generator<string> {
   for (const name of readdirSync(dir)) {
-    if (name === 'node_modules' || name === 'dist') continue;
+    if (name === 'node_modules' || name === 'dist') {
+      continue;
+    }
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) yield* walk(p);
-    else if (/\.(ts|tsx|js|mjs|cjs|json|sh|plist)$/.test(name)) yield p;
+    if (statSync(p).isDirectory()) {
+      yield* walk(p);
+    } else if (/\.(ts|tsx|js|mjs|cjs|json|sh|plist)$/.test(name)) {
+      yield p;
+    }
   }
 }
 

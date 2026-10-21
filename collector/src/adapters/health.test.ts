@@ -55,7 +55,10 @@ const run =
       bin in over
         ? over[bin]
         : { sysctl: SYSCTL, vm_stat: VM_STAT, memory_pressure: PRESSURE, ps: PS }[bin];
-    if (v instanceof Error) throw v;
+    if (v instanceof Error) {
+      throw v;
+    }
+
     return { stdout: v ?? '', stderr: '', code: 0 };
   };
 
@@ -154,8 +157,13 @@ describe('createHealthSampler', () => {
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     const slow: Run = async (bin) => {
-      if (bin === 'sysctl') calls++;
-      if (bin === 'ps' && calls >= 2) await gate; // the second round hangs until released
+      if (bin === 'sysctl') {
+        calls++;
+      }
+      if (bin === 'ps' && calls >= 2) {
+        await gate;
+      } // the second round hangs until released
+
       return {
         stdout: { sysctl: SYSCTL, vm_stat: VM_STAT, memory_pressure: PRESSURE, ps: PS }[bin] ?? '',
         stderr: '',

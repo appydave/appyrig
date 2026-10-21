@@ -16,10 +16,15 @@ import { page as flowPage } from './index.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -32,6 +37,7 @@ const LONG = 'A much longer brief: '.repeat(12);
 
 function q(id: string, from: string, to: string, min: number, summary: string): QueueItem {
   const at = new Date(T0 + min * 60_000).toISOString();
+
   return {
     id,
     source: `${from}@${RIG}`,
@@ -55,6 +61,7 @@ function fleet(): FleetMachine[] {
       q('s3', 'dev-qa', 'review-r1', 10, 'QA passed'),
     ],
   };
+
   return [fm];
 }
 
@@ -70,6 +77,7 @@ function ctxFor(machines: FleetMachine[]): PageContext {
     }),
   };
   const rigs = listRigs(machines);
+
   return {
     machines,
     allMachines: machines,

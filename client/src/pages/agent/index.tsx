@@ -84,8 +84,10 @@ function Picker({ ctx, current }: { ctx: PageContext; current: string }) {
       const k = `${t.machine.machine.label} · ${t.seat.rig ?? 'tmux sessions'}`;
       m.set(k, [...(m.get(k) ?? []), t]);
     }
+
     return [...m.entries()];
   }, [tiles]);
+
   return (
     <label className="rig-select ar-agent-picker">
       <span className="label">Agent</span>
@@ -127,6 +129,7 @@ function Header({
   const name = seatName(seat);
   const fresh = freshness(machine, ctx.now, ctx.hubConnected).label;
   const line = attachLine(seat.id, ssh === 'loading' ? null : ssh);
+
   return (
     <header className="ar-agent-head" data-testid="ar-agent-header" data-pip={pip}>
       <PageHeader
@@ -263,6 +266,7 @@ function Skills({
 }) {
   const out = loadout.state === 'ok' ? loadout.value : null;
   const skills = out?.loadout?.skills ?? [];
+
   return (
     <Section id="skills" title="Skills">
       {loadout.state === 'loading' && <p className="quiet">Reading its skills…</p>}
@@ -308,6 +312,7 @@ function Messages({ tile, now }: { tile: TileRef; now: number }) {
         </div>
       ))
     );
+
   return (
     <Section
       id="messages"
@@ -345,6 +350,7 @@ function Peers({
   const { seat, machine } = tile;
   const rig = seat.rig ? machine.snapshot.rigs.find((r) => r.name === seat.rig) : undefined;
   const edges = (rig?.edges ?? []).filter((e) => e.from === seat.id || e.to === seat.id);
+
   return (
     <Section id="peers" title="Works with">
       {edges.length > 0 ? (
@@ -381,6 +387,7 @@ function Peers({
 function Terminal({ seat }: { seat: Seat }) {
   const [open, setOpen] = useState(false);
   const preview = seat.tail ? visibleTail(seat.tail.lines, 4) : [];
+
   return (
     <Section id="terminal" title="Terminal">
       {preview.length > 0 && seat.tail && (
@@ -430,6 +437,7 @@ function AgentBody({ ctx, tile }: { ctx: PageContext; tile: TileRef }) {
       : data.waiting.state === 'ok'
         ? data.waiting.value.ssh
         : null;
+
   return (
     <>
       <Header ctx={ctx} tile={tile} ssh={ssh} noRig={data.waiting.state === 'na'} />
@@ -472,12 +480,14 @@ export function defaultAgent(machines: FleetMachine[], rigName: string | null): 
     (t.seat.contextUsedPct ?? 0) > 0;
   const messages = (t: TileRef) => {
     const mine = seatAddresses(t.seat);
+
     return t.machine.snapshot.queue.filter(
       (q) => mine.has(q.destination ?? '') || mine.has(q.source ?? '')
     ).length;
   };
   const rank = (t: TileRef) => {
     const pip = pipFor(t.seat, t.machine);
+
     return (
       (messages(t) > 0 ? 0 : 4) +
       (pip === 'working' || pip === 'blocked' ? 0 : 2) +
@@ -494,6 +504,7 @@ export function defaultAgent(machines: FleetMachine[], rigName: string | null): 
         )
     )[0];
   const inRig = (t: TileRef) => rigName !== null && t.seat.rig === rigName;
+
   return (
     best(tiles.filter((t) => inRig(t) && t.seat.source === 'openrig' && claude(t) && up(t))) ??
     best(tiles.filter(real)) ??
@@ -520,6 +531,7 @@ function AgentPage({ ctx }: PageProps) {
   const missing = !!agentKey && !found;
   const tile = found ?? findTile(ctx.allMachines, auto) ?? fallback;
   const defaulted = !!tile && !!auto && tile.key === auto && !missing;
+
   return (
     <main className="view ar-agent" data-testid="ar-agent">
       {/* Navigation brief: the "new in v2" and mock lines live behind Legend · L, not above the

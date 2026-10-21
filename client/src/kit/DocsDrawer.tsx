@@ -58,19 +58,24 @@ export function useRead<T>(
   const dep = JSON.stringify(input);
   const [got, setGot] = useState<Got<T>>({ state: input ? 'loading' : 'na' });
   useEffect(() => {
-    if (!input) return setGot({ state: 'na' });
+    if (!input) {
+      return setGot({ state: 'na' });
+    }
     setGot({ state: 'loading' });
     let live = true;
     void callVerb<T>(getSocket(), verb, input).then((a) => {
-      if (live)
+      if (live) {
         setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
+      }
     });
+
     return () => {
       live = false;
     };
     // `dep` describes `input`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getSocket, verb, dep]);
+
   return got;
 }
 
@@ -102,6 +107,7 @@ export function useDocsData(getSocket: () => FleetSocket, t: DocsTarget) {
             required: f.required,
           }))
         : [];
+
     return buildDocItems({
       layers: loadout.state === 'ok' ? (loadout.value.loadout?.layers ?? []) : [],
       startup,
@@ -119,6 +125,7 @@ export function useDocsData(getSocket: () => FleetSocket, t: DocsTarget) {
           ? loadout.value.reason
           : 'No documents found for this agent yet.';
   }
+
   return { items, loading, note, loadout, rig };
 }
 
@@ -143,11 +150,21 @@ function useContent(
   const fileId = src?.kind === 'rig' ? src.fileId : null;
   const path = src?.kind === 'mission' ? src.path : null;
   useEffect(() => {
-    if (!item || !src) return setC({ state: 'why', why: 'Pick a file on the left.' });
-    if (src.kind === 'text') return setC({ state: 'ok', text: src.text });
-    if (src.kind === 'unsent') return setC({ state: 'why', why: src.why });
-    if (src.kind === 'absent') return setC({ state: 'why', why: 'Not present for this agent.' });
-    if (!rig) return setC({ state: 'why', why: 'No rig to read this from.' });
+    if (!item || !src) {
+      return setC({ state: 'why', why: 'Pick a file on the left.' });
+    }
+    if (src.kind === 'text') {
+      return setC({ state: 'ok', text: src.text });
+    }
+    if (src.kind === 'unsent') {
+      return setC({ state: 'why', why: src.why });
+    }
+    if (src.kind === 'absent') {
+      return setC({ state: 'why', why: 'Not present for this agent.' });
+    }
+    if (!rig) {
+      return setC({ state: 'why', why: 'No rig to read this from.' });
+    }
     setC({ state: 'loading' });
     let live = true;
     if (fileId) {
@@ -156,7 +173,9 @@ function useContent(
         rig,
         fileId,
       }).then((a) => {
-        if (!live) return;
+        if (!live) {
+          return;
+        }
         setC(
           a.ok
             ? { state: 'ok', text: a.value.file.content }
@@ -169,8 +188,10 @@ function useContent(
         rig,
         path,
       }).then((a) => {
-        if (!live) return;
-        if (!a.ok)
+        if (!live) {
+          return;
+        }
+        if (!a.ok) {
           return setC({
             state: 'why',
             why:
@@ -178,15 +199,16 @@ function useContent(
                 ? "This hub doesn't serve mission files yet (needs the new hub)."
                 : 'The hub did not answer.',
           });
+        }
         const v = a.value;
-        if (v.status === 'ok')
+        if (v.status === 'ok') {
           setC({
             state: 'ok',
             ...(v.text !== null ? { text: v.text } : {}),
             ...(v.base64 !== null ? { base64: v.base64 } : {}),
             ...(v.mime ? { mime: v.mime } : {}),
           });
-        else
+        } else {
           setC({
             state: 'why',
             why:
@@ -200,12 +222,15 @@ function useContent(
                       ? "This machine's collector has not sent mission files yet."
                       : 'Loading from the machine…',
           });
+        }
       });
     }
+
     return () => {
       live = false;
     };
   }, [getSocket, machineId, rig, item, src, fileId, path]);
+
   return c;
 }
 
@@ -224,15 +249,17 @@ export function DocReader({
   const [source, setSource] = useState(false);
   const kind = item ? docKind(item.name) : 'text';
   let body: ReactNode;
-  if (!item) body = <p className="quiet">Pick a file on the left.</p>;
-  else if (c.state === 'loading') body = <p className="quiet">Opening…</p>;
-  else if (c.state === 'why')
+  if (!item) {
+    body = <p className="quiet">Pick a file on the left.</p>;
+  } else if (c.state === 'loading') {
+    body = <p className="quiet">Opening…</p>;
+  } else if (c.state === 'why') {
     body = (
       <p className="quiet" data-testid="docs-why">
         {c.why}
       </p>
     );
-  else if (kind === 'image' && c.base64)
+  } else if (kind === 'image' && c.base64) {
     body = (
       <img
         className="docs-img"
@@ -240,7 +267,7 @@ export function DocReader({
         alt={item.name}
       />
     );
-  else if (kind === 'html')
+  } else if (kind === 'html') {
     body = (
       <iframe
         title={item.name}
@@ -250,8 +277,9 @@ export function DocReader({
         data-testid="docs-html"
       />
     );
-  else if (kind === 'yaml') body = <YamlView source={c.text ?? ''} />;
-  else if (kind === 'markdown')
+  } else if (kind === 'yaml') {
+    body = <YamlView source={c.text ?? ''} />;
+  } else if (kind === 'markdown') {
     body = source ? (
       <pre className="md-code" tabIndex={0}>
         <code>{c.text}</code>
@@ -259,12 +287,14 @@ export function DocReader({
     ) : (
       <MarkdownView source={c.text ?? ''} />
     );
-  else
+  } else {
     body = (
       <pre className="md-code" tabIndex={0}>
         <code>{c.text}</code>
       </pre>
     );
+  }
+
   return (
     <section
       className="docs-reader"
@@ -309,6 +339,7 @@ export function DocsLayout({
     ? items.find((x) => x.present && x.name.toLowerCase() === target.open!.toLowerCase())
     : null;
   const shown = items.find((x) => x.key === pick) ?? wanted ?? firstDoc(items);
+
   return (
     <div className="docs-layout" data-testid="docs-layout">
       <nav className="docs-list" aria-label="Documents" data-testid="docs-list">
@@ -320,7 +351,10 @@ export function DocsLayout({
         )}
         {DOC_GROUPS.map((g) => {
           const rows = items.filter((x) => x.group === g.id);
-          if (rows.length === 0) return null;
+          if (rows.length === 0) {
+            return null;
+          }
+
           return (
             <div key={g.id} className="docs-group" data-testid={`docs-group-${g.id}`}>
               <h4 className="docs-group-h">
@@ -369,17 +403,21 @@ export function DocsDrawer({
     // Esc closes the top-most layer only: this overlay sits over the agent panel, so it takes the
     // key first (capture) and swallows it.
     const k = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== 'Escape') {
+        return;
+      }
       e.preventDefault();
       e.stopImmediatePropagation();
       onClose();
     };
     window.addEventListener('keydown', k, true);
+
     return () => window.removeEventListener('keydown', k, true);
   }, [onClose]);
   const top = useTopOffset();
   const rig = target.rig ?? target.seat?.rig ?? null;
   const title = target.seat ? seatName(target.seat) : (rig ?? 'Documents');
+
   return (
     <>
       <aside
@@ -423,5 +461,6 @@ export function useDocsDrawer(ctx: { getSocket: () => FleetSocket }) {
       onClose={close}
     />
   ) : null;
+
   return { openDocs, closeDocs: close, drawer, isOpen: target !== null };
 }

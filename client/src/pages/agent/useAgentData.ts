@@ -28,20 +28,24 @@ function useVerb<T>(
   useEffect(() => {
     if (input === null) {
       setGot({ state: 'na' });
+
       return;
     }
     setGot({ state: 'loading' });
     let current = true;
     void callVerb<T>(socket, verb, input).then((a) => {
-      if (current)
+      if (current) {
         setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
+      }
     });
+
     return () => {
       current = false;
     };
     // The input is described by `dep`; the socket is the page's one socket.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, verb, dep]);
+
   return got;
 }
 
@@ -86,9 +90,11 @@ export function useAgentData(
     dep
   );
   let detail: DetailState;
-  if (raw.state === 'loading') detail = { state: 'loading' };
-  else if (raw.state === 'na') detail = { state: 'sample', why: 'no seat.detail' };
-  else if (raw.state === 'ok' && raw.value.status === 'not-openrig') {
+  if (raw.state === 'loading') {
+    detail = { state: 'loading' };
+  } else if (raw.state === 'na') {
+    detail = { state: 'sample', why: 'no seat.detail' };
+  } else if (raw.state === 'ok' && raw.value.status === 'not-openrig') {
     detail = { state: 'not-openrig' };
   } else if (raw.state === 'refused') {
     detail = { state: 'sample', why: `seat.detail refused: ${raw.error.failureMode}` };
@@ -98,6 +104,7 @@ export function useAgentData(
       ? { state: 'ok', view }
       : { state: 'sample', why: 'seat.detail sent nothing for this seat yet' };
   }
+
   return { loadout, files, waiting, detail };
 }
 
@@ -119,9 +126,16 @@ export function useRigFile(
     rig && fileId ? { machine: machineId, rig, fileId } : null,
     `${machineId}/${rig}/${fileId}`
   );
-  if (!rig || !fileId || loaded.state === 'na') return null;
-  if (loaded.state === 'loading') return { state: 'loading' };
-  if (loaded.state === 'refused') return { state: 'refused', error: loaded.error };
+  if (!rig || !fileId || loaded.state === 'na') {
+    return null;
+  }
+  if (loaded.state === 'loading') {
+    return { state: 'loading' };
+  }
+  if (loaded.state === 'refused') {
+    return { state: 'refused', error: loaded.error };
+  }
   const f = loaded.value.file;
+
   return { state: 'ok', name: f.name, bytes: f.bytes, truncated: f.truncated, content: f.content };
 }

@@ -35,6 +35,7 @@ export const SNAPSHOT_CASES: [string, () => Promise<MachineSnapshot>][] = [
       const blockedPs = parsePs(readFixtureJson('synthetic/roamy--api-ps--starter-blocked.json'));
       const blockedRigs = base.rigs.map((r) => blockedPs.find((x) => x.id === r.id) ?? r);
       const seats = base.seats.map((s) => nodes.find((n) => n.id === s.id) ?? s);
+
       return buildSnapshot(
         fixtureSources({
           machine: 'roamy',

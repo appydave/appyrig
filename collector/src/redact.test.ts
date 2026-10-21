@@ -146,7 +146,9 @@ describe('redaction of unprefixed secrets in message bodies', () => {
       'https://www.openrig.dev/help/agents and node v24.13.0',
       'commit 3403b41 and ba75f89 accepted',
     ];
-    for (const text of calm) expect(redactString(text), text).toBe(text);
+    for (const text of calm) {
+      expect(redactString(text), text).toBe(text);
+    }
   });
 });
 
@@ -190,8 +192,9 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
     const coloured = `export TOKEN_X=1 \x1b[33m${tok110.slice(0, 40)}\x1b[0m\x1b[1m${tok110.slice(40)}\x1b[0m`;
     const out = redactString(coloured);
     expect(out).toContain(REDACTED);
-    for (let i = 0; i + 12 <= tok110.length; i += 6)
+    for (let i = 0; i + 12 <= tok110.length; i += 6) {
       expect(out).not.toContain(tok110.slice(i, i + 12));
+    }
   });
 
   it('a coloured line without a secret keeps its colours', () => {
@@ -216,18 +219,24 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
   /** Claude Code style: rows of `width`, each starting with a 2-space indent, hard newlines. */
   const tuiWrap = (text: string, width: number): string[] => {
     const rows: string[] = [];
-    for (let i = 0; i < text.length; i += width - 2) rows.push(`  ${text.slice(i, i + width - 2)}`);
+    for (let i = 0; i < text.length; i += width - 2) {
+      rows.push(`  ${text.slice(i, i + width - 2)}`);
+    }
+
     return rows;
   };
   /** Longest run of the token's random body still on screen. */
   const leak = (out: string) => {
     let best = 0;
-    for (let i = 0; i < body.length; i++)
-      for (let j = body.length; j > i + best; j--)
+    for (let i = 0; i < body.length; i++) {
+      for (let j = body.length; j > i + best; j--) {
         if (out.includes(body.slice(i, j))) {
           best = j - i;
           break;
         }
+      }
+    }
+
     return best;
   };
   const FORMS: Record<string, string> = {
@@ -236,8 +245,8 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
     bare: tok110,
   };
 
-  for (const width of [80, 120])
-    for (const [form, text] of Object.entries(FORMS))
+  for (const width of [80, 120]) {
+    for (const [form, text] of Object.entries(FORMS)) {
       it(`${form} form at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
         // A Claude pane draws full-width rules, so the widest row is the pane's width.
         const rule = '─'.repeat(width);
@@ -249,6 +258,8 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
         expect(out.startsWith(`${rule}\n  Here is the file:\n`)).toBe(true);
         expect(out.endsWith('\n  That is all of it.')).toBe(true);
       });
+    }
+  }
 
   describe('QA F2 MEDIUM-1: long secrets wrap over many rows', () => {
     // Fakes made for this test only: a 600-char JWT shape and a 300-char sk-ant key.
@@ -258,19 +269,22 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
       'sk-ant-Q89r4RClQRPXdMtpqkor6qMNHQQrNQpGs6gP4Gow882VUYxj4x98JThHtqoagfsvAFugHkodWg_CsCSBob5WIUzfbkOdfo2W1mdqvpbgu-Xck7qKIdRPZUrfsm05J-IP6pn8C9ma5NHe7uxrv6dKcnPd9NzsOAAL_SaP1MxBinljO61ckBs2W6lgCrW73WWO-dzXTaQZGKoMO4r4b2yZ_iWhahn35faOGqBRMLZtkDafuFTjkduVrM7Vo3IkEHK17LXPdfHsjZkQszLKegYIwSl_lXWwkHARp61R2';
     const longest = (secret: string, out: string) => {
       let best = 0;
-      for (let i = 0; i < secret.length; i++)
-        for (let j = secret.length; j > i + best; j--)
+      for (let i = 0; i < secret.length; i++) {
+        for (let j = secret.length; j > i + best; j--) {
           if (out.includes(secret.slice(i, j))) {
             best = j - i;
             break;
           }
+        }
+      }
+
       return best;
     };
-    for (const width of [80, 120])
+    for (const width of [80, 120]) {
       for (const [name, text, secret] of [
         ['600-char JWT', `token: ${jwt}`, jwt],
         ['300-char key', `ANTHROPIC_API_KEY=${key}`, key],
-      ] as const)
+      ] as const) {
         it(`${name} at ${width} cols leaks nothing past chance (≤ 2 chars)`, () => {
           const rows = ['─'.repeat(width), ...tuiWrap(text, width), '  Next line of prose.'];
           const out = redactWrapped(rows).map(redactString).join('\n');
@@ -278,6 +292,8 @@ describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', 
           expect(longest(secret, out)).toBeLessThanOrEqual(2);
           expect(out.endsWith('\n  Next line of prose.')).toBe(true);
         });
+      }
+    }
   });
 
   it('r1 HIGH (probe A): a row wider than the pane earlier in the tail (-J) does not switch the step off', () => {

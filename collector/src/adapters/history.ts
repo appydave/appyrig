@@ -27,7 +27,10 @@ const SEAT_TITLE = /^[\w.-]+@[\w.-]+$/;
 export function seatOfFirstLine(line: string): string | null {
   try {
     const d = JSON.parse(line) as { type?: unknown; customTitle?: unknown };
-    if (d.type !== 'custom-title' || typeof d.customTitle !== 'string') return null;
+    if (d.type !== 'custom-title' || typeof d.customTitle !== 'string') {
+      return null;
+    }
+
     return SEAT_TITLE.test(d.customTitle) ? d.customTitle : null;
   } catch {
     return null;
@@ -41,6 +44,7 @@ const clean = (s: string): string => {
       .replace(/\s+/g, ' ')
       .trim()
   );
+
   return flat.length > HISTORY_TEXT_MAX ? `${flat.slice(0, HISTORY_TEXT_MAX - 1)}…` : flat;
 };
 
@@ -60,16 +64,24 @@ export function classifyPrompt(raw: string): { origin: SeatHistoryOrigin; text: 
   if (/^From: \S+\s+To: \S+\s+Sent:/.test(t)) {
     return { origin: /---\s*Queue handoff: qitem-/.test(t) ? 'queue' : 'send', text: t };
   }
-  if (/^\[OpenRig watchdog/.test(t)) return { origin: 'system', text: t };
-  if (/^This session is being continued/.test(t)) return { origin: 'compaction', text: t };
-  if (/^Base directory for this skill/.test(t)) return { origin: 'skill', text: t };
+  if (/^\[OpenRig watchdog/.test(t)) {
+    return { origin: 'system', text: t };
+  }
+  if (/^This session is being continued/.test(t)) {
+    return { origin: 'compaction', text: t };
+  }
+  if (/^Base directory for this skill/.test(t)) {
+    return { origin: 'skill', text: t };
+  }
   if (/^\S+@\S+\s+OpenRig session identity:/.test(t)) {
     const end = STARTUP_HEADER_END.exec(t);
     const rest = end ? t.slice(end.index + end[0].length) : '';
+
     // OpenRig appends the seat's standard role pack ("# Role: Implementer …"). It is the same for
     // every seat of that role and says nothing about the work, so it is not kept as text.
     return { origin: 'startup', text: ROLE_PACK.test(rest) ? '' : rest };
   }
+
   return { origin: 'typed', text: t };
 }
 
@@ -79,6 +91,7 @@ export function toolSummary(name: string, input: unknown): string {
   const pick = ['command', 'file_path', 'path', 'pattern', 'url', 'query', 'description', 'prompt']
     .map((k) => i[k])
     .find((v) => typeof v === 'string' && v.length > 0) as string | undefined;
+
   return `${name}${pick ? `: ${pick}` : ''}`;
 }
 
@@ -93,7 +106,9 @@ interface Block {
 export function parseTranscript(text: string): SeatHistoryEvent[] {
   const out: SeatHistoryEvent[] = [];
   for (const line of text.split('\n')) {
-    if (!line.includes('"timestamp"')) continue;
+    if (!line.includes('"timestamp"')) {
+      continue;
+    }
     let d: { type?: string; timestamp?: string; message?: { content?: unknown } };
     try {
       d = JSON.parse(line);
@@ -101,31 +116,47 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
       continue;
     }
     const at = d.timestamp;
-    if (!at || Number.isNaN(Date.parse(at))) continue;
+    if (!at || Number.isNaN(Date.parse(at))) {
+      continue;
+    }
     const content = d.message?.content;
     const push = (kind: SeatHistoryEvent['kind'], t: string) => {
       if (kind === 'prompt') {
         const { origin, text } = classifyPrompt(t);
         const c = clean(text);
         // A startup prompt with nothing after its header is still an event: it is how the seat began.
-        if (c || origin === 'startup')
+        if (c || origin === 'startup') {
           out.push({ at: new Date(at).toISOString(), kind, text: c, origin });
+        }
+
         return;
       }
       const c = clean(t);
-      if (c) out.push({ at: new Date(at).toISOString(), kind, text: c });
+      if (c) {
+        out.push({ at: new Date(at).toISOString(), kind, text: c });
+      }
     };
     if (d.type === 'user') {
-      if (typeof content === 'string') push('prompt', content);
-      else if (Array.isArray(content))
-        for (const b of content as Block[]) if (b.type === 'text' && b.text) push('prompt', b.text);
+      if (typeof content === 'string') {
+        push('prompt', content);
+      } else if (Array.isArray(content)) {
+        for (const b of content as Block[]) {
+          if (b.type === 'text' && b.text) {
+            push('prompt', b.text);
+          }
+        }
+      }
     } else if (d.type === 'assistant' && Array.isArray(content)) {
       for (const b of content as Block[]) {
-        if (b.type === 'text' && b.text) push('reply', b.text);
-        else if (b.type === 'tool_use' && b.name) push('tool', toolSummary(b.name, b.input));
+        if (b.type === 'text' && b.text) {
+          push('reply', b.text);
+        } else if (b.type === 'tool_use' && b.name) {
+          push('tool', toolSummary(b.name, b.input));
+        }
       }
     }
   }
+
   return out;
 }
 
@@ -140,11 +171,16 @@ export const TITLE_HEAD_LINES = 20;
  */
 export function seatOfHead(head: string, complete: boolean): string | null {
   const lines = head.split('\n');
-  if (!complete) lines.pop(); // the head was cut: its last line is partial
+  if (!complete) {
+    lines.pop();
+  } // the head was cut: its last line is partial
   for (const line of lines.slice(0, TITLE_HEAD_LINES)) {
     const seat = seatOfFirstLine(line);
-    if (seat) return seat;
+    if (seat) {
+      return seat;
+    }
   }
+
   return null;
 }
 
@@ -153,6 +189,7 @@ async function seatOfFile(path: string): Promise<string | null> {
   try {
     const buf = Buffer.alloc(TITLE_HEAD_BYTES);
     const { bytesRead } = await fh.read(buf, 0, buf.length, 0);
+
     return seatOfHead(buf.subarray(0, bytesRead).toString('utf8'), bytesRead < buf.length);
   } finally {
     await fh.close();
@@ -171,8 +208,11 @@ export function lastEventMs(tail: string): number | null {
   let best: number | null = null;
   for (const m of tail.matchAll(/"timestamp":"([^"]{10,40})"/g)) {
     const t = Date.parse(m[1]!);
-    if (!Number.isNaN(t) && (best === null || t > best)) best = t;
+    if (!Number.isNaN(t) && (best === null || t > best)) {
+      best = t;
+    }
   }
+
   return best;
 }
 
@@ -182,6 +222,7 @@ async function lastEventOfFile(path: string, size: number): Promise<number | nul
     const len = Math.min(size, TAIL_EVENT_BYTES);
     const buf = Buffer.alloc(len);
     const { bytesRead } = await fh.read(buf, 0, len, size - len);
+
     return lastEventMs(buf.subarray(0, bytesRead).toString('utf8'));
   } finally {
     await fh.close();
@@ -217,7 +258,9 @@ export class TranscriptIndex {
   /** seat → its transcripts (several when a seat was rebuilt or resumed). Empty without Claude Code. */
   async scan(knownSeats: Set<string>): Promise<Map<string, TranscriptFile[]>> {
     const bySeat = new Map<string, TranscriptFile[]>();
-    if (knownSeats.size === 0) return bySeat;
+    if (knownSeats.size === 0) {
+      return bySeat;
+    }
     let dirs: string[];
     try {
       dirs = await readdir(this.projectsDir);
@@ -258,6 +301,7 @@ export class TranscriptIndex {
         }
       }
     }
+
     return bySeat;
   }
 }
@@ -293,13 +337,17 @@ export class HistoryReader {
   async changed(knownSeats: Set<string>): Promise<PendingHistory[]> {
     // QA F3 MEDIUM: the first scan can run before the first snapshot has named any seats. Nothing
     // was looked for, so agent activity stays "not read yet" (absent), never "no transcript" (null).
-    if (knownSeats.size === 0) return [];
+    if (knownSeats.size === 0) {
+      return [];
+    }
     const bySeat = await this.index.scan(knownSeats);
     // F3: the newest event across a seat's transcripts; a seat whose files hold none is left out (null).
     this.latest = new Map();
     for (const [seat, list] of bySeat) {
       const times = list.map((f) => f.lastEventMs).filter((t): t is number => t !== null);
-      if (times.length) this.latest.set(seat, Math.max(...times));
+      if (times.length) {
+        this.latest.set(seat, Math.max(...times));
+      }
     }
 
     const out: PendingHistory[] = [];
@@ -308,7 +356,9 @@ export class HistoryReader {
         .map((f) => `${f.path}:${f.size}:${f.mtimeMs}`)
         .sort()
         .join('|');
-      if (this.sent.get(seat) === sig) continue;
+      if (this.sent.get(seat) === sig) {
+        continue;
+      }
       const events: SeatHistoryEvent[] = [];
       for (const f of list) {
         try {
@@ -330,6 +380,7 @@ export class HistoryReader {
         markSent: () => this.sent.set(seat, sig),
       });
     }
+
     return out;
   }
 }

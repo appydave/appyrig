@@ -40,14 +40,19 @@ function makeDb(): string {
   );
   ins.run('dev-qa', null, 'x'.repeat(DB_CELL_MAX + 50).replace(/x/g, 'a b '), null);
   const big = db.prepare('INSERT INTO big (v) VALUES (?)');
-  for (let i = 1; i <= DB_ROWS_MAX + 20; i++) big.run(`row ${i}`);
+  for (let i = 1; i <= DB_ROWS_MAX + 20; i++) {
+    big.run(`row ${i}`);
+  }
   const fat = db.prepare(
     'INSERT INTO fat (c0, c1, c2, c3, c4, c5, c6, c7, c8, c9) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   );
   // ten wide text columns: 500 rows of ~2 KB each overflow the 600 KB per-push cap
-  for (let i = 0; i < 500; i++) fat.run(...Array.from({ length: 10 }, () => 'word '.repeat(60)));
+  for (let i = 0; i < 500; i++) {
+    fat.run(...Array.from({ length: 10 }, () => 'word '.repeat(60)));
+  }
   db.prepare('INSERT INTO kv VALUES (?, ?)').run('a', '1');
   db.close();
+
   return path;
 }
 
@@ -58,7 +63,9 @@ describe('B5 readAllTableRows', () => {
     const path = makeDb();
     const pushes = readAllTableRows('m2', path, '2026-10-12T00:00:00.000Z');
     expect(pushes.map((p) => p.table)).toEqual(['big', 'fat', 'kv', 'sessions']);
-    for (const p of pushes) expect(DbRowsPushSchema.safeParse(p).success).toBe(true);
+    for (const p of pushes) {
+      expect(DbRowsPushSchema.safeParse(p).success).toBe(true);
+    }
     const s = pushes.find((p) => p.table === 'sessions')!;
     expect(s).toMatchObject({
       total: 2,
@@ -148,8 +155,9 @@ describe('F2 (security #6): column names that look secret', () => {
       'session_id',
       'native_session_id_at_boot',
       'resume_token',
-    ])
+    ]) {
       expect(DB_SECRET_COLUMN.test(c), c).toBe(true);
+    }
   });
 
   it('keeps the seat-name columns and ordinary words readable', () => {
@@ -162,7 +170,8 @@ describe('F2 (security #6): column names that look secret', () => {
       'event',
       'inventory',
       'seat_session',
-    ])
+    ]) {
       expect(DB_SECRET_COLUMN.test(c), c).toBe(false);
+    }
   });
 });

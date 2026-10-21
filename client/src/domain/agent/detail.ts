@@ -30,7 +30,9 @@ export interface SeatDetailView {
 export function parseSeatDetail(
   value: Partial<SeatDetailOutput> | null | undefined
 ): SeatDetailView | null {
-  if (!value || value.status !== 'ok' || !value.detail) return null;
+  if (!value || value.status !== 'ok' || !value.detail) {
+    return null;
+  }
   const d: SeatDetailData = value.detail;
   const view: SeatDetailView = {
     spec: d.spec ? { name: d.spec.name, version: d.spec.version, profile: d.spec.profile } : null,
@@ -54,6 +56,7 @@ export function parseSeatDetail(
     view.startupFiles.length === 0 &&
     view.startupActions.length === 0 &&
     view.peers.length === 0;
+
   return empty ? null : view;
 }
 
@@ -69,6 +72,7 @@ export function sampleDetail(seat: Seat, rigMates: string[]): SeatDetailView {
   const role = seat.agentRole ?? seat.id.split('@')[0]!.split('-')[0]!;
   const rig = seat.rig ?? 'no rig';
   const name = seat.id.split('@')[0]!;
+
   return {
     spec: { name: role, version: '1.0.0', profile: 'default' },
     startupFiles: [

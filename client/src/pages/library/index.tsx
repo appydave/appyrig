@@ -47,6 +47,7 @@ function Detail({
     !live || item.group !== 'skill' ? sampleFiles(item) : got.phase === 'ok' ? got.value.files : [];
   const facts = Object.entries(item.facts);
   const kind = kindOf(item);
+
   return (
     <div className="lib-detail" data-testid="lib-detail">
       <p>{item.summary ?? 'No summary.'}</p>
@@ -185,6 +186,7 @@ function Library({ ctx }: PageProps) {
               {shown.map((i) => {
                 const k = itemKey(i);
                 const isOpen = open === k;
+
                 return (
                   <li key={k} data-testid="lib-item" data-kind={kindOf(i)}>
                     <button

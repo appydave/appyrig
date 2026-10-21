@@ -432,6 +432,7 @@ export const V2_QUEUE_KEYS = [
 export function stripV2Fields(snapshot: MachineSnapshot): MachineSnapshot {
   const drop = (row: object, keys: readonly string[]) =>
     Object.fromEntries(Object.entries(row).filter(([k]) => !keys.includes(k)));
+
   return {
     ...snapshot,
     seats: snapshot.seats.map((s) => drop(s, V2_SEAT_KEYS) as Seat),

@@ -811,6 +811,7 @@ export const LEGEND_PAGES = Object.keys(PAGES) as PageKey[];
 /** The sections for a V2 page: its own first, then Everywhere. A page with none still gets Everywhere. */
 export function legendSections(page: PageKey): LegendSection[] {
   const purpose = PAGE_PURPOSE[page];
+
   return [
     ...(purpose ? [{ title: 'What this page is for', purpose, entries: [] } as LegendSection] : []),
     ...(PAGES[page] ?? []),

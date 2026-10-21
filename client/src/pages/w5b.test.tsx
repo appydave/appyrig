@@ -34,16 +34,22 @@ import {
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
 vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 
 type Handler = (...args: unknown[]) => void;
+
 /** Answers the named verbs; any other verb is refused as unknown, like a hub without them. */
 function spySocket(answers: Record<string, unknown> = {}) {
   const handlers = new Map<string, Set<Handler>>();
@@ -51,12 +57,16 @@ function spySocket(answers: Record<string, unknown> = {}) {
   const s = {
     connected: true,
     on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) handlers.set(ev, new Set());
+      if (!handlers.has(ev)) {
+        handlers.set(ev, new Set());
+      }
       handlers.get(ev)!.add(h);
+
       return s;
     },
     off(ev: string, h: Handler) {
       handlers.get(ev)?.delete(h);
+
       return s;
     },
     emit: vi.fn(),
@@ -73,6 +83,7 @@ function spySocket(answers: Record<string, unknown> = {}) {
   };
   const fire = (ev: string, ...args: unknown[]) =>
     act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+
   return { socket: s as unknown as FleetSocket, sent, fire, emit: s.emit };
 }
 
@@ -283,6 +294,7 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
       status: 'idle' as const,
       contextUsedPct: pcts[i] === undefined ? null : pcts[i]!,
     }));
+
     return { ...fm, snapshot: { ...fm.snapshot, seats } };
   };
 
@@ -326,7 +338,9 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
       { contextCriticalPercent: 70, contextWarningPercent: 90 },
       { contextCriticalPercent: 120, contextWarningPercent: 70 },
     ];
-    for (const th of ignored) expect(thresholdsFor(policy(th), undefined).source).toBe('assumed');
+    for (const th of ignored) {
+      expect(thresholdsFor(policy(th), undefined).source).toBe('assumed');
+    }
     // a count beside valid context keys does not win
     expect(
       thresholdsFor(
@@ -450,8 +464,9 @@ describe('v2 Health: an empty list is never read as all-clear', () => {
     );
     expect(within(four!).getByTestId('sample-label')).toBeInTheDocument();
     expect(within(r!).getByTestId('hl2-thresholds')).toHaveTextContent('assumed default 80/60');
-    for (const card of [r!, m!, four!])
+    for (const card of [r!, m!, four!]) {
       expect(card.textContent?.toLowerCase()).not.toContain('healthy');
+    }
     fireEvent.click(within(r!).getByRole('button', { name: 'Enable diagnosis' }));
     fireEvent.click(within(r!).getByTestId('fake-confirm'));
     act(() => vi.advanceTimersByTime(1500));
@@ -579,10 +594,12 @@ describe('v2 Settings', () => {
       'file:///etc/x',
       '{"dir":"/var/lib"}',
       '["~/a"]',
-    ])
+    ]) {
       expect(show(v)).toBe('(path hidden)');
-    for (const v of ['127.0.0.1', 'Australia/Brisbane', 'light', 'UTC', '12:30', 'UTC / local'])
+    }
+    for (const v of ['127.0.0.1', 'Australia/Brisbane', 'light', 'UTC', '12:30', 'UTC / local']) {
       expect(show(v)).toBe(v);
+    }
     expect(showSource('/etc/openrig.yaml')).toBe('(path hidden)');
     expect(showSource('file')).toBe('file');
     expect(looksLikePath('a/b')).toBe(false);
@@ -626,8 +643,9 @@ describe('v2 Settings', () => {
       src.indexOf('SETTINGS_ALLOW'),
       src.indexOf('];', src.indexOf('SETTINGS_ALLOW'))
     );
-    for (const s of sampleSettings([fleetMachine(snapshot('m2'))])[0]!.settings)
+    for (const s of sampleSettings([fleetMachine(snapshot('m2'))])[0]!.settings) {
       expect(allow).toContain(`'${s.key}'`);
+    }
   });
 
   it('schedules are built from real names', () => {

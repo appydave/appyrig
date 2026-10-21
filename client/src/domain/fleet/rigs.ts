@@ -8,6 +8,7 @@ import type { RigRef } from './views.js';
  */
 export function busiestRig(rigs: RigRef[]): RigRef | null {
   const up = (r: RigRef) => (r.state === 'stopped' || r.state === 'asleep' ? 1 : 0);
+
   return (
     [...rigs].sort(
       (a, b) =>

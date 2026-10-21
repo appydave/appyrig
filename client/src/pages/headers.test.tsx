@@ -15,10 +15,15 @@ import { answeringSocket, pageCtx } from './page-test-kit.js';
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     attachCustomKeyEventHandler() {}
+
     loadAddon() {}
+
     open() {}
+
     reset() {}
+
     write() {}
+
     dispose() {}
   },
 }));
@@ -43,8 +48,9 @@ describe('one-line page headers', () => {
     // no other heading of the old kind above the content
     expect(main.querySelectorAll('h2:not(.ar-page-title)').length, `${key}: no loose h2`).toBe(0);
     // every fake inside the header sits in the ⋯ menu
-    for (const f of heads[0]!.querySelectorAll('[data-testid="fake-control"]'))
+    for (const f of heads[0]!.querySelectorAll('[data-testid="fake-control"]')) {
       expect(f.closest('.ar-mock-menu-pop'), `${key}: a header mock outside the ⋯`).not.toBeNull();
+    }
     expect(emitted).toEqual([]);
   });
 

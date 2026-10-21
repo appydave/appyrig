@@ -22,6 +22,7 @@ const BUILT_INS: [string, string, string][] = [
 export function sampleSpecs(machines: FleetMachine[]): WorkflowSpec[] {
   const machine = machines[0]?.machine.id ?? 'm4';
   const rig = realNames(machines).rigs[0]?.name ?? null;
+
   return BUILT_INS.map(([name, purpose, rule]) => ({
     machine,
     name,
@@ -60,6 +61,7 @@ export function sampleInstance(machines: FleetMachine[]): SampleInstance {
   const seats = inRig.length >= 3 ? inRig : names.seats;
   const who = (i: number) =>
     seats[i % Math.max(seats.length, 1)]?.id ?? `seat-${i + 1}@${rig?.name ?? 'rig'}`;
+
   return {
     instanceId: 'wf-sample-0001',
     workflow: 'gated-release',

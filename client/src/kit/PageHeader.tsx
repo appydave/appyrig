@@ -52,13 +52,19 @@ export function MockMenu({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     const away = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false);
+      if (!box.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     window.addEventListener('pointerdown', away);
+
     return () => window.removeEventListener('pointerdown', away);
   }, [open]);
+
   return (
     <span className="ar-mock-menu" ref={box}>
       <button

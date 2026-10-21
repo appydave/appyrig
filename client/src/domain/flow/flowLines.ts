@@ -20,6 +20,7 @@ export interface FlowPair extends LinePair {
 
 export const flowPairKey = (a: string, b: string) => {
   const [x, y] = a < b ? [a, b] : [b, a];
+
   return `pair:${x}|${y}`;
 };
 
@@ -39,10 +40,12 @@ export function flowPairs(edges: FlowEdge[], at: number): FlowPair[] {
       stale: aged(e, true),
     }))
   );
+
   return pairs.map((p) => {
     const mine = edges.filter(
       (e) => pairKey(e.from, e.to) === pairKey(p.a, p.b) && e.from !== e.to
     );
+
     return {
       ...p,
       key: flowPairKey(p.a, p.b),
@@ -84,6 +87,7 @@ export function pairPath(
   if (gap <= 1) {
     const s = { x: x1 + L.boxW / 2, y: rowY };
     const e = { x: x2 - L.boxW / 2, y: rowY };
+
     return {
       d: `M${s.x},${s.y} L${e.x},${e.y}`,
       lx: (s.x + e.x) / 2,
@@ -98,6 +102,7 @@ export function pairPath(
   const rise = 40 + gap * 30 + level * 26;
   const s = { x: x1, y: y0 };
   const e = { x: x2, y: y0 };
+
   return {
     d: `M${s.x},${s.y} C${s.x},${y0 - rise} ${e.x},${y0 - rise} ${e.x},${e.y}`,
     lx: (x1 + x2) / 2,

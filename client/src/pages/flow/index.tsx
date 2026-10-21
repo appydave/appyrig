@@ -32,6 +32,7 @@ function FlowPage({ ctx }: PageProps) {
           />
         )
       : null;
+
   return (
     <main className="view ar-flow-page" data-testid="ar-flow">
       <RigPicker

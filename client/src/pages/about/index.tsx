@@ -9,6 +9,7 @@ function AboutPage({ ctx }: PageProps) {
   const names = realNames(ctx.allMachines);
   const rig = names.rigs[0];
   const seats = names.seats.slice(0, 3);
+
   return (
     <main className="view ar-about" data-testid="ar-about">
       <h2>About</h2>

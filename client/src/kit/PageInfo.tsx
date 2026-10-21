@@ -4,7 +4,10 @@ import { PAGE_PURPOSE } from './legendData.js';
 /** An ⓘ whose tooltip says, in plain words, what a page is for. Same words as its Legend's first section. */
 export default function PageInfo({ page }: { page: PageKey }) {
   const text = PAGE_PURPOSE[page];
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
+
   return (
     <span
       className="page-info"

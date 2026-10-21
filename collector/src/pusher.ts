@@ -120,8 +120,9 @@ export function startPusher(opts: PusherOptions): Pusher {
   let capsWaiter: (() => void) | undefined;
   const capsWaitMs = opts.capsWaitMs ?? 1000;
   socket.on(FLEET_EVENTS.CAPS, (caps: unknown) => {
-    if (Array.isArray(caps))
+    if (Array.isArray(caps)) {
       hubCaps = new Set(caps.filter((c): c is string => typeof c === 'string'));
+    }
     capsSeen = true;
     capsWaiter?.();
   });
@@ -180,7 +181,9 @@ export function startPusher(opts: PusherOptions): Pusher {
     });
 
   const tick = async () => {
-    if (stopped) return;
+    if (stopped) {
+      return;
+    }
     try {
       if (socket.connected) {
         await waitForCaps();
@@ -189,7 +192,9 @@ export function startPusher(opts: PusherOptions): Pusher {
         const sendSpec = hubCaps.has(HUB_CAPS.SPEC_FIELDS) && !forceV15;
         const v2 = sendV2 ? built : stripV2Fields(built);
         const ack = await push(sendSpec ? v2 : stripSpecFields(v2));
-        if (!('timeout' in ack) && ack.ok) hubCaps = new Set(ack.caps ?? []);
+        if (!('timeout' in ack) && ack.ok) {
+          hubCaps = new Set(ack.caps ?? []);
+        }
         if (!('timeout' in ack) && !ack.ok && (sendV2 || sendSpec) && namesV2Key(ack.message)) {
           forceV15 = true;
           hubCaps = new Set();
@@ -206,7 +211,9 @@ export function startPusher(opts: PusherOptions): Pusher {
     } catch (e) {
       note(`tick failed: ${(e as Error).message}`);
     }
-    if (!stopped) timer = setTimeout(tick, intervalMs);
+    if (!stopped) {
+      timer = setTimeout(tick, intervalMs);
+    }
   };
   void tick();
 
@@ -222,30 +229,42 @@ export function startPusher(opts: PusherOptions): Pusher {
         });
     });
   const historyTick = async () => {
-    if (stopped || !opts.histories) return;
+    if (stopped || !opts.histories) {
+      return;
+    }
     try {
       if (socket.connected) {
         for (const p of await opts.histories()) {
           const ack = await pushHistory(p.history);
-          if ('timeout' in ack) note(`no ack for history of ${p.history.seat}`);
-          else if (ack.ok) p.markSent();
-          else note(`history refused for ${p.history.seat}: ${ack.failureMode}: ${ack.message}`);
+          if ('timeout' in ack) {
+            note(`no ack for history of ${p.history.seat}`);
+          } else if (ack.ok) {
+            p.markSent();
+          } else {
+            note(`history refused for ${p.history.seat}: ${ack.failureMode}: ${ack.message}`);
+          }
         }
       }
     } catch (e) {
       note(`history tick failed: ${(e as Error).message}`);
     }
-    if (!stopped) historyTimer = setTimeout(historyTick, historyInterval);
+    if (!stopped) {
+      historyTimer = setTimeout(historyTick, historyInterval);
+    }
   };
   // First history round shortly after the first snapshot, so known seats exist.
-  if (opts.histories) historyTimer = setTimeout(historyTick, Math.min(historyInterval, 5_000));
+  if (opts.histories) {
+    historyTimer = setTimeout(historyTick, Math.min(historyInterval, 5_000));
+  }
 
   // Queue bodies: one batch per tick, marked sent only when the hub accepts it. An older hub has
   // no listener for this event, so no ack comes back: noted as a timeout, retried next tick.
   let handoffTimer: NodeJS.Timeout | undefined;
   const handoffInterval = opts.handoffIntervalMs ?? HANDOFF_INTERVAL_MS;
   const handoffTick = async () => {
-    if (stopped || !opts.handoffs) return;
+    if (stopped || !opts.handoffs) {
+      return;
+    }
     try {
       if (socket.connected) {
         const pending = await opts.handoffs();
@@ -257,18 +276,25 @@ export function startPusher(opts: PusherOptions): Pusher {
                 resolve(err || !a ? { ok: false, timeout: true } : a);
               });
           });
-          if ('timeout' in ack)
+          if ('timeout' in ack) {
             warnSometimes('handoffs', 'no ack for queue bodies (is the hub older than v1.4?)');
-          else if (ack.ok) pending.markSent();
-          else note(`queue bodies refused: ${ack.failureMode}: ${ack.message}`);
+          } else if (ack.ok) {
+            pending.markSent();
+          } else {
+            note(`queue bodies refused: ${ack.failureMode}: ${ack.message}`);
+          }
         }
       }
     } catch (e) {
       note(`handoff tick failed: ${(e as Error).message}`);
     }
-    if (!stopped) handoffTimer = setTimeout(handoffTick, handoffInterval);
+    if (!stopped) {
+      handoffTimer = setTimeout(handoffTick, handoffInterval);
+    }
   };
-  if (opts.handoffs) handoffTimer = setTimeout(handoffTick, Math.min(handoffInterval, 3_000));
+  if (opts.handoffs) {
+    handoffTimer = setTimeout(handoffTick, Math.min(handoffInterval, 3_000));
+  }
 
   // v1.4 · S7: rig files (chunked, so no message nears socket.io's 1 MB limit) and the database
   // shape. Same rules as queue bodies: marked sent only when the hub accepts, retried otherwise,
@@ -296,7 +322,9 @@ export function startPusher(opts: PusherOptions): Pusher {
   ) => {
     let t: NodeJS.Timeout | undefined;
     const tick = async () => {
-      if (stopped) return;
+      if (stopped) {
+        return;
+      }
       try {
         if (socket.connected && (!needs || hubCaps.has(needs))) {
           const pending = await take();
@@ -323,7 +351,9 @@ export function startPusher(opts: PusherOptions): Pusher {
                 break;
               }
             }
-            if (all) pending.markSent();
+            if (all) {
+              pending.markSent();
+            }
           }
         }
       } catch (e) {
@@ -346,6 +376,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'v1.4',
       async () => {
         const p = await take(hubCaps);
+
         return p && { payloads: p.pushes, markSent: p.markSent };
       }
     );
@@ -356,6 +387,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       const p = await take();
       // A hub without seat-spec refuses the member / AgentSpec / topology keys (strict schema).
       const full = hubCaps.has(HUB_CAPS.SEAT_SPEC);
+
       return (
         p && { payloads: full ? p.loadouts : p.loadouts.map(stripSeatSpec), markSent: p.markSent }
       );
@@ -370,6 +402,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'v1.5',
       async () => {
         const p = await take();
+
         return p && { payloads: p.pushes, markSent: p.markSent };
       }
     );
@@ -383,6 +416,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'v2',
       async () => {
         const p = await take();
+
         return (
           p && {
             payloads: p.pushes,
@@ -403,6 +437,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'run board',
       async () => {
         const p = await take();
+
         return p && { payloads: p.pushes, markSent: p.markSent };
       },
       HUB_CAPS.MISSIONFILES
@@ -417,6 +452,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'N10',
       async () => {
         const p = await take();
+
         return p && { payloads: [p.push], markSent: p.markSent };
       },
       HUB_CAPS.RIG_SPECS
@@ -432,6 +468,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'N10',
       async () => {
         const p = await take();
+
         return p && { payloads: [p.push], markSent: p.markSent };
       },
       HUB_CAPS.RIG_COMMANDS
@@ -446,6 +483,7 @@ export function startPusher(opts: PusherOptions): Pusher {
       'v1.4',
       async () => {
         const p = await take();
+
         return p && { payloads: [p.push], markSent: p.markSent };
       }
     );
@@ -454,11 +492,19 @@ export function startPusher(opts: PusherOptions): Pusher {
   return {
     socket,
     async stop() {
-      for (const t of timers) clearTimeout(t);
-      if (handoffTimer) clearTimeout(handoffTimer);
+      for (const t of timers) {
+        clearTimeout(t);
+      }
+      if (handoffTimer) {
+        clearTimeout(handoffTimer);
+      }
       stopped = true;
-      if (timer) clearTimeout(timer);
-      if (historyTimer) clearTimeout(historyTimer);
+      if (timer) {
+        clearTimeout(timer);
+      }
+      if (historyTimer) {
+        clearTimeout(historyTimer);
+      }
       socket.close();
     },
   };

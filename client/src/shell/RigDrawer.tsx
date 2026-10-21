@@ -27,6 +27,7 @@ function readPinned(): boolean {
     return false;
   }
 }
+
 function writePinned(on: boolean): void {
   try {
     window.localStorage.setItem(PIN_KEY, on ? '1' : '0');
@@ -77,6 +78,7 @@ export default function RigDrawer({
   useEffect(() => {
     const on = () => setWinW(window.innerWidth);
     window.addEventListener('resize', on);
+
     return () => window.removeEventListener('resize', on);
   }, []);
   // While the panel is open and the page would be under MIN_PAGE_PX, the drawer shows as its tab only
@@ -90,7 +92,9 @@ export default function RigDrawer({
   const panel = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     const el = panel.current;
-    if (!el || !open) return;
+    if (!el || !open) {
+      return;
+    }
     const fit = () => {
       const top = Math.max(0, el.getBoundingClientRect().top);
       el.style.maxHeight = `${Math.max(160, window.innerHeight - top - 8)}px`;
@@ -98,6 +102,7 @@ export default function RigDrawer({
     fit();
     window.addEventListener('scroll', fit, { passive: true });
     window.addEventListener('resize', fit);
+
     return () => {
       window.removeEventListener('scroll', fit);
       window.removeEventListener('resize', fit);
@@ -111,23 +116,32 @@ export default function RigDrawer({
 
   useEffect(
     () => () => {
-      if (closeTimer.current) window.clearTimeout(closeTimer.current);
+      if (closeTimer.current) {
+        window.clearTimeout(closeTimer.current);
+      }
     },
     []
   );
   const enter = () => {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+    }
     setHover(true);
   };
   const leave = () => {
-    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+    }
     closeTimer.current = window.setTimeout(() => setHover(false), CLOSE_DELAY_MS);
   };
 
   /** Rig names that exist on more than one machine: their rows carry the machine chip. */
   const shared = useMemo(() => {
     const seen = new Map<string, Set<string>>();
-    for (const r of rigs) seen.set(r.name, (seen.get(r.name) ?? new Set()).add(r.machineId));
+    for (const r of rigs) {
+      seen.set(r.name, (seen.get(r.name) ?? new Set()).add(r.machineId));
+    }
+
     return new Set([...seen].filter(([, m]) => m.size > 1).map(([n]) => n));
   }, [rigs]);
 
@@ -138,6 +152,7 @@ export default function RigDrawer({
         const live = mine.filter((r) => r.state !== 'stopped');
         const stopped = mine.filter((r) => r.state === 'stopped');
         const loose = fm.snapshot.seats.filter((s) => s.rig === null);
+
         return { fm, live, stopped, loose };
       }),
     [machines, rigs]
@@ -151,6 +166,7 @@ export default function RigDrawer({
   const agentRow = (fm: FleetMachine, s: Seat) => {
     const pip = pipFor(s, fm);
     const key = seatKey(fm.machine.id, s.id);
+
     return (
       <li key={s.id}>
         <button
@@ -178,6 +194,7 @@ export default function RigDrawer({
       pods.set(k, [...(pods.get(k) ?? []), s]);
     }
     const shown = isOpen(r);
+
     return (
       <li
         key={r.key}
@@ -277,6 +294,7 @@ export default function RigDrawer({
         {tree.map(({ fm, live, stopped, loose }) => {
           const stoppedShown =
             stoppedOpen[fm.machine.id] ?? stopped.some((r) => r.key === highlightRigKey);
+
           return (
             <section key={fm.machine.id} className="rd-machine" data-liveness={fm.liveness}>
               <h3 className="rd-machine-h">

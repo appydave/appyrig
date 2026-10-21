@@ -59,6 +59,7 @@ describe('History fold: loaded rows are shown, filters go to the hub', () => {
     const { socket } = answeringSocket({
       'history.transitions': (input: Record<string, unknown>) => {
         asked.push(input);
+
         return {
           machines: header(40),
           rows: rows(input.before ? 100 : 1, 5),

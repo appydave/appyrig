@@ -30,6 +30,7 @@ const VIEW_LABEL = { wall: 'The Wall', map: 'Rig Map', flow: 'Handoff Flow', acc
 /** The Concept Atlas: every OpenRig term, checked against the code, and the AppyDave ideas beside it. */
 function AtlasPage() {
   const snap = ATLAS.snapshot;
+
   return (
     <article className="learn-body" data-testid="lesson" data-lesson={ATLAS_ID}>
       <span className="label">Concept Atlas</span>
@@ -83,8 +84,11 @@ function LiveExample({
   if (lesson.live === 'seats') {
     const rig = rigs.find((r) => r.handoffs > 0) ?? rigs[0];
     const fm = machines.find((m) => m.machine.id === rig?.machineId);
-    if (!rig || !fm) return <p className="quiet">No rigs reported yet.</p>;
+    if (!rig || !fm) {
+      return <p className="quiet">No rigs reported yet.</p>;
+    }
     const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
+
     return (
       <>
         <p>
@@ -102,6 +106,7 @@ function LiveExample({
           <tbody>
             {seats.map((s) => {
               const pip = pipFor(s, fm);
+
               return (
                 <tr key={s.id}>
                   <td>{seatName(s)}</td>
@@ -137,6 +142,7 @@ function LiveExample({
                 fm.snapshot.seats.filter((s) => s.rig === r.name).map((s) => s.pod ?? '–')
               ),
             ];
+
             return (
               <tr key={r.key}>
                 <td>{r.name}</td>
@@ -156,9 +162,13 @@ function LiveExample({
       .map((r) => {
         const map = buildRigMap(machines, r.key, now);
         const sum = (k: 'open' | 'stale') => map?.edges.reduce((n, e) => n + e[k], 0) ?? 0;
+
         return { r, open: sum('open'), stale: sum('stale') };
       });
-    if (!rows.length) return <p className="quiet">No handoffs on any rig yet.</p>;
+    if (!rows.length) {
+      return <p className="quiet">No handoffs on any rig yet.</p>;
+    }
+
     return (
       <table className="learn-table">
         <thead>
@@ -190,8 +200,10 @@ function LiveExample({
     const blocked = blockedSeats(machines);
     const stale = rigs.reduce((n, r) => {
       const map = r.handoffs ? buildRigMap(machines, r.key, now) : null;
+
       return n + (map?.edges.reduce((m, e) => m + e.stale, 0) ?? 0);
     }, 0);
+
     return (
       <ul className="learn-live-list">
         <li>
@@ -212,7 +224,10 @@ function LiveExample({
   }
   if (lesson.live === 'accounts') {
     const { accounts } = buildAccounts(machines);
-    if (!accounts.length) return <p className="quiet">No machine reports its account yet.</p>;
+    if (!accounts.length) {
+      return <p className="quiet">No machine reports its account yet.</p>;
+    }
+
     return (
       <ul className="learn-live-list">
         {accounts.map((a) => (
@@ -226,6 +241,7 @@ function LiveExample({
       </ul>
     );
   }
+
   return null;
 }
 

@@ -5,6 +5,7 @@ import type { FleetMachine, FleetUpdate, MachineSnapshot } from '@appydave/share
 /** The P0b AppyRig-shaped snapshots in test/fixtures/snapshots/, read from disk. */
 export function snapshot(name: 'roamy' | 'roamy--blocked' | 'm2'): MachineSnapshot {
   const file = path.resolve(__dirname, '../../../test/fixtures/snapshots', `${name}.json`);
+
   return JSON.parse(readFileSync(file, 'utf8')) as MachineSnapshot;
 }
 

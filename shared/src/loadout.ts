@@ -281,10 +281,16 @@ export function loadoutCounts(skills: LoadoutSkill[]): LoadoutCounts {
   const circlesOf = new Map<string, Set<SkillSource>>();
   for (const s of skills) {
     bySource[s.source] += 1;
-    if (s.alsoIn.length > 0) shadowed += 1;
+    if (s.alsoIn.length > 0) {
+      shadowed += 1;
+    }
     const key = shortSkillName(s.name);
     const set = circlesOf.get(key) ?? new Set<SkillSource>();
-    for (const src of [s.source, ...s.alsoIn]) if (CIRCLES.includes(src)) set.add(src);
+    for (const src of [s.source, ...s.alsoIn]) {
+      if (CIRCLES.includes(src)) {
+        set.add(src);
+      }
+    }
     circlesOf.set(key, set);
   }
   const regions: Record<string, number> = {};
@@ -292,5 +298,6 @@ export function loadoutCounts(skills: LoadoutSkill[]): LoadoutCounts {
     const key = [...set].sort().join('+');
     regions[key] = (regions[key] ?? 0) + 1;
   }
+
   return { bySource, shadowed, regions };
 }

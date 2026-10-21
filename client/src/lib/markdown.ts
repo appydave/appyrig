@@ -35,6 +35,7 @@ export type Block =
 
 export const safeHref = (href: string): string | null => {
   const h = href.trim();
+
   return /^(https?:\/\/|mailto:)/i.test(h) ? h : null;
 };
 
@@ -42,7 +43,9 @@ export function parseInline(src: string): Inline[] {
   const out: Inline[] = [];
   let text = '';
   const flush = () => {
-    if (text) out.push({ t: 'text', text });
+    if (text) {
+      out.push({ t: 'text', text });
+    }
     text = '';
   };
   let i = 0;
@@ -90,8 +93,11 @@ export function parseInline(src: string): Inline[] {
         flush();
         const href = safeHref(m[2]!);
         const kids = parseInline(m[1]!);
-        if (href) out.push({ t: 'link', href, children: kids });
-        else out.push(...kids, { t: 'text', text: m[2] ? ` (${m[2]})` : '' });
+        if (href) {
+          out.push({ t: 'link', href, children: kids });
+        } else {
+          out.push(...kids, { t: 'text', text: m[2] ? ` (${m[2]})` : '' });
+        }
         i += m[0].length;
         continue;
       }
@@ -100,6 +106,7 @@ export function parseInline(src: string): Inline[] {
     i++;
   }
   flush();
+
   return out;
 }
 
@@ -111,8 +118,13 @@ const TABLE_SEP = /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/;
 
 const cells = (line: string): string[] => {
   let s = line.trim();
-  if (s.startsWith('|')) s = s.slice(1);
-  if (s.endsWith('|') && !s.endsWith('\\|')) s = s.slice(0, -1);
+  if (s.startsWith('|')) {
+    s = s.slice(1);
+  }
+  if (s.endsWith('|') && !s.endsWith('\\|')) {
+    s = s.slice(0, -1);
+  }
+
   return s.split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
 };
 
@@ -135,6 +147,7 @@ export function parseMarkdown(source: string): Block[] {
     }
   }
   blocks.push(...parseBlocks(lines));
+
   return blocks;
 }
 
@@ -155,8 +168,9 @@ function parseBlocks(lines: string[]): Block[] {
       while (
         i < lines.length &&
         !new RegExp(`^\\s*${marker}{${fence[1]!.length},}\\s*$`).test(lines[i]!)
-      )
+      ) {
         body.push(lines[i++]!);
+      }
       i++; // the closing fence (or the end of the file)
       blocks.push({ t: 'code', lang: fence[2] ?? '', text: body.join('\n') });
       continue;
@@ -174,8 +188,9 @@ function parseBlocks(lines: string[]): Block[] {
     }
     if (/^\s*>/.test(line)) {
       const body: string[] = [];
-      while (i < lines.length && /^\s*>/.test(lines[i]!))
+      while (i < lines.length && /^\s*>/.test(lines[i]!)) {
         body.push(lines[i++]!.replace(/^\s*> ?/, ''));
+      }
       blocks.push({ t: 'quote', children: parseBlocks(body) });
       continue;
     }
@@ -214,9 +229,12 @@ function parseBlocks(lines: string[]): Block[] {
           !m ||
           m[1]!.length < baseIndent ||
           (m[1]!.length === baseIndent && /\d/.test(m[2]!) !== ordered)
-        )
+        ) {
           break;
-        if (m[1]!.length > baseIndent) break;
+        }
+        if (m[1]!.length > baseIndent) {
+          break;
+        }
         const text = [m[3]!];
         const nested: string[] = [];
         i++;
@@ -236,9 +254,14 @@ function parseBlocks(lines: string[]): Block[] {
             break;
           }
           const indent = l.length - l.trimStart().length;
-          if (indent <= baseIndent) break;
-          if (ITEM.test(l) || nested.length) nested.push(l.slice(Math.min(indent, baseIndent + 2)));
-          else text.push(l.trim());
+          if (indent <= baseIndent) {
+            break;
+          }
+          if (ITEM.test(l) || nested.length) {
+            nested.push(l.slice(Math.min(indent, baseIndent + 2)));
+          } else {
+            text.push(l.trim());
+          }
           i++;
         }
         items.push({
@@ -259,5 +282,6 @@ function parseBlocks(lines: string[]): Block[] {
     }
     blocks.push({ t: 'para', inline: parseInline(para.join(' ')) });
   }
+
   return blocks;
 }

@@ -56,16 +56,25 @@ export function buildParams(positionals, inputJson) {
   }
   for (const pair of positionals) {
     const eq = pair.indexOf('=');
-    if (eq <= 0) throw new Usage(`expected key=value, got "${pair}"`);
+    if (eq <= 0) {
+      throw new Usage(`expected key=value, got "${pair}"`);
+    }
     params[pair.slice(0, eq)] = parseValue(pair.slice(eq + 1));
   }
+
   return params;
 }
 
 function readToken(values, env, readFile) {
-  if (values['token-file']) return readFile(values['token-file']).trim();
-  if (env.APPYRIG_TOKEN_FILE) return readFile(env.APPYRIG_TOKEN_FILE).trim();
-  if (env.APPYRIG_TOKEN) return env.APPYRIG_TOKEN.trim();
+  if (values['token-file']) {
+    return readFile(values['token-file']).trim();
+  }
+  if (env.APPYRIG_TOKEN_FILE) {
+    return readFile(env.APPYRIG_TOKEN_FILE).trim();
+  }
+  if (env.APPYRIG_TOKEN) {
+    return env.APPYRIG_TOKEN.trim();
+  }
   try {
     return readFile(join(homedir(), '.config/appyrig/token')).trim();
   } catch {
@@ -99,25 +108,34 @@ export async function run(argv, env = process.env, io = {}) {
     const [verb, ...rest] = positionals;
     if (values.help || !verb) {
       out(`${HELP}\n`);
+
       return values.help ? 0 : 2;
     }
     const hub = (values.hub ?? env.APPYRIG_HUB_URL ?? DEFAULT_HUB).replace(/\/+$/, '');
 
     if (verb === 'docs' || verb === 'console') {
       out(`${hub}/v1/${verb}\n`);
+
       return 0;
     }
     if (verb === 'verbs') {
       const res = await doFetch(`${hub}/v1/openrpc.json`);
-      if (!res.ok) throw new Usage(`GET /v1/openrpc.json -> HTTP ${res.status}`);
+      if (!res.ok) {
+        throw new Usage(`GET /v1/openrpc.json -> HTTP ${res.status}`);
+      }
       const doc = await res.json();
-      for (const m of doc.methods ?? []) out(`${m.name}\t${m.summary ?? ''}\n`);
+      for (const m of doc.methods ?? []) {
+        out(`${m.name}\t${m.summary ?? ''}\n`);
+      }
+
       return 0;
     }
 
     const principal = values.as ?? 'cli';
     const params = buildParams(rest, values.input);
-    if (values['dry-run']) params.dryRun = true;
+    if (values['dry-run']) {
+      params.dryRun = true;
+    }
     const token = readToken(values, env, readFile);
     if (!token) {
       throw new Usage(
@@ -163,7 +181,10 @@ export async function run(argv, env = process.env, io = {}) {
       for (const issue of e.data?.details?.issues ?? []) {
         err(`appyrig:   ${issue.path}: ${issue.message}\n`);
       }
-      if (values.json) out(`${JSON.stringify(body.error)}\n`);
+      if (values.json) {
+        out(`${JSON.stringify(body.error)}\n`);
+      }
+
       return 1;
     }
     if (!body || typeof body !== 'object' || !('result' in body)) {
@@ -172,13 +193,16 @@ export async function run(argv, env = process.env, io = {}) {
     out(
       values.json ? `${JSON.stringify(body.result)}\n` : `${JSON.stringify(body.result, null, 2)}\n`
     );
+
     return 0;
   } catch (e) {
     if (e instanceof Usage || e?.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') {
       err(`appyrig: ${e.message}\n${e.showHelp === false ? '' : `${HELP}\n`}`);
+
       return 2;
     }
     err(`appyrig: ${e instanceof Error ? e.message : e}\n`);
+
     return 2;
   }
 }

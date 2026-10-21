@@ -33,21 +33,32 @@ export function filterCommands(
   { q, group, curatedOnly }: { q: string; group: string | null; curatedOnly: boolean }
 ): RigCommand[] {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+
   return all.filter((c) => {
-    if (curatedOnly && !c.curated) return false;
-    if (group && c.group !== group) return false;
-    if (!words.length) return true;
+    if (curatedOnly && !c.curated) {
+      return false;
+    }
+    if (group && c.group !== group) {
+      return false;
+    }
+    if (!words.length) {
+      return true;
+    }
     const hay = [c.command, c.plain, c.openrig_says, c.when_to_use, c.when_not, c.group]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();
+
     return words.every((w) => hay.includes(w));
   });
 }
 
 export function groupsOf(all: RigCommand[]): { group: string; count: number }[] {
   const m = new Map<string, number>();
-  for (const c of all) m.set(c.group, (m.get(c.group) ?? 0) + 1);
+  for (const c of all) {
+    m.set(c.group, (m.get(c.group) ?? 0) + 1);
+  }
+
   return [...m.entries()]
     .map(([group, count]) => ({ group, count }))
     .sort((a, b) => a.group.localeCompare(b.group));

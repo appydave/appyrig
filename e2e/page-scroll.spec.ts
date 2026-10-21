@@ -7,11 +7,14 @@ test('a new page opens at the top and Back restores the old scroll', async ({ pa
   await page.goto('/?frozen=busy-2026-10-18&v=2');
   await expect(page.getByTestId('ar-strip')).toBeVisible({ timeout: 20_000 });
   const dismiss = page.getByTestId('ar-welcome-dismiss');
-  if (await dismiss.count()) await dismiss.click();
+  if (await dismiss.count()) {
+    await dismiss.click();
+  }
 
   const scrolled = await page.evaluate(() => {
     document.documentElement.style.minHeight = '3000px';
     window.scrollTo(0, 300);
+
     return window.scrollY;
   });
   expect(scrolled).toBeGreaterThan(100);

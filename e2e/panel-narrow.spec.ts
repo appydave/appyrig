@@ -11,8 +11,10 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 async function box(l: Locator) {
   const b = await l.boundingBox();
   expect(b, 'drawn').not.toBeNull();
+
   return b!;
 }
+
 const overlaps = (
   a: { x: number; y: number; width: number; height: number },
   b: { x: number; y: number; width: number; height: number }
@@ -21,7 +23,9 @@ const overlaps = (
 async function open(page: Page, group: string, pageKey: string) {
   await page.goto(FROZEN);
   const gotIt = page.getByRole('button', { name: /got it/i });
-  if (await gotIt.count()) await gotIt.first().click();
+  if (await gotIt.count()) {
+    await gotIt.first().click();
+  }
   await page.getByTestId(`ar-group-${group}`).click();
   await page.getByTestId(`ar-page-${pageKey}`).click();
 }

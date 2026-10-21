@@ -24,10 +24,13 @@ function socketWith(onCall: Handler) {
       ) => {
         calls.push(request);
         const a = onCall(request);
-        if (a) queueMicrotask(() => ack(null, a));
+        if (a) {
+          queueMicrotask(() => ack(null, a));
+        }
       },
     }),
   } as unknown as FleetSocket;
+
   return { socket, calls };
 }
 
@@ -52,17 +55,21 @@ function rigFilesSocket(
     meta('rig.yaml', { bytes: RIG_YAML.length }),
     meta('MISSION.md', { bytes: MISSION.length }),
   ];
+
   return socketWith((req) => {
-    if (req.verb === 'rig.files')
+    if (req.verb === 'rig.files') {
       return {
         ok: true,
         value: { machine: 'm2', rig: 'flicut-ab', status: 'ok', reason: null, files, ...over.list },
       };
+    }
     if (req.verb === 'rig.file') {
       const id = String(req.input?.fileId);
       const m = files.find((f) => f.id === id);
-      if (!m)
+      if (!m) {
         return { ok: false, error: { failureMode: 'file-not-found', message: 'No such file.' } };
+      }
+
       return {
         ok: true,
         value: {
@@ -72,6 +79,7 @@ function rigFilesSocket(
         },
       };
     }
+
     return undefined;
   });
 }
@@ -87,6 +95,7 @@ const renderFiles = (s: ReturnType<typeof rigFilesSocket>, onClose = vi.fn()) =>
       onClose={onClose}
     />
   );
+
   return onClose;
 };
 
@@ -130,16 +139,19 @@ describe('RigFiles', () => {
   it("between a click and the answer, the old file is never shown in the new file's format (loading, not a mix)", async () => {
     const files = [meta('rig.yaml'), meta('MISSION.md')];
     const s = socketWith((req) => {
-      if (req.verb === 'rig.files')
+      if (req.verb === 'rig.files') {
         return {
           ok: true,
           value: { machine: 'm2', rig: 'flicut-ab', status: 'ok', reason: null, files },
         };
-      if (req.verb === 'rig.file' && req.input?.fileId === 'spec:rig.yaml')
+      }
+      if (req.verb === 'rig.file' && req.input?.fileId === 'spec:rig.yaml') {
         return {
           ok: true,
           value: { machine: 'm2', rig: 'flicut-ab', file: { ...files[0], content: RIG_YAML } },
         };
+      }
+
       return undefined; // MISSION.md never answers
     });
     renderFiles({ ...rigFilesSocket(), socket: s.socket, calls: s.calls });
@@ -178,7 +190,9 @@ describe('RigFiles', () => {
     expect(box).toHaveAttribute('data-status', status);
     expect(box.textContent).toMatch(text);
     expect(screen.queryByTestId('rig-file-item')).toBeNull();
-    if (status === 'pending') expect(screen.getByTestId('rig-files-refresh')).toBeInTheDocument();
+    if (status === 'pending') {
+      expect(screen.getByTestId('rig-files-refresh')).toBeInTheDocument();
+    }
   });
 
   it('a refused call is shown as its failure mode, not swallowed', async () => {
@@ -338,6 +352,7 @@ const renderSchema = (
       now={Date.now()}
     />
   );
+
   return s;
 };
 

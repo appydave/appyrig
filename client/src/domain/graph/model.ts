@@ -102,6 +102,7 @@ export const isLoose = (key: GroupKey) => key.endsWith(`:${LOOSE}`);
 
 const ms = (iso: string) => {
   const t = Date.parse(iso);
+
   return Number.isFinite(t) ? t : 0;
 };
 
@@ -113,13 +114,21 @@ const bare = (raw: string | null) => (raw ?? '').split('@')[0] ?? '';
  * whatever else the value depends on (the clock bucket, the machine's liveness).
  */
 const memo = new WeakMap<object, Map<string, unknown>>();
+
 function cached<T>(snap: object, key: string, make: () => T): T {
   let m = memo.get(snap);
-  if (!m) memo.set(snap, (m = new Map()));
-  if (m.has(key)) return m.get(key) as T;
+  if (!m) {
+    memo.set(snap, (m = new Map()));
+  }
+  if (m.has(key)) {
+    return m.get(key) as T;
+  }
   const v = make();
-  if (m.size > 300) m.clear(); // clock buckets pile up on a snapshot that never changes
+  if (m.size > 300) {
+    m.clear();
+  } // clock buckets pile up on a snapshot that never changes
   m.set(key, v);
+
   return v;
 }
 
@@ -153,17 +162,24 @@ export function endpointGroup(
   home: FleetMachine,
   all: FleetMachine[]
 ): GroupKey | null {
-  if (!raw || bare(raw) === 'human') return null;
+  if (!raw || bare(raw) === 'human') {
+    return null;
+  }
   const sig = fleetSeatsSig(all);
   if (sig !== placementSig) {
     placementSig = sig;
     placements = new WeakMap();
   }
   let byRaw = placements.get(home.snapshot);
-  if (!byRaw) placements.set(home.snapshot, (byRaw = new Map()));
-  if (byRaw.has(raw)) return byRaw.get(raw) ?? null;
+  if (!byRaw) {
+    placements.set(home.snapshot, (byRaw = new Map()));
+  }
+  if (byRaw.has(raw)) {
+    return byRaw.get(raw) ?? null;
+  }
   const g = placeEndpoint(raw, home, all);
   byRaw.set(raw, g);
+
   return g;
 }
 
@@ -175,15 +191,23 @@ function placeEndpoint(raw: string, home: FleetMachine, all: FleetMachine[]): Gr
   if (ep.seat && ep.machineId) {
     const fm = all.find((m) => m.machine.id === ep.machineId);
     const rig = ep.seat.rig;
-    if (rig && fm?.snapshot.rigs.some((r) => r.name === rig)) return `${ep.machineId}:${rig}`;
+    if (rig && fm?.snapshot.rigs.some((r) => r.name === rig)) {
+      return `${ep.machineId}:${rig}`;
+    }
+
     return looseKey(ep.machineId);
   }
   const rig = endpointRig(home, raw);
-  if (rig && home.snapshot.rigs.some((r) => r.name === rig)) return `${home.machine.id}:${rig}`;
+  if (rig && home.snapshot.rigs.some((r) => r.name === rig)) {
+    return `${home.machine.id}:${rig}`;
+  }
   // `openrig-orch@roamy` where that session is not a seat any more: its machine's no-rig group.
   const where = raw.includes('@') ? raw.slice(raw.lastIndexOf('@') + 1) : '';
   const there = where ? all.find((m) => m.machine.id === where) : undefined;
-  if (there && hasLoose(there)) return looseKey(where);
+  if (there && hasLoose(there)) {
+    return looseKey(where);
+  }
+
   return null;
 }
 
@@ -199,10 +223,16 @@ export function crossRigEdges(
   const machineIds = new Set(machines.map((m) => m.machine.id));
   for (const home of machines) {
     for (const q of home.snapshot.queue) {
-      if (seen.has(q.id)) continue;
+      if (seen.has(q.id)) {
+        continue;
+      }
       seen.add(q.id);
-      if (!q.source || !q.destination) continue;
-      if (bare(q.source) === 'human' || bare(q.destination) === 'human') continue;
+      if (!q.source || !q.destination) {
+        continue;
+      }
+      if (bare(q.source) === 'human' || bare(q.destination) === 'human') {
+        continue;
+      }
       const from = endpointGroup(q.source, home, machines);
       const to = endpointGroup(q.destination, home, machines);
       if (!from || !to) {
@@ -212,19 +242,28 @@ export function crossRigEdges(
           [q.source, from],
           [q.destination, to],
         ] as const) {
-          if (!g) missing.add(raw.includes('@') ? raw.slice(raw.lastIndexOf('@') + 1) : raw);
+          if (!g) {
+            missing.add(raw.includes('@') ? raw.slice(raw.lastIndexOf('@') + 1) : raw);
+          }
         }
-        for (const where of missing) names.set(where, (names.get(where) ?? 0) + 1);
+        for (const where of missing) {
+          names.set(where, (names.get(where) ?? 0) + 1);
+        }
         continue;
       }
-      if (from === to) continue;
+      if (from === to) {
+        continue;
+      }
       const k = `${from}→${to}`;
       const e = map.get(k) ?? { from, to, count: 0, open: 0, stale: 0, items: [] };
       e.count += 1;
       e.items.push(q);
       if (isOpen(q)) {
-        if (now - ms(q.createdAt) > STALE_MS) e.stale += 1;
-        else e.open += 1;
+        if (now - ms(q.createdAt) > STALE_MS) {
+          e.stale += 1;
+        } else {
+          e.open += 1;
+        }
       }
       map.set(k, e);
     }
@@ -235,6 +274,7 @@ export function crossRigEdges(
       items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
     }))
     .sort((a, b) => b.count - a.count || `${a.from}${a.to}`.localeCompare(`${b.from}${b.to}`));
+
   return {
     edges,
     unplaced: {
@@ -270,16 +310,24 @@ const askedDavid = (fm: FleetMachine, now: number): Map<string, number> =>
 function askedDavidOf(fm: FleetMachine, now: number): Map<string, number> {
   const out = new Map<string, number>();
   for (const q of fm.snapshot.queue) {
-    if (bare(q.destination) !== 'human' || !q.source || !isOpen(q)) continue;
-    if (now - ms(q.createdAt) > STALE_MS) continue;
+    if (bare(q.destination) !== 'human' || !q.source || !isOpen(q)) {
+      continue;
+    }
+    if (now - ms(q.createdAt) > STALE_MS) {
+      continue;
+    }
     const seat = fm.snapshot.seats.find((s) => s.id === q.source || s.logicalId === q.source);
-    if (seat) out.set(seat.id, (out.get(seat.id) ?? 0) + 1);
+    if (seat) {
+      out.set(seat.id, (out.get(seat.id) ?? 0) + 1);
+    }
   }
+
   return out;
 }
 
 function flagsOf(seat: Seat, pip: PipKey, rigRunning: boolean, asked: number, stale: boolean) {
   const down: PipKey[] = ['stopped', 'unknown'];
+
   return {
     needsMe: pip === 'blocked' || asked > 0,
     stuck: stale,
@@ -292,12 +340,17 @@ const staleSeats = (fm: FleetMachine, now: number): Set<string> =>
   cached(fm.snapshot, `stale:${now}`, () => {
     const out = new Set<string>();
     for (const q of fm.snapshot.queue) {
-      if (!q.destination || !isOpen(q) || now - ms(q.createdAt) <= STALE_MS) continue;
+      if (!q.destination || !isOpen(q) || now - ms(q.createdAt) <= STALE_MS) {
+        continue;
+      }
       const seat = fm.snapshot.seats.find(
         (s) => s.id === q.destination || s.logicalId === q.destination
       );
-      if (seat) out.add(seat.id);
+      if (seat) {
+        out.add(seat.id);
+      }
     }
+
     return out;
   });
 
@@ -321,6 +374,7 @@ function boxOf(
   const flags = seats.reduce(
     (acc, s, i) => {
       const f = flagsOf(s, pips[i]!, !!running, asked.get(s.id) ?? 0, stale.has(s.id));
+
       return {
         needsMe: acc.needsMe + (f.needsMe ? 1 : 0),
         stuck: acc.stuck + (f.stuck ? 1 : 0),
@@ -330,6 +384,7 @@ function boxOf(
     { needsMe: 0, stuck: 0, failing: 0 }
   );
   const active = pips.filter(isActive).length;
+
   return {
     key,
     machineId: fm.machine.id,
@@ -359,7 +414,12 @@ function boxOf(
 function lastHandoff(fm: FleetMachine, rig: string): LastHandoff | null {
   const items = rigQueue(fm, rig);
   let best: QueueItem | null = null;
-  for (const q of items) if (!best || q.updatedAt > best.updatedAt) best = q;
+  for (const q of items) {
+    if (!best || q.updatedAt > best.updatedAt) {
+      best = q;
+    }
+  }
+
   return best
     ? {
         from: bare(best.source) || '?',
@@ -373,8 +433,10 @@ function lastHandoff(fm: FleetMachine, rig: string): LastHandoff | null {
 /** Both directions of a rig pair as one line, merged by the kit; the items behind it ride along. */
 export function pairEdges(cross: CrossEdge[]): PairEdge[] {
   const items = new Map<string, QueueItem[]>();
-  for (const e of cross)
+  for (const e of cross) {
     items.set(pairKey(e.from, e.to), [...(items.get(pairKey(e.from, e.to)) ?? []), ...e.items]);
+  }
+
   return mergePairs(
     cross.map((e) => ({ from: e.from, to: e.to, count: e.count, open: e.open, stale: e.stale }))
   ).map((p) => ({
@@ -401,6 +463,7 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
     const rigs = refs.map((ref) => {
       const o = out.get(ref.key) ?? 0;
       const i = into.get(ref.key) ?? 0;
+
       // the same object while nothing it is made of changed, so the page can skip the box
       return cached(
         fm.snapshot,
@@ -427,6 +490,7 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
         const seats = fm.snapshot.seats.filter(
           (s) => !s.rig || !fm.snapshot.rigs.some((r) => r.name === s.rig)
         );
+
         return seats.length
           ? boxOf(
               fm,
@@ -442,9 +506,11 @@ export function buildGraph(machines: FleetMachine[], now: number = Date.now()): 
           : null;
       }
     );
+
     return { id: fm.machine.id, label: fm.machine.label, liveness: fm.liveness, rigs, loose };
   });
   const all = built.flatMap((m) => [...m.rigs, ...(m.loose ? [m.loose] : [])]);
+
   return {
     machines: built,
     pairs: pairEdges(cross),
@@ -490,7 +556,12 @@ export const isStopped = (r: GraphRig): boolean => !!r.ref && r.ref.status !== '
 
 /** A rig shows under a flag filter when one of its seats carries the flag (or, for Needs me, OpenRig flags the rig). */
 export function rigMatches(r: GraphRig, f: FlagFilter | null): boolean {
-  if (!f) return true;
-  if (f === 'needsMe' && r.ref && r.state === 'attention') return true;
+  if (!f) {
+    return true;
+  }
+  if (f === 'needsMe' && r.ref && r.state === 'attention') {
+    return true;
+  }
+
   return r.flags[f] > 0;
 }

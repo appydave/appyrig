@@ -62,6 +62,7 @@ export default function WallCard(p: WallCardProps) {
   const typed = p.lastTyped?.trim() || null;
   const stopped = p.status === 'stopped' || p.status === 'asleep';
   const rest = p.fallbackLines ?? [];
+
   return (
     <div
       className="wcard"

@@ -15,6 +15,7 @@ const dirs: string[] = [];
 const tmp = () => {
   const d = mkdtempSync(join(tmpdir(), 'appyrig-rigcmds-'));
   dirs.push(d);
+
   return d;
 };
 afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })));
@@ -66,8 +67,9 @@ describe('N10b: redaction before a command leaves the collector', () => {
       'rig send orch-lead@spaghetti "start gate 1"',
       'rig daemon status; rig --version',
       'rig auth --key-file ~/.x',
-    ])
+    ]) {
       expect(redactCommandText(ok)).toBe(ok);
+    }
   });
 
   it('masks the command, the shell line and both outputs of a logged entry, and never sends the session or tool ids', () => {

@@ -29,6 +29,7 @@ export function getFleetSocket(): FleetSocket {
       reconnectionDelayMax: 3000,
     });
   }
+
   return socket;
 }
 
@@ -60,7 +61,10 @@ export function useFleet(getSocket: () => FleetSocket = getFleetSocket): FleetVi
     s.on('connect', onConnect);
     s.on('disconnect', onDisconnect);
     s.on('connect_error', onError);
-    if (s.connected) setLink('connected');
+    if (s.connected) {
+      setLink('connected');
+    }
+
     return () => {
       s.off(FLEET_EVENTS.UPDATE, onUpdate);
       s.off('connect', onConnect);
@@ -81,21 +85,29 @@ export function useNow(intervalMs = 1000): number {
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
     const start = () => {
-      if (timer) return;
+      if (timer) {
+        return;
+      }
       setNow(Date.now());
       timer = setInterval(() => setNow(Date.now()), intervalMs);
     };
     const stop = () => {
-      if (timer) clearInterval(timer);
+      if (timer) {
+        clearInterval(timer);
+      }
       timer = null;
     };
     const onVisibility = () => (document.hidden ? stop() : start());
-    if (!document.hidden) start();
+    if (!document.hidden) {
+      start();
+    }
     document.addEventListener('visibilitychange', onVisibility);
+
     return () => {
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [intervalMs]);
+
   return now;
 }
