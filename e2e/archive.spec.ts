@@ -34,11 +34,16 @@ test('V1 archive: open from the menu, step once, Esc closes', async ({ page }) =
   await expect(page.getByTestId('v1-archive-count')).toHaveText(
     'V1 archive · screen 1 of 32 · picture 1 of 3'
   );
-  await page.getByTestId('v1-archive-next').click();
+  await page.getByTestId('v1-archive-pic-next').click();
   await expect(page.getByTestId('v1-archive-title')).toContainText('by machine');
   await expect(page.getByTestId('v1-archive-count')).toHaveText(
     'V1 archive · screen 1 of 32 · picture 2 of 3'
   );
+  // Next moves a whole screen, not a picture
+  await page.getByTestId('v1-archive-next').click();
+  await expect(page.getByTestId('v1-archive-count')).toContainText('screen 2 of 32');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByTestId('v1-archive-count')).toContainText('screen 1 of 32 · picture 1');
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('v1-archive')).toHaveCount(0);
 });

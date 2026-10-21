@@ -4,7 +4,8 @@ import './v1Archive.css';
 
 /**
  * The V1 archive: a full-screen pop-up with one screenshot of the retired V1 client at a time.
- * Prev/Next, the arrow keys, a numbered strip to jump, Esc closes. Read-only: it lists
+ * Prev/Next and ←/→ move one screen (row) at a time; a screen with several pictures has its own
+ * small picture switch (buttons, or ↑/↓). A numbered strip jumps; Esc closes. Read-only: it lists
  * GET /api/v1-archive once and shows each png from GET /api/v1-archive/<file>.
  * Fixed-size layers only, so opening it never moves the page behind it.
  */
@@ -14,6 +15,20 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
   const [onHub, setOnHub] = useState<Set<string> | null>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const last = slides.length - 1;
+  // A screen is a row; its pictures are the consecutive slides sharing that row.
+  const firstOfRow = (i: number) => {
+    let j = i;
+    while (j > 0 && slides[j - 1]!.row.row === slides[i]!.row.row) j--;
+    return j;
+  };
+  const prevScreen = (i: number) => (firstOfRow(i) === 0 ? 0 : firstOfRow(firstOfRow(i) - 1));
+  const nextScreen = (i: number) => {
+    let j = i;
+    while (j < last && slides[j + 1]!.row.row === slides[i]!.row.row) j++;
+    return Math.min(last, j + 1);
+  };
+  const samePicture = (i: number, d: number) =>
+    slides[i + d] && slides[i + d]!.row.row === slides[i]!.row.row ? i + d : i;
 
   useEffect(() => {
     let live = true;
@@ -39,15 +54,22 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
         onClose();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setAt((i) => Math.max(0, i - 1));
+        setAt(prevScreen);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        setAt((i) => Math.min(last, i + 1));
+        setAt(nextScreen);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setAt((i) => samePicture(i, -1));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setAt((i) => samePicture(i, 1));
       }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [onClose, last]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, slides]);
 
   const slide = slides[at]!;
   const missing = slide.file === null || (onHub !== null && !onHub.has(slide.file));
@@ -71,6 +93,32 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
           <span className="label" data-testid="v1-archive-count">
             V1 archive · screen {rowAt} of {rowSlides.length}
             {slide.parts > 1 ? ` · picture ${slide.part} of ${slide.parts}` : ''}
+          </span>
+          <span
+            className="v1a-pics"
+            style={{ visibility: slide.parts > 1 ? 'visible' : 'hidden' }}
+            aria-label="Pictures on this screen"
+          >
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="v1-archive-pic-prev"
+              disabled={slide.part === 1}
+              aria-label="Previous picture (↑)"
+              onClick={() => setAt((i) => samePicture(i, -1))}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="pill-btn"
+              data-testid="v1-archive-pic-next"
+              disabled={slide.part === slide.parts}
+              aria-label="Next picture (↓)"
+              onClick={() => setAt((i) => samePicture(i, 1))}
+            >
+              ↓
+            </button>
           </span>
           <button
             ref={closeRef}
@@ -117,8 +165,8 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
             type="button"
             className="pill-btn"
             data-testid="v1-archive-prev"
-            disabled={at === 0}
-            onClick={() => setAt(at - 1)}
+            disabled={firstOfRow(at) === 0}
+            onClick={() => setAt(prevScreen(at))}
           >
             ← Prev
           </button>
@@ -144,8 +192,8 @@ export default function V1Archive({ onClose }: { onClose: () => void }) {
             type="button"
             className="pill-btn"
             data-testid="v1-archive-next"
-            disabled={at === last}
-            onClick={() => setAt(at + 1)}
+            disabled={slide.row.row === slides[last]!.row.row}
+            onClick={() => setAt(nextScreen(at))}
           >
             Next →
           </button>

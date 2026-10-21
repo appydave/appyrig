@@ -263,8 +263,8 @@ describe('#6 Machines', () => {
     expect(free).toHaveTextContent('84% used, 52% could be freed');
     const watch = screen.getByTestId('mc2-watch');
     expect(watch.tagName).toBe('P');
-    expect(watch).toHaveTextContent('read by hand');
-    expect(within(watch).getByTestId('sample-label')).toBeInTheDocument();
+    expect(watch).toHaveTextContent('as each machine');
+    expect(watch).not.toHaveTextContent('latest release');
     expect(document.querySelector('.w4-hero-big')).toBeNull();
   });
 });

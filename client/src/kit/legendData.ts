@@ -671,7 +671,7 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
         { mark: 'Processes', means: 'Memory by terminal app and process, biggest first.' },
         {
           mark: 'version vs latest',
-          means: 'The OpenRig version this machine runs against the latest release.',
+          means: 'The OpenRig version this machine runs, against the newest one the fleet reports.',
         },
       ],
     },

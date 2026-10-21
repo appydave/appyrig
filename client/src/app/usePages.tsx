@@ -1,5 +1,5 @@
 import { PAGE_PURPOSE, PageInfo } from '../kit/index.js';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { FrozenMeta } from './frozen/frozenSocket.js';
 import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
 import type { AgentPanelTarget, NavGroupKey, PageKey, PageContext } from './types.js';
@@ -96,11 +96,62 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
   // The group shown under the nav follows the page, until the viewer opens another group.
   useEffect(() => setOpenGroup(null), [page]);
 
-  const goTo = useCallback((p: PageKey) => {
-    // the panel belongs to the page it was opened on
-    setAgentPanel(null);
-    setPage(p);
+  // ---- scroll: a new page starts at the top, Back and Forward put the old page back --------
+  const scrollMemory = useRef(new Map<string, number>());
+  const liveY = useRef(typeof window === 'undefined' ? 0 : window.scrollY);
+  const curHref = useRef(typeof window === 'undefined' ? '' : window.location.href);
+  /** Set by Back/Forward: where the page we land on was left. null = a new page, start at the top. */
+  const restoreY = useRef<number | null>(null);
+  useEffect(() => {
+    const onScroll = () => {
+      liveY.current = window.scrollY;
+      curHref.current = window.location.href;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    // The browser's own restore runs before the page has rendered and would fight ours.
+    const prev = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.history.scrollRestoration = prev;
+    };
   }, []);
+  const rememberScroll = useCallback(() => {
+    scrollMemory.current.set(window.location.href, liveY.current);
+  }, []);
+  const firstScroll = useRef(true);
+  useLayoutEffect(() => {
+    curHref.current = window.location.href;
+    if (firstScroll.current) {
+      firstScroll.current = false;
+      return;
+    }
+    const y = restoreY.current ?? 0;
+    restoreY.current = null;
+    window.scrollTo(0, y);
+    liveY.current = window.scrollY;
+    if (y === 0) return;
+    // A page that fills in after it mounts is not tall enough yet: try again for a moment.
+    let tries = 0;
+    let raf = 0;
+    const again = () => {
+      if (Math.abs(window.scrollY - y) <= 1 || ++tries > 30) return;
+      window.scrollTo(0, y);
+      raf = requestAnimationFrame(again);
+    };
+    raf = requestAnimationFrame(again);
+    return () => cancelAnimationFrame(raf);
+  }, [page]);
+
+  const goTo = useCallback(
+    (p: PageKey) => {
+      // the panel belongs to the page it was opened on
+      rememberScroll();
+      setAgentPanel(null);
+      setPage(p);
+    },
+    [rememberScroll]
+  );
 
   // ---- the URL is the state: page pushes, Back and Forward restore -------------------------
   const wroteOnce = useRef(false);
@@ -127,6 +178,10 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     const onPop = () => {
       const u = readUrlState();
       const p = urlPage() ?? 'wall';
+      // popstate fires before the page re-renders: the scroll is still the page being left
+      scrollMemory.current.set(curHref.current, liveY.current);
+      curHref.current = window.location.href;
+      restoreY.current = scrollMemory.current.get(window.location.href) ?? 0;
       setPage(p);
       if (p === 'agent') {
         setAgentKey(u.agent);
@@ -140,13 +195,17 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     return () => window.removeEventListener('popstate', onPop);
   }, [onUrlRig]);
 
-  const openAgentPage = useCallback((key: string) => {
-    // A plain tmux session ("?/name") has no agent page.
-    if (key.startsWith('?/')) return;
-    setAgentPanel(null);
-    setAgentKey(key);
-    setPage('agent');
-  }, []);
+  const openAgentPage = useCallback(
+    (key: string) => {
+      // A plain tmux session ("?/name") has no agent page.
+      if (key.startsWith('?/')) return;
+      rememberScroll();
+      setAgentPanel(null);
+      setAgentKey(key);
+      setPage('agent');
+    },
+    [rememberScroll]
+  );
 
   // Clicking a group opens a page of that group: the one last visited there, else its first.
   const lastInGroup = useRef<Partial<Record<NavGroupKey, PageKey>>>({});
