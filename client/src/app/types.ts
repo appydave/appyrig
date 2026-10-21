@@ -97,6 +97,6 @@ export interface PageDef {
   label: string;
   group: NavGroupKey;
   component: ComponentType<PageProps>;
-  /** One line for the About v2 page and the nav's title. */
+  /** One line for the About page and the nav's title. */
   blurb: string;
 }

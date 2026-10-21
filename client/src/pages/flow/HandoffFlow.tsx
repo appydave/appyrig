@@ -394,6 +394,20 @@ export default function HandoffFlow({
     flow.mode,
     flow.stages.map((x) => x.stage)
   );
+  // The tallest arc (a pair many boxes apart) and its label can rise above the top edge; the
+  // diagram gets that much extra room on top so no dot or label is clipped by the canvas.
+  const topPad = Math.max(
+    0,
+    -Math.min(
+      0,
+      ...[
+        ...pairs,
+        ...mergePairs(
+          structure.lines.map((l) => ({ from: l.from, to: l.to, count: 1, planned: true }))
+        ),
+      ].map((p) => pairPath(p, L, ROW_Y, BOX_H).ly - 24)
+    )
+  );
   // During a replay, narrate the latest chapter reached.
   const chapter = at === null ? null : ([...chapters].reverse().find((c) => c.at <= t) ?? null);
   // The handoff the replay is on: the stepped one, else the latest handed over by the replay time.
@@ -692,7 +706,7 @@ export default function HandoffFlow({
         {/* The diagram keeps a readable scale and scrolls sideways in its own box on a narrow page. */}
         <div className="flow-svg-scroll" data-testid="flow-diagram-scroll">
           <svg
-            viewBox={`0 0 ${W} ${H}`}
+            viewBox={`0 ${-topPad} ${W} ${H + topPad}`}
             className="flow-svg"
             role="group"
             aria-label="Handoff flow diagram: Tab to a line to see its handoffs"

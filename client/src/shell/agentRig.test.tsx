@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
 import App from '../app/App.js';
 import { listRigs } from '../domain/fleet/views.js';
@@ -65,8 +65,8 @@ const pressedRigs = () =>
     .filter((r) => r.getAttribute('aria-pressed') === 'true')
     .map((r) => r.dataset.rigKey);
 
-describe('O4: opening an agent picks that agent’s rig (one scope)', () => {
-  it('an agent of another rig updates rig=, the picked rig, the drawer and the scope line, and keeps its panel open', () => {
+describe('opening an agent never changes the focused rig', () => {
+  it('an agent of another rig opens its panel and leaves rig=, the drawer pick and the scope line alone', async () => {
     const ms = fleet();
     const rigs = listRigs(ms);
     const a = rigs[0]!;
@@ -88,11 +88,16 @@ describe('O4: opening an agent picks that agent’s rig (one scope)', () => {
     fireEvent.click(
       screen.getAllByTestId('drawer-agent').find((x) => x.dataset.agentKey === tile)!
     );
-    expect(rigParam()).toBe(rigToParam(b.key));
+    expect(rigParam()).toBe(rigToParam(a.key));
     expect(new URLSearchParams(location.search).get('agent')).toBe(agentToParam(tile));
-    expect(screen.getByTestId('agent-panel')).toBeInTheDocument(); // the pick did not close it
-    expect(pressedRigs()).toEqual([b.key]);
-    expect(screen.getByTestId('drawer-scope')).toHaveTextContent(`rig ${b.name}`);
+    expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
+    // (while the panel is open the drawer only describes the open agent; the focus is untouched)
+    // closing the panel leaves the focus on the rig it was on
+    fireEvent.click(screen.getByTestId('apanel-close'));
+    await waitFor(() => expect(screen.queryByTestId('agent-panel')).toBeNull());
+    expect(rigParam()).toBe(rigToParam(a.key));
+    expect(pressedRigs()).toEqual([a.key]);
+    expect(screen.getByTestId('drawer-scope')).toHaveTextContent(a.name);
   });
 
   it('a plain tmux seat (no rig) leaves the picked rig alone', () => {
@@ -146,5 +151,21 @@ describe('O4 on the rig pages: a Flow seat and a Run board station Docs also nam
     expect(screen.getByTestId('agent-panel')).toBeInTheDocument();
     expect(p.get('agent')).toContain(`@${rig.name}@`);
     expect(p.get('rig')).toBe(rigToParam(rig.key));
+  });
+});
+
+describe('Esc closes the Legend', () => {
+  it('L opens it, Esc closes it, and the page and address stay put', () => {
+    renderAt('?page=wall');
+    expect(screen.queryByTestId('legend2')).toBeNull();
+    fireEvent.keyDown(window, { key: 'l' });
+    expect(screen.getByTestId('legend2')).toBeInTheDocument();
+    const before = location.search;
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('legend2')).toBeNull();
+    expect(location.search).toBe(before);
+    // with the Legend closed, Esc does nothing
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByTestId('legend2')).toBeNull();
   });
 });

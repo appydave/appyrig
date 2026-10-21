@@ -74,7 +74,7 @@ export const PAGE_PURPOSE: Partial<Record<PageKey, string>> = {
   workflows: 'The built-in workflows and their runs, with an example step trace.',
   learn:
     'Every rig command in plain words: when to use it, when not to, and a copy button. Plus the checked lessons.',
-  about: 'What version 2 is, what in it is real, and what is still a mock.',
+  about: 'What AppyRig is, where things are, what is real and what is still a mock.',
 };
 
 const STATUS: LegendMark[] = [
@@ -794,18 +794,18 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
   ],
   about: [
     {
-      title: 'About v2',
+      title: 'About',
       entries: [
         {
-          mark: 'New in v2',
-          means: 'This page says what V2 is, what is real, and what is still a mock.',
+          mark: 'About',
+          means: 'This page says what AppyRig is, what is real, and what is still a mock.',
         },
       ],
     },
   ],
 };
 
-/** Every V2 page that has a legend section of its own. */
+/** Every page that has a legend section of its own. */
 export const LEGEND_PAGES = Object.keys(PAGES) as PageKey[];
 
 /** The sections for a V2 page: its own first, then Everywhere. A page with none still gets Everywhere. */
@@ -838,5 +838,5 @@ export const LEGEND_TITLE: Partial<Record<PageKey, string>> = {
   library: 'Library',
   workflows: 'Workflows',
   learn: 'Learn',
-  about: 'About v2',
+  about: 'About',
 };

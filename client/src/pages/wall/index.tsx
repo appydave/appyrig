@@ -342,7 +342,7 @@ function WallPage({ ctx }: PageProps) {
       ref={root}
       className="ar-wall"
       data-testid="ar-wall"
-      aria-label="The Wall (v2)"
+      aria-label="The Wall"
       onPointerEnter={() => setOver(true)}
       onPointerLeave={() => setOver(false)}
     >

@@ -427,7 +427,7 @@ describe('Agent page', () => {
     expect(screen.getByTestId('ar-agent-machine')).toHaveTextContent('Roamy');
     expect(screen.getByTestId('ar-agent-state')).toHaveTextContent('blocked');
     expect(screen.getByTestId('ar-agent-context')).toHaveTextContent('9%');
-    expect(screen.getByTestId('ar-agent-new-note')).toHaveTextContent('no old version');
+    expect(screen.getByTestId('ar-agent-new-note')).toHaveTextContent('no V1 version');
     // one documents section: grouped list left, reader right, no tiles and no sample files
     await waitFor(() =>
       expect(screen.getByTestId('docs-reader')).toHaveTextContent('Build the slice.')

@@ -236,10 +236,42 @@ describe('Needs You page', () => {
     expect(screen.queryByTestId('ny-stale')).toBeNull();
     fireEvent.click(screen.getByTestId('ny-toggle-stale'));
     expect(screen.getByTestId('ny-stale')).toHaveTextContent('Ancient question');
+    // real items exist, so the sample cards start collapsed behind a toggle below the real list
+    expect(screen.queryByTestId('ny-sample')).toBeNull();
+    fireEvent.click(screen.getByTestId('ny-toggle-sample'));
+    expect(screen.getByTestId('ny-toggle-sample')).toHaveTextContent('Hide sample cards');
     // the sample section is labelled and its cards are marked sample
     expect(screen.getAllByTestId('sample-label').length).toBeGreaterThan(0);
     const sample = within(screen.getByTestId('ny-sample')).getAllByTestId('ny-card');
     expect(sample.every((c) => c.dataset.real === 'sample')).toBe(true);
+  });
+
+  it('puts the toggle after the real list, and says when nothing fresh is waiting', () => {
+    const ms = twoMachines();
+    render(<Page ctx={ctxFor(ms)} />);
+    const toggle = screen.getByTestId('ny-toggle-sample');
+    const band = screen.getByTestId('ny-stale-band');
+    expect(band.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId('ny-total')).toHaveTextContent('waiting (');
+    // only stale items: header leads with "Nothing new waiting"
+    const m2 = fleetMachine(snapshot('m2'));
+    m2.snapshot = {
+      ...m2.snapshot,
+      seats: [],
+      queue: [q('stale-ask', { summary: 'Ancient question', createdAt: ago(STALE_MS + 2 * H) })],
+    };
+    const stale = [m2];
+    render(<Page ctx={ctxFor(stale)} />);
+    expect(screen.getAllByTestId('ny-total').at(-1)).toHaveTextContent(
+      /Nothing new waiting · 1 stale/
+    );
+  });
+
+  it('shows the sample cards straight away when there is no real item to show', () => {
+    render(<Page ctx={ctxFor(twoMachines())} />);
+    fireEvent.click(screen.getByTestId('ny-filter-approval'));
+    expect(screen.queryByTestId('ny-toggle-sample')).toBeNull();
+    expect(screen.getByTestId('ny-sample')).toBeInTheDocument();
   });
 
   it('filters the list', () => {

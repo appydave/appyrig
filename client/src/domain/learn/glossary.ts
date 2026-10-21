@@ -431,7 +431,7 @@ export const GLOSSARY: Record<string, Term> = {
   'ar-mock': {
     term: 'Mock',
     what: 'Not wired: this control is a mock and changes nothing.',
-    why: 'v2 shows how a control would feel before it is built. Pressing it never reaches the hub, OpenRig or any machine.',
+    why: 'A mock shows how a control would feel before it is built. Pressing it never reaches the hub, OpenRig or any machine.',
   },
   'ar-sample': {
     term: 'Sample data',
@@ -439,9 +439,9 @@ export const GLOSSARY: Record<string, Term> = {
     why: 'It shows what a page would look like once AppyRig collects this. Do not act on its numbers.',
   },
   'ar-switch': {
-    term: 'Current / v2',
-    what: 'Which version of AppyRig you are looking at. V switches the whole app; B flips just this page between old and new.',
-    why: 'v2 is the redesign, built inside the real app on the same data, so the two can be compared side by side.',
+    term: 'V1 archive',
+    what: 'Screenshots of the old V1 screens, kept under the ⋯ menu.',
+    why: 'V1 is gone from the app; the archive shows what it used to look like.',
   },
   drawers: {
     term: 'Machines whose cached profile names this account',
