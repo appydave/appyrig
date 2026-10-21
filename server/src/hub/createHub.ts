@@ -30,6 +30,7 @@ import { browserAuth, isAuthorised } from './browserAuth.js';
 import { attachCollectorIngest } from './collectorIngest.js';
 import { FleetStore, type LivenessChange } from './fleetStore.js';
 import { listenOnHosts, type Listening } from './listen.js';
+import { v1ArchiveRouter } from './v1ArchiveRouter.js';
 
 /**
  * Builds the whole hub (HTTP app, Socket.IO, fleet store, collector ingest, liveness timer)
@@ -161,6 +162,7 @@ export function createHub(opts: HubOptions): Hub {
   );
   app.use(healthRouter);
   app.use(infoRouter);
+  app.use(v1ArchiveRouter(opts.dataDir));
   app.use(apiRouter(core, identity, opts.liveHosts ?? [], (id) => store.feedback.screenshot(id)));
 
   if (opts.clientDist) {
