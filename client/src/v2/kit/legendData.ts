@@ -2,8 +2,7 @@ import type { PageKey } from '../types.js';
 
 /**
  * The V2 Legend, as data: one list of sections per V2 page, plus an "Everywhere" list (top bar,
- * machine badges, Rigs drawer, Agent panel, status marks) shown under every page. V1's legend
- * (components/Legend.tsx, learn/legend.ts) is not used by V2 at all.
+ * machine badges, Rigs drawer, Agent panel, status marks) shown under every page.
  *
  * Each entry names a mark and says what it means in plain words. `swatch` says how Legend2.tsx draws
  * the mark: always from the real component or CSS class the page uses, never an imitation. When a
@@ -15,7 +14,6 @@ export type Swatch =
   | `pip:${'working' | 'idle' | 'blocked' | 'stopped' | 'unknown' | 'asleep'}`
   | `chip:${'opus' | 'sonnet' | 'fable' | 'codex' | 'terminal'}`
   | 'mock'
-  | 'flip'
   | 'pill'
   | `run-job:${'done' | 'current' | 'waiting'}`
   | `tl:${'done' | 'handed-on' | 'open' | 'stopped'}`
@@ -113,34 +111,13 @@ const EVERYWHERE: LegendSection[] = [
         means: 'The top nav picks the PAGE (the view). The row beside it lists that group’s pages.',
       },
       {
-        mark: 'Flip · B  new / old',
-        means: 'Swap this page with its version-1 twin and back. "new" means you are on V2.',
-        swatch: 'flip',
-      },
-      {
-        mark: 'CURRENT · V2',
-        means: 'Which version of the whole app you are in. V2 is the one that is being kept.',
-        swatch: 'pill',
-      },
-      {
-        mark: 'Explain',
-        means: 'Hover any mark to read what it means. Off by default.',
-        swatch: 'pill',
-      },
-      {
         mark: 'Legend · L',
         means: 'This panel. L opens and closes it on every page.',
         swatch: 'pill',
       },
-      { mark: 'Keys · ?', means: 'The keyboard shortcuts for this page.', swatch: 'pill' },
-      {
-        mark: 'Feedback · F',
-        means: 'File a note about this screen, with its screenshot.',
-        swatch: 'pill',
-      },
       {
         mark: '⋯',
-        means: 'Rarely used helpers, and any mock controls for the page.',
+        means: 'Rarely used helpers: OpenRig vs AppyRig, the API docs and the V1 archive.',
         swatch: 'pill',
       },
       {

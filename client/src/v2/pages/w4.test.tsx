@@ -90,14 +90,12 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     activeRig: null,
     chooseRig: vi.fn(),
     pickedRig: null,
-    groupBy: 'rig',
     now: NOW,
     link: 'connected',
     hubConnected: true,
     received: true,
     getSocket: () => spy.socket,
     keys: true,
-    hidden: [],
     agentKey: null,
     openAgentPage: vi.fn(),
     openAgentPanel: vi.fn(),
@@ -106,10 +104,6 @@ function ctxFor(machines: FleetMachine[], over: Partial<V2Context> = {}): V2Cont
     focusNonce: 0,
     openRigs: [],
     setOpenRigs: vi.fn(),
-    onShowMachine: vi.fn(),
-    onOpenSeat: vi.fn(),
-    onOpenSkills: vi.fn(),
-    onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
     ...over,
@@ -489,14 +483,14 @@ describe('v2 Learn: commands panel (C19)', () => {
   });
 });
 
-describe('W4 pages in the app: registered, and B flips each to Current', () => {
+describe('W4 pages in the app: registered in their groups', () => {
   it.each([
-    ['fleet', 'accounts', 'v2-accounts', 'view-body-accounts'],
-    ['fleet', 'machines', 'v2-machines', 'view-body-machines'],
-    ['hood', 'schema', 'v2-schema', 'view-body-schema'],
-    ['hood', 'learn', 'v2-learn', 'view-body-learn'],
-    ['work', 'timeline', 'v2-timeline', 'view-body-timeline'],
-  ])('%s / %s', (group, key, v2Id, currentId) => {
+    ['fleet', 'accounts', 'v2-accounts'],
+    ['fleet', 'machines', 'v2-machines'],
+    ['hood', 'schema', 'v2-schema'],
+    ['hood', 'learn', 'v2-learn'],
+    ['work', 'timeline', 'v2-timeline'],
+  ])('%s / %s', (group, key, v2Id) => {
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -504,7 +498,7 @@ describe('W4 pages in the app: registered, and B flips each to Current', () => {
         disconnect() {}
       }
     );
-    history.replaceState(null, '', '/?v=2');
+    history.replaceState(null, '', '/');
     const spy = spySocket();
     render(<App getSocket={() => spy.socket} />);
     spy.fire(
@@ -514,10 +508,7 @@ describe('W4 pages in the app: registered, and B flips each to Current', () => {
     fireEvent.click(screen.getByTestId(`v2-group-${group}`));
     fireEvent.click(screen.getByTestId(`v2-page-${key}`));
     expect(screen.getByTestId(v2Id)).toBeInTheDocument();
-    expect(screen.getByTestId(`v2-page-${key}`).textContent).not.toContain('old');
-    fireEvent.keyDown(document.body, { key: 'b' });
-    expect(screen.queryByTestId(v2Id)).toBeNull();
-    expect(screen.getByTestId(currentId)).toBeInTheDocument();
+    expect(screen.getByTestId(`v2-page-${key}`)).toHaveAttribute('aria-current', 'page');
   });
 });
 

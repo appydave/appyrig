@@ -11,8 +11,6 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 async function quietIntro(page: Page) {
   const gotIt = page.getByRole('button', { name: /got it/i });
   if (await gotIt.count()) await gotIt.first().click();
-  const explain = page.getByRole('button', { name: /explain/i }).first();
-  if (/on/i.test((await explain.textContent()) ?? '')) await explain.click();
 }
 
 async function openFlow(page: Page) {

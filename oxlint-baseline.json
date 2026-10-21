@@ -1,36 +1,10 @@
 {
   "about": "Findings recorded when G02 was added: per file, per anti-slop rule. It may shrink, never grow. Rewrite with npm run oxlint:baseline.",
   "findings": {
-    "client/src/App.test.tsx": {
-      "no-chained-type-assertions": 3,
-      "no-module-mocking": 2,
-      "no-unknown-parameters": 1
-    },
     "client/src/App.tsx": {
-      "require-safety-comment-for-type-assertion": 3
-    },
-    "client/src/components/AgentPanel.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2,
-      "no-unknown-parameters": 2
-    },
-    "client/src/components/C3.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/components/C4.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 3
+      "require-safety-comment-for-type-assertion": 1
     },
     "client/src/components/ErrorFallback.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/components/F3Ages.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/components/HandoffKeys.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/components/Loadout.test.tsx": {
       "no-chained-type-assertions": 1
     },
     "client/src/components/MarkdownView.tsx": {
@@ -48,9 +22,6 @@
       "no-chained-type-assertions": 1,
       "no-unsafe-dictionary-type": 3
     },
-    "client/src/components/RigMap.tsx": {
-      "require-safety-comment-for-type-assertion": 4
-    },
     "client/src/components/RunCard.test.tsx": {
       "no-chained-type-assertions": 3,
       "no-unsafe-dictionary-type": 2
@@ -59,27 +30,14 @@
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 2
     },
-    "client/src/components/SeatCardsUiA.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 1
-    },
     "client/src/components/WaitingOnDavid.test.tsx": {
       "no-chained-type-assertions": 3,
       "no-unknown-parameters": 4
-    },
-    "client/src/components/Wall.test.ts": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/components/Wall.tsx": {
-      "require-safety-comment-for-type-assertion": 4
     },
     "client/src/config/env.test.ts": {
       "no-chained-type-assertions": 2
     },
     "client/src/config/env.ts": {
-      "require-safety-comment-for-type-assertion": 2
-    },
-    "client/src/feedback/capture.ts": {
       "require-safety-comment-for-type-assertion": 2
     },
     "client/src/fleet/coreCall.test.ts": {
@@ -290,7 +248,7 @@
       "no-module-mocking": 2
     },
     "client/src/v2/useV2.tsx": {
-      "require-safety-comment-for-type-assertion": 7
+      "require-safety-comment-for-type-assertion": 2
     },
     "client/src/v2/ux-nav.test.tsx": {
       "no-chained-type-assertions": 1,
@@ -387,9 +345,6 @@
     "collector/src/redact.ts": {
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 3
-    },
-    "e2e/support/fleet.ts": {
-      "no-chained-type-assertions": 1
     },
     "e2e/v2-tour.spec.ts": {
       "no-chained-type-assertions": 3

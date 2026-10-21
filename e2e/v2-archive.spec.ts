@@ -22,7 +22,7 @@ test('V1 archive: open from the menu, step once, Esc closes', async ({ page }) =
 
   await page.goto('/?frozen=busy-2026-10-18&v=2');
   await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
-  for (const id of ['v2-welcome-dismiss', 'explain-hint-dismiss']) {
+  for (const id of ['v2-welcome-dismiss']) {
     const b = page.getByTestId(id);
     if (await b.count()) await b.click();
   }
@@ -30,8 +30,15 @@ test('V1 archive: open from the menu, step once, Esc closes', async ({ page }) =
   await page.getByTestId('v1-archive-open').click();
   await expect(page.getByTestId('v1-archive')).toBeVisible();
   await expect(page.getByTestId('v1-archive-title')).toContainText('1. The Wall');
+  // the counter counts rows, like the strip, and names the picture within the row
+  await expect(page.getByTestId('v1-archive-count')).toHaveText(
+    'V1 archive · screen 1 of 32 · picture 1 of 3'
+  );
   await page.getByTestId('v1-archive-next').click();
   await expect(page.getByTestId('v1-archive-title')).toContainText('by machine');
+  await expect(page.getByTestId('v1-archive-count')).toHaveText(
+    'V1 archive · screen 1 of 32 · picture 2 of 3'
+  );
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('v1-archive')).toHaveCount(0);
 });

@@ -108,12 +108,11 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
 
   test('every helper is reachable, the rarely used ones behind the ⋯ menu', async ({ page }) => {
     await open(page);
-    for (const id of ['explain-toggle', 'legend-toggle', 'keys-toggle', 'feedback-open', 'flip'])
-      await expect(page.getByTestId(id), id).toBeVisible();
-    for (const id of ['notes-open', 'compare-link', 'api-docs-link'])
+    await expect(page.getByTestId('legend-toggle')).toBeVisible();
+    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open'])
       await expect(page.getByTestId(id), id).toBeHidden();
     await page.getByTestId('more-open').click();
-    for (const id of ['notes-open', 'compare-link', 'api-docs-link'])
+    for (const id of ['compare-link', 'api-docs-link', 'v1-archive-open'])
       await expect(page.getByTestId(id), id).toBeVisible();
     // the explainer and legend on the diagram pages sit behind Legend · L
     await page.keyboard.press('Escape');

@@ -1,101 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { queueMachine } from '../test/queueFixtures.js';
 import HandoffPanel from './HandoffPanel.js';
-import RunTimeline from './RunTimeline.js';
 import HandoffFlow from './HandoffFlow.js';
-import RigMap from './RigMap.js';
-import { buildRigMap } from '../fleet/views.js';
-import type { FleetMachine } from '@appydave/shared';
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');
 const d10 = queueMachine('ylo-d10');
 const key = (k: string) => fireEvent.keyDown(window, { key: k });
-const current = () =>
-  within(screen.getByTestId('handoff-list'))
-    .getAllByTestId('handoff-pick')
-    .find((b) => b.getAttribute('aria-current') === 'true');
-const title = () => screen.getByTestId('handoff-title').textContent;
 
 describe('Views K · J/K and [ ] with a handoff panel open', () => {
-  it('Timeline, keyboard only: Enter a mark, J×3, K×1, ]×2, [×1', () => {
-    render(<RunTimeline machine={d10} rig="ylo-d10" now={NOW} />);
-    const lead = d10.snapshot.queue.filter((q) => q.source === 'ylo-lead@ylo-d10');
-    const at = (i: number) => lead[i]!; // ylo-lead's lane, oldest first
-    const start = lead.length - 1; // the newest of ylo-lead's handoffs
-    const mark = screen
-      .getAllByTestId('timeline-mark')
-      .find((m) => m.getAttribute('data-id') === at(start).id && !m.getAttribute('data-flag'))!;
-    fireEvent.keyDown(mark, { key: 'Enter' });
-    expect(screen.getByTestId('handoff-keys-hint')).toHaveTextContent(
-      'J/K older / newer handoff · [ ] previous / next lane'
-    );
-    key('j');
-    key('j');
-    key('J');
-    // Three older: the list row and the message move together.
-    expect(title()).toBe(at(start - 3).summary);
-    expect(current()).toHaveTextContent(at(start - 3).summary!.slice(0, 30));
-    key('k');
-    expect(title()).toBe(at(start - 2).summary);
-    expect(current()).toHaveTextContent(at(start - 2).summary!.slice(0, 30));
-
-    // ] twice: ylo-lead → ylo-drip → ylo-copy (each opens its newest); [ once: back to ylo-drip.
-    key(']');
-    key(']');
-    expect(screen.getByTestId('handoff-panel').getAttribute('aria-label')).toMatch(/ylo-copy/);
-    key('[');
-    const drip = d10.snapshot.queue.filter((q) => q.source === 'ylo-drip@ylo-d10');
-    expect(screen.getByTestId('handoff-panel').getAttribute('aria-label')).toMatch(/ylo-drip/);
-    expect(title()).toBe(drip[drip.length - 1]!.summary);
-  });
-
-  it('Map: ] and [ skip planned lines, so the drawer stays on a real line (r1 W2 MEDIUM-1)', () => {
-    vi.stubGlobal(
-      'ResizeObserver',
-      class {
-        observe() {}
-        disconnect() {}
-      }
-    );
-    // One real line (the first lead → check handoff) and two planned spec edges with no handoff.
-    const seat = (n: string) => `${n}@ylo-d10`;
-    const one = d10.snapshot.queue.find(
-      (q) => q.source === seat('ylo-lead') && q.destination === seat('ylo-check')
-    )!;
-    const fm = {
-      ...d10,
-      snapshot: {
-        ...d10.snapshot,
-        queue: [one],
-        rigs: [
-          {
-            name: 'ylo-d10',
-            edges: [
-              { from: seat('ylo-lead'), to: seat('ylo-drip'), kind: 'delegates_to' },
-              { from: seat('ylo-lead'), to: seat('ylo-copy'), kind: 'delegates_to' },
-            ],
-          },
-        ],
-      },
-    } as unknown as FleetMachine;
-    const map = buildRigMap([fm], 'm4:ylo-d10', NOW)!;
-    expect(map.edges).toHaveLength(1);
-    expect(map.planned).toHaveLength(2);
-    render(<RigMap map={map} onOpen={() => {}} />);
-    expect(screen.getAllByTestId('rig-map-planned')).toHaveLength(2);
-    const real = screen.getByTestId('rig-map-edge');
-    fireEvent.keyDown(real, { key: 'Enter' });
-    expect(screen.getByTestId('handoff-panel')).toBeInTheDocument();
-    key(']');
-    // Without the fix ] lands on a planned line: no drawer, nothing selected.
-    expect(screen.getByTestId('handoff-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('rig-map-edge')).toHaveAttribute('data-selected', 'true');
-    key('[');
-    expect(screen.getByTestId('handoff-panel')).toBeInTheDocument();
-    vi.unstubAllGlobals();
-  });
-
   it('Flow: ] and [ step through the lines, each opening its newest handoff', () => {
     render(<HandoffFlow machine={d10} rig="ylo-d10" now={NOW} />);
     const lines = screen.getAllByTestId('flow-edge');

@@ -69,10 +69,10 @@ describe('URL parameters', () => {
 });
 
 describe('the URL is the state', () => {
-  it('a cold open is the Wall with nothing picked, Explain off, and the banner in the flow', () => {
+  it('a cold open is the Wall with nothing picked, and the banner in the flow', () => {
     renderAt('?v=2');
-    expect(location.search).toBe('?v=2&page=wall');
-    expect(screen.getByTestId('explain-toggle')).toHaveAttribute('aria-pressed', 'false');
+    // the old version switch is dropped from the address
+    expect(location.search).toBe('?page=wall');
     fireEvent.click(screen.getByTestId('rig-drawer-tab'));
     expect(
       screen.getAllByTestId('drawer-rig').filter((r) => r.getAttribute('aria-pressed') === 'true')

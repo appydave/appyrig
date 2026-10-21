@@ -1,10 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import { watchErrors } from './support/fleet';
 
-// A tour of v2 on the frozen busy snapshot (no rig has to be running): Current is untouched, every
-// page in the v2 nav renders, B flips old ↔ new where an old page exists and says so where it does
-// not, an agent click on the Wall lands on the Agent page, and a mock control sends nothing to the
-// hub. The nav is iterated, never listed, so a page a later wave registers is toured automatically.
+// A tour of the app on the frozen busy snapshot (no rig has to be running): the plain address and an
+// old `?v=1` link both open V2, every page in the nav renders, an agent click on the Wall lands on the
+// Agent page, and a mock control sends nothing to the hub. The nav is iterated, never listed, so a
+// page a later wave registers is toured automatically.
 
 const FROZEN = '/?frozen=busy-2026-10-18';
 
@@ -23,26 +23,23 @@ async function hookWebSocketSends(page: Page) {
 const sent = (page: Page) =>
   page.evaluate(() => (window as unknown as { __wsSent: string[] }).__wsSent.slice());
 
-/** The one page root on screen: a v2 page, or Current's body for a page with no v2. */
-const root = (page: Page) =>
-  page.locator('main[data-testid^="v2-"], main[data-testid^="view-body-"]');
+/** The one page root on screen. */
+const root = (page: Page) => page.locator('main[data-testid^="v2-"]');
 
 async function quietIntro(page: Page) {
-  // the first-visit hint and the explain overlay can sit over the page
+  // the first-visit hint can sit over the page
   const gotIt = page.getByRole('button', { name: /got it/i });
   if (await gotIt.count()) await gotIt.first().click();
-  const explain = page.getByRole('button', { name: /explain/i }).first();
-  if (/on/i.test((await explain.textContent()) ?? '')) await explain.click();
 }
 
 test.describe('v2 tour (frozen busy snapshot)', () => {
-  test('Current, every v2 page, the flip, an agent click, and a mock control', async ({ page }) => {
+  test('one version, every page, an agent click, and a mock control', async ({ page }) => {
     test.setTimeout(60_000);
     const errors = watchErrors(page);
     await hookWebSocketSends(page);
 
-    // 1. Current mode: the old tab strip, and no v2 nav
-    await page.goto(FROZEN);
+    // 1. an old `?v=1` link (it used to open the first client) opens V2, and the switch is dropped
+    await page.goto(`${FROZEN}&v=1`);
     // positive control: the hook really sees a send (so "none sent" below means something)
     expect(
       await page.evaluate(() => {
@@ -54,21 +51,16 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         return (window as unknown as { __wsSent: string[] }).__wsSent;
       })
     ).toContain('control');
-    await expect(page.getByTestId('view-wall')).toBeVisible();
-    await quietIntro(page);
-    await expect(page.getByTestId('v2-nav')).toHaveCount(0);
-    const currentKeys = (
-      await page
-        .locator('[data-testid^="view-"]:not([data-testid^="view-body-"])')
-        .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!.slice('view-'.length)))
-    ).filter((k) => k.length > 0);
-    expect(currentKeys.length, 'Current has its tab strip').toBeGreaterThanOrEqual(8);
-    for (const k of ['wall', 'map', 'flow', 'timeline', 'accounts', 'machines', 'schema', 'learn'])
-      expect(currentKeys).toContain(k);
-
-    // 2. V: every page in the v2 nav, whatever it holds today
-    await page.keyboard.press('v');
     await expect(page.getByTestId('v2-nav')).toBeVisible();
+    await expect(page.getByTestId('v2-wall')).toBeVisible();
+    await expect.poll(() => new URL(page.url()).searchParams.get('v')).toBeNull();
+    await quietIntro(page);
+    // nothing of the old client is left: no tab strip, no version switch, no flip
+    await expect(page.locator('nav.view-tabs')).toHaveCount(0);
+    await expect(page.getByTestId('version-current')).toHaveCount(0);
+    await expect(page.getByTestId('flip')).toHaveCount(0);
+
+    // 2. every page in the nav, whatever it holds today
     const groups = await page
       .locator('[data-testid^="v2-group-"]')
       .evaluateAll((els) => els.map((e) => e.getAttribute('data-testid')!));
@@ -87,50 +79,16 @@ test.describe('v2 tour (frozen busy snapshot)', () => {
         await page.getByTestId(`v2-page-${key}`).click();
         await expect(root(page), `${key} renders one page root`).toHaveCount(1);
         await expect(root(page)).toBeVisible();
-        const hasCurrent = currentKeys.includes(key);
-        // the Graph is a v2-only page; the Rig Map is its own page in the Work group
         if (key === 'graph') await expect(page.getByTestId('v2-graph')).toBeVisible();
-
-        // A Current page with no v2 yet shows Current's page and says so: nothing to flip between.
-        if (hasCurrent && (await page.getByTestId('v2-no-v2').count()) > 0) {
-          await expect(page.getByTestId('v2-no-v2')).toContainText('No v2 yet');
-          visited.push(`${g.replace('v2-group-', '')}/${key} (no v2 yet)`);
-          continue;
-        }
-        // 3. B: the old page where there is one, a plain note where there is not
-        await page.keyboard.press('b');
-        if (hasCurrent) {
-          await expect(page.getByTestId('flip')).toHaveAttribute('data-showing', 'old');
-          // Current's page has no common root id; what marks it is that no v2 page root is up
-          await expect(
-            page.locator('main[data-testid^="v2-"]'),
-            `${key}: Current's page`
-          ).toHaveCount(0);
-          await expect(page.locator('main').first()).toBeVisible();
-          await page.keyboard.press('b');
-          await expect(page.getByTestId('flip')).toHaveAttribute('data-showing', 'new');
-          // back to the new page (or, for a Current page with no v2 yet, its one page root)
-          await expect(root(page)).toHaveCount(1);
-        } else {
-          await expect(page.getByTestId('v2-flip-note')).toContainText('no old version');
-        }
-        await expect(root(page)).toHaveCount(1);
-        visited.push(`${g.replace('v2-group-', '')}/${key}${hasCurrent ? '' : ' (v2 only)'}`);
+        if (key === 'map') await expect(page.getByTestId('v2-rigmap')).toBeVisible();
+        visited.push(`${g.replace('v2-group-', '')}/${key}`);
       }
     }
     test.info().annotations.push({ type: 'pages visited', description: visited.join(', ') });
-    console.log(`v2 tour visited ${visited.length} pages: ${visited.join(', ')}`);
+    console.log(`tour visited ${visited.length} pages: ${visited.join(', ')}`);
     expect(visited.length).toBeGreaterThanOrEqual(10);
     expect(visited).toContain('work/map');
-    expect(visited).toContain('fleet/graph (v2 only)');
-
-    // the Rig Map is its own page now: Current's Rig Map tab, then V, opens it (one rig, full width)
-    await page.keyboard.press('v');
-    await page.getByTestId('view-map').click();
-    await page.keyboard.press('v');
-    await expect(page.getByTestId('v2-rigmap')).toBeVisible();
-    await expect(page.getByTestId('v2-graph')).toHaveCount(0);
-    await expect(page.getByTestId('v2-no-v2')).toHaveCount(0);
+    expect(visited).toContain('fleet/graph');
 
     // 4. an agent on the Wall opens the Agent page
     await page.getByTestId('v2-group-fleet').click();

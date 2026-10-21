@@ -106,18 +106,12 @@ function ctxFor(
     activeRig: null,
     chooseRig: vi.fn(),
     pickedRig: null,
-    groupBy: 'rig',
     now: NOW,
     link: 'connected' as unknown as V2Context['link'],
     hubConnected: true,
     received: true,
     getSocket: () => socket,
     keys: true,
-    hidden: [],
-    onShowMachine: vi.fn(),
-    onOpenSeat: vi.fn(),
-    onOpenSkills: vi.fn(),
-    onOpenAgent: vi.fn(),
     onOpenFiles: vi.fn(),
     goTo: vi.fn(),
     agentKey: null,
@@ -286,11 +280,10 @@ describe('Needs You page', () => {
     render(<Page ctx={ctx} />);
     fireEvent.click(screen.getAllByTestId('ny-open-agent')[0]!);
     expect(ctx.openAgentPage).toHaveBeenCalledOnce();
-    expect(ctx.onOpenAgent).not.toHaveBeenCalled();
   });
 });
 
-describe('Needs You: gates, unread rigs, hub link, hidden machines', () => {
+describe('Needs You: gates, unread rigs, hub link, no machines', () => {
   const Page = needsYou.component;
   const runningRigs = (ms: FleetMachine[]) =>
     ms.flatMap((m) => m.snapshot.rigs.filter((r) => r.status === 'running').map((r) => r.name));
@@ -382,13 +375,8 @@ describe('Needs You: gates, unread rigs, hub link, hidden machines', () => {
     expect(screen.getByTestId('ny-hub-down')).toHaveTextContent('link to the hub is down');
   });
 
-  it('tells hidden machines apart from no machine reporting', () => {
-    const { unmount } = render(
-      <Page ctx={ctxFor([], [], {}, { hidden: [{ id: 'm2', label: 'M2' }] })} />
-    );
-    expect(screen.getByTestId('ny-empty')).toHaveTextContent('hidden by the Show filter (M2)');
-    unmount();
-    render(<Page ctx={ctxFor([], [], {}, { hidden: [] })} />);
+  it('says when no machine is reporting', () => {
+    render(<Page ctx={ctxFor([], [], {})} />);
     expect(screen.getByTestId('ny-empty')).toHaveTextContent('No machine is reporting');
   });
 

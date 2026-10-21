@@ -175,9 +175,6 @@ function MachinesV2({ ctx }: V2PageProps) {
           <Card key={m.id} m={m} latestStale={latestStale} />
         ))}
       </div>
-      {ctx.hidden.length > 0 && (
-        <p className="quiet">{ctx.hidden.length} machine(s) hidden by your filter.</p>
-      )}
     </main>
   );
 }

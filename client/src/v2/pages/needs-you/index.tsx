@@ -298,9 +298,7 @@ function NeedsYou({ ctx }: V2PageProps) {
           {filter === 'approval' || filter === 'shipped' || filter === 'progress'
             ? `Nothing real is collected for ${FILTERS.find((f) => f.key === filter)!.label.toLowerCase()} yet; the sample cards below show the shape.`
             : ctx.machines.length === 0
-              ? ctx.hidden.length > 0
-                ? `Every machine is hidden by the Show filter (${ctx.hidden.map((h) => h.label).join(', ')}), so nothing is listed: show one to see what it is waiting on.`
-                : 'No machine is reporting, so this cannot say what is waiting (not the same as nothing waiting).'
+              ? 'No machine is reporting, so this cannot say what is waiting (not the same as nothing waiting).'
               : unread > 0 || !loaded
                 ? 'Nothing found so far, but not every rig could be read for gates (see above): that is not the same as nothing waiting.'
                 : 'Nothing is waiting on David.'}

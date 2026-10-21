@@ -45,8 +45,6 @@ function swatch(s: Swatch | undefined, entry: LegendMark): ReactNode {
       );
     case 'mock':
       return <MockMark label="mock" />;
-    case 'flip':
-      return <span className="v2-flip-state">new</span>;
     case 'pill':
       return <span className="pill-btn legend2-pill">{entry.mark}</span>;
     case 'run-job':

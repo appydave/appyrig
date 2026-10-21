@@ -67,10 +67,10 @@ describe('the V2 Legend', () => {
       expect(text).not.toMatch(stale);
   });
 
-  it('V2 sources never render V1’s legend; the page ⓘ carries the same words', () => {
+  it('the app renders only the V2 legend; the page ⓘ carries the same words', () => {
     const app = readFileSync(path.resolve(__dirname, '../../App.tsx'), 'utf8');
-    expect(app).toMatch(/v2on && legendOpen && <Legend2/);
-    expect(app).toMatch(/!v2on && legend && !focusTile/);
+    expect(app).toMatch(/legendOpen && <Legend2/);
+    expect(app).not.toMatch(/<Legend /);
     render(<PageInfo page="run" />);
     expect(screen.getByTestId('page-info')).toHaveAttribute('title', PAGE_PURPOSE.run);
   });

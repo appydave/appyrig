@@ -7,7 +7,7 @@ const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 async function open(page: Page) {
   await page.goto(FROZEN);
   await expect(page.getByTestId('v2-strip')).toBeVisible({ timeout: 20_000 });
-  for (const id of ['v2-welcome-dismiss', 'explain-hint-dismiss']) {
+  for (const id of ['v2-welcome-dismiss']) {
     const b = page.getByTestId(id);
     if (await b.count()) await b.click();
   }
