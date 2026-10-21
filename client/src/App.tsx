@@ -37,6 +37,7 @@ import { frozenNow, type FrozenMeta } from './v2/frozen/frozenSocket.js';
 import RigDrawer from './v2/shell/RigDrawer.js';
 import StripShell from './v2/shell/StripShell.js';
 import MoreMenu from './v2/shell/MoreMenu.js';
+import V1Archive from './v2/kit/V1Archive.js';
 import AgentPanelV2 from './v2/kit/AgentPanel.js';
 import {
   isV2Url,
@@ -232,6 +233,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const filesOpener = useRef<HTMLElement | null>(null);
   /** C4 (F23): the list of filed notes is open. */
   const [notesOpen, setNotesOpen] = useState(false);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   /** v1.5 · L1: the seat whose Debug view is open, and prompt-layer files open over it. */
   const [debugFor, setDebugFor] = useState<{ machineId: string; seatId: string } | null>(null);
   const [layersOpen, setLayersOpen] = useState<{ files: PresetFile[]; initialId: string } | null>(
@@ -776,6 +778,17 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
       Notes
     </button>
   );
+  const archiveButton = (
+    <button
+      type="button"
+      className="pill-btn"
+      data-testid="v1-archive-open"
+      title="Screenshots of every screen of the retired V1 client"
+      onClick={() => setArchiveOpen(true)}
+    >
+      V1 archive
+    </button>
+  );
   const compareLink = (
     <a
       className="pill-btn compare-link"
@@ -974,6 +987,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
             {notesButton}
             {compareLink}
             {apiLink}
+            {archiveButton}
           </MoreMenu>
         ) : (
           <>
@@ -1265,6 +1279,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
           ⚑ Feedback · F
         </button>
       )}
+      {archiveOpen && <V1Archive onClose={() => setArchiveOpen(false)} />}
       {notesOpen && <FeedbackNotes socket={getSocket()} onClose={() => setNotesOpen(false)} />}
       {toast && (
         <p

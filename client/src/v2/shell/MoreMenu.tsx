@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
- * v2 shell · the ⋯ menu: the rarely used helpers (Notes, OpenRig vs AppyRig). The items stay in the
+ * v2 shell · the ⋯ menu: the rarely used helpers (Notes, OpenRig vs AppyRig, V1 archive). The items stay in the
  * page while it is closed (hidden), so they are always reachable by their test ids and Explain.
  */
 export default function MoreMenu({ children }: { children: ReactNode }) {
@@ -34,7 +34,7 @@ export default function MoreMenu({ children }: { children: ReactNode }) {
         data-testid="more-open"
         aria-expanded={open}
         aria-label="More helpers"
-        title="More: Notes, OpenRig vs AppyRig"
+        title="More: Notes, OpenRig vs AppyRig, V1 archive"
         onClick={() => setOpen((o) => !o)}
       >
         ⋯
