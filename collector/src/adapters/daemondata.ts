@@ -5,15 +5,15 @@ import {
   LIBRARY_ROWS_MAX,
   SETTING_PATH_HIDDEN,
   SeatDetailDataSchema,
-  TEXT_CATEGORY_MAX,
-  TEXT_ID_MAX,
-  TEXT_LABEL_MAX,
-  TEXT_NAME_MAX,
+  TEXT_SMALL_MAX,
+  TEXT_XLONG_MAX,
+  TEXT_MEDIUM_MAX,
+  TEXT_LONG_MAX,
   TEXT_PATH_MAX,
-  TEXT_REASON_MAX,
-  TEXT_SOURCE_MAX,
-  TEXT_SUMMARY_MAX,
-  TEXT_TAG_MAX,
+  TEXT_XXLONG_MAX,
+  TEXT_TINY_MAX,
+  TEXT_XXXLONG_MAX,
+  TEXT_SHORT_MAX,
   TRANSITIONS_MAX,
   type DaemonDataPush,
   type DaemonKind,
@@ -114,19 +114,19 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
     throw new Error('node detail: expected a JSON object');
   }
   const compact = isRec(raw.compactSpec) ? raw.compactSpec : {};
-  const specName = txt(raw.resolvedSpecName, TEXT_NAME_MAX) ?? txt(compact.name, TEXT_NAME_MAX);
+  const specName = txt(raw.resolvedSpecName, TEXT_LONG_MAX) ?? txt(compact.name, TEXT_LONG_MAX);
   const specVersion =
-    txt(raw.resolvedSpecVersion, TEXT_TAG_MAX) ?? txt(compact.version, TEXT_TAG_MAX);
-  const profile = txt(raw.profile, TEXT_NAME_MAX) ?? txt(compact.profile, TEXT_NAME_MAX);
-  const hash = txt(raw.resolvedSpecHash, TEXT_NAME_MAX);
+    txt(raw.resolvedSpecVersion, TEXT_SHORT_MAX) ?? txt(compact.version, TEXT_SHORT_MAX);
+  const profile = txt(raw.profile, TEXT_LONG_MAX) ?? txt(compact.profile, TEXT_LONG_MAX);
+  const hash = txt(raw.resolvedSpecHash, TEXT_LONG_MAX);
   const spec =
     specName || specVersion || profile || hash
       ? { name: specName, version: specVersion, profile, hash }
       : null;
   const guidance = isRec(raw.recoveryGuidance) ? raw.recoveryGuidance : {};
   const notes = [
-    txt(guidance.summary, TEXT_REASON_MAX, true),
-    ...list(guidance.notes).map((n) => txt(n, TEXT_REASON_MAX, true)),
+    txt(guidance.summary, TEXT_XXLONG_MAX, true),
+    ...list(guidance.notes).map((n) => txt(n, TEXT_XXLONG_MAX, true)),
   ]
     .filter((n): n is string => n !== null)
     .slice(0, 10);
@@ -137,7 +137,7 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(f)) {
         return [];
       }
-      const path = txt(f.path, TEXT_SUMMARY_MAX);
+      const path = txt(f.path, TEXT_XXXLONG_MAX);
       if (!path) {
         return [];
       }
@@ -145,10 +145,10 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       return [
         {
           path,
-          deliveryHint: txt(f.deliveryHint, TEXT_TAG_MAX),
+          deliveryHint: txt(f.deliveryHint, TEXT_SHORT_MAX),
           required: bool(f.required),
           appliesOn: list(f.appliesOn)
-            .map((a) => txt(a, TEXT_TAG_MAX))
+            .map((a) => txt(a, TEXT_SHORT_MAX))
             .filter((a): a is string => a !== null)
             .slice(0, 10),
         },
@@ -158,7 +158,7 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(a)) {
         return [];
       }
-      const type = txt(a.type, TEXT_TAG_MAX);
+      const type = txt(a.type, TEXT_SHORT_MAX);
       if (!type) {
         return [];
       }
@@ -166,8 +166,8 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       return [
         {
           type,
-          phase: txt(a.phase, TEXT_TAG_MAX),
-          text: txt(a.value, TEXT_SUMMARY_MAX, true),
+          phase: txt(a.phase, TEXT_SHORT_MAX),
+          text: txt(a.value, TEXT_XXXLONG_MAX, true),
         },
       ];
     }),
@@ -175,7 +175,7 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(p)) {
         return [];
       }
-      const logicalId = txt(p.logicalId, TEXT_ID_MAX);
+      const logicalId = txt(p.logicalId, TEXT_XLONG_MAX);
       if (!logicalId) {
         return [];
       }
@@ -183,8 +183,8 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       return [
         {
           logicalId,
-          session: txt(p.canonicalSessionName, TEXT_ID_MAX),
-          runtime: txt(p.runtime, TEXT_TAG_MAX),
+          session: txt(p.canonicalSessionName, TEXT_XLONG_MAX),
+          runtime: txt(p.runtime, TEXT_SHORT_MAX),
         },
       ];
     }),
@@ -193,9 +193,9 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
       if (!isRec(r)) {
         return [];
       }
-      const id = txt(r.id, TEXT_ID_MAX);
+      const id = txt(r.id, TEXT_XLONG_MAX);
 
-      return id ? [{ id, category: txt(r.category, TEXT_CATEGORY_MAX) }] : [];
+      return id ? [{ id, category: txt(r.category, TEXT_SMALL_MAX) }] : [];
     }),
   });
 }
@@ -251,8 +251,8 @@ export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
       if (!isRec(r)) {
         return [];
       }
-      const id = txt(r.id, TEXT_REASON_MAX);
-      const name = txt(r.name, TEXT_ID_MAX);
+      const id = txt(r.id, TEXT_XXLONG_MAX);
+      const name = txt(r.name, TEXT_XLONG_MAX);
       if (!id || !name) {
         return [];
       }
@@ -260,13 +260,13 @@ export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
       return [
         {
           id,
-          kind: txt(r.kind, TEXT_TAG_MAX),
+          kind: txt(r.kind, TEXT_SHORT_MAX),
           name,
-          version: txt(r.version, TEXT_TAG_MAX),
-          sourceType: txt(r.sourceType, TEXT_TAG_MAX),
-          summary: txt(r.summary, TEXT_SUMMARY_MAX, true),
+          version: txt(r.version, TEXT_SHORT_MAX),
+          sourceType: txt(r.sourceType, TEXT_SHORT_MAX),
+          summary: txt(r.summary, TEXT_XXXLONG_MAX, true),
           path: txt(r.sourcePath, TEXT_PATH_MAX),
-          updatedAt: txt(r.updatedAt, TEXT_TAG_MAX),
+          updatedAt: txt(r.updatedAt, TEXT_SHORT_MAX),
           facts: pickFacts(r, [
             'rolesCount',
             'stepsCount',
@@ -289,8 +289,8 @@ export function parseLibrarySkills(raw: unknown): LibraryRow[] {
       if (!isRec(r)) {
         return [];
       }
-      const id = txt(r.id, TEXT_REASON_MAX);
-      const name = txt(r.name, TEXT_ID_MAX);
+      const id = txt(r.id, TEXT_XXLONG_MAX);
+      const name = txt(r.name, TEXT_XLONG_MAX);
       if (!id || !name) {
         return [];
       }
@@ -298,7 +298,7 @@ export function parseLibrarySkills(raw: unknown): LibraryRow[] {
         if (!isRec(f)) {
           return [];
         }
-        const fname = txt(f.name, TEXT_ID_MAX);
+        const fname = txt(f.name, TEXT_XLONG_MAX);
         if (!fname) {
           return [];
         }
@@ -313,7 +313,7 @@ export function parseLibrarySkills(raw: unknown): LibraryRow[] {
           kind: 'skill',
           name,
           version: null,
-          sourceType: txt(r.source, TEXT_TAG_MAX),
+          sourceType: txt(r.source, TEXT_SHORT_MAX),
           summary: null,
           path: txt(r.absolutePath, TEXT_PATH_MAX),
           updatedAt: null,
@@ -335,8 +335,8 @@ export function parseLibraryPacks(raw: unknown): LibraryRow[] {
       if (!isRec(r)) {
         return [];
       }
-      const id = txt(r.id, TEXT_REASON_MAX);
-      const name = txt(r.name, TEXT_ID_MAX);
+      const id = txt(r.id, TEXT_XXLONG_MAX);
+      const name = txt(r.name, TEXT_XLONG_MAX);
       if (!id || !name) {
         return [];
       }
@@ -345,11 +345,11 @@ export function parseLibraryPacks(raw: unknown): LibraryRow[] {
       return [
         {
           id,
-          kind: txt(r.kind, TEXT_TAG_MAX) ?? 'context-pack',
+          kind: txt(r.kind, TEXT_SHORT_MAX) ?? 'context-pack',
           name,
-          version: txt(r.version, TEXT_TAG_MAX),
-          sourceType: txt(r.sourceType, TEXT_TAG_MAX),
-          summary: txt(r.purpose, TEXT_SUMMARY_MAX, true),
+          version: txt(r.version, TEXT_SHORT_MAX),
+          sourceType: txt(r.sourceType, TEXT_SHORT_MAX),
+          summary: txt(r.purpose, TEXT_XXXLONG_MAX, true),
           path: txt(r.sourcePath, TEXT_PATH_MAX),
           updatedAt: null,
           facts: { ...pickFacts(r, ['taxonomy']), ...(tokens !== null ? { tokens } : {}) },
@@ -374,9 +374,9 @@ export function parseTransitionRow(r: unknown): TransitionRow | null {
   const rawId = r.transitionId;
   const id =
     typeof rawId === 'string' ? rawId.trim() : typeof rawId === 'number' ? String(rawId) : '';
-  const qitemId = txt(r.qitemId, TEXT_ID_MAX);
-  const state = txt(r.state, TEXT_TAG_MAX);
-  const when = txt(r.originalTimestamp, TEXT_TAG_MAX) ?? txt(r.createdAt, TEXT_TAG_MAX);
+  const qitemId = txt(r.qitemId, TEXT_XLONG_MAX);
+  const state = txt(r.state, TEXT_SHORT_MAX);
+  const when = txt(r.originalTimestamp, TEXT_SHORT_MAX) ?? txt(r.createdAt, TEXT_SHORT_MAX);
   const ms = when ? Date.parse(when) : NaN;
   if (!id || id.length > 30 || !qitemId || !state || !Number.isFinite(ms)) {
     return null;
@@ -387,9 +387,9 @@ export function parseTransitionRow(r: unknown): TransitionRow | null {
     qitemId,
     at: new Date(ms).toISOString(),
     state,
-    actor: txt(r.actorSession, TEXT_ID_MAX),
-    closureReason: txt(r.closureReason, TEXT_ID_MAX),
-    closureTarget: txt(r.closureTarget, TEXT_ID_MAX),
+    actor: txt(r.actorSession, TEXT_XLONG_MAX),
+    closureReason: txt(r.closureReason, TEXT_XLONG_MAX),
+    closureTarget: txt(r.closureTarget, TEXT_XLONG_MAX),
   };
 }
 
@@ -416,8 +416,8 @@ export function parseTransitionsPage(raw: unknown): {
 
       return Number.isFinite(h) && h >= 0 ? Math.round(h) : null;
     })(),
-    hostId: txt(source.hostId, TEXT_LABEL_MAX),
-    bootEpoch: txt(source.bootEpoch, TEXT_LABEL_MAX),
+    hostId: txt(source.hostId, TEXT_MEDIUM_MAX),
+    bootEpoch: txt(source.bootEpoch, TEXT_MEDIUM_MAX),
   };
 }
 
@@ -429,7 +429,7 @@ export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['spe
       if (!isRec(r)) {
         return [];
       }
-      const name = txt(r.name, TEXT_ID_MAX);
+      const name = txt(r.name, TEXT_XLONG_MAX);
       if (!name) {
         return [];
       }
@@ -438,12 +438,12 @@ export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['spe
         {
           name,
           version:
-            txt(r.version, TEXT_TAG_MAX) ?? (num(r.version) !== null ? String(r.version) : null),
-          purpose: txt(r.purpose, TEXT_SUMMARY_MAX, true),
-          targetRig: txt(r.targetRig, TEXT_ID_MAX),
+            txt(r.version, TEXT_SHORT_MAX) ?? (num(r.version) !== null ? String(r.version) : null),
+          purpose: txt(r.purpose, TEXT_XXXLONG_MAX, true),
+          targetRig: txt(r.targetRig, TEXT_XLONG_MAX),
           terminalTurnRule:
-            txt(r.coordinationTerminalTurnRule, TEXT_LABEL_MAX) ??
-            txt(r.terminalTurnRule, TEXT_LABEL_MAX),
+            txt(r.coordinationTerminalTurnRule, TEXT_MEDIUM_MAX) ??
+            txt(r.terminalTurnRule, TEXT_MEDIUM_MAX),
           isBuiltIn: bool(r.isBuiltIn),
         },
       ];
@@ -457,7 +457,7 @@ export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData[
       if (!isRec(r)) {
         return [];
       }
-      const instanceId = txt(r.instanceId, TEXT_ID_MAX);
+      const instanceId = txt(r.instanceId, TEXT_XLONG_MAX);
       if (!instanceId) {
         return [];
       }
@@ -467,16 +467,16 @@ export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData[
       return [
         {
           instanceId,
-          workflowName: txt(r.workflowName, TEXT_ID_MAX),
+          workflowName: txt(r.workflowName, TEXT_XLONG_MAX),
           workflowVersion:
-            txt(r.workflowVersion, TEXT_TAG_MAX) ??
+            txt(r.workflowVersion, TEXT_SHORT_MAX) ??
             (num(r.workflowVersion) !== null ? String(r.workflowVersion) : null),
-          status: txt(r.status, TEXT_TAG_MAX),
-          currentStepId: txt(r.currentStepId, TEXT_ID_MAX),
+          status: txt(r.status, TEXT_SHORT_MAX),
+          currentStepId: txt(r.currentStepId, TEXT_XLONG_MAX),
           hopCount: hops !== null && hops >= 0 ? Math.round(hops) : null,
-          createdAt: txt(r.createdAt, TEXT_TAG_MAX),
-          completedAt: txt(r.completedAt, TEXT_TAG_MAX),
-          deadlineState: txt(deadline.state, TEXT_TAG_MAX),
+          createdAt: txt(r.createdAt, TEXT_SHORT_MAX),
+          completedAt: txt(r.completedAt, TEXT_SHORT_MAX),
+          deadlineState: txt(deadline.state, TEXT_SHORT_MAX),
         },
       ];
     })
@@ -506,17 +506,17 @@ export function parseHealthFindings(
 
         return [
           {
-            id: txt(r.id, TEXT_ID_MAX) ?? txt(r.findingId, TEXT_ID_MAX) ?? `finding-${i}`,
+            id: txt(r.id, TEXT_XLONG_MAX) ?? txt(r.findingId, TEXT_XLONG_MAX) ?? `finding-${i}`,
             detector:
-              txt(r.detector, TEXT_NAME_MAX) ??
-              txt(r.detectorId, TEXT_NAME_MAX) ??
-              txt(r.kind, TEXT_NAME_MAX),
-            severity: txt(r.severity, TEXT_TAG_MAX),
+              txt(r.detector, TEXT_LONG_MAX) ??
+              txt(r.detectorId, TEXT_LONG_MAX) ??
+              txt(r.kind, TEXT_LONG_MAX),
+            severity: txt(r.severity, TEXT_SHORT_MAX),
             summary:
-              txt(r.summary, TEXT_SUMMARY_MAX, true) ??
-              txt(r.title, TEXT_SUMMARY_MAX, true) ??
-              txt(r.message, TEXT_SUMMARY_MAX, true),
-            evaluatedAt: txt(r.evaluatedAt, TEXT_TAG_MAX),
+              txt(r.summary, TEXT_XXXLONG_MAX, true) ??
+              txt(r.title, TEXT_XXXLONG_MAX, true) ??
+              txt(r.message, TEXT_XXXLONG_MAX, true),
+            evaluatedAt: txt(r.evaluatedAt, TEXT_SHORT_MAX),
           },
         ];
       })
@@ -528,7 +528,7 @@ export function parseHealthFindings(
         if (!isRec(c)) {
           return [];
         }
-        const source = txt(c.source, TEXT_NAME_MAX);
+        const source = txt(c.source, TEXT_LONG_MAX);
         if (!source) {
           return [];
         }
@@ -536,12 +536,12 @@ export function parseHealthFindings(
         return [
           {
             source,
-            unit: txt(c.unit, TEXT_NAME_MAX),
+            unit: txt(c.unit, TEXT_LONG_MAX),
             evaluated: countOrNull(c.evaluated),
             total: countOrNull(c.total),
             omitted: countOrNull(c.omitted),
             partial: bool(c.partial),
-            evaluatedAt: txt(c.evaluatedAt, TEXT_TAG_MAX),
+            evaluatedAt: txt(c.evaluatedAt, TEXT_SHORT_MAX),
           },
         ];
       })
@@ -557,13 +557,13 @@ export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
   const diagnosis = isRec(p.diagnosis) ? p.diagnosis : {};
   const names = (v: unknown) =>
     list(v)
-      .flatMap((x) => txt(x, TEXT_NAME_MAX) ?? [])
+      .flatMap((x) => txt(x, TEXT_LONG_MAX) ?? [])
       .slice(0, 40);
   const thresholds: Record<string, number> = {};
   if (isRec(p.thresholds)) {
     for (const [k, v] of Object.entries(p.thresholds)) {
       if (typeof v === 'number' && Number.isFinite(v)) {
-        thresholds[k.slice(0, TEXT_TAG_MAX)] = v;
+        thresholds[k.slice(0, TEXT_SHORT_MAX)] = v;
       }
     }
   }
@@ -596,7 +596,7 @@ export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
   const c = isRec(raw.counts) ? raw.counts : {};
 
   return {
-    verdict: txt(raw.verdict, TEXT_TAG_MAX),
+    verdict: txt(raw.verdict, TEXT_SHORT_MAX),
     red: countOrNull(c.red),
     yellow: countOrNull(c.yellow),
     green: countOrNull(c.green),
@@ -611,8 +611,8 @@ export function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
   const lag = num(loop.lagP99Ms);
 
   return {
-    semver: txt(raw.semver, TEXT_TAG_MAX),
-    commit: txt(raw.commit, TEXT_TAG_MAX),
+    semver: txt(raw.semver, TEXT_SHORT_MAX),
+    commit: txt(raw.commit, TEXT_SHORT_MAX),
     eventLoopLagP99Ms: lag !== null && lag >= 0 ? lag : null,
   };
 }
@@ -712,13 +712,13 @@ export function parseSettings(raw: unknown): SettingsData {
       return SETTING_PATH_HIDDEN;
     }
 
-    return redactString(text).slice(0, TEXT_ID_MAX);
+    return redactString(text).slice(0, TEXT_XLONG_MAX);
   };
   for (const [key, entry] of Object.entries(raw.settings)) {
     if (!isRec(entry)) {
       continue;
     }
-    if (!isAllowed(key) || WITHHELD_KEY.test(key) || key.length > TEXT_NAME_MAX) {
+    if (!isAllowed(key) || WITHHELD_KEY.test(key) || key.length > TEXT_LONG_MAX) {
       withheld += 1;
       continue;
     }
@@ -728,7 +728,7 @@ export function parseSettings(raw: unknown): SettingsData {
     }
     settings[key] = {
       value: v,
-      source: txt(entry.source, TEXT_SOURCE_MAX),
+      source: txt(entry.source, TEXT_TINY_MAX),
       defaultValue: value(entry.defaultValue) ?? null,
     };
   }
@@ -1108,7 +1108,8 @@ export class DaemonDataReader {
         return null;
       }
     };
-    const semver = health.ok && isRec(health.value) ? txt(health.value.semver, TEXT_TAG_MAX) : null;
+    const semver =
+      health.ok && isRec(health.value) ? txt(health.value.semver, TEXT_SHORT_MAX) : null;
     const data: LibraryData = {
       openrigVersion: semver,
       specs: one('specs', specs, parseLibrarySpecs),

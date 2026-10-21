@@ -31,17 +31,19 @@ export const DAEMON_KINDS = [
 export type DaemonKind = (typeof DAEMON_KINDS)[number];
 
 /**
- * Longest text each kind of field may hold. The schema below and the collector's trimming read the same
- * names, so a value the collector cuts always fits the schema that checks it.
+ * Longest text a field may hold, by size tier (a tier says how long, not what the field is: a field
+ * takes the tier its data needs). TEXT_PATH_MAX is the one field-true name: every use is a file path.
+ * The schema below and the collector's trimming read the same names, so a value the collector cuts
+ * always fits the schema that checks it.
  */
-export const TEXT_SOURCE_MAX = 40;
-export const TEXT_TAG_MAX = 60;
-export const TEXT_CATEGORY_MAX = 80;
-export const TEXT_LABEL_MAX = 100;
-export const TEXT_NAME_MAX = 120;
-export const TEXT_ID_MAX = 200;
-export const TEXT_REASON_MAX = 300;
-export const TEXT_SUMMARY_MAX = 400;
+export const TEXT_TINY_MAX = 40;
+export const TEXT_SHORT_MAX = 60;
+export const TEXT_SMALL_MAX = 80;
+export const TEXT_MEDIUM_MAX = 100;
+export const TEXT_LONG_MAX = 120;
+export const TEXT_XLONG_MAX = 200;
+export const TEXT_XXLONG_MAX = 300;
+export const TEXT_XXXLONG_MAX = 400;
 export const TEXT_PATH_MAX = 500;
 
 const Text = (max: number) => z.string().max(max);
@@ -52,45 +54,45 @@ const TextN = (max: number) => z.string().max(max).nullable();
 export const SeatDetailDataSchema = z.strictObject({
   spec: z
     .strictObject({
-      name: TextN(TEXT_NAME_MAX),
-      version: TextN(TEXT_TAG_MAX),
-      profile: TextN(TEXT_NAME_MAX),
-      hash: TextN(TEXT_NAME_MAX),
+      name: TextN(TEXT_LONG_MAX),
+      version: TextN(TEXT_SHORT_MAX),
+      profile: TextN(TEXT_LONG_MAX),
+      hash: TextN(TEXT_LONG_MAX),
     })
     .nullable(),
   startupFiles: z
     .array(
       z.strictObject({
-        path: Text(TEXT_SUMMARY_MAX),
-        deliveryHint: TextN(TEXT_TAG_MAX),
+        path: Text(TEXT_XXXLONG_MAX),
+        deliveryHint: TextN(TEXT_SHORT_MAX),
         required: z.boolean().nullable(),
-        appliesOn: z.array(Text(TEXT_TAG_MAX)).max(10),
+        appliesOn: z.array(Text(TEXT_SHORT_MAX)).max(10),
       })
     )
     .max(60),
   startupActions: z
     .array(
       z.strictObject({
-        type: Text(TEXT_TAG_MAX),
-        phase: TextN(TEXT_TAG_MAX),
+        type: Text(TEXT_SHORT_MAX),
+        phase: TextN(TEXT_SHORT_MAX),
         /** The text the action sends, redacted and cut; null when the action sends none. */
-        text: TextN(TEXT_SUMMARY_MAX),
+        text: TextN(TEXT_XXXLONG_MAX),
       })
     )
     .max(60),
   peers: z
     .array(
       z.strictObject({
-        logicalId: Text(TEXT_ID_MAX),
-        session: TextN(TEXT_ID_MAX),
-        runtime: TextN(TEXT_TAG_MAX),
+        logicalId: Text(TEXT_XLONG_MAX),
+        session: TextN(TEXT_XLONG_MAX),
+        runtime: TextN(TEXT_SHORT_MAX),
       })
     )
     .max(60),
   /** The daemon's recovery guidance notes (plain words). Never the resume token. */
-  recoveryNotes: z.array(Text(TEXT_REASON_MAX)).max(10),
+  recoveryNotes: z.array(Text(TEXT_XXLONG_MAX)).max(10),
   installedResources: z
-    .array(z.strictObject({ id: Text(TEXT_ID_MAX), category: TextN(TEXT_CATEGORY_MAX) }))
+    .array(z.strictObject({ id: Text(TEXT_XLONG_MAX), category: TextN(TEXT_SMALL_MAX) }))
     .max(60),
 });
 export type SeatDetailData = z.infer<typeof SeatDetailDataSchema>;
@@ -100,25 +102,28 @@ export type SeatDetailData = z.infer<typeof SeatDetailDataSchema>;
 export const LIBRARY_ROWS_MAX = 300;
 export const LIBRARY_FILES_MAX = 30;
 
-const FactValue = z.union([z.string().max(TEXT_ID_MAX), z.number(), z.boolean(), z.null()]);
+const FactValue = z.union([z.string().max(TEXT_XLONG_MAX), z.number(), z.boolean(), z.null()]);
 
 /** One library row, the same shape for specs, skills and context packs. */
 export const LibraryRowSchema = z.strictObject({
-  id: Text(TEXT_REASON_MAX),
-  kind: TextN(TEXT_TAG_MAX),
-  name: Text(TEXT_ID_MAX),
-  version: TextN(TEXT_TAG_MAX),
-  sourceType: TextN(TEXT_TAG_MAX),
-  summary: TextN(TEXT_SUMMARY_MAX),
+  id: Text(TEXT_XXLONG_MAX),
+  kind: TextN(TEXT_SHORT_MAX),
+  name: Text(TEXT_XLONG_MAX),
+  version: TextN(TEXT_SHORT_MAX),
+  sourceType: TextN(TEXT_SHORT_MAX),
+  summary: TextN(TEXT_XXXLONG_MAX),
   /** Where it lives on that machine's disk (shown as text, never opened). */
   path: TextN(TEXT_PATH_MAX),
-  updatedAt: TextN(TEXT_TAG_MAX),
+  updatedAt: TextN(TEXT_SHORT_MAX),
   /** Group-specific facts: spec (rolesCount, stepsCount, targetRig, …), skill (fileCount, totalBytes), pack (taxonomy, tokens). */
-  facts: z.record(z.string().max(TEXT_TAG_MAX), FactValue),
+  facts: z.record(z.string().max(TEXT_SHORT_MAX), FactValue),
   /** Skill file names and sizes (library.get only; library.list leaves them out). */
   files: z
     .array(
-      z.strictObject({ name: Text(TEXT_ID_MAX), size: z.number().int().nonnegative().nullable() })
+      z.strictObject({
+        name: Text(TEXT_XLONG_MAX),
+        size: z.number().int().nonnegative().nullable(),
+      })
     )
     .max(LIBRARY_FILES_MAX),
 });
@@ -126,7 +131,7 @@ export type LibraryRow = z.infer<typeof LibraryRowSchema>;
 
 /** Each list is null when that endpoint could not be read this round (kept apart from an empty list). */
 export const LibraryDataSchema = z.strictObject({
-  openrigVersion: TextN(TEXT_TAG_MAX),
+  openrigVersion: TextN(TEXT_SHORT_MAX),
   specs: z.array(LibraryRowSchema).max(LIBRARY_ROWS_MAX).nullable(),
   skills: z.array(LibraryRowSchema).max(LIBRARY_ROWS_MAX).nullable(),
   contextPacks: z.array(LibraryRowSchema).max(LIBRARY_ROWS_MAX).nullable(),
@@ -141,12 +146,12 @@ export const TRANSITIONS_MAX = 1000;
 export const TransitionRowSchema = z.strictObject({
   /** The daemon's id, a decimal string (telemetry ids are strings; per-daemon sequence). */
   id: Text(30),
-  qitemId: Text(TEXT_ID_MAX),
+  qitemId: Text(TEXT_XLONG_MAX),
   at: isoDate,
-  state: Text(TEXT_TAG_MAX),
-  actor: TextN(TEXT_ID_MAX),
-  closureReason: TextN(TEXT_ID_MAX),
-  closureTarget: TextN(TEXT_ID_MAX),
+  state: Text(TEXT_SHORT_MAX),
+  actor: TextN(TEXT_XLONG_MAX),
+  closureReason: TextN(TEXT_XLONG_MAX),
+  closureTarget: TextN(TEXT_XLONG_MAX),
 });
 export type TransitionRow = z.infer<typeof TransitionRowSchema>;
 
@@ -156,33 +161,33 @@ export const TransitionsDataSchema = z.strictObject({
   /** Rows the daemon had when last read (the collector keeps the newest TRANSITIONS_MAX). */
   retained: z.number().int().nonnegative().nullable(),
   truncated: z.boolean(),
-  hostId: TextN(TEXT_LABEL_MAX),
-  bootEpoch: TextN(TEXT_LABEL_MAX),
+  hostId: TextN(TEXT_MEDIUM_MAX),
+  bootEpoch: TextN(TEXT_MEDIUM_MAX),
 });
 export type TransitionsData = z.infer<typeof TransitionsDataSchema>;
 
 // ── workflows ────────────────────────────────────
 
 export const WorkflowSpecSchema = z.strictObject({
-  name: Text(TEXT_ID_MAX),
-  version: TextN(TEXT_TAG_MAX),
-  purpose: TextN(TEXT_SUMMARY_MAX),
-  targetRig: TextN(TEXT_ID_MAX),
-  terminalTurnRule: TextN(TEXT_LABEL_MAX),
+  name: Text(TEXT_XLONG_MAX),
+  version: TextN(TEXT_SHORT_MAX),
+  purpose: TextN(TEXT_XXXLONG_MAX),
+  targetRig: TextN(TEXT_XLONG_MAX),
+  terminalTurnRule: TextN(TEXT_MEDIUM_MAX),
   isBuiltIn: z.boolean().nullable(),
 });
 export type WorkflowSpec = z.infer<typeof WorkflowSpecSchema>;
 
 export const WorkflowInstanceSchema = z.strictObject({
-  instanceId: Text(TEXT_ID_MAX),
-  workflowName: TextN(TEXT_ID_MAX),
-  workflowVersion: TextN(TEXT_TAG_MAX),
-  status: TextN(TEXT_TAG_MAX),
-  currentStepId: TextN(TEXT_ID_MAX),
+  instanceId: Text(TEXT_XLONG_MAX),
+  workflowName: TextN(TEXT_XLONG_MAX),
+  workflowVersion: TextN(TEXT_SHORT_MAX),
+  status: TextN(TEXT_SHORT_MAX),
+  currentStepId: TextN(TEXT_XLONG_MAX),
   hopCount: z.number().int().nonnegative().nullable(),
-  createdAt: TextN(TEXT_TAG_MAX),
-  completedAt: TextN(TEXT_TAG_MAX),
-  deadlineState: TextN(TEXT_TAG_MAX),
+  createdAt: TextN(TEXT_SHORT_MAX),
+  completedAt: TextN(TEXT_SHORT_MAX),
+  deadlineState: TextN(TEXT_SHORT_MAX),
 });
 export type WorkflowInstance = z.infer<typeof WorkflowInstanceSchema>;
 
@@ -196,22 +201,22 @@ export type WorkflowsData = z.infer<typeof WorkflowsDataSchema>;
 // ── health ──────
 
 export const HealthFindingSchema = z.strictObject({
-  id: Text(TEXT_ID_MAX),
-  detector: TextN(TEXT_NAME_MAX),
-  severity: TextN(TEXT_TAG_MAX),
-  summary: TextN(TEXT_SUMMARY_MAX),
-  evaluatedAt: TextN(TEXT_TAG_MAX),
+  id: Text(TEXT_XLONG_MAX),
+  detector: TextN(TEXT_LONG_MAX),
+  severity: TextN(TEXT_SHORT_MAX),
+  summary: TextN(TEXT_XXXLONG_MAX),
+  evaluatedAt: TextN(TEXT_SHORT_MAX),
 });
 export type HealthFinding = z.infer<typeof HealthFindingSchema>;
 
 export const HealthCoverageSchema = z.strictObject({
-  source: Text(TEXT_NAME_MAX),
-  unit: TextN(TEXT_NAME_MAX),
+  source: Text(TEXT_LONG_MAX),
+  unit: TextN(TEXT_LONG_MAX),
   evaluated: z.number().nonnegative().nullable(),
   total: z.number().nonnegative().nullable(),
   omitted: z.number().nonnegative().nullable(),
   partial: z.boolean().nullable(),
-  evaluatedAt: TextN(TEXT_TAG_MAX),
+  evaluatedAt: TextN(TEXT_SHORT_MAX),
 });
 export type HealthCoverage = z.infer<typeof HealthCoverageSchema>;
 
@@ -225,9 +230,9 @@ export const HealthDataSchema = z.strictObject({
   policy: z
     .strictObject({
       diagnosisEnabled: z.boolean().nullable(),
-      disabledDetectors: z.array(Text(TEXT_NAME_MAX)).max(40),
-      detectors: z.array(Text(TEXT_NAME_MAX)).max(40),
-      thresholds: z.record(z.string().max(TEXT_TAG_MAX), z.number()),
+      disabledDetectors: z.array(Text(TEXT_LONG_MAX)).max(40),
+      detectors: z.array(Text(TEXT_LONG_MAX)).max(40),
+      thresholds: z.record(z.string().max(TEXT_SHORT_MAX), z.number()),
     })
     .nullable(),
   contextSummary: z
@@ -240,7 +245,7 @@ export const HealthDataSchema = z.strictObject({
     .nullable(),
   restore: z
     .strictObject({
-      verdict: TextN(TEXT_TAG_MAX),
+      verdict: TextN(TEXT_SHORT_MAX),
       red: z.number().int().nonnegative().nullable(),
       yellow: z.number().int().nonnegative().nullable(),
       green: z.number().int().nonnegative().nullable(),
@@ -248,8 +253,8 @@ export const HealthDataSchema = z.strictObject({
     .nullable(),
   daemon: z
     .strictObject({
-      semver: TextN(TEXT_TAG_MAX),
-      commit: TextN(TEXT_TAG_MAX),
+      semver: TextN(TEXT_SHORT_MAX),
+      commit: TextN(TEXT_SHORT_MAX),
       eventLoopLagP99Ms: z.number().nonnegative().nullable(),
     })
     .nullable(),
@@ -306,17 +311,17 @@ export function healthCaveats(d: HealthData): string[] {
 
 // ── settings ─────────────────────────────────────────────────────────────────
 
-const SettingValue = z.union([z.string().max(TEXT_ID_MAX), z.number(), z.boolean(), z.null()]);
+const SettingValue = z.union([z.string().max(TEXT_XLONG_MAX), z.number(), z.boolean(), z.null()]);
 
 export const SettingSchema = z.strictObject({
   value: SettingValue,
-  source: TextN(TEXT_SOURCE_MAX),
+  source: TextN(TEXT_TINY_MAX),
   defaultValue: SettingValue,
 });
 export type Setting = z.infer<typeof SettingSchema>;
 
 export const SettingsDataSchema = z.strictObject({
-  settings: z.record(z.string().max(TEXT_NAME_MAX), SettingSchema),
+  settings: z.record(z.string().max(TEXT_LONG_MAX), SettingSchema),
   /** Keys read but not forwarded (not on the allowlist, secret-looking name). */
   withheld: z.number().int().nonnegative(),
   /** Keys forwarded whose value looked like a path and was replaced by SETTING_PATH_HIDDEN. */
@@ -336,7 +341,7 @@ const PushBase = {
    * route exists but the daemon does not know this item (a 404 on one seat). data is null for both.
    */
   status: z.enum(['ok', 'unsupported', 'not-found']),
-  reason: TextN(TEXT_REASON_MAX),
+  reason: TextN(TEXT_XXLONG_MAX),
 };
 
 const push = <K extends DaemonKind, D extends z.ZodType>(kind: K, data: D) =>
@@ -344,7 +349,7 @@ const push = <K extends DaemonKind, D extends z.ZodType>(kind: K, data: D) =>
     kind: z.literal(kind),
     ...PushBase,
     /** seatdetail: the seat id; every other kind: exactly the empty string. */
-    key: kind === 'seatdetail' ? z.string().min(1).max(TEXT_ID_MAX) : z.literal(''),
+    key: kind === 'seatdetail' ? z.string().min(1).max(TEXT_XLONG_MAX) : z.literal(''),
     data: data.nullable(),
   });
 
@@ -376,7 +381,7 @@ const MachineFilter = z.strictObject({
 export const DataMachineSchema = z.strictObject({
   machine: MachineId,
   status: DataStatusSchema,
-  reason: TextN(TEXT_REASON_MAX),
+  reason: TextN(TEXT_XXLONG_MAX),
   collectedAt: isoDate.nullable(),
 });
 export type DataMachine = z.infer<typeof DataMachineSchema>;
@@ -387,7 +392,7 @@ export const SeatDetailOutputSchema = z.strictObject({
   machine: MachineId,
   seat: z.string(),
   status: DataStatusSchema.or(z.enum(['not-openrig', 'seat-not-found'])),
-  reason: TextN(TEXT_REASON_MAX),
+  reason: TextN(TEXT_XXLONG_MAX),
   collectedAt: isoDate.nullable(),
   detail: SeatDetailDataSchema.nullable(),
 });
@@ -407,7 +412,12 @@ export type LibraryItem = z.infer<typeof LibraryItemSchema>;
 export const LibraryListInputSchema = MachineFilter.extend({
   group: LibraryGroupSchema.optional().describe('only specs, skills or context packs'),
   kind: z.string().min(1).optional().describe('only this kind, e.g. agent, rig, workflow'),
-  text: z.string().min(1).max(TEXT_ID_MAX).optional().describe('substring of name, id or summary'),
+  text: z
+    .string()
+    .min(1)
+    .max(TEXT_XLONG_MAX)
+    .optional()
+    .describe('substring of name, id or summary'),
   limit: z
     .number()
     .int()
@@ -421,7 +431,7 @@ export type LibraryListInput = z.infer<typeof LibraryListInputSchema>;
 export const LibraryListOutputSchema = z.strictObject({
   machines: z.array(
     DataMachineSchema.extend({
-      openrigVersion: TextN(TEXT_TAG_MAX),
+      openrigVersion: TextN(TEXT_SHORT_MAX),
       /** null = that list could not be read from that machine (not the same as 0). */
       counts: z.strictObject({
         specs: z.number().int().nonnegative().nullable(),
@@ -493,9 +503,9 @@ export type HistoryTransitionsInput = z.infer<typeof HistoryTransitionsInputSche
 export const HistoryTransitionRowSchema = TransitionRowSchema.extend({
   machine: MachineId,
   /** From the machine's last queue snapshot, when the item is still in it. */
-  source: TextN(TEXT_ID_MAX),
-  destination: TextN(TEXT_ID_MAX),
-  summary: TextN(TEXT_ID_MAX),
+  source: TextN(TEXT_XLONG_MAX),
+  destination: TextN(TEXT_XLONG_MAX),
+  summary: TextN(TEXT_XLONG_MAX),
 });
 export type HistoryTransitionRow = z.infer<typeof HistoryTransitionRowSchema>;
 
