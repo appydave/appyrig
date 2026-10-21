@@ -73,6 +73,9 @@
     },
     "no-magic-numbers": {
       "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/agent/detail.ts": {
@@ -92,6 +95,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/fleet/accountWindow.ts": {
@@ -105,6 +111,9 @@
       "count": 10
     },
     "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -177,6 +186,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/fleet/runcard.test.ts": {
@@ -226,6 +238,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/fleet/useFleet.ts": {
@@ -259,6 +274,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 7
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/flow/flowLines.ts": {
@@ -312,6 +330,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/health/model.ts": {
@@ -329,11 +350,17 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/history/model.ts": {
     "no-magic-numbers": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/learn/glossary.ts": {
@@ -425,6 +452,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/domain/run/model.ts": {
@@ -470,6 +500,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/specs/model.ts": {
@@ -498,6 +531,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/domain/wall/model.ts": {
@@ -514,6 +550,9 @@
       "count": 6
     },
     "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
       "count": 2
     }
   },
@@ -557,6 +596,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/FakeControl.tsx": {
@@ -573,6 +615,9 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/FocusTerminal.tsx": {
@@ -689,6 +734,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/RigFilesSchema.test.tsx": {
@@ -741,6 +789,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 3
     }
   },
   "client/src/kit/SchemaRows.tsx": {
@@ -769,6 +820,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/kit/SeatCardLines.tsx": {
@@ -829,6 +883,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/kit/YamlView.tsx": {
@@ -874,6 +931,9 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/expression-complexity": {
       "count": 2
     }
   },
@@ -933,6 +993,9 @@
     },
     "no-magic-numbers": {
       "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/agent/useAgentData.ts": {
@@ -964,6 +1027,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/flow/ReplayConsoles.tsx": {
@@ -972,6 +1038,9 @@
     },
     "max-lines-per-function": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/flow/clean.test.tsx": {
@@ -1043,6 +1112,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/graph/graph.test.tsx": {
@@ -1071,6 +1143,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/health/index.tsx": {
@@ -1085,6 +1160,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "client/src/pages/history/index.tsx": {
@@ -1099,6 +1177,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 4
     }
   },
   "client/src/pages/learn/index.tsx": {
@@ -1124,6 +1205,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/machines/index.tsx": {
@@ -1176,6 +1260,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/needs-you/needs-you.test.tsx": {
@@ -1220,6 +1307,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 3
     }
   },
   "client/src/pages/run/run.test.tsx": {
@@ -1283,6 +1373,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/timeline/index.tsx": {
@@ -1331,6 +1424,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "client/src/pages/workflows/index.tsx": {
@@ -1338,6 +1434,9 @@
       "count": 1
     },
     "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -1436,6 +1535,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "collector/src/adapters/dbrows.ts": {
@@ -1475,6 +1577,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 2
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/history.ts": {
@@ -1540,6 +1645,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/openrigShapes.ts": {
@@ -1587,6 +1695,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/adapters/rigspecs.ts": {
@@ -1734,6 +1845,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 5
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "collector/src/redact.ts": {
@@ -1748,6 +1862,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 2
     }
   },
   "collector/vitest.config.ts": {
@@ -1837,6 +1954,9 @@
     },
     "no-magic-numbers": {
       "count": 4
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "server/scripts/hub-ui-probe.mjs": {
@@ -1901,6 +2021,11 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "server/src/core/schemaDiff.ts": {
+    "sonarjs/expression-complexity": {
       "count": 1
     }
   },
@@ -2009,6 +2134,9 @@
     },
     "sonarjs/cognitive-complexity": {
       "count": 3
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
     }
   },
   "server/src/hub/hub.test.ts": {
