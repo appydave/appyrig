@@ -122,7 +122,7 @@ describe('AC 8 — the API bar on the read verbs', () => {
     const res = await rpc(h, {
       jsonrpc: '2.0',
       id: 7,
-      method: 'seat.get',
+      method: 'seat.tail',
       params: { machine: 'm4', seat: 'x' },
     });
     expect(res.body).toMatchObject({
@@ -213,12 +213,12 @@ describe('B9 / B10 — docs and console pages', () => {
     expect(pages.console).toContain('"100.126.70.25"');
   });
 
-  it('the OpenRPC document is deterministic and lists every verb, all read-only except the one named write', () => {
+  it('the OpenRPC document is deterministic and lists every verb, all read-only', () => {
     const a = apiDocument(readIdentity());
     expect(JSON.stringify(a)).toBe(JSON.stringify(apiDocument(readIdentity())));
-    expect(a.methods).toHaveLength(35);
+    expect(a.methods).toHaveLength(31);
     const writes = a.methods.filter((m) => m['x-side-effects'] !== 'read-only').map((m) => m.name);
-    expect(writes).toEqual(['feedback.add']);
+    expect(writes).toEqual([]);
   });
 });
 

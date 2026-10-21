@@ -298,7 +298,6 @@ async function main() {
       );
     for (const q of newest) await record('handoff.get', { machine, id: q.id });
   }
-  await record('feedback.list', { limit: 3 });
 
   const recordedAt = new Date().toISOString();
   const file = {

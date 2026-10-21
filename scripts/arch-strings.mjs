@@ -14,10 +14,10 @@ const ROOTS = ['shared/src', 'server/src', 'server/scripts', 'client/src', 'coll
 // Display copy that names the terminal app for the reader. Only the app name is allowed here: the
 // route strings and `capture-pane` stay banned. rig-commands.json is generated from the brain.
 const COPY_FILES = new Set([
-  'client/src/learn/glossary.ts',
-  'client/src/v2/pages/learn/rig-commands.json',
-  'client/src/v2/pages/wall/index.tsx',
-  'client/src/v2/pages/wall/wall.test.tsx',
+  'client/src/domain/learn/glossary.ts',
+  'client/src/domain/learn/rig-commands.json',
+  'client/src/pages/wall/index.tsx',
+  'client/src/pages/wall/wall.test.tsx',
 ]);
 const COPY_ALLOWED = new Set(['herdr']);
 const SKIP = new Set(['node_modules', 'dist']);

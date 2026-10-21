@@ -3,13 +3,6 @@ import {
   healthCaveats,
   type AccountListOutput,
   sampleAge,
-  FeedbackAddInputSchema,
-  FeedbackAddOutputSchema,
-  FeedbackGetInputSchema,
-  FeedbackGetOutputSchema,
-  FeedbackListInputSchema,
-  FeedbackListOutputSchema,
-  type FeedbackListOutput,
   DbSchemaInputSchema,
   DbSchemaOutputSchema,
   RigFileInputSchema,
@@ -92,9 +85,7 @@ import {
   type SeatDetailOutput,
   type SeatLoadoutOutput,
   SeatHistoryOutputSchema,
-  SeatGetOutputSchema,
   SeatListInputSchema,
-  SeatRefSchema,
   SeatStatusSchema,
   SeatSummarySchema,
   SeatTailInputSchema,
@@ -121,7 +112,6 @@ import {
 } from './vendor/failure-codes.js';
 import type { FleetStore } from '../hub/fleetStore.js';
 import { rigEntryOf } from './rigEntry.js';
-import { FeedbackRefusal } from '../hub/feedbackStore.js';
 import type { AppIdentity } from './identity.js';
 
 /**
@@ -133,7 +123,10 @@ import type { AppIdentity } from './identity.js';
 
 // ── refusals ───────────────────────────────────────────────────────────────────────────────────
 
-/** AppyRig's frozen refusal table. Append only; never renumber (pinned in core.test.ts). */
+/**
+ * AppyRig's frozen refusal table. Append only; never renumber (pinned in core.test.ts). The three
+ * feedback-* codes belonged to the retired feedback verbs; they stay so their numbers are never reused.
+ */
 export const FAILURE_CODES = defineFailureCodes({
   'unknown-capability': JSONRPC_CODES.methodNotFound,
   'invalid-input': JSONRPC_CODES.invalidParams,
@@ -191,28 +184,6 @@ type Verb<I extends z.ZodType, O extends z.ZodType> = {
   contract: CapabilityContract<I, O>;
   handle: (input: z.infer<I>, ctx: VerbContext) => z.infer<O>;
 };
-
-/** The one write verb's shape: a human-only command that edits only AppyRig's own store. */
-const writeCommand = <I extends z.ZodType, O extends z.ZodType>(
-  description: string,
-  input: I,
-  output: O,
-  failureModes: string[],
-  handle: (input: z.infer<I>, ctx: VerbContext) => z.infer<O>
-): Verb<I, O> => ({
-  contract: defineCapability({
-    kind: 'command',
-    description,
-    input,
-    output,
-    sideEffects: 'reversible-write',
-    idempotent: false,
-    confirmationRequired: false,
-    humanOnly: true,
-    failureModes,
-  }),
-  handle,
-});
 
 const query = <I extends z.ZodType, O extends z.ZodType>(
   description: string,
@@ -452,8 +423,6 @@ const SEAT_NOT_FOUND = ['machine-not-found', 'seat-not-found'];
 const HANDOFF_NOT_FOUND = ['machine-not-found', 'handoff-not-found'];
 const RIG_NOT_FOUND = ['machine-not-found', 'rig-not-found'];
 const LIBRARY_NOT_FOUND = ['machine-not-found', 'library-item-not-found'];
-const FEEDBACK_NOT_FOUND = ['feedback-not-found'];
-const FEEDBACK_ADD = ['feedback-unavailable', 'feedback-full'];
 const FILE_NOT_FOUND = ['machine-not-found', 'rig-not-found', 'file-not-found'];
 
 /**
@@ -594,17 +563,6 @@ const VERB_SET = {
           .filter((s) => input.status === undefined || s.status === input.status)
           .map(({ tail: _tail, ...seat }) => ({ ...place(m), seat }))
       )
-  ),
-
-  'seat.get': query(
-    'One seat in full, with its last terminal text (at most 200 lines).',
-    SeatRefSchema,
-    SeatGetOutputSchema,
-    SEAT_NOT_FOUND,
-    (input, ctx) => {
-      const { m, seat } = seatOf(ctx, input.machine, input.seat);
-      return { ...place(m), seat };
-    }
   ),
 
   'seat.tail': query(
@@ -1278,81 +1236,6 @@ const VERB_SET = {
     }
   ),
 
-  'feedback.add': writeCommand(
-    "File an in-app feedback note (a verdict, a region, a note, the view state and optionally a PNG screenshot) into AppyRig's own data/feedback/ store. The only write AppyRig makes: it never touches OpenRig, a seat or the queue. Human-only (an agent reads notes, it does not file them). The screenshot is base64 PNG, at most 3 MB decoded (downscale to 1600 px wide first); send it over POST /v1/feedback, whose body limit is 5 MB. dryRun validates and writes nothing.",
-    FeedbackAddInputSchema,
-    FeedbackAddOutputSchema,
-    FEEDBACK_ADD,
-    (input, ctx) => {
-      try {
-        const { note, count } = ctx.store.feedback.add(
-          input,
-          { viewer: ctx.principal, appVersion: ctx.identity.version, now: ctx.now() },
-          ctx.dryRun
-        );
-        return {
-          id: note.id,
-          createdAt: note.createdAt,
-          hasScreenshot: note.screenshot !== null,
-          screenshot: note.screenshot,
-          count,
-          dryRun: ctx.dryRun,
-        };
-      } catch (e) {
-        if (e instanceof FeedbackRefusal) {
-          if (e.failureMode === 'invalid-input')
-            throw new CapabilityRefusal('invalid-input', e.message, {
-              issues: [{ path: 'screenshotPng', message: e.message }],
-            });
-          throw new CapabilityRefusal(e.failureMode, e.message);
-        }
-        throw e;
-      }
-    }
-  ),
-
-  'feedback.list': query(
-    "The feedback notes filed in the app, newest first (verdict, region, the note's first 200 characters, route, whether it has a screenshot). indexFile is the same list as a file on the hub's disk (data/feedback/index.jsonl), readable without this API; read one in full with feedback.get.",
-    FeedbackListInputSchema,
-    FeedbackListOutputSchema,
-    [],
-    (input, ctx): FeedbackListOutput => {
-      const since = input.since ? Date.parse(input.since) : null;
-      const all = ctx.store.feedback.list();
-      return {
-        total: all.length,
-        notes: all
-          .filter((n) => !input.verdict || n.verdict === input.verdict)
-          .filter((n) => !input.region || n.region === input.region)
-          .filter((n) => since === null || Date.parse(n.createdAt) >= since)
-          .slice(0, input.limit ?? 50),
-        indexFile: ctx.store.feedback.indexFile,
-      };
-    }
-  ),
-
-  'feedback.get': query(
-    "One feedback note in full (everything the viewer sent plus what the server added), with the route to its screenshot (GET /v1/feedback/<id>/screenshot.png) and its folder on the hub's disk.",
-    FeedbackGetInputSchema,
-    FeedbackGetOutputSchema,
-    FEEDBACK_NOT_FOUND,
-    (input, ctx) => {
-      const found = ctx.store.feedback.get(input.id);
-      if (!found) {
-        throw new CapabilityRefusal('feedback-not-found', `No feedback note "${input.id}".`, {
-          id: input.id,
-        });
-      }
-      return {
-        note: found.note,
-        screenshotUrl: found.note.screenshot
-          ? `/v1/feedback/${found.note.id}/screenshot.png`
-          : null,
-        folder: found.folder,
-      };
-    }
-  ),
-
   'rig.waiting': query(
     "Run card R2, read-only: what a rig is waiting on David for that the queue list alone can't show. gates: FliStudio gate ids (g_ + 10 hex) in the rig's handoff messages whose newest mention still calls them open, each with the words around it and a link only when a handoff carried one. ssh: the machine's user@host from AppyRig config machines.<id>.ssh (null: not configured), for a copyable attach line. AppyRig never opens, answers or attaches to anything.",
     RigWaitingInputSchema,
@@ -1502,32 +1385,12 @@ const VERB_SET = {
   ),
 };
 
-/**
- * The single write AppyRig has: filing an in-app feedback note into its own data/feedback/ store.
- * Everything else is a read-only query. A write is only allowed here if it is on this list AND is a
- * human-only command that is not idempotent; core.test.ts pins the list to exactly this one name.
- */
-export const WRITE_VERBS = ['feedback.add'] as const;
-
-/** Refuse, at import time, a registry holding anything but read-only queries (AC 9) and the one named write. */
+/** Refuse, at import time, a registry holding anything but read-only queries (AC 9). */
 export function defineVerbs<S extends Record<string, Verb<z.ZodType, z.ZodType>>>(set: S): S {
-  const isAllowedWrite = (name: string, c: CapabilityContract): boolean =>
-    (WRITE_VERBS as readonly string[]).includes(name) &&
-    c.kind === 'command' &&
-    c.sideEffects === 'reversible-write' &&
-    c.humanOnly === true &&
-    !c.idempotent;
   const writes = Object.entries(set)
-    .filter(
-      ([name, v]) =>
-        !(v.contract.sideEffects === 'read-only' && v.contract.kind === 'query') &&
-        !isAllowedWrite(name, v.contract)
-    )
+    .filter(([, v]) => !(v.contract.sideEffects === 'read-only' && v.contract.kind === 'query'))
     .map(([name]) => name);
-  if (writes.length > 0)
-    throw new Error(
-      `verbs are read-only except ${WRITE_VERBS.join(', ')}; not: ${writes.join(', ')}`
-    );
+  if (writes.length > 0) throw new Error(`verbs are read-only queries; not: ${writes.join(', ')}`);
   defineCapabilities(Object.fromEntries(Object.entries(set).map(([k, v]) => [k, v.contract])));
   return set;
 }

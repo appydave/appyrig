@@ -1,10 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from 'react-error-boundary';
-import App from './App.js';
-import { installTestHooks } from './fleet/xtermRegistry.js';
-import ErrorFallback from './components/ErrorFallback.js';
-import { frozenFromSearch, loadFrozen, type FrozenRun } from './v2/frozen/load.js';
+import App from './app/App.js';
+import { installTestHooks } from './domain/fleet/xtermRegistry.js';
+import ErrorFallback from './kit/ErrorFallback.js';
+import { frozenFromSearch, loadFrozen, type FrozenRun } from './app/frozen/load.js';
 import './styles/index.css';
 
 // AC 11 test hook, in every build mode (contract): window.__appyrig.xtermCount().

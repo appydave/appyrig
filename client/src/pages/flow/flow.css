@@ -1,0 +1,203 @@
+/* Handoff Flow v2 on the kit's quiet line style (brief 2026-10-19, handoff lines). Light only. */
+
+/* The count label on a pair: small, light, mono ("14 ⇄ 8"). */
+.ar-flow .ar-pair-pill {
+  fill: var(--ar-surface-raised);
+  stroke: var(--ar-line);
+}
+.ar-flow .ar-pair-count {
+  fill: var(--ar-ink);
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.ar-flow .ar-arrowhead {
+  fill: var(--ar-ink);
+  fill-opacity: 0.6;
+}
+/* A picked line (the panel shows it) stays lit. */
+.ar-flow g[data-testid='flow-edge'][data-selected] .hl-line,
+.ar-flow g[data-testid='flow-edge']:focus-visible .hl-line {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 1;
+}
+.ar-flow .ar-pulse {
+  fill: var(--ar-sequence);
+}
+/* Left open is a badge on the box ("N open · 3h"), never a dashed outline. */
+.ar-flow .flow-box.stale {
+  stroke-dasharray: none;
+}
+.ar-flow .hl-legend {
+  margin: 4px 0 8px;
+}
+
+/* ---- clean batch (UX notes 2026-10-19, Screens 7-8): nothing moves under the cursor ---- */
+
+/* The narration strip is one line, always the same height: it names the handoff, the panel
+   holds the text. */
+.ar-flow .ar-narration {
+  height: 40px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The diagram row and the panel beside it are a fixed height; the panel's text scrolls inside. */
+.ar-flow .flow-row {
+  height: 440px;
+  flex-wrap: nowrap;
+}
+.ar-flow .flow-row > .handoff-panel,
+.ar-flow .flow-row > .follow-work,
+.ar-flow .flow-row > * + * {
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+}
+/* The diagram never shrinks below a readable scale: on a narrow page (the Agent panel open, the
+   drawer pinned) it scrolls sideways inside its own box instead. */
+.ar-flow .flow-row > .flow-svg-scroll {
+  flex: 1 1 620px;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.ar-flow .flow-svg-scroll > .flow-svg {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 760px;
+  max-width: none;
+  height: 100%;
+}
+/* The replay bar sits pinned to the bottom of the viewport, one row, always the same size. */
+.ar-flow .flow-replay {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex-wrap: nowrap;
+  height: 52px;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  background: var(--ar-canvas);
+  border-top: 1px solid var(--ar-line);
+  box-shadow: 0 -4px 12px rgb(52 45 45 / 0.08);
+}
+.ar-flow .ar-step-count {
+  min-width: 92px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.ar-flow .ar-replay-time {
+  width: auto;
+  min-width: 60px;
+  flex: 0 1 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-flow .flow-replay input[type='range'] {
+  flex: 1 1 200px;
+  min-width: 120px;
+}
+
+/* During a replay the current handoff is lit at full ink and colour, as V1 draws it. */
+.ar-flow .hl-line.ar-current {
+  stroke: var(--ar-sequence);
+  stroke-opacity: 1;
+}
+.ar-flow .ar-pulse {
+  fill: var(--ar-sequence);
+  fill-opacity: 0.9;
+}
+.ar-flow .ar-pulse-current {
+  fill: var(--ar-blocked);
+  fill-opacity: 1;
+  stroke: var(--ar-surface-raised);
+  stroke-width: 2;
+}
+/* V1's rework loop: what was sent back, an amber arc under the boxes. */
+.ar-flow .ar-back-arc {
+  fill: none;
+  stroke: var(--ar-sequence);
+  stroke-width: 2;
+  stroke-opacity: 0.85;
+}
+.ar-flow .ar-back-text {
+  fill: var(--ar-sequence);
+  font-family: var(--ar-font-term);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.ar-flow .ar-flow-key summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+/* The consoles keep their height whether one, two or none are open. */
+.ar-flow .ar-consoles .console-grid {
+  min-height: 240px;
+}
+.ar-flow .ar-console-mode {
+  font-size: 12px;
+  color: var(--ar-ink-muted);
+}
+.ar-flow .console[data-current] {
+  border-color: var(--ar-sequence);
+}
+
+.flow-docs-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+/* ---- one-line header, and a rig change that never moves the page ---- */
+/* The stats sit in the page header's facts: one line, no wrap. */
+.ar-flow .ar-page-facts .flow-stats {
+  display: inline-flex;
+  gap: 14px;
+  margin: 0;
+  white-space: nowrap;
+}
+/* The page never gets shorter on a rig change (a rig without the seats-per-stage line, or with no
+   handoffs at all), so the browser never has to pull the scroll position up. */
+.ar-flow-page {
+  min-height: 1320px;
+  /* the layout follows the page's width (the drawer and the Agent panel take from it) */
+  container: flowpage / inline-size;
+  min-width: 0;
+}
+/* A narrow page: the details panel goes below the diagram, and the diagram gets the full width. */
+@container flowpage (max-width: 820px) {
+  .ar-flow .flow-row {
+    height: auto;
+    flex-wrap: wrap;
+  }
+  .ar-flow .flow-row > .flow-svg-scroll {
+    flex: 1 1 100%;
+    height: 440px;
+  }
+  .ar-flow .flow-row > * + * {
+    flex: 1 1 100%;
+    max-width: none;
+    height: 420px;
+  }
+}
+/* The chapters stay on one row (scroll sideways), so their count never changes the height. */
+.ar-flow .flow-chapters {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.ar-flow .ar-page-facts .flow-stats b {
+  font-size: 20px;
+}

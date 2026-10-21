@@ -1,0 +1,30 @@
+/* v2 Agent page, navigation brief fixes. AppyDave light only. */
+
+/* No sideways scroll: the last terminal lines (a 160-column rule of box-drawing characters, say)
+   scroll inside their own box instead of widening the page. */
+.ar-agent {
+  min-width: 0;
+  overflow-x: clip;
+}
+.ar-agent .ar-agent-section,
+.ar-agent .ar-agent-section > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.ar-agent .ar-wall-term {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+  box-sizing: border-box;
+}
+
+/* COPY ATTACH stays on one line, whatever width the header has left. */
+.ar-agent .copy-attach,
+.ar-agent .ar-page-actions .pill-btn {
+  white-space: nowrap;
+}
+.ar-agent .ar-page-actions {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}

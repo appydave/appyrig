@@ -1,0 +1,159 @@
+/* Rig Map: the Graph's open-rig inside, given the whole page for one rig. */
+.ar-rigmap {
+  padding: 8px 16px 24px;
+}
+.ar-rigmap .rm-body {
+  width: 100%;
+  /* the cards size to the room this page really has (the agent panel or a pinned drawer narrows it) */
+  container-type: inline-size;
+}
+.ar-rigmap .g2-inside {
+  margin-top: 0;
+  border-top: 0;
+}
+.ar-rigmap .g2-pods {
+  gap: 14px;
+}
+.ar-rigmap .g2-pod {
+  flex: 1 1 280px;
+}
+/* A stopped rig is frosted, as in the Graph and the Wall: pale fill, dashed edge, dimmed text. */
+.ar-rigmap .rm-body[data-state='stopped'] {
+  border: 1px dashed var(--ar-line);
+  border-left: 5px dashed var(--ar-ink-muted);
+  border-radius: 10px;
+  padding: 8px;
+  background: var(--ar-surface);
+  color: var(--ar-ink-muted);
+}
+.ar-rigmap .rm-body[data-state='stopped'] .g2-status,
+.ar-rigmap .rm-body[data-state='stopped'] .g2-pod-label {
+  opacity: 0.75;
+}
+
+/* ---------- Roomy: the Rig Map fills the page. Wall cards, big pods, heavy readable lines. ---------- */
+/* the left channel carries the labels of lines that run between rows */
+.ar-rigmap .g2-inside-body {
+  padding-left: 160px;
+}
+.ar-rigmap .g2-pods {
+  gap: 26px 22px;
+}
+.ar-rigmap .g2-pod {
+  flex: 1 1 auto;
+  padding: 30px 18px 18px;
+  border: 1.5px dashed var(--ar-ink-muted);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ar-surface-raised) 60%, var(--ar-canvas));
+}
+.ar-rigmap .g2-pod-label {
+  top: 6px;
+  left: 14px;
+  font-size: 17px;
+  letter-spacing: 0.08em;
+  color: var(--ar-ink);
+}
+.ar-rigmap .g2-pod-cards {
+  gap: 18px;
+}
+.ar-rigmap .g2-pod-human {
+  flex: 0 0 auto;
+}
+/* handoff lines: clearly visible and labelled at this scale, not the faint Graph-size lines */
+.ar-rigmap .hl-faint {
+  stroke-opacity: 0.62;
+}
+.ar-rigmap .hl-planned {
+  stroke-dasharray: 2 7;
+}
+.ar-rigmap .hl-label-faint {
+  opacity: 1;
+}
+.ar-rigmap .g2-label-text {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ar-rigmap .g2-label rect {
+  stroke: var(--ar-ink-muted);
+  stroke-width: 1.5;
+}
+.ar-rigmap .g2-self {
+  font-size: 12px;
+}
+/* the person is as big as an agent card */
+.ar-rigmap .g2-human {
+  width: 232px;
+  height: 134px;
+  padding: 9px 11px;
+}
+.ar-rigmap .g2-human .g2-card-name {
+  font-size: 16px;
+}
+.ar-rigmap .g2-human .g2-badge {
+  font-size: 12px;
+  line-height: 18px;
+}
+
+/* The Wall's card, larger: the same slots at a roomier fixed size, with bigger type. */
+.ar-rigmap .wcard {
+  --wc-w: clamp(232px, calc(100cqw - 225px), 308px);
+  --wc-h: 200px;
+}
+.ar-rigmap .wcard-main {
+  gap: 6px;
+  padding: 10px 14px 11px;
+}
+.ar-rigmap .wcard-name {
+  font-size: 17px;
+}
+.ar-rigmap .wcard-address {
+  font-size: 12.5px;
+}
+.ar-rigmap .wcard-meta {
+  font-size: 12px;
+  gap: 9px;
+}
+.ar-rigmap .wcard-skills {
+  font-size: 11px;
+}
+.ar-rigmap .wcard-term {
+  font-size: 12.5px;
+  padding: 8px 10px;
+  gap: 5px;
+}
+.ar-rigmap .wcard-foot {
+  font-size: 11.5px;
+}
+.ar-rigmap .wcard-head .chip {
+  max-width: 96px;
+}
+.ar-rigmap .g2-human {
+  width: clamp(232px, calc(100cqw - 225px), 308px);
+  height: 132px;
+  padding: 12px 14px;
+}
+.ar-rigmap .g2-pods {
+  align-items: stretch;
+}
+.ar-rigmap .g2-pod {
+  padding: 38px 24px 26px;
+}
+.ar-rigmap .g2-pod-label {
+  top: 8px;
+  left: 18px;
+  font-size: 19px;
+}
+
+/* A narrow page: a slimmer left channel, and the person card takes the cards' width too. */
+@container (max-width: 760px) {
+  .ar-rigmap .g2-inside-body {
+    padding-left: 120px;
+  }
+  .ar-rigmap .g2-pod {
+    flex-basis: 100%;
+    padding: 36px 14px 18px;
+  }
+  .ar-rigmap .g2-human {
+    width: clamp(232px, calc(100cqw - 185px), 308px);
+  }
+}

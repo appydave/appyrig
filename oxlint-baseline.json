@@ -1,38 +1,38 @@
 {
   "about": "Findings recorded when G02 was added: per file, per anti-slop rule. It may shrink, never grow. Rewrite with npm run oxlint:baseline.",
   "findings": {
-    "client/src/App.tsx": {
+    "client/src/app/App.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/components/ErrorFallback.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/components/MarkdownView.tsx": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/components/PlanStrip.test.tsx": {
+    "client/src/app/app.test.tsx": {
       "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 1,
-      "no-unsafe-dictionary-type": 2
+      "no-module-mocking": 2
     },
-    "client/src/components/RigFiles.tsx": {
+    "client/src/app/frozen/frozenSocket.ts": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 4,
+      "no-unsafe-dictionary-type": 4,
+      "require-safety-comment-for-type-assertion": 6
+    },
+    "client/src/app/frozen/load.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/app/usePages.tsx": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/components/RigFilesSchema.test.tsx": {
+    "client/src/app/ux-nav.test.tsx": {
       "no-chained-type-assertions": 1,
-      "no-unsafe-dictionary-type": 3
+      "no-module-mocking": 2
     },
-    "client/src/components/RunCard.test.tsx": {
-      "no-chained-type-assertions": 3,
+    "client/src/app/ux-pages-a.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-module-mocking": 2,
       "no-unsafe-dictionary-type": 2
     },
-    "client/src/components/RunOutputs.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 2
-    },
-    "client/src/components/WaitingOnDavid.test.tsx": {
-      "no-chained-type-assertions": 3,
-      "no-unknown-parameters": 4
+    "client/src/app/w2.test.tsx": {
+      "no-chained-type-assertions": 2,
+      "no-module-mocking": 2,
+      "no-unsafe-dictionary-type": 4
     },
     "client/src/config/env.test.ts": {
       "no-chained-type-assertions": 2
@@ -40,233 +40,230 @@
     "client/src/config/env.ts": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/fleet/coreCall.test.ts": {
+    "client/src/domain/fleet/coreCall.test.ts": {
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 3
     },
-    "client/src/fleet/coreCall.ts": {
+    "client/src/domain/fleet/coreCall.ts": {
       "no-unknown-parameters": 1,
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/fleet/health.test.ts": {
+    "client/src/domain/fleet/health.test.ts": {
       "no-chained-type-assertions": 1
     },
-    "client/src/fleet/model.ts": {
+    "client/src/domain/fleet/model.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/fleet/runcard.test.ts": {
+    "client/src/domain/fleet/runcard.test.ts": {
       "no-chained-type-assertions": 2
     },
-    "client/src/fleet/store.ts": {
+    "client/src/domain/fleet/store.ts": {
       "no-unknown-parameters": 2,
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/fleet/timeline.test.ts": {
+    "client/src/domain/fleet/timeline.test.ts": {
       "no-chained-type-assertions": 1
     },
-    "client/src/fleet/useFleet.ts": {
+    "client/src/domain/fleet/useFleet.ts": {
       "no-unknown-parameters": 1
     },
-    "client/src/fleet/views.ts": {
+    "client/src/domain/fleet/views.ts": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/learn/atlas.ts": {
+    "client/src/domain/graph/model.ts": {
+      "require-safety-comment-for-type-assertion": 2
+    },
+    "client/src/domain/history/model.ts": {
       "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/domain/learn/atlas.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/domain/learn/commands.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/domain/library/model.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/domain/missions/model.ts": {
+      "require-safety-comment-for-type-assertion": 3
+    },
+    "client/src/domain/needs-you/model.ts": {
+      "require-safety-comment-for-type-assertion": 2
+    },
+    "client/src/domain/rig-map/lines.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/domain/run/model.ts": {
+      "require-safety-comment-for-type-assertion": 4
+    },
+    "client/src/domain/settings/model.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/kit/DocsDrawer.tsx": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/kit/ErrorFallback.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/kit/Legend2.tsx": {
+      "require-safety-comment-for-type-assertion": 2
+    },
+    "client/src/kit/MarkdownView.tsx": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/kit/PageHeader.tsx": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "client/src/kit/PlanStrip.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/kit/RigFiles.tsx": {
+      "require-safety-comment-for-type-assertion": 2
+    },
+    "client/src/kit/RigFilesSchema.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unsafe-dictionary-type": 3
+    },
+    "client/src/kit/RunCard.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/kit/RunOutputs.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 2
+    },
+    "client/src/kit/WaitingOnDavid.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-unknown-parameters": 4
+    },
+    "client/src/kit/data/index.tsx": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/kit/docs.test.tsx": {
+      "no-chained-type-assertions": 1
+    },
+    "client/src/kit/legendData.ts": {
+      "require-safety-comment-for-type-assertion": 2
     },
     "client/src/lib/keys.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/test/queueFixtures.ts": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/v2/data/index.tsx": {
-      "no-unsafe-dictionary-type": 1
-    },
-    "client/src/v2/frozen/frozenSocket.ts": {
-      "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 4,
-      "no-unsafe-dictionary-type": 4,
-      "require-safety-comment-for-type-assertion": 6
-    },
-    "client/src/v2/frozen/load.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/kit/DocsDrawer.tsx": {
-      "no-unsafe-dictionary-type": 1
-    },
-    "client/src/v2/kit/Legend2.tsx": {
-      "require-safety-comment-for-type-assertion": 2
-    },
-    "client/src/v2/kit/PageHeader.tsx": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/kit/docs.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/v2/kit/legendData.ts": {
-      "require-safety-comment-for-type-assertion": 2
-    },
-    "client/src/v2/pages/agent/useAgentData.ts": {
+    "client/src/pages/agent/useAgentData.ts": {
       "no-unknown-parameters": 1
     },
-    "client/src/v2/pages/flow/FlowDocsBar.tsx": {
+    "client/src/pages/flow/FlowDocsBar.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/v2/pages/flow/clean.test.tsx": {
+    "client/src/pages/flow/clean.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
-    "client/src/v2/pages/flow/flowLines.test.tsx": {
+    "client/src/pages/flow/flowLines.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
-    "client/src/v2/pages/flow/verdict.test.tsx": {
+    "client/src/pages/flow/verdict.test.tsx": {
       "no-chained-type-assertions": 3,
       "no-module-mocking": 2
     },
-    "client/src/v2/pages/graph/RigBox.tsx": {
+    "client/src/pages/graph/RigBox.tsx": {
       "require-safety-comment-for-type-assertion": 4
     },
-    "client/src/v2/pages/graph/RigInside.tsx": {
+    "client/src/pages/graph/RigInside.tsx": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/v2/pages/graph/graph.test.tsx": {
+    "client/src/pages/graph/graph.test.tsx": {
       "no-chained-type-assertions": 4,
       "no-module-mocking": 2
     },
-    "client/src/v2/pages/graph/index.tsx": {
+    "client/src/pages/graph/index.tsx": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/v2/pages/graph/model.ts": {
-      "require-safety-comment-for-type-assertion": 2
-    },
-    "client/src/v2/pages/graph/openRigs.ts": {
+    "client/src/pages/graph/openRigs.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/v2/pages/headers.test.tsx": {
+    "client/src/pages/headers.test.tsx": {
       "no-module-mocking": 2
     },
-    "client/src/v2/pages/history/index.tsx": {
+    "client/src/pages/history/index.tsx": {
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/v2/pages/history/model.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/pages/learn/commands.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/pages/library/model.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/pages/missions/machines.test.tsx": {
+    "client/src/pages/missions/machines.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 1,
       "no-unsafe-dictionary-type": 3
     },
-    "client/src/v2/pages/missions/missions.test.tsx": {
+    "client/src/pages/missions/missions.test.tsx": {
       "no-chained-type-assertions": 2
     },
-    "client/src/v2/pages/missions/model.ts": {
-      "require-safety-comment-for-type-assertion": 3
-    },
-    "client/src/v2/pages/needs-you/model.ts": {
-      "require-safety-comment-for-type-assertion": 2
-    },
-    "client/src/v2/pages/needs-you/needs-you.test.tsx": {
+    "client/src/pages/needs-you/needs-you.test.tsx": {
       "no-chained-type-assertions": 2,
       "no-unknown-parameters": 2,
       "no-unsafe-dictionary-type": 1
     },
-    "client/src/v2/pages/page-test-kit.ts": {
+    "client/src/pages/page-test-kit.ts": {
       "no-chained-type-assertions": 2,
       "no-unknown-parameters": 1,
       "no-unsafe-dictionary-type": 2
     },
-    "client/src/v2/pages/rig-map/lines.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/pages/rig-map/rigmap.test.tsx": {
+    "client/src/pages/rig-map/rigmap.test.tsx": {
       "no-chained-type-assertions": 3,
       "no-module-mocking": 2
     },
-    "client/src/v2/pages/run/index.tsx": {
+    "client/src/pages/run/index.tsx": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "client/src/v2/pages/run/model.ts": {
-      "require-safety-comment-for-type-assertion": 4
-    },
-    "client/src/v2/pages/run/run.test.tsx": {
+    "client/src/pages/run/run.test.tsx": {
       "no-module-mocking": 1,
       "no-unknown-parameters": 1,
       "no-unsafe-dictionary-type": 1
     },
-    "client/src/v2/pages/settings/model.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/pages/w4.test.tsx": {
+    "client/src/pages/w4.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2,
       "no-unknown-parameters": 3,
       "no-unsafe-dictionary-type": 1
     },
-    "client/src/v2/pages/w5-fold.test.tsx": {
+    "client/src/pages/w5-fold.test.tsx": {
       "no-unsafe-dictionary-type": 2
     },
-    "client/src/v2/pages/w5b.test.tsx": {
+    "client/src/pages/w5b.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2,
       "no-unknown-parameters": 2,
       "no-unsafe-dictionary-type": 1
     },
-    "client/src/v2/pages/wall/TeamPicker.tsx": {
+    "client/src/pages/wall/TeamPicker.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/v2/pages/wall/index.tsx": {
+    "client/src/pages/wall/index.tsx": {
       "no-unknown-parameters": 1,
       "require-safety-comment-for-type-assertion": 3
     },
-    "client/src/v2/registry.ts": {
+    "client/src/shell/MoreMenu.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/v2/shell/MoreMenu.tsx": {
+    "client/src/shell/StripShell.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/v2/shell/StripShell.tsx": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/v2/shell/agentRig.test.tsx": {
+    "client/src/shell/agentRig.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
-    "client/src/v2/shell/nav.test.tsx": {
+    "client/src/shell/nav.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
-    "client/src/v2/shell/shell.test.tsx": {
+    "client/src/shell/shell.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
-    "client/src/v2/useV2.tsx": {
-      "require-safety-comment-for-type-assertion": 2
-    },
-    "client/src/v2/ux-nav.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
-    },
-    "client/src/v2/ux-pages-a.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2,
-      "no-unsafe-dictionary-type": 2
-    },
-    "client/src/v2/v2.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
-    },
-    "client/src/v2/w2.test.tsx": {
-      "no-chained-type-assertions": 2,
-      "no-module-mocking": 2,
-      "no-unsafe-dictionary-type": 4
+    "client/src/test/queueFixtures.ts": {
+      "no-chained-type-assertions": 1
     },
     "collector/src/adapters/account.ts": {
       "no-unsafe-dictionary-type": 1,
@@ -346,15 +343,12 @@
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 3
     },
-    "e2e/v2-tour.spec.ts": {
+    "e2e/tour.spec.ts": {
       "no-chained-type-assertions": 3
     },
     "scripts/customize.ts": {
       "no-unknown-parameters": 1,
       "require-safety-comment-for-type-assertion": 5
-    },
-    "scripts/gen-api.ts": {
-      "require-safety-comment-for-type-assertion": 1
     },
     "scripts/provenance/check.ts": {
       "no-unsafe-dictionary-type": 2,
@@ -385,7 +379,7 @@
     },
     "server/src/core/verbs.ts": {
       "no-chained-type-assertions": 1,
-      "require-safety-comment-for-type-assertion": 13
+      "require-safety-comment-for-type-assertion": 12
     },
     "server/src/hub/accounts.test.ts": {
       "no-unsafe-dictionary-type": 1
@@ -411,14 +405,6 @@
       "no-unknown-parameters": 2
     },
     "server/src/hub/daemonDataStore.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "server/src/hub/feedback.test.ts": {
-      "no-unknown-parameters": 2,
-      "no-unsafe-dictionary-type": 3
-    },
-    "server/src/hub/feedbackStore.ts": {
-      "no-unknown-parameters": 1,
       "require-safety-comment-for-type-assertion": 1
     },
     "server/src/hub/fleetStore.ts": {
