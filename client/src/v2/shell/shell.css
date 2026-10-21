@@ -103,6 +103,12 @@ body:has(.v2-nav) header.app-header {
 }
 
 /* ---- the ⋯ menu ---- */
+/* The header (45) is a sticky stacking context, so the dropdown inside it can never outrank page content
+   that sits higher (the Graph canvas layers go to 50-80). While the menu is open the whole header is raised
+   above every page layer; z-index only, so nothing shifts. */
+.app-v2 .app-header:has(.v2-more-btn[aria-expanded='true']) {
+  z-index: 100;
+}
 .v2-more {
   position: relative;
   flex: none;
