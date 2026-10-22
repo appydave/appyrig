@@ -24,3 +24,15 @@ export function removeScratch(): void {
     rmSync(made.pop() as string, { recursive: true, force: true });
   }
 }
+
+/** What a gate's `scanDirectory` takes: a source folder and the names its findings are reported under. */
+type DirectoryScan<T> = (options: { sourceDir: string; workspace: string; prefix: string }) => T;
+
+/** Scans a scratch workspace holding `files` the way the gate scans a real one. */
+export function scanProbe<T>(scanDirectory: DirectoryScan<T>, files: Record<string, string>): T {
+  return scanDirectory({
+    sourceDir: scratchSource(files),
+    workspace: 'probe',
+    prefix: 'probe/src',
+  });
+}

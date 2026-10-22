@@ -10,6 +10,13 @@
  *   npm run coupling:baseline  rewrite the baseline; refuses if anything would grow
  *
  * Exit codes are the ratchet's (ratchet-gate.mjs).
+ *
+ * Two things the numbers do not see:
+ *  - archlint follows `./x.js` to `x.ts` but not to `x.tsx`; the scan strips `.js` from its disposable
+ *    copy (archlint-scan.mjs) so edges into React files are counted.
+ *  - A hub written as a re-export barrel is invisible to both rules: archlint scores a file's own
+ *    symbols and a barrel has none (client/src/kit/index.ts and collector/src/adapters/index.ts are
+ *    real ones). Coupling that hides behind a barrel shows up on the files that import it.
  */
 import { fileURLToPath } from 'node:url';
 import {

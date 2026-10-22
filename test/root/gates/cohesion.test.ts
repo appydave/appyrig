@@ -1,18 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { removeScratch, scratchSource } from './scratchWorkspace.js';
+import { removeScratch, scanProbe } from './scratchWorkspace.js';
 // @ts-expect-error plain .mjs gate with no type declarations
 import { messageFor, scanDirectory } from '@root/lint/gates/cohesion.mjs';
 // @ts-expect-error plain .mjs gate with no type declarations
 import { compare } from '@root/lint/gates/ratchet-gate.mjs';
 
-/** A scratch workspace whose `src/` holds `files`, scanned the way the gate scans a real one. */
-function scan(files: Record<string, string>): Record<string, number> {
-  return scanDirectory({
-    sourceDir: scratchSource(files),
-    workspace: 'probe',
-    prefix: 'probe/src',
-  });
-}
+const scan = (files: Record<string, string>): Record<string, number> =>
+  scanProbe(scanDirectory, files);
 
 afterEach(removeScratch);
 

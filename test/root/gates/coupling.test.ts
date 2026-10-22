@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { removeScratch, scratchSource } from './scratchWorkspace.js';
+import { removeScratch, scanProbe } from './scratchWorkspace.js';
 // @ts-expect-error plain .mjs gate with no type declarations
 import { couplingMessage, hubMessage, scanDirectory } from '@root/lint/gates/coupling.mjs';
 // @ts-expect-error plain .mjs gate with no type declarations
@@ -7,14 +7,7 @@ import { foreignSections } from '@root/lint/gates/ratchet-gate.mjs';
 
 type Found = { coupling: Record<string, number>; hubs: Record<string, number> };
 
-/** A scratch workspace whose `src/` holds `files`, scanned the way the gate scans a real one. */
-function scan(files: Record<string, string>): Found {
-  return scanDirectory({
-    sourceDir: scratchSource(files),
-    workspace: 'probe',
-    prefix: 'probe/src',
-  });
-}
+const scan = (files: Record<string, string>): Found => scanProbe(scanDirectory, files);
 
 afterEach(removeScratch);
 
