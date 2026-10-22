@@ -1,80 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { CallAnswer, FleetMachine, QueueItem } from '@appydave/shared';
+import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { listRigs, STALE_MS, type FlowEdge } from '../../domain/fleet/views.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
 import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
 import { LINE_WIDTH_CAP, lineWidth, relativeWidthLines } from '../../kit/index.js';
-import type { PageContext } from '../../app/types.js';
 import { page as flowPage } from './index.js';
+import { rigPageCtx } from '../page-test-kit.js';
 import { flowPairs, pairPath } from '../../domain/flow/flowLines.js';
 
 /** Handoff Flow v2 on the kit's quiet line style (brief 2026-10-19, handoff lines). */
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 
-function socket() {
-  const s = {
-    connected: true,
-    on: () => s,
-    off: () => s,
-    emit: vi.fn(),
-    timeout: () => ({
-      emit: (_e: string, req: { verb: string }, cb: (err: null, a: CallAnswer) => void) =>
-        cb(null, { ok: false, error: { failureMode: 'unknown_verb', message: req.verb } }),
-    }),
-  };
-
-  return s as unknown as FleetSocket;
-}
-
-function ctxFor(machines: FleetMachine[], rigName = 'starter'): PageContext {
-  const rigs = listRigs(machines);
-
-  return {
-    machines,
-    allMachines: machines,
-    rigs,
-    activeRig: rigs.find((r) => r.name === rigName) ?? rigs[0] ?? null,
-    chooseRig: vi.fn(),
-    pickedRig: null,
-    now: NOW,
-    link: 'connected',
-    hubConnected: true,
-    received: true,
-    getSocket: socket,
-    keys: true,
-    onOpenFiles: vi.fn(),
-    goTo: vi.fn(),
-    agentKey: null,
-    openAgentPage: vi.fn(),
-    openAgentPanel: vi.fn(),
-    closeAgentPanel: vi.fn(),
-    agentPanel: null,
-    focusNonce: 0,
-    openRigs: [],
-    setOpenRigs: vi.fn(),
-  };
-}
+const ctxFor = (machines: FleetMachine[], rigName = 'starter') =>
+  rigPageCtx(machines, rigName, NOW);
 
 const q = (id: string, createdAt: string): QueueItem => ({
   id,

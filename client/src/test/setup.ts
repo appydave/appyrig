@@ -8,3 +8,21 @@ import { vi, beforeEach } from 'vitest';
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
 });
+
+// The terminal widget has no DOM in jsdom: every page test that mounts it gets this stand-in.
+vi.mock('@xterm/xterm', () => ({
+  Terminal: class {
+    attachCustomKeyEventHandler() {}
+
+    loadAddon() {}
+
+    open() {}
+
+    reset() {}
+
+    write() {}
+
+    dispose() {}
+  },
+}));
+vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));

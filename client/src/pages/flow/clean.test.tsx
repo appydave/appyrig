@@ -1,34 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import type { CallAnswer, FleetMachine, QueueItem } from '@appydave/shared';
-import { listRigs } from '../../domain/fleet/views.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import type { PageContext } from '../../app/types.js';
 import { page as flowPage } from './index.js';
+import { rigPageCtx } from '../page-test-kit.js';
 
 /**
  * v2 clean batch, flow lane (UX notes 2026-10-19, Screens 7-8): replay shows Traffic (B1), the
  * current handoff is lit, the step lives at the controls, the strip names the handoff once and the
  * panel holds its text, and the consoles follow the handoff unless pinned.
  */
-
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 
 const T0 = Date.parse('2026-10-18T09:00:00.000Z');
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
@@ -66,44 +47,7 @@ function fleet(): FleetMachine[] {
   return [fm];
 }
 
-function ctxFor(machines: FleetMachine[]): PageContext {
-  const s = {
-    connected: true,
-    on: () => s,
-    off: () => s,
-    emit: vi.fn(),
-    timeout: () => ({
-      emit: (_e: string, req: { verb: string }, cb: (err: null, a: CallAnswer) => void) =>
-        cb(null, { ok: false, error: { failureMode: 'unknown_verb', message: req.verb } }),
-    }),
-  };
-  const rigs = listRigs(machines);
-
-  return {
-    machines,
-    allMachines: machines,
-    rigs,
-    activeRig: rigs.find((r) => r.name === RIG) ?? null,
-    chooseRig: vi.fn(),
-    pickedRig: null,
-    now: NOW,
-    link: 'connected',
-    hubConnected: true,
-    received: true,
-    getSocket: () => s as unknown as FleetSocket,
-    keys: true,
-    onOpenFiles: vi.fn(),
-    goTo: vi.fn(),
-    agentKey: null,
-    openAgentPage: vi.fn(),
-    openAgentPanel: vi.fn(),
-    closeAgentPanel: vi.fn(),
-    agentPanel: null,
-    focusNonce: 0,
-    openRigs: [],
-    setOpenRigs: vi.fn(),
-  };
-}
+const ctxFor = (machines: FleetMachine[]) => rigPageCtx(machines, RIG, NOW);
 
 beforeEach(() => {
   try {

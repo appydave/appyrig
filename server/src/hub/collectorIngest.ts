@@ -115,73 +115,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
       });
     });
 
-    // v1.2: one seat's history (replay consoles). Same checks as a snapshot.
-    socket.on(FLEET_EVENTS.HISTORY, (raw, ack) => {
-      const reply = typeof ack === 'function' ? ack : () => {};
-
-      const parsed = SeatHistorySchema.safeParse(raw);
-
-      if (!parsed.success) {
-        reply({
-          ok: false,
-          failureMode: 'invalid_snapshot',
-          message: parsed.error.issues
-            .slice(0, 5)
-            .map((i) => `${i.path.join('.')}: ${i.message}`)
-            .join('; '),
-        });
-
-        return;
-      }
-
-      if (parsed.data.machineId !== machineId) {
-        reply({
-          ok: false,
-          failureMode: 'machine_mismatch',
-          message: `socket authenticated as ${machineId}, history is for ${parsed.data.machineId}`,
-        });
-
-        return;
-      }
-
-      opts.store.putHistory(parsed.data);
-      reply({ ok: true, receivedAt: new Date().toISOString() });
-    });
-
-    // v1.4 · S4: queue message bodies, sent once each. Same checks as a history.
-    socket.on(FLEET_EVENTS.HANDOFFS, (raw, ack) => {
-      const reply = typeof ack === 'function' ? ack : () => {};
-
-      const parsed = HandoffBodiesSchema.safeParse(raw);
-
-      if (!parsed.success) {
-        reply({
-          ok: false,
-          failureMode: 'invalid_snapshot',
-          message: parsed.error.issues
-            .slice(0, 5)
-            .map((i) => `${i.path.join('.')}: ${i.message}`)
-            .join('; '),
-        });
-
-        return;
-      }
-
-      if (parsed.data.machineId !== machineId) {
-        reply({
-          ok: false,
-          failureMode: 'machine_mismatch',
-          message: `socket authenticated as ${machineId}, queue bodies are for ${parsed.data.machineId}`,
-        });
-
-        return;
-      }
-
-      opts.store.putHandoffs(parsed.data);
-      reply({ ok: true, receivedAt: new Date().toISOString() });
-    });
-
-    // v1.4 · S7: a chunk of one rig's files, and the OpenRig database shape. Same checks as the others.
+    // The checks every push after the snapshot shares: valid shape, same machine as the socket, then store and ack.
     const guarded =
       (
         schema: {
@@ -226,6 +160,19 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
         reply({ ok: true, receivedAt: new Date().toISOString() });
       };
 
+    // v1.2: one seat's history (replay consoles). Same checks as a snapshot.
+    socket.on(
+      FLEET_EVENTS.HISTORY,
+      guarded(SeatHistorySchema, 'history', (d) => opts.store.putHistory(d))
+    );
+
+    // v1.4 · S4: queue message bodies, sent once each. Same checks as a history.
+    socket.on(
+      FLEET_EVENTS.HANDOFFS,
+      guarded(HandoffBodiesSchema, 'queue bodies', (d) => opts.store.putHandoffs(d))
+    );
+
+    // v1.4 · S7: a chunk of one rig's files, and the OpenRig database shape. Same checks as the others.
     socket.on(
       FLEET_EVENTS.RIGFILES,
       guarded(RigFilesPushSchema, 'rig files', (d) => opts.store.rigFiles.put(d))

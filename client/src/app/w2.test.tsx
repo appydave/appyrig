@@ -12,6 +12,7 @@ import { page as wallPage } from '../pages/wall/index.js';
 import { seatFlags, STUCK_AFTER_MS, wallView } from '../domain/wall/model.js';
 import { pageFor, navGroups } from './registry.js';
 import type { PageContext } from './types.js';
+import { verbSocket, type Answers } from '../pages/page-test-kit.js';
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -29,37 +30,6 @@ vi.mock('@xterm/xterm', () => ({
   },
 }));
 vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
-type Answers = Record<string, (input: Record<string, unknown>) => CallAnswer | undefined>;
-
-/** A socket that answers verbs from a table (unknown verb: a refusal) and records every verb sent. */
-function verbSocket(answers: Answers = {}) {
-  const sent: string[] = [];
-  const socket = {
-    connected: true,
-    on: () => socket,
-    off: () => socket,
-    emit: vi.fn(),
-    timeout: () => ({
-      emit: (
-        _ev: string,
-        req: { verb: string; input: Record<string, unknown> },
-        cb: (err: Error | null, answer?: CallAnswer) => void
-      ) => {
-        sent.push(req.verb);
-
-        const a = answers[req.verb]?.(req.input) ?? {
-          ok: false,
-          error: { failureMode: 'unknown_verb', message: `no such verb: ${req.verb}` },
-        };
-
-        cb(null, a as CallAnswer);
-      },
-    }),
-  };
-
-  return { socket: socket as unknown as FleetSocket, sent, raw: socket };
-}
 
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 

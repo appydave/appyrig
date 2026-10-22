@@ -24,15 +24,10 @@
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
-    "client/src/app/ux-pages-a.test.tsx": {
+    "client/src/app/w2.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-module-mocking": 2,
       "no-unsafe-dictionary-type": 2
-    },
-    "client/src/app/w2.test.tsx": {
-      "no-chained-type-assertions": 2,
-      "no-module-mocking": 2,
-      "no-unsafe-dictionary-type": 4
     },
     "client/src/config/env.test.ts": {
       "no-chained-type-assertions": 2
@@ -154,17 +149,8 @@
     "client/src/pages/flow/FlowDocsBar.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/pages/flow/clean.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
-    },
-    "client/src/pages/flow/flowLines.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
-    },
     "client/src/pages/flow/verdict.test.tsx": {
-      "no-chained-type-assertions": 3,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 2
     },
     "client/src/pages/graph/RigBox.tsx": {
       "require-safety-comment-for-type-assertion": 4
@@ -181,9 +167,6 @@
     },
     "client/src/pages/graph/openRigs.ts": {
       "require-safety-comment-for-type-assertion": 1
-    },
-    "client/src/pages/headers.test.tsx": {
-      "no-module-mocking": 2
     },
     "client/src/pages/history/index.tsx": {
       "no-unsafe-dictionary-type": 1,
@@ -203,9 +186,9 @@
       "no-unsafe-dictionary-type": 1
     },
     "client/src/pages/page-test-kit.ts": {
-      "no-chained-type-assertions": 2,
+      "no-chained-type-assertions": 4,
       "no-unknown-parameters": 1,
-      "no-unsafe-dictionary-type": 2
+      "no-unsafe-dictionary-type": 4
     },
     "client/src/pages/rig-map/rigmap.test.tsx": {
       "no-chained-type-assertions": 3,
@@ -230,7 +213,6 @@
     },
     "client/src/pages/w5b.test.tsx": {
       "no-chained-type-assertions": 1,
-      "no-module-mocking": 2,
       "no-unknown-parameters": 2,
       "no-unsafe-dictionary-type": 1
     },
@@ -261,6 +243,9 @@
     },
     "client/src/test/queueFixtures.ts": {
       "no-chained-type-assertions": 1
+    },
+    "client/src/test/setup.ts": {
+      "no-module-mocking": 2
     },
     "collector/src/adapters/account.ts": {
       "no-unsafe-dictionary-type": 1,
