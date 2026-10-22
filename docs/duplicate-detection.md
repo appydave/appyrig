@@ -60,9 +60,13 @@ The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs
 (`runs-on: [self-hosted, m2, semantic]`, runner `mac-mini-m2`) on every pull request and push to main, weekly
 (Monday 03:00 Bangkok, cron `0 20 * * 0`) and on demand (`workflow_dispatch`). It costs no GitHub Actions
 minutes (a hard budget: free plan, 2,000 a month shared across the org). The repo is private, so pull requests
-cannot come from forks. The job is `continue-on-error` with a 60-minute timeout, so it reports but never blocks;
-it stays that way until two clean weeks, then one judged PR makes it blocking. "Clean" means the semantic _step_ exits 0 on main, not the job colour: `continue-on-error` keeps the job green over a red step. A pull-request run tests the merge with main, so it can go red from a clone another merged gate added. Runs queue one at a time
-(`concurrency`) because they share one cache.
+cannot be triggered from forks and the self-hosted runner is not exposed to untrusted code. If the repo ever goes
+public, drop `pull_request` from this workflow. The job is `continue-on-error` with a 60-minute timeout. That keeps the
+workflow _run_ green, not the job's check: a red semantic step still shows as a red check on the pull request, so the
+merge rule (every check passes) already stops on it. Making the job blocking later changes the run colour, not what
+the merge rule sees. "Clean" for the two weeks that must pass first means the semantic _step_ exits 0 on main; then one
+judged PR makes it blocking. A pull-request run tests the merge with main, so it can go red from a clone another merged
+gate added. Runs queue one at a time (`concurrency`) because they share one cache.
 
 The cache lives on the M2 at `JSCPD_CACHE_DIR=/Users/davidcruwys/.cache/jscpd-appyrig` (model and embeddings), so
 there is no `actions/cache` step and no eviction. Clear it by deleting that directory on the M2.
