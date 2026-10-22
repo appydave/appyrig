@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
+import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { ago, PIP } from '@client/domain/fleet/model.js';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigWaiting } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { RIG_STATE, type MapSeat, type RigMap } from '@client/domain/fleet/views.js';
 import { CopyAttach, harnessOf, pctText, tokensText } from '@client/kit/SeatCardLines.js';
@@ -279,7 +279,7 @@ export default function RigInside({
     let live = true;
 
     setSsh(undefined);
-    void callVerb<RigWaitingOutput>(socket, 'rig.waiting', {
+    void readRigWaiting(socket, {
       machine: home,
       rig: map.rig.name,
     }).then((a) => live && a.ok && setSsh(a.value.ssh));

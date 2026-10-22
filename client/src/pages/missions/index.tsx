@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigFile, readRigFiles } from '@client/kit/data/rigReads.js';
 import MarkdownView from '@client/kit/MarkdownView.js';
 import '@client/kit/data/coverage.css';
 import './missions.css';
@@ -56,7 +55,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
 
     void (async () => {
       for (const r of rigsRef.current) {
-        const files = await callVerb<RigFilesOutput>(socket, 'rig.files', {
+        const files = await readRigFiles(socket, {
           machine: r.machineId,
           rig: r.rig,
         });
@@ -66,7 +65,7 @@ function MissionDoc({ mission, ctx }: { mission: Mission; ctx: PageProps['ctx'] 
           continue;
         }
 
-        const got = await callVerb<RigFileOutput>(socket, 'rig.file', {
+        const got = await readRigFile(socket, {
           machine: r.machineId,
           rig: r.rig,
           fileId: f.id,

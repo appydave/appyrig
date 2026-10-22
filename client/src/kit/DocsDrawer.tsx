@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type {
   MissionFileOutput,
   Refusal,
-  RigFileOutput,
   RigFilesOutput,
   Seat,
   SeatDetailOutput,
   SeatLoadoutOutput,
 } from '@appydave/shared';
 import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigFile } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { seatName } from '@client/domain/fleet/model.js';
 import MarkdownView from './MarkdownView.js';
@@ -201,7 +201,7 @@ function useContent(
     let live = true;
 
     if (fileId) {
-      void callVerb<RigFileOutput>(getSocket(), 'rig.file', {
+      void readRigFile(getSocket(), {
         machine: machineId,
         rig,
         fileId,

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { RigWaitingOutput } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigWaiting } from '@client/kit/data/rigReads.js';
 import { rigQueue } from '@client/domain/fleet/views.js';
 import '@client/kit/data/coverage.css';
 import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '@client/kit/index.js';
@@ -191,9 +190,10 @@ function useGates(ctx: PageProps['ctx']): GatesState {
 
     void Promise.all(
       targets.map((t) =>
-        callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: t.machine, rig: t.rig }).then(
-          (a) => ({ key: `${t.machine}:${t.rig}`, gates: a.ok ? a.value.gates : null })
-        )
+        readRigWaiting(socket, { machine: t.machine, rig: t.rig }).then((a) => ({
+          key: `${t.machine}:${t.rig}`,
+          gates: a.ok ? a.value.gates : null,
+        }))
       )
     ).then((rows) => {
       if (!live) {

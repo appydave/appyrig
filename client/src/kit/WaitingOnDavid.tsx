@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigWaiting } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 interface Props {
@@ -153,7 +153,7 @@ export default function WaitingOnDavid({ machine, rig, toDavid, socket, onGates 
 
     let live = true;
 
-    void callVerb<RigWaitingOutput>(socket, 'rig.waiting', { machine: machineId, rig }).then(
+    void readRigWaiting(socket, { machine: machineId, rig }).then(
       (a) => live && setW(a.ok ? a.value : null)
     );
 
