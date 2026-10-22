@@ -23,7 +23,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { initRefusal, sortedByKey } from './baseline-tools.mjs';
+import { refuseInitOverBaseline, sortedByKey } from './baseline-tools.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../../..');
 const BASELINE_FILE = 'cohesion-baseline.json';
@@ -195,19 +195,6 @@ export function messageFor({ file, now, was }) {
   return `${file}: its exports fall into ${now} unconnected groups (${status}; limit ${MAX_COMPONENTS} once a file has ${MIN_EXPORTS} exports). Split it by responsibility: move each group of exports that do not use each other into its own file, named for what it does.`;
 }
 
-function refuseInitOverBaseline() {
-  const refusal = initRefusal({
-    root: ROOT,
-    baseline: BASELINE_FILE,
-    command: 'cohesion:baseline',
-  });
-
-  if (refusal) {
-    console.error(`cohesion: ${refusal}`);
-    process.exit(1);
-  }
-}
-
 function writeBaseline({ file, actual }) {
   writeFileSync(
     file,
@@ -268,7 +255,12 @@ function check({ actual, grown, shrunk }) {
 }
 
 function main() {
-  refuseInitOverBaseline();
+  refuseInitOverBaseline({
+    gate: 'cohesion',
+    root: ROOT,
+    baseline: BASELINE_FILE,
+    command: 'cohesion:baseline',
+  });
 
   const file = join(ROOT, BASELINE_FILE);
   const hasBaseline = existsSync(file);
