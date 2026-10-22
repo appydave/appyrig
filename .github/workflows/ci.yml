@@ -34,6 +34,15 @@ jobs:
       - name: Architecture boundaries and banned strings
         run: npm run arch:check
 
+      - name: Folder cycles (baselined)
+        run: npm run arch:folders
+
+      - name: Cycle baselines can only shrink
+        run: npm run arch:ratchet
+
+      - name: Dead code (Knip, normal and --production; baselined)
+        run: npm run knip
+
       - name: Tests you can trust (no skips, sleeps, CI branches or snapshot switches)
         run: npm run test:trust
 

@@ -13,6 +13,7 @@
     "**/coverage/**",
     "**/.quality-results/**",
     "**/.jscpd/**",
+    ".dependency-cruiser-known-*.json",
     "**/*.css",
     "api/**",
     "test/fixtures/**",
