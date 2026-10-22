@@ -1,11 +1,24 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { removeScratch, scanProbe } from './scratchWorkspace.js';
 // @ts-expect-error plain .mjs gate with no type declarations
-import { couplingMessage, hubMessage, scanDirectory } from '@root/lint/gates/coupling.mjs';
+import * as coupling from '@root/lint/gates/coupling.mjs';
 // @ts-expect-error plain .mjs gate with no type declarations
-import { foreignSections } from '@root/lint/gates/ratchet-gate.mjs';
+import { adoptable, foreignSections } from '@root/lint/gates/ratchet-gate.mjs';
+// @ts-expect-error plain .mjs gate with no type declarations
+import * as tools from '@root/lint/gates/baseline-tools.mjs';
 
-type Found = { coupling: Record<string, number>; hubs: Record<string, number> };
+const { couplingMessage, hubMessage, scanDirectory, stabilityMessage } = coupling;
+const { baseRef, sectionsOnBase } = tools;
+
+type Found = {
+  coupling: Record<string, number>;
+  hubs: Record<string, number>;
+  stability: Record<string, number>;
+};
 
 const scan = (files: Record<string, string>): Found => scanProbe(scanDirectory, files);
 
@@ -84,6 +97,46 @@ describe('which files the coupling gate flags', () => {
   });
 });
 
+/** Five modules import `stable`; the leaves are what `volatile` imports, so it imports five and is imported once. */
+const stabilityWorld = (stableImports: string): Record<string, string> => ({
+  ...leaves(5),
+  ...Object.fromEntries(
+    names(5, 100).map((n) => [
+      `${n}.ts`,
+      `import { stable } from './stable.js';\nexport const ${n} = stable;\n`,
+    ])
+  ),
+  'volatile.ts': importer(5),
+  'steady.ts': 'export const steady = 1;\n',
+  'stable.ts': `${stableImports}\nexport const stable = 1;\n`,
+});
+
+describe('which imports the stability rule flags', () => {
+  it('flags a stable module that imports a volatile one', () => {
+    const found = scan(stabilityWorld("import { all } from './volatile.js';\nvoid all;"));
+
+    expect(found.stability).toEqual({ 'probe/src/stable.ts -> probe/src/volatile.ts': 1 });
+  });
+
+  it('passes a stable module that imports another stable one, and one that imports nothing', () => {
+    const importsStable = scan(
+      stabilityWorld("import { steady } from './steady.js';\nvoid steady;")
+    );
+    const importsNothing = scan(stabilityWorld(''));
+
+    expect(importsStable.stability).toEqual({});
+    expect(importsNothing.stability).toEqual({});
+  });
+
+  it('does not flag a volatile module for importing stable ones', () => {
+    const found = scan(stabilityWorld("import { all } from './volatile.js';\nvoid all;"));
+
+    expect(
+      Object.keys(found.stability).some((pair) => pair.startsWith('probe/src/volatile.ts'))
+    ).toBe(false);
+  });
+});
+
 describe('what the gate tells the agent', () => {
   it('says what to do about coupling, with the limit', () => {
     const text = couplingMessage({ file: 'client/src/x.ts', now: 25, was: 0 });
@@ -93,10 +146,144 @@ describe('what the gate tells the agent', () => {
     expect(text).toContain('move that work into a module of their own');
   });
 
+  it('names both files and what to do about a stability finding', () => {
+    const text = stabilityMessage({ file: 'client/src/a.ts -> client/src/b.ts', now: 1, was: 0 });
+
+    expect(text).toContain('client/src/a.ts depends on client/src/b.ts');
+    expect(text).toContain('a module both import');
+  });
+
   it('says what to do about a hub', () => {
     expect(hubMessage({ file: 'client/src/hub.ts', now: 16, was: 0 })).toContain(
       'import what they use directly'
     );
+  });
+});
+
+describe('a rule new to a gate is adopted once, by name', () => {
+  const sections = { coupling: 1, hubs: 1, stability: 1 };
+
+  it('adopts a named section the baseline does not hold yet', () => {
+    const saved = { about: 'x', coupling: {}, hubs: {} };
+
+    expect(adoptable({ saved, sections, argv: ['--update', '--adopt=stability'] })).toEqual([
+      'stability',
+    ]);
+  });
+
+  it('never adopts a section the baseline already holds, so it cannot grow', () => {
+    const saved = { about: 'x', coupling: {}, hubs: {}, stability: {} };
+
+    expect(adoptable({ saved, sections, argv: ['--adopt=stability', '--adopt=coupling'] })).toEqual(
+      []
+    );
+  });
+
+  it('adopts nothing unless it is asked for by name, or for a section the gate does not have', () => {
+    const saved = { about: 'x' };
+
+    expect(adoptable({ saved, sections, argv: ['--update'] })).toEqual([]);
+    expect(adoptable({ saved, sections, argv: ['--adopt=cycles'] })).toEqual([]);
+  });
+});
+
+/** The shape of a baseline file in these tests: the about line and the sections a gate keeps. */
+type BaselineFile = {
+  about: string;
+  coupling?: Record<string, number>;
+  hubs?: Record<string, number>;
+};
+
+/** A scratch git repository whose one commit holds `baselines` (file name -> content); returns its path. */
+function repoWith(baselines: Record<string, BaselineFile>): string {
+  const root = mkdtempSync(join(tmpdir(), 'adopt-repo-'));
+  const git = (...args: string[]) =>
+    execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], {
+      stdio: 'pipe',
+    });
+
+  repos.push(root);
+  git('init', '-q');
+
+  for (const [name, body] of Object.entries(baselines)) {
+    writeFileSync(join(root, name), JSON.stringify(body));
+  }
+
+  git('add', '-A');
+  git('commit', '-q', '-m', 'baseline');
+
+  return root;
+}
+
+const repos: string[] = [];
+
+afterEach(() => {
+  while (repos.length) {
+    rmSync(repos.pop() as string, { recursive: true, force: true });
+  }
+});
+
+describe('an adoption is checked against the baseline committed on the base branch', () => {
+  const committed = { about: 'x', coupling: { 'a.ts': 1 }, hubs: {} };
+
+  it('reads the sections as committed, not as the working file now is', () => {
+    const root = repoWith({ 'b.json': committed });
+
+    writeFileSync(join(root, 'b.json'), JSON.stringify({ about: 'x', hubs: {} }));
+
+    expect(sectionsOnBase({ root, baselineFile: 'b.json', ref: 'HEAD' })).toEqual([
+      'coupling',
+      'hubs',
+    ]);
+  });
+
+  it('reads no sections when the baseline file is not on the base branch at all', () => {
+    const root = repoWith({ 'other.json': committed });
+
+    expect(sectionsOnBase({ root, baselineFile: 'b.json', ref: 'HEAD' })).toEqual([]);
+  });
+
+  it('cannot answer outside a git repository, so a caller can fail closed', () => {
+    const root = mkdtempSync(join(tmpdir(), 'adopt-norepo-'));
+
+    repos.push(root);
+
+    expect(() => sectionsOnBase({ root, baselineFile: 'b.json', ref: 'HEAD' })).toThrow(
+      'git could not read'
+    );
+  });
+
+  it('compares with origin/main when the repository has it, else with HEAD', () => {
+    const root = repoWith({ 'b.json': committed });
+
+    expect(baseRef(root)).toBe('HEAD');
+
+    execFileSync('git', ['-C', root, 'update-ref', 'refs/remotes/origin/main', 'HEAD']);
+
+    expect(baseRef(root)).toBe('origin/main');
+  });
+
+  it('adopts a brand-new section, even when the file was committed without it', () => {
+    const root = repoWith({ 'b.json': committed });
+    const onBase = sectionsOnBase({ root, baselineFile: 'b.json', ref: 'HEAD' });
+    const sections = { coupling: 1, hubs: 1, stability: 1 };
+
+    expect(adoptable({ saved: committed, sections, onBase, argv: ['--adopt=stability'] })).toEqual([
+      'stability',
+    ]);
+  });
+
+  it('refuses a section the base branch holds, even after it was deleted from the working file', () => {
+    const root = repoWith({ 'b.json': committed });
+
+    writeFileSync(join(root, 'b.json'), JSON.stringify({ about: 'x', hubs: {} }));
+
+    const onBase = sectionsOnBase({ root, baselineFile: 'b.json', ref: 'HEAD' });
+    const saved = { about: 'x', hubs: {} };
+    const sections = { coupling: 1, hubs: 1, stability: 1 };
+
+    expect(adoptable({ saved, sections, argv: ['--adopt=coupling'] })).toEqual(['coupling']);
+    expect(adoptable({ saved, sections, onBase, argv: ['--adopt=coupling'] })).toEqual([]);
   });
 });
 

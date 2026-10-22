@@ -46,7 +46,7 @@ jobs:
       - name: Module cohesion (archlint; baselined, may only shrink)
         run: npm run cohesion
 
-      - name: Coupling and hubs (archlint; baselined, may only shrink)
+      - name: Coupling, hubs and stability (archlint; baselined, may only shrink)
         run: npm run coupling
 
       - name: Tests you can trust (no skips, sleeps, CI branches or snapshot switches)

@@ -26,7 +26,9 @@ import { fileURLToPath } from 'node:url';
 const KIB = 1024;
 const BUFFER_MIB = 64;
 const MAX_BUFFER = BUFFER_MIB * KIB * KIB;
-const ERROR_TAIL = 400;
+
+/** How much of an unreadable finding or a failed run's output goes into an error message. */
+export const ERROR_TAIL = 400;
 
 /** The repository root. */
 export const ROOT = join(fileURLToPath(import.meta.url), '../../..');
@@ -140,9 +142,13 @@ function parseSmells(result, { tmp, prefix }) {
     );
   }
 
+  const inRepo = (text) => text?.replaceAll(`${tmp}/src/`, `${prefix}/`);
+
   return (report.smells ?? []).map((smell) => ({
     ...smell,
     files: smell.files.map((file) => `${prefix}/${relative(join(tmp, 'src'), file)}`),
+    // A finding names its other file only in this text, with the disposable path: give it the repo's.
+    locations: (smell.locations ?? []).map((l) => ({ ...l, description: inRepo(l.description) })),
   }));
 }
 

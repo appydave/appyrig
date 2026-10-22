@@ -1,10 +1,14 @@
 {
-  "about": "G14 findings recorded when the gate was added. coupling: files touching more than the limit, with how many. hubs: files that are hubs, with fan-in plus fan-out. It may shrink, never grow. Rewrite with npm run coupling:baseline.",
+  "about": "G14 and G15 findings recorded when the gates were added. coupling: files touching more than the limit, with how many. hubs: files that are hubs, with fan-in plus fan-out. stability: a file and the less stable file it imports. It may shrink, never grow. Rewrite with npm run coupling:baseline.",
   "coupling": {
     "client/src/app/registry.ts": 22,
     "client/src/domain/fleet/model.ts": 31,
     "client/src/domain/fleet/useFleet.ts": 26,
     "client/src/domain/fleet/views.ts": 28
   },
-  "hubs": {}
+  "hubs": {},
+  "stability": {
+    "client/src/app/usePages.tsx -> client/src/app/registry.ts": 1,
+    "client/src/pages/about/index.tsx -> client/src/app/registry.ts": 1
+  }
 }

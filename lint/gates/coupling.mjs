@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 /**
- * G14: coupling and hubs. A file should not depend on too many others, and a pass-through file should
- * not sit between a crowd of importers and a crowd of imports. Runs archlint's `high_coupling` (CBO:
- * the files a file imports plus the files that import it) and `hub_module` over the production code of
+ * G14 + G15: coupling, hubs and stability. A file should not depend on too many others, a pass-through
+ * file should not sit between a crowd of importers and a crowd of imports, and a file should not
+ * depend on one that changes more often than it does. Runs archlint's `high_coupling` (CBO: the files a
+ * file imports plus the files that import it), `hub_module` and `sdp_violation` (the Stable
+ * Dependencies Principle: instability = imports / (imports + importers)) over the production code of
  * client, server, collector and shared, and compares the findings with coupling-baseline.json, so only
  * NEW findings fail while today's are recorded.
  *
@@ -21,6 +23,7 @@
 import { fileURLToPath } from 'node:url';
 import {
   ARCHLINT_EXCLUDES,
+  ERROR_TAIL,
   WORKSPACES,
   archlintSmellsOf,
   archlintSmells,
@@ -36,6 +39,14 @@ const MAX_CBO = 20;
 const HUB_FAN_IN = 8;
 const HUB_FAN_OUT = 8;
 const HUB_MAX_COMPLEXITY = 5;
+/**
+ * Stability: a file with at least SDP_MIN_FAN_TOTAL imports plus importers must not import a file that is
+ * SDP_MIN_INSTABILITY_GAP more unstable (instability 0 = everything depends on it, 1 = it depends on
+ * everything). Omer's 5 / 0.3 finds nothing here; this is the strictest setting whose findings are
+ * worth fixing (the next step down only adds page-to-kit pairs 0.05-0.09 apart, which is noise).
+ */
+const SDP_MIN_FAN_TOTAL = 2;
+const SDP_MIN_INSTABILITY_GAP = 0.1;
 
 /** `shared/` is the wire contract that everything imports: scanned, and measured at zero on both rules. */
 const SCANNED = [...WORKSPACES, 'shared'];
@@ -49,22 +60,45 @@ const RULES = {
     max_complexity: HUB_MAX_COMPLEXITY,
     exclude: ARCHLINT_EXCLUDES,
   },
+  sdp_violation: {
+    severity: 'high',
+    min_fan_total: SDP_MIN_FAN_TOTAL,
+    instability_diff: SDP_MIN_INSTABILITY_GAP,
+    exclude: ARCHLINT_EXCLUDES,
+  },
 };
 
-/** archlint's findings as { coupling: { file: cbo }, hubs: { file: fanIn + fanOut } }. */
+/** The file a stability finding says the finding's file depends on: "... from <path>". */
+const DEPENDS_ON = / from (\S+)$/;
+
+/** `<file> -> <the less stable file it imports>`: the finding's identity, so a second bad import in one file is its own entry. */
+function stabilityPair(smell) {
+  const target = DEPENDS_ON.exec(smell.locations?.[0]?.description ?? '')?.[1];
+
+  if (!target) {
+    throw new Error(`unreadable stability finding: ${JSON.stringify(smell).slice(0, ERROR_TAIL)}`);
+  }
+
+  return `${smell.files[0]} -> ${target}`;
+}
+
+/** archlint's findings as { coupling: { file: cbo }, hubs: { file: fanIn + fanOut }, stability: { 'a -> b': 1 } }. */
 function sectionsOf(smells) {
   const coupling = {};
   const hubs = {};
+  const stability = {};
 
   for (const smell of smells) {
     if (smell.type.startsWith('HighCoupling')) {
       coupling[smell.files[0]] = metric(smell, 'cbo');
     } else if (smell.type.startsWith('HubModule')) {
       hubs[smell.files[0]] = metric(smell, 'fanIn') + metric(smell, 'fanOut');
+    } else if (smell.type.startsWith('sdp_violation')) {
+      stability[stabilityPair(smell)] = 1;
     }
   }
 
-  return { coupling, hubs };
+  return { coupling, hubs, stability };
 }
 
 /** Findings for one source directory. Throws when the run did not look. */
@@ -88,14 +122,21 @@ export function hubMessage({ file, now, was }) {
   return `${file}: ${now} files import or are imported by this hub (${status}; a hub has ${HUB_FAN_IN}+ in and ${HUB_FAN_OUT}+ out and almost no logic). Let the importers import what they use directly, or give the hub a job of its own.`;
 }
 
+/** What to do about a file that imports something less stable than itself, written for the agent that reads it as its prompt. */
+export function stabilityMessage({ file: pair }) {
+  const [file, dependency] = pair.split(' -> ');
+
+  return `${file} depends on ${dependency}, which changes more often than it does (limit: a gap of ${SDP_MIN_INSTABILITY_GAP} in instability once a file has ${SDP_MIN_FAN_TOTAL} imports plus importers). Move what ${file} uses out of ${dependency} into a module both import, or pass it in, so the stable file never depends on the volatile one.`;
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runRatchetGate({
     gate: 'coupling',
     baselineFile: BASELINE_FILE,
     command: 'coupling:baseline',
     about:
-      'G14 findings recorded when the gate was added. coupling: files touching more than the limit, with how many. hubs: files that are hubs, with fan-in plus fan-out. It may shrink, never grow. Rewrite with npm run coupling:baseline.',
+      'G14 and G15 findings recorded when the gates were added. coupling: files touching more than the limit, with how many. hubs: files that are hubs, with fan-in plus fan-out. stability: a file and the less stable file it imports. It may shrink, never grow. Rewrite with npm run coupling:baseline.',
     scan: scanApplication,
-    sections: { coupling: couplingMessage, hubs: hubMessage },
+    sections: { coupling: couplingMessage, hubs: hubMessage, stability: stabilityMessage },
   });
 }

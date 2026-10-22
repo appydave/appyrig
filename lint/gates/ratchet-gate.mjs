@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT } from './archlint-scan.mjs';
-import { refuseInitOverBaseline, sortedByKey } from './baseline-tools.mjs';
+import { baseRef, refuseInitOverBaseline, sectionsOnBase, sortedByKey } from './baseline-tools.mjs';
 
 const ABOUT_KEY = 'about';
 
@@ -44,7 +44,7 @@ function compareSections({ sections, actual, baseline }) {
   for (const [name, messageFor] of Object.entries(sections)) {
     const found = compare(actual[name], baseline[name] ?? {});
 
-    grown.push(...found.grown.map((g) => ({ ...g, text: messageFor(g) })));
+    grown.push(...found.grown.map((g) => ({ ...g, section: name, text: messageFor(g) })));
     shrunk.push(...found.shrunk.map((s) => ({ ...s, text: `  ${s.file}: ${s.was} -> ${s.now}` })));
   }
 
@@ -108,10 +108,61 @@ const summary = ({ sections, actual }) =>
     .map((name) => `${Object.keys(actual[name]).length} ${name}`)
     .join(', ');
 
-/** Writes the baseline for `--init` and `--update`; `--update` refuses to grow it. */
-function record({ gate, baselineFile, about, actual, sections, grown }) {
-  if (grown.length && !process.argv.includes('--init')) {
-    fail(1, `${gate}: refusing to grow the baseline.`, ...grown.map((g) => g.text));
+/** The sections `--adopt=<section>` asks for. */
+const adoptionsAsked = (argv = process.argv) =>
+  argv.filter((arg) => arg.startsWith('--adopt=')).map((arg) => arg.slice('--adopt='.length));
+
+/**
+ * The asked-for sections that may be adopted: the one way a rule added to a gate has its first findings
+ * recorded. A section the baseline holds, or that the base branch holds (`onBase`), cannot be adopted:
+ * deleting it from the working file must not turn its existing findings into new ones.
+ */
+export function adoptable({ saved, sections, onBase = [], argv = process.argv }) {
+  return adoptionsAsked(argv).filter(
+    (name) => name in sections && !(name in saved) && !onBase.includes(name)
+  );
+}
+
+/** The sections already on the base branch, read from git; exits (closed) when git cannot say. */
+function committedSections({ gate, baselineFile }) {
+  try {
+    return sectionsOnBase({ root: ROOT, baselineFile });
+  } catch (error) {
+    return fail(
+      1,
+      `${gate}: --adopt needs ${baselineFile} as committed on ${baseRef(ROOT)}, and could not read it: ${error.message}`
+    );
+  }
+}
+
+/** Refuses an adoption of a section the base branch already holds, saying why. */
+function refuseAdoptingBase({ gate, baselineFile, onBase }) {
+  const blocked = adoptionsAsked().filter((name) => onBase.includes(name));
+
+  if (blocked.length) {
+    fail(
+      1,
+      `${gate}: cannot adopt ${blocked.join(', ')}: ${baselineFile} on ${baseRef(ROOT)} already holds ${blocked.length > 1 ? 'them' : 'it'}. A rule already in the baseline cannot be re-recorded with more findings. Restore the section from ${baseRef(ROOT)} and fix the new findings instead.`
+    );
+  }
+}
+
+/** Writes the baseline for `--init` and `--update`; `--update` refuses to grow it, except a section being adopted. */
+function record({ gate, baselineFile, about, actual, sections, grown, saved }) {
+  const onBase = adoptionsAsked().length ? committedSections({ gate, baselineFile }) : [];
+
+  refuseAdoptingBase({ gate, baselineFile, onBase });
+
+  const adopted = adoptable({ saved, sections, onBase });
+  const refused = grown.filter((g) => !adopted.includes(g.section));
+
+  if (refused.length && !process.argv.includes('--init')) {
+    const newRule = refused.some((g) => !(g.section in saved));
+    const hint = newRule
+      ? ' (A rule new to this gate is recorded once with --update --adopt=<section>; a section already on the base branch cannot be adopted.)'
+      : '';
+
+    fail(1, `${gate}: refusing to grow the baseline.${hint}`, ...refused.map((g) => g.text));
   }
 
   writeBaseline({ gate, file: join(ROOT, baselineFile), about, actual, sections });
@@ -157,7 +208,7 @@ export function runRatchetGate(options) {
   const { grown, shrunk } = compareSections({ sections, actual, baseline: saved });
 
   if (process.argv.includes('--init') || process.argv.includes('--update')) {
-    record({ ...options, actual, grown });
+    record({ ...options, actual, grown, saved });
   } else {
     check({ gate, command, actual, sections, grown, shrunk });
   }
