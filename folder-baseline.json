@@ -1,0 +1,44 @@
+{
+  "about": "Folders over 10 files or 10 subfolders when G09 was added, with their counts. It may shrink, never grow. Rewrite with npm run folders:baseline.",
+  "folders": {
+    "client/src/app": {
+      "files": 12
+    },
+    "client/src/domain": {
+      "subfolders": 22
+    },
+    "client/src/domain/fleet": {
+      "files": 24
+    },
+    "client/src/kit": {
+      "files": 61
+    },
+    "client/src/pages": {
+      "subfolders": 20
+    },
+    "collector/src": {
+      "files": 13
+    },
+    "collector/src/adapters": {
+      "files": 43
+    },
+    "e2e": {
+      "files": 16
+    },
+    "scripts": {
+      "files": 12
+    },
+    "server/src/core": {
+      "files": 11
+    },
+    "server/src/hub": {
+      "files": 24
+    },
+    "shared/src": {
+      "files": 21
+    },
+    "test/root": {
+      "files": 14
+    }
+  }
+}

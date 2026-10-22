@@ -20,6 +20,8 @@
     "lint:fix": "eslint . --fix",
     "oxlint": "node scripts/oxlint-gate.mjs",
     "oxlint:baseline": "node scripts/oxlint-gate.mjs --update",
+    "folders": "node lint/folder-limits.mjs",
+    "folders:baseline": "node lint/folder-limits.mjs --update",
     "stylelint": "stylelint \"client/src/**/*.css\"",
     "stylelint:baseline": "stylelint \"client/src/**/*.css\" --suppress",
     "stylelint:ratchet": "npm run stylelint && npm run stylelint:baseline && git diff --exit-code -- stylelint-suppressions.json",
