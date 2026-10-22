@@ -18,8 +18,15 @@ const KIB = 1024;
 const BUFFER_MIB = 16;
 const MAX_BUFFER = BUFFER_MIB * KIB * KIB;
 const WORKSPACES = ['client', 'server', 'collector', 'shared'];
-const SOURCE = /\.(ts|tsx|js|mjs|cjs|mts)$/;
-const NOT_SCANNED = ['test/fixtures/', 'test/root/fixtures/', 'server/src/core/vendor/'];
+// .mjs and .cjs run under plain Node, which does not read tsconfig `paths`; they keep their relative imports.
+const SOURCE = /\.(ts|tsx|js|mts)$/;
+// Vendored files, recorded fixtures, and this codemod's own test, whose sample text holds `../` imports.
+const NOT_SCANNED = [
+  'test/fixtures/',
+  'test/root/fixtures/',
+  'server/src/core/vendor/',
+  'test/root/gates/root-imports.test.ts',
+];
 /** `from '..'`, `import('..')`, `import '..'`, `require('..')`: the quoted specifier is group 2. */
 const SPECIFIER = /\b(from\s+|import\s*\(\s*|import\s+|require\s*\(\s*)(['"])(\.\.\/[^'"\n]*)\2/g;
 

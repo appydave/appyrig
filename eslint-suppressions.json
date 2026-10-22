@@ -1875,6 +1875,9 @@
     "no-magic-numbers": {
       "count": 9
     },
+    "no-restricted-imports": {
+      "count": 1
+    },
     "sonarjs/cognitive-complexity": {
       "count": 2
     },
@@ -1888,6 +1891,9 @@
     },
     "no-magic-numbers": {
       "count": 10
+    },
+    "no-restricted-syntax": {
+      "count": 1
     },
     "sonarjs/cognitive-complexity": {
       "count": 1

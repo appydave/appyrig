@@ -6,7 +6,7 @@ describe('env config', () => {
   beforeEach(() => {
     process.env = { ...originalEnv };
     // Clear the module cache so env.ts re-executes with new process.env
-    // We use dynamic import with cache-busting instead
+    vi.resetModules();
   });
 
   afterEach(() => {
@@ -18,7 +18,7 @@ describe('env config', () => {
     delete process.env.PORT;
     delete process.env.CLIENT_URL;
 
-    const { env } = await import('./env.js?defaults=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.PORT).toBe(7191);
     expect(env.CLIENT_URL).toBe('http://localhost:7190');
@@ -29,7 +29,7 @@ describe('env config', () => {
     process.env.NODE_ENV = 'test';
     process.env.HUB_TOKEN = '';
 
-    const { env } = await import('./env.js?blank-token=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.HUB_TOKEN).toBeUndefined();
     delete process.env.HUB_TOKEN;
@@ -39,7 +39,7 @@ describe('env config', () => {
     process.env.NODE_ENV = 'test';
     process.env.PORT = '9999';
 
-    const { env } = await import('./env.js?port=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.PORT).toBe(9999);
   });
@@ -47,7 +47,7 @@ describe('env config', () => {
   it('exposes convenience boolean flags', async () => {
     process.env.NODE_ENV = 'test';
 
-    const { env } = await import('./env.js?flags=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.isTest).toBe(true);
     expect(env.isDevelopment).toBe(false);
@@ -57,7 +57,7 @@ describe('env config', () => {
   it('sets isDevelopment true when NODE_ENV is development', async () => {
     process.env.NODE_ENV = 'development';
 
-    const { env } = await import('./env.js?dev=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.isDevelopment).toBe(true);
     expect(env.isTest).toBe(false);
@@ -67,7 +67,7 @@ describe('env config', () => {
   it('sets isProduction true when NODE_ENV is production', async () => {
     process.env.NODE_ENV = 'production';
 
-    const { env } = await import('./env.js?prod=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.isProduction).toBe(true);
     expect(env.isDevelopment).toBe(false);
@@ -82,7 +82,7 @@ describe('env config', () => {
     // env.ts calls process.exit(1) on failure but the mock does not stop execution,
     // so spreading parsed.data (undefined) throws — catch that expected error.
     try {
-      await import('./env.js?' + Date.now());
+      await import('./env.js');
     } catch {
       // expected: module throws after mocked exit because parsed.data is undefined
     }
@@ -100,7 +100,7 @@ describe('env config', () => {
     // env.ts calls process.exit(1) on failure but the mock does not stop execution,
     // so spreading parsed.data (undefined) throws — catch that expected error.
     try {
-      await import('./env.js?' + Date.now());
+      await import('./env.js');
     } catch {
       // expected: module throws after mocked exit because parsed.data is undefined
     }
@@ -114,7 +114,7 @@ describe('env config', () => {
     process.env.HUB_BIND_HOSTS = '';
     process.env.DATA_DIR = '';
 
-    const { env } = await import('./env.js?blank-hub=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.HUB_BIND_HOSTS).toBe('127.0.0.1,::1');
     expect(env.DATA_DIR).toBeUndefined();
@@ -124,7 +124,7 @@ describe('env config', () => {
     process.env.NODE_ENV = 'test';
     process.env.HUB_BIND_HOSTS = '127.0.0.1,::1,100.126.70.25';
 
-    const { env } = await import('./env.js?m2-hosts=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.HUB_BIND_HOSTS).toBe('127.0.0.1,::1,100.126.70.25');
   });
@@ -140,7 +140,7 @@ describe('env config', () => {
     delete process.env.HUB_TOKEN;
     process.env.HUB_TOKEN_FILE = file;
 
-    const { env } = await import('./env.js?token-file=' + Date.now());
+    const { env } = await import('./env.js');
 
     expect(env.HUB_TOKEN).toBe('file-hub-token-0123456789abcdef');
   });
@@ -153,7 +153,7 @@ describe('env config', () => {
     delete process.env.HUB_TOKEN;
     process.env.HUB_TOKEN_FILE = '/nonexistent/appyrig/token';
     try {
-      await import('./env.js?token-file-missing=' + Date.now());
+      await import('./env.js');
     } catch {
       // parsed data may be unusable after the mocked exit
     }
@@ -162,9 +162,10 @@ describe('env config', () => {
     expect(String(errSpy.mock.calls[0]?.[0])).toMatch(/Cannot read HUB_TOKEN_FILE/);
 
     exitSpy.mockClear();
+    vi.resetModules();
     process.env.HUB_TOKEN = 'inline-hub-token-0123456789';
     try {
-      await import('./env.js?token-both=' + Date.now());
+      await import('./env.js');
     } catch {
       // as above
     }
@@ -189,7 +190,7 @@ describe('env config', () => {
     delete process.env.HUB_TOKEN;
     process.env.HUB_TOKEN_FILE = file;
     try {
-      await import('./env.js?token-file-open=' + Date.now());
+      await import('./env.js');
     } catch {
       // parsed data may be unusable after the mocked exit
     }

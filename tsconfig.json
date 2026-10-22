@@ -8,5 +8,5 @@
       "@root/*": ["./*"]
     }
   },
-  "include": []
+  "include": ["scripts", "test", "e2e", "lint", "playwright.config.ts"]
 }
