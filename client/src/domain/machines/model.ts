@@ -1,5 +1,6 @@
 import type { FleetMachine, Reading } from '@appydave/shared';
-import { pressureOf, value, type PressureView } from '@client/domain/fleet/health.js';
+import { pressureOf, type PressureView } from '@client/domain/fleet/health.js';
+import { value } from '@client/lib/readings.js';
 
 /**
  * C21 version watch. AppyRig does not ask npm and holds no "latest release" of its own: each

@@ -1,10 +1,5 @@
-import {
-  sampleAge,
-  type FleetMachine,
-  type MachineHealth,
-  type Reading,
-  type SampleAge,
-} from '@appydave/shared';
+import { sampleAge, type FleetMachine, type MachineHealth, type SampleAge } from '@appydave/shared';
+import { gb } from '@client/lib/readings.js';
 
 /**
  * v1.4 S6: machine health in words (mochaccino machine-health, B). The collector re-samples every
@@ -29,9 +24,9 @@ export interface PressureView {
 }
 
 /** C2: swap used ≥ this share of swap total makes a machine at least "tight". */
-export const SWAP_TIGHT = 0.5;
+const SWAP_TIGHT = 0.5;
 /** …and ≥ this share, "under pressure". */
-export const SWAP_PRESSURE = 0.8;
+const SWAP_PRESSURE = 0.8;
 
 const RANK: Record<'normal' | 'warn' | 'critical', number> = { normal: 0, warn: 1, critical: 2 };
 const WORD = { normal: 'normal', warn: 'tight', critical: 'under pressure' } as const;
@@ -146,18 +141,3 @@ function verdictOf(fm: FleetMachine): PressureView {
  */
 export const healthAge = (fm: FleetMachine, h: MachineHealth, now: number): SampleAge =>
   sampleAge(h.sampledAt, { collectedAt: fm.snapshot.collectedAt, receivedAt: fm.lastSeen }, now);
-
-export function gb(bytes: number): string {
-  const g = bytes / 1024 ** 3;
-
-  return g >= 100
-    ? `${g.toFixed(0)} GB`
-    : g >= 1
-      ? `${Number(g.toFixed(1))} GB`
-      : `${Math.round(bytes / 1024 ** 2)} MB`;
-}
-
-/** The value, or null; with the reason kept for a hover. */
-export function value<T>(r: Reading<T>): { v: T | null; why: string | null } {
-  return r.status === 'ok' ? { v: r.value, why: null } : { v: null, why: r.reason };
-}

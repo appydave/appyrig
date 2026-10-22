@@ -132,7 +132,7 @@
       "count": 1
     },
     "no-magic-numbers": {
-      "count": 12
+      "count": 8
     },
     "sonarjs/cognitive-complexity": {
       "count": 1
