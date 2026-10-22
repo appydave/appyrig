@@ -55,12 +55,19 @@ Notes that decided settings:
 
 ## Semantic model and CI
 
-The semantic profile downloads a checksum-verified CodeRankEmbed model on first use (about 548 MB,
-CPU only, no hosted API; jscpd 5.4.1 pins the revision). First run on an M4 Mini took about 4.5 minutes
-(3,759 functions embedded); a rerun against the cache takes about a second. The `duplicates` CI job
-caches `.quality-results/jscpd-cache` per engine, model, runner and a hash of the TypeScript files, and
-uploads the JSON reports. Embedding scores can differ slightly between macOS and Linux; review borderline
-pairs when upgrading tools or if the CI job disagrees with the local baseline.
+The four fast profiles run in the blocking `Duplicate detection` job (seconds). The semantic profile runs in
+its own job, `Duplicate detection (semantic, non-blocking)`: `continue-on-error`, 60-minute timeout. Its first
+Linux run in the original combined 20-minute job was cancelled before it finished, and the cache is saved only
+by a job that completes, so it was split out to let that run finish. Whether it becomes blocking again is a
+ruling for the tier 4 retro, once the cached Linux time is known.
+
+The profile downloads a checksum-verified CodeRankEmbed model on first use (about 548 MB, CPU only, no hosted
+API; jscpd 5.4.1 pins the revision). On an M4 Mini the first run took about 4.5 minutes (3,759 functions
+embedded) and a rerun against the cache about a second. Linux CI timing: cold run TBD (more than 20 minutes on
+`ubuntu-latest`); cached run TBD, to be filled in from the first two runs of the semantic job. The job caches
+`.quality-results/jscpd-cache` per engine, model, runner and a hash of the TypeScript files, and uploads the JSON
+report. Embedding scores can differ slightly between macOS and Linux; review borderline pairs if the job
+disagrees with the local baseline.
 
 Blind spots: AST similarity skips test files; semantic compares across files, not within one; unsupported
 languages and very short snippets are not covered.

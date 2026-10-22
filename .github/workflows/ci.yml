@@ -95,6 +95,39 @@ jobs:
     name: Duplicate detection
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pnpm (the anti-slop plugin builds itself with it on install)
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: No new clones (exact, renamed, near-miss; baselined)
+        run: npm run lint:duplicates:fast
+
+      - name: Keep the clone reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-reports
+          path: .quality-results/jscpd/*.json
+          if-no-files-found: error
+          retention-days: 7
+
+  duplicates-semantic:
+    name: Duplicate detection (semantic, non-blocking)
+    runs-on: ubuntu-latest
+    # Not a gate yet: the first Linux run has to finish to save the model and embeddings cache.
+    continue-on-error: true
+    timeout-minutes: 60
     env:
       JSCPD_CACHE_DIR: ${{ github.workspace }}/.quality-results/jscpd-cache
 
@@ -120,16 +153,16 @@ jobs:
           restore-keys: |
             jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-
 
-      - name: No new clones (exact, renamed, near-miss, semantic; baselined)
-        run: npm run lint:duplicates
+      - name: No new semantic clones (baselined)
+        run: npm run lint:duplicates:semantic
 
-      - name: Keep the clone reports
+      - name: Keep the semantic report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: duplicate-reports
-          path: .quality-results/jscpd/*.json
-          if-no-files-found: error
+          name: duplicate-reports-semantic
+          path: .quality-results/jscpd/semantic.json
+          if-no-files-found: ignore
           retention-days: 7
 
   provenance:
