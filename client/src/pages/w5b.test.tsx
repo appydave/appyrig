@@ -4,10 +4,9 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { FLEET_EVENTS, type FleetMachine } from '@appydave/shared';
 import App from '../app/App.js';
-import { listRigs } from '../domain/fleet/views.js';
 import type { FleetSocket } from '../domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
-import type { PageContext } from '../app/types.js';
+import { pageCtx } from './page-test-kit.js';
 import type { HealthData } from '@appydave/shared';
 import type { HealthFindingsMachine } from '../domain/health/model.js';
 import type { SettingsMachine } from '../domain/settings/model.js';
@@ -30,23 +29,6 @@ import {
   show,
   showSource,
 } from '../domain/settings/model.js';
-
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 
 type Handler = (...args: unknown[]) => void;
 
@@ -92,32 +74,7 @@ function spySocket(answers: Record<string, unknown> = {}) {
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 
-function ctxFor(machines: FleetMachine[], socket: FleetSocket): PageContext {
-  return {
-    machines,
-    allMachines: machines,
-    rigs: listRigs(machines),
-    activeRig: null,
-    chooseRig: vi.fn(),
-    pickedRig: null,
-    now: NOW,
-    link: 'connected',
-    hubConnected: true,
-    received: true,
-    getSocket: () => socket,
-    keys: true,
-    onOpenFiles: vi.fn(),
-    goTo: vi.fn(),
-    agentKey: null,
-    openAgentPage: vi.fn(),
-    openAgentPanel: vi.fn(),
-    closeAgentPanel: vi.fn(),
-    agentPanel: null,
-    focusNonce: 0,
-    openRigs: [],
-    setOpenRigs: vi.fn(),
-  };
-}
+const ctxFor = (machines: FleetMachine[], socket: FleetSocket) => pageCtx(machines, socket, NOW);
 
 const data = (over: Partial<HealthData> = {}): HealthData => ({
   findings: [],

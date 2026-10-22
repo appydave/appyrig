@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { CallAnswer, FleetMachine } from '@appydave/shared';
+import type { FleetMachine } from '@appydave/shared';
 import { listRigs } from '../domain/fleet/views.js';
 import type { FleetSocket } from '../domain/fleet/useFleet.js';
 import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
+import { pageCtx, verbSocket } from '../pages/page-test-kit.js';
 import { FakeControl, MockNote, MOCK_NOTE_TEXT } from '../kit/index.js';
 import { page as wallPage } from '../pages/wall/index.js';
 import { matchTeams, teamsLabel, teamsOf } from '../domain/wall/model.js';
@@ -19,83 +20,12 @@ import type { PageContext } from './types.js';
  * page with per-control badges on hover, and the Wall's team filter is one compact control.
  */
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
-type Answers = Record<string, (input: Record<string, unknown>) => CallAnswer | undefined>;
-
-function verbSocket(answers: Answers = {}) {
-  const sent: string[] = [];
-  const socket = {
-    connected: true,
-    on: () => socket,
-    off: () => socket,
-    emit: vi.fn(),
-    timeout: () => ({
-      emit: (
-        _ev: string,
-        req: { verb: string; input: Record<string, unknown> },
-        cb: (err: Error | null, answer?: CallAnswer) => void
-      ) => {
-        sent.push(req.verb);
-
-        const a = answers[req.verb]?.(req.input) ?? {
-          ok: false,
-          error: { failureMode: 'unknown_verb', message: `no such verb: ${req.verb}` },
-        };
-
-        cb(null, a as CallAnswer);
-      },
-    }),
-  };
-
-  return { socket: socket as unknown as FleetSocket, sent, raw: socket };
-}
-
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 
-function makeCtx(machines: FleetMachine[], socket: FleetSocket): PageContext {
-  const rigs = listRigs(machines);
-
-  return {
-    machines,
-    allMachines: machines,
-    rigs,
-    activeRig: rigs[0] ?? null,
-    chooseRig: vi.fn(),
-    pickedRig: null,
-    now: NOW,
-    link: 'connected',
-    hubConnected: true,
-    received: true,
-    getSocket: () => socket,
-    keys: true,
-    onOpenFiles: vi.fn(),
-    goTo: vi.fn(),
-    agentKey: null,
-    openAgentPage: vi.fn(),
-    openAgentPanel: vi.fn(),
-    closeAgentPanel: vi.fn(),
-    agentPanel: null,
-    focusNonce: 0,
-    openRigs: [],
-    setOpenRigs: vi.fn(),
-  };
-}
+const makeCtx = (machines: FleetMachine[], socket: FleetSocket): PageContext => ({
+  ...pageCtx(machines, socket, NOW),
+  activeRig: listRigs(machines)[0] ?? null,
+});
 
 const fleet = () => [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
 

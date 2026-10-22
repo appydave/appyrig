@@ -1,34 +1,16 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { CallAnswer, FleetMachine, QueueItem } from '@appydave/shared';
-import { buildFlow, flowChapters, listRigs } from '../../domain/fleet/views.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import type { FleetMachine, QueueItem } from '@appydave/shared';
+import { buildFlow, flowChapters } from '../../domain/fleet/views.js';
 import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import type { PageContext } from '../../app/types.js';
 import { page as flowPage } from './index.js';
+import { rigPageCtx } from '../page-test-kit.js';
 
 /**
  * Run board brief, lane 2 (2026-10-19): in v2 Handoff Flow a handoff is "sent back" when its
  * `verdict:` tag says changes or fail; accept / pass never are. A rig with no verdict tags keeps the
  * backwards-stage rule, and buildFlow without the option behaves exactly as before.
  */
-
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 
 const T0 = Date.parse('2026-10-18T09:00:00.000Z');
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
@@ -122,44 +104,7 @@ describe('buildFlow: sent back by verdict', () => {
   });
 });
 
-function ctxFor(machines: FleetMachine[]): PageContext {
-  const s = {
-    connected: true,
-    on: () => s,
-    off: () => s,
-    emit: vi.fn(),
-    timeout: () => ({
-      emit: (_e: string, req: { verb: string }, cb: (err: null, a: CallAnswer) => void) =>
-        cb(null, { ok: false, error: { failureMode: 'unknown_verb', message: req.verb } }),
-    }),
-  };
-  const rigs = listRigs(machines);
-
-  return {
-    machines,
-    allMachines: machines,
-    rigs,
-    activeRig: rigs.find((r) => r.name === RIG) ?? null,
-    chooseRig: vi.fn(),
-    pickedRig: null,
-    now: NOW,
-    link: 'connected',
-    hubConnected: true,
-    received: true,
-    getSocket: () => s as unknown as FleetSocket,
-    keys: true,
-    onOpenFiles: vi.fn(),
-    goTo: vi.fn(),
-    agentKey: null,
-    openAgentPage: vi.fn(),
-    openAgentPanel: vi.fn(),
-    closeAgentPanel: vi.fn(),
-    agentPanel: null,
-    focusNonce: 0,
-    openRigs: [],
-    setOpenRigs: vi.fn(),
-  };
-}
+const ctxFor = (machines: FleetMachine[]) => rigPageCtx(machines, RIG, NOW);
 
 describe('v2 Handoff Flow page: sent back by verdict', () => {
   const Flow = flowPage.component;

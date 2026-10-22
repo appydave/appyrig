@@ -2061,7 +2061,7 @@
       "count": 3
     },
     "no-magic-numbers": {
-      "count": 4
+      "count": 2
     }
   },
   "server/src/hub/createHub.ts": {

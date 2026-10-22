@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
 import { listRigs } from '../domain/fleet/views.js';
@@ -11,23 +11,6 @@ import { answeringSocket, pageCtx } from './page-test-kit.js';
  * kit's one-line PageHeader; explainer paragraphs sit behind Legend · L (`.ar-explainer` or
  * `.hl-legend`); a mock control in the header is behind the ⋯ MockMenu, never loose in the line.
  */
-
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
 
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 const PAGES: PageKey[] = ['flow', 'run', 'missions', 'needs-you', 'timeline', 'history', 'agent'];
