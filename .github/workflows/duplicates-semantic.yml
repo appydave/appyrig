@@ -1,22 +1,32 @@
 name: Duplicates (semantic)
 
-# The semantic clone check is too slow for push/PR (cold run on ubuntu-latest took more than 42 minutes)
-# and Actions minutes are a hard budget, so it runs weekly (Monday 03:00 Bangkok) or on demand.
+# The semantic clone check is too slow for GitHub-hosted runners (cold run on ubuntu-latest took more than
+# 42 minutes) and Actions minutes are a hard budget, so it runs on the M2 self-hosted runner, which costs
+# no Actions minutes and keeps the model and embeddings between runs. The repo is private, so pull
+# requests cannot come from forks and the self-hosted runner is not exposed to untrusted code.
 on:
+  pull_request:
+  push:
+    branches: [main]
   schedule:
     - cron: '0 20 * * 0'
   workflow_dispatch:
 
+# One run at a time: every run shares the persistent cache directory on the runner.
+concurrency:
+  group: duplicates-semantic
+  cancel-in-progress: false
+
 jobs:
   semantic:
     name: Duplicate detection (semantic, non-blocking)
-    runs-on: ubuntu-latest
-    # Not a gate: a cold Linux run takes more than 42 minutes, so this runs weekly or on demand only.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, m2, semantic]
+    # Not a gate yet: stays non-blocking until two clean weeks, then one judged PR flips it.
     continue-on-error: true
     timeout-minutes: 60
     env:
-      JSCPD_CACHE_DIR: ${{ github.workspace }}/.quality-results/jscpd-cache
+      # Persistent on the M2 (replaces actions/cache): the model and embeddings survive between runs.
+      JSCPD_CACHE_DIR: /Users/davidcruwys/.cache/jscpd-appyrig
 
     steps:
       - uses: actions/checkout@v4
@@ -24,21 +34,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
 
       - name: Install pnpm (the anti-slop plugin builds itself with it on install)
-        run: npm install -g pnpm
+        run: command -v pnpm || npm install -g pnpm
 
       - name: Install dependencies
         run: npm install
-
-      - name: Cache the semantic model and its embeddings
-        uses: actions/cache@v4
-        with:
-          path: .quality-results/jscpd-cache
-          key: jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!**/node_modules/**') }}
-          restore-keys: |
-            jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-
 
       - name: No new semantic clones (baselined)
         run: npm run lint:duplicates:semantic

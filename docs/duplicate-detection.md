@@ -56,26 +56,34 @@ Notes that decided settings:
 ## Semantic model and CI
 
 The four fast profiles run in the blocking `Duplicate detection` job in `ci.yml` (seconds, every push and PR).
-The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs **weekly (Monday 03:00
-Bangkok, cron `0 20 * * 0`) or on demand (`workflow_dispatch`), never on push or pull request**. GitHub Actions
-minutes are a hard budget (free plan, 2,000 a month shared across the org). The job is `continue-on-error`
-with a 60-minute timeout, so it reports but never blocks.
+The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs on the **M2 self-hosted runner**
+(`runs-on: [self-hosted, m2, semantic]`, runner `mac-mini-m2`) on every pull request and push to main, weekly
+(Monday 03:00 Bangkok, cron `0 20 * * 0`) and on demand (`workflow_dispatch`). It costs no GitHub Actions
+minutes (a hard budget: free plan, 2,000 a month shared across the org). The repo is private, so pull requests
+cannot be triggered from forks and the self-hosted runner is not exposed to untrusted code. If the repo ever goes
+public, drop `pull_request` from this workflow. The job is `continue-on-error` with a 60-minute timeout. That keeps the
+workflow _run_ green, not the job's check: a red semantic step still shows as a red check on the pull request, so the
+merge rule (every check passes) already stops on it. Making the job blocking later changes the run colour, not what
+the merge rule sees. "Clean" for the two weeks that must pass first means the semantic _step_ exits 0 on main; then one
+judged PR makes it blocking. A pull-request run tests the merge with main, so it can go red from a clone another merged
+gate added. Runs queue one at a time (`concurrency`) because they share one cache.
+
+The cache lives on the M2 at `JSCPD_CACHE_DIR=/Users/davidcruwys/.cache/jscpd-appyrig` (model and embeddings), so
+there is no `actions/cache` step and no eviction. Clear it by deleting that directory on the M2.
 
 The profile downloads a checksum-verified CodeRankEmbed model on first use (about 548 MB, CPU only, no hosted
 API; jscpd 5.4.1 pins the revision) and embeds every function. Measured:
 
-| Where                  | Cold run                                                     | Cached run |
-| ---------------------- | ------------------------------------------------------------ | ---------- |
-| M4 Mini                | about 4.5 minutes (3,759 functions)                          | about 1 s  |
-| GitHub `ubuntu-latest` | **more than 42 minutes** (run 39707247570, cancelled at 42+) | unknown    |
+| Where                  | Cold run                                                     | Cached run                                                   |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| M4 Mini                | about 4.5 minutes (3,759 functions)                          | about 1 s                                                    |
+| GitHub `ubuntu-latest` | **more than 42 minutes** (run 39707247570, cancelled at 42+) | unknown                                                      |
+| M2 self-hosted runner  | **4 min 35 s** (step; job 5 min 24 s; run 39720873908)       | **2 s** (25 of 3,762 functions re-embedded; run 39721482990) |
 
-An earlier combined run (39704974333) hit its 20-minute timeout. Known risks for the weekly run: GitHub
-evicts caches unused for 7 days, so a weekly run may be cold; and if a cold run also exceeds the 60-minute
-timeout the cache is never saved and every run stays cold. Embedding scores can also differ slightly between
-macOS and Linux; review borderline pairs if the job disagrees with the local baseline.
+An earlier combined run (39704974333) on `ubuntu-latest` hit its 20-minute timeout. M2 and M4 are both macOS
+ARM64, so embedding scores should match the local baseline; review borderline pairs if the job disagrees.
 
-Where the checks should run (local hook, pre-push, CI, or a self-hosted runner on the M2) is an open design
-question for the tier 4 retro, as is whether semantic ever becomes blocking.
+Whether semantic ever becomes blocking is decided after the two clean weeks.
 
 Blind spots: AST similarity skips test files; semantic compares across files, not within one; unsupported
 languages and very short snippets are not covered.
