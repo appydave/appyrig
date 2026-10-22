@@ -258,7 +258,19 @@ function scanDisableDirectives() {
   return scanTexts(names.map((name) => ({ name, text: readFileSync(join(ROOT, name), 'utf8') })));
 }
 
+/** `--init` is for a repo with no baseline yet: over an existing one it would skip the refuse-growth rule. */
+function refuseInitOverBaseline() {
+  if (process.argv.includes('--init') && existsSync(join(ROOT, BASELINE_FILE))) {
+    console.error(
+      `oxlint-gate: ${BASELINE_FILE} exists: use \`npm run oxlint:baseline\` (it refuses growth); --init is only for a repo with no baseline yet`
+    );
+    process.exit(1);
+  }
+}
+
 function main() {
+  refuseInitOverBaseline();
+
   const update = process.argv.includes('--update');
   const init = process.argv.includes('--init');
   const out = run();
