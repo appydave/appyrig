@@ -1,5 +1,5 @@
 {
-  "extends": "@appydave/appystack-config/typescript/base.json",
+  "extends": ["@appydave/appystack-config/typescript/base.json", "../tsconfig.json"],
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",

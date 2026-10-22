@@ -1,6 +1,7 @@
 import appyConfig from '@appydave/appystack-config/eslint/react';
 import stylistic from '@stylistic/eslint-plugin';
 import { colorSelectors } from './lint/colors.js';
+import { importRules, importSelectors } from './lint/imports.js';
 import { complexityPlugins, complexityRules } from './lint/complexity.js';
 import { limitRules, sizeSelectors } from './lint/limits.js';
 import { numericRules } from './lint/numeric.js';
@@ -39,13 +40,14 @@ export default [
     plugins: { '@stylistic': stylistic },
     rules: spacingRules,
   },
-  // G04: size, and G05: palette only (TypeScript colours). Both restrict syntax, which is one rule per file.
+  // G04: size, G05: palette only (TypeScript colours) and G10: root imports. They restrict syntax, which is one rule per file.
   // Today's findings sit in eslint-suppressions.json; only new ones fail.
   {
     files: ['**/*.{ts,tsx,js,mjs,cjs}'],
     rules: {
       ...limitRules,
-      'no-restricted-syntax': ['error', ...sizeSelectors, ...colorSelectors],
+      ...importRules,
+      'no-restricted-syntax': ['error', ...sizeSelectors, ...colorSelectors, ...importSelectors],
     },
   },
   // G05: named constants. Production code only; tests state their own numbers.
