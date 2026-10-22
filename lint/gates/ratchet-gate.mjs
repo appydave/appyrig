@@ -44,7 +44,7 @@ function compareSections({ sections, actual, baseline }) {
   for (const [name, messageFor] of Object.entries(sections)) {
     const found = compare(actual[name], baseline[name] ?? {});
 
-    grown.push(...found.grown.map((g) => ({ ...g, text: messageFor(g) })));
+    grown.push(...found.grown.map((g) => ({ ...g, section: name, text: messageFor(g) })));
     shrunk.push(...found.shrunk.map((s) => ({ ...s, text: `  ${s.file}: ${s.was} -> ${s.now}` })));
   }
 
@@ -108,10 +108,29 @@ const summary = ({ sections, actual }) =>
     .map((name) => `${Object.keys(actual[name]).length} ${name}`)
     .join(', ');
 
-/** Writes the baseline for `--init` and `--update`; `--update` refuses to grow it. */
-function record({ gate, baselineFile, about, actual, sections, grown }) {
-  if (grown.length && !process.argv.includes('--init')) {
-    fail(1, `${gate}: refusing to grow the baseline.`, ...grown.map((g) => g.text));
+/**
+ * Sections `--adopt=<section>` names that the saved baseline does not hold yet: the one way a rule
+ * added to a gate has its first findings recorded. A section already in the baseline cannot be adopted.
+ */
+export function adoptable({ saved, sections, argv = process.argv }) {
+  return argv
+    .filter((arg) => arg.startsWith('--adopt='))
+    .map((arg) => arg.slice('--adopt='.length))
+    .filter((name) => name in sections && !(name in saved));
+}
+
+/** Writes the baseline for `--init` and `--update`; `--update` refuses to grow it, except a section being adopted. */
+function record({ gate, baselineFile, about, actual, sections, grown, saved }) {
+  const adopted = adoptable({ saved, sections });
+  const refused = grown.filter((g) => !adopted.includes(g.section));
+
+  if (refused.length && !process.argv.includes('--init')) {
+    const newRule = refused.some((g) => !(g.section in saved));
+    const hint = newRule
+      ? ' (A rule new to this gate is recorded once with --update --adopt=<section>.)'
+      : '';
+
+    fail(1, `${gate}: refusing to grow the baseline.${hint}`, ...refused.map((g) => g.text));
   }
 
   writeBaseline({ gate, file: join(ROOT, baselineFile), about, actual, sections });
@@ -157,7 +176,7 @@ export function runRatchetGate(options) {
   const { grown, shrunk } = compareSections({ sections, actual, baseline: saved });
 
   if (process.argv.includes('--init') || process.argv.includes('--update')) {
-    record({ ...options, actual, grown });
+    record({ ...options, actual, grown, saved });
   } else {
     check({ gate, command, actual, sections, grown, shrunk });
   }
