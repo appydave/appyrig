@@ -31,7 +31,6 @@
         "exports": 1
       },
       "client/src/domain/fleet/health.ts": {
-        "exports": 2,
         "types": 1
       },
       "client/src/domain/fleet/model.ts": {
@@ -442,7 +441,7 @@
         "exports": 1
       },
       "client/src/domain/fleet/health.ts": {
-        "exports": 4,
+        "exports": 2,
         "types": 1
       },
       "client/src/domain/fleet/model.ts": {

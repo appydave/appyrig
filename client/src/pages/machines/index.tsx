@@ -1,4 +1,4 @@
-import { gb } from '@client/domain/fleet/health.js';
+import { gb } from '@client/lib/readings.js';
 import { FakeControl, MockNote, SampleLabel } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
 import {
