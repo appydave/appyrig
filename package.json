@@ -40,6 +40,8 @@
     "arch:ratchet": "npm run arch:baseline && git diff --exit-code -- .dependency-cruiser-known-violations.json .dependency-cruiser-known-folder-cycles.json",
     "knip": "node lint/knip-gate.mjs",
     "knip:baseline": "node lint/knip-gate.mjs --update",
+    "cohesion": "node lint/gates/cohesion.mjs",
+    "cohesion:baseline": "node lint/gates/cohesion.mjs --update",
     "fake-collector": "node server/scripts/fake-collector.mjs",
     "api:gen": "tsx scripts/gen-api.ts",
     "snapshots:update": "tsx scripts/update-snapshots.ts",
@@ -57,6 +59,7 @@
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",
+    "@archlinter/cli": "0.17.1",
     "@clack/prompts": "^1.7.0",
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.61.1",

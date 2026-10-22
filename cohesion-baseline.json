@@ -1,0 +1,28 @@
+{
+  "about": "Files whose exports fall into more groups than G13 allows, with the group count when it was recorded. It may shrink, never grow. Rewrite with npm run cohesion:baseline.",
+  "findings": {
+    "client/src/domain/docs/model.ts": 4,
+    "client/src/domain/fleet/accountWindow.ts": 3,
+    "client/src/domain/fleet/health.ts": 6,
+    "client/src/domain/fleet/model.ts": 4,
+    "client/src/domain/fleet/runcard.ts": 3,
+    "client/src/domain/fleet/views.ts": 5,
+    "client/src/domain/graph/model.ts": 3,
+    "client/src/domain/health/model.ts": 3,
+    "client/src/domain/learn/atlas.ts": 3,
+    "client/src/domain/learn/glossary.ts": 4,
+    "client/src/domain/lines/handoffLines.ts": 4,
+    "client/src/domain/missions/model.ts": 3,
+    "client/src/domain/run/model.ts": 3,
+    "client/src/domain/specs/model.ts": 3,
+    "client/src/domain/workflows/model.ts": 4,
+    "client/src/kit/HandoffLineMarks.tsx": 5,
+    "client/src/kit/SampleData.tsx": 4,
+    "client/src/kit/SeatCardLines.tsx": 4,
+    "client/src/kit/TerminalCard.tsx": 5,
+    "client/src/kit/legendData.ts": 3,
+    "collector/src/adapters/history.ts": 3,
+    "collector/src/adapters/openrigShapes.ts": 3,
+    "server/src/core/verbs.ts": 4
+  }
+}
