@@ -1,0 +1,53 @@
+name: Duplicates (semantic)
+
+# The semantic clone check is too slow for push/PR (cold run on ubuntu-latest took more than 42 minutes)
+# and Actions minutes are a hard budget, so it runs weekly (Monday 03:00 Bangkok) or on demand.
+on:
+  schedule:
+    - cron: '0 20 * * 0'
+  workflow_dispatch:
+
+jobs:
+  semantic:
+    name: Duplicate detection (semantic, non-blocking)
+    runs-on: ubuntu-latest
+    # Not a gate: a cold Linux run takes more than 42 minutes, so this runs weekly or on demand only.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    timeout-minutes: 60
+    env:
+      JSCPD_CACHE_DIR: ${{ github.workspace }}/.quality-results/jscpd-cache
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pnpm (the anti-slop plugin builds itself with it on install)
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Cache the semantic model and its embeddings
+        uses: actions/cache@v4
+        with:
+          path: .quality-results/jscpd-cache
+          key: jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!**/node_modules/**') }}
+          restore-keys: |
+            jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: No new semantic clones (baselined)
+        run: npm run lint:duplicates:semantic
+
+      - name: Keep the semantic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: duplicate-reports-semantic
+          path: .quality-results/jscpd/semantic.json
+          if-no-files-found: ignore
+          retention-days: 7

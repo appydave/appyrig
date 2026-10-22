@@ -95,8 +95,6 @@ jobs:
     name: Duplicate detection
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      JSCPD_CACHE_DIR: ${{ github.workspace }}/.quality-results/jscpd-cache
 
     steps:
       - uses: actions/checkout@v4
@@ -112,16 +110,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Cache the semantic model and its embeddings
-        uses: actions/cache@v4
-        with:
-          path: .quality-results/jscpd-cache
-          key: jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!**/node_modules/**') }}
-          restore-keys: |
-            jscpd-5.4.1-CodeRankEmbed-${{ runner.os }}-${{ runner.arch }}-
-
-      - name: No new clones (exact, renamed, near-miss, semantic; baselined)
-        run: npm run lint:duplicates
+      - name: No new clones (exact, renamed, near-miss; baselined)
+        run: npm run lint:duplicates:fast
 
       - name: Keep the clone reports
         if: always()
