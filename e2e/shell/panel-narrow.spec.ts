@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { chooseRigInDrawer, watchErrors } from './support/fleet';
+import { chooseRigInDrawer, watchErrors } from '../support/fleet';
 
 // The Agent panel takes ~520 px from the page. With it open, the Run board and the Handoff Flow must
 // still lay out: on the Run board the ledger moves below the job panel, the document tabs keep their

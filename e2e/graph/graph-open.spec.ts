@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { watchErrors } from './support/fleet';
+import { watchErrors } from '../support/fleet';
 
 // The merged Graph at 1440x900 on the frozen busy snapshot: rigs are boxes in machine columns, several
 // can be open in place, agents are fixed-size compact cards, zoom shows less as you zoom out, a person is a

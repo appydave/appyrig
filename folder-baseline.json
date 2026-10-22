@@ -22,9 +22,6 @@
     "collector/src/adapters": {
       "files": 43
     },
-    "e2e": {
-      "files": 16
-    },
     "scripts": {
       "files": 12
     },
