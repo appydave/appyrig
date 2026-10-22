@@ -1,3 +1,5 @@
+/** Helpers shared by the baseline writers (oxlint-gate, folder-limits, knip-gate): one module, so a script under scripts/ needs one `../` import, not two. */
+
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -11,4 +13,13 @@ export function initRefusal({ root, baseline, command }) {
   }
 
   return `${baseline} exists: use \`npm run ${command}\` (it refuses growth); --init is only for a repo with no baseline yet`;
+}
+
+/** A copy of `counts` with its keys in alphabetical order, so a rewritten baseline diffs cleanly. */
+export function sortedByKey(counts, mapValue = (value) => value) {
+  return Object.fromEntries(
+    Object.keys(counts)
+      .sort()
+      .map((key) => [key, mapValue(counts[key])])
+  );
 }

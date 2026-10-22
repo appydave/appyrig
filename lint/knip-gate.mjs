@@ -15,7 +15,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { initRefusal } from './gates/init-guard.mjs';
+import { initRefusal } from './gates/baseline-tools.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'knip-baseline.json';

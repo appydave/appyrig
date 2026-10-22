@@ -13,7 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sortedByKey } from '../lint/sorted.mjs';
+import { initRefusal, sortedByKey } from '../lint/gates/baseline-tools.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'oxlint-baseline.json';
@@ -258,12 +258,11 @@ function scanDisableDirectives() {
   return scanTexts(names.map((name) => ({ name, text: readFileSync(join(ROOT, name), 'utf8') })));
 }
 
-/** `--init` is for a repo with no baseline yet: over an existing one it would skip the refuse-growth rule. */
 function refuseInitOverBaseline() {
-  if (process.argv.includes('--init') && existsSync(join(ROOT, BASELINE_FILE))) {
-    console.error(
-      `oxlint-gate: ${BASELINE_FILE} exists: use \`npm run oxlint:baseline\` (it refuses growth); --init is only for a repo with no baseline yet`
-    );
+  const refusal = initRefusal({ root: ROOT, baseline: BASELINE_FILE, command: 'oxlint:baseline' });
+
+  if (refusal) {
+    console.error(`oxlint-gate: ${refusal}`);
     process.exit(1);
   }
 }

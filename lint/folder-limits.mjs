@@ -14,8 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { initRefusal } from './gates/init-guard.mjs';
-import { sortedByKey } from './sorted.mjs';
+import { initRefusal, sortedByKey } from './gates/baseline-tools.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'folder-baseline.json';
