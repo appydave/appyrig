@@ -2174,16 +2174,6 @@
       "count": 2
     }
   },
-  "server/src/middleware/validate.test.ts": {
-    "max-params": {
-      "count": 1
-    }
-  },
-  "server/src/middleware/validate.ts": {
-    "no-magic-numbers": {
-      "count": 1
-    }
-  },
   "server/vitest.config.ts": {
     "no-magic-numbers": {
       "count": 5
