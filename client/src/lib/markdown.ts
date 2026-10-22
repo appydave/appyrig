@@ -173,171 +173,237 @@ export function parseMarkdown(source: string): Block[] {
   return blocks;
 }
 
+/** One block read from `lines` at index `i`, and the index of the first line after it. */
+interface Parsed {
+  block: Block;
+  next: number;
+}
+
+type BlockParser = (lines: string[], i: number) => Parsed | null;
+
+/** The capture group of ITEM that holds the item's own text. */
+const ITEM_TEXT_GROUP = 3;
+
+const indentOf = (line: string): number => line.length - line.trimStart().length;
+
+function parseFence(lines: string[], i: number): Parsed | null {
+  const fence = FENCE.exec(lines[i]!);
+
+  if (!fence) {
+    return null;
+  }
+
+  const marker = fence[1]![0]!;
+  const closing = new RegExp(`^\\s*${marker}{${fence[1]!.length},}\\s*$`);
+  const body: string[] = [];
+  let next = i + 1;
+
+  while (next < lines.length && !closing.test(lines[next]!)) {
+    body.push(lines[next++]!);
+  }
+
+  // the closing fence (or the end of the file) is skipped too
+  return { block: { t: 'code', lang: fence[2] ?? '', text: body.join('\n') }, next: next + 1 };
+}
+
+function parseHeadingBlock(lines: string[], i: number): Parsed | null {
+  const h = HEADING.exec(lines[i]!);
+
+  return h
+    ? { block: { t: 'heading', level: h[1]!.length, inline: parseInline(h[2]!) }, next: i + 1 }
+    : null;
+}
+
+function parseRule(lines: string[], i: number): Parsed | null {
+  return HR.test(lines[i]!) ? { block: { t: 'hr' }, next: i + 1 } : null;
+}
+
+function parseQuote(lines: string[], i: number): Parsed | null {
+  const isQuoteLine = (l: string): boolean => /^\s*>/.test(l);
+
+  if (!isQuoteLine(lines[i]!)) {
+    return null;
+  }
+
+  const body: string[] = [];
+  let next = i;
+
+  while (next < lines.length && isQuoteLine(lines[next]!)) {
+    body.push(lines[next++]!.replace(/^\s*> ?/, ''));
+  }
+
+  return { block: { t: 'quote', children: parseBlocks(body) }, next };
+}
+
+function alignOf(cell: string): 'left' | 'right' | 'center' | null {
+  if (/^:-+:$/.test(cell)) {
+    return 'center';
+  }
+
+  if (/-:$/.test(cell)) {
+    return 'right';
+  }
+
+  return /^:-/.test(cell) ? 'left' : null;
+}
+
+function startsTable(lines: string[], i: number): boolean {
+  const separator = lines[i + 1];
+
+  return (
+    lines[i]!.includes('|') &&
+    separator !== undefined &&
+    TABLE_SEP.test(separator) &&
+    separator.includes('-')
+  );
+}
+
+function parseTable(lines: string[], i: number): Parsed | null {
+  if (!startsTable(lines, i)) {
+    return null;
+  }
+
+  const head = cells(lines[i]!);
+  const align = cells(lines[i + 1]!).map(alignOf);
+  const rows: Inline[][][] = [];
+  let next = i + 2;
+
+  while (next < lines.length && lines[next]!.trim() !== '' && lines[next]!.includes('|')) {
+    rows.push(cells(lines[next++]!).map(parseInline));
+  }
+
+  return { block: { t: 'table', head: head.map(parseInline), align, rows }, next };
+}
+
+/** A blank line ends a list item unless a line indented deeper than the item follows. */
+function blankContinuesItem(lines: string[], i: number, baseIndent: number): boolean {
+  const following = lines[i + 1];
+
+  return following !== undefined && /^\s{2,}\S/.test(following) && indentOf(following) > baseIndent;
+}
+
+function endsItem(lines: string[], i: number, baseIndent: number): boolean {
+  return lines[i]!.trim() === ''
+    ? !blankContinuesItem(lines, i, baseIndent)
+    : indentOf(lines[i]!) <= baseIndent;
+}
+
+/** A list item being read: its own text lines, and the lines of the blocks nested under it. */
+interface ItemBody {
+  text: string[];
+  nested: string[];
+}
+
+/** Routes one line of a list item: its own text, or a nested block's (item lines and everything after one). */
+function addItemLine(body: ItemBody, l: string, baseIndent: number): void {
+  const { text, nested } = body;
+
+  if (l.trim() === '') {
+    nested.push(l);
+  } else if (ITEM.test(l) || nested.length) {
+    nested.push(l.slice(Math.min(indentOf(l), baseIndent + 2)));
+  } else {
+    text.push(l.trim());
+  }
+}
+
+/** The list item starting at `start`, with the index of the first line after it. */
+function readListItem(
+  lines: string[],
+  start: number,
+  baseIndent: number
+): { item: ListItem; next: number } {
+  const body: ItemBody = { text: [ITEM.exec(lines[start]!)![ITEM_TEXT_GROUP]!], nested: [] };
+  let i = start + 1;
+
+  while (i < lines.length && !endsItem(lines, i, baseIndent)) {
+    addItemLine(body, lines[i++]!, baseIndent);
+  }
+
+  const children = body.nested.length ? parseBlocks(body.nested) : [];
+
+  return { item: { inline: parseInline(body.text.join(' ')), children }, next: i };
+}
+
+function isSiblingItem(m: RegExpExecArray | null, baseIndent: number, ordered: boolean): boolean {
+  return m !== null && m[1]!.length === baseIndent && /\d/.test(m[2]!) === ordered;
+}
+
+function parseList(lines: string[], i: number): Parsed | null {
+  const first = ITEM.exec(lines[i]!);
+
+  if (!first) {
+    return null;
+  }
+
+  const baseIndent = first[1]!.length;
+  const ordered = /\d/.test(first[2]!);
+  const items: ListItem[] = [];
+  let next = i;
+  let m: RegExpExecArray | null = first;
+
+  while (isSiblingItem(m, baseIndent, ordered)) {
+    const read = readListItem(lines, next, baseIndent);
+
+    items.push(read.item);
+    next = read.next;
+    m = next < lines.length ? ITEM.exec(lines[next]!) : null;
+  }
+
+  return { block: { t: 'list', ordered, items }, next };
+}
+
+function parseParagraph(lines: string[], i: number): Parsed {
+  const para: string[] = [];
+  let next = i;
+
+  while (
+    next < lines.length &&
+    lines[next]!.trim() !== '' &&
+    (para.length === 0 || !startsBlock(lines[next]!, lines[next + 1]))
+  ) {
+    para.push(lines[next++]!.trim());
+  }
+
+  return { block: { t: 'para', inline: parseInline(para.join(' ')) }, next };
+}
+
+/** Tried in order; a line no parser claims is a paragraph. */
+const BLOCK_PARSERS: BlockParser[] = [
+  parseFence,
+  parseHeadingBlock,
+  parseRule,
+  parseQuote,
+  parseTable,
+  parseList,
+];
+
+function parseBlockAt(lines: string[], i: number): Parsed {
+  for (const parser of BLOCK_PARSERS) {
+    const parsed = parser(lines, i);
+
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return parseParagraph(lines, i);
+}
+
 function parseBlocks(lines: string[]): Block[] {
   const blocks: Block[] = [];
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i]!;
-
-    if (line.trim() === '') {
+    if (lines[i]!.trim() === '') {
       i++;
       continue;
     }
 
-    const fence = FENCE.exec(line);
+    const parsed = parseBlockAt(lines, i);
 
-    if (fence) {
-      const marker = fence[1]![0]!;
-      const body: string[] = [];
-
-      i++;
-      while (
-        i < lines.length &&
-        !new RegExp(`^\\s*${marker}{${fence[1]!.length},}\\s*$`).test(lines[i]!)
-      ) {
-        body.push(lines[i++]!);
-      }
-
-      i++; // the closing fence (or the end of the file)
-      blocks.push({ t: 'code', lang: fence[2] ?? '', text: body.join('\n') });
-      continue;
-    }
-
-    const h = HEADING.exec(line);
-
-    if (h) {
-      blocks.push({ t: 'heading', level: h[1]!.length, inline: parseInline(h[2]!) });
-      i++;
-      continue;
-    }
-
-    if (HR.test(line)) {
-      blocks.push({ t: 'hr' });
-      i++;
-      continue;
-    }
-
-    if (/^\s*>/.test(line)) {
-      const body: string[] = [];
-
-      while (i < lines.length && /^\s*>/.test(lines[i]!)) {
-        body.push(lines[i++]!.replace(/^\s*> ?/, ''));
-      }
-
-      blocks.push({ t: 'quote', children: parseBlocks(body) });
-      continue;
-    }
-
-    if (
-      line.includes('|') &&
-      lines[i + 1] !== undefined &&
-      TABLE_SEP.test(lines[i + 1]!) &&
-      lines[i + 1]!.includes('-')
-    ) {
-      const head = cells(line);
-      const align = cells(lines[i + 1]!).map((c) =>
-        /^:-+:$/.test(c)
-          ? ('center' as const)
-          : /-:$/.test(c)
-            ? ('right' as const)
-            : /^:-/.test(c)
-              ? ('left' as const)
-              : null
-      );
-
-      i += 2;
-
-      const rows: Inline[][][] = [];
-
-      while (i < lines.length && lines[i]!.trim() !== '' && lines[i]!.includes('|')) {
-        rows.push(cells(lines[i++]!).map(parseInline));
-      }
-
-      blocks.push({ t: 'table', head: head.map(parseInline), align, rows });
-      continue;
-    }
-
-    const item = ITEM.exec(line);
-
-    if (item) {
-      const baseIndent = item[1]!.length;
-      const ordered = /\d/.test(item[2]!);
-      const items: ListItem[] = [];
-
-      while (i < lines.length) {
-        const m = ITEM.exec(lines[i]!);
-
-        if (
-          !m ||
-          m[1]!.length < baseIndent ||
-          (m[1]!.length === baseIndent && /\d/.test(m[2]!) !== ordered)
-        ) {
-          break;
-        }
-
-        if (m[1]!.length > baseIndent) {
-          break;
-        }
-
-        const text = [m[3]!];
-        const nested: string[] = [];
-
-        i++;
-        while (i < lines.length) {
-          const l = lines[i]!;
-
-          if (l.trim() === '') {
-            // a blank line ends the item unless an indented line follows
-            if (
-              i + 1 < lines.length &&
-              /^\s{2,}\S/.test(lines[i + 1]!) &&
-              lines[i + 1]!.length - lines[i + 1]!.trimStart().length > baseIndent
-            ) {
-              nested.push(l);
-              i++;
-              continue;
-            }
-
-            break;
-          }
-
-          const indent = l.length - l.trimStart().length;
-
-          if (indent <= baseIndent) {
-            break;
-          }
-
-          if (ITEM.test(l) || nested.length) {
-            nested.push(l.slice(Math.min(indent, baseIndent + 2)));
-          } else {
-            text.push(l.trim());
-          }
-
-          i++;
-        }
-
-        items.push({
-          inline: parseInline(text.join(' ')),
-          children: nested.length ? parseBlocks(nested) : [],
-        });
-      }
-
-      blocks.push({ t: 'list', ordered, items });
-      continue;
-    }
-
-    const para: string[] = [];
-
-    while (
-      i < lines.length &&
-      lines[i]!.trim() !== '' &&
-      (para.length === 0 || !startsBlock(lines[i]!, lines[i + 1]))
-    ) {
-      para.push(lines[i++]!.trim());
-    }
-
-    blocks.push({ t: 'para', inline: parseInline(para.join(' ')) });
+    blocks.push(parsed.block);
+    i = parsed.next;
   }
 
   return blocks;
