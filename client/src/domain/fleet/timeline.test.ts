@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { queueMachine } from '../../test/queueFixtures.js';
+import { queueMachine } from '@client/test/queueFixtures.js';
 import {
   BREAK_PX,
   OUTSIDE_LANE,

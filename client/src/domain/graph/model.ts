@@ -1,6 +1,6 @@
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
-import { pipFor, seatName, type PipKey } from '../fleet/model.js';
-import { mergePairs, pairKey, type LinePair } from '../lines/handoffLines.js';
+import { pipFor, seatName, type PipKey } from '@client/domain/fleet/model.js';
+import { mergePairs, pairKey, type LinePair } from '@client/domain/lines/handoffLines.js';
 import {
   endpointRig,
   isOpen,
@@ -9,7 +9,7 @@ import {
   rigQueue,
   STALE_MS,
   type RigRef,
-} from '../fleet/views.js';
+} from '@client/domain/fleet/views.js';
 
 /**
  * v2 Graph (the fleet overview): every rig as ONE box, grouped by machine, and the traffic BETWEEN

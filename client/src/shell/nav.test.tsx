@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
-import App from '../app/App.js';
-import { listRigs } from '../domain/fleet/views.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
+import App from '@client/app/App.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import { agentFromParam, agentToParam, rigFromParam, rigToParam } from './urlState.js';
 
 vi.mock('@xterm/xterm', () => ({

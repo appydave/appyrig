@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import type { RigFilesOutput, RigOutputsOutput } from '@appydave/shared';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import RunOutputs from './RunOutputs.js';
 
 const named = {

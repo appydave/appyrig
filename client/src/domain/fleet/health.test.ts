@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FleetMachine, MachineHealth } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { clockAheadText } from '@appydave/shared';
 import { HEALTH_STALE_MS, healthAge, pressureOf } from './health.js';
 

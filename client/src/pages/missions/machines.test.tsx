@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import type { PageContext } from '../../app/types.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import type { PageContext } from '@client/app/types.js';
 import { page as missions } from './index.js';
-import { deriveMissions } from '../../domain/missions/model.js';
+import { deriveMissions } from '@client/domain/missions/model.js';
 
 /**
  * Run board brief, lane 2 (2026-10-19): Missions keeps machines apart. The same mission id on two

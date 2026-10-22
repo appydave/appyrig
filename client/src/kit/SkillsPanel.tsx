@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { LoadoutSkill } from '@appydave/shared';
-import { groupSkills } from '../domain/docs/model.js';
+import { groupSkills } from '@client/domain/docs/model.js';
 import './docs.css';
 
 /**

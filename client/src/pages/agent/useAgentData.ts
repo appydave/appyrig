@@ -7,9 +7,9 @@ import type {
   SeatDetailOutput,
   SeatLoadoutOutput,
 } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import { parseSeatDetail, type SeatDetailView } from '../../domain/agent/detail.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { parseSeatDetail, type SeatDetailView } from '@client/domain/agent/detail.js';
 
 export type Loaded<T> =
   | { state: 'loading' }

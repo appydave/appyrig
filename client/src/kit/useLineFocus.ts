@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { lineFocusState } from '../domain/lines/handoffLines.js';
+import { lineFocusState } from '@client/domain/lines/handoffLines.js';
 
 /** Handlers that set the focus on pointer hover AND keyboard focus (a keyboard user gets the same). */
 export interface FocusHandlers {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import './coverage.css';
 
 /**
@@ -25,7 +25,7 @@ export type {
 } from '@appydave/shared';
 import type { DataMachine, DataStatus } from '@appydave/shared';
 
-export type { WorkflowSpec, WorkflowInstance } from '../../domain/workflows/model.js';
+export type { WorkflowSpec, WorkflowInstance } from '@client/domain/workflows/model.js';
 
 // ---------------------------------------------------------------- calling
 

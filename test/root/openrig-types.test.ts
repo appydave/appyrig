@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { OpenRig } from '../../shared/src/index.js';
+import { OpenRig } from '@shared/index.js';
 
 /**
  * The shared OpenRig schemas against OpenRig's own files: every rig.yaml and agent.yaml shipped in

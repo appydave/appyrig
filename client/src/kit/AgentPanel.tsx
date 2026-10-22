@@ -8,11 +8,11 @@ import {
   pipFor,
   seatName,
   visibleTail,
-} from '../domain/fleet/model.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+} from '@client/domain/fleet/model.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { CopyAttach, HarnessMark, RoleTag, pctText, tokensText } from './SeatCardLines.js';
-import type { AgentPanelTab, AgentPanelTarget } from '../app/types.js';
-import { findTile, seatAddresses } from '../domain/fleet/seats.js';
+import type { AgentPanelTab, AgentPanelTarget } from '@client/app/types.js';
+import { findTile, seatAddresses } from '@client/domain/fleet/seats.js';
 import { DocsLayout, useRead } from './DocsDrawer.js';
 import { useTopOffset } from './useTopOffset.js';
 import './docs.css';

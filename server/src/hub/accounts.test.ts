@@ -17,7 +17,7 @@ import {
   tierOf,
   windowOf,
 } from './accounts.js';
-import { loadSnapshot, push, startHub, TOKEN } from '../test/hubHarness.js';
+import { loadSnapshot, push, startHub, TOKEN } from '@server/test/hubHarness.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');
 const at = (ms: number) => new Date(NOW.getTime() + ms).toISOString();

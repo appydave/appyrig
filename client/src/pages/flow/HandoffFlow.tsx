@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, HandoffGetOutput, RigEntry, RigEntryOutput } from '@appydave/shared';
-import { ago } from '../../domain/fleet/model.js';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import { ago } from '@client/domain/fleet/model.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import {
   buildFlow,
   flowChapters,
@@ -11,14 +11,14 @@ import {
   rigQueue,
   stageOf,
   type FlowOptions,
-} from '../../domain/fleet/views.js';
+} from '@client/domain/fleet/views.js';
 import ReplayConsoles from './ReplayConsoles.js';
 import FlowDocsBar from './FlowDocsBar.js';
-import HandoffPanel, { type PanelMode, type PanelSelection } from '../../kit/HandoffPanel.js';
-import FollowWork from '../../kit/FollowWork.js';
-import { entryWords, medianSentence } from '../../domain/flow/words.js';
-import { followWork } from '../../domain/fleet/timeline.js';
-import { isShortcutBlocked, isSlider } from '../../lib/keys.js';
+import HandoffPanel, { type PanelMode, type PanelSelection } from '@client/kit/HandoffPanel.js';
+import FollowWork from '@client/kit/FollowWork.js';
+import { entryWords, medianSentence } from '@client/domain/flow/words.js';
+import { followWork } from '@client/domain/fleet/timeline.js';
+import { isShortcutBlocked, isSlider } from '@client/lib/keys.js';
 import {
   HandoffLegend,
   PageHeader,
@@ -33,8 +33,8 @@ import {
   mergePairs,
   pairLabel,
   useLineFocus,
-} from '../../kit/index.js';
-import { flowPairKey, flowPairs, pairPath, type FlowPair } from '../../domain/flow/flowLines.js';
+} from '@client/kit/index.js';
+import { flowPairKey, flowPairs, pairPath, type FlowPair } from '@client/domain/flow/flowLines.js';
 import './flow.css';
 
 /**

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DbSchemaOutput, DbTable, Refusal, SchemaChanges } from '@appydave/shared';
 import SchemaRows from './SchemaRows.js';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { isTextEntry } from '../lib/keys.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { isTextEntry } from '@client/lib/keys.js';
 
 interface MachineRef {
   id: string;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import * as shared from '../../shared/src/index.js';
+import * as shared from '@shared/index.js';
 
 /**
  * Goal 5 of the bottom-up refactor: AppyRig's own "loadout layers" (file-presence checks) are not

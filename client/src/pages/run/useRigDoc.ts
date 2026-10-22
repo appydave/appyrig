@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 export interface RigDoc {
   status: 'loading' | 'ok' | 'missing' | 'unread';

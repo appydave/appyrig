@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RigCommandsOutput, RigSpecsOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import { plannedWord } from '../../domain/fleet/views.js';
-import { agoFrom, useMachineLabel } from '../../kit/data/index.js';
-import { PageHeader } from '../../kit/index.js';
-import type { PageKey, PageDef, PageProps } from '../../app/types.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { plannedWord } from '@client/domain/fleet/views.js';
+import { agoFrom, useMachineLabel } from '@client/kit/data/index.js';
+import { PageHeader } from '@client/kit/index.js';
+import type { PageKey, PageDef, PageProps } from '@client/app/types.js';
 import {
   AGENT_STATUS_WORD,
   STATE_WORD,
@@ -19,7 +19,7 @@ import {
   type RigCommandRow,
   type ShownEdge,
   type ShownSpec,
-} from '../../domain/specs/model.js';
+} from '@client/domain/specs/model.js';
 import './specs.css';
 
 /** How often the page asks again: specs change as a rig is written, commands as they run. */

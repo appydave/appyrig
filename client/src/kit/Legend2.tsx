@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { PIP, type PipKey } from '../domain/fleet/model.js';
-import type { PageKey } from '../app/types.js';
+import { PIP, type PipKey } from '@client/domain/fleet/model.js';
+import type { PageKey } from '@client/app/types.js';
 import MockMark from './MockMark.js';
 import TerminalCard from './TerminalCard.js';
 import WallCard from './WallCard.js';

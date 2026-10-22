@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { queueMachine } from '../test/queueFixtures.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { queueMachine } from '@client/test/queueFixtures.js';
 import RunCard from './RunCard.js';
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');

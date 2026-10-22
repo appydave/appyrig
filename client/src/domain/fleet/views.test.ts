@@ -8,7 +8,7 @@ import type {
   Seat,
 } from '@appydave/shared';
 import { windowStory } from './accountWindow.js';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import {
   buildAccounts,
   buildFlow,
@@ -646,7 +646,7 @@ describe('B2 rigState (fb-0001): follows rig ps', () => {
 
 describe('B3 (fb-0006): the median stat as one plain sentence', () => {
   it('names the count and says it is a median, not a grade', async () => {
-    const { medianSentence } = await import('../flow/words.js');
+    const { medianSentence } = await import('@client/domain/flow/words.js');
 
     expect(medianSentence(3.1, 12)).toBe(
       'Of the 12 handoffs closed so far, half were closed within 3.1 minutes of being handed over and half took longer (the median, the middle value). It is not a grade: there are no thresholds. Handoffs still open are not counted; they show as waiting or left open.'

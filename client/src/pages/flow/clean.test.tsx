@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { page as flowPage } from './index.js';
-import { rigPageCtx } from '../page-test-kit.js';
+import { rigPageCtx } from '@client/pages/page-test-kit.js';
 
 /**
  * v2 clean batch, flow lane (UX notes 2026-10-19, Screens 7-8): replay shows Traffic (B1), the

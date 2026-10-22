@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { MachineSnapshotSchema, TAIL_MAX_LINES } from '@appydave/shared';
-import { SNAPSHOTS, loadSnapshot as load } from '../test/hubHarness.js';
+import { SNAPSHOTS, loadSnapshot as load } from '@server/test/hubHarness.js';
 
 describe('snapshot fixtures satisfy the shared contract', () => {
   for (const file of readdirSync(SNAPSHOTS).filter((f) => f.endsWith('.json'))) {

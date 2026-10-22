@@ -9,7 +9,7 @@ import {
   type RigCommand,
   type RigCommandsPush,
 } from '@appydave/shared';
-import { REDACTED, redactString } from '../redact.js';
+import { REDACTED, redactString } from '@collector/redact.js';
 
 /**
  * N10b: the machine's log of `rig` commands, `~/.appyrig/rig-commands.jsonl`, written by a hook

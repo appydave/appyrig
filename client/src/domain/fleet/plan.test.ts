@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { QueueItem } from '@appydave/shared';
-import { queueMachine } from '../../test/queueFixtures.js';
+import { queueMachine } from '@client/test/queueFixtures.js';
 import { changeOrders, choosePlan, names, numberedSteps, planIn, sliceTable } from './plan.js';
 
 const brief = (n: string) =>

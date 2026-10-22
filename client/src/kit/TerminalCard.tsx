@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { PIP, type ModelFamily, type PipKey } from '../domain/fleet/model.js';
+import { PIP, type ModelFamily, type PipKey } from '@client/domain/fleet/model.js';
 import { HarnessMark, pctText, tokensText } from './SeatCardLines.js';
-import { tailLine } from '../domain/fleet/terminal.js';
+import { tailLine } from '@client/domain/fleet/terminal.js';
 import './terminalCard.css';
 
 export { tailLine };

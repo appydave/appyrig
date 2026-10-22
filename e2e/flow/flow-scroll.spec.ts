@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { chooseRigInDrawer, watchErrors } from '../support/fleet';
+import { chooseRigInDrawer, watchErrors } from '@root/e2e/support/fleet';
 
 // Integration walk, 2026-10-19: on Flow, choosing a rig in the Rigs drawer left the page scrolled
 // (window.scrollY 44). The open drawer ran past the bottom of the window, so bringing its tab into

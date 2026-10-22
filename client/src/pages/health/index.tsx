@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { FleetMachine, HealthFindingsOutput, SettingsGetOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import { FakeControl, SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { FakeControl, SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   contextRollup,
   coverageLine,
@@ -14,9 +14,9 @@ import {
   thresholdsFor,
   verdictFor,
   type HealthFindingsMachine,
-} from '../../domain/health/model.js';
-import '../w5b.css';
-import '../../kit/data/coverage.css';
+} from '@client/domain/health/model.js';
+import '@client/pages/w5b.css';
+import '@client/kit/data/coverage.css';
 
 type Loaded =
   | { state: 'loading' }

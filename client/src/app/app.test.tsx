@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { FLEET_EVENTS } from '@appydave/shared';
 import App from './App.js';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import { applyFleetUpdate, initialFleetState } from '../domain/fleet/store.js';
-import { useFleet, type FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { applyFleetUpdate, initialFleetState } from '@client/domain/fleet/store.js';
+import { useFleet, type FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import {
   callKey,
   createFrozenSocket,
@@ -17,7 +17,7 @@ import {
 } from './frozen/frozenSocket.js';
 import { loadFrozen } from './frozen/load.js';
 import { guardPortFor, isLocalDevRequest } from './devProxy.js';
-import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from '../kit/index.js';
+import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from '@client/kit/index.js';
 import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
 
 vi.mock('@xterm/xterm', () => ({

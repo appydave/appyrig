@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 import type { CallAnswer, FleetMachine } from '@appydave/shared';
-import { listRigs } from '../domain/fleet/views.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import type { PageContext } from '../app/types.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import type { PageContext } from '@client/app/types.js';
 
 /** Test helper: a socket that answers read verbs from a map (a value, or a function of the input) (anything else is refused) and records every verb sent. */
 export function answeringSocket(answers: Record<string, unknown> = {}) {

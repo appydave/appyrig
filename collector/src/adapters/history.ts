@@ -8,7 +8,7 @@ import {
   type SeatHistoryEvent,
   type SeatHistoryOrigin,
 } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 
 /**
  * v1.2 · seat history for the replay consoles, from Claude Code transcripts on disk.

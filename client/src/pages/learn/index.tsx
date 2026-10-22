@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import Learn from '../../kit/Learn.js';
-import { copyText } from '../../kit/WaitingOnDavid.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+import Learn from '@client/kit/Learn.js';
+import { copyText } from '@client/kit/WaitingOnDavid.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   filterCommands,
   groupsOf,
   loadCommands,
   type RigCommand,
   type RigCommands,
-} from '../../domain/learn/commands.js';
-import '../w4.css';
+} from '@client/domain/learn/commands.js';
+import '@client/pages/w4.css';
 
 const SHOWN = 40;
 

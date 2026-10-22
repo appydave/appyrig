@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { HandoffGetOutput } from '@appydave/shared';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { DOT_STATE_LABEL, dotState, type WorkChain } from '../domain/fleet/timeline.js';
-import { isTextEntry } from '../lib/keys.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { DOT_STATE_LABEL, dotState, type WorkChain } from '@client/domain/fleet/timeline.js';
+import { isTextEntry } from '@client/lib/keys.js';
 
 interface Props {
   machineId: string;

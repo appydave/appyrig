@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import { MockMark, SampleData, SampleLabel, useFakeAction } from '../../kit/index.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { MockMark, SampleData, SampleLabel, useFakeAction } from '@client/kit/index.js';
 import type { SettingsGetOutput } from '@appydave/shared';
-import '../../kit/data/coverage.css';
-import type { PageDef, PageProps } from '../../app/types.js';
+import '@client/kit/data/coverage.css';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   groupSettings,
   sampleSchedules,
@@ -13,8 +13,8 @@ import {
   type SettingLine,
   type SettingValue,
   type SettingsMachine,
-} from '../../domain/settings/model.js';
-import '../w5b.css';
+} from '@client/domain/settings/model.js';
+import '@client/pages/w5b.css';
 
 type Loaded =
   | { state: 'loading' }

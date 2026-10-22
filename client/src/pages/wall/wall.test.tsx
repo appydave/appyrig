@@ -2,11 +2,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import { answeringSocket, pageCtx } from '../page-test-kit.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
 import { page as wall } from './index.js';
-import { cardBody, machineCounts, orderByMachine, wallTail } from '../../domain/wall/model.js';
-import { groupSeats, groupState } from '../../domain/fleet/model.js';
+import { cardBody, machineCounts, orderByMachine, wallTail } from '@client/domain/wall/model.js';
+import { groupSeats, groupState } from '@client/domain/fleet/model.js';
 
 const NOW = Date.parse('2026-10-19T12:00:00.000Z');
 const Wall = wall.component;

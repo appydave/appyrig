@@ -1,5 +1,5 @@
 import { HANDOFF_BATCH_MAX, HANDOFF_BODY_MAX, type HandoffBodies } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 
 /**
  * Sends each queue message body to the hub exactly once. A body never changes after the item is

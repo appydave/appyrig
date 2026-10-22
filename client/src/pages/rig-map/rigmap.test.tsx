@@ -3,11 +3,11 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { FleetMachine, FleetUpdate } from '@appydave/shared';
-import { listRigs } from '../../domain/fleet/views.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import type { FrozenFile } from '../../app/frozen/frozenSocket.js';
-import type { PageContext } from '../../app/types.js';
-import { NAV_GROUPS, groupOf } from '../../app/registry.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
+import type { PageContext } from '@client/app/types.js';
+import { NAV_GROUPS, groupOf } from '@client/app/registry.js';
 import { page } from './index.js';
 
 vi.mock('@xterm/xterm', () => ({

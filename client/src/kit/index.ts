@@ -40,7 +40,7 @@ export {
   type LineStep,
   type PodEdge,
   type RawEdge,
-} from '../domain/lines/handoffLines.js';
+} from '@client/domain/lines/handoffLines.js';
 export { useLineFocus, type FocusHandlers } from './useLineFocus.js';
 export {
   HandoffLegend,
@@ -74,7 +74,7 @@ export {
   groupSkills,
   type DocItem,
   type DocGroup,
-} from '../domain/docs/model.js';
+} from '@client/domain/docs/model.js';
 export { default as AgentPanel, stripAnsi, type AgentPanelProps } from './AgentPanel.js';
 export { useTopOffset, measureTopOffset } from './useTopOffset.js';
 export { default as Legend2 } from './Legend2.js';

@@ -1,24 +1,24 @@
 import type { NavGroupKey, PageKey, PageDef } from './types.js';
-import { page as wallPage } from '../pages/wall/index.js';
-import { page as aboutPage } from '../pages/about/index.js';
-import { page as timelinePage } from '../pages/timeline/index.js';
-import { page as accountsPage } from '../pages/accounts/index.js';
-import { page as machinesPage } from '../pages/machines/index.js';
-import { page as schemaPage } from '../pages/schema/index.js';
-import { page as learnPage } from '../pages/learn/index.js';
-import { page as needsYouPage } from '../pages/needs-you/index.js';
-import { page as missionsPage } from '../pages/missions/index.js';
-import { page as flowPage } from '../pages/flow/index.js';
-import { page as agentPage } from '../pages/agent/index.js';
-import { page as runPage } from '../pages/run/index.js';
-import { page as rigMapPage } from '../pages/rig-map/index.js';
-import { page as graphPage } from '../pages/graph/index.js';
-import { page as specsPage } from '../pages/specs/index.js';
-import { page as healthPage } from '../pages/health/index.js';
-import { page as settingsPage } from '../pages/settings/index.js';
-import { page as libraryPage } from '../pages/library/index.js';
-import { page as workflowsPage } from '../pages/workflows/index.js';
-import { page as historyPage } from '../pages/history/index.js';
+import { page as wallPage } from '@client/pages/wall/index.js';
+import { page as aboutPage } from '@client/pages/about/index.js';
+import { page as timelinePage } from '@client/pages/timeline/index.js';
+import { page as accountsPage } from '@client/pages/accounts/index.js';
+import { page as machinesPage } from '@client/pages/machines/index.js';
+import { page as schemaPage } from '@client/pages/schema/index.js';
+import { page as learnPage } from '@client/pages/learn/index.js';
+import { page as needsYouPage } from '@client/pages/needs-you/index.js';
+import { page as missionsPage } from '@client/pages/missions/index.js';
+import { page as flowPage } from '@client/pages/flow/index.js';
+import { page as agentPage } from '@client/pages/agent/index.js';
+import { page as runPage } from '@client/pages/run/index.js';
+import { page as rigMapPage } from '@client/pages/rig-map/index.js';
+import { page as graphPage } from '@client/pages/graph/index.js';
+import { page as specsPage } from '@client/pages/specs/index.js';
+import { page as healthPage } from '@client/pages/health/index.js';
+import { page as settingsPage } from '@client/pages/settings/index.js';
+import { page as libraryPage } from '@client/pages/library/index.js';
+import { page as workflowsPage } from '@client/pages/workflows/index.js';
+import { page as historyPage } from '@client/pages/history/index.js';
 
 /**
  * The page registry: every page, keyed by page.

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { AnsiUp } from 'ansi_up';
-import { stripOsc } from '../domain/fleet/model.js';
+import { stripOsc } from '@client/domain/fleet/model.js';
 
 /**
  * ANSI → HTML for Wall tiles (no xterm on the Wall). ansi_up escapes HTML in the terminal text

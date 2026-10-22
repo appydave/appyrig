@@ -14,7 +14,7 @@ import {
   reportProblem,
   rulesThatGrew,
   scanTexts,
-} from '../../scripts/oxlint-gate.mjs';
+} from '@root/scripts/oxlint-gate.mjs';
 
 /**
  * G02 gate wrapper: scripts/oxlint-gate.mjs turns Oxlint's findings into a baseline ratchet. This

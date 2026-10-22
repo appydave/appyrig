@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { DbSchemaOutput, SchemaChanges, TableChange } from '@appydave/shared';
-import SchemaView from '../../kit/SchemaView.js';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import { SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
-import { sampleChanges, versionLine } from '../../domain/schema/model.js';
-import '../w4.css';
+import SchemaView from '@client/kit/SchemaView.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
+import { sampleChanges, versionLine } from '@client/domain/schema/model.js';
+import '@client/pages/w4.css';
 import './schema.css';
 
 type Answer = { ok: true; out: DbSchemaOutput } | { ok: false; why: string } | null;

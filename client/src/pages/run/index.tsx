@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { FleetMachine, HistoryTransitionsOutput, QueueItem } from '@appydave/shared';
-import MarkdownView from '../../kit/MarkdownView.js';
-import RigPicker from '../../kit/RigPicker.js';
-import { useVerb } from '../../kit/data/index.js';
-import { MockMark, PageHeader, useDocsDrawer } from '../../kit/index.js';
+import MarkdownView from '@client/kit/MarkdownView.js';
+import RigPicker from '@client/kit/RigPicker.js';
+import { useVerb } from '@client/kit/data/index.js';
+import { MockMark, PageHeader, useDocsDrawer } from '@client/kit/index.js';
 import HowRunWent from './HowRunWent.js';
-import type { PageDef, PageProps } from '../../app/types.js';
-import { parseMissionJobs, type JobRow } from '../../domain/run/jobs.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
+import { parseMissionJobs, type JobRow } from '@client/domain/run/jobs.js';
 import {
   buildRun,
   clock,
@@ -18,14 +18,14 @@ import {
   type JobState,
   type RunModel,
   type Station,
-} from '../../domain/run/model.js';
+} from '@client/domain/run/model.js';
 import {
   useMissionFile,
   whyNot,
   type MissionFileKind,
   type MissionFileResult,
 } from './useMissionFile.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { useRigDoc, type RigDoc } from './useRigDoc.js';
 import './run.css';
 

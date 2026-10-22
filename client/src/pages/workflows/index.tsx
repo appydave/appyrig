@@ -8,10 +8,10 @@ import {
   useVerb,
   type WorkflowListOutput,
   type WorkflowSpec,
-} from '../../kit/data/index.js';
-import { FakeControl, SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
-import { CLOSURE_WORD, sampleInstance, sampleSpecs } from '../../domain/workflows/model.js';
+} from '@client/kit/data/index.js';
+import { FakeControl, SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
+import { CLOSURE_WORD, sampleInstance, sampleSpecs } from '@client/domain/workflows/model.js';
 
 function SpecList({ specs, label }: { specs: WorkflowSpec[]; label: (id: string) => string }) {
   return (

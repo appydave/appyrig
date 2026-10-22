@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import RigPicker from './RigPicker.js';
 import { rigFacts } from './RigInfo.js';
-import type { RigRef } from '../domain/fleet/views.js';
+import type { RigRef } from '@client/domain/fleet/views.js';
 
 const rig = (over: Partial<RigRef> = {}): RigRef => ({
   key: 'm2:appyrig-v14',

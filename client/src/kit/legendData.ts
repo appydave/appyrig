@@ -1,4 +1,4 @@
-import type { PageKey } from '../app/types.js';
+import type { PageKey } from '@client/app/types.js';
 
 /**
  * The V2 Legend, as data: one list of sections per V2 page, plus an "Everywhere" list (top bar,

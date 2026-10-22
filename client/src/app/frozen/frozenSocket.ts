@@ -1,5 +1,5 @@
 import { FLEET_EVENTS, type CallAnswer, type CoreCallRequest } from '@appydave/shared';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 /**
  * Frozen-data mode, REPLAY half: a stand-in for `getFleetSocket` that `useFleet(getSocket)` and

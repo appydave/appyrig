@@ -11,7 +11,7 @@ import {
   type MissionFilePush,
   type MissionFilesPush,
 } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 import { candidatesFor } from './rigfiles.js';
 import type { SpecInfo } from './specs.js';
 

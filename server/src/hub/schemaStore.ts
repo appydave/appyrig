@@ -9,7 +9,7 @@ import {
   type DbTable,
   type SchemaPush,
 } from '@appydave/shared';
-import { diffSchemas } from '../core/schemaDiff.js';
+import { diffSchemas } from '@server/core/schemaDiff.js';
 
 /**
  * v1.4 · S7: the OpenRig database shape per machine, and the schema seen under each OpenRig

@@ -15,14 +15,14 @@ import {
   type FleetMachine,
   type FleetUpdate,
 } from '@appydave/shared';
-import { createCore, type Core } from '../core/core.js';
-import { apiRouter, rpcParseError } from '../core/doors.js';
-import { readIdentity, type AppIdentity } from '../core/identity.js';
-import { requestLogger } from '../middleware/requestLogger.js';
-import { errorHandler } from '../middleware/errorHandler.js';
-import { apiLimiter } from '../middleware/rateLimiter.js';
-import healthRouter from '../routes/health.js';
-import infoRouter from '../routes/info.js';
+import { createCore, type Core } from '@server/core/core.js';
+import { apiRouter, rpcParseError } from '@server/core/doors.js';
+import { readIdentity, type AppIdentity } from '@server/core/identity.js';
+import { requestLogger } from '@server/middleware/requestLogger.js';
+import { errorHandler } from '@server/middleware/errorHandler.js';
+import { apiLimiter } from '@server/middleware/rateLimiter.js';
+import healthRouter from '@server/routes/health.js';
+import infoRouter from '@server/routes/info.js';
 import { accountViews, applyAccountDerived } from './accounts.js';
 import { applyRigLabels, defaultConfigPath, watchConfig } from './appConfig.js';
 import { browserAuth, isAuthorised } from './browserAuth.js';

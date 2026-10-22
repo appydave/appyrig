@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { page as needsYou } from './needs-you/index.js';
 import { answeringSocket, pageCtx } from './page-test-kit.js';
 

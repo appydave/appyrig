@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain .mjs gate with no type declarations
-import { compare, folderSizes, messageFor, oversize } from '../../../lint/folder-limits.mjs';
+import { compare, folderSizes, messageFor, oversize } from '@root/lint/folder-limits.mjs';
 
 const REPO = join(import.meta.dirname, '../../..');
 const names = (folder: string, n: number, ext = 'ts') =>

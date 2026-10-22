@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { matchTeams, teamsLabel, type Team } from '../../domain/wall/model.js';
+import { matchTeams, teamsLabel, type Team } from '@client/domain/wall/model.js';
 
 /**
  * walk #10: the team filter as one compact control. "Teams: all ▾" opens a small panel with a

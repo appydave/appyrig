@@ -1,4 +1,4 @@
-import type { PageKey } from '../app/types.js';
+import type { PageKey } from '@client/app/types.js';
 import { PAGE_PURPOSE } from './legendData.js';
 
 /** An ⓘ whose tooltip says, in plain words, what a page is for. Same words as its Legend's first section. */

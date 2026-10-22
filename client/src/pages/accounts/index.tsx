@@ -1,10 +1,10 @@
 import type { AccountWindow, FleetMachine } from '@appydave/shared';
-import { windowStory } from '../../domain/fleet/accountWindow.js';
-import { burnPerHour, hoursToEmpty } from '../../domain/accounts/model.js';
-import { buildAccounts, resetsIn } from '../../domain/fleet/views.js';
-import { FakeControl } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
-import '../w4.css';
+import { windowStory } from '@client/domain/fleet/accountWindow.js';
+import { burnPerHour, hoursToEmpty } from '@client/domain/accounts/model.js';
+import { buildAccounts, resetsIn } from '@client/domain/fleet/views.js';
+import { FakeControl } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
+import '@client/pages/w4.css';
 
 const hrs = (h: number | null) =>
   h === null

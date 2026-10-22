@@ -1,15 +1,9 @@
 {
   "extends": "@appydave/appystack-config/typescript/node.json",
   "compilerOptions": {
+    "paths": { "@server/*": ["./src/*"] },
     "outDir": "./dist",
-    "rootDir": "./src",
-    "baseUrl": ".",
-    "paths": {
-      "@routes/*": ["src/routes/*"],
-      "@middleware/*": ["src/middleware/*"],
-      "@config/*": ["src/config/*"],
-      "@services/*": ["src/services/*"]
-    }
+    "rootDir": "./src"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

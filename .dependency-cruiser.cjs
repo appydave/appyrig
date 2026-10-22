@@ -47,6 +47,8 @@ module.exports = {
   options: {
     doNotFollow: { path: 'node_modules' },
     exclude: { path: '(node_modules|dist)' },
+    // Resolves the @client/@server/... aliases, so the boundary rules still see aliased imports.
+    tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: true,
     combinedDependencies: true,
   },

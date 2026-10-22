@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { RigWaitingOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import { rigQueue } from '../../domain/fleet/views.js';
-import '../../kit/data/coverage.css';
-import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { rigQueue } from '@client/domain/fleet/views.js';
+import '@client/kit/data/coverage.css';
+import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   FILTERS,
   KIND_LABEL,
@@ -19,7 +19,7 @@ import {
   type GatesByRig,
   type NeedFilter,
   type NeedItem,
-} from '../../domain/needs-you/model.js';
+} from '@client/domain/needs-you/model.js';
 
 type Pretend = 'Approved' | 'Dismissed' | 'Snoozed' | 'Replied';
 

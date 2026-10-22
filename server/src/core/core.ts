@@ -2,7 +2,7 @@ import { ASLEEP_AFTER_MS, type AppConfig, type CallAnswer } from '@appydave/shar
 import { authorize } from './vendor/capability.js';
 import { CapabilityRefusal } from './vendor/failure-codes.js';
 import { VERB_REGISTRY } from './verbs.js';
-import type { FleetStore } from '../hub/fleetStore.js';
+import type { FleetStore } from '@server/hub/fleetStore.js';
 import type { AppIdentity } from './identity.js';
 
 /**

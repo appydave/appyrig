@@ -1,6 +1,6 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { isOpen } from '../fleet/views.js';
-import { realNames } from '../fleet/realNames.js';
+import { isOpen } from '@client/domain/fleet/views.js';
+import { realNames } from '@client/domain/fleet/realNames.js';
 
 /**
  * Missions: mission to slices to jobs.

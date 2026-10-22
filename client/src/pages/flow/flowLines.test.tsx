@@ -3,12 +3,12 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { listRigs, STALE_MS, type FlowEdge } from '../../domain/fleet/views.js';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import { LINE_WIDTH_CAP, lineWidth, relativeWidthLines } from '../../kit/index.js';
+import { listRigs, STALE_MS, type FlowEdge } from '@client/domain/fleet/views.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { LINE_WIDTH_CAP, lineWidth, relativeWidthLines } from '@client/kit/index.js';
 import { page as flowPage } from './index.js';
-import { rigPageCtx } from '../page-test-kit.js';
-import { flowPairs, pairPath } from '../../domain/flow/flowLines.js';
+import { rigPageCtx } from '@client/pages/page-test-kit.js';
+import { flowPairs, pairPath } from '@client/domain/flow/flowLines.js';
 
 /** Handoff Flow v2 on the kit's quiet line style (brief 2026-10-19, handoff lines). */
 

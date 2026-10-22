@@ -1,10 +1,10 @@
 // The replay consoles on the Handoff Flow page: they follow the replay step.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, SeatHistoryOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import { modelChip, seatName } from '../../domain/fleet/model.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import { consoleLines, rigQueue, type ConsoleKind } from '../../domain/fleet/views.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { modelChip, seatName } from '@client/domain/fleet/model.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { consoleLines, rigQueue, type ConsoleKind } from '@client/domain/fleet/views.js';
 
 interface Props {
   machine: FleetMachine;

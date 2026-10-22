@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import type { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import { TAIL_MAX_LINES } from '@appydave/shared';
-import { stripOsc } from '../domain/fleet/model.js';
-import { trackTerminal } from '../domain/fleet/xtermRegistry.js';
+import { stripOsc } from '@client/domain/fleet/model.js';
+import { trackTerminal } from '@client/domain/fleet/xtermRegistry.js';
 
 interface Props {
   lines: string[];

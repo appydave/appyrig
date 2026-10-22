@@ -7,7 +7,7 @@ import {
   interfaceFields,
   mapKeys,
   unionLiterals,
-} from '../../scripts/provenance/extract.js';
+} from '@root/scripts/provenance/extract.js';
 
 /**
  * The provenance check's extractors (scripts/provenance/extract.ts). A missing anchor must come

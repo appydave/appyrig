@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { QueueItem } from '@appydave/shared';
-import type { PageDef, PageProps } from '../../app/types.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   HandoffLegend,
   LeftOpenBadgeSvg,
@@ -14,14 +14,14 @@ import {
   lineWidth,
   pairLabel,
   useLineFocus,
-} from '../../kit/index.js';
-import { buildRigMap } from '../../domain/fleet/views.js';
-import { useDocsDrawer } from '../../kit/index.js';
+} from '@client/kit/index.js';
+import { buildRigMap } from '@client/domain/fleet/views.js';
+import { useDocsDrawer } from '@client/kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
 import { useOpenRigs } from './openRigs.js';
 import RigBox, { lastWords } from './RigBox.js';
 import RigInside from './RigInside.js';
-import { routeLines, type Box, type Tip } from '../../domain/graph/lineRoute.js';
+import { routeLines, type Box, type Tip } from '@client/domain/graph/lineRoute.js';
 import {
   allGroups,
   buildGraph,
@@ -33,7 +33,7 @@ import {
   type Graph,
   type GraphRig,
   type PairEdge,
-} from '../../domain/graph/model.js';
+} from '@client/domain/graph/model.js';
 import './graph.css';
 
 /** A stable function that always calls the latest one: lets memo(RigBox) skip boxes whose rig has not changed. */

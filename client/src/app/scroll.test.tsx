@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { io } from 'socket.io-client';
 import App from './App.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 // A real, never-connected socket: the pages show their empty state, which is all a scroll test needs.
 function renderApp() {

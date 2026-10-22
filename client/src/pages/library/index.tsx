@@ -8,9 +8,9 @@ import {
   type LibraryGetOutput,
   type LibraryItem,
   type LibraryListOutput,
-} from '../../kit/data/index.js';
-import { FakeControl, SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+} from '@client/kit/data/index.js';
+import { FakeControl, SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   LIB_FILTERS,
   countByKind,
@@ -21,7 +21,7 @@ import {
   sampleLibrary,
   unreadByFilter,
   type LibFilter,
-} from '../../domain/library/model.js';
+} from '@client/domain/library/model.js';
 
 const SHOWN = 80;
 const LIST_INPUT = { limit: 500 };

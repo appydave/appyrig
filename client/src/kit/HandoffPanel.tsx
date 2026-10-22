@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { HandoffGetOutput, QueueItem, Refusal } from '@appydave/shared';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { isShortcutBlocked } from '../lib/keys.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { isShortcutBlocked } from '@client/lib/keys.js';
 
 export type PanelMode = 'hover' | 'pinned';
 

@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FleetStore, type LivenessChange } from './fleetStore.js';
-import { loadSnapshot, manualClock } from '../test/hubHarness.js';
+import { loadSnapshot, manualClock } from '@server/test/hubHarness.js';
 
 const dirs: string[] = [];
 

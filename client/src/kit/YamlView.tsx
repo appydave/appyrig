@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { tokenizeYaml } from '../lib/yamlLines.js';
+import { tokenizeYaml } from '@client/lib/yamlLines.js';
 
 interface Props {
   source: string;

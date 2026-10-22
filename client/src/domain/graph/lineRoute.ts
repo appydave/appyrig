@@ -1,5 +1,5 @@
 import type { GroupKey } from './model.js';
-import type { LinePair } from '../lines/handoffLines.js';
+import type { LinePair } from '@client/domain/lines/handoffLines.js';
 
 /** A rig box in canvas pixels. */
 export interface Box {

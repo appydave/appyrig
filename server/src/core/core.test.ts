@@ -15,8 +15,8 @@ import {
 } from '@appydave/shared';
 import { createCore } from './core.js';
 import { FAILURE_CODES, VERBS, VERB_REGISTRY, defineVerbs } from './verbs.js';
-import { FleetStore } from '../hub/fleetStore.js';
-import { loadSnapshot, manualClock } from '../test/hubHarness.js';
+import { FleetStore } from '@server/hub/fleetStore.js';
+import { loadSnapshot, manualClock } from '@server/test/hubHarness.js';
 import type { AppIdentity } from './identity.js';
 import { readIdentity } from './identity.js';
 

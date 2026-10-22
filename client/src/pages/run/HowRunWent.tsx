@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { FleetMachine } from '@appydave/shared';
-import { buildRun as buildTimeline, dur, OUTCOME } from '../../domain/timeline/model.js';
-import { clock, type RunModel } from '../../domain/run/model.js';
+import { buildRun as buildTimeline, dur, OUTCOME } from '@client/domain/timeline/model.js';
+import { clock, type RunModel } from '@client/domain/run/model.js';
 
 const hhmm = (t: number) =>
   new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });

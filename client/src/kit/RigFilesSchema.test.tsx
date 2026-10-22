@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { DbSchemaOutput, DbTable, RigFile, RigFilesOutput } from '@appydave/shared';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import RigFiles from './RigFiles.js';
 import SchemaView, { changeSummary } from './SchemaView.js';
 import YamlView from './YamlView.js';

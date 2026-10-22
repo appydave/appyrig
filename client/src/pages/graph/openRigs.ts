@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { PageContext } from '../../app/types.js';
+import type { PageContext } from '@client/app/types.js';
 
 /**
  * Which rigs are open on the Graph, kept across visits to the page. The nav lane will expose this

@@ -1,6 +1,6 @@
 import type { FleetMachine } from '@appydave/shared';
 import type { WorkflowListOutput } from '@appydave/shared';
-import { realNames } from '../fleet/realNames.js';
+import { realNames } from '@client/domain/fleet/realNames.js';
 
 export type WorkflowSpec = WorkflowListOutput['specs'][number];
 export type WorkflowInstance = WorkflowListOutput['instances'][number];

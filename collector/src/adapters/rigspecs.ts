@@ -16,7 +16,7 @@ import {
   type SpecPod,
   type SpecSeat,
 } from '@appydave/shared';
-import { redactDeep, redactString } from '../redact.js';
+import { redactDeep, redactString } from '@collector/redact.js';
 import type { SpecInfo } from './specs.js';
 import { podOf, rigSpecOf } from './specView.js';
 

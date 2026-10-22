@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { RigCommandsOutput, RigSpecsOutput } from '@appydave/shared';
-import { TOKEN, loadSnapshot, push, startHub, type RunningHub } from '../test/hubHarness.js';
+import { TOKEN, loadSnapshot, push, startHub, type RunningHub } from '@server/test/hubHarness.js';
 
 /**
  * N10: rig specs (launched or not) and the rig command log, collector → hub → read verbs.

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { QueueItem } from '@appydave/shared';
-import { choosePlan, type PlanSource } from '../domain/fleet/plan.js';
+import { choosePlan, type PlanSource } from '@client/domain/fleet/plan.js';
 
 interface Props {
   /** Plan candidates from the rig's files; null while they are read. */

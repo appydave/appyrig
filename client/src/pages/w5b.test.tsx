@@ -3,13 +3,13 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { FLEET_EVENTS, type FleetMachine } from '@appydave/shared';
-import App from '../app/App.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
+import App from '@client/app/App.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import { pageCtx } from './page-test-kit.js';
 import type { HealthData } from '@appydave/shared';
-import type { HealthFindingsMachine } from '../domain/health/model.js';
-import type { SettingsMachine } from '../domain/settings/model.js';
+import type { HealthFindingsMachine } from '@client/domain/health/model.js';
+import type { SettingsMachine } from '@client/domain/settings/model.js';
 import { page as healthPage } from './health/index.js';
 import {
   contextRollup,
@@ -19,7 +19,7 @@ import {
   staleWords,
   thresholdsFor,
   verdictFor,
-} from '../domain/health/model.js';
+} from '@client/domain/health/model.js';
 import { page as settingsPage } from './settings/index.js';
 import {
   groupSettings,
@@ -28,7 +28,7 @@ import {
   sampleSettings,
   show,
   showSource,
-} from '../domain/settings/model.js';
+} from '@client/domain/settings/model.js';
 
 type Handler = (...args: unknown[]) => void;
 

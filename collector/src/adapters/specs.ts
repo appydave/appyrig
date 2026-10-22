@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { OpenRig, RIG_SUMMARY_MAX } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 
 /**
  * Finds each rig's `rig.yaml` on this machine. OpenRig does not keep the spec path (its `rigs`

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@client/*": ["./client/src/*"],
+      "@server/*": ["./server/src/*"],
+      "@collector/*": ["./collector/src/*"],
+      "@shared/*": ["./shared/src/*"],
+      "@root/*": ["./*"]
+    }
+  },
+  "include": ["scripts", "test", "e2e", "lint", "playwright.config.ts"]
+}

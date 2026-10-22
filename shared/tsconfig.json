@@ -1,6 +1,7 @@
 {
   "extends": "@appydave/appystack-config/typescript/base.json",
   "compilerOptions": {
+    "paths": { "@shared/*": ["./src/*"] },
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true
