@@ -26,5 +26,3 @@ eslint-suppressions.json
 
 # Stylelint writes this file itself (--suppress) in its own format.
 stylelint-suppressions.json
-# Written by depcruise --baseline (npm run arch:baseline); the ratchet compares it byte for byte.
-.dependency-cruiser-known-*.json

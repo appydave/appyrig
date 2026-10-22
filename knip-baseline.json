@@ -261,9 +261,6 @@
       "lint/folder-limits.mjs": {
         "exports": 4
       },
-      "lint/knip-gate.mjs": {
-        "exports": 3
-      },
       "lint/root-imports-codemod.mjs": {
         "exports": 1
       },

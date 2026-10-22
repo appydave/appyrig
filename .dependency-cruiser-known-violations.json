@@ -4,13 +4,7 @@
     "from": "client/src/app/registry.ts",
     "to": "client/src/pages/about/index.tsx",
     "unresolvedTo": "@client/pages/about/index.js",
-    "dependencyTypes": [
-      "aliased",
-      "aliased-tsconfig",
-      "aliased-tsconfig-paths",
-      "local",
-      "import"
-    ],
+    "dependencyTypes": ["aliased", "aliased-tsconfig", "aliased-tsconfig-paths", "local", "import"],
     "rule": {
       "severity": "error",
       "name": "no-circular"
