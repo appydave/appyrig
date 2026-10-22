@@ -76,6 +76,7 @@ describe('the gate on a real tree', () => {
     mkdirSync(join(dir, 'lint'));
     mkdirSync(join(dir, 'shared/src'), { recursive: true });
     cpSync(join(REPO, 'lint/folder-limits.mjs'), join(dir, 'lint/folder-limits.mjs'));
+    cpSync(join(REPO, 'lint/sorted.mjs'), join(dir, 'lint/sorted.mjs'));
     writeFileSync(join(dir, 'folder-baseline.json'), '{"folders":{}}');
     run('git', ['init', '-q']);
     for (const f of names('shared/src', 11)) {

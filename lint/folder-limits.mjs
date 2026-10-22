@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sortedByKey } from './sorted.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'folder-baseline.json';
@@ -161,12 +162,7 @@ function listFiles() {
   return r.status === 0 ? r.stdout.split('\n').filter((f) => f && existsSync(join(ROOT, f))) : null;
 }
 
-const sorted = (counts) =>
-  Object.fromEntries(
-    Object.keys(counts)
-      .sort()
-      .map((f) => [f, counts[f]])
-  );
+const sorted = (counts) => sortedByKey(counts);
 
 const ABOUT =
   'Folders over 10 files or 10 subfolders when G09 was added, with their counts. It may shrink, never grow. Rewrite with npm run folders:baseline.';

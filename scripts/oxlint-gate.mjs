@@ -13,6 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sortedByKey } from '../lint/sorted.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'oxlint-baseline.json';
@@ -148,11 +149,7 @@ export function rulesThatGrew(baseline, actual) {
 }
 
 const sorted = (counts) =>
-  Object.fromEntries(
-    Object.keys(counts)
-      .sort()
-      .map((f) => [f, Object.fromEntries(Object.entries(counts[f]).sort())])
-  );
+  sortedByKey(counts, (rules) => Object.fromEntries(Object.entries(rules).sort()));
 
 /** Why a parsed report cannot be trusted as "clean", or null. A run that checked nothing is not a pass. */
 export function reportProblem(report) {
