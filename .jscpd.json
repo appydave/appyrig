@@ -1,0 +1,30 @@
+{
+  "path": ["."],
+  "mode": "weak",
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.git/**",
+    "**/.mochaccino/**",
+    "**/.claude/**",
+    "**/package-lock.json",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/coverage/**",
+    "**/.quality-results/**",
+    "**/.jscpd/**",
+    "**/*.css",
+    "api/**",
+    "test/fixtures/**",
+    "test/root/fixtures/**",
+    "client/src/domain/learn/atlas.json",
+    "client/src/domain/learn/rig-commands.json",
+    "client/src/domain/learn/commands.ts",
+    "client/src/domain/learn/glossary.ts",
+    "client/src/domain/learn/lessons.ts",
+    "client/src/kit/v1ArchiveManifest.ts"
+  ],
+  "reporters": ["console", "json"],
+  "output": ".quality-results/jscpd",
+  "failOnEmpty": true
+}

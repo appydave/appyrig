@@ -39,7 +39,13 @@
     "test:root": "vitest run --config test/root/vitest.config.ts",
     "atlas:sync": "node scripts/sync-atlas.mjs",
     "rig-commands:sync": "node scripts/sync-rig-commands.mjs",
-    "provenance": "tsx scripts/provenance/main.ts"
+    "provenance": "tsx scripts/provenance/main.ts",
+    "lint:duplicates": "npm run lint:duplicates:exact && npm run lint:duplicates:identifiers && npm run lint:duplicates:renamed && npm run lint:duplicates:similar && npm run lint:duplicates:semantic",
+    "lint:duplicates:exact": "jscpd --config .jscpd.json --kind exact --min-tokens 90 --min-lines 9 --baseline .jscpd/exact.json --fail-on-new-clones 0 --report-name exact",
+    "lint:duplicates:identifiers": "jscpd --config .jscpd.json --kind renamed --ignore-identifiers --min-tokens 130 --min-lines 16 --baseline .jscpd/identifiers.json --fail-on-new-clones 0 --report-name identifiers",
+    "lint:duplicates:renamed": "jscpd --config .jscpd.json --kind renamed --ignore-identifiers --ignore-literals --ignore-annotations --min-tokens 240 --min-lines 1 --baseline .jscpd/renamed.json --fail-on-new-clones 0 --report-name renamed",
+    "lint:duplicates:similar": "jscpd --config .jscpd.json --kind similar,gap,ast --similarity 0.85 --min-nodes 40 --max-gap-lines 12 --min-tokens 60 --min-lines 5 --baseline .jscpd/similar.json --fail-on-new-clones 0 --report-name similar",
+    "lint:duplicates:semantic": "jscpd --config .jscpd.json --kind semantic --semantic --semantic-download CodeRankEmbed --semantic-model CodeRankEmbed --semantic-scope all --semantic-same-threshold 0.90 --semantic-threshold 0.90 --min-tokens 36 --min-lines 1 --baseline .jscpd/semantic.json --fail-on-new-clones 0 --report-name semantic"
   },
   "devDependencies": {
     "@appydave/appystack-config": "^1.0.3",
@@ -57,6 +63,7 @@
     "eslint-plugin-sonarjs": "^4.2.0",
     "globals": "^15.15.0",
     "husky": "^9.1.7",
+    "jscpd": "5.4.1",
     "lint-staged": "^17.0.8",
     "oxlint": "1.66.0",
     "oxlint-plugin-anti-slop": "github:sirknigget/anti-slop#cc0382b565489d0c55a9b071784e73f00e6acb0c",

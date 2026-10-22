@@ -26,3 +26,6 @@ Thumbs.db
 
 # provenance check output (regenerated each run)
 /scripts/provenance/out/
+
+# jscpd reports and semantic cache (regenerated each run)
+.quality-results/
