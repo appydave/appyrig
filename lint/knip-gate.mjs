@@ -15,6 +15,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { initRefusal } from './gates/baseline-tools.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'knip-baseline.json';
@@ -170,7 +171,17 @@ function report({ grown, shrunk }) {
 /** `--update` rewrites the baseline, but never to a bigger one. */
 const wantsUpdate = ({ grown }) => process.argv.includes('--update') && !grown.length;
 
+function refuseInit() {
+  const refusal = initRefusal({ root: ROOT, baseline: BASELINE_FILE, command: 'knip:baseline' });
+
+  if (refusal) {
+    fail(1, `knip-gate: ${refusal}`);
+  }
+}
+
 function main() {
+  refuseInit();
+
   const file = join(ROOT, BASELINE_FILE);
   const init = process.argv.includes('--init');
 

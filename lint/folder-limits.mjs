@@ -14,7 +14,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { sortedByKey } from './sorted.mjs';
+import { initRefusal, sortedByKey } from './gates/baseline-tools.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../..');
 const BASELINE_FILE = 'folder-baseline.json';
@@ -214,6 +214,12 @@ function readBaseline(file, init) {
 }
 
 function main() {
+  const refusal = initRefusal({ root: ROOT, baseline: BASELINE_FILE, command: 'folders:baseline' });
+
+  if (refusal) {
+    fail(1, `folder-limits: ${refusal}`);
+  }
+
   const files = listFiles();
 
   if (!files?.length) {
