@@ -61,7 +61,7 @@ The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs
 (Monday 03:00 Bangkok, cron `0 20 * * 0`) and on demand (`workflow_dispatch`). It costs no GitHub Actions
 minutes (a hard budget: free plan, 2,000 a month shared across the org). The repo is private, so pull requests
 cannot come from forks. The job is `continue-on-error` with a 60-minute timeout, so it reports but never blocks;
-it stays that way until two clean weeks, then one judged PR makes it blocking. Runs queue one at a time
+it stays that way until two clean weeks, then one judged PR makes it blocking. "Clean" means the semantic _step_ exits 0 on main, not the job colour: `continue-on-error` keeps the job green over a red step. A pull-request run tests the merge with main, so it can go red from a clone another merged gate added. Runs queue one at a time
 (`concurrency`) because they share one cache.
 
 The cache lives on the M2 at `JSCPD_CACHE_DIR=/Users/davidcruwys/.cache/jscpd-appyrig` (model and embeddings), so
