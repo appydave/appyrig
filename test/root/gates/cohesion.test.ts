@@ -1,31 +1,14 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { removeScratch, scanProbe } from './scratchWorkspace.js';
 // @ts-expect-error plain .mjs gate with no type declarations
-import { compare, messageFor, scanDirectory } from '@root/lint/gates/cohesion.mjs';
+import { messageFor, scanDirectory } from '@root/lint/gates/cohesion.mjs';
+// @ts-expect-error plain .mjs gate with no type declarations
+import { compare } from '@root/lint/gates/ratchet-gate.mjs';
 
-const made: string[] = [];
+const scan = (files: Record<string, string>): Record<string, number> =>
+  scanProbe(scanDirectory, files);
 
-/** A scratch workspace whose `src/` holds `files`, scanned the way the gate scans a real one. */
-function scan(files: Record<string, string>): Record<string, number> {
-  const root = mkdtempSync(join(tmpdir(), 'cohesion-probe-'));
-
-  made.push(root);
-
-  for (const [name, text] of Object.entries(files)) {
-    mkdirSync(dirname(join(root, 'src', name)), { recursive: true });
-    writeFileSync(join(root, 'src', name), text);
-  }
-
-  return scanDirectory({ sourceDir: join(root, 'src'), workspace: 'probe', prefix: 'probe/src' });
-}
-
-afterEach(() => {
-  while (made.length) {
-    rmSync(made.pop() as string, { recursive: true, force: true });
-  }
-});
+afterEach(removeScratch);
 
 /** Five exports that never use each other: a catch-all bucket. */
 const MIXED = `
