@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import type { FleetMachine, RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetMachine, RigFilesOutput } from '@appydave/shared';
+import { readRigFile, readRigFiles } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import WaitingOnDavid from './WaitingOnDavid.js';
 import PlanStrip from './PlanStrip.js';
@@ -127,7 +127,7 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
         return null;
       }
 
-      const a = await callVerb<RigFileOutput>(socket, 'rig.file', {
+      const a = await readRigFile(socket, {
         machine: machineId,
         rig,
         fileId: id,
@@ -137,7 +137,7 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
     };
 
     void (async () => {
-      const a = await callVerb<RigFilesOutput>(socket, 'rig.files', { machine: machineId, rig });
+      const a = await readRigFiles(socket, { machine: machineId, rig });
 
       if (!live) {
         return;

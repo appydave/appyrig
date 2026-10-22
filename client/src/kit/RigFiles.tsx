@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Refusal, RigFileMeta, RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigFile, readRigFiles } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { isTextEntry } from '@client/lib/keys.js';
 import MarkdownView from './MarkdownView.js';
@@ -123,7 +123,7 @@ export default function RigFiles({
     }
 
     setList({ state: 'loading' });
-    void callVerb<RigFilesOutput>(socket, 'rig.files', { machine: machineId, rig }).then((a) => {
+    void readRigFiles(socket, { machine: machineId, rig }).then((a) => {
       if (!a.ok) {
         return setList({ state: 'refused', error: a.error });
       }
@@ -163,7 +163,7 @@ export default function RigFiles({
     let current = true;
 
     setFile({ state: 'loading', id: selected });
-    void callVerb<RigFileOutput>(socket, 'rig.file', {
+    void readRigFile(socket, {
       machine: machineId,
       rig,
       fileId: selected,

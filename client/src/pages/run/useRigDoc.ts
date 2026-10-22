@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { readRigFile, readRigFiles } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 export interface RigDoc {
@@ -34,7 +33,7 @@ export function useRigDoc(
 
     setDoc({ status: 'loading' });
     void (async () => {
-      const files = await callVerb<RigFilesOutput>(getSocket(), 'rig.files', { machine, rig });
+      const files = await readRigFiles(getSocket(), { machine, rig });
 
       if (!live) {
         return;
@@ -59,7 +58,7 @@ export function useRigDoc(
         return setDoc({ status: 'missing', why: `${name} is not in this rig's folders` });
       }
 
-      const got = await callVerb<RigFileOutput>(getSocket(), 'rig.file', {
+      const got = await readRigFile(getSocket(), {
         machine,
         rig,
         fileId: f.id,
