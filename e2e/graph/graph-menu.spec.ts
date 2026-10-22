@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { signIn, watchErrors } from './support/fleet';
+import { signIn, watchErrors } from '../support/fleet';
 
 // v2 Graph: the "⋯" rig menu must draw OVER the next rig frame in its column. Each frame is its own
 // stacking context, so the open menu's frame has to be raised (a jsdom test cannot see this: only a
