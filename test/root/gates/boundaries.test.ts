@@ -16,6 +16,9 @@ const LAYER_RULES = [
   'shared-imports-nothing-local',
   'client-domain-has-no-ui',
   'client-kit-has-no-screens',
+  'client-lib-is-a-leaf',
+  'client-shell-below-pages',
+  'collector-adapters-below-orchestration',
 ];
 
 describe('boundary rules', () => {

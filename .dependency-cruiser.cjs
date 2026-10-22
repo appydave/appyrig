@@ -72,6 +72,30 @@ module.exports = {
       to: { path: '^client/src/(shell|pages)/|^client/src/app/(?!types\\.ts$)', reachable: true },
     },
     {
+      name: 'client-lib-is-a-leaf',
+      comment:
+        'lib/ holds plain helpers: it never loads domain, kit, shell, pages or app code, directly or through another module. Move what lib needs down into lib/, or move the helper up to the layer that uses it.',
+      severity: 'error',
+      from: { path: '^client/src/lib/', pathNot: '\\.test\\.tsx?$' },
+      to: { path: '^client/src/(domain|kit|shell|pages|app)/', reachable: true },
+    },
+    {
+      name: 'client-shell-below-pages',
+      comment:
+        'shell/ is the frame around the pages: it never loads a page or the app, directly or through another module (types from app/types.ts are fine). Pass what it needs in as props, or move the shared piece into kit/ or domain/.',
+      severity: 'error',
+      from: { path: '^client/src/shell/', pathNot: '\\.test\\.tsx?$' },
+      to: { path: '^client/src/(pages|app)/(?!types\\.ts$)', reachable: true },
+    },
+    {
+      name: 'collector-adapters-below-orchestration',
+      comment:
+        'adapters/ read one source each: they never load the builder, the pusher or the entry points, directly or through another module. Pass the data in as an argument, or move the shared piece into adapters/ or shared/.',
+      severity: 'error',
+      from: { path: '^collector/src/adapters/', pathNot: '\\.test\\.ts$' },
+      to: { path: '^collector/src/(builder|pusher|main|index)\\.', reachable: true },
+    },
+    {
       name: 'not-to-dev-dep',
       comment:
         'Production code cannot import a devDependency: it would be missing in a production install. Move the package to dependencies, or keep the import in a test.',
