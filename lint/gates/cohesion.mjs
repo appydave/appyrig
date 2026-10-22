@@ -38,8 +38,12 @@ const MAX_COMPONENTS = 2;
 
 /**
  * Workspaces scanned, each with its own path alias (archlint resolves imports against one package
- * root). `shared/` is not: it is the wire contract, every file zod schemas with their inferred types,
- * which archlint reads as unconnected groups however cohesive they are.
+ * root). `shared/` is not: it is the wire contract (zod schemas with their inferred types, their
+ * limits and enum lists, event tables, plain types and a dozen helper functions). archlint counts each
+ * schema/type pair as an unconnected group, so scanning it would turn every new schema into a red build.
+ * Seven files there carry functions (daemondata, loadout, openrig/chainFiles, openrig/rigSpec, rigspecs,
+ * snapshot, health); they are on the cleanup list so shared/ holds only declarations (rigSpec.ts and
+ * snapshot.ts first): /Users/davidcruwys/dev/appyrigs/runs/spaghetti/appyrig/burn-down-backlog.md
  */
 const WORKSPACES = ['client', 'server', 'collector'];
 
