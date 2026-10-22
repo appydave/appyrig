@@ -6,7 +6,6 @@
         "exports": 2
       },
       "client/package.json": {
-        "dependencies": 3,
         "devDependencies": 3
       },
       "client/src/app/frozen/load.ts": {
@@ -144,8 +143,7 @@
         "types": 3
       },
       "client/src/kit/index.ts": {
-        "exports": 19,
-        "types": 19
+        "exports": 1
       },
       "client/src/lib/markdown.ts": {
         "types": 1
@@ -219,10 +217,6 @@
       },
       "collector/src/adapters/history.ts": {
         "exports": 2
-      },
-      "collector/src/adapters/index.ts": {
-        "exports": 41,
-        "types": 11
       },
       "collector/src/adapters/missionfiles.ts": {
         "exports": 2
@@ -416,9 +410,6 @@
       "bin/appyrig.mjs": {
         "exports": 2
       },
-      "client/package.json": {
-        "dependencies": 5
-      },
       "client/src/app/devProxy.ts": {
         "files": 1
       },
@@ -433,9 +424,6 @@
       },
       "client/src/app/usePages.tsx": {
         "exports": 1
-      },
-      "client/src/config/env.ts": {
-        "files": 1
       },
       "client/src/domain/accounts/model.ts": {
         "exports": 1
@@ -597,8 +585,7 @@
         "types": 3
       },
       "client/src/kit/index.ts": {
-        "exports": 34,
-        "types": 19
+        "exports": 16
       },
       "client/src/kit/legendData.ts": {
         "exports": 1
@@ -615,9 +602,6 @@
       },
       "client/src/lib/stableOrder.ts": {
         "exports": 1
-      },
-      "client/src/lib/utils.ts": {
-        "files": 1
       },
       "client/src/lib/yamlLines.ts": {
         "types": 2
@@ -696,8 +680,7 @@
         "exports": 9
       },
       "collector/src/adapters/index.ts": {
-        "exports": 51,
-        "types": 11
+        "exports": 10
       },
       "collector/src/adapters/loadout.ts": {
         "exports": 12,
@@ -788,9 +771,6 @@
       },
       "server/src/middleware/requestLogger.ts": {
         "exports": 3
-      },
-      "server/src/middleware/validate.ts": {
-        "files": 1
       },
       "shared/src/accounts.ts": {
         "exports": 4

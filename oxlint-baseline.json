@@ -29,12 +29,6 @@
       "no-module-mocking": 2,
       "no-unsafe-dictionary-type": 2
     },
-    "client/src/config/env.test.ts": {
-      "no-chained-type-assertions": 2
-    },
-    "client/src/config/env.ts": {
-      "require-safety-comment-for-type-assertion": 2
-    },
     "client/src/domain/fleet/coreCall.test.ts": {
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 3
@@ -412,12 +406,6 @@
     },
     "server/src/middleware/requestLogger.test.ts": {
       "no-chained-type-assertions": 1
-    },
-    "server/src/middleware/validate.test.ts": {
-      "no-chained-type-assertions": 1
-    },
-    "server/src/middleware/validate.ts": {
-      "require-safety-comment-for-type-assertion": 1
     },
     "server/src/test/hubHarness.ts": {
       "no-unknown-parameters": 1,
