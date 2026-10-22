@@ -2,6 +2,17 @@
 module.exports = {
   forbidden: [
     {
+      name: 'no-circular',
+      comment:
+        'Two modules that import each other (directly or through others) cannot be loaded or tested alone. Move what both need into a third module that neither of them imports from. Type-only and dynamic imports do not count.',
+      severity: 'error',
+      from: {},
+      to: {
+        circular: true,
+        viaOnly: { dependencyTypesNot: ['type-only', 'pre-compilation-only', 'dynamic-import'] },
+      },
+    },
+    {
       name: 'client-not-server-or-collector',
       severity: 'error',
       from: { path: '^client/' },
@@ -49,7 +60,7 @@ module.exports = {
     exclude: { path: '(node_modules|dist)' },
     // Resolves the @client/@server/... aliases, so the boundary rules still see aliased imports.
     tsConfig: { fileName: 'tsconfig.json' },
-    tsPreCompilationDeps: true,
+    tsPreCompilationDeps: 'specify',
     combinedDependencies: true,
   },
 };

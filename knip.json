@@ -1,0 +1,60 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "includeEntryExports": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "bin/appyrig.mjs!",
+        "scripts/*.{ts,mjs}",
+        "scripts/provenance/main.ts",
+        "lint/*.{js,mjs}",
+        "e2e/**/*.spec.ts",
+        "e2e/support/global-teardown.ts",
+        "test/root/**/*.test.ts",
+        "playwright.config.ts"
+      ],
+      "project": ["bin/**", "scripts/**", "lint/**", "e2e/**", "test/**", "*.{js,ts,mjs}!"],
+      "ignore": ["test/fixtures/**", "test/root/fixtures/**"],
+      "playwright": false
+    },
+    "client": {
+      "entry": ["src/main.tsx!"],
+      "project": [
+        "src/**/*.{ts,tsx}!",
+        "!src/**/*.test.{ts,tsx}!",
+        "!src/**/test/**!",
+        "!src/**/*test-kit*!"
+      ]
+    },
+    "server": {
+      "entry": ["src/index.ts!", "scripts/*.mjs"],
+      "project": [
+        "src/**/*.ts!",
+        "scripts/**",
+        "!src/**/*.test.{ts,tsx}!",
+        "!src/**/test/**!",
+        "!src/**/*test-kit*!"
+      ],
+      "ignore": ["src/core/vendor/**"]
+    },
+    "collector": {
+      "entry": ["src/main.ts!", "src/index.ts!", "scripts/*.{ts,mjs}"],
+      "project": [
+        "src/**/*.ts!",
+        "scripts/**",
+        "!src/**/*.test.{ts,tsx}!",
+        "!src/**/test/**!",
+        "!src/**/*test-kit*!"
+      ]
+    },
+    "shared": {
+      "entry": ["src/index.ts!"],
+      "project": [
+        "src/**/*.ts!",
+        "!src/**/*.test.{ts,tsx}!",
+        "!src/**/test/**!",
+        "!src/**/*test-kit*!"
+      ]
+    }
+  }
+}

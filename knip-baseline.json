@@ -1,0 +1,894 @@
+{
+  "about": "Knip findings recorded when G11 was added: per mode (normal, production), file and issue type. It may shrink, never grow. Rewrite with npm run knip:baseline.",
+  "findings": {
+    "normal": {
+      "bin/appyrig.mjs": {
+        "exports": 2
+      },
+      "client/package.json": {
+        "dependencies": 3,
+        "devDependencies": 3
+      },
+      "client/src/app/frozen/load.ts": {
+        "exports": 2
+      },
+      "client/src/app/usePages.tsx": {
+        "exports": 1
+      },
+      "client/src/domain/accounts/model.ts": {
+        "exports": 1
+      },
+      "client/src/domain/agent/detail.ts": {
+        "types": 1
+      },
+      "client/src/domain/docs/model.ts": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/domain/fleet/accountWindow.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/coreCall.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/health.ts": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/domain/fleet/model.ts": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/domain/fleet/plan.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/runcard.ts": {
+        "types": 2
+      },
+      "client/src/domain/fleet/store.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/timeline.ts": {
+        "exports": 1,
+        "types": 3
+      },
+      "client/src/domain/fleet/views.ts": {
+        "exports": 9,
+        "types": 5
+      },
+      "client/src/domain/fleet/xtermRegistry.ts": {
+        "exports": 1
+      },
+      "client/src/domain/graph/model.ts": {
+        "exports": 1,
+        "types": 3
+      },
+      "client/src/domain/health/model.ts": {
+        "exports": 4,
+        "types": 1
+      },
+      "client/src/domain/learn/glossary.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/domain/learn/lessons.ts": {
+        "types": 1
+      },
+      "client/src/domain/missions/model.ts": {
+        "exports": 2,
+        "types": 4
+      },
+      "client/src/domain/needs-you/model.ts": {
+        "exports": 4
+      },
+      "client/src/domain/rig-map/lines.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/domain/run/model.ts": {
+        "exports": 2,
+        "types": 3
+      },
+      "client/src/domain/settings/model.ts": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/domain/specs/model.ts": {
+        "types": 1
+      },
+      "client/src/domain/timeline/model.ts": {
+        "types": 2
+      },
+      "client/src/domain/workflows/model.ts": {
+        "types": 2
+      },
+      "client/src/kit/AnsiText.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/DocsDrawer.tsx": {
+        "exports": 2
+      },
+      "client/src/kit/FakeControl.tsx": {
+        "types": 1
+      },
+      "client/src/kit/FollowWork.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/HandoffLineMarks.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/RigFiles.tsx": {
+        "types": 1
+      },
+      "client/src/kit/RigPicker.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/SampleData.tsx": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/kit/SchemaView.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/SeatCardLines.tsx": {
+        "exports": 2
+      },
+      "client/src/kit/TerminalCard.tsx": {
+        "types": 1
+      },
+      "client/src/kit/WallCard.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/data/index.tsx": {
+        "exports": 1,
+        "types": 3
+      },
+      "client/src/kit/index.ts": {
+        "exports": 19,
+        "types": 19
+      },
+      "client/src/lib/markdown.ts": {
+        "types": 1
+      },
+      "client/src/lib/yamlLines.ts": {
+        "types": 2
+      },
+      "client/src/pages/agent/useAgentData.ts": {
+        "exports": 1,
+        "types": 2
+      },
+      "client/src/pages/graph/FakeRunner.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/graph/RigInside.tsx": {
+        "exports": 2
+      },
+      "client/src/pages/graph/index.tsx": {
+        "exports": 2
+      },
+      "client/src/pages/graph/openRigs.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/pages/history/index.tsx": {
+        "exports": 3,
+        "types": 1
+      },
+      "client/src/pages/needs-you/index.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/page-test-kit.ts": {
+        "exports": 1
+      },
+      "client/src/pages/run/index.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/specs/index.tsx": {
+        "exports": 2
+      },
+      "client/src/shell/RigDrawer.tsx": {
+        "exports": 1
+      },
+      "client/src/shell/urlState.ts": {
+        "exports": 1
+      },
+      "client/src/test/msw/browser.ts": {
+        "files": 1
+      },
+      "client/src/test/msw/handlers.ts": {
+        "files": 1
+      },
+      "client/src/test/msw/server.ts": {
+        "files": 1
+      },
+      "collector/src/adapters/account.ts": {
+        "exports": 1
+      },
+      "collector/src/adapters/daemon.ts": {
+        "exports": 3
+      },
+      "collector/src/adapters/daemondata.ts": {
+        "exports": 14,
+        "types": 1
+      },
+      "collector/src/adapters/dbrows.ts": {
+        "exports": 1
+      },
+      "collector/src/adapters/health.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/history.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/index.ts": {
+        "exports": 41,
+        "types": 11
+      },
+      "collector/src/adapters/missionfiles.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/openrigShapes.ts": {
+        "exports": 6,
+        "types": 1
+      },
+      "collector/src/adapters/rigcommands.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/rigspecs.ts": {
+        "exports": 1
+      },
+      "collector/src/adapters/specs.ts": {
+        "exports": 1
+      },
+      "collector/src/builder.ts": {
+        "exports": 2
+      },
+      "collector/src/config.ts": {
+        "exports": 1
+      },
+      "collector/src/install.test.ts": {
+        "binaries": 1
+      },
+      "collector/src/pusher.ts": {
+        "exports": 2
+      },
+      "collector/src/redact.ts": {
+        "exports": 2
+      },
+      "e2e/support/global-teardown.ts": {
+        "exports": 1
+      },
+      "lint/folder-limits.mjs": {
+        "exports": 4
+      },
+      "lint/knip-gate.mjs": {
+        "exports": 3
+      },
+      "lint/root-imports-codemod.mjs": {
+        "exports": 1
+      },
+      "package.json": {
+        "binaries": 2
+      },
+      "playwright.config.ts": {
+        "exports": 1
+      },
+      "scripts/oxlint-gate.d.mts": {
+        "exports": 13,
+        "types": 3
+      },
+      "scripts/oxlint-gate.mjs": {
+        "exports": 1
+      },
+      "scripts/provenance/check.ts": {
+        "unlisted": 1
+      },
+      "scripts/record-frozen.mjs": {
+        "unlisted": 1
+      },
+      "server/package.json": {
+        "dependencies": 1,
+        "devDependencies": 1
+      },
+      "server/src/core/core.ts": {
+        "types": 1
+      },
+      "server/src/core/doors.ts": {
+        "exports": 4
+      },
+      "server/src/core/verbs.ts": {
+        "exports": 6,
+        "types": 1
+      },
+      "server/src/hub/accounts.ts": {
+        "exports": 1
+      },
+      "server/src/hub/browserAuth.ts": {
+        "exports": 2
+      },
+      "server/src/hub/v1ArchiveRouter.ts": {
+        "exports": 2
+      },
+      "server/src/index.ts": {
+        "exports": 1
+      },
+      "server/src/middleware/requestLogger.ts": {
+        "exports": 1
+      },
+      "shared/src/accounts.ts": {
+        "exports": 4
+      },
+      "shared/src/appConfig.ts": {
+        "exports": 4,
+        "types": 2
+      },
+      "shared/src/clock.ts": {
+        "exports": 2
+      },
+      "shared/src/constants.ts": {
+        "exports": 1
+      },
+      "shared/src/daemondata.ts": {
+        "exports": 20,
+        "types": 11
+      },
+      "shared/src/dbrows.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "shared/src/dbschema.ts": {
+        "exports": 5,
+        "types": 2
+      },
+      "shared/src/handoffs.ts": {
+        "exports": 1,
+        "types": 2
+      },
+      "shared/src/health.ts": {
+        "exports": 4,
+        "types": 2
+      },
+      "shared/src/history.ts": {
+        "exports": 1,
+        "types": 2
+      },
+      "shared/src/index.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "shared/src/loadout.ts": {
+        "duplicates": 3,
+        "exports": 6,
+        "types": 4
+      },
+      "shared/src/missionfiles.ts": {
+        "exports": 3,
+        "types": 2
+      },
+      "shared/src/openrig/agentSpec.ts": {
+        "types": 4
+      },
+      "shared/src/openrig/chainFiles.ts": {
+        "exports": 3,
+        "types": 2
+      },
+      "shared/src/openrig/project.ts": {
+        "exports": 5,
+        "types": 6
+      },
+      "shared/src/openrig/rigSpec.ts": {
+        "exports": 5,
+        "types": 7
+      },
+      "shared/src/openrig/startup.ts": {
+        "exports": 3,
+        "types": 7
+      },
+      "shared/src/rigfiles.ts": {
+        "exports": 1,
+        "types": 2
+      },
+      "shared/src/rigspecs.ts": {
+        "exports": 5,
+        "types": 2
+      },
+      "shared/src/runcard.ts": {
+        "duplicates": 1,
+        "exports": 4,
+        "types": 4
+      },
+      "shared/src/snapshot.ts": {
+        "exports": 6,
+        "types": 4
+      },
+      "shared/src/types.ts": {
+        "types": 1
+      },
+      "shared/src/verbs.ts": {
+        "exports": 1,
+        "types": 9
+      },
+      "test/root/openrig-types.test.ts": {
+        "unlisted": 1
+      },
+      "test/root/wire-compat.test.ts": {
+        "unlisted": 1
+      }
+    },
+    "production": {
+      "bin/appyrig.mjs": {
+        "exports": 2
+      },
+      "client/package.json": {
+        "dependencies": 5
+      },
+      "client/src/app/devProxy.ts": {
+        "files": 1
+      },
+      "client/src/app/frozen/frozenSocket.ts": {
+        "exports": 2
+      },
+      "client/src/app/frozen/load.ts": {
+        "exports": 2
+      },
+      "client/src/app/registry.ts": {
+        "exports": 1
+      },
+      "client/src/app/usePages.tsx": {
+        "exports": 1
+      },
+      "client/src/config/env.ts": {
+        "files": 1
+      },
+      "client/src/domain/accounts/model.ts": {
+        "exports": 1
+      },
+      "client/src/domain/agent/detail.ts": {
+        "types": 1
+      },
+      "client/src/domain/docs/model.ts": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/domain/fleet/accountWindow.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/coreCall.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/health.ts": {
+        "exports": 4,
+        "types": 1
+      },
+      "client/src/domain/fleet/model.ts": {
+        "exports": 5,
+        "types": 1
+      },
+      "client/src/domain/fleet/plan.ts": {
+        "exports": 4,
+        "types": 2
+      },
+      "client/src/domain/fleet/runcard.ts": {
+        "types": 2
+      },
+      "client/src/domain/fleet/store.ts": {
+        "exports": 1
+      },
+      "client/src/domain/fleet/timeline.ts": {
+        "exports": 4,
+        "types": 4
+      },
+      "client/src/domain/fleet/views.ts": {
+        "exports": 13,
+        "types": 6
+      },
+      "client/src/domain/fleet/xtermRegistry.ts": {
+        "exports": 1
+      },
+      "client/src/domain/graph/model.ts": {
+        "exports": 5,
+        "types": 5
+      },
+      "client/src/domain/health/model.ts": {
+        "exports": 4,
+        "types": 1
+      },
+      "client/src/domain/learn/glossary.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/domain/learn/lessons.ts": {
+        "types": 1
+      },
+      "client/src/domain/lines/handoffLines.ts": {
+        "exports": 6,
+        "types": 1
+      },
+      "client/src/domain/machines/model.ts": {
+        "exports": 3,
+        "types": 1
+      },
+      "client/src/domain/missions/model.ts": {
+        "exports": 2,
+        "types": 4
+      },
+      "client/src/domain/needs-you/model.ts": {
+        "exports": 5
+      },
+      "client/src/domain/rig-map/lines.ts": {
+        "exports": 2,
+        "types": 3
+      },
+      "client/src/domain/run/model.ts": {
+        "exports": 2,
+        "types": 3
+      },
+      "client/src/domain/settings/model.ts": {
+        "exports": 3,
+        "types": 1
+      },
+      "client/src/domain/specs/model.ts": {
+        "types": 1
+      },
+      "client/src/domain/timeline/model.ts": {
+        "types": 2
+      },
+      "client/src/domain/wall/model.ts": {
+        "exports": 2
+      },
+      "client/src/domain/workflows/model.ts": {
+        "types": 2
+      },
+      "client/src/kit/AgentPanel.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/AnsiText.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/DocsDrawer.tsx": {
+        "exports": 3
+      },
+      "client/src/kit/FakeControl.tsx": {
+        "types": 1
+      },
+      "client/src/kit/FollowWork.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/HandoffLineMarks.tsx": {
+        "exports": 2
+      },
+      "client/src/kit/MockMark.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/MockNote.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/PageHeader.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/RigFiles.tsx": {
+        "types": 1
+      },
+      "client/src/kit/RigInfo.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/RigPicker.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/SampleData.tsx": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/kit/SchemaRows.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/SchemaView.tsx": {
+        "exports": 2
+      },
+      "client/src/kit/SeatCardLines.tsx": {
+        "exports": 4
+      },
+      "client/src/kit/TerminalCard.tsx": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/kit/WallCard.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/data/index.tsx": {
+        "exports": 1,
+        "types": 3
+      },
+      "client/src/kit/index.ts": {
+        "exports": 34,
+        "types": 19
+      },
+      "client/src/kit/legendData.ts": {
+        "exports": 1
+      },
+      "client/src/kit/useTopOffset.ts": {
+        "exports": 1
+      },
+      "client/src/kit/v1ArchiveManifest.ts": {
+        "exports": 1
+      },
+      "client/src/lib/markdown.ts": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/lib/stableOrder.ts": {
+        "exports": 1
+      },
+      "client/src/lib/utils.ts": {
+        "files": 1
+      },
+      "client/src/lib/yamlLines.ts": {
+        "types": 2
+      },
+      "client/src/pages/agent/index.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/agent/useAgentData.ts": {
+        "exports": 1,
+        "types": 2
+      },
+      "client/src/pages/flow/HandoffFlow.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/graph/FakeRunner.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/graph/RigInside.tsx": {
+        "exports": 2
+      },
+      "client/src/pages/graph/index.tsx": {
+        "exports": 5
+      },
+      "client/src/pages/graph/openRigs.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "client/src/pages/history/index.tsx": {
+        "exports": 3,
+        "types": 1
+      },
+      "client/src/pages/learn/index.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/needs-you/index.tsx": {
+        "exports": 1
+      },
+      "client/src/pages/run/index.tsx": {
+        "exports": 2,
+        "types": 1
+      },
+      "client/src/pages/specs/index.tsx": {
+        "exports": 3
+      },
+      "client/src/shell/RigDrawer.tsx": {
+        "exports": 1
+      },
+      "client/src/shell/urlState.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/account.ts": {
+        "exports": 3,
+        "types": 1
+      },
+      "collector/src/adapters/daemon.ts": {
+        "exports": 4
+      },
+      "collector/src/adapters/daemondata.ts": {
+        "exports": 24,
+        "types": 1
+      },
+      "collector/src/adapters/dbrows.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/dbschema.ts": {
+        "exports": 3
+      },
+      "collector/src/adapters/fixtureSources.ts": {
+        "files": 1
+      },
+      "collector/src/adapters/health.ts": {
+        "exports": 8,
+        "types": 1
+      },
+      "collector/src/adapters/history.ts": {
+        "exports": 9
+      },
+      "collector/src/adapters/index.ts": {
+        "exports": 51,
+        "types": 11
+      },
+      "collector/src/adapters/loadout.ts": {
+        "exports": 12,
+        "types": 3
+      },
+      "collector/src/adapters/missionfiles.ts": {
+        "exports": 6,
+        "types": 2
+      },
+      "collector/src/adapters/openrigShapes.ts": {
+        "exports": 12,
+        "types": 2
+      },
+      "collector/src/adapters/rigcommands.ts": {
+        "exports": 6
+      },
+      "collector/src/adapters/rigfiles.ts": {
+        "exports": 5
+      },
+      "collector/src/adapters/rigspecs.ts": {
+        "exports": 2
+      },
+      "collector/src/adapters/seatcard.ts": {
+        "exports": 1
+      },
+      "collector/src/adapters/sources.ts": {
+        "exports": 1
+      },
+      "collector/src/adapters/specs.ts": {
+        "exports": 3
+      },
+      "collector/src/adapters/tmux.ts": {
+        "exports": 1
+      },
+      "collector/src/builder.ts": {
+        "exports": 5
+      },
+      "collector/src/config.ts": {
+        "exports": 2
+      },
+      "collector/src/index.ts": {
+        "exports": 1
+      },
+      "collector/src/pusher.ts": {
+        "exports": 3
+      },
+      "collector/src/redact.ts": {
+        "exports": 2
+      },
+      "collector/src/snapshotCases.ts": {
+        "files": 1
+      },
+      "scripts/oxlint-gate.d.mts": {
+        "exports": 13,
+        "types": 3
+      },
+      "server/package.json": {
+        "dependencies": 1
+      },
+      "server/src/core/core.ts": {
+        "types": 1
+      },
+      "server/src/core/doors.ts": {
+        "exports": 10,
+        "types": 1
+      },
+      "server/src/core/verbs.ts": {
+        "exports": 7,
+        "types": 1
+      },
+      "server/src/helpers/response.ts": {
+        "exports": 1
+      },
+      "server/src/hub/accounts.ts": {
+        "exports": 5
+      },
+      "server/src/hub/browserAuth.ts": {
+        "exports": 4
+      },
+      "server/src/hub/v1ArchiveRouter.ts": {
+        "exports": 2
+      },
+      "server/src/index.ts": {
+        "exports": 3
+      },
+      "server/src/middleware/errorHandler.ts": {
+        "exports": 1
+      },
+      "server/src/middleware/requestLogger.ts": {
+        "exports": 3
+      },
+      "server/src/middleware/validate.ts": {
+        "files": 1
+      },
+      "shared/src/accounts.ts": {
+        "exports": 4
+      },
+      "shared/src/appConfig.ts": {
+        "exports": 4,
+        "types": 2
+      },
+      "shared/src/clock.ts": {
+        "exports": 3
+      },
+      "shared/src/constants.ts": {
+        "exports": 1
+      },
+      "shared/src/daemondata.ts": {
+        "exports": 20,
+        "types": 11
+      },
+      "shared/src/dbrows.ts": {
+        "exports": 1,
+        "types": 1
+      },
+      "shared/src/dbschema.ts": {
+        "exports": 5,
+        "types": 2
+      },
+      "shared/src/handoffs.ts": {
+        "exports": 1,
+        "types": 2
+      },
+      "shared/src/health.ts": {
+        "exports": 4,
+        "types": 2
+      },
+      "shared/src/history.ts": {
+        "exports": 2,
+        "types": 2
+      },
+      "shared/src/index.ts": {
+        "exports": 1,
+        "types": 3
+      },
+      "shared/src/loadout.ts": {
+        "duplicates": 3,
+        "exports": 12,
+        "types": 4
+      },
+      "shared/src/missionfiles.ts": {
+        "exports": 3,
+        "types": 2
+      },
+      "shared/src/openrig/agentSpec.ts": {
+        "exports": 3,
+        "types": 4
+      },
+      "shared/src/openrig/chainFiles.ts": {
+        "exports": 3,
+        "types": 2
+      },
+      "shared/src/openrig/project.ts": {
+        "exports": 10,
+        "types": 6
+      },
+      "shared/src/openrig/rigSpec.ts": {
+        "exports": 14,
+        "types": 7
+      },
+      "shared/src/openrig/startup.ts": {
+        "exports": 9,
+        "types": 7
+      },
+      "shared/src/rigfiles.ts": {
+        "exports": 2,
+        "types": 2
+      },
+      "shared/src/rigspecs.ts": {
+        "exports": 5,
+        "types": 2
+      },
+      "shared/src/runcard.ts": {
+        "duplicates": 1,
+        "exports": 4,
+        "types": 4
+      },
+      "shared/src/snapshot.ts": {
+        "exports": 10,
+        "types": 4
+      },
+      "shared/src/types.ts": {
+        "types": 3
+      },
+      "shared/src/verbs.ts": {
+        "exports": 1,
+        "types": 9
+      }
+    }
+  }
+}
