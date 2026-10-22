@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import type { PageContext } from '../../app/types.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import type { PageContext } from '@client/app/types.js';
 import { page as missions } from './index.js';
 import {
   deriveMissions,
@@ -12,7 +12,7 @@ import {
   sampleMission,
   sliceOf,
   untaggedMissionCount,
-} from '../../domain/missions/model.js';
+} from '@client/domain/missions/model.js';
 
 const T = '2026-10-18T10:00:00.000Z';
 

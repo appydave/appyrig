@@ -20,7 +20,7 @@ import {
   type SeatLoadout,
   type SkillSource,
 } from '@appydave/shared';
-import { redactDeep, redactString } from '../redact.js';
+import { redactDeep, redactString } from '@collector/redact.js';
 import { defaultProjectsDir, TranscriptIndex, type TranscriptFile } from './history.js';
 import type { SpecInfo } from './specs.js';
 

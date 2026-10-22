@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createSpecIndex, parseSpec, scanSpecs } from './specs.js';
-import { enrichRigs } from '../builder.js';
-import { specFoldersOf } from '../config.js';
+import { enrichRigs } from '@collector/builder.js';
+import { specFoldersOf } from '@collector/config.js';
 import {
   DEFAULT_SPEC_FOLDERS,
   RigSummarySchema,

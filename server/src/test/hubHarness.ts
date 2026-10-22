@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { io as ioc, type Socket } from 'socket.io-client';
 import { FLEET_EVENTS, type FleetUpdate, type MachineSnapshot } from '@appydave/shared';
-import { createHub, type Hub, type HubOptions } from '../hub/createHub.js';
-import { sessionCookieHeader } from '../hub/browserAuth.js';
+import { createHub, type Hub, type HubOptions } from '@server/hub/createHub.js';
+import { sessionCookieHeader } from '@server/hub/browserAuth.js';
 
 /** Test-only helpers: real hubs on random localhost ports, real Socket.IO clients. */
 

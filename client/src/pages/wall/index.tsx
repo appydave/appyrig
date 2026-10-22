@@ -12,14 +12,14 @@ import {
   seatName,
   type PipKey,
   type WallGroup,
-} from '../../domain/fleet/model.js';
-import { useStableOrder } from '../../lib/stableOrder.js';
-import { groupRank } from '../../domain/fleet/model.js';
-import { FakeControl, MockNote, PageHeader, WallCard } from '../../kit/index.js';
-import { useUrlParam } from '../../shell/urlState.js';
+} from '@client/domain/fleet/model.js';
+import { useStableOrder } from '@client/lib/stableOrder.js';
+import { groupRank } from '@client/domain/fleet/model.js';
+import { FakeControl, MockNote, PageHeader, WallCard } from '@client/kit/index.js';
+import { useUrlParam } from '@client/shell/urlState.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
-import type { PageDef, PageProps } from '../../app/types.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   seatFlags,
   teamsOf,
@@ -29,7 +29,7 @@ import {
   wallView,
   type SeatFlags,
   type WallFilter,
-} from '../../domain/wall/model.js';
+} from '@client/domain/wall/model.js';
 
 const MACHINE_ORDER_TEXT =
   'Order: by machine, as in the Rigs drawer · its rigs, then its plain tmux sessions, then its stopped rigs · stopped rigs collapsed';

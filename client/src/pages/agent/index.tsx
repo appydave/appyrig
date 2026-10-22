@@ -10,11 +10,17 @@ import {
   seatName,
   visibleTail,
   type TileRef,
-} from '../../domain/fleet/model.js';
-import FocusTerminal from '../../kit/FocusTerminal.js';
-import AnsiText from '../../kit/AnsiText.js';
-import { CopyAttach, HarnessMark, RoleTag, pctText, tokensText } from '../../kit/SeatCardLines.js';
-import { attachLine } from '../../kit/WaitingOnDavid.js';
+} from '@client/domain/fleet/model.js';
+import FocusTerminal from '@client/kit/FocusTerminal.js';
+import AnsiText from '@client/kit/AnsiText.js';
+import {
+  CopyAttach,
+  HarnessMark,
+  RoleTag,
+  pctText,
+  tokensText,
+} from '@client/kit/SeatCardLines.js';
+import { attachLine } from '@client/kit/WaitingOnDavid.js';
 import {
   DocsLayout,
   FakeControl,
@@ -22,10 +28,10 @@ import {
   PageHeader,
   SampleData,
   SkillsPanel,
-} from '../../kit/index.js';
-import { allTiles, findTile, seatAddresses } from '../../domain/fleet/seats.js';
-import type { PageContext, PageDef, PageProps } from '../../app/types.js';
-import { isOpenRigSeat, sampleDetail, type SeatDetailView } from '../../domain/agent/detail.js';
+} from '@client/kit/index.js';
+import { allTiles, findTile, seatAddresses } from '@client/domain/fleet/seats.js';
+import type { PageContext, PageDef, PageProps } from '@client/app/types.js';
+import { isOpenRigSeat, sampleDetail, type SeatDetailView } from '@client/domain/agent/detail.js';
 import { useAgentData } from './useAgentData.js';
 import './agent.css';
 

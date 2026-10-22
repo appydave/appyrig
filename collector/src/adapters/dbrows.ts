@@ -10,7 +10,7 @@ import {
   type DbCell,
   type DbRowsPush,
 } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 import { defaultOpenrigDb, openReadOnly } from './dbschema.js';
 
 /**

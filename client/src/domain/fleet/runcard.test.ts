@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { queueMachine } from '../../test/queueFixtures.js';
+import { queueMachine } from '@client/test/queueFixtures.js';
 import { missionLine, reportLine, runCard } from './runcard.js';
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');

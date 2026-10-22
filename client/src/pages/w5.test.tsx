@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { page as library } from './library/index.js';
 import { page as workflows } from './workflows/index.js';
 import { page as history } from './history/index.js';
-import { filterLibrary, kindOf, sampleLibrary } from '../domain/library/model.js';
-import { filterHistory, fromQueue, fromTransitions } from '../domain/history/model.js';
+import { filterLibrary, kindOf, sampleLibrary } from '@client/domain/library/model.js';
+import { filterHistory, fromQueue, fromTransitions } from '@client/domain/history/model.js';
 import { answeringSocket, ok, pageCtx } from './page-test-kit.js';
 
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');

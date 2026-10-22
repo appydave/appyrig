@@ -1,6 +1,12 @@
 import type { FleetMachine, Seat } from '@appydave/shared';
-import { agentActivityOf, groupSeats, groupState, pipFor, type WallGroup } from '../fleet/model.js';
-import { tailLine } from '../fleet/terminal.js';
+import {
+  agentActivityOf,
+  groupSeats,
+  groupState,
+  pipFor,
+  type WallGroup,
+} from '@client/domain/fleet/model.js';
+import { tailLine } from '@client/domain/fleet/terminal.js';
 
 /** C22: the three "look here" filters, in AppyRig's own status words. */
 export type WallFilter = 'all' | 'needs' | 'stuck' | 'failing';

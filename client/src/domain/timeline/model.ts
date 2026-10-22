@@ -1,7 +1,12 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { seatKey, seatName } from '../fleet/model.js';
-import { buildTimeline, dotState, OUTSIDE_LANE, type Timeline } from '../fleet/timeline.js';
-import { endpointRig, isOpen, STALE_MS } from '../fleet/views.js';
+import { seatKey, seatName } from '@client/domain/fleet/model.js';
+import {
+  buildTimeline,
+  dotState,
+  OUTSIDE_LANE,
+  type Timeline,
+} from '@client/domain/fleet/timeline.js';
+import { endpointRig, isOpen, STALE_MS } from '@client/domain/fleet/views.js';
 
 /**
  * v2 Run Timeline, read at a glance: the run's outcome, its phases (who did the work in each),

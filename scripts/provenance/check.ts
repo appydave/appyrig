@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'yaml';
-import * as OpenRig from '../../shared/src/openrig/index.js';
+import * as OpenRig from '@shared/openrig/index.js';
 import {
   constList,
   docMdNames,

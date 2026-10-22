@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import type { Logger } from 'pino';
 import { TOKEN_QUERY_PARAM } from '@appydave/shared';
-import { logger } from '../config/logger.js';
+import { logger } from '@server/config/logger.js';
 
 /**
  * Request logging that never writes a credential (r1 H1). The hub log becomes a launchd log file

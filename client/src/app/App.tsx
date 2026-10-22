@@ -1,21 +1,26 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import FleetStrip from '../kit/FleetStrip.js';
-import RigFiles from '../kit/RigFiles.js';
-import { Legend2 } from '../kit/index.js';
-import { isShortcutBlocked, isTextEntry } from '../lib/keys.js';
-import { findSeat, orderedMachines, seatName } from '../domain/fleet/model.js';
-import { listRigs } from '../domain/fleet/views.js';
-import { getFleetSocket, useFleet, useNow, type FleetSocket } from '../domain/fleet/useFleet.js';
+import FleetStrip from '@client/kit/FleetStrip.js';
+import RigFiles from '@client/kit/RigFiles.js';
+import { Legend2 } from '@client/kit/index.js';
+import { isShortcutBlocked, isTextEntry } from '@client/lib/keys.js';
+import { findSeat, orderedMachines, seatName } from '@client/domain/fleet/model.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import {
+  getFleetSocket,
+  useFleet,
+  useNow,
+  type FleetSocket,
+} from '@client/domain/fleet/useFleet.js';
 import { usePages } from './usePages.js';
-import { busiestRig } from '../domain/fleet/rigs.js';
+import { busiestRig } from '@client/domain/fleet/rigs.js';
 import { frozenNow, type FrozenMeta } from './frozen/frozenSocket.js';
-import RigDrawer from '../shell/RigDrawer.js';
-import StripShell from '../shell/StripShell.js';
-import MoreMenu from '../shell/MoreMenu.js';
-import V1Archive from '../kit/V1Archive.js';
-import AgentPanel from '../kit/AgentPanel.js';
-import { readUrlState, rigFromParam, rigToParam, writeParams } from '../shell/urlState.js';
-import '../shell/shell.css';
+import RigDrawer from '@client/shell/RigDrawer.js';
+import StripShell from '@client/shell/StripShell.js';
+import MoreMenu from '@client/shell/MoreMenu.js';
+import V1Archive from '@client/kit/V1Archive.js';
+import AgentPanel from '@client/kit/AgentPanel.js';
+import { readUrlState, rigFromParam, rigToParam, writeParams } from '@client/shell/urlState.js';
+import '@client/shell/shell.css';
 
 /** The `open` parameter as the address has it right now. */
 function readUrlOpen(): string | null {

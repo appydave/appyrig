@@ -6,8 +6,8 @@ import {
   type DbRowsOutput,
   type Refusal,
 } from '@appydave/shared';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 const PAGE = 50;
 

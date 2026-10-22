@@ -12,7 +12,7 @@ import {
   push,
   startHub,
   type RunningHub,
-} from '../test/hubHarness.js';
+} from '@server/test/hubHarness.js';
 
 const running: RunningHub[] = [];
 

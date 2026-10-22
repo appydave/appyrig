@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { MissionFileOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 
 /**
  * Run board · ONE door for every file the page reads from a rig's mission folders: a job's spec, a

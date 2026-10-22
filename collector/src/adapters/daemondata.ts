@@ -26,7 +26,7 @@ import {
   type TransitionRow,
   type TransitionsData,
 } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 
 /**
  * v2 data channels: the READ-ONLY reads of the OpenRig daemon that the v2 pages need, pushed on one

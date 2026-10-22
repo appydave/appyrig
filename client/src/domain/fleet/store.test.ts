@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TAIL_MAX_LINES } from '@appydave/shared';
-import { fleetMachine, snapshot, update } from '../../test/fleetFixtures.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import { applyFleetUpdate, initialFleetState } from './store.js';
 
 describe('applyFleetUpdate', () => {

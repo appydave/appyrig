@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
-import { PIP, pipFor, seatKey, seatName } from '../domain/fleet/model.js';
-import { RIG_STATE, type RigRef } from '../domain/fleet/views.js';
+import { PIP, pipFor, seatKey, seatName } from '@client/domain/fleet/model.js';
+import { RIG_STATE, type RigRef } from '@client/domain/fleet/views.js';
 
 /**
  * v2 shell · the Rigs drawer: the subject picker. A tree, machine, rig, pod, agent, with a status

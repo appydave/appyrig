@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import MarkdownView from '../../kit/MarkdownView.js';
-import '../../kit/data/coverage.css';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import MarkdownView from '@client/kit/MarkdownView.js';
+import '@client/kit/data/coverage.css';
 import './missions.css';
-import { FakeControl, MockMark, PageHeader, SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+import { FakeControl, MockMark, PageHeader, SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   deriveMissions,
   deriveUnattributed,
@@ -15,7 +15,7 @@ import {
   untaggedMissionCount,
   type Mission,
   type Slice,
-} from '../../domain/missions/model.js';
+} from '@client/domain/missions/model.js';
 
 const SHOWN_JOBS = 6;
 const firstLine = (s: string | null) => (s ?? '').split('\n')[0]!.trim();

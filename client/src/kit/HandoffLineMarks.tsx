@@ -6,7 +6,7 @@ import {
   PLANNED_DASH,
   type LegendEntry,
   type LineFocusState,
-} from '../domain/lines/handoffLines.js';
+} from '@client/domain/lines/handoffLines.js';
 import './handoffLines.css';
 
 /** CSS classes for a handoff line `<path>`: the width step is NOT here (it is `lineWidth(count)`). */

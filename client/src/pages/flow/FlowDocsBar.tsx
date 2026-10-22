@@ -1,7 +1,7 @@
 import type { FleetMachine } from '@appydave/shared';
-import { seatKey } from '../../domain/fleet/model.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import { useDocsDrawer } from '../../kit/index.js';
+import { seatKey } from '@client/domain/fleet/model.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { useDocsDrawer } from '@client/kit/index.js';
 
 /**
  * Handoff Flow: "Documents" for the seat(s) the panel is showing. One button per seat of the

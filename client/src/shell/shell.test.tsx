@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
-import App from '../app/App.js';
-import { listRigs } from '../domain/fleet/views.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
-import { MockMenu, PageHeader } from '../kit/index.js';
+import App from '@client/app/App.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
+import { MockMenu, PageHeader } from '@client/kit/index.js';
 import MoreMenu from './MoreMenu.js';
 import RigDrawer from './RigDrawer.js';
 import StripShell from './StripShell.js';

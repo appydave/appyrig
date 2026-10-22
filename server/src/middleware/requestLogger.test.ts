@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { requestLogger } from './requestLogger.js';
-import { logger } from '../config/logger.js';
+import { logger } from '@server/config/logger.js';
 
 function buildApp() {
   const app = express();
@@ -121,7 +121,7 @@ describe('requestLogger never writes a credential (r1 H1)', () => {
     const { default: pino } = await import('pino');
     const { Writable } = await import('node:stream');
     const { createRequestLogger, maskUrl } = await import('./requestLogger.js');
-    const { browserAuth, sessionValue } = await import('../hub/browserAuth.js');
+    const { browserAuth, sessionValue } = await import('@server/hub/browserAuth.js');
     const TOKEN = 'secret-hub-token-0123456789abcdef';
     const lines: string[] = [];
     const sink = new Writable({

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { allPages } from '../app/registry.js';
+import { allPages } from '@client/app/registry.js';
 import Legend2 from './Legend2.js';
 import PageInfo from './PageInfo.js';
 import { LEGEND_PAGES, PAGE_PURPOSE, legendSections } from './legendData.js';

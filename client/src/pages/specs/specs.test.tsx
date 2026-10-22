@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { RigCommandsOutput, RigSpecsOutput } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import { NAV_GROUPS, pageFor } from '../../app/registry.js';
-import { LEGEND_TITLE, PAGE_PURPOSE } from '../../kit/index.js';
-import { answeringSocket, pageCtx } from '../page-test-kit.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { NAV_GROUPS, pageFor } from '@client/app/registry.js';
+import { LEGEND_TITLE, PAGE_PURPOSE } from '@client/kit/index.js';
+import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
 import { COMMANDS_POLL_MS, page as specsPage } from './index.js';
-import { shownCommands, shownSpecs } from '../../domain/specs/model.js';
+import { shownCommands, shownSpecs } from '@client/domain/specs/model.js';
 
 const NOW = Date.parse('2026-10-20T12:00:00.000Z');
 

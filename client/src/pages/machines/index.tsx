@@ -1,14 +1,14 @@
-import { gb } from '../../domain/fleet/health.js';
-import { FakeControl, MockNote, SampleLabel } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+import { gb } from '@client/domain/fleet/health.js';
+import { FakeControl, MockNote, SampleLabel } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   behindWords,
   machineView,
   newestVersion,
   sampleLoad,
   type MachineView,
-} from '../../domain/machines/model.js';
-import '../w4.css';
+} from '@client/domain/machines/model.js';
+import '@client/pages/w4.css';
 import './machines.css';
 
 const pct = (a: number | null, b: number | null) =>

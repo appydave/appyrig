@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ASLEEP_AFTER_MS, type Seat } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import {
   ago,
   blockedBecause,

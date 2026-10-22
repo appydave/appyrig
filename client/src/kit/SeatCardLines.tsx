@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { attachLine, copyText } from './WaitingOnDavid.js';
-import { roleWord } from '../domain/fleet/model.js';
+import { roleWord } from '@client/domain/fleet/model.js';
 
 /**
  * D09 W3: what a seat card says about who the seat is. The role comes from its OpenRig agent_ref

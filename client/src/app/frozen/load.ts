@@ -1,4 +1,4 @@
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { createFrozenSocket, type FrozenFile, type FrozenMeta } from './frozenSocket.js';
 
 export const FROZEN_PARAM = 'frozen';

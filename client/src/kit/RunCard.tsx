@@ -1,12 +1,12 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import type { FleetMachine, RigFileOutput, RigFilesOutput } from '@appydave/shared';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import WaitingOnDavid from './WaitingOnDavid.js';
 import PlanStrip from './PlanStrip.js';
 import RunOutputs from './RunOutputs.js';
-import { changeOrders, planIn, type PlanSource } from '../domain/fleet/plan.js';
-import { rigQueue } from '../domain/fleet/views.js';
+import { changeOrders, planIn, type PlanSource } from '@client/domain/fleet/plan.js';
+import { rigQueue } from '@client/domain/fleet/views.js';
 import {
   RUN_WORD,
   clip,
@@ -15,7 +15,7 @@ import {
   reportLine,
   runCard,
   stepText,
-} from '../domain/fleet/runcard.js';
+} from '@client/domain/fleet/runcard.js';
 
 interface Props {
   machine: FleetMachine;

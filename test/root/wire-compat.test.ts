@@ -17,7 +17,7 @@ import {
   stripSpecFields,
   type MachineSnapshot,
   type SeatLoadout,
-} from '../../shared/src/index.js';
+} from '@shared/index.js';
 
 /**
  * Goal 6 of the bottom-up refactor: the wire stays backward-compatible for the client and for the

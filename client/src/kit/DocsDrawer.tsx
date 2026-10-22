@@ -8,9 +8,9 @@ import type {
   SeatDetailOutput,
   SeatLoadoutOutput,
 } from '@appydave/shared';
-import { callVerb } from '../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { seatName } from '../domain/fleet/model.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { seatName } from '@client/domain/fleet/model.js';
 import MarkdownView from './MarkdownView.js';
 import YamlView from './YamlView.js';
 import {
@@ -20,7 +20,7 @@ import {
   firstDoc,
   type DocItem,
   type StartupRef,
-} from '../domain/docs/model.js';
+} from '@client/domain/docs/model.js';
 import { useTopOffset } from './useTopOffset.js';
 import './docs.css';
 

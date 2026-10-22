@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import { seatKey } from '../../domain/fleet/model.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { seatKey } from '@client/domain/fleet/model.js';
 import {
   Coverage,
   Loading,
@@ -10,9 +10,9 @@ import {
   type HistoryTransitionRow,
   type HistoryTransitionsOutput,
   type VerbState,
-} from '../../kit/data/index.js';
-import { PageHeader, SampleData } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+} from '@client/kit/data/index.js';
+import { PageHeader, SampleData } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   filterHistory,
   fromQueue,
@@ -21,7 +21,7 @@ import {
   sampleEvents,
   statesOf,
   type HistRow,
-} from '../../domain/history/model.js';
+} from '@client/domain/history/model.js';
 
 /** Rows asked for per page (the verb's own maximum). */
 export const PAGE_SIZE = 200;

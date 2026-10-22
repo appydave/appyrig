@@ -1,6 +1,6 @@
 import type { FleetMachine } from '@appydave/shared';
 import type { LibraryItem } from '@appydave/shared';
-import { realNames } from '../fleet/realNames.js';
+import { realNames } from '@client/domain/fleet/realNames.js';
 
 export type LibKind = 'workflow' | 'agent' | 'rig' | 'skill' | 'context pack';
 export type LibFilter = 'all' | LibKind;

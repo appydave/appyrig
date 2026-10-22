@@ -11,11 +11,11 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { apiDocument, CONSOLE_PATH } from '../server/src/core/doors.js';
-import { readIdentity } from '../server/src/core/identity.js';
-import { renderApiPage } from '../server/src/core/vendor/api-page.js';
-import { openRpcText } from '../server/src/core/vendor/openrpc.js';
-import { VERBS } from '../server/src/core/verbs.js';
+import { apiDocument, CONSOLE_PATH } from '@server/core/doors.js';
+import { readIdentity } from '@server/core/identity.js';
+import { renderApiPage } from '@server/core/vendor/api-page.js';
+import { openRpcText } from '@server/core/vendor/openrpc.js';
+import { VERBS } from '@server/core/verbs.js';
 
 const root = resolve(import.meta.dirname, '..');
 const check = process.argv.includes('--check');

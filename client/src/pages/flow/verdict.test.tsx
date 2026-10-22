@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { buildFlow, flowChapters } from '../../domain/fleet/views.js';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
+import { buildFlow, flowChapters } from '@client/domain/fleet/views.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { page as flowPage } from './index.js';
-import { rigPageCtx } from '../page-test-kit.js';
+import { rigPageCtx } from '@client/pages/page-test-kit.js';
 
 /**
  * Run board brief, lane 2 (2026-10-19): in v2 Handoff Flow a handoff is "sent back" when its

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import type { FleetMachine } from '@appydave/shared';
-import { ago, blockedSeats, PIP, pipFor, seatName } from '../domain/fleet/model.js';
-import { buildAccounts, buildRigMap, listRigs } from '../domain/fleet/views.js';
-import { GLOSSARY, STUDY_GUIDE_URL } from '../domain/learn/glossary.js';
-import { LESSONS, type Lesson } from '../domain/learn/lessons.js';
-import { ATLAS, ATLAS_URL, STATUS_LABEL, atlasGroups } from '../domain/learn/atlas.js';
-import type { PageKey } from '../app/types.js';
+import { ago, blockedSeats, PIP, pipFor, seatName } from '@client/domain/fleet/model.js';
+import { buildAccounts, buildRigMap, listRigs } from '@client/domain/fleet/views.js';
+import { GLOSSARY, STUDY_GUIDE_URL } from '@client/domain/learn/glossary.js';
+import { LESSONS, type Lesson } from '@client/domain/learn/lessons.js';
+import { ATLAS, ATLAS_URL, STATUS_LABEL, atlasGroups } from '@client/domain/learn/atlas.js';
+import type { PageKey } from '@client/app/types.js';
 
 interface Props {
   machines: FleetMachine[];

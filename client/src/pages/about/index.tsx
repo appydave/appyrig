@@ -1,6 +1,6 @@
-import { FakeControl, SampleData, realNames } from '../../kit/index.js';
-import { NAV_GROUPS, navLabel } from '../../app/registry.js';
-import type { PageDef, PageProps } from '../../app/types.js';
+import { FakeControl, SampleData, realNames } from '@client/kit/index.js';
+import { NAV_GROUPS, navLabel } from '@client/app/registry.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 
 /**
  * The About page: what AppyRig is, where things are, and what is real versus a mock. Uses the kit (one FakeControl, one SampleData section) so later waves have an example.

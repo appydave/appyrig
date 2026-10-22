@@ -1,5 +1,5 @@
 import { Fragment, useMemo, type ReactNode } from 'react';
-import { parseMarkdown, type Block, type Inline } from '../lib/markdown.js';
+import { parseMarkdown, type Block, type Inline } from '@client/lib/markdown.js';
 import YamlView from './YamlView.js';
 
 const inline = (nodes: Inline[]): ReactNode =>

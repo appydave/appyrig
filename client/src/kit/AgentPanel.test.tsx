@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
-import { answeringSocket } from '../pages/page-test-kit.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { answeringSocket } from '@client/pages/page-test-kit.js';
 import AgentPanel, { stripAnsi } from './AgentPanel.js';
-import type { AgentPanelTab } from '../app/types.js';
+import type { AgentPanelTab } from '@client/app/types.js';
 import { measureTopOffset } from './useTopOffset.js';
 
 const NOW = Date.parse('2026-10-19T12:00:00.000Z');

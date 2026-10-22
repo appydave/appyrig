@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
-import { ago, PIP } from '../../domain/fleet/model.js';
-import { callVerb } from '../../domain/fleet/coreCall.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import { RIG_STATE, type MapSeat, type RigMap } from '../../domain/fleet/views.js';
-import { CopyAttach, harnessOf, pctText, tokensText } from '../../kit/SeatCardLines.js';
-import { attachLine } from '../../kit/WaitingOnDavid.js';
+import { ago, PIP } from '@client/domain/fleet/model.js';
+import { callVerb } from '@client/domain/fleet/coreCall.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { RIG_STATE, type MapSeat, type RigMap } from '@client/domain/fleet/views.js';
+import { CopyAttach, harnessOf, pctText, tokensText } from '@client/kit/SeatCardLines.js';
+import { attachLine } from '@client/kit/WaitingOnDavid.js';
 import {
   LeftOpenBadgeSvg,
   WaitingBadgeSvg,
@@ -15,12 +15,12 @@ import {
   lineWidth,
   pairLabel,
   useLineFocus,
-} from '../../kit/index.js';
-import { mapPairs, type MapPair } from '../../domain/rig-map/lines.js';
-import type { GraphRig } from '../../domain/graph/model.js';
-import { TerminalCard, WallCard, tailLine } from '../../kit/index.js';
-import { cardBody } from '../../domain/wall/model.js';
-import { findTile } from '../../domain/fleet/seats.js';
+} from '@client/kit/index.js';
+import { mapPairs, type MapPair } from '@client/domain/rig-map/lines.js';
+import type { GraphRig } from '@client/domain/graph/model.js';
+import { TerminalCard, WallCard, tailLine } from '@client/kit/index.js';
+import { cardBody } from '@client/domain/wall/model.js';
+import { findTile } from '@client/domain/fleet/seats.js';
 
 interface Props {
   map: RigMap;

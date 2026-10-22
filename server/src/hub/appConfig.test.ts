@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RigSummarySchema, type FleetMachine } from '@appydave/shared';
 import { applyRigLabels, watchConfig } from './appConfig.js';
-import { loadSnapshot, nextUpdate, push, startHub, TOKEN } from '../test/hubHarness.js';
+import { loadSnapshot, nextUpdate, push, startHub, TOKEN } from '@server/test/hubHarness.js';
 
 /** The rig shape before v1.4: what an old hub would still enforce. Test-only. */
 const RigSummaryStrictV13 = RigSummarySchema.omit({

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import WaitingOnDavid, { attachLine, copyText } from './WaitingOnDavid.js';
 
 const machine = {

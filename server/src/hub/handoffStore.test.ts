@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { HANDOFF_STORE_MAX, type MachineSnapshot } from '@appydave/shared';
 import { FleetStore } from './fleetStore.js';
-import { loadSnapshot } from '../test/hubHarness.js';
+import { loadSnapshot } from '@server/test/hubHarness.js';
 
 const bodies = (ids: string[]) => ({
   machineId: 'roamy',

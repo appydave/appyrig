@@ -10,7 +10,7 @@ import {
   sampleHealth,
   type Run,
 } from './health.js';
-import { buildSnapshot } from '../builder.js';
+import { buildSnapshot } from '@collector/builder.js';
 import { fixtureSources } from './fixtureSources.js';
 
 // Real output shapes, captured on the M2 (macOS 26).

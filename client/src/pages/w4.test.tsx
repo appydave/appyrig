@@ -9,16 +9,16 @@ import {
   type FleetUpdate,
   type QueueItem,
 } from '@appydave/shared';
-import App from '../app/App.js';
-import { listRigs } from '../domain/fleet/views.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot, update } from '../test/fleetFixtures.js';
-import type { FrozenFile } from '../app/frozen/frozenSocket.js';
-import type { PageContext } from '../app/types.js';
+import App from '@client/app/App.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
+import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
+import type { PageContext } from '@client/app/types.js';
 import { page as timelinePage } from './timeline/index.js';
-import { buildRun, dur } from '../domain/timeline/model.js';
+import { buildRun, dur } from '@client/domain/timeline/model.js';
 import { page as accountsPage } from './accounts/index.js';
-import { burnPerHour, hoursToEmpty } from '../domain/accounts/model.js';
+import { burnPerHour, hoursToEmpty } from '@client/domain/accounts/model.js';
 import { page as machinesPage } from './machines/index.js';
 import {
   behindWords,
@@ -27,11 +27,11 @@ import {
   newestVersion,
   parseVersion,
   versionState,
-} from '../domain/machines/model.js';
+} from '@client/domain/machines/model.js';
 import { page as schemaPage } from './schema/index.js';
-import { sampleChanges } from '../domain/schema/model.js';
+import { sampleChanges } from '@client/domain/schema/model.js';
 import { CommandsPanel } from './learn/index.js';
-import { filterCommands, groupsOf, type RigCommands } from '../domain/learn/commands.js';
+import { filterCommands, groupsOf, type RigCommands } from '@client/domain/learn/commands.js';
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -520,7 +520,7 @@ describe('v2 Learn: commands panel (C19)', () => {
   });
 
   it('the real list loads: 371 commands, 51 in plain words', async () => {
-    const { loadCommands } = await import('../domain/learn/commands.js');
+    const { loadCommands } = await import('@client/domain/learn/commands.js');
     const d = await loadCommands();
 
     expect(d.commands).toHaveLength(371);

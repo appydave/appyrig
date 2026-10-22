@@ -7,7 +7,7 @@ import {
   type RigPod,
   type RigSpecView,
 } from '@appydave/shared';
-import { redactDeep, redactString } from '../redact.js';
+import { redactDeep, redactString } from '@collector/redact.js';
 
 /**
  * How a validated rig.yaml's pods and rig-level fields travel (the snapshot's spec fields and N10's

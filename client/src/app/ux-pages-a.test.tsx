@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
-import { listRigs } from '../domain/fleet/views.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
-import { pageCtx, verbSocket } from '../pages/page-test-kit.js';
-import { FakeControl, MockNote, MOCK_NOTE_TEXT } from '../kit/index.js';
-import { page as wallPage } from '../pages/wall/index.js';
-import { matchTeams, teamsLabel, teamsOf } from '../domain/wall/model.js';
-import { page as machinesPage } from '../pages/machines/index.js';
-import { page as schemaPage } from '../pages/schema/index.js';
-import { versionLine } from '../domain/schema/model.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { pageCtx, verbSocket } from '@client/pages/page-test-kit.js';
+import { FakeControl, MockNote, MOCK_NOTE_TEXT } from '@client/kit/index.js';
+import { page as wallPage } from '@client/pages/wall/index.js';
+import { matchTeams, teamsLabel, teamsOf } from '@client/domain/wall/model.js';
+import { page as machinesPage } from '@client/pages/machines/index.js';
+import { page as schemaPage } from '@client/pages/schema/index.js';
+import { versionLine } from '@client/domain/schema/model.js';
 import { allPages } from './registry.js';
 import type { PageContext } from './types.js';
 

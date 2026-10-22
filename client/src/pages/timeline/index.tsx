@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import RigPicker from '../../kit/RigPicker.js';
-import { DOT_STATE_LABEL, dotState, timeScale } from '../../domain/fleet/timeline.js';
-import { PageHeader } from '../../kit/index.js';
-import type { PageDef, PageProps } from '../../app/types.js';
-import { buildRun, dur, OUTCOME, OUTSIDE_LANE } from '../../domain/timeline/model.js';
-import '../w4.css';
+import RigPicker from '@client/kit/RigPicker.js';
+import { DOT_STATE_LABEL, dotState, timeScale } from '@client/domain/fleet/timeline.js';
+import { PageHeader } from '@client/kit/index.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
+import { buildRun, dur, OUTCOME, OUTSIDE_LANE } from '@client/domain/timeline/model.js';
+import '@client/pages/w4.css';
 
 const clock = (t: number) =>
   new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });

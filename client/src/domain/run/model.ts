@@ -1,7 +1,7 @@
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
-import { pipFor, seatName } from '../fleet/model.js';
-import { isOpen, rigQueue, stageOf, type Stage } from '../fleet/views.js';
-import { missionOf, sliceOf } from '../missions/model.js';
+import { pipFor, seatName } from '@client/domain/fleet/model.js';
+import { isOpen, rigQueue, stageOf, type Stage } from '@client/domain/fleet/views.js';
+import { missionOf, sliceOf } from '@client/domain/missions/model.js';
 import type { JobRow } from './jobs.js';
 
 /**

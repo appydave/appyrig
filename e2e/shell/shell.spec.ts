@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { chooseRigInDrawer, watchErrors } from '../support/fleet';
+import { chooseRigInDrawer, watchErrors } from '@root/e2e/support/fleet';
 
 // The v2 frame at 1440 x 900 on the frozen busy snapshot: one thin bar, machine badges, the Rigs
 // drawer at the left (the page shrinks beside it), and the page starting high on every page. Every

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export { realNames, type RealNames } from '../domain/fleet/realNames.js';
+export { realNames, type RealNames } from '@client/domain/fleet/realNames.js';
 
 /**
  * v2 kit · SampleData: the convention for data AppyRig does not collect yet.

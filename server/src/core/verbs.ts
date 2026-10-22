@@ -110,7 +110,7 @@ import {
   SUITE_REFUSAL_DETAILS,
   defineFailureCodes,
 } from './vendor/failure-codes.js';
-import type { FleetStore } from '../hub/fleetStore.js';
+import type { FleetStore } from '@server/hub/fleetStore.js';
 import { rigEntryOf } from './rigEntry.js';
 import type { AppIdentity } from './identity.js';
 

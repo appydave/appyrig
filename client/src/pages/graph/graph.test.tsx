@@ -8,12 +8,12 @@ import {
   type FleetUpdate,
   type QueueItem,
 } from '@appydave/shared';
-import App from '../../app/App.js';
-import { listRigs } from '../../domain/fleet/views.js';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot, update } from '../../test/fleetFixtures.js';
-import type { FrozenFile } from '../../app/frozen/frozenSocket.js';
-import type { PageContext } from '../../app/types.js';
+import App from '@client/app/App.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
+import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
+import type { PageContext } from '@client/app/types.js';
 import { GraphScreen, page, SHOW_STOPPED_KEY } from './index.js';
 import {
   buildGraph,
@@ -21,9 +21,9 @@ import {
   endpointGroup,
   looseKey,
   pairEdges,
-} from '../../domain/graph/model.js';
-import { routeLines } from '../../domain/graph/lineRoute.js';
-import { relativeWidthLines } from '../../kit/index.js';
+} from '@client/domain/graph/model.js';
+import { routeLines } from '@client/domain/graph/lineRoute.js';
+import { relativeWidthLines } from '@client/kit/index.js';
 import RigBox, { lastWords } from './RigBox.js';
 
 vi.mock('@xterm/xterm', () => ({

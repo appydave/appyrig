@@ -1,9 +1,9 @@
-import { PAGE_PURPOSE, PageInfo } from '../kit/index.js';
+import { PAGE_PURPOSE, PageInfo } from '@client/kit/index.js';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import type { FrozenMeta } from './frozen/frozenSocket.js';
 import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
 import type { AgentPanelTarget, NavGroupKey, PageKey, PageContext } from './types.js';
-import { PANEL_ENTRY, agentToParam, readUrlState, writeParams } from '../shell/urlState.js';
+import { PANEL_ENTRY, agentToParam, readUrlState, writeParams } from '@client/shell/urlState.js';
 import './app.css';
 import './w2.css';
 

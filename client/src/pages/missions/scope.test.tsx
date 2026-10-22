@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import { listRigs } from '../../domain/fleet/views.js';
-import { answeringSocket, pageCtx } from '../page-test-kit.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
 import { page as missions } from './index.js';
 
 /** Navigation brief: a rig picked in the Rigs drawer filters Missions, with "× all rigs". */

@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { MockMark, useFakeAction } from '../../kit/index.js';
+import { MockMark, useFakeAction } from '@client/kit/index.js';
 
 /**
  * Graph fakes: per-rig Start / Restore / Launch and per-agent Restart / Stop. One runner for the

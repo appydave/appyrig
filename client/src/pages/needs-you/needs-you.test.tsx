@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import type { CallAnswer } from '@appydave/shared';
-import type { FleetSocket } from '../../domain/fleet/useFleet.js';
-import type { PageContext } from '../../app/types.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import type { PageContext } from '@client/app/types.js';
 import { page as needsYou } from './index.js';
 import {
   buildNeeds,
@@ -14,7 +14,7 @@ import {
   sweepCount,
   waited,
   STALE_MS,
-} from '../../domain/needs-you/model.js';
+} from '@client/domain/needs-you/model.js';
 
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 const ago = (ms: number) => new Date(NOW - ms).toISOString();

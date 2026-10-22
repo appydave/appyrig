@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '../../test/fleetFixtures.js';
-import { answeringSocket, pageCtx } from '../page-test-kit.js';
-import type { PageContext } from '../../app/types.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
+import type { PageContext } from '@client/app/types.js';
 import type { MissionFileResult } from './useMissionFile.js';
 import { page as run, DOC_DEFAULT_TAB } from './index.js';
-import { buildRun, parseDoneCheck, topLine, verdictOf } from '../../domain/run/model.js';
-import { parseMissionJobs } from '../../domain/run/jobs.js';
+import { buildRun, parseDoneCheck, topLine, verdictOf } from '@client/domain/run/model.js';
+import { parseMissionJobs } from '@client/domain/run/jobs.js';
 
 const files = vi.hoisted(() => ({
   result: (path: string): MissionFileResult => ({ status: 'missing', path }),

@@ -1,9 +1,9 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { ago } from '../../domain/fleet/model.js';
-import { RIG_STATE } from '../../domain/fleet/views.js';
-import { MockMark } from '../../kit/index.js';
+import { ago } from '@client/domain/fleet/model.js';
+import { RIG_STATE } from '@client/domain/fleet/views.js';
+import { MockMark } from '@client/kit/index.js';
 import { FakeButton } from './FakeRunner.js';
-import type { GraphRig } from '../../domain/graph/model.js';
+import type { GraphRig } from '@client/domain/graph/model.js';
 
 interface Props {
   rig: GraphRig;

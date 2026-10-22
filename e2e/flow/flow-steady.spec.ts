@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { chooseRigInDrawer, watchErrors } from '../support/fleet';
+import { chooseRigInDrawer, watchErrors } from '@root/e2e/support/fleet';
 
 // v2 clean batch, flow lane (UX notes 2026-10-19, Screen 8: "the screen jumps up and down… the
 // button I was about to click has moved out from under my cursor"). On the frozen busy snapshot,

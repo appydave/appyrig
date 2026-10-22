@@ -5,7 +5,7 @@ import {
   type HealthFindingsOutput,
   type SettingsGetOutput,
 } from '@appydave/shared';
-import { freshness, seatName } from '../fleet/model.js';
+import { freshness, seatName } from '@client/domain/fleet/model.js';
 
 /** One machine's row of health.findings (shared/src/daemondata.ts). */
 export type HealthFindingsMachine = HealthFindingsOutput['machines'][number];

@@ -9,7 +9,7 @@ import {
   type RigFile,
   type RigFilesPush,
 } from '@appydave/shared';
-import { redactString } from '../redact.js';
+import { redactString } from '@collector/redact.js';
 import { specVariant, type SpecInfo } from './specs.js';
 
 /**

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import type { LoadoutLayer, LoadoutSkill, RigFileMeta, Seat } from '@appydave/shared';
-import { answeringSocket } from '../pages/page-test-kit.js';
+import { answeringSocket } from '@client/pages/page-test-kit.js';
 import { DocsDrawer } from './DocsDrawer.js';
 import SkillsPanel from './SkillsPanel.js';
-import { buildDocItems, docKind, firstDoc, groupSkills } from '../domain/docs/model.js';
+import { buildDocItems, docKind, firstDoc, groupSkills } from '@client/domain/docs/model.js';
 
 const layer = (id: LoadoutLayer['id'], name: string, present: boolean): LoadoutLayer => ({
   id,

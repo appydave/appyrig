@@ -1,18 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { CallAnswer, FleetMachine, Seat } from '@appydave/shared';
-import { listRigs } from '../domain/fleet/views.js';
-import type { FleetSocket } from '../domain/fleet/useFleet.js';
-import { fleetMachine, snapshot } from '../test/fleetFixtures.js';
-import { page as agentPage, defaultAgent } from '../pages/agent/index.js';
-import { parseSeatDetail, sampleDetail } from '../domain/agent/detail.js';
-import { page as flowPage } from '../pages/flow/index.js';
-import { structureLines } from '../pages/flow/HandoffFlow.js';
-import { page as wallPage } from '../pages/wall/index.js';
-import { seatFlags, STUCK_AFTER_MS, wallView } from '../domain/wall/model.js';
+import { listRigs } from '@client/domain/fleet/views.js';
+import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { page as agentPage, defaultAgent } from '@client/pages/agent/index.js';
+import { parseSeatDetail, sampleDetail } from '@client/domain/agent/detail.js';
+import { page as flowPage } from '@client/pages/flow/index.js';
+import { structureLines } from '@client/pages/flow/HandoffFlow.js';
+import { page as wallPage } from '@client/pages/wall/index.js';
+import { seatFlags, STUCK_AFTER_MS, wallView } from '@client/domain/wall/model.js';
 import { pageFor, navGroups } from './registry.js';
 import type { PageContext } from './types.js';
-import { verbSocket, type Answers } from '../pages/page-test-kit.js';
+import { verbSocket, type Answers } from '@client/pages/page-test-kit.js';
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { PIP, type ModelFamily, type PipKey } from '../domain/fleet/model.js';
+import { PIP, type ModelFamily, type PipKey } from '@client/domain/fleet/model.js';
 import { HarnessMark, pctText, tokensText } from './SeatCardLines.js';
 import './wallCard.css';
 

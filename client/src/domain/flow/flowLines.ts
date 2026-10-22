@@ -1,6 +1,6 @@
-import type { FlowEdge } from '../fleet/views.js';
-import { STALE_MS } from '../fleet/views.js';
-import { mergePairs, pairKey, type LinePair } from '../lines/handoffLines.js';
+import type { FlowEdge } from '@client/domain/fleet/views.js';
+import { STALE_MS } from '@client/domain/fleet/views.js';
+import { mergePairs, pairKey, type LinePair } from '@client/domain/lines/handoffLines.js';
 
 /**
  * Handoff Flow v2 on the kit's one line style (brief 2026-10-19, handoff lines): one line per pair

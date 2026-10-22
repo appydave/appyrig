@@ -1,6 +1,11 @@
 import type { QueueItem } from '@appydave/shared';
-import { plannedWord, type MapEdge, type RigMap } from '../fleet/views.js';
-import { mergePairs, podRail, type LinePair, type RawEdge } from '../lines/handoffLines.js';
+import { plannedWord, type MapEdge, type RigMap } from '@client/domain/fleet/views.js';
+import {
+  mergePairs,
+  podRail,
+  type LinePair,
+  type RawEdge,
+} from '@client/domain/lines/handoffLines.js';
 
 /**
  * The Rig Map v2's line model: ONE line per pair of agents (both directions together), and ONE

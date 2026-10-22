@@ -3,7 +3,7 @@ import { parseGraphEdges, parseNodes, parsePs, parseQueue } from './daemon.js';
 import { QueueItemSchema } from '@appydave/shared';
 import { readFixtureJson } from './fixtureSources.js';
 import { SeatSchema } from '@appydave/shared';
-import { redactDeep } from '../redact.js';
+import { redactDeep } from '@collector/redact.js';
 
 const KERNEL = 'roamy--api-rig-kernel-01M4B5W1CN575YJD9K6JB3D3NC-nodes.json';
 const syn = (name: string) => `synthetic/roamy--api-rig-starter-nodes--${name}.json`;

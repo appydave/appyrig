@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { RIG_STATE, type RigRef } from '../domain/fleet/views.js';
+import { RIG_STATE, type RigRef } from '@client/domain/fleet/views.js';
 import RigInfo, { rigTitle } from './RigInfo.js';
-import { useStableOrder } from '../lib/stableOrder.js';
+import { useStableOrder } from '@client/lib/stableOrder.js';
 
 interface Props {
   rigs: RigRef[];
