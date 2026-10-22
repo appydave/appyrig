@@ -55,19 +55,27 @@ Notes that decided settings:
 
 ## Semantic model and CI
 
-The four fast profiles run in the blocking `Duplicate detection` job (seconds). The semantic profile runs in
-its own job, `Duplicate detection (semantic, non-blocking)`: `continue-on-error`, 60-minute timeout. Its first
-Linux run in the original combined 20-minute job was cancelled before it finished, and the cache is saved only
-by a job that completes, so it was split out to let that run finish. Whether it becomes blocking again is a
-ruling for the tier 4 retro, once the cached Linux time is known.
+The four fast profiles run in the blocking `Duplicate detection` job in `ci.yml` (seconds, every push and PR).
+The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs **weekly (Monday 03:00
+Bangkok, cron `0 20 * * 0`) or on demand (`workflow_dispatch`), never on push or pull request**. GitHub Actions
+minutes are a hard budget (free plan, 2,000 a month shared across the org). The job is `continue-on-error`
+with a 60-minute timeout, so it reports but never blocks.
 
 The profile downloads a checksum-verified CodeRankEmbed model on first use (about 548 MB, CPU only, no hosted
-API; jscpd 5.4.1 pins the revision). On an M4 Mini the first run took about 4.5 minutes (3,759 functions
-embedded) and a rerun against the cache about a second. Linux CI timing: cold run TBD (more than 20 minutes on
-`ubuntu-latest`); cached run TBD, to be filled in from the first two runs of the semantic job. The job caches
-`.quality-results/jscpd-cache` per engine, model, runner and a hash of the TypeScript files, and uploads the JSON
-report. Embedding scores can differ slightly between macOS and Linux; review borderline pairs if the job
-disagrees with the local baseline.
+API; jscpd 5.4.1 pins the revision) and embeds every function. Measured:
+
+| Where                  | Cold run                                                     | Cached run |
+| ---------------------- | ------------------------------------------------------------ | ---------- |
+| M4 Mini                | about 4.5 minutes (3,759 functions)                          | about 1 s  |
+| GitHub `ubuntu-latest` | **more than 42 minutes** (run 39707247570, cancelled at 42+) | unknown    |
+
+An earlier combined run (39704974333) hit its 20-minute timeout. Known risks for the weekly run: GitHub
+evicts caches unused for 7 days, so a weekly run may be cold; and if a cold run also exceeds the 60-minute
+timeout the cache is never saved and every run stays cold. Embedding scores can also differ slightly between
+macOS and Linux; review borderline pairs if the job disagrees with the local baseline.
+
+Where the checks should run (local hook, pre-push, CI, or a self-hosted runner on the M2) is an open design
+question for the tier 4 retro, as is whether semantic ever becomes blocking.
 
 Blind spots: AST similarity skips test files; semantic compares across files, not within one; unsupported
 languages and very short snippets are not covered.
