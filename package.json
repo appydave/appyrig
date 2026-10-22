@@ -42,6 +42,8 @@
     "knip:baseline": "node lint/knip-gate.mjs --update",
     "cohesion": "node lint/gates/cohesion.mjs",
     "cohesion:baseline": "node lint/gates/cohesion.mjs --update",
+    "coupling": "node lint/gates/coupling.mjs",
+    "coupling:baseline": "node lint/gates/coupling.mjs --update",
     "fake-collector": "node server/scripts/fake-collector.mjs",
     "api:gen": "tsx scripts/gen-api.ts",
     "snapshots:update": "tsx scripts/update-snapshots.ts",
