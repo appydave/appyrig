@@ -70,11 +70,11 @@ there is no `actions/cache` step and no eviction. Clear it by deleting that dire
 The profile downloads a checksum-verified CodeRankEmbed model on first use (about 548 MB, CPU only, no hosted
 API; jscpd 5.4.1 pins the revision) and embeds every function. Measured:
 
-| Where                  | Cold run                                                     | Cached run |
-| ---------------------- | ------------------------------------------------------------ | ---------- |
-| M4 Mini                | about 4.5 minutes (3,759 functions)                          | about 1 s  |
-| GitHub `ubuntu-latest` | **more than 42 minutes** (run 39707247570, cancelled at 42+) | unknown    |
-| M2 self-hosted runner  | **4 min 35 s** (step; job 5 min 24 s; run 39720873908)       | TO MEASURE |
+| Where                  | Cold run                                                     | Cached run                                                   |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| M4 Mini                | about 4.5 minutes (3,759 functions)                          | about 1 s                                                    |
+| GitHub `ubuntu-latest` | **more than 42 minutes** (run 39707247570, cancelled at 42+) | unknown                                                      |
+| M2 self-hosted runner  | **4 min 35 s** (step; job 5 min 24 s; run 39720873908)       | **2 s** (25 of 3,762 functions re-embedded; run 39721482990) |
 
 An earlier combined run (39704974333) on `ubuntu-latest` hit its 20-minute timeout. M2 and M4 are both macOS
 ARM64, so embedding scores should match the local baseline; review borderline pairs if the job disagrees.
