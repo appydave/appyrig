@@ -261,7 +261,7 @@ export default function ReplayConsoles({ machine, rig, at, socket, follow }: Pro
                   family={chip.family}
                   hist={h}
                   current={!pinned || followKey.split(',').includes(name)}
-                  lines={consoleLines(name, rig, items, events, at)}
+                  lines={consoleLines({ seatName: name, rig, items, history: events, at })}
                 />
               );
             })}
