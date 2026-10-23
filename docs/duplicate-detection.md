@@ -39,7 +39,7 @@ computed rate.
 | `identifiers` | 130 tokens / 16 lines                             |              7 |            0 | 120: 1 of 8 false (optional-field pairs in an options type)  |
 | `renamed`     | 240 tokens / 1 line                               |              5 |            0 | 204: 4 of 10 false (data tables, a markdown table)           |
 | `similar`     | AST 0.85, min-nodes 40, gap 12, 60 tokens / 5 ln. |             14 |            0 | AST 0.75: `apiSuccess`/`apiError` false; tokens 40: 3 of 23  |
-| `semantic`    | CodeRankEmbed, 0.90, 36 tokens / 1 line           |            144 |            3 | 0.84: 12 of 203 false (2-line `flatMap` calls, `it()` pairs) |
+| `semantic`    | CodeRankEmbed, 0.90, size in `package.json`       |            144 |            3 | 0.84: 12 of 203 false (2-line `flatMap` calls, `it()` pairs) |
 
 Notes that decided settings:
 
@@ -84,6 +84,14 @@ An earlier combined run (39704974333) on `ubuntu-latest` hit its 20-minute timeo
 ARM64, so embedding scores should match the local baseline; review borderline pairs if the job disagrees.
 
 Whether semantic ever becomes blocking is decided after the two clean weeks.
+
+The semantic minimum size was raised after a sweep of the token and line limits and of skipping test files
+(B01). Short idioms (an Escape-key listener, a toast list, a seven-line Playwright helper) scored high without being
+worth a shared helper, and a size cut was the one lever that removed them without losing the real clones such as
+`median()`. Known loss: the 8-line `kb` formatter pair is below the limit and no longer reported. The baseline
+dropped by exactly the pairs under the limit, none added. If test noise comes back, the second option is to skip
+test files in the semantic profile (127 to 17 pairs at the time), at the cost of paraphrased test copies that
+no profile would then catch.
 
 Blind spots: AST similarity skips test files; semantic compares across files, not within one; unsupported
 languages and very short snippets are not covered.
