@@ -50,10 +50,6 @@
         "exports": 1,
         "types": 3
       },
-      "client/src/domain/fleet/views.ts": {
-        "exports": 9,
-        "types": 5
-      },
       "client/src/domain/fleet/xtermRegistry.ts": {
         "exports": 1
       },
@@ -463,8 +459,8 @@
         "types": 4
       },
       "client/src/domain/fleet/views.ts": {
-        "exports": 13,
-        "types": 6
+        "exports": 4,
+        "types": 1
       },
       "client/src/domain/fleet/xtermRegistry.ts": {
         "exports": 1
