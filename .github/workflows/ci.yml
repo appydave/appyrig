@@ -58,6 +58,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Frozen finding scores (G04/G06; baselined, may only shrink)
+        run: npm run scores
+
       - name: No type lies (Oxlint + anti-slop, baselined)
         run: npm run oxlint
 

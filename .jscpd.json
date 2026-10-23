@@ -14,6 +14,7 @@
     "**/.quality-results/**",
     "**/.jscpd/**",
     ".dependency-cruiser-known-*.json",
+    "scores-baseline.json",
     "**/*.css",
     "api/**",
     "test/fixtures/**",

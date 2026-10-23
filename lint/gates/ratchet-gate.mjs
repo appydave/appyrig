@@ -45,7 +45,9 @@ function compareSections({ sections, actual, baseline }) {
     const found = compare(actual[name], baseline[name] ?? {});
 
     grown.push(...found.grown.map((g) => ({ ...g, section: name, text: messageFor(g) })));
-    shrunk.push(...found.shrunk.map((s) => ({ ...s, text: `  ${s.file}: ${s.was} -> ${s.now}` })));
+    shrunk.push(
+      ...found.shrunk.map((s) => ({ ...s, text: `  [${name}] ${s.file}: ${s.was} -> ${s.now}` }))
+    );
   }
 
   return { grown, shrunk };
