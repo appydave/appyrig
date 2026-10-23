@@ -7,7 +7,7 @@ import { listRigs } from '@client/domain/fleet/views.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
 import type { PageContext } from '@client/app/types.js';
-import { NAV_GROUPS, groupOf } from '@client/app/registry.js';
+import { groupOf, navGroups } from '@client/app/registry.js';
 import { page } from './index.js';
 
 vi.mock('@xterm/xterm', () => ({
@@ -97,7 +97,7 @@ describe('Rig Map page', () => {
     expect(page.key).toBe('map');
     expect(groupOf('map')).toBe('work');
 
-    const work = NAV_GROUPS.find((g) => g.key === 'work')!.pages;
+    const work = navGroups().find((g) => g.key === 'work')!.pages;
 
     expect(Math.abs(work.indexOf('map') - work.indexOf('flow'))).toBe(1);
   });

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import type { FrozenMeta } from './frozen/frozenSocket.js';
 import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
 import type { AgentPanelTarget, NavGroupKey, PageKey, PageContext } from './types.js';
+import { NavProvider } from '@client/shell/NavContext.js';
 import { PANEL_ENTRY, agentToParam, readUrlState, writeParams } from '@client/shell/urlState.js';
 import './app.css';
 import './w2.css';
@@ -292,7 +293,15 @@ export function usePages({ frozen, ctx, onUrlRig }: UsePagesArgs): PageFrame {
     agentPanel,
   };
   const Page = pageFor(page)?.component;
-  const body = Page ? <Page ctx={fullCtx} /> : null;
+  const navView = navGroups().map((g) => ({
+    ...g,
+    pages: g.pages.map((key) => ({ key, label: navLabel(key) })),
+  }));
+  const body = Page ? (
+    <NavProvider value={navView}>
+      <Page ctx={fullCtx} />
+    </NavProvider>
+  ) : null;
 
   const controls = frozen ? (
     <span className="ar-controls">

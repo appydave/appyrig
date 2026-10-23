@@ -62,7 +62,7 @@ export function pageFor(key: PageKey): PageDef | undefined {
  * The grouped nav (C6: more pages than today, still simpler — four groups, not a 15-tab strip).
  * Each group lists its pages in order; a page shows in the nav once it is registered above.
  */
-export const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[] = [
+const NAV_GROUPS: { key: NavGroupKey; label: string; pages: PageKey[] }[] = [
   {
     key: 'fleet',
     label: 'Fleet',
