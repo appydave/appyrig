@@ -505,195 +505,299 @@ export function buildRigMap(
 
   const items = rigQueue(home, rig.name);
   const openAt = new Map<string, OpenCount>();
-  const edgeMap = new Map<string, MapEdge>();
-  const outside = new Map<string, { fm: FleetMachine | null; ep: Endpoint }>();
+  const scan: HandoffScan = {
+    machines,
+    home,
+    rigName: rig.name,
+    now,
+    edges: new Map<string, MapEdge>(),
+    openAt,
+    outside: new Map(),
+    seatOf: (fm, seat): MapSeat =>
+      mapSeat(fm, seat, openAt.get(seatKey(fm.machine.id, seat.id)) ?? NONE),
+  };
 
   for (const q of items) {
-    if (!q.source || !q.destination) {
-      continue;
-    }
-
-    const from = resolveEndpoint(q.source, home, machines);
-    const to = resolveEndpoint(q.destination, home, machines);
-
-    for (const ep of [from, to]) {
-      const inRig = ep.machineId === home.machine.id && ep.seat?.rig === rig.name;
-
-      if (!inRig) {
-        outside.set(ep.key, {
-          fm: machines.find((m) => m.machine.id === ep.machineId) ?? null,
-          ep,
-        });
-      }
-    }
-
-    const k = `${from.key}→${to.key}`;
-    const newItems: QueueItem[] = [];
-    const e = edgeMap.get(k) ?? {
-      from: from.key,
-      to: to.key,
-      count: 0,
-      open: 0,
-      stale: 0,
-      self: from.key === to.key,
-      items: newItems,
-    };
-
-    e.count += 1;
-    e.items.push(q);
-    if (isOpen(q)) {
-      const age = now - ms(q.createdAt);
-      const c = { ...(openAt.get(to.key) ?? NONE) };
-
-      if (age > STALE_MS) {
-        e.stale += 1;
-        c.stale += 1;
-        c.oldestStaleMs = Math.max(c.oldestStaleMs ?? 0, age);
-      } else {
-        e.open += 1;
-        c.open += 1;
-      }
-
-      openAt.set(to.key, c);
-    }
-
-    edgeMap.set(k, e);
+    recordHandoff(scan, q);
   }
-
-  const pods = new Map<string, MapPod>();
-
-  for (const seat of home.snapshot.seats.filter((s) => s.rig === rig.name)) {
-    const pod = seat.pod ?? 'seats';
-    const p = pods.get(pod) ?? { name: pod, seats: [] };
-
-    p.seats.push(mapSeat(home, seat, openAt.get(seatKey(home.machine.id, seat.id)) ?? NONE));
-    pods.set(pod, p);
-  }
-
-  const lanes: MapLane[] = [
-    {
-      machineId: home.machine.id,
-      label: home.machine.label,
-      liveness: home.liveness,
-      subtitle: `rig ${rig.name} · ${rig.status}`,
-      pods: [...pods.values()].sort(
-        (a, b) => podRank(a.name) - podRank(b.name) || a.name.localeCompare(b.name)
-      ),
-    },
-  ];
-
-  // Outside endpoints: grouped by their machine (or "not placed" when we cannot find them).
-  const byMachine = new Map<string, MapLane>();
-
-  for (const { fm, ep } of outside.values()) {
-    const id = fm?.machine.id ?? '?';
-    const sameMachine = id === home.machine.id;
-    const laneKey = sameMachine ? `${id}:other` : id;
-    let lane = byMachine.get(laneKey);
-
-    if (!lane) {
-      lane = {
-        machineId: laneKey,
-        label: fm
-          ? sameMachine
-            ? `${fm.machine.label} · other rigs`
-            : fm.machine.label
-          : 'Not placed',
-        liveness: fm?.liveness ?? 'asleep',
-        subtitle: fm ? 'talks to this rig' : 'queue names with no seat we can see',
-        pods: [],
-      };
-      byMachine.set(laneKey, lane);
-    }
-
-    // Group by the seat's real pod; 'seats' is only the fallback when the pod is unknown.
-    const podName = ep.seat?.pod ?? 'seats';
-    let outPod = lane.pods.find((p) => p.name === podName);
-
-    if (!outPod) {
-      outPod = { name: podName, seats: [] };
-      lane.pods.push(outPod);
-    }
-
-    outPod.seats.push(
-      fm && ep.seat
-        ? mapSeat(fm, ep.seat, openAt.get(ep.key) ?? NONE)
-        : {
-            key: ep.key,
-            name: ep.raw,
-            model: { text: 'unplaced', family: 'other' },
-            pip: 'unknown',
-            address: ep.raw,
-            rig: null,
-            source: 'tmux' as const,
-            runtime: null,
-            modelRaw: null,
-            contextPct: null,
-            contextTokens: null,
-            activity: null,
-            ...(openAt.get(ep.key) ?? NONE),
-          }
-    );
-  }
-
-  for (const lane of byMachine.values()) {
-    lane.pods.sort((a, b) => podRank(a.name) - podRank(b.name) || a.name.localeCompare(b.name));
-  }
-
-  lanes.push(...byMachine.values());
-
-  // r1 HIGH-1: the collector delivers queue rows newest first, but a line's items are read
-  // oldest first (the drawer's list, and "latest" = the last one), so sort them once here.
-  const edges = [...edgeMap.values()].map((e) => ({
-    ...e,
-    items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
-  }));
-  // D09 W2: a spec edge between two of the rig's seats is planned until a handoff goes that way.
-  const spec = home.snapshot.rigs.find((r) => r.name === rig.name)?.edges;
-  const mine = new Set(home.snapshot.seats.filter((s) => s.rig === rig.name).map((s) => s.id));
-  const planned =
-    spec === undefined
-      ? null
-      : spec
-          .filter((e) => e.from !== e.to && mine.has(e.from) && mine.has(e.to))
-          .map((e) => ({
-            from: seatKey(home.machine.id, e.from),
-            to: seatKey(home.machine.id, e.to),
-            kind: e.kind,
-          }))
-          .filter((e) => !edgeMap.has(`${e.from}→${e.to}`))
-          // QA W2 LOW-1: two kinds on one pair (kernel: collaborates_with + escalates_to) draw one
-          // line carrying both words, never just the first.
-          .reduce<{ from: string; to: string; kind: string }[]>((acc, e) => {
-            const same = acc.find((x) => x.from === e.from && x.to === e.to);
-
-            if (!same) {
-              acc.push({ ...e });
-            } else if (!same.kind.split(',').includes(e.kind)) {
-              same.kind += `,${e.kind}`;
-            }
-
-            return acc;
-          }, [])
-          .map((e): MapEdge => ({
-            from: e.from,
-            to: e.to,
-            count: 0,
-            open: 0,
-            stale: 0,
-            self: false,
-            items: [],
-            planned: e.kind,
-          }));
 
   return {
     rig,
-    lanes,
-    edges,
+    lanes: [homeLane(scan, rig), ...outsideLanes(scan)],
+    edges: oldestFirst(scan.edges),
     handoffs: rig.handoffs,
     outgoing: items.length - rig.handoffs,
-    planned,
+    planned: plannedEdges(home, rig.name, scan.edges),
   };
+}
+
+/** An endpoint of a handoff that is not a seat of the mapped rig. */
+interface OutsideEnd {
+  fm: FleetMachine | null;
+  ep: Endpoint;
+}
+
+/** What one pass over the rig's queue collects: the lines, who is waiting where, who is outside. */
+interface HandoffScan {
+  machines: FleetMachine[];
+  home: FleetMachine;
+  rigName: string;
+  now: number;
+  edges: Map<string, MapEdge>;
+  openAt: Map<string, OpenCount>;
+  outside: Map<string, OutsideEnd>;
+  /** A seat as the map draws it, with the open items waiting on it. */
+  seatOf: (fm: FleetMachine, seat: Seat) => MapSeat;
+}
+
+function recordHandoff(scan: HandoffScan, q: QueueItem): void {
+  if (!q.source || !q.destination) {
+    return;
+  }
+
+  const from = resolveEndpoint(q.source, scan.home, scan.machines);
+  const to = resolveEndpoint(q.destination, scan.home, scan.machines);
+
+  noteOutside(scan, from);
+  noteOutside(scan, to);
+
+  const e = edgeBetween(scan.edges, from, to);
+
+  e.count += 1;
+  e.items.push(q);
+
+  if (isOpen(q)) {
+    countOpen(scan, e, { toKey: to.key, age: scan.now - ms(q.createdAt) });
+  }
+}
+
+function noteOutside(scan: HandoffScan, ep: Endpoint): void {
+  const inRig = ep.machineId === scan.home.machine.id && ep.seat?.rig === scan.rigName;
+
+  if (!inRig) {
+    scan.outside.set(ep.key, {
+      fm: scan.machines.find((m) => m.machine.id === ep.machineId) ?? null,
+      ep,
+    });
+  }
+}
+
+/** The line from one endpoint to another, created (and remembered) on its first handoff. */
+function edgeBetween(edges: Map<string, MapEdge>, from: Endpoint, to: Endpoint): MapEdge {
+  const k = `${from.key}→${to.key}`;
+  const e: MapEdge = edges.get(k) ?? {
+    from: from.key,
+    to: to.key,
+    count: 0,
+    open: 0,
+    stale: 0,
+    self: from.key === to.key,
+    items: [],
+  };
+
+  edges.set(k, e);
+
+  return e;
+}
+
+/** An open item counts on its line and against the receiving seat: fresh (waiting) or stale (left behind). */
+function countOpen(scan: HandoffScan, e: MapEdge, open: { toKey: string; age: number }): void {
+  const c = { ...(scan.openAt.get(open.toKey) ?? NONE) };
+
+  if (open.age > STALE_MS) {
+    e.stale += 1;
+    c.stale += 1;
+    c.oldestStaleMs = Math.max(c.oldestStaleMs ?? 0, open.age);
+  } else {
+    e.open += 1;
+    c.open += 1;
+  }
+
+  scan.openAt.set(open.toKey, c);
+}
+
+const comparePods = (a: MapPod, b: MapPod) =>
+  podRank(a.name) - podRank(b.name) || a.name.localeCompare(b.name);
+
+/** The pod of that name in the list, added at the end on first use. */
+function podIn(pods: MapPod[], name: string): MapPod {
+  const found = pods.find((p) => p.name === name);
+
+  if (found) {
+    return found;
+  }
+
+  const pod: MapPod = { name, seats: [] };
+
+  pods.push(pod);
+
+  return pod;
+}
+
+function homeLane(scan: HandoffScan, rig: RigRef): MapLane {
+  const { home } = scan;
+  const pods: MapPod[] = [];
+
+  for (const seat of home.snapshot.seats.filter((s) => s.rig === scan.rigName)) {
+    podIn(pods, seat.pod ?? 'seats').seats.push(scan.seatOf(home, seat));
+  }
+
+  return {
+    machineId: home.machine.id,
+    label: home.machine.label,
+    liveness: home.liveness,
+    subtitle: `rig ${scan.rigName} · ${rig.status}`,
+    pods: pods.sort(comparePods),
+  };
+}
+
+/** Outside endpoints: grouped by their machine (or "not placed" when we cannot find them). */
+function outsideLanes(scan: HandoffScan): MapLane[] {
+  const lanes = new Map<string, MapLane>();
+
+  for (const { fm, ep } of scan.outside.values()) {
+    // Group by the seat's real pod; 'seats' is only the fallback when the pod is unknown.
+    const pod = podIn(outsideLane(lanes, scan.home, fm).pods, ep.seat?.pod ?? 'seats');
+
+    pod.seats.push(outsideSeat(scan, { fm, ep }));
+  }
+
+  for (const lane of lanes.values()) {
+    lane.pods.sort(comparePods);
+  }
+
+  return [...lanes.values()];
+}
+
+function outsideLane(
+  lanes: Map<string, MapLane>,
+  home: FleetMachine,
+  fm: FleetMachine | null
+): MapLane {
+  const id = fm?.machine.id ?? '?';
+  const sameMachine = id === home.machine.id;
+  const laneKey = sameMachine ? `${id}:other` : id;
+  const found = lanes.get(laneKey);
+
+  if (found) {
+    return found;
+  }
+
+  const lane: MapLane = {
+    machineId: laneKey,
+    label: outsideLabel(fm, sameMachine),
+    liveness: fm?.liveness ?? 'asleep',
+    subtitle: fm ? 'talks to this rig' : 'queue names with no seat we can see',
+    pods: [],
+  };
+
+  lanes.set(laneKey, lane);
+
+  return lane;
+}
+
+function outsideLabel(fm: FleetMachine | null, sameMachine: boolean): string {
+  if (!fm) {
+    return 'Not placed';
+  }
+
+  return sameMachine ? `${fm.machine.label} · other rigs` : fm.machine.label;
+}
+
+function outsideSeat(scan: HandoffScan, { fm, ep }: OutsideEnd): MapSeat {
+  return fm && ep.seat
+    ? scan.seatOf(fm, ep.seat)
+    : unplacedSeat(ep, scan.openAt.get(ep.key) ?? NONE);
+}
+
+function unplacedSeat(ep: Endpoint, c: OpenCount): MapSeat {
+  return {
+    key: ep.key,
+    name: ep.raw,
+    model: { text: 'unplaced', family: 'other' },
+    pip: 'unknown',
+    address: ep.raw,
+    rig: null,
+    source: 'tmux' as const,
+    runtime: null,
+    modelRaw: null,
+    contextPct: null,
+    contextTokens: null,
+    activity: null,
+    ...c,
+  };
+}
+
+/**
+ * r1 HIGH-1: the collector delivers queue rows newest first, but a line's items are read oldest
+ * first (the drawer's list, and "latest" = the last one), so sort them once here.
+ */
+function oldestFirst(edges: Map<string, MapEdge>): MapEdge[] {
+  return [...edges.values()].map((e) => ({
+    ...e,
+    items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+  }));
+}
+
+interface SpecEdge {
+  from: string;
+  to: string;
+  kind: string;
+}
+
+/**
+ * D09 W2: a spec edge between two of the rig's seats is planned until a handoff goes that way.
+ * Null when the machine's collector does not send the rig's edges.
+ */
+function plannedEdges(
+  home: FleetMachine,
+  rigName: string,
+  edges: Map<string, MapEdge>
+): MapEdge[] | null {
+  const spec = home.snapshot.rigs.find((r) => r.name === rigName)?.edges;
+
+  if (spec === undefined) {
+    return null;
+  }
+
+  const mine = new Set(home.snapshot.seats.filter((s) => s.rig === rigName).map((s) => s.id));
+  const pairs: SpecEdge[] = spec
+    .filter((e) => e.from !== e.to && mine.has(e.from) && mine.has(e.to))
+    .map((e) => ({
+      from: seatKey(home.machine.id, e.from),
+      to: seatKey(home.machine.id, e.to),
+      kind: e.kind,
+    }))
+    .filter((e) => !edges.has(`${e.from}→${e.to}`));
+
+  return mergeKinds(pairs).map((e): MapEdge => ({
+    from: e.from,
+    to: e.to,
+    count: 0,
+    open: 0,
+    stale: 0,
+    self: false,
+    items: [],
+    planned: e.kind,
+  }));
+}
+
+/**
+ * QA W2 LOW-1: two kinds on one pair (kernel: collaborates_with + escalates_to) draw one line
+ * carrying both words, never just the first.
+ */
+function mergeKinds(pairs: SpecEdge[]): SpecEdge[] {
+  return pairs.reduce<SpecEdge[]>((acc, e) => {
+    const same = acc.find((x) => x.from === e.from && x.to === e.to);
+
+    if (!same) {
+      acc.push({ ...e });
+    } else if (!same.kind.split(',').includes(e.kind)) {
+      same.kind += `,${e.kind}`;
+    }
+
+    return acc;
+  }, []);
 }
 
 // ---------------------------------------------------------------- Handoff Flow
