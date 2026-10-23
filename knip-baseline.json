@@ -458,9 +458,8 @@
         "exports": 4,
         "types": 4
       },
-      "client/src/domain/fleet/views.ts": {
-        "exports": 4,
-        "types": 1
+      "client/src/domain/fleet/views/accounts/accounts.ts": {
+        "exports": 1
       },
       "client/src/domain/fleet/xtermRegistry.ts": {
         "exports": 1
