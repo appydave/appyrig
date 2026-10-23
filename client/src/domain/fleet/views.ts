@@ -1130,134 +1130,249 @@ export function buildFlow(query: FlowQuery): FlowView | null {
     return null;
   }
 
-  const { rigSeats, mode, order, inRig, nameOf, nodeOf } = flowLayout(fm, rig, items);
-
-  const edgeMap = new Map<string, FlowEdge>();
-  const waiting = new Map<string, QueueItem[]>();
-  const stale = new Map<string, QueueItem[]>();
-  const closedTurn: number[] = [];
-  let total = 0;
-  let rework = 0;
-  const byVerdict =
-    opts.sentBack === 'verdict-or-stage' && items.some((q) => verdictOf(q) !== null);
+  const run: FlowRun = {
+    fm,
+    rig,
+    items,
+    at,
+    now,
+    sentBack: opts.sentBack,
+    byVerdict: opts.sentBack === 'verdict-or-stage' && items.some((q) => verdictOf(q) !== null),
+    layout: flowLayout(fm, rig, items),
+    edges: new Map<string, FlowEdge>(),
+    waiting: new Map(),
+    stale: new Map(),
+    closedTurn: [],
+    total: 0,
+    rework: 0,
+  };
 
   for (const q of items) {
-    const created = ms(q.createdAt);
-
-    if (created > at) {
-      continue;
-    }
-
-    total += 1;
-
-    const from = nodeOf(q.source);
-    const to = nodeOf(q.destination);
-    const movesBack = order.indexOf(to) < order.indexOf(from);
-    const toWorkStage = to !== 'lead' && to !== OUTSIDE;
-    const back = byVerdict
-      ? SENT_BACK_VERDICTS.has(verdictOf(q) ?? '')
-      : mode === 'roles' && movesBack && toWorkStage;
-
-    if (back) {
-      rework += 1;
-    }
-
-    const k = `${from}→${to}`;
-    const e = edgeMap.get(k) ?? { from, to, count: 0, inFlight: [], items: [], rework: back };
-
-    // By stage every item on one edge agrees; by verdict one sent-back item marks the edge, and
-    // `back` (set only when a rule was asked for) says how many of its items were.
-    if (back) {
-      e.rework = true;
-    }
-
-    if (opts.sentBack) {
-      e.back = (e.back ?? 0) + (back ? 1 : 0);
-    }
-
-    e.count += 1;
-    e.items.push(q);
-
-    const closedAt = isOpen(q) ? now : ms(q.updatedAt);
-
-    // Still open = still in flight, even when the replay time is "now".
-    if (isOpen(q) || closedAt > at) {
-      e.inFlight.push(q);
-
-      const bucket = at - created > STALE_MS ? stale : waiting;
-
-      bucket.set(to, [...(bucket.get(to) ?? []), q]);
-    } else if (!isOpen(q)) {
-      closedTurn.push((closedAt - created) / MS_PER_MINUTE);
-    }
-
-    edgeMap.set(k, e);
+    recordFlowHandoff(run, q);
   }
 
+  return flowViewOf(run, range);
+}
+
+function flowViewOf(run: FlowRun, range: { start: number; end: number }): FlowView {
+  const stages = stageViews(run);
+
+  return {
+    mode: run.layout.mode,
+    start: range.start,
+    end: range.end,
+    at: run.at,
+    stages,
+    edges: [...run.edges.values()].filter((e) => e.from !== e.to),
+    total: run.total,
+    rework: run.rework,
+    medianTurnaroundMin: median(run.closedTurn),
+    closedCount: run.closedTurn.length,
+    bottleneck: bottleneckOf(stages),
+  };
+}
+
+/** What one pass over the rig's queue up to the replay time collects. */
+interface FlowRun {
+  fm: FleetMachine;
+  rig: string;
+  items: QueueItem[];
+  at: number;
+  now: number;
+  sentBack: SentBackRule | undefined;
+  byVerdict: boolean;
+  layout: FlowLayout;
+  edges: Map<string, FlowEdge>;
+  waiting: Map<string, QueueItem[]>;
+  stale: Map<string, QueueItem[]>;
+  closedTurn: number[];
+  total: number;
+  rework: number;
+}
+
+function recordFlowHandoff(run: FlowRun, q: QueueItem): void {
+  if (ms(q.createdAt) > run.at) {
+    return;
+  }
+
+  run.total += 1;
+
+  const from = run.layout.nodeOf(q.source);
+  const to = run.layout.nodeOf(q.destination);
+  const back = isSentBack(run, q, { from, to });
+
+  if (back) {
+    run.rework += 1;
+  }
+
+  const e = flowEdge(run.edges, { from, to }, back);
+
+  markEdge(e, { back, counted: run.sentBack !== undefined });
+  e.count += 1;
+  e.items.push(q);
+  settle(run, e, { q, to });
+}
+
+/**
+ * By stage every item on one edge agrees; by verdict one sent-back item marks the edge, and `back`
+ * (set only when a rule was asked for, `counted`) says how many of its items were.
+ */
+function markEdge(e: FlowEdge, sent: { back: boolean; counted: boolean }): void {
+  if (sent.back) {
+    e.rework = true;
+  }
+
+  if (sent.counted) {
+    e.back = (e.back ?? 0) + (sent.back ? 1 : 0);
+  }
+}
+
+function isSentBack(run: FlowRun, q: QueueItem, ends: { from: string; to: string }): boolean {
+  if (run.byVerdict) {
+    return SENT_BACK_VERDICTS.has(verdictOf(q) ?? '');
+  }
+
+  const { mode, order } = run.layout;
+
+  return (
+    mode === 'roles' &&
+    order.indexOf(ends.to) < order.indexOf(ends.from) &&
+    ends.to !== 'lead' &&
+    ends.to !== OUTSIDE
+  );
+}
+
+/** The line between two boxes, created (and remembered) on its first handoff. */
+function flowEdge(
+  edges: Map<string, FlowEdge>,
+  ends: { from: string; to: string },
+  back: boolean
+): FlowEdge {
+  const k = `${ends.from}→${ends.to}`;
+  const e: FlowEdge = edges.get(k) ?? {
+    from: ends.from,
+    to: ends.to,
+    count: 0,
+    inFlight: [],
+    items: [],
+    rework: back,
+  };
+
+  edges.set(k, e);
+
+  return e;
+}
+
+/** An item still in flight at the replay time waits (fresh) or is stale; a closed one adds its turnaround. */
+function settle(run: FlowRun, e: FlowEdge, handoff: { q: QueueItem; to: string }): void {
+  const { q, to } = handoff;
+  const created = ms(q.createdAt);
+  const closedAt = isOpen(q) ? run.now : ms(q.updatedAt);
+
+  // Still open = still in flight, even when the replay time is "now".
+  if (isOpen(q) || closedAt > run.at) {
+    const bucket = run.at - created > STALE_MS ? run.stale : run.waiting;
+
+    e.inFlight.push(q);
+    bucket.set(to, [...(bucket.get(to) ?? []), q]);
+  } else {
+    run.closedTurn.push((closedAt - created) / MS_PER_MINUTE);
+  }
+}
+
+function stageViews(run: FlowRun): FlowStageView[] {
+  const seatsBy = seatsByNode(run);
+  const hasLead = hasLeadRole(run);
+
+  return run.layout.order.map((id) => stageView(run, { id, seatsBy, hasLead }));
+}
+
+/** The rig's seats, each under the box it sits in. */
+function seatsByNode(run: FlowRun): Map<string, FlowStageView['seats']> {
+  const { rigSeats, mode, nodeOf } = run.layout;
   const seatsBy = new Map<string, FlowStageView['seats']>();
 
   for (const s of rigSeats) {
-    const id = mode === 'roles' ? stageOf(seatName(s)) : nodeOf(`${seatName(s)}@${rig}`);
+    const id = mode === 'roles' ? stageOf(seatName(s)) : nodeOf(`${seatName(s)}@${run.rig}`);
     const chip = modelChip(s);
 
     seatsBy.set(id, [
       ...(seatsBy.get(id) ?? []),
       {
         name: seatName(s),
-        key: seatKey(fm.machine.id, s.id),
+        key: seatKey(run.fm.machine.id, s.id),
         family: chip.family,
         model: chip.text,
       },
     ]);
   }
 
-  const oldest = (list: QueueItem[]) =>
-    list.reduce<number | null>((acc, q) => {
-      const age = at - ms(q.createdAt);
+  return seatsBy;
+}
 
-      return acc === null || age > acc ? age : acc;
-    }, null);
+/** A lead exists when a seat of the rig, or an endpoint of the rig's queue, reads as one. */
+function hasLeadRole(run: FlowRun): boolean {
+  const { rigSeats, inRig, nameOf } = run.layout;
 
-  // A lead exists when a seat of the rig, or an endpoint of the rig's queue, reads as one.
-  const hasLead =
+  return (
     rigSeats.some((s) => stageOf(seatName(s)) === 'lead') ||
-    items.some((q) =>
+    run.items.some((q) =>
       [q.source, q.destination].some((raw) => inRig(raw) && stageOf(nameOf(raw)) === 'lead')
-    );
-  const stages: FlowStageView[] = order.map((id) => {
-    const w = waiting.get(id) ?? [];
-    const st = stale.get(id) ?? [];
+    )
+  );
+}
 
-    return {
-      stage: id,
-      label: mode !== 'roles' ? id : roleLabel(id),
-      seats: seatsBy.get(id) ?? [],
-      outside:
-        mode === 'roles'
-          ? id === OUTSIDE
-          : id !== 'others' && !rigSeats.some((s) => seatName(s) === id),
-      noLead: mode === 'roles' && id === 'lead' && !hasLead,
-      waiting: w.length,
-      oldestWaitMs: oldest(w),
-      stale: st.length,
-      oldestStaleMs: oldest(st),
-    };
-  });
-  const top = [...stages].sort((a, b) => b.waiting - a.waiting)[0];
+interface StageParts {
+  id: string;
+  seatsBy: Map<string, FlowStageView['seats']>;
+  hasLead: boolean;
+}
+
+function stageView(run: FlowRun, parts: StageParts): FlowStageView {
+  const { id, seatsBy, hasLead } = parts;
+  const { mode } = run.layout;
+  const w = run.waiting.get(id) ?? [];
+  const st = run.stale.get(id) ?? [];
 
   return {
-    mode,
-    start: range.start,
-    end: range.end,
-    at,
-    stages,
-    edges: [...edgeMap.values()].filter((e) => e.from !== e.to),
-    total,
-    rework,
-    medianTurnaroundMin: median(closedTurn),
-    closedCount: closedTurn.length,
-    bottleneck: top && top.waiting > 0 ? top.stage : null,
+    stage: id,
+    label: boxLabel(mode, id),
+    seats: seatsBy.get(id) ?? [],
+    outside: isOutsideBox(run.layout, id),
+    noLead: mode === 'roles' && id === 'lead' && !hasLead,
+    waiting: w.length,
+    oldestWaitMs: oldestAge(w, run.at),
+    stale: st.length,
+    oldestStaleMs: oldestAge(st, run.at),
   };
+}
+
+/** A role's name in roles mode, the seat's name in seats mode. */
+function boxLabel(mode: FlowMode, id: string): string {
+  return mode === 'roles' ? roleLabel(id) : id;
+}
+
+/** Roles mode: the outside box. Seats mode: an endpoint that is not a seat of the rig (not "others"). */
+function isOutsideBox(layout: FlowLayout, id: string): boolean {
+  return layout.mode === 'roles'
+    ? id === OUTSIDE
+    : id !== 'others' && !layout.rigSeats.some((s) => seatName(s) === id);
+}
+
+/** How long the oldest of these items had been waiting at the replay time, or null for none. */
+function oldestAge(list: QueueItem[], at: number): number | null {
+  return list.reduce<number | null>((acc, q) => {
+    const age = at - ms(q.createdAt);
+
+    return acc === null || age > acc ? age : acc;
+  }, null);
+}
+
+/** The box holding the most fresh waiting items, if any. */
+function bottleneckOf(stages: FlowStageView[]): string | null {
+  const top = [...stages].sort((a, b) => b.waiting - a.waiting)[0];
+
+  return top && top.waiting > 0 ? top.stage : null;
 }
 
 // ---------------------------------------------------------------- replay chapters
