@@ -500,7 +500,7 @@ describe('Handoff Flow', () => {
 
 describe('Replay chapters', () => {
   it('finds start, first rework and end in a real run, in time order', () => {
-    const ch = flowChapters(m2(), 'fliedit-team', NOW);
+    const ch = flowChapters({ fm: m2(), rig: 'fliedit-team', now: NOW });
     const kinds = ch.map((c) => c.kind);
 
     expect(kinds[0]).toBe('start');
@@ -514,7 +514,7 @@ describe('Replay chapters', () => {
     const fm = m2();
 
     fm.snapshot.queue = [];
-    expect(flowChapters(fm, 'fliedit-team', NOW)).toEqual([]);
+    expect(flowChapters({ fm, rig: 'fliedit-team', now: NOW })).toEqual([]);
   });
 });
 
