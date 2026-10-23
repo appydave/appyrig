@@ -2,8 +2,11 @@ name: Duplicates (semantic)
 
 # The semantic clone check is too slow for GitHub-hosted runners (cold run on ubuntu-latest took more than
 # 42 minutes) and Actions minutes are a hard budget, so it runs on the M2 self-hosted runner, which costs
-# no Actions minutes and keeps the model and embeddings between runs. The repo is private, so pull
-# requests cannot come from forks and the self-hosted runner is not exposed to untrusted code.
+# no Actions minutes and keeps the model and embeddings between runs. The repo is public, so a pull
+# request can come from a fork, and a self-hosted runner must never run a fork's code. The boundary is
+# GitHub's fork approval policy: never approve a fork's workflow run that touches .github/workflows or
+# anything that reaches the self-hosted runner. The job's `if` skips fork pull requests as a second layer.
+# Push, schedule and manual runs are unaffected.
 on:
   pull_request:
   push:
@@ -20,6 +23,7 @@ concurrency:
 jobs:
   semantic:
     name: Duplicate detection (semantic, non-blocking)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, m2, semantic]
     # Not a gate yet: stays non-blocking until two clean weeks, then one judged PR flips it.
     continue-on-error: true
