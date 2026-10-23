@@ -60,8 +60,9 @@ The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs
 (`runs-on: [self-hosted, m2, semantic]`, runner `mac-mini-m2`) on every pull request and push to main, weekly
 (Monday 03:00 Bangkok, cron `0 20 * * 0`) and on demand (`workflow_dispatch`). It costs no GitHub Actions
 minutes (a hard budget: free plan, 2,000 a month shared across the org). The repo is public, so a pull request
-can come from a fork; the job's `if` skips fork pull requests so the self-hosted runner never runs untrusted code.
-Push, schedule and manual runs are unaffected. The job is `continue-on-error` with a 60-minute timeout. That keeps the
+can come from a fork, and a self-hosted runner must never run a fork's code. The boundary is GitHub's fork approval
+policy: never approve a fork's workflow run that touches `.github/workflows` or anything that reaches the self-hosted
+runner. The job's `if` skips fork pull requests as a second layer. Push, schedule and manual runs are unaffected. The job is `continue-on-error` with a 60-minute timeout. That keeps the
 workflow _run_ green, not the job's check: a red semantic step still shows as a red check on the pull request, so the
 merge rule (every check passes) already stops on it. Making the job blocking later changes the run colour, not what
 the merge rule sees. "Clean" for the two weeks that must pass first means the semantic _step_ exits 0 on main; then one
