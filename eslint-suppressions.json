@@ -263,9 +263,6 @@
     "max-params": {
       "count": 4
     },
-    "no-magic-numbers": {
-      "count": 12
-    },
     "sonarjs/cognitive-complexity": {
       "count": 7
     },

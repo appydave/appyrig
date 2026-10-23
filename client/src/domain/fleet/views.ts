@@ -43,7 +43,7 @@ export interface Endpoint {
  * which the daemon reports without a rig), or logical id plus rig (`desk.planner@ylo-desk`).
  * One helper for every caller so the forms cannot drift apart.
  */
-export function seatAddresses(seat: Seat): string[] {
+function seatAddresses(seat: Seat): string[] {
   return [seat.id, ...logicalAddresses(seat)];
 }
 
@@ -52,7 +52,7 @@ function logicalAddresses(seat: Seat): string[] {
   return seat.logicalId ? [seat.logicalId, `${seat.logicalId}@${seat.rig}`] : [];
 }
 
-export function seatAnswersTo(seat: Seat, raw: string): boolean {
+function seatAnswersTo(seat: Seat, raw: string): boolean {
   return seatAddresses(seat).includes(raw);
 }
 
@@ -352,12 +352,12 @@ export interface MapSeat {
   activity: string | null;
 }
 
-export interface MapPod {
+interface MapPod {
   name: string;
   seats: MapSeat[];
 }
 
-export interface MapLane {
+interface MapLane {
   machineId: string;
   label: string;
   liveness: FleetMachine['liveness'];
@@ -493,6 +493,7 @@ export function buildRigMap(
     }
 
     const k = `${from.key}→${to.key}`;
+    const newItems: QueueItem[] = [];
     const e = edgeMap.get(k) ?? {
       from: from.key,
       to: to.key,
@@ -500,7 +501,7 @@ export function buildRigMap(
       open: 0,
       stale: 0,
       self: from.key === to.key,
-      items: [] as QueueItem[],
+      items: newItems,
     };
 
     e.count += 1;
@@ -663,22 +664,47 @@ export function buildRigMap(
 // ---------------------------------------------------------------- Handoff Flow
 
 /** An open item older than this is stale: left behind, not a queue building up. */
-export const STALE_MS = 2 * 60 * 60 * 1000;
+const MS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+const MS_PER_MINUTE = SECONDS_PER_MINUTE * MS_PER_SECOND;
+const STALE_HOURS = 2;
+
+/** How long an open item can sit before it counts as left behind rather than waiting. */
+export const STALE_MS = STALE_HOURS * MINUTES_PER_HOUR * MS_PER_MINUTE;
+
+/** The shortest wait that earns its own line in the replay chapters. */
+const CHAPTER_MIN_WAIT_MINUTES = 5;
 
 export type Stage = 'lead' | 'build' | 'qa' | 'review';
-export const STAGES: Stage[] = ['lead', 'build', 'qa', 'review'];
+
+const STAGES: Stage[] = ['lead', 'build', 'qa', 'review'];
 /**
  * Roles mode only: senders and receivers that are not in this rig (openrig-orch, David / human, a
  * seat of another rig) sit in their own box at the left edge, never inside the Lead stage.
  */
-export const OUTSIDE = 'outside';
-export const OUTSIDE_LABEL = 'From outside the rig';
-export const STAGE_LABEL: Record<Stage, string> = {
+const OUTSIDE = 'outside';
+const OUTSIDE_LABEL = 'From outside the rig';
+const STAGE_LABEL: Record<Stage, string> = {
   lead: 'Lead',
   build: 'Builders',
   qa: 'QA',
   review: 'Reviewer',
 };
+
+function isStage(id: string): id is Stage {
+  return Object.hasOwn(STAGE_LABEL, id);
+}
+
+/** The box title in roles mode: a role's name, or the outside box's. */
+function roleLabel(id: string): string {
+  if (id === OUTSIDE) {
+    return OUTSIDE_LABEL;
+  }
+
+  return isStage(id) ? STAGE_LABEL[id] : id;
+}
 
 /** Role from the seat's name: the convention every rig so far follows (orch-lead, dev-qa, review-r1). */
 export function stageOf(name: string): Stage {
@@ -734,7 +760,7 @@ export interface FlowEdge {
   back?: number;
 }
 
-export interface FlowStageView {
+interface FlowStageView {
   /** Node id: a Stage in roles mode, a seat name in seats mode. */
   stage: string;
   label: string;
@@ -804,17 +830,17 @@ export function flowRange(items: QueueItem[]): { start: number; end: number } | 
  *    exactly when its verdict is `changes` or `fail` (`accept` / `pass` never are, whichever way they
  *    go); a rig with no verdict tags at all keeps the stage rule.
  */
-export type SentBackRule = 'stage' | 'verdict-or-stage';
+type SentBackRule = 'stage' | 'verdict-or-stage';
 
 export interface FlowOptions {
   sentBack?: SentBackRule;
 }
 
 /** Verdicts that send work back. */
-export const SENT_BACK_VERDICTS = new Set(['changes', 'fail']);
+const SENT_BACK_VERDICTS = new Set(['changes', 'fail']);
 
 /** The `verdict:<word>` tag on a handoff, lower-cased; null when it has none. */
-export function verdictOf(q: Pick<QueueItem, 'tags'>): string | null {
+function verdictOf(q: Pick<QueueItem, 'tags'>): string | null {
   const t = q.tags.find((x) => x.startsWith('verdict:'));
 
   return t ? t.slice('verdict:'.length).trim().toLowerCase() : null;
@@ -960,7 +986,7 @@ export function buildFlow(
 
       bucket.set(to, [...(bucket.get(to) ?? []), q]);
     } else if (!isOpen(q)) {
-      closedTurn.push((closedAt - created) / 60_000);
+      closedTurn.push((closedAt - created) / MS_PER_MINUTE);
     }
 
     edgeMap.set(k, e);
@@ -1002,7 +1028,7 @@ export function buildFlow(
 
     return {
       stage: id,
-      label: mode !== 'roles' ? id : id === OUTSIDE ? OUTSIDE_LABEL : STAGE_LABEL[id as Stage],
+      label: mode !== 'roles' ? id : roleLabel(id),
       seats: seatsBy.get(id) ?? [],
       outside:
         mode === 'roles'
@@ -1115,8 +1141,8 @@ export function flowChapters(
     .sort((a, b) => b.w - a.w);
   const longest = waits[0];
 
-  if (longest && longest.w >= 5 * 60_000) {
-    const mins = Math.round(longest.w / 60_000);
+  if (longest && longest.w >= CHAPTER_MIN_WAIT_MINUTES * MS_PER_MINUTE) {
+    const mins = Math.round(longest.w / MS_PER_MINUTE);
 
     out.push({
       at: ms(longest.q.createdAt),
@@ -1208,7 +1234,7 @@ export function median(xs: number[]): number | null {
 
 // ---------------------------------------------------------------- Accounts
 
-export interface AccountDrawer {
+interface AccountDrawer {
   machineLabel: string;
   seats: string[];
 }
@@ -1246,7 +1272,7 @@ const PLAN_LABEL: Record<string, string> = {
   claude_enterprise: 'Enterprise',
 };
 
-export function planLabel(plan: string | null): string {
+function planLabel(plan: string | null): string {
   if (!plan) {
     return 'plan unknown';
   }
@@ -1387,18 +1413,18 @@ export function resetsIn(iso: string | null, now: number): string | null {
     return null;
   }
 
-  const m = Math.round((ms(iso) - now) / 60_000);
+  const m = Math.round((ms(iso) - now) / MS_PER_MINUTE);
 
   if (m <= 0) {
     return 'now';
   }
 
-  const h = Math.floor(m / 60);
-  const d = Math.floor(h / 24);
+  const h = Math.floor(m / MINUTES_PER_HOUR);
+  const d = Math.floor(h / HOURS_PER_DAY);
 
   if (d >= 1) {
-    return `in ${d}d ${h % 24}h`;
+    return `in ${d}d ${h % HOURS_PER_DAY}h`;
   }
 
-  return h ? `in ${h}h ${m % 60}m` : `in ${m}m`;
+  return h ? `in ${h}h ${m % MINUTES_PER_HOUR}m` : `in ${m}m`;
 }

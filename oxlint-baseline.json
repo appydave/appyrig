@@ -56,9 +56,6 @@
     "client/src/domain/fleet/useFleet.ts": {
       "no-unknown-parameters": 1
     },
-    "client/src/domain/fleet/views.ts": {
-      "require-safety-comment-for-type-assertion": 2
-    },
     "client/src/domain/graph/model.ts": {
       "require-safety-comment-for-type-assertion": 2
     },
