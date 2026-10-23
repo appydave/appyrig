@@ -985,13 +985,144 @@ function verdictOf(q: Pick<QueueItem, 'tags'>): string | null {
   return t ? t.slice('verdict:'.length).trim().toLowerCase() : null;
 }
 
-export function buildFlow(
-  fm: FleetMachine,
-  rig: string,
-  at: number,
-  now: number,
-  opts: FlowOptions = {}
-): FlowView | null {
+interface FlowQuery {
+  fm: FleetMachine;
+  rig: string;
+  at: number;
+  now: number;
+  opts?: FlowOptions;
+}
+
+/** How a rig's endpoints become the flow's boxes: roles (the four stages) or one box per seat. */
+interface FlowLayout {
+  rigSeats: Seat[];
+  mode: FlowMode;
+  order: string[];
+  inRig: (raw: string | null) => boolean;
+  nameOf: (raw: string | null) => string;
+  nodeOf: (raw: string | null) => string;
+}
+
+function flowLayout(fm: FleetMachine, rig: string, items: QueueItem[]): FlowLayout {
+  const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
+  const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
+  const nameOf = seatNamer(rigSeats);
+  const mode = flowModeOf([
+    ...rigSeats.map(seatName),
+    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(nameOf)),
+  ]);
+
+  if (mode === 'roles') {
+    return {
+      rigSeats,
+      mode,
+      order: rolesOrder(items, inRig),
+      inRig,
+      nameOf,
+      nodeOf: roleNodeOf(inRig, nameOf),
+    };
+  }
+
+  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? nameOf(raw) : (raw ?? '?'));
+  const seatOrder = seatNodes(rigSeats, items, nodeOfRaw);
+
+  return {
+    rigSeats,
+    mode,
+    order: seatOrder,
+    inRig,
+    nameOf,
+    nodeOf: seatNodeOf(seatOrder, nodeOfRaw),
+  };
+}
+
+/** An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name. */
+function seatNamer(rigSeats: Seat[]): (raw: string | null) => string {
+  return (raw) => {
+    const seat = raw ? rigSeats.find((x) => seatAnswersTo(x, raw)) : undefined;
+
+    return seat ? seatName(seat) : bare(raw);
+  };
+}
+
+/** Roles mode: anyone outside the rig gets their own box, at the left edge (only when there is one). */
+function rolesOrder(items: QueueItem[], inRig: (raw: string | null) => boolean): string[] {
+  const hasOutside = items.some((q) => !inRig(q.source) || !inRig(q.destination));
+
+  return hasOutside ? [OUTSIDE, ...STAGES] : STAGES;
+}
+
+function roleNodeOf(
+  inRig: (raw: string | null) => boolean,
+  nameOf: (raw: string | null) => string
+): (raw: string | null) => string {
+  return (raw) => (inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE);
+}
+
+function seatNodeOf(
+  seatOrder: string[],
+  nodeOfRaw: (raw: string | null) => string
+): (raw: string | null) => string {
+  return (raw) => {
+    const id = nodeOfRaw(raw);
+
+    return seatOrder.includes(id) ? id : 'others';
+  };
+}
+
+/**
+ * Seats mode: one node per endpoint, in the order each first handed work on; the overflow shares an
+ * "others" node.
+ */
+function seatNodes(
+  rigSeats: Seat[],
+  items: QueueItem[],
+  nodeOfRaw: (raw: string | null) => string
+): string[] {
+  const { seatOrder, counts } = firstSeen(items, nodeOfRaw);
+  const idle = rigSeats.map(seatName).filter((name) => !counts.has(name));
+  const all = [...seatOrder, ...idle];
+
+  return all.length > MAX_SEAT_BOXES ? capSeatBoxes(all, counts) : all;
+}
+
+/** Each endpoint in the order it first took part in a handoff, with how many handoffs it is in. */
+function firstSeen(
+  items: QueueItem[],
+  nodeOfRaw: (raw: string | null) => string
+): { seatOrder: string[]; counts: Map<string, number> } {
+  const counts = new Map<string, number>();
+  const seatOrder: string[] = [];
+
+  for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+    for (const raw of [q.source, q.destination]) {
+      const id = nodeOfRaw(raw);
+
+      if (!counts.has(id)) {
+        seatOrder.push(id);
+      }
+
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+  }
+
+  return { seatOrder, counts };
+}
+
+/** Keep the busiest seats (in first-seen order) and fold the rest into "others". */
+function capSeatBoxes(seatOrder: string[], counts: Map<string, number>): string[] {
+  const keep = new Set(
+    [...seatOrder]
+      .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0))
+      .slice(0, MAX_SEAT_BOXES - 1)
+  );
+
+  return [...seatOrder.filter((id) => keep.has(id)), 'others'];
+}
+
+export function buildFlow(query: FlowQuery): FlowView | null {
+  const { fm, rig, at, now } = query;
+  const opts: FlowOptions = query.opts ?? {};
   const items = rigQueue(fm, rig);
   const range = flowRange(items);
 
@@ -999,74 +1130,7 @@ export function buildFlow(
     return null;
   }
 
-  const rigSeats = fm.snapshot.seats.filter((x) => x.rig === rig);
-  const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
-  // An in-rig address may be a logical id (`dev.qa@r`): read its stage from the seat's own name.
-  const nameOf = (raw: string | null): string => {
-    const seat = raw ? rigSeats.find((x) => seatAnswersTo(x, raw)) : undefined;
-
-    return seat ? seatName(seat) : bare(raw);
-  };
-
-  const mode = flowModeOf([
-    ...rigSeats.map(seatName),
-    ...items.flatMap((q) => [q.source, q.destination].filter(inRig).map(nameOf)),
-  ]);
-
-  // Seats mode: one node per endpoint, in the order each first handed work on; the overflow
-  // shares an "others" node.
-  const seatOrder: string[] = [];
-  const nodeOfRaw = (raw: string | null) => (inRig(raw) ? nameOf(raw) : (raw ?? '?'));
-
-  if (mode === 'seats') {
-    const counts = new Map<string, number>();
-
-    for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
-      for (const raw of [q.source, q.destination]) {
-        const id = nodeOfRaw(raw);
-
-        if (!counts.has(id)) {
-          seatOrder.push(id);
-        }
-
-        counts.set(id, (counts.get(id) ?? 0) + 1);
-      }
-    }
-
-    for (const s of rigSeats) {
-      if (!counts.has(seatName(s))) {
-        seatOrder.push(seatName(s));
-      }
-    }
-
-    if (seatOrder.length > MAX_SEAT_BOXES) {
-      const keep = new Set(
-        [...seatOrder]
-          .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0))
-          .slice(0, MAX_SEAT_BOXES - 1)
-      );
-      const kept = seatOrder.filter((id) => keep.has(id));
-
-      seatOrder.length = 0;
-      seatOrder.push(...kept, 'others');
-    }
-  }
-
-  // Roles mode: anyone outside the rig gets their own box, at the left edge (only when there is one).
-  const hasOutside =
-    mode === 'roles' && items.some((q) => !inRig(q.source) || !inRig(q.destination));
-  const nodeOf = (raw: string | null): string => {
-    if (mode === 'roles') {
-      return inRig(raw) ? stageOf(nameOf(raw)) : OUTSIDE;
-    }
-
-    const id = nodeOfRaw(raw);
-
-    return seatOrder.includes(id) ? id : 'others';
-  };
-
-  const order: string[] =
-    mode === 'roles' ? (hasOutside ? [OUTSIDE, ...STAGES] : STAGES) : seatOrder;
+  const { rigSeats, mode, order, inRig, nameOf, nodeOf } = flowLayout(fm, rig, items);
 
   const edgeMap = new Map<string, FlowEdge>();
   const waiting = new Map<string, QueueItem[]>();
@@ -1234,7 +1298,7 @@ export function flowChapters({ fm, rig, now, opts = {} }: ChapterQuery): Chapter
     return [];
   }
 
-  const flowAt = (t: number) => buildFlow(fm, rig, t, now, opts)!;
+  const flowAt = (t: number) => buildFlow({ fm, rig, at: t, now, opts })!;
   const { firstRework, peak } = scanRun(items, flowAt);
 
   return [
