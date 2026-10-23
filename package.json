@@ -44,6 +44,8 @@
     "cohesion:baseline": "node lint/gates/cohesion.mjs --update",
     "coupling": "node lint/gates/coupling.mjs",
     "coupling:baseline": "node lint/gates/coupling.mjs --update",
+    "scores": "node lint/gates/scores.mjs",
+    "scores:baseline": "node lint/gates/scores.mjs --update",
     "fake-collector": "node server/scripts/fake-collector.mjs",
     "api:gen": "tsx scripts/gen-api.ts",
     "snapshots:update": "tsx scripts/update-snapshots.ts",
