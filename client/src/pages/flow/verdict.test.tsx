@@ -57,13 +57,8 @@ function rig(withVerdicts: boolean): FleetMachine {
 
 type FlowOpts = { sentBack?: 'stage' | 'verdict-or-stage' };
 
-// The option is new: called through a loose signature so this file also runs against the old code.
-const flowOf = buildFlow as unknown as (
-  ...a: [FleetMachine, string, number, number, FlowOpts?]
-) => ReturnType<typeof buildFlow>;
-
 const backEdges = (fm: FleetMachine, opts?: FlowOpts) => {
-  const f = flowOf(fm, RIG, NOW, NOW, opts)!;
+  const f = buildFlow({ fm, rig: RIG, at: NOW, now: NOW, opts })!;
 
   return {
     rework: f.rework,

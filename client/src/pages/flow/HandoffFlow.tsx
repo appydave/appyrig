@@ -478,7 +478,7 @@ export default function HandoffFlow({
   }
 
   const t = at ?? range.end;
-  const flow = buildFlow(machine, rig, t, now, V2_FLOW)!;
+  const flow = buildFlow({ fm: machine, rig, at: t, now, opts: V2_FLOW })!;
   const pairs = flowPairs(flow.edges, t);
   const L = layoutFor(flow.stages.map((s) => s.stage));
   const labelOf = (id: string) => flow.stages.find((s) => s.stage === id)?.label ?? id;

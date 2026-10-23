@@ -265,7 +265,7 @@ describe('Handoff Flow', () => {
   it('at the end of a run: all handoffs counted, rework is QA/review sending back to builders', () => {
     const fm = m2();
     const range = flowRange(rigQueue(fm, 'fliedit-team'))!;
-    const flow = buildFlow(fm, 'fliedit-team', range.end, NOW)!;
+    const flow = buildFlow({ fm, rig: 'fliedit-team', at: range.end, now: NOW })!;
 
     expect(flow.total).toBe(rigQueue(fm, 'fliedit-team').length);
 
@@ -279,7 +279,7 @@ describe('Handoff Flow', () => {
   it('replaying to the start shows only what had happened by then', () => {
     const fm = m2();
     const range = flowRange(rigQueue(fm, 'fliedit-team'))!;
-    const flow = buildFlow(fm, 'fliedit-team', range.start, NOW)!;
+    const flow = buildFlow({ fm, rig: 'fliedit-team', at: range.start, now: NOW })!;
 
     expect(flow.total).toBeGreaterThanOrEqual(1);
     expect(flow.total).toBeLessThan(rigQueue(fm, 'fliedit-team').length);
@@ -298,13 +298,18 @@ describe('Handoff Flow', () => {
       }),
     ];
 
-    const mid = buildFlow(fm, 'x', Date.parse('2026-10-09T10:10:00.000Z'), NOW)!;
+    const mid = buildFlow({ fm, rig: 'x', at: Date.parse('2026-10-09T10:10:00.000Z'), now: NOW })!;
 
     expect(mid.edges[0]!.inFlight.map((i) => i.id)).toEqual(['a']);
     expect(mid.stages.find((s) => s.stage === 'qa')!.waiting).toBe(1);
     expect(mid.bottleneck).toBe('qa');
 
-    const after = buildFlow(fm, 'x', Date.parse('2026-10-09T10:30:00.000Z'), NOW)!;
+    const after = buildFlow({
+      fm,
+      rig: 'x',
+      at: Date.parse('2026-10-09T10:30:00.000Z'),
+      now: NOW,
+    })!;
 
     expect(after.edges[0]!.inFlight).toEqual([]);
     expect(after.medianTurnaroundMin).toBe(20);
@@ -326,7 +331,7 @@ describe('Handoff Flow', () => {
     ];
 
     const later = Date.parse('2026-10-09T10:00:00.000Z') + STALE_MS + 60_000;
-    const flow = buildFlow(fm, 'x', later, later)!;
+    const flow = buildFlow({ fm, rig: 'x', at: later, now: later })!;
     const lead = flow.stages.find((s) => s.stage === 'lead')!;
 
     expect(lead.waiting).toBe(0);
@@ -355,7 +360,7 @@ describe('Handoff Flow', () => {
       }),
     ];
 
-    const flow = buildFlow(fm, 'sr', NOW, NOW)!;
+    const flow = buildFlow({ fm, rig: 'sr', at: NOW, now: NOW })!;
 
     expect(flow.mode).toBe('seats');
     expect(flow.stages.map((s) => s.stage)).toEqual(['research-scout', 'research-checker']);
@@ -376,7 +381,7 @@ describe('Handoff Flow', () => {
       }),
     ];
 
-    const flow = buildFlow(fm, 'x', NOW, NOW)!;
+    const flow = buildFlow({ fm, rig: 'x', at: NOW, now: NOW })!;
 
     expect(flow.mode).toBe('roles');
 
@@ -402,7 +407,7 @@ describe('Handoff Flow', () => {
       }),
     ];
 
-    const flow = buildFlow(fm, 'x', NOW, NOW)!;
+    const flow = buildFlow({ fm, rig: 'x', at: NOW, now: NOW })!;
 
     expect(flow.stages.find((s) => s.stage === 'lead')!.noLead).toBe(false);
   });
@@ -432,7 +437,7 @@ describe('Handoff Flow', () => {
       }),
     ];
 
-    const flow = buildFlow(fm, 'x', NOW, NOW)!;
+    const flow = buildFlow({ fm, rig: 'x', at: NOW, now: NOW })!;
 
     expect(flow.stages.map((s) => s.stage)).toEqual(['outside', 'lead', 'build', 'qa', 'review']);
 
@@ -477,7 +482,7 @@ describe('Handoff Flow', () => {
       }),
     ];
 
-    const flow = buildFlow(fm, r, NOW, NOW)!;
+    const flow = buildFlow({ fm, rig: r, at: NOW, now: NOW })!;
 
     expect(flow.mode).toBe('roles');
     expect(flow.edges.map((e) => `${e.from}→${e.to}`).sort()).toEqual([
@@ -494,7 +499,7 @@ describe('Handoff Flow', () => {
     const fm = m2();
 
     fm.snapshot.queue = [];
-    expect(buildFlow(fm, 'fliedit-team', NOW, NOW)).toBeNull();
+    expect(buildFlow({ fm, rig: 'fliedit-team', at: NOW, now: NOW })).toBeNull();
   });
 });
 
@@ -696,7 +701,7 @@ describe('B3 (fb-0006): the median stat as one plain sentence', () => {
   it('buildFlow reports how many closed handoffs the median covers', () => {
     const fm = fleetMachine(snapshot('m2'));
     const rig = listRigs([fm]).find((r) => r.handoffs > 0)!;
-    const flow = buildFlow(fm, rig.name, Date.now(), Date.now());
+    const flow = buildFlow({ fm, rig: rig.name, at: Date.now(), now: Date.now() });
 
     expect(flow?.closedCount).toBeGreaterThanOrEqual(0);
     if (flow && flow.closedCount > 0) {
@@ -823,7 +828,7 @@ describe('F1 · handoffs attach to the rig doing the work (truth E1)', () => {
     expect(lead.open).toBe(1);
 
     // The Handoff Flow shows it too: planner as a node outside this rig.
-    const flow = buildFlow(fm, 'ylo-thumbs', NOW, NOW)!;
+    const flow = buildFlow({ fm, rig: 'ylo-thumbs', at: NOW, now: NOW })!;
 
     expect(flow.total).toBe(2);
 
