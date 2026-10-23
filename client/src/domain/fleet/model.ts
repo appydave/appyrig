@@ -32,34 +32,41 @@ export function pipFor(seat: Seat, machine: FleetMachine): PipKey {
   return machine.liveness === 'asleep' ? 'asleep' : seat.status;
 }
 
-export type FreshnessLevel = 'live' | 'stale' | 'asleep';
+type FreshnessLevel = 'live' | 'stale' | 'asleep';
 
 export interface Freshness {
   level: FreshnessLevel;
   label: string;
 }
 
+const MS_PER_SECOND = 1000;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+/** An age reads in hours up to this many, then in days. */
+const HOURS_BEFORE_DAYS = 48;
+
 /** "4s", "3m", "2h", "5d". Negative ages (clock skew) read as 0s. */
 export function ago(ms: number): string {
-  const s = Math.max(0, Math.floor(ms / 1000));
+  const s = Math.max(0, Math.floor(ms / MS_PER_SECOND));
 
-  if (s < 60) {
+  if (s < SECONDS_PER_MINUTE) {
     return `${s}s`;
   }
 
-  const m = Math.floor(s / 60);
+  const m = Math.floor(s / SECONDS_PER_MINUTE);
 
-  if (m < 60) {
+  if (m < MINUTES_PER_HOUR) {
     return `${m}m`;
   }
 
-  const h = Math.floor(m / 60);
+  const h = Math.floor(m / MINUTES_PER_HOUR);
 
-  if (h < 48) {
+  if (h < HOURS_BEFORE_DAYS) {
     return `${h}h`;
   }
 
-  return `${Math.floor(h / 24)}d`;
+  return `${Math.floor(h / HOURS_PER_DAY)}d`;
 }
 
 /**
@@ -105,22 +112,24 @@ export function modelChip(seat: Seat): { text: string; family: ModelFamily } {
   const raw = seat.model;
 
   if (raw) {
-    const m = /^claude-(opus|sonnet|fable|haiku)-(\d+)-(\d+)/.exec(raw);
+    const family = /^(gpt|codex|o\d)/.test(raw) ? 'codex' : 'other';
 
-    if (m) {
-      return { text: `${m[1]} ${m[2]}.${m[3]}`, family: m[1] as ModelFamily };
-    }
-
-    if (/^(gpt|codex|o\d)/.test(raw)) {
-      return { text: raw, family: 'codex' };
-    }
-
-    return { text: raw, family: 'other' };
+    return claudeChip(raw) ?? { text: raw, family };
   }
 
   const runtime = seat.runtime ?? 'unknown';
 
   return { text: runtime, family: runtime === 'codex' ? 'codex' : 'other' };
+}
+
+const CLAUDE_FAMILIES = ['opus', 'sonnet', 'fable', 'haiku'] as const;
+
+/** The chip of a Claude model id such as `claude-opus-4-8` ("opus 4.8"), or null for any other id. */
+function claudeChip(raw: string): { text: string; family: ModelFamily } | null {
+  const [, word, major, minor] = /^claude-(opus|sonnet|fable|haiku)-(\d+)-(\d+)/.exec(raw) ?? [];
+  const family = CLAUDE_FAMILIES.find((f) => f === word);
+
+  return family ? { text: `${family} ${major}.${minor}`, family } : null;
 }
 
 export type GroupBy = 'rig' | 'machine';
@@ -144,14 +153,7 @@ export interface WallGroup {
 /** S3: what a Wall group is doing as a whole, which decides its place and whether it starts open. */
 export type GroupState = 'blocked' | 'working' | 'idle' | 'unknown' | 'stopped' | 'asleep';
 
-export const GROUP_STATES: GroupState[] = [
-  'blocked',
-  'working',
-  'idle',
-  'unknown',
-  'stopped',
-  'asleep',
-];
+const GROUP_STATES: GroupState[] = ['blocked', 'working', 'idle', 'unknown', 'stopped', 'asleep'];
 
 /** Stated on screen above the Wall (S3: "the sort order is stated on screen"). */
 export const WALL_ORDER_TEXT =
@@ -203,7 +205,7 @@ export function agentActivityOf(seat: Seat): string | null {
 }
 
 /** Latest agent activity of any seat in the group, as an ISO string ('' when none reported). */
-export function groupLastActivity(g: WallGroup): string {
+function groupLastActivity(g: WallGroup): string {
   return g.tiles.reduce((acc, t) => {
     const at = agentActivityOf(t.seat) ?? '';
 
@@ -236,48 +238,60 @@ export function groupSeats(machines: FleetMachine[], by: GroupBy): WallGroup[] {
 }
 
 function collectGroups(machines: FleetMachine[], by: GroupBy): WallGroup[] {
-  const groups: WallGroup[] = [];
+  return machines.flatMap((fm) => (by === 'machine' ? [machineGroup(fm)] : rigGroups(fm)));
+}
 
-  for (const fm of machines) {
-    const asleep = fm.liveness === 'asleep';
-    const seats = fm.snapshot.seats;
+const tileOf = (fm: FleetMachine, seat: Seat): TileRef => ({
+  key: seatKey(fm.machine.id, seat.id),
+  machine: fm,
+  seat,
+});
 
-    if (by === 'machine') {
-      groups.push({
-        key: fm.machine.id,
-        name: fm.machine.label,
-        where: `${seats.length} seat${seats.length === 1 ? '' : 's'}`,
-        asleep,
-        tiles: seats.map((seat) => ({ key: seatKey(fm.machine.id, seat.id), machine: fm, seat })),
-      });
-      continue;
-    }
+function machineGroup(fm: FleetMachine): WallGroup {
+  const seats = fm.snapshot.seats;
 
-    const byRig = new Map<string, WallGroup>();
+  return {
+    key: fm.machine.id,
+    name: fm.machine.label,
+    where: `${seats.length} seat${seats.length === 1 ? '' : 's'}`,
+    asleep: fm.liveness === 'asleep',
+    tiles: seats.map((seat) => tileOf(fm, seat)),
+  };
+}
 
-    for (const seat of seats) {
-      const rig = seat.rig ?? null;
-      const key = `${fm.machine.id}:${rig ?? '~tmux'}`;
-      let g = byRig.get(key);
+/** One group per rig on a machine (seats outside OpenRig share "tmux sessions"), in order of first seat. */
+function rigGroups(fm: FleetMachine): WallGroup[] {
+  const byRig = new Map<string, WallGroup>();
 
-      if (!g) {
-        g = {
-          key,
-          name: rig ?? 'tmux sessions',
-          where: fm.machine.label,
-          asleep,
-          tiles: [],
-          rig: rig ? fm.snapshot.rigs.find((r) => r.name === rig) : undefined,
-        };
-        byRig.set(key, g);
-        groups.push(g);
-      }
+  for (const seat of fm.snapshot.seats) {
+    const rig = seat.rig ?? null;
+    const key = `${fm.machine.id}:${rig ?? '~tmux'}`;
+    const group = byRig.get(key) ?? rigGroup({ key, rig, fm });
 
-      g.tiles.push({ key: seatKey(fm.machine.id, seat.id), machine: fm, seat });
-    }
+    group.tiles.push(tileOf(fm, seat));
+    byRig.set(key, group);
   }
 
-  return groups;
+  return [...byRig.values()];
+}
+
+function rigGroup({
+  key,
+  rig,
+  fm,
+}: {
+  key: string;
+  rig: string | null;
+  fm: FleetMachine;
+}): WallGroup {
+  return {
+    key,
+    name: rig ?? 'tmux sessions',
+    where: fm.machine.label,
+    asleep: fm.liveness === 'asleep',
+    tiles: [],
+    rig: rig ? fm.snapshot.rigs.find((r) => r.name === rig) : undefined,
+  };
 }
 
 export interface FleetCounts {
@@ -441,28 +455,25 @@ const PROMPT_LINE = /^\s*[❯›>](\s|$)/;
  */
 function inputBoxStart(lines: string[]): number {
   for (let i = lines.length - 1; i > 0; i -= 1) {
-    if (!PROMPT_LINE.test(stripAnsi(lines[i]!))) {
-      continue;
-    }
-
-    if (!RULE.test(stripAnsi(lines[i - 1]!))) {
-      continue;
-    }
-
-    const lower = lines.findIndex((l, k) => k > i && RULE.test(stripAnsi(l)));
-
-    if (lower === -1) {
-      continue;
-    }
-
-    // r1 W3 LOW-2: only the box when what follows its lower rule is footer chrome (or blank), so a
-    // plain pane with "> quoted" between two long rules keeps the output after it.
-    if (lines.slice(lower + 1).every(isChrome)) {
+    if (isInputBox(lines, i)) {
       return i - 1;
     }
   }
 
   return -1;
+}
+
+/** Whether the prompt line at `i` sits between two rules with only footer chrome (or blank) below the lower one. */
+function isInputBox(lines: string[], i: number): boolean {
+  if (!PROMPT_LINE.test(stripAnsi(lines[i]!)) || !RULE.test(stripAnsi(lines[i - 1]!))) {
+    return false;
+  }
+
+  const lower = lines.findIndex((l, k) => k > i && RULE.test(stripAnsi(l)));
+
+  // r1 W3 LOW-2: only the box when what follows its lower rule is footer chrome (or blank), so a
+  // plain pane with "> quoted" between two long rules keeps the output after it.
+  return lower !== -1 && lines.slice(lower + 1).every(isChrome);
 }
 
 export function contentTail(all: string[], n: number): string[] {
