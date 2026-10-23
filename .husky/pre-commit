@@ -1,1 +1,15 @@
 npx lint-staged
+
+# After lint-staged (its --prune-suppressions edits eslint-suppressions.json): the cheap checks it does not run,
+# then the one that keeps scores-baseline.json in step. `scores:baseline` only shrinks: a score that rose fails here.
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+css=$(echo "$staged" | grep -E '\.css$' || true)
+
+[ -z "$css" ] || npx stylelint $css
+npm run folders --silent
+npm run test:trust --silent
+
+if echo "$staged" | grep -qE '\.(ts|tsx|js|mjs)$'; then
+  npm run scores:baseline --silent
+  git add scores-baseline.json
+fi
