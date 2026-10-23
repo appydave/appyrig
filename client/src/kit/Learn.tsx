@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import { ago, blockedSeats, PIP, pipFor, seatName } from '@client/domain/fleet/model.js';
-import { buildAccounts, buildRigMap, listRigs } from '@client/domain/fleet/views.js';
+import { buildAccounts } from '@client/domain/fleet/views/accounts/accounts.js';
+import { buildRigMap } from '@client/domain/fleet/views/map/rigMap.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import { GLOSSARY, STUDY_GUIDE_URL } from '@client/domain/learn/glossary.js';
 import { LESSONS, type Lesson } from '@client/domain/learn/lessons.js';
 import { ATLAS, ATLAS_URL, STATUS_LABEL, atlasGroups } from '@client/domain/learn/atlas.js';

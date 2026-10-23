@@ -9,28 +9,18 @@ import type {
 } from '@appydave/shared';
 import { windowStory } from './accountWindow.js';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
-import {
-  buildAccounts,
-  buildFlow,
-  buildRigMap,
-  endpointRig,
-  consoleLines,
-  flowChapters,
-  flowModeOf,
-  flowRange,
-  isOpen,
-  listRigs,
-  median,
-  mostHeadroom,
-  plannedWord,
-  resetsIn,
-  resolveEndpoint,
-  replaySteps,
-  rigQueue,
-  stageOf,
-  STALE_MS,
-  rigState,
-} from './views.js';
+import { buildAccounts, mostHeadroom } from './views/accounts/accounts.js';
+import { buildFlow, flowRange } from './views/flow/flow.js';
+import { buildRigMap, plannedWord } from './views/map/rigMap.js';
+import { endpointRig, isOpen, rigQueue } from './views/core/queue.js';
+import { consoleLines, replaySteps } from './views/flow/console.js';
+import { flowChapters } from './views/flow/chapters.js';
+import { flowModeOf, stageOf } from './views/flow/stages.js';
+import { listRigs } from './views/core/rigList.js';
+import { median } from './views/core/stats.js';
+import { resetsIn, STALE_MS } from './views/core/time.js';
+import { resolveEndpoint } from './views/core/endpoints.js';
+import { rigState } from './views/core/rigState.js';
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 const m2 = () => fleetMachine(snapshot('m2'));

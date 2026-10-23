@@ -1,5 +1,5 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { isOpen } from '@client/domain/fleet/views.js';
+import { isOpen } from '@client/domain/fleet/views/core/queue.js';
 import { realNames } from '@client/domain/fleet/realNames.js';
 
 /**

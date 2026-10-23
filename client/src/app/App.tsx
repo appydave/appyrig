@@ -4,7 +4,7 @@ import RigFiles from '@client/kit/RigFiles.js';
 import { Legend2 } from '@client/kit/index.js';
 import { isShortcutBlocked, isTextEntry } from '@client/lib/keys.js';
 import { findSeat, orderedMachines, seatName } from '@client/domain/fleet/model.js';
-import { listRigs } from '@client/domain/fleet/views.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import {
   getFleetSocket,
   useFleet,

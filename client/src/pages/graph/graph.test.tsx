@@ -9,7 +9,7 @@ import {
   type QueueItem,
 } from '@appydave/shared';
 import App from '@client/app/App.js';
-import { listRigs } from '@client/domain/fleet/views.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';

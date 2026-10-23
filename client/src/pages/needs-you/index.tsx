@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { readRigWaiting } from '@client/kit/data/rigReads.js';
-import { rigQueue } from '@client/domain/fleet/views.js';
+import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
 import '@client/kit/data/coverage.css';
 import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';

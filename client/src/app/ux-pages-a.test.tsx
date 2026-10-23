@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
-import { listRigs } from '@client/domain/fleet/views.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { pageCtx, verbSocket } from '@client/pages/page-test-kit.js';

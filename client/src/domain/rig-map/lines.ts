@@ -1,5 +1,6 @@
 import type { QueueItem } from '@appydave/shared';
-import { plannedWord, type MapEdge, type RigMap } from '@client/domain/fleet/views.js';
+import { plannedWord } from '@client/domain/fleet/views/map/rigMap.js';
+import { type MapEdge, type RigMap } from '@client/domain/fleet/views/map/types.js';
 import {
   mergePairs,
   podRail,

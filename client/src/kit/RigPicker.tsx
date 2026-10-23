@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { RIG_STATE, type RigRef } from '@client/domain/fleet/views.js';
+import { RIG_STATE } from '@client/domain/fleet/views/core/rigState.js';
+import { type RigRef } from '@client/domain/fleet/views/core/types.js';
 import RigInfo, { rigTitle } from './RigInfo.js';
 import { useStableOrder } from '@client/lib/stableOrder.js';
 

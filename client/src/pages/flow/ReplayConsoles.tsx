@@ -4,7 +4,9 @@ import type { FleetMachine, SeatHistoryOutput } from '@appydave/shared';
 import { callVerb } from '@client/domain/fleet/coreCall.js';
 import { modelChip, seatName } from '@client/domain/fleet/model.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
-import { consoleLines, rigQueue, type ConsoleKind } from '@client/domain/fleet/views.js';
+import { consoleLines } from '@client/domain/fleet/views/flow/console.js';
+import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { type ConsoleKind } from '@client/domain/fleet/views/flow/types.js';
 
 interface Props {
   machine: FleetMachine;

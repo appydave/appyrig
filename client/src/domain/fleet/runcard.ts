@@ -1,6 +1,6 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { pipFor, seatName } from './model.js';
-import { endpointRig, isOpen, rigQueue } from './views.js';
+import { endpointRig, isOpen, rigQueue } from './views/core/queue.js';
 
 /**
  * Run card R1: what a rig's run is for, where it is and how it ended, in words, from data the hub

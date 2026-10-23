@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { QueueItem } from '@appydave/shared';
 import type { PageDef, PageProps } from '@client/app/types.js';
-import { buildRigMap } from '@client/domain/fleet/views.js';
+import { buildRigMap } from '@client/domain/fleet/views/map/rigMap.js';
 import { PageHeader, useDocsDrawer } from '@client/kit/index.js';
 import { allGroups, buildGraph } from '@client/domain/graph/model.js';
 import { lastWords } from '@client/pages/graph/RigBox.js';
 import RigInside from '@client/pages/graph/RigInside.js';
-import { RIG_STATE } from '@client/domain/fleet/views.js';
+import { RIG_STATE } from '@client/domain/fleet/views/core/rigState.js';
 import { freshness } from '@client/domain/fleet/model.js';
 import '@client/pages/graph/graph.css';
 import './rigmap.css';

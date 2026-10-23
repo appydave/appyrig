@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { FleetMachine, FleetUpdate } from '@appydave/shared';
-import { listRigs } from '@client/domain/fleet/views.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
 import type { PageContext } from '@client/app/types.js';

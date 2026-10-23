@@ -1,7 +1,8 @@
 import type { AccountWindow, FleetMachine } from '@appydave/shared';
 import { windowStory } from '@client/domain/fleet/accountWindow.js';
 import { burnPerHour, hoursToEmpty } from '@client/domain/accounts/model.js';
-import { buildAccounts, resetsIn } from '@client/domain/fleet/views.js';
+import { buildAccounts } from '@client/domain/fleet/views/accounts/accounts.js';
+import { resetsIn } from '@client/domain/fleet/views/core/time.js';
 import { FakeControl } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
 import '@client/pages/w4.css';

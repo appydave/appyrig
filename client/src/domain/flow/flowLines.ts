@@ -1,5 +1,5 @@
-import type { FlowEdge } from '@client/domain/fleet/views.js';
-import { STALE_MS } from '@client/domain/fleet/views.js';
+import type { FlowEdge } from '@client/domain/fleet/views/flow/types.js';
+import { STALE_MS } from '@client/domain/fleet/views/core/time.js';
 import { mergePairs, pairKey, type LinePair } from '@client/domain/lines/handoffLines.js';
 
 /**
