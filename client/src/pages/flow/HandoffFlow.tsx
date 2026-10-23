@@ -251,7 +251,7 @@ export default function HandoffFlow({
   // Chapters only need the open/closed picture to 10-minute precision.
   const tenMin = Math.floor(now / 600_000) * 600_000;
   const chapters = useMemo(
-    () => (machine && rig ? flowChapters(machine, rig, tenMin, V2_FLOW) : []),
+    () => (machine && rig ? flowChapters({ fm: machine, rig, now: tenMin, opts: V2_FLOW }) : []),
     [machine, rig, tenMin]
   );
   const steps = useMemo(() => (machine && rig ? replaySteps(machine, rig) : []), [machine, rig]);

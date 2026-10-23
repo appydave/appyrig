@@ -258,19 +258,16 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
       "count": 2
     },
+    "max-params": {
+      "count": 1
+    },
     "sonarjs/cognitive-complexity": {
-      "count": 4
+      "count": 2
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 5
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
+      "count": 3
     }
   },
   "client/src/domain/flow/flowLines.ts": {

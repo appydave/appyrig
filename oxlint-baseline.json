@@ -141,7 +141,7 @@
       "require-safety-comment-for-type-assertion": 1
     },
     "client/src/pages/flow/verdict.test.tsx": {
-      "no-chained-type-assertions": 2
+      "no-chained-type-assertions": 1
     },
     "client/src/pages/graph/RigBox.tsx": {
       "require-safety-comment-for-type-assertion": 4

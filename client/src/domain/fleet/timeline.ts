@@ -178,7 +178,7 @@ export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timel
     lanes,
     marks,
     phases,
-    peak: flowChapters(fm, rig, now).find((c) => c.kind === 'peak') ?? null,
+    peak: flowChapters({ fm, rig, now }).find((c) => c.kind === 'peak') ?? null,
     total: items.length,
     sentOut: items.filter((q) => ownerRig(fm, q) !== rig).length,
   };

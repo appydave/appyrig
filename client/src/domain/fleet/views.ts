@@ -984,12 +984,11 @@ export function buildFlow(
 
     const from = nodeOf(q.source);
     const to = nodeOf(q.destination);
+    const movesBack = order.indexOf(to) < order.indexOf(from);
+    const toWorkStage = to !== 'lead' && to !== OUTSIDE;
     const back = byVerdict
       ? SENT_BACK_VERDICTS.has(verdictOf(q) ?? '')
-      : mode === 'roles' &&
-        order.indexOf(to) < order.indexOf(from) &&
-        to !== 'lead' &&
-        to !== OUTSIDE;
+      : mode === 'roles' && movesBack && toWorkStage;
 
     if (back) {
       rework += 1;
@@ -1105,16 +1104,25 @@ export interface Chapter {
 const hhmm = (t: number) =>
   new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
+interface ChapterQuery {
+  fm: FleetMachine;
+  rig: string;
+  now: number;
+  opts?: FlowOptions;
+}
+
+interface Peak {
+  at: number;
+  n: number;
+  where: string;
+  flow: FlowView;
+}
+
 /**
  * The moments worth pausing on in a run, found from the queue alone so any rig gets them:
  * the first handoff, the first item sent back, the biggest fresh queue, the longest real wait, the end.
  */
-export function flowChapters(
-  fm: FleetMachine,
-  rig: string,
-  now: number,
-  opts: FlowOptions = {}
-): Chapter[] {
+export function flowChapters({ fm, rig, now, opts = {} }: ChapterQuery): Chapter[] {
   const items = [...rigQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const range = flowRange(items);
 
@@ -1122,53 +1130,78 @@ export function flowChapters(
     return [];
   }
 
-  const label = (flow: FlowView, id: string) =>
-    flow.stages.find((s) => s.stage === id)?.label ?? id;
-  const out: Chapter[] = [];
+  const flowAt = (t: number) => buildFlow(fm, rig, t, now, opts)!;
+  const { firstRework, peak } = scanRun(items, flowAt);
 
-  const first = items[0]!;
+  return [
+    startChapter(items[0]!),
+    firstRework,
+    peak && peakChapter(peak),
+    longestWaitChapter(items),
+    endChapter(range.end, flowAt(range.end)),
+  ]
+    .filter((c): c is Chapter => c !== null)
+    .sort((a, b) => a.at - b.at);
+}
 
-  out.push({
+function startChapter(first: QueueItem): Chapter {
+  return {
     at: ms(first.createdAt),
     kind: 'start',
     title: 'The run starts',
     text: `${hhmm(ms(first.createdAt))} · ${bare(first.source)} hands the first item to ${bare(first.destination)}.`,
-  });
+  };
+}
 
-  let reworkSeen = false;
-  let peak: { at: number; n: number; where: string; flow: FlowView } | null = null;
+/** Replays the run handoff by handoff: the first item sent back, and the biggest fresh queue seen. */
+function scanRun(
+  items: QueueItem[],
+  flowAt: (t: number) => FlowView
+): { firstRework: Chapter | null; peak: Peak | null } {
+  let firstRework: Chapter | null = null;
+  let peak: Peak | null = null;
 
   for (const q of items) {
     const t = ms(q.createdAt);
-    const flow = buildFlow(fm, rig, t, now, opts)!;
+    const flow = flowAt(t);
 
-    if (!reworkSeen && flow.rework > 0) {
-      reworkSeen = true;
-      out.push({
-        at: t,
-        kind: 'first-rework',
-        title: 'First sent back',
-        text: `${hhmm(t)} · ${bare(q.source)} sends an item back to ${bare(q.destination)}: a verdict, an answer or rework.`,
-      });
-    }
-
-    const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
-
-    if (top && top.waiting > (peak?.n ?? 1)) {
-      peak = { at: t, n: top.waiting, where: top.stage, flow };
-    }
+    firstRework ??= flow.rework > 0 ? reworkChapter(q, t) : null;
+    peak = biggerPeak(peak, flow, t);
   }
 
-  if (peak) {
-    out.push({
-      at: peak.at,
-      kind: 'peak',
-      title: 'Biggest queue',
-      text: `${hhmm(peak.at)} · ${peak.n} items waiting at ${label(peak.flow, peak.where)} at once. This is where the run slowed down.`,
-    });
-  }
+  return { firstRework, peak };
+}
 
-  // The longest wait that was real work (closed, and under the stale cut-off).
+function reworkChapter(q: QueueItem, t: number): Chapter {
+  return {
+    at: t,
+    kind: 'first-rework',
+    title: 'First sent back',
+    text: `${hhmm(t)} · ${bare(q.source)} sends an item back to ${bare(q.destination)}: a verdict, an answer or rework.`,
+  };
+}
+
+function biggerPeak(peak: Peak | null, flow: FlowView, t: number): Peak | null {
+  const top = [...flow.stages].sort((a, b) => b.waiting - a.waiting)[0];
+
+  return top && top.waiting > (peak?.n ?? 1)
+    ? { at: t, n: top.waiting, where: top.stage, flow }
+    : peak;
+}
+
+function peakChapter(peak: Peak): Chapter {
+  const label = peak.flow.stages.find((s) => s.stage === peak.where)?.label ?? peak.where;
+
+  return {
+    at: peak.at,
+    kind: 'peak',
+    title: 'Biggest queue',
+    text: `${hhmm(peak.at)} · ${peak.n} items waiting at ${label} at once. This is where the run slowed down.`,
+  };
+}
+
+/** The longest wait that was real work (closed, and under the stale cut-off), if it is worth a chapter. */
+function longestWaitChapter(items: QueueItem[]): Chapter | null {
   const waits = items
     .filter((q) => !isOpen(q))
     .map((q) => ({ q, w: ms(q.updatedAt) - ms(q.createdAt) }))
@@ -1176,27 +1209,27 @@ export function flowChapters(
     .sort((a, b) => b.w - a.w);
   const longest = waits[0];
 
-  if (longest && longest.w >= CHAPTER_MIN_WAIT_MINUTES * MS_PER_MINUTE) {
-    const mins = Math.round(longest.w / MS_PER_MINUTE);
-
-    out.push({
-      at: ms(longest.q.createdAt),
-      kind: 'longest-wait',
-      title: 'Longest wait',
-      text: `${hhmm(ms(longest.q.createdAt))} · an item for ${bare(longest.q.destination)} waits ${mins} min before it is closed.`,
-    });
+  if (!longest || longest.w < CHAPTER_MIN_WAIT_MINUTES * MS_PER_MINUTE) {
+    return null;
   }
 
-  const endFlow = buildFlow(fm, rig, range.end, now, opts)!;
+  const mins = Math.round(longest.w / MS_PER_MINUTE);
 
-  out.push({
-    at: range.end,
+  return {
+    at: ms(longest.q.createdAt),
+    kind: 'longest-wait',
+    title: 'Longest wait',
+    text: `${hhmm(ms(longest.q.createdAt))} · an item for ${bare(longest.q.destination)} waits ${mins} min before it is closed.`,
+  };
+}
+
+function endChapter(end: number, endFlow: FlowView): Chapter {
+  return {
+    at: end,
     kind: 'end',
     title: 'Where it ended',
-    text: `${hhmm(range.end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back` : ''}.`,
-  });
-
-  return out.sort((a, b) => a.at - b.at);
+    text: `${hhmm(end)} · ${endFlow.total} handoffs${endFlow.mode === 'roles' ? `, ${endFlow.rework} sent back` : ''}.`,
+  };
 }
 
 // ---------------------------------------------------------------- replay consoles
@@ -1329,6 +1362,8 @@ export interface UnreportedMachine {
   reason: 'old-collector' | 'no-login';
 }
 
+type MachineAccount = NonNullable<FleetMachine['snapshot']['account']>;
+
 export function buildAccounts(machines: FleetMachine[]): {
   accounts: AccountView[];
   unknown: UnreportedMachine[];
@@ -1347,44 +1382,13 @@ export function buildAccounts(machines: FleetMachine[]): {
       continue;
     }
 
-    const v =
-      accounts.get(acct.email) ??
-      ({
-        email: acct.email,
-        planLabel: planLabel(acct.plan),
-        reading: null,
-        machines: [],
-        drawers: [],
-        activeSeats: 0,
-        derived: null,
-        profiles: [],
-      } satisfies AccountView);
+    const v = accounts.get(acct.email) ?? newAccountView(acct.email, acct);
 
-    // The hub derives one answer per account; take the one with a reading if machines differ.
-    if (acct.derived && (!v.derived || (!v.derived.readingFrom && acct.derived.readingFrom))) {
-      v.derived = acct.derived;
-    }
-
+    takeDerived(v, acct);
     v.machines.push(fm.machine.label);
     v.profiles.push({ machine: fm.machine.label, fetchedAt: acct.profileFetchedAt });
-    if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
-      v.reading = {
-        ...acct,
-        from: fm.machine.label,
-        push: { collectedAt: fm.snapshot.collectedAt, receivedAt: fm.lastSeen },
-        asleep: fm.liveness === 'asleep',
-      };
-    }
-
-    if (fm.liveness === 'live') {
-      const seats = fm.snapshot.seats.filter((s) => s.status !== 'stopped' && isClaudeSeat(s));
-
-      if (seats.length) {
-        v.drawers.push({ machineLabel: fm.machine.label, seats: seats.map(seatName) });
-        v.activeSeats += seats.length;
-      }
-    }
-
+    takeReading(v, fm, acct);
+    addSeats(v, fm);
     accounts.set(acct.email, v);
   }
 
@@ -1392,6 +1396,53 @@ export function buildAccounts(machines: FleetMachine[]): {
     accounts: [...accounts.values()].sort((a, b) => a.email.localeCompare(b.email)),
     unknown,
   };
+}
+
+function newAccountView(email: string, acct: MachineAccount): AccountView {
+  return {
+    email,
+    planLabel: planLabel(acct.plan),
+    reading: null,
+    machines: [],
+    drawers: [],
+    activeSeats: 0,
+    derived: null,
+    profiles: [],
+  };
+}
+
+/** The hub derives one answer per account; take the one with a reading if machines differ. */
+function takeDerived(v: AccountView, acct: MachineAccount): void {
+  const next = acct.derived;
+
+  if (next && (!v.derived || (!v.derived.readingFrom && next.readingFrom))) {
+    v.derived = next;
+  }
+}
+
+/** The freshest reading wins: every machine on the account sees the same window. */
+function takeReading(v: AccountView, fm: FleetMachine, acct: MachineAccount): void {
+  if (acct.sampledAt && (!v.reading || acct.sampledAt > (v.reading.sampledAt ?? ''))) {
+    v.reading = {
+      ...acct,
+      from: fm.machine.label,
+      push: { collectedAt: fm.snapshot.collectedAt, receivedAt: fm.lastSeen },
+      asleep: fm.liveness === 'asleep',
+    };
+  }
+}
+
+/** A live machine's non-stopped Claude seats count as active on the account. */
+function addSeats(v: AccountView, fm: FleetMachine): void {
+  const seats =
+    fm.liveness === 'live'
+      ? fm.snapshot.seats.filter((s) => s.status !== 'stopped' && isClaudeSeat(s))
+      : [];
+
+  if (seats.length) {
+    v.drawers.push({ machineLabel: fm.machine.label, seats: seats.map(seatName) });
+    v.activeSeats += seats.length;
+  }
 }
 
 /** D0: how badly a window's verdict warns: 2 = will run out or spent, 1 = be careful, 0 = otherwise. */

@@ -61,9 +61,6 @@ type FlowOpts = { sentBack?: 'stage' | 'verdict-or-stage' };
 const flowOf = buildFlow as unknown as (
   ...a: [FleetMachine, string, number, number, FlowOpts?]
 ) => ReturnType<typeof buildFlow>;
-const chaptersOf = flowChapters as unknown as (
-  ...a: [FleetMachine, string, number, FlowOpts?]
-) => ReturnType<typeof flowChapters>;
 
 const backEdges = (fm: FleetMachine, opts?: FlowOpts) => {
   const f = flowOf(fm, RIG, NOW, NOW, opts)!;
@@ -96,7 +93,9 @@ describe('buildFlow: sent back by verdict', () => {
 
   it('the chapters follow the same rule when asked', () => {
     const first = (opts?: FlowOpts) =>
-      chaptersOf(rig(true), RIG, NOW, opts).find((c) => c.kind === 'first-rework')?.at;
+      flowChapters({ fm: rig(true), rig: RIG, now: NOW, opts }).find(
+        (c) => c.kind === 'first-rework'
+      )?.at;
 
     // the stage rule finds the qa PASS at minute 10; the verdict rule waits for the CHANGES at 15
     expect(first()).toBe(T0 + 10 * 60_000);
