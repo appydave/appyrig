@@ -5,7 +5,6 @@
     "client/src/domain/fleet/accountWindow.ts": 3,
     "client/src/domain/fleet/model.ts": 4,
     "client/src/domain/fleet/runcard.ts": 3,
-    "client/src/domain/fleet/views.ts": 3,
     "client/src/domain/graph/model.ts": 3,
     "client/src/domain/health/model.ts": 3,
     "client/src/domain/learn/atlas.ts": 3,
