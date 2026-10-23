@@ -605,7 +605,7 @@ describe('Replay consoles', () => {
       { at: '2026-10-09T10:45:00.000Z', kind: 'tool' as const, text: 'Bash: npm test' },
     ];
     const at = Date.parse('2026-10-09T10:35:00.000Z');
-    const lines = consoleLines('dev-hub', 'x', items, history, at);
+    const lines = consoleLines({ seatName: 'dev-hub', rig: 'x', items, history, at });
 
     expect(lines.map((l) => l.kind)).toEqual(['received', 'reply', 'sent']);
     expect(lines[0]!.text).toBe('← orch-lead: build the hub');
@@ -613,7 +613,13 @@ describe('Replay consoles', () => {
   });
 
   it('without history a console still shows the handoff messages', () => {
-    const lines = consoleLines('dev-qa', 'x', items, null, Date.parse('2026-10-09T11:00:00.000Z'));
+    const lines = consoleLines({
+      seatName: 'dev-qa',
+      rig: 'x',
+      items,
+      history: null,
+      at: Date.parse('2026-10-09T11:00:00.000Z'),
+    });
 
     expect(lines.map((l) => l.text)).toEqual(['← dev-hub: ready for QA', '→ review-r1: pass']);
   });
@@ -628,13 +634,42 @@ describe('Replay consoles', () => {
 
 describe('B2 rigState (fb-0001): follows rig ps', () => {
   it('asleep machine > stopped > attention (blocked or ATTN) > working > idle', () => {
-    expect(rigState('asleep', 'running', 0, ['working'])).toBe('asleep');
-    expect(rigState('live', 'stopped', 2, ['blocked'])).toBe('stopped');
-    expect(rigState('live', 'running', 1, ['idle'])).toBe('attention');
-    expect(rigState('live', 'running', 0, ['working', 'blocked'])).toBe('attention');
-    expect(rigState('live', 'running', 0, ['idle', 'working'])).toBe('working');
-    expect(rigState('live', 'running', 0, ['idle', 'stopped'])).toBe('idle');
-    expect(rigState('live', 'running', 0, [])).toBe('idle');
+    expect(
+      rigState({ liveness: 'asleep', status: 'running', attentionCount: 0, seatPips: ['working'] })
+    ).toBe('asleep');
+    expect(
+      rigState({ liveness: 'live', status: 'stopped', attentionCount: 2, seatPips: ['blocked'] })
+    ).toBe('stopped');
+    expect(
+      rigState({ liveness: 'live', status: 'running', attentionCount: 1, seatPips: ['idle'] })
+    ).toBe('attention');
+    expect(
+      rigState({
+        liveness: 'live',
+        status: 'running',
+        attentionCount: 0,
+        seatPips: ['working', 'blocked'],
+      })
+    ).toBe('attention');
+    expect(
+      rigState({
+        liveness: 'live',
+        status: 'running',
+        attentionCount: 0,
+        seatPips: ['idle', 'working'],
+      })
+    ).toBe('working');
+    expect(
+      rigState({
+        liveness: 'live',
+        status: 'running',
+        attentionCount: 0,
+        seatPips: ['idle', 'stopped'],
+      })
+    ).toBe('idle');
+    expect(rigState({ liveness: 'live', status: 'running', attentionCount: 0, seatPips: [] })).toBe(
+      'idle'
+    );
   });
 
   it('every listed rig carries a state', () => {

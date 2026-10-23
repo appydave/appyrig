@@ -67,35 +67,53 @@ export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachi
     return endpointOf(raw, home, own);
   }
 
-  // The same seat can be addressed by its OpenRig logical id (`desk.planner@ylo-desk`). It resolves
-  // to the same key as the session-name form, so edges merge. A logical id is unique only per rig, so
-  // pick deterministically: home wins; else the single machine that has it; else the single live one;
-  // else several candidates mean we do not guess (unplaced). A full logical-id match beats the
-  // `name@machineId` reading below.
-  // Session ids are matched on the home machine only (above): elsewhere `name@machineId` keeps its
-  // meaning. So the cross-machine loop matches logical forms only. Two seats on one machine that
-  // answer to the same bare logical id are ambiguous: we do not guess.
-  const unplaced = (): Endpoint => ({
-    key: `?/${raw}`,
-    raw,
-    name: raw.split('@')[0] || raw,
-    machineId: null,
-    seat: null,
-  });
-  const hits: { fm: FleetMachine; seat: Seat }[] = [];
+  const hits = logicalHits(raw, home, all);
+
+  if (!hits) {
+    return unplacedEndpoint(raw);
+  }
+
+  return placeLogical(raw, home, hits) ?? placeByMachine(raw, all) ?? unplacedEndpoint(raw);
+}
+
+interface SeatHit {
+  fm: FleetMachine;
+  seat: Seat;
+}
+
+function unplacedEndpoint(raw: string): Endpoint {
+  return { key: `?/${raw}`, raw, name: raw.split('@')[0] || raw, machineId: null, seat: null };
+}
+
+/**
+ * The seats that answer to a logical id (`desk.planner@ylo-desk`), home machine first. It resolves
+ * to the same key as the session-name form, so edges merge. Session ids are matched on the home
+ * machine only (the caller does that): elsewhere `name@machineId` keeps its meaning, so this loop
+ * matches logical forms only. Null when two seats on the home machine answer to the same logical id:
+ * ambiguous, so we do not guess.
+ */
+function logicalHits(raw: string, home: FleetMachine, all: FleetMachine[]): SeatHit[] | null {
+  const hits: SeatHit[] = [];
 
   for (const fm of [home, ...all.filter((m) => m !== home)]) {
     const found = fm.snapshot.seats.filter((x) => logicalAddresses(x).includes(raw));
 
     if (found.length > 1 && fm === home) {
-      return unplaced();
+      return null;
     }
 
-    for (const seat of found) {
-      hits.push({ fm, seat });
-    }
+    hits.push(...found.map((seat) => ({ fm, seat })));
   }
 
+  return hits;
+}
+
+/**
+ * A logical id is unique only per rig, so pick deterministically: home wins; else the single machine
+ * that has it; else the single live one; else several candidates mean we do not guess (unplaced). A
+ * full logical-id match beats the `name@machineId` reading. Null when nothing answered.
+ */
+function placeLogical(raw: string, home: FleetMachine, hits: SeatHit[]): Endpoint | null {
   const homeHit = hits.find((h) => h.fm === home);
 
   if (homeHit) {
@@ -109,24 +127,22 @@ export function resolveEndpoint(raw: string, home: FleetMachine, all: FleetMachi
     return endpointOf(raw, pick[0]!.fm, pick[0]!.seat);
   }
 
-  if (hits.length > 1) {
-    return unplaced();
-  }
+  return hits.length > 1 ? unplacedEndpoint(raw) : null;
+}
 
+/** `name@machineId`: the seat `name` on that machine, or null. */
+function placeByMachine(raw: string, all: FleetMachine[]): Endpoint | null {
   const at = raw.lastIndexOf('@');
 
-  if (at > 0) {
-    const name = raw.slice(0, at);
-    const where = raw.slice(at + 1);
-    const fm = all.find((m) => m.machine.id === where);
-    const seat = fm?.snapshot.seats.find((s) => s.id === name || s.id.split('@')[0] === name);
-
-    if (fm && seat) {
-      return endpointOf(raw, fm, seat);
-    }
+  if (at <= 0) {
+    return null;
   }
 
-  return { key: `?/${raw}`, raw, name: raw.split('@')[0] || raw, machineId: null, seat: null };
+  const name = raw.slice(0, at);
+  const fm = all.find((m) => m.machine.id === raw.slice(at + 1));
+  const seat = fm?.snapshot.seats.find((s) => s.id === name || s.id.split('@')[0] === name);
+
+  return fm && seat ? endpointOf(raw, fm, seat) : null;
 }
 
 function endpointOf(raw: string, fm: FleetMachine, seat: Seat): Endpoint {
@@ -175,13 +191,15 @@ export const RIG_STATE: Record<RigState, { glyph: string; label: string }> = {
   asleep: { glyph: '◌', label: 'machine asleep' },
 };
 
+interface RigStateInput {
+  liveness: string;
+  status: string;
+  attentionCount: number;
+  seatPips: PipKey[];
+}
+
 /** asleep machine > stopped > a seat blocked or OpenRig's attention count > a seat working > idle. */
-export function rigState(
-  liveness: string,
-  status: string,
-  attentionCount: number,
-  seatPips: PipKey[]
-): RigState {
+export function rigState({ liveness, status, attentionCount, seatPips }: RigStateInput): RigState {
   if (liveness === 'asleep') {
     return 'asleep';
   }
@@ -223,43 +241,7 @@ export interface RigRef {
 
 /** Every rig on every machine: running first, then the most recent sign of life (a queue row or a seat). */
 export function listRigs(machines: FleetMachine[]): RigRef[] {
-  const out: RigRef[] = [];
-
-  for (const fm of machines) {
-    for (const rig of fm.snapshot.rigs) {
-      const items = rigQueue(fm, rig.name);
-      const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
-      // Most recent sign of life: a queue row moving, or any of its seats doing something.
-      const last = [...items.map((q) => q.updatedAt), ...seats.map(agentActivityOf)].reduce<
-        string | null
-      >((acc, at) => (at && (acc === null || at > acc) ? at : acc), null);
-
-      out.push({
-        key: `${fm.machine.id}:${rig.name}`,
-        machineId: fm.machine.id,
-        machineLabel: fm.machine.label,
-        name: rig.name,
-        status: rig.status,
-        state: rigState(
-          fm.liveness,
-          rig.status,
-          rig.attentionCount,
-          seats.map((s) => pipFor(s, fm))
-        ),
-        seatCount: seats.length,
-        // F1: each item once, on the rig doing the work (a rig's outgoing items are not its total).
-        handoffs: items.filter((q) => ownerRig(fm, q) === rig.name).length,
-        // The collector's recentAt is the same rule computed over the full queue; prefer it.
-        lastActivity: rig.recentAt !== undefined ? rig.recentAt : last,
-        displayName: rig.displayName,
-        owner: rig.owner,
-        summary: rig.summary,
-        specPath: rig.specPath,
-        specStatus: rig.specStatus,
-      });
-    }
-  }
-
+  const out = machines.flatMap((fm) => fm.snapshot.rigs.map((rig) => rigRef(fm, rig)));
   // S3: every rig list reads running first, then most recent (Wall groups, Map and Flow chips).
   const running = (r: RigRef) => (r.status === 'running' ? 0 : 1);
 
@@ -268,6 +250,43 @@ export function listRigs(machines: FleetMachine[]): RigRef[] {
       running(a) - running(b) ||
       (b.lastActivity ?? '').localeCompare(a.lastActivity ?? '') ||
       a.key.localeCompare(b.key)
+  );
+}
+
+function rigRef(fm: FleetMachine, rig: FleetMachine['snapshot']['rigs'][number]): RigRef {
+  const items = rigQueue(fm, rig.name);
+  const seats = fm.snapshot.seats.filter((s) => s.rig === rig.name);
+
+  return {
+    key: `${fm.machine.id}:${rig.name}`,
+    machineId: fm.machine.id,
+    machineLabel: fm.machine.label,
+    name: rig.name,
+    status: rig.status,
+    state: rigState({
+      liveness: fm.liveness,
+      status: rig.status,
+      attentionCount: rig.attentionCount,
+      seatPips: seats.map((s) => pipFor(s, fm)),
+    }),
+    seatCount: seats.length,
+    // F1: each item once, on the rig doing the work (a rig's outgoing items are not its total).
+    handoffs: items.filter((q) => ownerRig(fm, q) === rig.name).length,
+    // The collector's recentAt is the same rule computed over the full queue; prefer it.
+    lastActivity: rig.recentAt !== undefined ? rig.recentAt : lastSignOfLife(items, seats),
+    displayName: rig.displayName,
+    owner: rig.owner,
+    summary: rig.summary,
+    specPath: rig.specPath,
+    specStatus: rig.specStatus,
+  };
+}
+
+/** Most recent sign of life: a queue row moving, or any of its seats doing something. */
+function lastSignOfLife(items: QueueItem[], seats: Seat[]): string | null {
+  return [...items.map((q) => q.updatedAt), ...seats.map(agentActivityOf)].reduce<string | null>(
+    (acc, at) => (at && (acc === null || at > acc) ? at : acc),
+    null
   );
 }
 
@@ -287,25 +306,41 @@ export function endpointRig(fm: FleetMachine, raw: string | null): string | null
     return null;
   }
 
-  let rigs = seatRigs.get(fm.snapshot);
-
-  if (!rigs) {
-    rigs = new Map<string, string | null>();
-    // A logical form shared by seats in different rigs is ambiguous: null, same as resolveEndpoint.
-    for (const s of fm.snapshot.seats) {
-      for (const a of logicalAddresses(s)) {
-        rigs.set(a, rigs.has(a) && rigs.get(a) !== s.rig ? null : s.rig);
-      }
-    }
-
-    for (const s of fm.snapshot.seats) {
-      rigs.set(s.id, s.rig);
-    }
-
-    seatRigs.set(fm.snapshot, rigs);
-  }
+  const rigs = seatRigIndex(fm);
 
   return rigs.has(raw) ? (rigs.get(raw) ?? null) : suffix(raw) || null;
+}
+
+/** Every address a seat answers to, mapped to its rig (null where two rigs share the address). */
+function seatRigIndex(fm: FleetMachine): Map<string, string | null> {
+  const cached = seatRigs.get(fm.snapshot);
+
+  if (cached) {
+    return cached;
+  }
+
+  const rigs = buildSeatRigIndex(fm.snapshot.seats);
+
+  seatRigs.set(fm.snapshot, rigs);
+
+  return rigs;
+}
+
+function buildSeatRigIndex(seats: Seat[]): Map<string, string | null> {
+  const rigs = new Map<string, string | null>();
+
+  // A logical form shared by seats in different rigs is ambiguous: null, same as resolveEndpoint.
+  for (const s of seats) {
+    for (const a of logicalAddresses(s)) {
+      rigs.set(a, rigs.has(a) && rigs.get(a) !== s.rig ? null : s.rig);
+    }
+  }
+
+  for (const s of seats) {
+    rigs.set(s.id, s.rig);
+  }
+
+  return rigs;
 }
 
 /**
@@ -1179,39 +1214,40 @@ export interface ConsoleLine {
  * carries every handoff's message) merged with its transcript events (prompts, replies, tool calls)
  * when the collector sent its history. Oldest first, nothing after `at`.
  */
-export function consoleLines(
-  seatName: string,
-  rig: string,
-  items: QueueItem[],
-  history: SeatHistoryEvent[] | null,
-  at: number
-): ConsoleLine[] {
+export function consoleLines({ seatName, rig, items, history, at }: ConsoleQuery): ConsoleLine[] {
   const me = (raw: string | null) => raw === `${seatName}@${rig}` || bare(raw) === seatName;
-  const lines: ConsoleLine[] = [];
+  const handoffs = items
+    .filter((q) => ms(q.createdAt) <= at)
+    .map((q) => handoffLine(q, me))
+    .filter((line): line is ConsoleLine => line !== null);
+  const events = (history ?? []).filter((e) => ms(e.at) <= at);
 
-  for (const q of items) {
-    if (ms(q.createdAt) > at) {
-      continue;
-    }
+  return [...handoffs, ...events].sort((a, b) => a.at.localeCompare(b.at));
+}
 
-    const msg = q.summary ?? '(no message)';
+interface ConsoleQuery {
+  seatName: string;
+  rig: string;
+  items: QueueItem[];
+  history: SeatHistoryEvent[] | null;
+  at: number;
+}
 
-    if (me(q.source) && !me(q.destination)) {
-      lines.push({ at: q.createdAt, kind: 'sent', text: `→ ${bare(q.destination)}: ${msg}` });
-    } else if (me(q.destination) && !me(q.source)) {
-      lines.push({ at: q.createdAt, kind: 'received', text: `← ${bare(q.source)}: ${msg}` });
-    } else if (me(q.source) && me(q.destination)) {
-      lines.push({ at: q.createdAt, kind: 'sent', text: `↺ note to self: ${msg}` });
-    }
+/** One queue row as the seat sees it: sent, received, a note to self, or not its row at all (null). */
+function handoffLine(q: QueueItem, me: (raw: string | null) => boolean): ConsoleLine | null {
+  const msg = q.summary ?? '(no message)';
+  const fromMe = me(q.source);
+  const toMe = me(q.destination);
+
+  if (fromMe && toMe) {
+    return { at: q.createdAt, kind: 'sent', text: `↺ note to self: ${msg}` };
   }
 
-  for (const e of history ?? []) {
-    if (ms(e.at) <= at) {
-      lines.push(e);
-    }
+  if (fromMe) {
+    return { at: q.createdAt, kind: 'sent', text: `→ ${bare(q.destination)}: ${msg}` };
   }
 
-  return lines.sort((a, b) => a.at.localeCompare(b.at));
+  return toMe ? { at: q.createdAt, kind: 'received', text: `← ${bare(q.source)}: ${msg}` } : null;
 }
 
 /** A rig's handoffs in time order: the replay's single steps. */
