@@ -121,6 +121,18 @@ describe('one version: V2 is the whole app', () => {
     expect(location.search).toBe('?page=about');
   });
 
+  it('the About page lists every nav group with its pages', () => {
+    history.replaceState(null, '', '/?page=about');
+    renderLive();
+
+    const groups = screen.getByTestId('ar-about').querySelector('.ar-about-groups')!;
+
+    expect(groups.querySelectorAll('li')).toHaveLength(4);
+    expect(groups.textContent).toContain('Fleet:');
+    expect(groups.textContent).toContain('Wall');
+    expect(groups.textContent).toContain('Under the hood:');
+  });
+
   it('V and B are no longer keys: the page stays put', () => {
     renderLive();
     press('v');

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { RigCommandsOutput, RigSpecsOutput } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
-import { NAV_GROUPS, pageFor } from '@client/app/registry.js';
+import { navGroups, pageFor } from '@client/app/registry.js';
 import { LEGEND_TITLE, PAGE_PURPOSE } from '@client/kit/index.js';
 import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
 import { COMMANDS_POLL_MS, page as specsPage } from './index.js';
@@ -146,7 +146,7 @@ afterEach(() => vi.useRealTimers());
 
 describe('N10: the Rig specs page', () => {
   it('sits in the Fleet group right after the Graph, with a Legend purpose and title', () => {
-    const fleet = NAV_GROUPS.find((g) => g.key === 'fleet')!.pages;
+    const fleet = navGroups().find((g) => g.key === 'fleet')!.pages;
 
     expect(fleet.indexOf('specs')).toBe(fleet.indexOf('graph') + 1);
     expect(pageFor('specs')).toMatchObject({ label: 'Rig specs', group: 'fleet' });

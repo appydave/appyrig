@@ -1,11 +1,12 @@
 import { FakeControl, SampleData, realNames } from '@client/kit/index.js';
-import { NAV_GROUPS, navLabel } from '@client/app/registry.js';
+import { useNavGroups } from '@client/shell/NavContext.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
 
 /**
  * The About page: what AppyRig is, where things are, and what is real versus a mock. Uses the kit (one FakeControl, one SampleData section) so later waves have an example.
  */
 function AboutPage({ ctx }: PageProps) {
+  const navGroups = useNavGroups();
   const names = realNames(ctx.allMachines);
   const rig = names.rigs[0];
   const seats = names.seats.slice(0, 3);
@@ -20,13 +21,13 @@ function AboutPage({ ctx }: PageProps) {
       </p>
       <h3>Where things are</h3>
       <ul className="ar-about-groups">
-        {NAV_GROUPS.map((g) => (
+        {navGroups.map((g) => (
           <li key={g.key}>
             <b>{g.label}:</b>{' '}
             {g.pages.map((p, i) => (
-              <span key={p}>
+              <span key={p.key}>
                 {i > 0 && ' · '}
-                <span>{navLabel(p)}</span>
+                <span>{p.label}</span>
               </span>
             ))}
           </li>

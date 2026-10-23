@@ -88,6 +88,14 @@ module.exports = {
       to: { path: '^client/src/(pages|app)/(?!types\\.ts$)', reachable: true },
     },
     {
+      name: 'client-pages-do-not-import-app',
+      comment:
+        'pages/ are lent everything by the app and never reach back into it (types from app/types.ts are fine). A page that needs app data gets it from the page context or a shell/ context; the app lists the pages, not the other way round.',
+      severity: 'error',
+      from: { path: '^client/src/pages/', pathNot: '\\.test\\.tsx?$' },
+      to: { path: '^client/src/app/(?!types\\.ts$)', reachable: true },
+    },
+    {
       name: 'collector-adapters-below-orchestration',
       comment:
         'adapters/ read one source each: they never load the builder, the pusher or the entry points, directly or through another module. Pass the data in as an argument, or move the shared piece into adapters/ or shared/.',
