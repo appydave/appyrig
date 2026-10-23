@@ -59,9 +59,9 @@ The four fast profiles run in the blocking `Duplicate detection` job in `ci.yml`
 The semantic profile has its own workflow, `duplicates-semantic.yml`, which runs on the **M2 self-hosted runner**
 (`runs-on: [self-hosted, m2, semantic]`, runner `mac-mini-m2`) on every pull request and push to main, weekly
 (Monday 03:00 Bangkok, cron `0 20 * * 0`) and on demand (`workflow_dispatch`). It costs no GitHub Actions
-minutes (a hard budget: free plan, 2,000 a month shared across the org). The repo is private, so pull requests
-cannot be triggered from forks and the self-hosted runner is not exposed to untrusted code. If the repo ever goes
-public, drop `pull_request` from this workflow. The job is `continue-on-error` with a 60-minute timeout. That keeps the
+minutes (a hard budget: free plan, 2,000 a month shared across the org). The repo is public, so a pull request
+can come from a fork; the job's `if` skips fork pull requests so the self-hosted runner never runs untrusted code.
+Push, schedule and manual runs are unaffected. The job is `continue-on-error` with a 60-minute timeout. That keeps the
 workflow _run_ green, not the job's check: a red semantic step still shows as a red check on the pull request, so the
 merge rule (every check passes) already stops on it. Making the job blocking later changes the run colour, not what
 the merge rule sees. "Clean" for the two weeks that must pass first means the semantic _step_ exits 0 on main; then one
