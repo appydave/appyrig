@@ -135,6 +135,24 @@ describe('a run that did not look', () => {
     );
   });
 
+  it('leaves a file with a NEW finding to the ratchet, which names the function', () => {
+    const results = [
+      {
+        filePath: 'x.js',
+        suppressedMessages: [],
+        messages: [{ ruleId: 'max-params' }, { ruleId: 'max-params' }],
+      },
+    ];
+
+    expect(() => checkCoverage({ results, suppressions: frozen(1) })).not.toThrow();
+  });
+
+  it('tells an agent to run lint, not to edit the suppressions file, when the counts still differ', () => {
+    expect(() => checkCoverage({ results: [result(1)], suppressions: frozen(2) })).toThrow(
+      /Run npm run lint, fix what it reports/
+    );
+  });
+
   it('passes when the two agree', () => {
     expect(() => checkCoverage({ results: [result(2)], suppressions: frozen(2) })).not.toThrow();
   });

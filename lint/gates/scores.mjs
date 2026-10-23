@@ -16,7 +16,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT } from './archlint-scan.mjs';
 import { runRatchetGate } from './ratchet-gate.mjs';
@@ -98,25 +98,50 @@ export function collectScores(results, readText = (file) => readFileSync(file, '
   return sections;
 }
 
-/** How many suppressed findings each scored rule has in ESLint's output. */
-function suppressedByRule(results) {
-  const counts = Object.fromEntries(ruleNames.map((rule) => [rule, 0]));
+const relPath = (path) => (isAbsolute(path) ? relative(ROOT, path) : path);
+
+const zeroByRule = () => Object.fromEntries(ruleNames.map((rule) => [rule, 0]));
+
+/**
+ * The files that report an unsuppressed finding of a scored rule, per rule. ESLint's bulk suppression is
+ * all-or-nothing per file and rule: a new long function in a file that froze one makes that file report
+ * ALL its findings of the rule unsuppressed, so its frozen count no longer matches the suppressed one.
+ * Such files go to the ratchet, which names the function; the coverage guard leaves them out.
+ */
+function filesWithNewFindings(results) {
+  const waived = Object.fromEntries(ruleNames.map((rule) => [rule, new Set()]));
+
+  for (const result of results) {
+    for (const message of result.messages.filter((m) => m.ruleId in RULES)) {
+      waived[message.ruleId].add(relPath(result.filePath));
+    }
+  }
+
+  return waived;
+}
+
+/** How many suppressed findings each scored rule has in ESLint's output, outside the waived files. */
+function suppressedByRule({ results, waived }) {
+  const counts = zeroByRule();
 
   for (const result of results) {
     for (const message of result.suppressedMessages ?? []) {
-      counts[message.ruleId] += message.ruleId in RULES ? 1 : 0;
+      const counted =
+        message.ruleId in RULES && !waived[message.ruleId].has(relPath(result.filePath));
+
+      counts[message.ruleId] += counted ? 1 : 0;
     }
   }
 
   return counts;
 }
 
-/** How many findings each scored rule has in eslint-suppressions.json. */
-function frozenByRule(suppressions) {
-  const counts = Object.fromEntries(ruleNames.map((rule) => [rule, 0]));
+/** How many findings each scored rule has in eslint-suppressions.json, outside the waived files. */
+function frozenByRule({ suppressions, waived }) {
+  const counts = zeroByRule();
 
-  for (const rules of Object.values(suppressions)) {
-    for (const rule of ruleNames) {
+  for (const [file, rules] of Object.entries(suppressions)) {
+    for (const rule of ruleNames.filter((name) => !waived[name].has(file))) {
       counts[rule] += rules[rule]?.count ?? 0;
     }
   }
@@ -124,13 +149,17 @@ function frozenByRule(suppressions) {
   return counts;
 }
 
-/** Throws unless the findings ESLint reported are exactly the ones eslint-suppressions.json froze. */
+/**
+ * Throws unless the findings ESLint reported are exactly the ones eslint-suppressions.json froze. A file
+ * that also has a NEW finding of a rule is skipped here and judged by the ratchet, so the message names
+ * the function and not the suppressions file.
+ */
 export function checkCoverage({ results, suppressions }) {
-  const seen = suppressedByRule(results);
-  const frozen = frozenByRule(suppressions);
-  const total = ruleNames.reduce((sum, rule) => sum + seen[rule], 0);
+  const waived = filesWithNewFindings(results);
+  const seen = suppressedByRule({ results, waived });
+  const frozen = frozenByRule({ suppressions, waived });
 
-  if (!total) {
+  if (!results.some((result) => scored(result).length)) {
     throw new Error(
       'none of the scored rules reported a finding: the rules are off or the run read nothing.'
     );
@@ -139,7 +168,7 @@ export function checkCoverage({ results, suppressions }) {
   for (const rule of ruleNames) {
     if (seen[rule] !== frozen[rule]) {
       throw new Error(
-        `${rule}: ESLint reported ${seen[rule]} frozen findings but ${SUPPRESSIONS_FILE} holds ${frozen[rule]}.`
+        `${rule}: ESLint reported ${seen[rule]} frozen findings but ${SUPPRESSIONS_FILE} holds ${frozen[rule]}. Run npm run lint, fix what it reports, and if it reports nothing run npm run lint -- --prune-suppressions.`
       );
     }
   }
