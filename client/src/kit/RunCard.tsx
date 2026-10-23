@@ -6,7 +6,7 @@ import WaitingOnDavid from './WaitingOnDavid.js';
 import PlanStrip from './PlanStrip.js';
 import RunOutputs from './RunOutputs.js';
 import { changeOrders, planIn, type PlanSource } from '@client/domain/fleet/plan.js';
-import { rigQueue } from '@client/domain/fleet/views.js';
+import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
 import {
   RUN_WORD,
   clip,

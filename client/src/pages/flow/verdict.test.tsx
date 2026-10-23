@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { buildFlow, flowChapters } from '@client/domain/fleet/views.js';
+import { buildFlow } from '@client/domain/fleet/views/flow/flow.js';
+import { flowChapters } from '@client/domain/fleet/views/flow/chapters.js';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { page as flowPage } from './index.js';
 import { rigPageCtx } from '@client/pages/page-test-kit.js';

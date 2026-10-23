@@ -3,7 +3,8 @@ import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { ago, PIP } from '@client/domain/fleet/model.js';
 import { readRigWaiting } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
-import { RIG_STATE, type MapSeat, type RigMap } from '@client/domain/fleet/views.js';
+import { RIG_STATE } from '@client/domain/fleet/views/core/rigState.js';
+import { type MapSeat, type RigMap } from '@client/domain/fleet/views/map/types.js';
 import { CopyAttach, harnessOf, pctText, tokensText } from '@client/kit/SeatCardLines.js';
 import { attachLine } from '@client/kit/WaitingOnDavid.js';
 import {

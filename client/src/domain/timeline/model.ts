@@ -6,7 +6,8 @@ import {
   OUTSIDE_LANE,
   type Timeline,
 } from '@client/domain/fleet/timeline.js';
-import { endpointRig, isOpen, STALE_MS } from '@client/domain/fleet/views.js';
+import { endpointRig, isOpen } from '@client/domain/fleet/views/core/queue.js';
+import { STALE_MS } from '@client/domain/fleet/views/core/time.js';
 
 /**
  * v2 Run Timeline, read at a glance: the run's outcome, its phases (who did the work in each),

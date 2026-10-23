@@ -1,6 +1,8 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { seatName } from './model.js';
-import { endpointRig, flowChapters, ownerRig, rigQueue, type Chapter } from './views.js';
+import { endpointRig, ownerRig, rigQueue } from './views/core/queue.js';
+import { flowChapters } from './views/flow/chapters.js';
+import { type Chapter } from './views/flow/types.js';
 
 /**
  * Views V1 + V2: the run timeline per rig, and the chain one piece of work belongs to. Pure, like

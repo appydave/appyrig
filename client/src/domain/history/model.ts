@@ -1,6 +1,6 @@
 import type { FleetMachine } from '@appydave/shared';
 import type { HistoryTransitionRow } from '@appydave/shared';
-import { endpointRig } from '@client/domain/fleet/views.js';
+import { endpointRig } from '@client/domain/fleet/views/core/queue.js';
 import { realNames } from '@client/domain/fleet/realNames.js';
 
 /** One line of history, from the transitions verb (real, every step) or the queue snapshot (real, latest state only). */

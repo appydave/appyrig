@@ -253,11 +253,6 @@
       "count": 2
     }
   },
-  "client/src/domain/fleet/views.ts": {
-    "max-lines": {
-      "count": 1
-    }
-  },
   "client/src/domain/flow/flowLines.ts": {
     "max-lines-per-function": {
       "count": 1

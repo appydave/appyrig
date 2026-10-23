@@ -15,7 +15,7 @@ import {
   pairLabel,
   useLineFocus,
 } from '@client/kit/index.js';
-import { buildRigMap } from '@client/domain/fleet/views.js';
+import { buildRigMap } from '@client/domain/fleet/views/map/rigMap.js';
 import { useDocsDrawer } from '@client/kit/index.js';
 import { FakeRunner } from './FakeRunner.js';
 import { useOpenRigs } from './openRigs.js';

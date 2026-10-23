@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
 import App from './App.js';
-import { listRigs } from '@client/domain/fleet/views.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import { defaultAgent } from '@client/pages/agent/index.js';

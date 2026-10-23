@@ -1,4 +1,4 @@
-import type { RigRef } from './views.js';
+import type { RigRef } from './views/core/types.js';
 
 /**
  * The rig every rig page lands on when nobody has chosen one: a rig that is up first (a stopped or

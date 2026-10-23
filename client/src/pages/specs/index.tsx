@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RigCommandsOutput, RigSpecsOutput } from '@appydave/shared';
 import { callVerb } from '@client/domain/fleet/coreCall.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
-import { plannedWord } from '@client/domain/fleet/views.js';
+import { plannedWord } from '@client/domain/fleet/views/map/rigMap.js';
 import { agoFrom, useMachineLabel } from '@client/kit/data/index.js';
 import { PageHeader } from '@client/kit/index.js';
 import type { PageKey, PageDef, PageProps } from '@client/app/types.js';

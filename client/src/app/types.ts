@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { FleetMachine } from '@appydave/shared';
-import type { RigRef } from '@client/domain/fleet/views.js';
+import type { RigRef } from '@client/domain/fleet/views/core/types.js';
 import type { FleetSocket, HubLink } from '@client/domain/fleet/useFleet.js';
 
 /** A page key: one per page in the registry (app/registry.ts). */

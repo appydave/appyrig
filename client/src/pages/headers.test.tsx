@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
-import { listRigs } from '@client/domain/fleet/views.js';
+import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import { pageFor } from '@client/app/registry.js';
 import type { PageKey } from '@client/app/types.js';
 import { answeringSocket, pageCtx } from './page-test-kit.js';

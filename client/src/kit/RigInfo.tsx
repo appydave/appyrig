@@ -1,4 +1,4 @@
-import type { RigRef } from '@client/domain/fleet/views.js';
+import type { RigRef } from '@client/domain/fleet/views/core/types.js';
 
 export type RigFacts = Pick<
   RigRef,

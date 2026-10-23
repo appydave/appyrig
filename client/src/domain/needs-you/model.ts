@@ -1,6 +1,6 @@
 import type { FleetMachine, QueueItem, RigGate } from '@appydave/shared';
 import { agentActivityOf, blockedLine, seatKey, seatName } from '@client/domain/fleet/model.js';
-import { endpointRig, isOpen } from '@client/domain/fleet/views.js';
+import { endpointRig, isOpen } from '@client/domain/fleet/views/core/queue.js';
 import { realNames } from '@client/domain/fleet/realNames.js';
 
 /**

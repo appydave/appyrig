@@ -3,15 +3,12 @@ import type { FleetMachine, HandoffGetOutput, RigEntry, RigEntryOutput } from '@
 import { ago } from '@client/domain/fleet/model.js';
 import { callVerb } from '@client/domain/fleet/coreCall.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
-import {
-  buildFlow,
-  flowChapters,
-  flowRange,
-  replaySteps,
-  rigQueue,
-  stageOf,
-  type FlowOptions,
-} from '@client/domain/fleet/views.js';
+import { buildFlow, flowRange } from '@client/domain/fleet/views/flow/flow.js';
+import { flowChapters } from '@client/domain/fleet/views/flow/chapters.js';
+import { replaySteps } from '@client/domain/fleet/views/flow/console.js';
+import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { stageOf } from '@client/domain/fleet/views/flow/stages.js';
+import { type FlowOptions } from '@client/domain/fleet/views/flow/types.js';
 import ReplayConsoles from './ReplayConsoles.js';
 import FlowDocsBar from './FlowDocsBar.js';
 import HandoffPanel, { type PanelMode, type PanelSelection } from '@client/kit/HandoffPanel.js';
