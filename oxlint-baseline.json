@@ -40,9 +40,6 @@
     "client/src/domain/fleet/health.test.ts": {
       "no-chained-type-assertions": 1
     },
-    "client/src/domain/fleet/model.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
     "client/src/domain/fleet/runcard.test.ts": {
       "no-chained-type-assertions": 2
     },

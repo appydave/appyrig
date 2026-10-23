@@ -149,18 +149,6 @@
   "client/src/domain/fleet/model.ts": {
     "max-lines": {
       "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "no-magic-numbers": {
-      "count": 8
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
     }
   },
   "client/src/domain/fleet/plan.test.ts": {
