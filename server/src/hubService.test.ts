@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { mkdtempSync, mkdirSync, writeFileSync, chmodSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 /**
  * server/scripts/hub-service.sh `plist` mode: the launchd job's whole configuration, printed
@@ -41,6 +43,31 @@ describe('hub-service.sh plist', () => {
     expect(node).toMatch(/^\/.+\/node$/);
     expect(entry).toBe(`${repo}/server/dist/index.js`);
     expect(value(xml, 'PATH')!.split(':')[0]).toBe(node!.replace(/\/node$/, ''));
+  });
+
+  it('keeps the ~/.local/node-current link unresolved, and --node still wins', () => {
+    const home = mkdtempSync(join(tmpdir(), 'hub-service-home-'));
+    const real = join(home, 'versions', 'v1');
+
+    mkdirSync(join(real, 'bin'), { recursive: true });
+    mkdirSync(join(home, '.local'), { recursive: true });
+    writeFileSync(join(real, 'bin', 'node'), '#!/bin/sh\n');
+    chmodSync(join(real, 'bin', 'node'), 0o755);
+    symlinkSync(real, join(home, '.local', 'node-current'));
+
+    const link = join(home, '.local', 'node-current', 'bin');
+    const run = (...args: string[]) =>
+      execFileSync('bash', [script, 'plist', ...args], {
+        encoding: 'utf8',
+        env: { ...process.env, HOME: home },
+      });
+
+    const xml = run();
+
+    expect(xml).toContain(`<string>${link}/node</string>`);
+    expect(value(xml, 'PATH')!.split(':')[0]).toBe(link);
+    expect(xml).not.toContain(join(real, 'bin'));
+    expect(run('--node', '/usr/bin/env')).toContain('<string>/usr/bin/env</string>');
   });
 
   it('never carries a token value, only the file path', () => {

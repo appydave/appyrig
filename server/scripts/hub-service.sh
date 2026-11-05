@@ -13,11 +13,12 @@
 #   --token-file <f>   hub token file, 0600     (~/.config/appyrig/token)
 #   --data-dir <d>     DATA_DIR                 (<repo>/data)
 #   --log <f>          stdout + stderr          (~/Library/Logs/appyrig-hub.log; <label>.log for other labels)
-#   --node <path>      node binary              (the node on PATH now, resolved to an absolute path)
+#   --node <path>      node binary              (~/.local/node-current/bin/node if executable, else the node on PATH;
+#                                                made absolute, symlinks kept so a Node upgrade needs no new plist)
 #
 # The plist is the whole configuration: it sets HUB_IGNORE_DOTENV=1 so the repo's .env (dev ports)
 # cannot override it, and passes the token as a FILE path, never the token itself. launchd does not
-# see nvm's PATH, so node is written as an absolute path (review M8).
+# see nvm's PATH, so node is written as an absolute path (review M8). Symlinks are NOT resolved.
 # Read-only toward OpenRig, tmux and seats: this only manages the hub's own agent.
 set -euo pipefail
 
@@ -34,7 +35,9 @@ bind=127.0.0.1,::1,100.126.70.25
 token_file="$HOME/.config/appyrig/token"
 data_dir="$repo/data"
 log=""
-node_bin="$(command -v node || true)"
+# Prefer the stable link: a Node upgrade then repoints the link and the plist stays valid. --node still wins.
+if [[ -x "$HOME/.local/node-current/bin/node" ]]; then node_bin="$HOME/.local/node-current/bin/node"
+else node_bin="$(command -v node || true)"; fi
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -69,7 +72,7 @@ xml() { # escape for a plist <string>
 render_plist() {
   [[ -n "$node_bin" ]] || die "no node on PATH; pass --node /absolute/path/to/node"
   local node_abs node_dir
-  node_abs="$(cd "$(dirname "$node_bin")" && pwd -P)/$(basename "$node_bin")"
+  node_abs="$(cd "$(dirname "$node_bin")" && pwd)/$(basename "$node_bin")"
   node_dir="$(dirname "$node_abs")"
   cat <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

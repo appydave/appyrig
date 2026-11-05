@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  chmodSync,
+  symlinkSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -28,7 +35,7 @@ const hasPlutil = (() => {
 /** Install script, written to a temp plist dir and never loaded (--no-load). */
 const SCRIPTS = resolve(import.meta.dirname, '../scripts');
 
-function install(extra: string[] = []) {
+function install(extra: string[] = [], env?: NodeJS.ProcessEnv) {
   const dir = mkdtempSync(join(tmpdir(), 'appyrig-install-'));
   const token = join(dir, 'token');
 
@@ -49,7 +56,7 @@ function install(extra: string[] = []) {
       '--no-load',
       ...extra,
     ],
-    { encoding: 'utf8' }
+    { encoding: 'utf8', env }
   );
 
   return { dir, token, out };
@@ -94,6 +101,25 @@ describe('launchd install script', () => {
 
     expect(xml).toContain('<key>Label</key><string>com.appydave.appyrig.collector</string>');
     expect(xml).toContain('Logs/appyrig-collector.log');
+  });
+
+  it('keeps the ~/.local/node-current link unresolved in ProgramArguments and PATH', () => {
+    const home = mkdtempSync(join(tmpdir(), 'appyrig-install-home-'));
+    const real = join(home, '.nvm', 'v1');
+    const link = join(home, '.local', 'node-current', 'bin');
+
+    mkdirSync(join(home, '.local'), { recursive: true });
+    mkdirSync(join(real, 'bin'), { recursive: true });
+    symlinkSync(real, join(home, '.local', 'node-current'));
+    writeFileSync(join(link, 'node'), '#!/bin/sh\n', { mode: 0o755 });
+    chmodSync(join(link, 'node'), 0o755);
+
+    const { dir } = install([], { ...process.env, HOME: home });
+    const xml = readFileSync(join(dir, 'com.appydave.appyrig.collector.plist'), 'utf8');
+
+    expect(xml).toContain(`<string>${link}/node</string>`);
+    expect(xml).toMatch(new RegExp(`<key>PATH</key><string>${link}:`));
+    expect(xml).not.toContain(join(real, 'bin'));
   });
 
   it('refuses a missing token file and a missing hub', () => {

@@ -3,8 +3,9 @@
 #
 #   collector/scripts/install.sh --hub http://100.126.70.25:7191 --token-file ~/.config/appyrig/token \
 #       [--machine-id m2] [--machine-label M2] [--label com.appydave.appyrig.collector] \
-#       [--plist-dir ~/Library/LaunchAgents] [--no-load]
+#       [--plist-dir ~/Library/LaunchAgents] [--no-load] [--node <path>]
 #
+# node: --node if given, else ~/.local/node-current/bin/node when executable, else the node on PATH. Symlinks are kept, not resolved.
 # Resolves absolute node / tmux / herdr / rig paths now and writes them (and a PATH) into the plist,
 # because launchd starts with a thin environment. RunAtLoad + KeepAlive; log at
 # ~/Library/Logs/appyrig-collector.log (or appyrig-collector-<suffix>.log for a non-default label).
@@ -12,7 +13,7 @@
 set -euo pipefail
 
 HUB="" TOKEN_FILE="" MACHINE_ID="" MACHINE_LABEL="" LABEL="com.appydave.appyrig.collector"
-PLIST_DIR="$HOME/Library/LaunchAgents" LOAD=1
+PLIST_DIR="$HOME/Library/LaunchAgents" LOAD=1 NODE_BIN=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --hub) HUB="$2"; shift 2 ;;
@@ -21,6 +22,7 @@ while [ $# -gt 0 ]; do
     --machine-label) MACHINE_LABEL="$2"; shift 2 ;;
     --label) LABEL="$2"; shift 2 ;;
     --plist-dir) PLIST_DIR="$2"; shift 2 ;;
+    --node) NODE_BIN="$2"; shift 2 ;;
     --no-load) LOAD=0; shift ;;
     -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -54,7 +56,10 @@ if [ ! -f "$ROOT/dist/main.js" ]; then
 fi
 
 abs() { command -v "$1" 2>/dev/null || true; }
-NODE_BIN="$(abs node)"; [ -n "$NODE_BIN" ] || { echo "node not found on PATH" >&2; exit 2; }
+if [ -z "$NODE_BIN" ]; then
+  if [ -x "$HOME/.local/node-current/bin/node" ]; then NODE_BIN="$HOME/.local/node-current/bin/node"; else NODE_BIN="$(abs node)"; fi
+fi
+[ -n "$NODE_BIN" ] || { echo "node not found on PATH" >&2; exit 2; }
 TMUX_BIN="$(abs tmux)"; [ -n "$TMUX_BIN" ] || { echo "tmux not found on PATH" >&2; exit 2; }
 HERDR_BIN="$(abs herdr)"   # optional: absent means the viewer source reports not ok
 # optional: a machine without OpenRig (the M4) still has tmux seats; the daemon source then reports not ok
