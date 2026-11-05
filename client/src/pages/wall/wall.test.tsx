@@ -27,6 +27,16 @@ function renderWall() {
 }
 
 describe('Wall v2: V1 terminal cards, V2 triage', () => {
+  it('V45: the folder line keeps the path\u2019s END (cut at the start) and the full path is in its title', () => {
+    renderWall();
+
+    const folder = screen.getAllByTestId('terminal-card-folder')[0]!;
+    const cwd = within(folder).getByTestId('terminal-card-cwd');
+
+    expect(cwd.querySelector('bdi')).not.toBeNull();
+    expect(folder.getAttribute('title')).toContain(cwd.textContent ?? '');
+  });
+
   it('every card is the kit WallCard: one fixed size, set by the stylesheet, never by content', () => {
     renderWall();
 
@@ -437,5 +447,22 @@ describe('machine order and card body', () => {
     const none = cardBody({ cwd: null, tail: { lines: ['/ (1)'] } } as never);
 
     expect(none.folder).toBeNull();
+  });
+
+  it('cardBody: Claude Code\u2019s dim suggested reply is not shown as typed; real typing is', () => {
+    const ESC = '\u001b';
+    const suggestion = `${ESC}[39m\u276f\u00a0${ESC}[2mgo G00b${ESC}[0m`;
+    const sent = `${ESC}[39m\u276f\u00a0${ESC}[0mfix the bug`;
+    const onlySuggestion = cardBody({ cwd: null, tail: { lines: [suggestion] } } as never);
+
+    expect(onlySuggestion.lastTyped).toBeNull();
+    expect(onlySuggestion.fallback).toEqual([]);
+
+    // an earlier sent message stays the last thing typed
+    expect(
+      cardBody({ cwd: null, tail: { lines: [sent, 'done', suggestion] } } as never).lastTyped
+    ).toBe('fix the bug');
+    // typed text in the box (normal weight) still shows
+    expect(cardBody({ cwd: null, tail: { lines: [sent] } } as never).lastTyped).toBe('fix the bug');
   });
 });

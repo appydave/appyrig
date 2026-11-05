@@ -50,6 +50,21 @@ interface Props {
   onOpenAgent?: (seatKey: string) => void;
 }
 
+/** The panel's one-line status: which way it works and what it is showing now. */
+function statusWords(mode: PanelMode, pinned: boolean, hasSelection: boolean): string {
+  if (mode === 'hover') {
+    return pinned
+      ? 'Kept because you clicked it. Esc or ✕ lets it follow the pointer again.'
+      : 'Follows the pointer: point at a line, a dot or a box. Click one to keep it here.';
+  }
+
+  return hasSelection
+    ? 'Showing what you clicked. Click another line, dot or box, or press Esc to clear.'
+    : 'Click a line, a dot or a box to show its handoffs here. Pointing only shows a small card.';
+}
+
+const KEYS_TITLE = 'J / K: older / newer handoff. [ and ]: previous / next line.';
+
 const clock = (iso: string) =>
   new Date(iso).toLocaleString(undefined, {
     weekday: 'short',
@@ -194,20 +209,16 @@ export default function HandoffPanel({
   );
 
   // B1 (fb-0007): the panel always says which way it works and what it is showing now.
+  const statusText = statusWords(mode, pinned, !!selection);
   const status = (
     <p
       className="handoff-status"
       data-testid="handoff-status"
       data-mode={mode}
       data-pinned={pinned}
+      title={statusText}
     >
-      {mode === 'hover'
-        ? pinned
-          ? 'Kept because you clicked it. Esc or ✕ lets it follow the pointer again.'
-          : 'Follows the pointer: point at a line, a dot or a box. Click one to keep it here.'
-        : selection
-          ? 'Showing what you clicked. Click another line, dot or box, or press Esc to clear.'
-          : 'Click a line, a dot or a box to show its handoffs here. Pointing only shows a small card.'}
+      {statusText}
     </p>
   );
 
@@ -327,7 +338,7 @@ export default function HandoffPanel({
         </p>
       )}
       {keys && (
-        <p className="handoff-keys" data-testid="handoff-keys-hint">
+        <p className="handoff-keys" data-testid="handoff-keys-hint" title={KEYS_TITLE}>
           <kbd>J</kbd>/<kbd>K</kbd> older / newer handoff
           {onLine && (
             <>

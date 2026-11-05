@@ -14,6 +14,7 @@ import FlowDocsBar from './FlowDocsBar.js';
 import HandoffPanel, { type PanelMode, type PanelSelection } from '@client/kit/HandoffPanel.js';
 import FollowWork from '@client/kit/FollowWork.js';
 import { entryWords, medianSentence } from '@client/domain/flow/words.js';
+import { emptySeatsWord, fitText, seatsLine } from '@client/domain/flow/boxText.js';
 import { followWork } from '@client/domain/fleet/timeline.js';
 import { isShortcutBlocked, isSlider } from '@client/lib/keys.js';
 import {
@@ -481,9 +482,9 @@ export default function HandoffFlow({
   if (!range) {
     return (
       <>
-        <PageHeader title="Handoff Flow" facts={[rig, 'no handoffs yet']} />
+        <PageHeader title="Handoff Flow" facts={[rig, 'no queue tickets yet']} />
         <p className="empty" data-testid="flow-empty">
-          No handoffs through the queue in {rig} yet.
+          No queue tickets in {rig} yet. Messages the seats send each other are not counted yet.
         </p>
       </>
     );
@@ -719,8 +720,11 @@ export default function HandoffFlow({
             {rig}
           </span>,
           <span key="stats" className="flow-stats">
-            <span data-testid="flow-total">
-              <b>{flow.total}</b> handoffs
+            <span
+              data-testid="flow-total"
+              title="Queue tickets only. Messages the seats send each other are not counted yet."
+            >
+              <b>{flow.total}</b> queue tickets
             </span>
             {(flow.mode === 'roles' || flow.rework > 0) && (
               <span data-testid="flow-rework">
@@ -1082,6 +1086,10 @@ export default function HandoffFlow({
               })}
             {flow.stages.map((s) => {
               const x = L.x(s.stage);
+              const seatsText = seatsLine(
+                s.seats.map((m) => m.model),
+                emptySeatsWord(s, flow.mode === 'roles')
+              );
               const state = s.waiting ? 'waiting' : s.stale ? 'stale' : '';
 
               return (
@@ -1154,17 +1162,8 @@ export default function HandoffFlow({
                     {s.noLead ? 'No lead — by design' : s.label}
                   </text>
                   <text x={x} y={ROW_Y + 8} className="flow-seats">
-                    {s.seats.length
-                      ? s.seats.map((x) => x.model).join(' · ')
-                      : s.noLead
-                        ? 'no lead seat in this rig'
-                        : s.outside
-                          ? flow.mode === 'roles'
-                            ? 'orchestrator, David or another rig'
-                            : 'outside this rig'
-                          : s.stage === 'others'
-                            ? 'quieter seats'
-                            : 'no seat'}
+                    <title>{seatsText.full}</title>
+                    {fitText(seatsText.short, L.boxW)}
                   </text>
                   {!s.noLead && (
                     <g data-testid="flow-wait-badge" data-state={state || 'none'}>

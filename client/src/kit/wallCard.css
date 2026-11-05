@@ -218,10 +218,28 @@
 .wcard-warn {
   color: var(--ar-blocked-text);
 }
+.wcard-folder {
+  display: flex;
+}
+/* The path is cut at its start (rtl clips the left, the bdi keeps the text reading left to right),
+   so the end of the folder and the branch both stay visible. */
 .wcard-cwd {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
   color: var(--wc-cwd);
 }
 .wcard-branch {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre;
   color: var(--wc-branch);
 }
 .wcard-foot {

@@ -626,6 +626,9 @@ describe('Handoff Flow v2', () => {
     render(<Flow ctx={makeCtx(fleet(), socket)} />);
     expect(screen.getByTestId('handoff-flow')).toHaveAttribute('data-lens', 'traffic');
     expect(screen.getByTestId('flow-total')).toBeInTheDocument();
+    // V29(a): the count says it is queue tickets and that rig send messages are not counted yet
+    expect(screen.getByTestId('flow-total')).toHaveTextContent(/queue tickets/);
+    expect(screen.getByTestId('flow-total').getAttribute('title')).toMatch(/not counted yet/);
 
     const pills = screen.getAllByTestId('flow-count-pill');
 

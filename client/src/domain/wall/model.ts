@@ -7,7 +7,7 @@ import {
   type WallGroup,
 } from '@client/domain/fleet/model.js';
 import { isLiveStatus } from '@client/domain/fleet/views/core/rigState.js';
-import { plainLine, tailLine } from '@client/domain/fleet/terminal.js';
+import { isDimSuggestion, plainLine, tailLine } from '@client/domain/fleet/terminal.js';
 
 /** C22: the three "look here" filters, in AppyRig's own status words. */
 export type WallFilter = 'all' | 'needs' | 'stuck' | 'failing';
@@ -271,6 +271,13 @@ const clean = (l: string) =>
     .replace(/\s+/g, ' ')
     .trim();
 
+/** The seat's terminal lines, cleaned. Claude Code's dim suggested reply was never typed or sent: left out. */
+const sentLines = (seat: Seat): string[] =>
+  (seat.tail?.lines ?? [])
+    .filter((l) => !isDimSuggestion(l))
+    .map(clean)
+    .filter(Boolean);
+
 /**
  * What a Wall card shows from a seat's terminal: the last thing typed (the last line that is a
  * prompt with text after it), the folder and branch from the status line under it, and when there is
@@ -278,7 +285,7 @@ const clean = (l: string) =>
  * not shown once a real prompt line exists.
  */
 export function cardBody(seat: Seat): CardBody {
-  const lines = (seat.tail?.lines ?? []).map(clean).filter(Boolean);
+  const lines = sentLines(seat);
   let lastTyped: string | null = null;
 
   for (let i = lines.length - 1; i >= 0; i--) {

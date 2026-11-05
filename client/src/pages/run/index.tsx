@@ -499,6 +499,9 @@ function JobPanel({
 
 // ---------------------------------------------------------------- ledger
 
+const NO_TICKET =
+  'No queue ticket for this mission yet. Messages the seats send each other are not counted yet.';
+
 function Ledger({
   ctx,
   machine,
@@ -549,7 +552,7 @@ function Ledger({
     <section data-testid="run-ledger">
       <div className="run-label">What just happened</div>
       {sorted.length === 0 ? (
-        <p className="quiet">No handoff of this mission yet.</p>
+        <p className="quiet">{NO_TICKET}</p>
       ) : (
         <ul className="run-ledger">
           {sorted.map((r) => {

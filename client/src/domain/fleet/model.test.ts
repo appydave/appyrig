@@ -24,6 +24,7 @@ import {
   stripOsc,
   visibleTail,
 } from './model.js';
+import { isDimSuggestion, tailLine } from './terminal.js';
 
 const NOW = Date.parse('2026-10-09T14:00:00.000Z');
 const at = (msAgo: number) => new Date(NOW - msAgo).toISOString();
@@ -404,5 +405,31 @@ describe('contentTail (S3)', () => {
 
   it('a screen that is all chrome falls back to the plain tail, never to nothing', () => {
     expect(contentTail(['❯ ', '  ⏵⏵ auto mode on (shift+tab to cycle)'], 3)).toHaveLength(2);
+  });
+});
+
+const ESC = '\u001b';
+
+describe('Claude Code dim suggested reply', () => {
+  const suggestion = `${ESC}[39m\u276f\u00a0${ESC}[2mgo G00b${ESC}[0m`;
+
+  it('is recognised by its dim text after the prompt', () => {
+    expect(isDimSuggestion(suggestion)).toBe(true);
+    expect(isDimSuggestion(`[39m\u276f\u00a0[2mgo on[0m`)).toBe(true);
+  });
+
+  it('is not recognised for typed input, normal output or an empty prompt', () => {
+    expect(isDimSuggestion(`${ESC}[39m\u276f\u00a0${ESC}[0mfix the bug`)).toBe(false);
+    expect(isDimSuggestion(`\u276f fix the bug`)).toBe(false);
+    expect(isDimSuggestion(`${ESC}[2mfaint output line${ESC}[0m`)).toBe(false);
+    expect(isDimSuggestion(`${ESC}[39m\u276f\u00a0`)).toBe(false);
+    expect(isDimSuggestion(`${ESC}[38;5;246m\u203a Message from @x`)).toBe(false);
+  });
+
+  it('is skipped by tailLine, which then shows the last real line', () => {
+    expect(tailLine(['Brewed for 1m', suggestion])).toBe('Brewed for 1m');
+    expect(tailLine(['Brewed for 1m', `${ESC}[39m\u276f\u00a0${ESC}[0mfix it`])).toBe(
+      '\u276f\u00a0fix it'.trim()
+    );
   });
 });

@@ -614,7 +614,7 @@
       "count": 2
     },
     "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 2
@@ -976,7 +976,7 @@
       "count": 7
     },
     "sonarjs/expression-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/pages/flow/ReplayConsoles.tsx": {

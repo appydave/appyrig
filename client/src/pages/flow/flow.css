@@ -62,15 +62,51 @@
   overflow-x: hidden;
   overflow-y: hidden;
 }
-/* Documents sits under the row in a slot that is always one line tall, so picking a box adds nothing. */
+/* Documents sits under the row in a slot that is always the same height (the bar with its buttons is
+   40px), so picking a box adds nothing. */
 .ar-flow .flow-docs-slot {
-  min-height: 36px;
+  height: 40px;
   box-sizing: border-box;
+  overflow: hidden;
 }
-/* The diagram never shrinks below a readable scale: on a narrow page (the Agent panel open, the
-   drawer pinned) it scrolls sideways inside its own box instead. */
+.ar-flow .flow-docs-slot .flow-docs-bar {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+/* Beside the panel the diagram keeps its 760px floor and the panel gives way (down to 310px): at the
+   Rigs-drawer width (row 1088) that is 760 + 14 gap + 314. */
+.ar-flow .flow-row > .handoff-panel {
+  flex: 0 1 460px;
+  min-width: 310px;
+  max-width: 460px;
+}
+/* The panel's text and its list share what is left of its fixed height and scroll inside; the help
+   lines and the agent chips stay one line each so a 310px panel still fits. */
+.ar-flow .handoff-panel .handoff-status,
+.ar-flow .handoff-panel .handoff-keys {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-flow .handoff-panel .handoff-agents {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.ar-flow .handoff-panel .handoff-agents > * {
+  flex: 0 0 auto;
+}
+.ar-flow .handoff-panel .handoff-head b {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The diagram scales to its box down to 640px wide, then scrolls sideways inside its own box. */
 .ar-flow .flow-row > .flow-svg-scroll {
-  flex: 1 1 620px;
+  flex: 1 0 760px;
   min-width: 0;
   height: 100%;
   overflow-x: auto;
@@ -80,8 +116,8 @@
   display: block;
   box-sizing: border-box;
   width: 100%;
-  min-width: 760px;
-  max-width: none;
+  min-width: 640px;
+  max-width: 100%;
   height: 100%;
 }
 /* The replay bar sits pinned to the bottom of the viewport, one row, always the same size. */
@@ -188,9 +224,9 @@
   min-width: 0;
 }
 /* A narrow page: the details panel goes below the diagram, and the diagram gets the full width. */
-/* (Wide enough for the diagram at its 760px floor, the 14px gap and the 340px panel: below that the panel
+/* (The diagram's 760px floor + the 14px gap + the panel's 310px minimum = 1084: below that the panel
    goes underneath rather than cutting the diagram off at the right.) */
-@container flowpage (max-width: 1120px) {
+@container flowpage (max-width: 1083px) {
   .ar-flow .flow-row {
     height: auto;
     flex-wrap: wrap;
@@ -199,7 +235,8 @@
     flex: 1 1 100%;
     height: 440px;
   }
-  .ar-flow .flow-row > * + * {
+  .ar-flow .flow-row > * + *,
+  .ar-flow .flow-row > .handoff-panel {
     flex: 1 1 100%;
     max-width: none;
     height: 420px;

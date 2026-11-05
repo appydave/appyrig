@@ -57,6 +57,25 @@ export interface WallCardProps {
 export const isFrosted = (s: PipKey): boolean =>
   s === 'stopped' || s === 'asleep' || s === 'unknown';
 
+/** The folder line: a long path loses its START, not its end (the last folders are the part that
+ *  differs, e.g. a worktree under .claude/worktrees/...). The branch stays whole; the title has all. */
+function WallFolder({ folder, branch }: { folder?: string | null; branch?: string | null }) {
+  return (
+    <span
+      className="wcard-line wcard-folder"
+      data-testid="terminal-card-folder"
+      title={`${folder ?? ''}${branch ? ` (${branch})` : ''}`}
+    >
+      {folder && (
+        <span className="wcard-cwd" data-testid="terminal-card-cwd">
+          <bdi>{folder}</bdi>
+        </span>
+      )}
+      {branch && <span className="wcard-branch"> ({branch})</span>}
+    </span>
+  );
+}
+
 export default function WallCard(p: WallCardProps) {
   const frosted = isFrosted(p.status);
   const typed = p.lastTyped?.trim() || null;
@@ -136,10 +155,7 @@ export default function WallCard(p: WallCardProps) {
               <span className="wcard-line wcard-dim">no terminal text</span>
             )}
             {!stopped && (p.folder || p.branch) ? (
-              <span className="wcard-line wcard-folder" data-testid="terminal-card-folder">
-                {p.folder && <span className="wcard-cwd">{p.folder}</span>}
-                {p.branch && <span className="wcard-branch"> ({p.branch})</span>}
-              </span>
+              <WallFolder folder={p.folder} branch={p.branch} />
             ) : null}
           </span>
           <span className="wcard-foot">

@@ -2112,8 +2112,17 @@ g[data-testid='flow-edge'] {
   max-height: none;
   overflow: hidden;
 }
+.handoff-panel .handoff-body {
+  flex: 3 1 0;
+  min-height: 48px;
+}
+/* The list of handoffs scrolls inside the panel (it was clipped to three lines, the rest out of reach). */
 .handoff-panel .handoff-list {
-  flex: 0 0 auto;
+  display: block;
+  flex: 2 1 0;
+  min-height: 44px;
+  overflow-y: auto;
+  -webkit-line-clamp: unset;
 }
 /* A floating hint for what is under the pointer: it never takes the pointer and never moves layout. */
 .hover-card {

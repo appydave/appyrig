@@ -19,7 +19,9 @@ import {
   type RigCommandRow,
   type ShownEdge,
   type ShownSpec,
+  type SpecState,
 } from '@client/domain/specs/model.js';
+import { STATE_HELP } from '@client/domain/specs/stateHelp.js';
 import './specs.css';
 
 /** How often the page asks again: specs change as a rig is written, commands as they run. */
@@ -76,6 +78,15 @@ export function usePolledVerb<T>(
 const valueOf = <T,>(s: Polled<T>): T | null =>
   s.phase === 'ok' ? s.value : s.phase === 'refused' ? s.last : null;
 
+/** The state chip; hover says what the state is, how the rig got there and what changes it. */
+function StateBadge({ state, testId }: { state: SpecState; testId?: string }) {
+  return (
+    <span className="rs-badge" data-state={state} data-testid={testId} title={STATE_HELP[state]}>
+      {STATE_WORD[state]}
+    </span>
+  );
+}
+
 function Edges({ edges, testId }: { edges: ShownEdge[]; testId: string }) {
   return (
     <ul className="rs-edges" data-testid={testId}>
@@ -113,9 +124,7 @@ function SpecDetail({
     <section className="rs-detail" data-testid="rs-detail" data-state={spec.state}>
       <header className="rs-detail-head">
         <h3 data-testid="rs-detail-name">{spec.name}</h3>
-        <span className="rs-badge" data-state={spec.state} data-testid="rs-detail-state">
-          {STATE_WORD[spec.state]}
-        </span>
+        <StateBadge state={spec.state} testId="rs-detail-state" />
         <span className="quiet">
           spec on {label(spec.machine)}
           {elsewhere ? ` · launched on ${label(spec.liveMachine!)}` : ''}
@@ -485,9 +494,7 @@ function RigSpecs({ ctx }: PageProps) {
               onClick={() => setPicked(s.key)}
             >
               <span className="rs-item-name">{s.name}</span>
-              <span className="rs-badge" data-state={s.state}>
-                {STATE_WORD[s.state]}
-              </span>
+              <StateBadge state={s.state} />
               <span className="quiet rs-item-where">
                 {label(s.machine)}
                 {s.liveMachine && s.liveMachine !== s.machine

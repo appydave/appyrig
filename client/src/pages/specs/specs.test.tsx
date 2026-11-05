@@ -7,6 +7,7 @@ import { LEGEND_TITLE, PAGE_PURPOSE } from '@client/kit/index.js';
 import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
 import { COMMANDS_POLL_MS, SPECS_POLL_MS, page as specsPage } from './index.js';
 import { shownCommands, shownSpecs } from '@client/domain/specs/model.js';
+import { STATE_HELP } from '@client/domain/specs/stateHelp.js';
 
 const NOW = Date.parse('2026-10-20T12:00:00.000Z');
 
@@ -169,6 +170,16 @@ describe('N10: the Rig specs page', () => {
       'data-state',
       launched.status === 'running' ? 'running' : 'launched'
     );
+
+    // V16: every state chip says in plain words what it is, how it got there and what changes it
+    expect(items[0]!.querySelector('.rs-badge')).toHaveAttribute(
+      'title',
+      expect.stringMatching(/Draft \(not launched\).*rig up/)
+    );
+    expect(items[1]!.querySelector('.rs-badge')?.getAttribute('title')).toBe(
+      STATE_HELP[items[1]!.getAttribute('data-state') as 'running' | 'launched']
+    );
+    expect(screen.getByTestId('rs-detail-state')).toHaveAttribute('title', STATE_HELP.draft);
 
     const detail = screen.getByTestId('rs-detail');
 

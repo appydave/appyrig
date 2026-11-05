@@ -746,13 +746,18 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
         {
           mark: 'draft (not launched)',
           means:
-            'A rig.yaml is written, but OpenRig has not started it, so it has no live seats yet.',
+            'A rig.yaml is written, but OpenRig has no record of this rig, so it has no live seats. Starting it (rig up) makes it running; if OpenRig forgets the rig it goes back to draft.',
         },
         {
           mark: 'running',
-          means: 'OpenRig knows this rig and it is running. The buttons open its live views.',
+          means:
+            'OpenRig has this rig and its status is running (here, or on the machine that launched it). Stopping it makes it "launched, not running". The buttons open its live views.',
         },
-        { mark: 'launched, not running', means: 'OpenRig knows this rig, but it is stopped.' },
+        {
+          mark: 'launched, not running',
+          means:
+            'OpenRig has a record of this rig, but its status is not running (stopped, for example). Starting it again makes it running.',
+        },
         {
           mark: 'Pods and seats',
           means:
