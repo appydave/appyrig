@@ -378,7 +378,9 @@ describe('N10: the Rig specs page', () => {
     render(<specsPage.component ctx={pageCtx([m2], socket, NOW)} />);
     await waitFor(() => expect(screen.getByTestId('rs-specs-old-hub')).toBeInTheDocument());
     expect(screen.getAllByTestId('rs-item')).toHaveLength(1);
-    expect(screen.getByTestId('rs-live-record')).toBeInTheDocument();
+    // the hub gave no files, so the Summary opens by itself
+    await waitFor(() => expect(screen.getByTestId('rs-live-record')).toBeInTheDocument());
+    expect(screen.getByTestId('rs-files-none')).toBeInTheDocument();
     expect(screen.getByTestId('rs-seat')).toHaveTextContent(`dev-build@${rig.name}`);
     expect(screen.getByTestId('rs-agents-unsent')).toBeInTheDocument();
     expect(screen.getByTestId('rs-commands-status')).toHaveTextContent(/older AppyRig/);

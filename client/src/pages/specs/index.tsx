@@ -5,10 +5,9 @@ import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { plannedWord } from '@client/domain/fleet/views/map/rigMap.js';
 import { agoFrom, useMachineLabel } from '@client/kit/data/index.js';
 import { PageHeader } from '@client/kit/index.js';
-import type { PageKey, PageDef, PageProps } from '@client/app/types.js';
+import type { PageDef, PageProps } from '@client/app/types.js';
 import {
   AGENT_STATUS_WORD,
-  STATE_WORD,
   clockOf,
   outcomeOf,
   profileSummary,
@@ -19,9 +18,9 @@ import {
   type RigCommandRow,
   type ShownEdge,
   type ShownSpec,
-  type SpecState,
 } from '@client/domain/specs/model.js';
-import { STATE_HELP } from '@client/domain/specs/stateHelp.js';
+import { SpecFiles } from './SpecFiles.js';
+import { DetailHead, LiveLinks, SpecsNotices, StateBadge, SummaryToggle } from './SpecParts.js';
 import './specs.css';
 
 /** How often the page asks again: specs change as a rig is written, commands as they run. */
@@ -78,15 +77,6 @@ export function usePolledVerb<T>(
 const valueOf = <T,>(s: Polled<T>): T | null =>
   s.phase === 'ok' ? s.value : s.phase === 'refused' ? s.last : null;
 
-/** The state chip; hover says what the state is, how the rig got there and what changes it. */
-function StateBadge({ state, testId }: { state: SpecState; testId?: string }) {
-  return (
-    <span className="rs-badge" data-state={state} data-testid={testId} title={STATE_HELP[state]}>
-      {STATE_WORD[state]}
-    </span>
-  );
-}
-
 function Edges({ edges, testId }: { edges: ShownEdge[]; testId: string }) {
   return (
     <ul className="rs-edges" data-testid={testId}>
@@ -111,195 +101,178 @@ function SpecDetail({
 }) {
   const fm = ctx.allMachines.find((m) => m.machine.id === (spec.liveMachine ?? spec.machine));
   const liveSeat = (session: string) => fm?.snapshot.seats.find((s) => s.id === session);
-  const liveKey = spec.liveMachine ? `${spec.liveMachine}:${spec.name}` : spec.key;
-  const elsewhere = spec.liveMachine !== null && spec.liveMachine !== spec.machine;
-  const open = (page: PageKey) => {
-    ctx.chooseRig(liveKey);
-    ctx.goTo(page);
-  };
-
+  const [noFiles, setNoFiles] = useState(spec.liveMachine === null);
+  const [summaryUser, setSummaryUser] = useState<boolean | null>(null);
+  const summaryOpen = summaryUser ?? noFiles;
   const seatCount = spec.pods?.reduce((n, p) => n + p.seats.length, 0) ?? 0;
 
   return (
     <section className="rs-detail" data-testid="rs-detail" data-state={spec.state}>
-      <header className="rs-detail-head">
-        <h3 data-testid="rs-detail-name">{spec.name}</h3>
-        <StateBadge state={spec.state} testId="rs-detail-state" />
-        <span className="quiet">
-          spec on {label(spec.machine)}
-          {elsewhere ? ` · launched on ${label(spec.liveMachine!)}` : ''}
-          {spec.pods ? ` · ${spec.pods.length} pods · ${seatCount} seats` : ''}
-        </span>
-      </header>
-      {spec.summary && <p className="rs-summary">{spec.summary}</p>}
-      {spec.specPath && (
-        <p className="quiet rs-path">
-          File: <code>{spec.specPath}</code>
-        </p>
-      )}
-      {spec.state !== 'draft' && (
-        <p className="rs-links" data-testid="rs-links">
-          {elsewhere
-            ? `This rig is launched on ${label(spec.liveMachine!)}, from its own copy of the spec.`
-            : 'This rig is launched.'}{' '}
-          See it live:{' '}
-          <button type="button" className="pill-btn" onClick={() => open('graph')}>
-            Graph
-          </button>{' '}
-          <button type="button" className="pill-btn" onClick={() => open('map')}>
-            Rig Map
-          </button>{' '}
-          <button type="button" className="pill-btn" onClick={() => open('run')}>
-            Run board
-          </button>{' '}
-          <button
-            type="button"
-            className="pill-btn"
-            onClick={() => ctx.onOpenFiles(spec.liveMachine ?? spec.machine, spec.name)}
-          >
-            Files
-          </button>
-        </p>
-      )}
-      {spec.state === 'draft' && (
-        <p className="quiet" data-testid="rs-draft-note">
-          Written but not launched: OpenRig does not know this rig yet, so there are no live seats
-          to show. This is what <code>rig up</code> would start.
-        </p>
-      )}
+      <DetailHead spec={spec} label={label} />
+      {spec.state !== 'draft' && <LiveLinks spec={spec} ctx={ctx} label={label} />}
       {!spec.specValid && (
         <p className="rs-warn" data-testid="rs-invalid">
           OpenRig would refuse this rig.yaml as written, so its pods and edges are not shown.
         </p>
       )}
-      {(spec.culture || spec.docs.length > 0) && (
-        <p className="rs-docs" data-testid="rs-docs">
-          {spec.culture && (
-            <>
-              Culture: <code>{spec.culture}</code>{' '}
-            </>
+      <SpecFiles
+        getSocket={ctx.getSocket}
+        machine={spec.liveMachine}
+        machineLabel={label(spec.liveMachine ?? spec.machine)}
+        rig={spec.name}
+        specPath={spec.specPath}
+        onNone={setNoFiles}
+      />
+      <SummaryToggle open={summaryOpen} onToggle={() => setSummaryUser(!summaryOpen)} />
+      {summaryOpen && (
+        <div className="rs-summary-body" data-testid="rs-summary-body">
+          {spec.summary && <p className="rs-summary">{spec.summary}</p>}
+          {spec.pods && (
+            <p className="quiet rs-path">
+              {spec.pods.length} pods · {seatCount} seats
+            </p>
           )}
-          {spec.docs.length > 0 && (
-            <>
-              Docs:{' '}
-              {spec.docs.map((d) => (
-                <code key={d}>{d} </code>
-              ))}
-            </>
+          {spec.specPath && (
+            <p className="quiet rs-path">
+              File: <code>{spec.specPath}</code>
+            </p>
           )}
-        </p>
-      )}
+          {spec.state === 'draft' && (
+            <p className="quiet" data-testid="rs-draft-note">
+              Written but not launched: OpenRig does not know this rig yet, so there are no live
+              seats to show. This is what <code>rig up</code> would start.
+            </p>
+          )}
+          {(spec.culture || spec.docs.length > 0) && (
+            <p className="rs-docs" data-testid="rs-docs">
+              {spec.culture && (
+                <>
+                  Culture: <code>{spec.culture}</code>{' '}
+                </>
+              )}
+              {spec.docs.length > 0 && (
+                <>
+                  Docs:{' '}
+                  {spec.docs.map((d) => (
+                    <code key={d}>{d} </code>
+                  ))}
+                </>
+              )}
+            </p>
+          )}
 
-      {spec.pods && (
-        <>
-          <h4>Pods and seats</h4>
-          <div className="rs-pods">
-            {spec.pods.map((p) => (
-              <div className="rs-pod" key={p.id} data-testid="rs-pod" data-pod={p.id}>
-                <div className="rs-pod-head">
-                  <b>{p.label}</b> <span className="quiet mono">{p.id}</span>
+          {spec.pods && (
+            <>
+              <h4>Pods and seats</h4>
+              <div className="rs-pods">
+                {spec.pods.map((p) => (
+                  <div className="rs-pod" key={p.id} data-testid="rs-pod" data-pod={p.id}>
+                    <div className="rs-pod-head">
+                      <b>{p.label}</b> <span className="quiet mono">{p.id}</span>
+                    </div>
+                    {p.summary && <p className="rs-pod-summary">{p.summary}</p>}
+                    <ul className="rs-seats">
+                      {p.seats.map((s) => {
+                        const live = liveSeat(s.session);
+                        const prof = profileSummary(spec.agents, s.agentRef, s.profile);
+                        const model = seatModel(spec.agents, s);
+
+                        return (
+                          <li key={s.id} className="rs-seat" data-testid="rs-seat">
+                            <span className="mono rs-session">{s.session}</span>
+                            {live && (
+                              <span className="quiet rs-live" data-testid="rs-seat-live">
+                                {' '}
+                                · {live.status}
+                              </span>
+                            )}
+                            <br />
+                            <span className="rs-seat-facts">
+                              profile <b data-testid="rs-seat-profile">{s.profile ?? 'not sent'}</b>
+                              {s.runtime ? ` · ${s.runtime}` : ''}
+                              {model ? ` · ${model}` : ''}
+                            </span>
+                            {prof && <span className="rs-seat-prof quiet">{prof}</span>}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {p.edges.length > 0 && (
+                      <>
+                        <div className="quiet rs-sub">Inside this pod</div>
+                        <Edges edges={p.edges} testId="rs-pod-edges" />
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {spec.edges && (
+            <>
+              <h4>Edges between pods</h4>
+              {spec.edges.length > 0 ? (
+                <Edges edges={spec.edges} testId="rs-rig-edges" />
+              ) : (
+                <p className="quiet">None written.</p>
+              )}
+            </>
+          )}
+
+          <h4>AgentSpecs and their profiles</h4>
+          {spec.agents === null ? (
+            <p className="quiet" data-testid="rs-agents-unsent">
+              {label(spec.machine)}&apos;s collector does not send AgentSpecs yet (it predates this
+              page).
+            </p>
+          ) : spec.agents.length === 0 ? (
+            <p className="quiet">None named.</p>
+          ) : (
+            spec.agents.map((a) => (
+              <div className="rs-agent" key={a.ref} data-testid="rs-agent">
+                <div>
+                  <code>{a.ref}</code>{' '}
+                  {a.spec ? (
+                    <b>
+                      {a.spec.name} v{a.spec.version}
+                    </b>
+                  ) : (
+                    <span className="rs-warn">{AGENT_STATUS_WORD[a.status]}</span>
+                  )}{' '}
+                  <span className="quiet">used by {a.usedBy.length}</span>
                 </div>
-                {p.summary && <p className="rs-pod-summary">{p.summary}</p>}
-                <ul className="rs-seats">
-                  {p.seats.map((s) => {
-                    const live = liveSeat(s.session);
-                    const prof = profileSummary(spec.agents, s.agentRef, s.profile);
-                    const model = seatModel(spec.agents, s);
-
-                    return (
-                      <li key={s.id} className="rs-seat" data-testid="rs-seat">
-                        <span className="mono rs-session">{s.session}</span>
-                        {live && (
-                          <span className="quiet rs-live" data-testid="rs-seat-live">
-                            {' '}
-                            · {live.status}
-                          </span>
-                        )}
-                        <br />
-                        <span className="rs-seat-facts">
-                          profile <b data-testid="rs-seat-profile">{s.profile ?? 'not sent'}</b>
-                          {s.runtime ? ` · ${s.runtime}` : ''}
-                          {model ? ` · ${model}` : ''}
-                        </span>
-                        {prof && <span className="rs-seat-prof quiet">{prof}</span>}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {p.edges.length > 0 && (
-                  <>
-                    <div className="quiet rs-sub">Inside this pod</div>
-                    <Edges edges={p.edges} testId="rs-pod-edges" />
-                  </>
+                {a.spec?.description && <p className="rs-pod-summary">{a.spec.description}</p>}
+                {a.spec && (
+                  <table className="rs-profiles" data-testid="rs-profiles">
+                    <thead>
+                      <tr>
+                        <th>Profile</th>
+                        <th>Model</th>
+                        <th>What it is for</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(a.spec.profiles).map(([name, p]) => (
+                        <tr key={name} data-testid="rs-profile">
+                          <td className="mono">{name}</td>
+                          <td className="mono">{p.preferences?.model ?? '-'}</td>
+                          <td>{p.summary ?? p.description ?? ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {spec.edges && (
-        <>
-          <h4>Edges between pods</h4>
-          {spec.edges.length > 0 ? (
-            <Edges edges={spec.edges} testId="rs-rig-edges" />
-          ) : (
-            <p className="quiet">None written.</p>
+            ))
           )}
-        </>
-      )}
-
-      <h4>AgentSpecs and their profiles</h4>
-      {spec.agents === null ? (
-        <p className="quiet" data-testid="rs-agents-unsent">
-          {label(spec.machine)}&apos;s collector does not send AgentSpecs yet (it predates this
-          page).
-        </p>
-      ) : spec.agents.length === 0 ? (
-        <p className="quiet">None named.</p>
-      ) : (
-        spec.agents.map((a) => (
-          <div className="rs-agent" key={a.ref} data-testid="rs-agent">
-            <div>
-              <code>{a.ref}</code>{' '}
-              {a.spec ? (
-                <b>
-                  {a.spec.name} v{a.spec.version}
-                </b>
-              ) : (
-                <span className="rs-warn">{AGENT_STATUS_WORD[a.status]}</span>
-              )}{' '}
-              <span className="quiet">used by {a.usedBy.length}</span>
-            </div>
-            {a.spec?.description && <p className="rs-pod-summary">{a.spec.description}</p>}
-            {a.spec && (
-              <table className="rs-profiles" data-testid="rs-profiles">
-                <thead>
-                  <tr>
-                    <th>Profile</th>
-                    <th>Model</th>
-                    <th>What it is for</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(a.spec.profiles).map(([name, p]) => (
-                    <tr key={name} data-testid="rs-profile">
-                      <td className="mono">{name}</td>
-                      <td className="mono">{p.preferences?.model ?? '-'}</td>
-                      <td>{p.summary ?? p.description ?? ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ))
-      )}
-      {spec.source === 'live-record' && (
-        <p className="quiet" data-testid="rs-live-record">
-          From the launched rig&apos;s own record: {label(spec.machine)}&apos;s collector does not
-          send its spec scan yet, so profiles and AgentSpecs are not shown.
-        </p>
+          {spec.source === 'live-record' && (
+            <p className="quiet" data-testid="rs-live-record">
+              From the launched rig&apos;s own record: {label(spec.machine)}&apos;s collector does
+              not send its spec scan yet, so profiles and AgentSpecs are not shown.
+            </p>
+          )}
+        </div>
       )}
     </section>
   );
@@ -464,18 +437,11 @@ function RigSpecs({ ctx }: PageProps) {
             : `${specs.length} rig specs · ${drafts} not launched`,
         ]}
       />
-      {specsQ.phase === 'refused' && !specsValue && (
-        <p className="quiet" data-testid="rs-specs-old-hub">
-          The hub does not list unlaunched rigs yet (it runs an older AppyRig). Shown: launched
-          rigs, from their own records.
-        </p>
-      )}
-      {pending.length > 0 && (
-        <p className="quiet" data-testid="rs-specs-pending">
-          {pending.map((m) => label(m.machine)).join(', ')}: not sending its spec scan yet, so only
-          launched rigs show for {pending.length === 1 ? 'it' : 'them'}.
-        </p>
-      )}
+      <SpecsNotices
+        refused={specsQ.phase === 'refused' && !specsValue}
+        pending={pending}
+        label={label}
+      />
       <div className="rs-layout">
         <nav className="rs-list" aria-label="Rig specs" data-testid="rs-list" ref={list}>
           {specs.length === 0 && specsQ.phase !== 'loading' && (
@@ -506,7 +472,7 @@ function RigSpecs({ ctx }: PageProps) {
         </nav>
         <div className="rs-main">
           {selected ? (
-            <SpecDetail spec={selected} ctx={ctx} label={label} />
+            <SpecDetail key={selected.key} spec={selected} ctx={ctx} label={label} />
           ) : (
             specsQ.phase === 'loading' && <p className="quiet">Reading the rig specs…</p>
           )}
