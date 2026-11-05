@@ -14,6 +14,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Rebuild shared/dist first, so a stale build cannot give a false pass (scripts/vitest/build-shared.mjs).
+    globalSetup: [`${repo}scripts/vitest/build-shared.mjs`],
     environment: 'node',
     testTimeout: 30000,
     include: ['test/root/**/*.test.ts'],

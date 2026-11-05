@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Rebuild shared/dist first, so a stale build cannot give a false pass (scripts/vitest/build-shared.mjs).
+    globalSetup: ['../scripts/vitest/build-shared.mjs'],
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],

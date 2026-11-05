@@ -7,6 +7,7 @@
         "bin/appyrig.mjs!",
         "scripts/*.{ts,mjs}",
         "scripts/provenance/main.ts",
+        "scripts/vitest/build-shared.mjs",
         "lint/**/*.{js,mjs}",
         "e2e/**/*.spec.ts",
         "e2e/support/global-teardown.ts",
