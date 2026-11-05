@@ -527,6 +527,32 @@ describe('Graph page', () => {
     expect(rigKeys()).toContain('m2:kernel');
   });
 
+  it('the chip hints say they count rigs and state the rule', () => {
+    render(<Graph ctx={ctxFor([fleetMachine(snapshot('m2'))])} />);
+    for (const k of ['needsMe', 'stuck', 'failing']) {
+      expect(screen.getByTestId(`g2-filter-${k}`).getAttribute('title') ?? '').toMatch(
+        /^Counts rigs\./
+      );
+    }
+
+    expect(screen.getByTestId('g2-filter-stuck').getAttribute('title')).toMatch(/over 2 hours/);
+  });
+
+  it('a partly running rig is not hidden as stopped', () => {
+    const m = fleetMachine(snapshot('m2'));
+    const partial = {
+      ...m,
+      snapshot: {
+        ...m.snapshot,
+        rigs: m.snapshot.rigs.map((r, i) => (i === 0 ? { ...r, status: 'partial' } : r)),
+      },
+    };
+    const key = listRigs([partial])[0]!.key;
+
+    render(<Graph ctx={ctxFor([partial])} />);
+    expect(rigKeys()).toContain(key);
+  });
+
   it('Needs me / Failing filters keep only matching rigs', () => {
     const blocked = fleetMachine(snapshot('roamy--blocked'));
     const failing = {

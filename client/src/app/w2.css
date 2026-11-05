@@ -153,8 +153,10 @@
   scroll-margin-top: calc(var(--ar-bar-h, 0px) + 56px); /* clears the sticky bar and header */
 }
 .ar-wall-group[data-focused] {
-  outline: 2px solid var(--ar-cta);
-  outline-offset: 6px;
+  /* dark ink ring (the yellow was too pale on the cream page) with a clear gap off the group's edge.
+     outline takes no layout space, so focusing a rig moves nothing; 3px + 4px stays inside the 8px gap. */
+  outline: 3px solid var(--ar-ink);
+  outline-offset: 4px;
   border-radius: 8px;
 }
 .ar-wall-actions-row {

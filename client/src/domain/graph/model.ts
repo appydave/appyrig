@@ -3,6 +3,7 @@ import { pipFor, seatName, type PipKey } from '@client/domain/fleet/model.js';
 import { mergePairs, pairKey, type LinePair } from '@client/domain/lines/handoffLines.js';
 import { endpointRig, isOpen, rigQueue } from '@client/domain/fleet/views/core/queue.js';
 import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
+import { isLiveStatus } from '@client/domain/fleet/views/core/rigState.js';
 import { resolveEndpoint } from '@client/domain/fleet/views/core/endpoints.js';
 import { STALE_MS } from '@client/domain/fleet/views/core/time.js';
 import { type RigRef } from '@client/domain/fleet/views/core/types.js';
@@ -584,24 +585,24 @@ export const FLAG_FILTERS: { key: FlagFilter; label: string; glyph: string; hint
     key: 'needsMe',
     label: 'Needs me',
     glyph: '▲',
-    hint: 'A seat is blocked, or asked David something still open',
+    hint: 'Counts rigs. A rig with a blocked seat, an open question to you from the last 2 hours, or OpenRig’s attention flag',
   },
   {
     key: 'stuck',
     label: 'Stuck',
     glyph: '⌛',
-    hint: 'Work addressed to a seat left open over 2 h',
+    hint: 'Counts rigs. A rig with work addressed to a seat that has been open over 2 hours',
   },
   {
     key: 'failing',
     label: 'Failing',
     glyph: '✕',
-    hint: 'A seat is down while its rig runs, or OpenRig left recovery guidance',
+    hint: 'Counts rigs. A rig with a seat down while the rig runs, or with recovery guidance from OpenRig',
   },
 ];
 
 /** A rig that is not running (stopped): hidden by default, like the Wall's stopped seats. */
-export const isStopped = (r: GraphRig): boolean => !!r.ref && r.ref.status !== 'running';
+export const isStopped = (r: GraphRig): boolean => !!r.ref && !isLiveStatus(r.ref.status);
 
 /** A rig shows under a flag filter when one of its seats carries the flag (or, for Needs me, OpenRig flags the rig). */
 export function rigMatches(r: GraphRig, f: FlagFilter | null): boolean {

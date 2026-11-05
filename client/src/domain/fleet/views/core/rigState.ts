@@ -9,6 +9,10 @@ export const RIG_STATE: Record<RigState, { glyph: string; label: string }> = {
   asleep: { glyph: '◌', label: 'machine asleep' },
 };
 
+/** OpenRig reports `running`, or `partial` when only some of a rig's seats run: both are live. */
+export const isLiveStatus = (status: string): boolean =>
+  status === 'running' || status === 'partial';
+
 interface RigStateInput {
   liveness: string;
   status: string;
@@ -16,13 +20,13 @@ interface RigStateInput {
   seatPips: PipKey[];
 }
 
-/** asleep machine > stopped > a seat blocked or OpenRig's attention count > a seat working > idle. */
+/** asleep machine > stopped (not running or partial) > a seat blocked or OpenRig's attention count > a seat working > idle. */
 export function rigState({ liveness, status, attentionCount, seatPips }: RigStateInput): RigState {
   if (liveness === 'asleep') {
     return 'asleep';
   }
 
-  if (status !== 'running') {
+  if (!isLiveStatus(status)) {
     return 'stopped';
   }
 

@@ -138,18 +138,12 @@ body:has(.ar-nav) header.app-header {
   gap: 4px 10px;
   min-height: 30px;
   max-width: 100%;
-}
-.ar-strip-toggle {
-  flex: none;
-  font-family: var(--ar-font-label);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ar-ink-muted);
-  background: transparent;
-  border: 0;
-  padding: 2px 4px;
+  /* the whole box is the click target, padding and gaps included */
   cursor: pointer;
+}
+.ar-strip-wrap:focus-visible {
+  outline: 2px solid var(--ar-ink);
+  outline-offset: 2px;
 }
 .ar-strip-body {
   flex: 1 1 auto;
@@ -546,7 +540,7 @@ body:has(.ar-nav) header.app-header {
   text-overflow: ellipsis;
 }
 
-/* Machine strip: the chevron is the only control, the badges toggle the detail in place. */
+/* Machine strip: the whole box toggles the detail in place. */
 .ar-strip-link {
   flex: none;
   font-family: var(--ar-font-label);

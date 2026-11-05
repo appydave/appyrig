@@ -29,7 +29,8 @@
   --pip: var(--ar-working);
 }
 .wcard[data-pip='working'] .wcard-face {
-  box-shadow: inset 0 0 0 1.5px var(--ar-working);
+  /* a heavy inset ring: it takes no layout space, so a seat turning green moves nothing */
+  box-shadow: inset 0 0 0 4px var(--ar-working);
 }
 .wcard[data-pip='blocked'] {
   --pip: var(--ar-blocked);
@@ -51,13 +52,19 @@
 .wcard:hover .wcard-face {
   box-shadow: 0 0 0 2px var(--ar-cta);
 }
+.wcard[data-pip='working'][data-selected] .wcard-face,
+.wcard[data-pip='working']:hover .wcard-face {
+  box-shadow:
+    inset 0 0 0 4px var(--ar-working),
+    0 0 0 2px var(--ar-cta);
+}
 .wcard-bar {
   flex: none;
   height: 3px;
   background: var(--pip);
 }
 .wcard[data-pip='working'] .wcard-bar {
-  height: 4px;
+  height: 6px;
 }
 .wcard[data-pip='blocked'] .wcard-bar {
   height: 6px;
@@ -151,7 +158,12 @@
   color: var(--pip);
 }
 .wcard[data-pip='working'] .wcard-pip {
-  color: var(--ar-working-text);
+  /* a solid green tag; the spread shadow pads it without moving its neighbours */
+  color: var(--ar-ink);
+  font-weight: 700;
+  background: var(--ar-working-text);
+  box-shadow: 0 0 0 2px var(--ar-working-text);
+  border-radius: 3px;
 }
 .wcard[data-pip='blocked'] .wcard-pip {
   color: var(--ar-blocked-text);

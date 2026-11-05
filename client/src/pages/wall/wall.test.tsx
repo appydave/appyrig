@@ -136,6 +136,41 @@ describe('Wall v2: V1 terminal cards, V2 triage', () => {
   });
 });
 
+describe('Wall v2: chip hints, focus ring and working seat', () => {
+  it('each filter hint says it counts seats and states the rule', () => {
+    renderWall();
+    for (const f of ['needs', 'stuck', 'failing']) {
+      expect(screen.getByTestId(`ar-filter-${f}`).getAttribute('title') ?? '').toMatch(
+        /^Counts seats\./
+      );
+    }
+
+    expect(screen.getByTestId('ar-filter-stuck').getAttribute('title')).toMatch(/over 10 minutes/);
+    expect(screen.getByTestId('ar-filter-failing').getAttribute('title')).toMatch(
+      /stopped seat.*whose rig is running/
+    );
+  });
+
+  it('the focused group ring is dark, offset from the edge, and reserves no space', () => {
+    const css = readFileSync(path.resolve(__dirname, '../../app/w2.css'), 'utf8');
+    const rule = /\.ar-wall-group\[data-focused\]\s*\{[^}]*\}/.exec(css)![0];
+
+    expect(rule).toMatch(/outline:\s*3px solid var\(--ar-ink\)/);
+    expect(rule).toMatch(/outline-offset:\s*4px/);
+    expect(rule).not.toMatch(/margin|padding|border:/);
+  });
+
+  it('a working card has a heavy green inset ring and a solid status tag, with no size change', () => {
+    const css = readFileSync(path.resolve(__dirname, '../../kit/wallCard.css'), 'utf8');
+
+    expect(css).toMatch(
+      /\.wcard\[data-pip='working'\] \.wcard-face\s*\{[^}]*inset 0 0 0 4px var\(--ar-working\)/
+    );
+    expect(css).toMatch(/\.wcard\[data-pip='working'\] \.wcard-pip\s*\{[^}]*font-weight:\s*700/);
+    expect(css).not.toMatch(/animation/);
+  });
+});
+
 describe('Wall v2: navigation (rig focus, panel, header, tails)', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();

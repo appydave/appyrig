@@ -6,6 +6,7 @@ import {
   pipFor,
   type WallGroup,
 } from '@client/domain/fleet/model.js';
+import { isLiveStatus } from '@client/domain/fleet/views/core/rigState.js';
 import { tailLine } from '@client/domain/fleet/terminal.js';
 
 /** C22: the three "look here" filters, in AppyRig's own status words. */
@@ -87,7 +88,7 @@ export function teamsOf(machines: FleetMachine[]): Team[] {
     machineId: g.tiles[0]?.machine.machine.id ?? '',
     seats: g.tiles.length,
     // A rig running; for plain tmux sessions (no rig), any session that is up.
-    running: g.rig ? g.rig.status === 'running' : g.tiles.some((t) => t.seat.status !== 'stopped'),
+    running: g.rig ? isLiveStatus(g.rig.status) : g.tiles.some((t) => t.seat.status !== 'stopped'),
   }));
 }
 

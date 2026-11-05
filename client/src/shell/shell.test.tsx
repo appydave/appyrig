@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
@@ -113,6 +114,47 @@ describe('Rigs drawer', () => {
     fireEvent.click(agents[0]!);
     expect(agent).toHaveBeenCalledWith(agents[0]!.getAttribute('data-agent-key'));
     expect(agents[0]!.getAttribute('data-agent-key')).toMatch(/^[a-z0-9-]+\//);
+  });
+
+  it('a partly running rig lists among the live rigs, not under Stopped', () => {
+    const m = fleet();
+    const machines = m.map((fm, i) =>
+      i === 0
+        ? {
+            ...fm,
+            snapshot: {
+              ...fm.snapshot,
+              rigs: fm.snapshot.rigs.map((r, j) => (j === 0 ? { ...r, status: 'partial' } : r)),
+            },
+          }
+        : fm
+    );
+    const rigs = listRigs(machines);
+    const partial = rigs.find((r) => r.status === 'partial')!;
+
+    expect(partial.state).not.toBe('stopped');
+    expect(rigs.slice(0, rigs.filter((r) => r.status !== 'stopped').length)).toContain(partial);
+    render(
+      <RigDrawer
+        machines={machines}
+        rigs={rigs}
+        highlightRigKey={null}
+        highlightAgentKey={null}
+        scope="Whole fleet"
+        onChooseRig={() => {}}
+        onOpenAgent={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTestId('rig-drawer-tab'));
+    // the row is there without opening any Stopped fold
+    expect(
+      screen
+        .getAllByTestId('drawer-rig')
+        .some((r) => r.getAttribute('data-rig-key') === partial.key)
+    ).toBe(true);
+    for (const f of screen.queryAllByTestId('drawer-stopped')) {
+      expect(f.textContent ?? '').not.toContain(partial.name);
+    }
   });
 
   it('the pin is remembered; stopped rigs are folded under "Stopped (N)", dimmed, after the live ones', () => {
@@ -305,9 +347,35 @@ describe('machine badges', () => {
     fireEvent.click(screen.getByText('normal')); // the health mark toggles too, it never navigates
     expect(wrap).toHaveAttribute('data-expanded', 'false');
     expect(toMachines).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId('strip-toggle'));
+    // the empty box itself (its padding, not a badge) is the click target, and there is no arrow button
+    expect(screen.queryByTestId('strip-toggle')).toBeNull();
+    fireEvent.click(wrap);
+    expect(wrap).toHaveAttribute('data-expanded', 'true');
     fireEvent.click(screen.getByTestId('strip-machines-link'));
     expect(toMachines).toHaveBeenCalledOnce();
+    expect(wrap).toHaveAttribute('data-expanded', 'true'); // the link keeps its own meaning
+  });
+
+  it('the box is a keyboard button: role, aria-expanded, Enter and Space toggle, focus style in CSS', () => {
+    render(
+      <StripShell summary="1 seat" onMachines={() => {}}>
+        <section className="strip">
+          <span className="machine">M2</span>
+        </section>
+      </StripShell>
+    );
+
+    const wrap = screen.getByRole('button', { expanded: false });
+
+    expect(wrap).toBe(screen.getByTestId('ar-strip'));
+    expect(wrap).toHaveAttribute('tabindex', '0');
+    fireEvent.keyDown(wrap, { key: 'Enter' });
+    expect(wrap).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.keyDown(wrap, { key: ' ' });
+    expect(wrap).toHaveAttribute('aria-expanded', 'false');
+    expect(readFileSync(`${__dirname}/shell.css`, 'utf8')).toMatch(
+      /\.ar-strip-wrap:focus-visible\s*\{[^}]*outline/
+    );
   });
 });
 

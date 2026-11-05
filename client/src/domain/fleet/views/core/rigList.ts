@@ -1,6 +1,6 @@
 import { type FleetMachine, type QueueItem, type Seat } from '@appydave/shared';
 import { agentActivityOf, pipFor } from '@client/domain/fleet/model.js';
-import { rigState } from '@client/domain/fleet/views/core/rigState.js';
+import { isLiveStatus, rigState } from '@client/domain/fleet/views/core/rigState.js';
 import { type RigRef } from '@client/domain/fleet/views/core/types.js';
 import { ownerRig, rigQueue } from '@client/domain/fleet/views/core/queue.js';
 
@@ -8,7 +8,7 @@ import { ownerRig, rigQueue } from '@client/domain/fleet/views/core/queue.js';
 export function listRigs(machines: FleetMachine[]): RigRef[] {
   const out = machines.flatMap((fm) => fm.snapshot.rigs.map((rig) => rigRef(fm, rig)));
   // S3: every rig list reads running first, then most recent (Wall groups, Map and Flow chips).
-  const running = (r: RigRef) => (r.status === 'running' ? 0 : 1);
+  const running = (r: RigRef) => (isLiveStatus(r.status) ? 0 : 1);
 
   return out.sort(
     (a, b) =>

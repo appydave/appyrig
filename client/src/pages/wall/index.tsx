@@ -79,17 +79,17 @@ const FILTERS: { id: WallFilter; label: string; hint: string }[] = [
   {
     id: 'needs',
     label: 'Needs me',
-    hint: 'Blocked: a permission prompt or a question is waiting for a person',
+    hint: 'Counts seats. A seat is blocked: a permission prompt or a question is waiting for a person',
   },
   {
     id: 'stuck',
     label: 'Stuck',
-    hint: 'OpenRig flags it for attention, a queue item is blocked, or work is waiting and the agent has done nothing for 10 minutes',
+    hint: 'Counts seats. A seat that is up and OpenRig flagged it for attention, or it has blocked work, or it is not working, has open work, and has been quiet for over 10 minutes',
   },
   {
     id: 'failing',
     label: 'Failing',
-    hint: 'Stopped while its rig is running, or stopped and flagged by OpenRig',
+    hint: 'Counts seats. A stopped seat that OpenRig flagged, or whose rig is running',
   },
 ];
 
