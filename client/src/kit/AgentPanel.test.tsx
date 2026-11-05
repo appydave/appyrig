@@ -130,5 +130,8 @@ describe('AgentPanel', () => {
 
   it('stripAnsi removes colour codes with or without the ESC byte', () => {
     expect(stripAnsi('\u001b[1;32mok\u001b[0m [31mx[0m')).toBe('ok x');
+    // hyperlink sequences: whole (with ESC) or only their remains (ESC lost); the link text stays
+    expect(stripAnsi('a \u001b]8;id=1;https://x.dev\u001b\\link\u001b]8;;\u001b\\')).toBe('a link');
+    expect(stripAnsi('a ]8;id=1;https://x.dev\\link]8;;\\')).toBe('a link');
   });
 });

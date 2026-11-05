@@ -1,5 +1,6 @@
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
 import { pipFor, seatName } from '@client/domain/fleet/model.js';
+import { plainLine } from '@client/domain/fleet/terminal.js';
 import { isOpen, rigQueue } from '@client/domain/fleet/views/core/queue.js';
 import { stageOf } from '@client/domain/fleet/views/flow/stages.js';
 import { type Stage } from '@client/domain/fleet/views/flow/types.js';
@@ -189,8 +190,7 @@ export function buildRun(
     // The last readable line of its terminal, colour codes removed (with or without their ESC byte).
     const tail =
       seat.tail?.lines
-        // eslint-disable-next-line no-control-regex
-        .map((l) => l.replace(/\u001b?\[[0-9;?]*[ -/]*[@-~]/g, '').trim())
+        .map((l) => plainLine(l).trim())
         .filter(Boolean)
         .at(-1) ?? null;
 

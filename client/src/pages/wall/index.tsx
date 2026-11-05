@@ -20,6 +20,7 @@ import { useUrlParam } from '@client/shell/urlState.js';
 import TeamPicker from './TeamPicker.js';
 import './wall.css';
 import type { PageDef, PageProps } from '@client/app/types.js';
+import type { RigRef } from '@client/domain/fleet/views/core/types.js';
 import {
   seatFlags,
   teamsOf,
@@ -242,6 +243,43 @@ const SeatCard = memo(function SeatCard({
   );
 });
 
+function OnlyRigButton({
+  picked,
+  present,
+  only,
+  onToggle,
+}: {
+  picked: RigRef;
+  present: boolean;
+  only: boolean;
+  onToggle: () => void;
+}) {
+  const name = picked.displayName ?? picked.name;
+
+  return (
+    <button
+      type="button"
+      className="pill-btn ar-wall-only"
+      data-testid="ar-only-rig"
+      disabled={!present}
+      title={
+        present
+          ? only
+            ? 'Showing only this rig: click to show every rig again'
+            : `Hide every other rig and show only ${name} (${picked.machineLabel})`
+          : `${picked.name} has no seat on the Wall right now (stopped seats hidden, a filter, or a team switched off)`
+      }
+      onClick={onToggle}
+    >
+      {present
+        ? only
+          ? `Showing only ${name} \u00b7 \u00d7 show all`
+          : `Show only ${name}`
+        : `${name} \u00b7 ${picked.machineLabel}: not shown`}
+    </button>
+  );
+}
+
 function WallPage({ ctx }: PageProps) {
   const [filter, setFilter] = useState<WallFilter>('all');
   const [hideStopped, setHideStopped] = useState(readHideStopped);
@@ -458,26 +496,12 @@ function WallPage({ ctx }: PageProps) {
               />
             )}
             {picked && (
-              <button
-                type="button"
-                className="pill-btn ar-wall-only"
-                data-testid="ar-only-rig"
-                disabled={!present}
-                title={
-                  present
-                    ? only
-                      ? 'Showing only this rig: click to show every rig again'
-                      : `Hide every other rig and show only ${picked.displayName ?? picked.name} (${picked.machineLabel})`
-                    : `${picked.name} has no seat on the Wall right now (stopped seats hidden, a filter, or a team switched off)`
-                }
-                onClick={() => setOnly((o) => !o)}
-              >
-                {present
-                  ? only
-                    ? `Showing only ${picked.displayName ?? picked.name} \u00b7 \u00d7 show all`
-                    : `Show only ${picked.displayName ?? picked.name}`
-                  : `${picked.displayName ?? picked.name} \u00b7 ${picked.machineLabel}: not shown`}
-              </button>
+              <OnlyRigButton
+                picked={picked}
+                present={present}
+                only={only}
+                onToggle={() => setOnly((o) => !o)}
+              />
             )}
           </span>
         }

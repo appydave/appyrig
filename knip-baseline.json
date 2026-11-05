@@ -173,7 +173,7 @@
         "exports": 1
       },
       "client/src/pages/specs/index.tsx": {
-        "exports": 2
+        "exports": 1
       },
       "client/src/shell/RigDrawer.tsx": {
         "exports": 1

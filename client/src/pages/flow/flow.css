@@ -57,6 +57,16 @@
   overflow: auto;
   box-sizing: border-box;
 }
+/* The panel's own list scrolls inside it: the panel itself never gets a second scrollbar. */
+.ar-flow .flow-row > .handoff-panel {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+/* Documents sits under the row in a slot that is always one line tall, so picking a box adds nothing. */
+.ar-flow .flow-docs-slot {
+  min-height: 36px;
+  box-sizing: border-box;
+}
 /* The diagram never shrinks below a readable scale: on a narrow page (the Agent panel open, the
    drawer pinned) it scrolls sideways inside its own box instead. */
 .ar-flow .flow-row > .flow-svg-scroll {
@@ -178,7 +188,9 @@
   min-width: 0;
 }
 /* A narrow page: the details panel goes below the diagram, and the diagram gets the full width. */
-@container flowpage (max-width: 820px) {
+/* (Wide enough for the diagram at its 760px floor, the 14px gap and the 340px panel: below that the panel
+   goes underneath rather than cutting the diagram off at the right.) */
+@container flowpage (max-width: 1120px) {
   .ar-flow .flow-row {
     height: auto;
     flex-wrap: wrap;
@@ -200,4 +212,23 @@
 }
 .ar-flow .ar-page-facts .flow-stats b {
   font-size: 20px;
+}
+
+/* Seats per stage: one row per stage, so the chips stay put when the page narrows (they used to wrap
+   into a loose scatter) and picking a box does not move them. */
+.ar-flow .flow-legend {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+/* A clicked box or line shows its selection in the drawing (the lit line, the box border), not as the
+   browser's rectangle over whatever line passes behind it. Keyboard focus still shows on the box. */
+.ar-flow g[data-testid='flow-stage']:focus,
+.ar-flow g[data-testid='flow-edge']:focus {
+  outline: none;
+}
+.ar-flow g[data-testid='flow-stage']:focus-visible .flow-box,
+.ar-flow g[data-testid='flow-stage'][data-selected] .flow-box {
+  stroke: var(--ar-cta);
+  stroke-width: 3;
 }

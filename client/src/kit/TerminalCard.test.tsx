@@ -97,6 +97,14 @@ describe('TerminalCard: one fixed size', () => {
     expect(tailLine(['', '[38;2;78;186;101mgreen[39m  ', '   '])).toBe('green');
     expect(tailLine(['a', '\u001b[1mb\u001b[0m'])).toBe('b');
     expect(tailLine([])).toBeNull();
+  });
+
+  it('tailLine drops hyperlink sequences, with or without their ESC byte, and keeps the link text', () => {
+    expect(
+      tailLine(['see \u001b]8;id=18dvze;https://x.dev/a\u001b\\the page\u001b]8;;\u001b\\ now'])
+    ).toBe('see the page now');
+    expect(tailLine([']8;id=18dvze;https://x.dev/a\\the page]8;;\\ now'])).toBe('the page now');
+    expect(tailLine(['\u001b[94m]8;id=7epicu;https://x.dev/b\\link\u001b[39m]8;;\\'])).toBe('link');
     expect(tailLine(undefined)).toBeNull();
   });
 

@@ -382,6 +382,45 @@ function Commands({
   );
 }
 
+/**
+ * Which spec is selected. The rig focused in the Rigs drawer wins (once per pick, a repeat of the same
+ * rig included via focusNonce); with nothing chosen the first spec is held on to, so a launch that
+ * re-sorts the list does not slide the selection to another rig; and the selected row is kept in view.
+ */
+function useSelectedSpec(ctx: PageProps['ctx'], specs: ShownSpec[], loaded: boolean) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const selected = specs.find((s) => s.key === picked) ?? specs[0] ?? null;
+  const list = useRef<HTMLElement>(null);
+  const focusKey = ctx.pickedRig?.key ?? null;
+  const applied = useRef<string | null>(null);
+
+  // (Declared before the pick below, so a focused rig's choice lands last and wins.)
+  useEffect(() => {
+    if (picked === null && loaded && specs[0]) {
+      setPicked(specs[0].key);
+    }
+  }, [picked, loaded, specs]);
+  useEffect(() => {
+    const stamp = `${focusKey}#${ctx.focusNonce}`;
+
+    if (!focusKey || applied.current === stamp || !specs.some((s) => s.key === focusKey)) {
+      return;
+    }
+
+    applied.current = stamp;
+    setPicked(focusKey);
+  }, [focusKey, ctx.focusNonce, specs]);
+
+  // A state change moves the row (the list is sorted by state); keep the selected row in view, in place.
+  const at = selected ? specs.findIndex((s) => s.key === selected.key) : -1;
+
+  useEffect(() => {
+    list.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView?.({ block: 'nearest' });
+  }, [selected?.key, at]);
+
+  return { selected, setPicked, list };
+}
+
 function RigSpecs({ ctx }: PageProps) {
   const label = useMachineLabel(ctx.allMachines);
   const specsQ = usePolledVerb<RigSpecsOutput>(ctx.getSocket, 'rig.specs', SPECS_POLL_MS);
@@ -391,9 +430,8 @@ function RigSpecs({ ctx }: PageProps) {
     () => shownSpecs(specsValue, ctx.allMachines),
     [specsValue, ctx.allMachines]
   );
-  const [picked, setPicked] = useState<string | null>(null);
   const [allRigs, setAllRigs] = useState(false);
-  const selected = specs.find((s) => s.key === picked) ?? specs[0] ?? null;
+  const { selected, setPicked, list } = useSelectedSpec(ctx, specs, specsValue !== null);
   const cmds = valueOf(cmdsQ);
 
   const drafts = specs.filter((s) => s.state === 'draft').length;
@@ -430,7 +468,7 @@ function RigSpecs({ ctx }: PageProps) {
         </p>
       )}
       <div className="rs-layout">
-        <nav className="rs-list" aria-label="Rig specs" data-testid="rs-list">
+        <nav className="rs-list" aria-label="Rig specs" data-testid="rs-list" ref={list}>
           {specs.length === 0 && specsQ.phase !== 'loading' && (
             <p className="quiet" data-testid="rs-none">
               No rig.yaml found in any machine&apos;s spec folders.

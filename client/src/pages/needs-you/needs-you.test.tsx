@@ -67,6 +67,7 @@ function twoMachines(): FleetMachine[] {
   return [m2, roamy];
 }
 
+type RigAsk = { rig: string };
 type Answers = Record<string, unknown | ((input: unknown) => unknown)>;
 
 /** A socket that answers read verbs from `answers` (anything else is refused) and records every verb sent. */
@@ -435,6 +436,27 @@ describe('Needs You: gates, unread rigs, hub link, no machines', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('asks for the gates of a partly running rig as well as a running one', async () => {
+    const asked: string[] = [];
+    const rigs = (m: FleetMachine) =>
+      m.snapshot.rigs.map((r, i) => ({ ...r, status: i === 0 ? 'partial' : 'stopped' }));
+    const ms = twoMachines().map((m) => ({ ...m, snapshot: { ...m.snapshot, rigs: rigs(m) } }));
+
+    render(
+      <Page
+        ctx={ctxFor(ms, [], {
+          'rig.waiting': (i: RigAsk) => {
+            asked.push(i.rig);
+
+            return waitingFor([]);
+          },
+        })}
+      />
+    );
+    await waitFor(() => expect(asked.length).toBeGreaterThan(0));
+    expect(new Set(asked)).toEqual(new Set(ms.map((m) => m.snapshot.rigs[0]!.name)));
   });
 
   it('says gates are unread for N rigs, and does not say nothing is waiting', async () => {

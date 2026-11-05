@@ -165,3 +165,16 @@
   flex-wrap: wrap;
   white-space: normal;
 }
+/* The "Show only" chip must not make the header wrap when a rig is focused. `contain: inline-size` makes
+   its text count as zero width for line-breaking, so only its min-width (9rem) is counted; it then grows
+   into any free room up to 14rem, and a long name is cut with an ellipsis (the title has it all). With no
+   rig focused there is no chip and nothing is reserved. */
+.ar-wall .ar-wall-only {
+  flex: 1 1 0;
+  min-width: 9rem;
+  max-width: 14rem;
+  contain: inline-size;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

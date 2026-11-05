@@ -1365,9 +1365,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 3
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
     }
   },
   "client/src/pages/workflows/index.tsx": {

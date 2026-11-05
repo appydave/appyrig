@@ -13,6 +13,7 @@ import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { CopyAttach, HarnessMark, RoleTag, pctText, tokensText } from './SeatCardLines.js';
 import type { AgentPanelTab, AgentPanelTarget } from '@client/app/types.js';
 import { findTile, seatAddresses } from '@client/domain/fleet/seats.js';
+import { plainLine } from '@client/domain/fleet/terminal.js';
 import { DocsLayout, useRead } from './DocsDrawer.js';
 import { useTopOffset } from './useTopOffset.js';
 import './docs.css';
@@ -32,10 +33,7 @@ export interface AgentPanelProps extends AgentPanelTarget {
   ctx: { allMachines: FleetMachine[]; getSocket: () => FleetSocket; now: number };
 }
 
-// eslint-disable-next-line no-control-regex
-const ANSI = /\u001b?\[[0-9;?]*[ -/]*[@-~]/g;
-
-export const stripAnsi = (s: string) => s.replace(ANSI, '');
+export const stripAnsi = plainLine;
 
 /**
  * The right-side Agent panel: opened on top of the current page, never instead of it. Starts below

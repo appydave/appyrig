@@ -5,7 +5,7 @@ import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { navGroups, pageFor } from '@client/app/registry.js';
 import { LEGEND_TITLE, PAGE_PURPOSE } from '@client/kit/index.js';
 import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
-import { COMMANDS_POLL_MS, page as specsPage } from './index.js';
+import { COMMANDS_POLL_MS, SPECS_POLL_MS, page as specsPage } from './index.js';
 import { shownCommands, shownSpecs } from '@client/domain/specs/model.js';
 
 const NOW = Date.parse('2026-10-20T12:00:00.000Z');
@@ -223,6 +223,80 @@ describe('N10: the Rig specs page', () => {
     fireEvent.click(within(links).getByRole('button', { name: 'Rig Map' }));
     expect(ctx.chooseRig).toHaveBeenCalledWith(`m2:${launched.name}`);
     expect(ctx.goTo).toHaveBeenCalledWith('map');
+  });
+
+  it('the rig focused in the Rigs drawer is the one selected here', async () => {
+    const m2 = fleetMachine(snapshot('m2'));
+    const launched = m2.snapshot.rigs[0]!;
+    const { socket } = answeringSocket({
+      'rig.specs': specsAnswer('m2', launched.name, launched.status),
+      'rig.commands': () => ({ machines: [], commands: [] }),
+    });
+    const base = pageCtx([m2], socket, NOW);
+    const ctx = { ...base, pickedRig: base.rigs.find((r) => r.name === launched.name) ?? null };
+
+    render(<specsPage.component ctx={ctx} />);
+    await waitFor(() => expect(screen.getAllByTestId('rs-item')).toHaveLength(2));
+    // the draft sorts first and would be the default; the focused rig wins
+    await waitFor(() =>
+      expect(screen.getByTestId('rs-detail-name')).toHaveTextContent(launched.name)
+    );
+    expect(
+      screen.getAllByTestId('rs-item').find((i) => i.getAttribute('aria-pressed') === 'true')
+    ).toHaveTextContent(launched.name);
+  });
+
+  it('a rig whose state changes keeps its selection and changes its badge in place', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const m2 = fleetMachine(snapshot('m2'));
+    const launched = m2.snapshot.rigs[0]!;
+    let spaghettiLaunched = false;
+    const answer = () => {
+      const a = specsAnswer('m2', launched.name, launched.status);
+
+      if (spaghettiLaunched) {
+        // spaghetti is launched now: it is no longer a draft, so the list sorts it down
+        a.specs[0] = {
+          ...a.specs[0]!,
+          launched: true,
+          rigStatus: 'running',
+          launchedOn: [{ machine: 'm2', status: 'running' }],
+        };
+        a.specs[1] = {
+          ...a.specs[1]!,
+          name: 'aaa-first',
+          rigStatus: 'running',
+          launchedOn: [{ machine: 'm2', status: 'running' }],
+        };
+      }
+
+      return a;
+    };
+
+    const { socket } = answeringSocket({
+      'rig.specs': answer,
+      'rig.commands': () => ({ machines: [], commands: [] }),
+    });
+
+    render(<specsPage.component ctx={pageCtx([m2], socket, NOW)} />);
+    await waitFor(() => expect(screen.getAllByTestId('rs-item')).toHaveLength(2));
+    expect(screen.getByTestId('rs-detail-name')).toHaveTextContent('spaghetti');
+    expect(screen.getByTestId('rs-detail-state')).toHaveTextContent('draft');
+
+    spaghettiLaunched = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SPECS_POLL_MS + 50);
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('rs-detail-state')).not.toHaveTextContent('draft')
+    );
+    // the row moved below the other rig, but the selection stayed on it
+    expect(screen.getAllByTestId('rs-item')[0]).toHaveTextContent('aaa-first');
+    expect(screen.getByTestId('rs-detail-name')).toHaveTextContent('spaghetti');
+    expect(
+      screen.getAllByTestId('rs-item').find((i) => i.getAttribute('aria-pressed') === 'true')
+    ).toHaveTextContent('spaghetti');
   });
 
   it('Commands: the selected rig only, "All rigs" shows the rest, and new lines appear without a reload', async () => {

@@ -129,6 +129,22 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
     expect(screen.getByTestId('docs-drawer')).toBeInTheDocument();
   });
 
+  it('Documents lives in its own slot under the row, there before and after a pick, so a pick moves nothing', () => {
+    const { container } = render(<Flow ctx={ctxFor(fleet())} />);
+    const row = container.querySelector('.flow-row')!;
+
+    expect(screen.getByTestId('flow-docs-slot')).toBeEmptyDOMElement();
+    expect(row.contains(screen.getByTestId('flow-docs-slot'))).toBe(false);
+    fireEvent.click(screen.getByTestId('flow-next'));
+
+    const bar = screen.getByTestId('flow-docs-bar');
+
+    expect(screen.getByTestId('flow-docs-slot')).toContainElement(bar);
+    // not a third item in the row: it cannot squeeze the diagram or the panel
+    expect(row.contains(bar)).toBe(false);
+    expect(row.children).toHaveLength(2);
+  });
+
   it('calm turns off the lit line and the back arcs, and is remembered', () => {
     render(<Flow ctx={ctxFor(fleet())} />);
     fireEvent.click(screen.getByTestId('flow-next'));

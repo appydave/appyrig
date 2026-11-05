@@ -149,6 +149,21 @@ export function structureLines(
 
 const PANEL_KEY = 'appyrig.handoffPanel';
 
+/** The seats whose documents the panel offers: the picked box's, else those at both ends of the picked line. */
+function docsSeatKeys(
+  selection: PanelSelection | null,
+  pair: { a: string; b: string } | undefined,
+  stages: { stage: string; seats: { key: string }[] }[]
+): string[] {
+  const ends = selection?.agents ? [] : pair ? [pair.a, pair.b] : [];
+  const keys = [
+    ...(selection?.agents ?? []),
+    ...ends.flatMap((id) => stages.find((x) => x.stage === id)?.seats ?? []),
+  ];
+
+  return [...new Set(keys.map((k) => k.key))];
+}
+
 /**
  * Batch 1 · B1 (fb-0005: "hovering over something doesn't mean you want it"): the panel shows what
  * you CLICK unless a viewer chose to have it follow the pointer. A stored choice is kept.
@@ -1198,25 +1213,6 @@ export default function HandoffFlow({
           />
         ) : (
           <>
-            <FlowDocsBar
-              machine={machine}
-              socket={socket}
-              seatKeys={[
-                ...new Set(
-                  (selection?.agents?.map((a) => a.key) ?? []).concat(
-                    selection?.agents
-                      ? []
-                      : (pairOf(selection?.edge ?? null)
-                          ? [pairOf(selection!.edge)!.a, pairOf(selection!.edge)!.b]
-                          : []
-                        ).flatMap(
-                          (id) =>
-                            flow.stages.find((x) => x.stage === id)?.seats.map((x) => x.key) ?? []
-                        )
-                  )
-                ),
-              ]}
-            />
             <HandoffPanel
               machineId={machine.machine.id}
               selection={selection}
@@ -1270,6 +1266,17 @@ export default function HandoffFlow({
               </span>
             ))}
           </div>
+        )}
+      </div>
+      {/* Documents sits under the row in a slot that is always its height: it used to be a third item in
+          the row, so picking a box squeezed the diagram and the panel and moved everything below. */}
+      <div className="flow-docs-slot" data-testid="flow-docs-slot">
+        {!(chain && follow) && (
+          <FlowDocsBar
+            machine={machine}
+            socket={socket}
+            seatKeys={docsSeatKeys(selection, pairOf(selection?.edge ?? null), flow.stages)}
+          />
         )}
       </div>
 

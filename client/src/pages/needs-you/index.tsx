@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { readRigWaiting } from '@client/kit/data/rigReads.js';
 import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { isLiveStatus } from '@client/domain/fleet/views/core/rigState.js';
 import '@client/kit/data/coverage.css';
 import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
@@ -154,7 +155,7 @@ interface GatesState {
 }
 
 /**
- * Gates per rig, read through the read-only rig.waiting verb for every running rig on a live
+ * Gates per rig, read through the read-only rig.waiting verb for every live (running or partly running) rig on a live
  * machine. Re-asked every GATES_REFRESH_MS and whenever queue activity on a rig changes (its
  * newest updatedAt is part of the signature), so a gate answered or raised shows up.
  */
@@ -167,7 +168,7 @@ function useGates(ctx: PageProps['ctx']): GatesState {
         .filter((m) => m.liveness !== 'asleep')
         .flatMap((m) =>
           m.snapshot.rigs
-            .filter((r) => r.status === 'running')
+            .filter((r) => isLiveStatus(r.status))
             .map((r) => ({
               machine: m.machine.id,
               rig: r.name,

@@ -7,7 +7,7 @@ import {
   type WallGroup,
 } from '@client/domain/fleet/model.js';
 import { isLiveStatus } from '@client/domain/fleet/views/core/rigState.js';
-import { tailLine } from '@client/domain/fleet/terminal.js';
+import { plainLine, tailLine } from '@client/domain/fleet/terminal.js';
 
 /** C22: the three "look here" filters, in AppyRig's own status words. */
 export type WallFilter = 'all' | 'needs' | 'stuck' | 'failing';
@@ -266,9 +266,7 @@ export interface CardBody {
 }
 
 const clean = (l: string) =>
-  l
-    // eslint-disable-next-line no-control-regex
-    .replace(/\u001b?\[[0-9;?]*[ -/]*[@-~]/g, '')
+  plainLine(l)
     .replace(/[\u2500-\u259f]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
