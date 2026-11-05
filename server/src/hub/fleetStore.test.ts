@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ASLEEP_AFTER_MS } from '@appydave/shared';
 import { FleetStore, type LivenessChange } from './fleetStore.js';
 import { loadSnapshot, manualClock } from '@server/test/hubHarness.js';
 
@@ -74,7 +75,7 @@ describe('FleetStore liveness changes (logged by the hub, so AC 6 is visible in 
 
     const lastSeen = clock.now().toISOString();
 
-    clock.advance(14_999);
+    clock.advance(ASLEEP_AFTER_MS - 1);
     store.sweep();
     clock.advance(1);
     store.sweep();
