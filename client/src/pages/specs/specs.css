@@ -11,8 +11,12 @@
   gap: 6px;
   position: sticky;
   top: calc(var(--ar-bar-h, 48px) + 8px);
+  /* the list scrolls inside, so the page is as tall as the right column and the detail is never far away */
+  max-height: calc(100vh - var(--ar-bar-h, 48px) - 16px);
+  overflow-y: auto;
 }
 .ar-specs .rs-item {
+  flex-shrink: 0;
   display: grid;
   grid-template-columns: 1fr;
   gap: 2px;
@@ -266,8 +270,25 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+/* the whole grouped list is one box: it scrolls inside and never grows past the text box beside it */
+.ar-specs .rs-file-groups {
   max-height: 460px;
   overflow-y: auto;
+  padding: 1px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ar-specs .rs-file-group-label {
+  margin: 0 0 4px;
+  font-family: var(--ar-font-label);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ar-ink-muted);
+  user-select: none;
+  -webkit-user-select: none;
 }
 .ar-specs .rs-file {
   display: grid;

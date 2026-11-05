@@ -48,11 +48,67 @@ function useFileText(getSocket: GetSocket, t: Target, file: RigFileMeta | null):
 const SCOPE_WORD: Record<RigFileMeta['scope'], string> = {
   spec: '',
   mission: 'mission folder',
-  rig: 'named in rig.yaml',
+  rig: '',
 };
+
+/** Two groups, so the same name in both reads as two files, not a repeat. Order inside each group is kept. */
+const GROUPS: { key: string; label: string; has: (f: RigFileMeta) => boolean }[] = [
+  { key: 'next', label: 'Next to rig.yaml', has: (f) => f.scope !== 'rig' },
+  { key: 'named', label: 'Named in rig.yaml', has: (f) => f.scope === 'rig' },
+];
 
 const KB = 1024;
 const sizeOf = (n: number) => (n < KB ? `${n} B` : `${(n / KB).toFixed(1)} KB`);
+
+function FileRow({ f, on, onPick }: { f: RigFileMeta; on: boolean; onPick: (id: string) => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        className="rs-file"
+        data-testid="rs-file"
+        data-file-id={f.id}
+        aria-pressed={on}
+        onClick={() => onPick(f.id)}
+      >
+        <span className="rs-file-name">{f.name}</span>
+        <span className="quiet rs-file-meta">
+          {sizeOf(f.bytes)}
+          {SCOPE_WORD[f.scope] ? ` · ${SCOPE_WORD[f.scope]}` : ''}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function FileGroups({
+  files,
+  current,
+  onPick,
+}: {
+  files: RigFileMeta[];
+  current: RigFileMeta | null;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <div className="rs-file-groups" data-testid="rs-file-groups">
+      {GROUPS.map((g) => ({ g, inGroup: files.filter(g.has) }))
+        .filter((x) => x.inGroup.length > 0)
+        .map(({ g, inGroup }) => (
+          <div key={g.key} role="group" aria-labelledby={`rs-fg-${g.key}`}>
+            <div id={`rs-fg-${g.key}`} className="rs-file-group-label" data-testid="rs-file-group">
+              {g.label}
+            </div>
+            <ul className="rs-file-list" aria-label={g.label}>
+              {inGroup.map((f) => (
+                <FileRow key={f.id} f={f} on={f.id === current?.id} onPick={onPick} />
+              ))}
+            </ul>
+          </div>
+        ))}
+    </div>
+  );
+}
 
 /** The file list and, beside it, the chosen file's text. */
 export function FilePicker({
@@ -71,26 +127,7 @@ export function FilePicker({
 
   return (
     <div className="rs-files" data-testid="rs-files">
-      <ul className="rs-file-list" aria-label="Files">
-        {files.map((f) => (
-          <li key={f.id}>
-            <button
-              type="button"
-              className="rs-file"
-              data-testid="rs-file"
-              data-file-id={f.id}
-              aria-pressed={f.id === file?.id}
-              onClick={() => setPicked(f.id)}
-            >
-              <span className="rs-file-name">{f.name}</span>
-              <span className="quiet rs-file-meta">
-                {sizeOf(f.bytes)}
-                {SCOPE_WORD[f.scope] ? ` · ${SCOPE_WORD[f.scope]}` : ''}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <FileGroups files={files} current={file} onPick={setPicked} />
       <FileText file={file} shown={shown} />
     </div>
   );

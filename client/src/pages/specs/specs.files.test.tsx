@@ -105,6 +105,28 @@ describe('V67: the files are the main view', () => {
     expect(screen.getByTestId('rs-summary-body')).toBeInTheDocument();
   });
 
+  it('groups the files: Next to rig.yaml and Named in rig.yaml, labels are not buttons', async () => {
+    withFiles();
+    await waitFor(() => expect(screen.getAllByTestId('rs-item')).toHaveLength(2));
+    fireEvent.click(screen.getAllByTestId('rs-item')[1]!);
+    await waitFor(() => expect(screen.getAllByTestId('rs-file')).toHaveLength(3));
+
+    const labels = screen.getAllByTestId('rs-file-group');
+
+    expect(labels.map((l) => l.textContent)).toEqual(['Next to rig.yaml', 'Named in rig.yaml']);
+    expect(labels.every((l) => l.closest('button') === null)).toBe(true);
+    expect(screen.getAllByTestId('rs-file')).toHaveLength(3);
+
+    const next = screen.getByRole('list', { name: 'Next to rig.yaml' });
+    const named = screen.getByRole('list', { name: 'Named in rig.yaml' });
+
+    expect(next.textContent).toContain('rig.yaml');
+    expect(next.textContent).toContain('CULTURE.md');
+    expect(named.textContent).toContain('RUNBOOK.md');
+    expect(named.textContent).not.toContain('named in rig.yaml');
+    expect(screen.getAllByTestId('rs-file')[0]).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('says so when a file is cut or cannot be read', async () => {
     withFiles();
     await waitFor(() => expect(screen.getAllByTestId('rs-item')).toHaveLength(2));
