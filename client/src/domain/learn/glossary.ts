@@ -117,7 +117,7 @@ export const GLOSSARY: Record<string, Term> = {
   },
   asleep: {
     term: 'Asleep',
-    what: 'The machine has not reported for 15 seconds or more: a closed lid, a reboot, or a stopped collector.',
+    what: 'The machine has not reported for 45 seconds or more: a closed lid, a reboot, or a stopped collector.',
     why: 'Everything shown for it is its last-known state. Work handed to its seats waits until it wakes.',
   },
   'no-openrig': {

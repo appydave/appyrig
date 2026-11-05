@@ -25,7 +25,7 @@ export const TAIL_MAX_LINES = 200;
 export const PUSH_INTERVAL_MS = 3_000;
 
 /** A machine with no push for this long is shown as asleep, never idle (AC 6). */
-export const ASLEEP_AFTER_MS = 15_000;
+export const ASLEEP_AFTER_MS = 45_000;
 
 const isoDate = z.iso.datetime({ offset: true });
 

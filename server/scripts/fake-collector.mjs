@@ -16,7 +16,7 @@
  * (test/fixtures/rigfiles/) and the OpenRig database shape (test/fixtures/openrig-schema-0.6.6.json),
  * first as a slightly older version (0.6.5) and then as 0.6.6, so the hub has a schema change to show.
  * --once pushes one snapshot per scenario, prints the acks and exits 1 if any was refused.
- * Stop it (Ctrl-C) to watch the hub mark the machine asleep after 15 s.
+ * Stop it (Ctrl-C) to watch the hub mark the machine asleep after 45 s.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
