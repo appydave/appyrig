@@ -23,7 +23,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build shared
         run: npm run build --workspace=shared
@@ -96,7 +96,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Install the browser
         run: npx playwright install --with-deps chromium
@@ -129,7 +129,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: No new clones (exact, renamed, near-miss; baselined)
         run: npm run lint:duplicates:fast
@@ -159,7 +159,7 @@ jobs:
         run: npm install -g pnpm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Read the OpenRig pin
         id: pin
