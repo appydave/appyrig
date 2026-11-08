@@ -123,6 +123,7 @@ describe('seat history adapter', () => {
     };
     const lines = [
       line({ ...ok, timestamp: 2026 }),
+      line({ ...ok, timestamp: 'yesterday' }),
       line({ ...ok, message: 'hello' }),
       line({ ...ok, message: { content: { nope: 1 } } }),
       line({ ...ok, type: 5 }),
