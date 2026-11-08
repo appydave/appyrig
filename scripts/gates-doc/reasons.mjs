@@ -27,8 +27,6 @@ const PI_OPENRIG =
   'OpenRig drops its own runtime files into every seat folder (git-excluded); added in 186c751 with no reason in its message.';
 const COV_TESTS =
   'reason unknown: no comment in the vitest config (the server one is from the scaffold, 5ef74dd). Find out: git log -S"exclude" -- <the config>';
-const TS_DEFAULT =
-  'reason unknown: no comment in the tsconfig. Find out: git log -S"exclude" -- <the tsconfig>';
 
 export const REASONS = {
   'eslint|ignore|.openrig/**': OPENRIG,
