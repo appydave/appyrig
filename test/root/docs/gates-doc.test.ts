@@ -9,7 +9,7 @@ import { collect, problems, render } from '@root/scripts/gates-doc/exemptions.mj
 import { REASONS } from '@root/scripts/gates-doc/reasons.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
-const SOURCES = ['eslint', 'knip', 'jscpd'];
+const SOURCES = ['eslint', 'knip', 'jscpd', 'tsconfig', 'vitest', 'prettier'];
 
 interface Entry {
   key: string;
