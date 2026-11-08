@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -9,7 +10,7 @@ import { collect, problems, render } from '@root/scripts/gates-doc/exemptions.mj
 import { REASONS } from '@root/scripts/gates-doc/reasons.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
-const SOURCES = ['eslint', 'knip', 'jscpd'];
+const SOURCES = ['eslint', 'knip', 'jscpd', 'tsconfig', 'vitest', 'prettier'];
 
 interface Entry {
   key: string;
@@ -82,5 +83,25 @@ describe('Feature: the checks fail on a deliberately bad example', () => {
 
     expect(text).toContain('`x/**`');
     expect(text).toContain('because');
+  });
+});
+
+describe('Feature: a new tsconfig or vitest config cannot sit outside the list unseen', () => {
+  // Tracked configs that have no exclude or coverage exclude to list.
+  const EXEMPTION_FREE = ['tsconfig.json', 'test/root/vitest.config.ts'];
+  const tracked = execFileSync('git', ['ls-files', '*tsconfig*.json', '*vitest.config.ts'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+  })
+    .split('\n')
+    .filter(Boolean);
+
+  it('Scenario: given the tracked tsconfigs and vitest configs, then each is listed or named exemption-free', () => {
+    const known = new Set([...entries.map((e) => e.where), ...EXEMPTION_FREE]);
+
+    expect(
+      tracked.filter((file) => !known.has(file)),
+      'These configs are not read by scripts/gates-doc/files.mjs. Add each to TSCONFIGS or VITEST_CONFIGS there, or to EXEMPTION_FREE in this test if it excludes nothing.'
+    ).toEqual([]);
   });
 });
