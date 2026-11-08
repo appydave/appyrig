@@ -71,7 +71,9 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
     expect(errors).toEqual([]);
   });
 
-  test('machine badges start collapsed and open to the full strip on a click', async ({ page }) => {
+  test('machine badges start collapsed and open to the full strip on a click; the box closes it', async ({
+    page,
+  }) => {
     await open(page);
 
     const strip = page.getByTestId('ar-strip');
@@ -81,8 +83,14 @@ test.describe('v2 shell (frozen busy snapshot, 1440 px)', () => {
     await page.locator('[data-testid="machine-chip"]').first().click();
     await expect(strip).toHaveAttribute('data-expanded', 'true');
     await expect(page.getByTestId('fleet-counts')).toBeVisible();
-    await page.getByTestId('strip-toggle').click();
+    // the whole box is the toggle (V2/V3, 260753e): there is no separate arrow any more
+    await strip.locator('.ar-strip-summary').click();
     await expect(strip).toHaveAttribute('data-expanded', 'false');
+    await expect(page.getByTestId('fleet-counts')).toBeHidden();
+    // and it is a keyboard button
+    await strip.focus();
+    await page.keyboard.press('Enter');
+    await expect(strip).toHaveAttribute('data-expanded', 'true');
   });
 
   test('the Rigs tab is always there; opening the drawer shrinks the page instead of covering it', async ({
