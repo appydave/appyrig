@@ -224,6 +224,71 @@ describe('fix-first F2 (security #4, #5): more prefixes, ANSI, wrapped tokens', 
   });
 });
 
+describe('C93 (audit CQ-K2): shell-line secrets', () => {
+  const FAKE = 'Zq8xP2mL9vRt';
+
+  it.each([
+    [
+      '--with-token',
+      `gh auth login --with-token ${FAKE}`,
+      `gh auth login --with-token ${REDACTED}`,
+    ],
+    ['--token', `mytool --token ${FAKE}`, `mytool --token ${REDACTED}`],
+    ['--password', `mytool --password ${FAKE}`, `mytool --password ${REDACTED}`],
+    [
+      'Authorization: Token',
+      `curl -H 'Authorization: Token ${FAKE}'`,
+      `curl -H 'Authorization: Token ${REDACTED}'`,
+    ],
+    ['curl -u', `curl -u admin:${FAKE} https://x`, `curl -u admin:${REDACTED} https://x`],
+  ])('%s: the secret goes, the rest stays', (_name, text, expected) => {
+    expect(redactString(text)).toBe(expected);
+  });
+
+  it.each([
+    ['a quoted flag value', `mytool --token "${FAKE}"`],
+    ['a prefixed flag', `mytool --github-token ${FAKE}`],
+    ['curl --user', `curl --user admin:${FAKE} https://x`],
+    ['curl -su, later on the line', `curl -X POST -su 'admin:${FAKE}' https://x`],
+    ['a password with no digit', 'curl -u admin:hunterhunter https://x'],
+    ['another Authorization scheme', `Authorization: ApiKey ${FAKE}`],
+    ['Authorization with no scheme', `Authorization: ${FAKE}`],
+  ])('%s never survives', (_name, text) => {
+    const out = redactString(text);
+
+    expect(out).toContain(REDACTED);
+    expect(out).not.toContain(FAKE);
+    expect(out).not.toContain('hunterhunter');
+  });
+
+  it('leaves ordinary pane text and paths exactly as they were', () => {
+    const calm = [
+      'use the --token flag to log in',
+      'gh auth login --with-token < token.txt',
+      'mytool --token $MY_TOKEN',
+      'mytool --password "$PW"',
+      'mytool --token <your-token>',
+      'mytool --token YOUR_TOKEN',
+      'claude --max-tokens 4096',
+      'mytool --token-file /Users/me/.config/appyrig/token',
+      'mytool --token ./token.txt',
+      'cat /Users/me/secrets/password.txt',
+      'Authorization: required for this route',
+      'the Authorization: header is optional here',
+      'git push -u origin main',
+      'docker run -u 1000:1000 node',
+      'ps -u root:wheel',
+      'curl -u admin https://example.com:8080/x',
+      'curl -u "$USER:$PASS" https://example.com',
+      'curl --user-agent foo:bar https://example.com',
+    ];
+
+    for (const text of calm) {
+      expect(redactString(text), text).toBe(text);
+    }
+  });
+});
+
 describe('F2 rework (QA HIGH-1): a token Claude Code hard-wrapped across rows', () => {
   // A fake: 97 random characters (letters, digits, '-', '_'), made for this test only.
   const body =
