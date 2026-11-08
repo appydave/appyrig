@@ -205,6 +205,23 @@ describe('sampleSchema', () => {
     expect(s.status).toBe('unreadable');
     expect(s.reason).toMatch(/could not read the OpenRig database/);
   });
+  it('a table whose name is a blob is unreadable and says which row, not a table called "1,2,3"', async () => {
+    const path = join(tmp(), 'openrig.sqlite');
+    const db = new DatabaseSync(path);
+
+    db.enableDefensive(false);
+    db.exec('CREATE TABLE t (a TEXT); PRAGMA writable_schema = ON');
+    db.exec("UPDATE sqlite_master SET name = CAST(name AS BLOB) WHERE name = 't'");
+    db.close();
+
+    const s = await sampleSchema('m2', rigRun(), { dbPath: path, now });
+
+    expect(s.status).toBe('unreadable');
+    expect(s.tables).toEqual([]);
+    expect(s.reason).toBe(
+      'could not read the OpenRig database: unexpected table list row from the OpenRig database: name=(blob 1 bytes), type="table"'
+    );
+  });
   it('a version that cannot be read is null, and the tables still come back', async () => {
     const s = await sampleSchema('m2', rigRun('', 1), { dbPath: makeDb(), now });
 

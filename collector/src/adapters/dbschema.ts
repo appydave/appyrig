@@ -5,6 +5,8 @@ import { pathToFileURL } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { DB_COLUMNS_MAX, DB_TABLES_MAX, type DbTable, type SchemaPush } from '@appydave/shared';
 import type { Run } from './health.js';
+import { errorMessage } from './narrow/errors.js';
+import { ColumnRow, ForeignKeyRow, ObjectRow, parseRows } from './narrow/dbRows.js';
 
 /**
  * v1.4 · S7: the shape of the OpenRig database on this machine. READ-ONLY, three ways over:
@@ -46,7 +48,7 @@ export function readTables(dbPath: string): DbTable[] {
   try {
     db.exec('PRAGMA query_only = ON');
 
-    const objects = db.prepare(SELECT_OBJECTS).all() as { name: string; type: 'table' | 'view' }[];
+    const objects = parseRows(ObjectRow, db.prepare(SELECT_OBJECTS).all(), 'table list');
     const cols = db.prepare(
       'SELECT name, type, "notnull" AS nn, dflt_value, pk FROM pragma_table_info(?)'
     );
@@ -57,25 +59,18 @@ export function readTables(dbPath: string): DbTable[] {
     return objects.slice(0, DB_TABLES_MAX).map((o) => ({
       name: o.name,
       kind: o.type,
-      columns: (cols.all(o.name) as Record<string, unknown>[])
+      columns: parseRows(ColumnRow, cols.all(o.name), `columns of ${o.name}`)
         .slice(0, DB_COLUMNS_MAX)
         .map((c) => ({
-          name: String(c.name),
-          type: String(c.type ?? ''),
-          notNull: Number(c.nn) === 1,
-          pk: Number(c.pk),
-          default:
-            c.dflt_value === null || c.dflt_value === undefined
-              ? null
-              : String(c.dflt_value).slice(0, 200),
+          name: c.name,
+          type: c.type ?? '',
+          notNull: c.nn === 1,
+          pk: c.pk,
+          default: c.dflt_value === null ? null : String(c.dflt_value).slice(0, 200),
         })),
-      foreignKeys: (fks.all(o.name) as Record<string, unknown>[])
+      foreignKeys: parseRows(ForeignKeyRow, fks.all(o.name), `foreign keys of ${o.name}`)
         .slice(0, DB_COLUMNS_MAX)
-        .map((k) => ({
-          from: String(k.f),
-          table: String(k.t),
-          to: k.o === null || k.o === undefined ? null : String(k.o),
-        })),
+        .map((k) => ({ from: k.f, table: k.t, to: k.o })),
     }));
   } finally {
     db.close();
@@ -101,7 +96,8 @@ export async function sampleSchema(
 ): Promise<SchemaPush> {
   const dbPath = opts.dbPath ?? defaultOpenrigDb();
   const collectedAt = (opts.now ?? (() => new Date()))().toISOString();
-  const base = { machineId, collectedAt, tables: [] as DbTable[] };
+  const noTables: DbTable[] = [];
+  const base = { machineId, collectedAt, tables: noTables };
 
   if (!existsSync(dbPath)) {
     return {
@@ -120,7 +116,7 @@ export async function sampleSchema(
     return {
       ...base,
       status: 'unreadable',
-      reason: `could not read the OpenRig database: ${(e as Error).message}`.slice(0, 300),
+      reason: `could not read the OpenRig database: ${errorMessage(e)}`.slice(0, 300),
       openrigVersion,
     };
   }
