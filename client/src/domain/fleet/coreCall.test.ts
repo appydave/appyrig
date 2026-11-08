@@ -32,6 +32,12 @@ describe('callVerb', () => {
     ['ok missing', { value: 1 }, '{"value":1}'],
     ['ok true without value', { ok: true }, '{"ok":true}'],
     ['ok false without error', { ok: false }, '{"ok":false}'],
+    [
+      'error without a failureMode',
+      { ok: false, error: { message: 'x' } },
+      '{"ok":false,"error":{"message":"x"}}',
+    ],
+    ['error that is not an object', { ok: false, error: 5 }, '{"ok":false,"error":5}'],
   ])('refuses a malformed answer (%s), saying what the hub sent', async (_name, sent, text) => {
     const s = socketAnswering((ack) => ack(null, sent));
     const answer = await callVerb(s, 'system.status', {});
@@ -50,5 +56,20 @@ describe('callVerb', () => {
     const s = socketAnswering((ack) => ack(null, refusal));
 
     await expect(callVerb(s, 'seat.tail', {})).resolves.toEqual(refusal);
+  });
+
+  it('cuts what the hub sent to its first 120 characters', async () => {
+    const sent = { ok: false, padding: 'a'.repeat(300) };
+    const s = socketAnswering((ack) => ack(null, sent));
+    const answer = await callVerb(s, 'system.status', {});
+    const message = answer.ok ? '' : answer.error.message;
+
+    expect(message.endsWith(`It sent: ${JSON.stringify(sent).slice(0, 120)}`)).toBe(true);
+  });
+
+  it('passes a null value through unchanged', async () => {
+    const s = socketAnswering((ack) => ack(null, { ok: true, value: null }));
+
+    await expect(callVerb(s, 'system.status', {})).resolves.toEqual({ ok: true, value: null });
   });
 });
