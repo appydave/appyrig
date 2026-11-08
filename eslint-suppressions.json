@@ -334,10 +334,10 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 5
+      "count": 4
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 6
+      "count": 4
     }
   },
   "client/src/domain/schema/model.ts": {
