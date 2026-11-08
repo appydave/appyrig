@@ -23,32 +23,12 @@ async function cssRules(code: string, file: string): Promise<string[]> {
   return result.results.flatMap((r) => r.warnings.map((w) => w.rule));
 }
 
-describe('G05 magic numbers', () => {
-  it('fails on a bare number in production code', async () => {
-    const code = 'export function wait() {\n  return setTimeout(() => undefined, 5000);\n}\n';
-
-    expect(await eslintRules(code, 'server/src/g05-bad-number.ts')).toContain('no-magic-numbers');
-  });
-
-  it('fails on a bare number in an object property', async () => {
-    const code = 'export const options = { retries: 7 };\n';
-
-    expect(await eslintRules(code, 'server/src/g05-bad-property.ts')).toContain('no-magic-numbers');
-  });
-
-  it('accepts a named constant, 0, 1, -1 and halving', async () => {
+describe('List 6: magic numbers are not a lint rule', () => {
+  it('a bare number in production code passes, so the retired rule cannot come back unnoticed', async () => {
     const code =
-      'const TIMEOUT_MS = 5000;\n\nexport const half = (a: number) => a / 2 + 1 - 1 + 0 - -1 + TIMEOUT_MS;\n';
+      'export const options = { retries: 7, wait: () => setTimeout(() => undefined, 5000) };\n';
 
-    expect(await eslintRules(code, 'server/src/g05-good-number.ts')).toEqual([]);
-  });
-
-  it('leaves test files alone', async () => {
-    const code = 'export const options = { retries: 7 };\n';
-
-    expect(await eslintRules(code, 'server/src/g05-number.test.ts')).not.toContain(
-      'no-magic-numbers'
-    );
+    expect(await eslintRules(code, 'server/src/list6-bare-number.ts')).toEqual([]);
   });
 });
 
