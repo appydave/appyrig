@@ -103,6 +103,6 @@ export default function RigPicker({ rigs, selected, onSelect, onOpenFiles, info 
  * C5 (F12): a rig's name as the picker shows it, always machine-qualified (`kernel · m4`), so
  * three `kernel`s on three machines never read the same.
  */
-export function rigLabel(r: Pick<RigRef, 'name' | 'displayName' | 'machineId'>): string {
+function rigLabel(r: Pick<RigRef, 'name' | 'displayName' | 'machineId'>): string {
   return `${r.displayName ?? r.name} · ${r.machineId}`;
 }

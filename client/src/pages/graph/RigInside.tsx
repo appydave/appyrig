@@ -47,7 +47,7 @@ interface Props {
 }
 
 /** A person, not an agent: `human@kernel`, `operator-human`. */
-export const isHuman = (s: Pick<MapSeat, 'name' | 'address'>): boolean =>
+const isHuman = (s: Pick<MapSeat, 'name' | 'address'>): boolean =>
   /(^|[-_.])human($|@)/i.test(s.name) || /(^|[-_.])human@/i.test(s.address);
 
 interface Rect {
@@ -638,7 +638,7 @@ export default function RigInside({
  * A person, not an agent: a dark card with what waits on them as amber badges ("56 left open · 5d",
  * "48 from dev-qa"). Never a NOT PLACED rail.
  */
-export function HumanCard({
+function HumanCard({
   seat,
   from,
   fromTotal,

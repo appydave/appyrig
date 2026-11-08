@@ -8,99 +8,7 @@
       "client/package.json": {
         "devDependencies": 3
       },
-      "client/src/app/frozen/load.ts": {
-        "exports": 2
-      },
-      "client/src/app/usePages.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/AnsiText.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/DocsDrawer.tsx": {
-        "exports": 2
-      },
-      "client/src/kit/FakeControl.tsx": {
-        "types": 1
-      },
-      "client/src/kit/FollowWork.tsx": {
-        "exports": 1
-      },
       "client/src/kit/HandoffLineMarks.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/RigFiles.tsx": {
-        "types": 1
-      },
-      "client/src/kit/RigPicker.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/SampleData.tsx": {
-        "exports": 1,
-        "types": 1
-      },
-      "client/src/kit/SchemaView.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/SeatCardLines.tsx": {
-        "exports": 2
-      },
-      "client/src/kit/TerminalCard.tsx": {
-        "types": 1
-      },
-      "client/src/kit/WallCard.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/data/index.tsx": {
-        "exports": 1,
-        "types": 2
-      },
-      "client/src/kit/index.ts": {
-        "exports": 1
-      },
-      "client/src/lib/markdown.ts": {
-        "types": 1
-      },
-      "client/src/lib/yamlLines.ts": {
-        "types": 2
-      },
-      "client/src/pages/agent/useAgentData.ts": {
-        "exports": 1,
-        "types": 2
-      },
-      "client/src/pages/graph/FakeRunner.tsx": {
-        "exports": 1
-      },
-      "client/src/pages/graph/RigInside.tsx": {
-        "exports": 2
-      },
-      "client/src/pages/graph/index.tsx": {
-        "exports": 2
-      },
-      "client/src/pages/graph/openRigs.ts": {
-        "exports": 1,
-        "types": 1
-      },
-      "client/src/pages/history/index.tsx": {
-        "exports": 3,
-        "types": 1
-      },
-      "client/src/pages/needs-you/index.tsx": {
-        "exports": 1
-      },
-      "client/src/pages/page-test-kit.ts": {
-        "exports": 1
-      },
-      "client/src/pages/run/index.tsx": {
-        "exports": 1
-      },
-      "client/src/pages/specs/index.tsx": {
-        "exports": 1
-      },
-      "client/src/shell/RigDrawer.tsx": {
-        "exports": 1
-      },
-      "client/src/shell/urlState.ts": {
         "exports": 1
       },
       "client/src/test/msw/browser.ts": {
@@ -286,13 +194,7 @@
       "client/src/app/frozen/frozenSocket.ts": {
         "exports": 2
       },
-      "client/src/app/frozen/load.ts": {
-        "exports": 2
-      },
       "client/src/app/registry.ts": {
-        "exports": 1
-      },
-      "client/src/app/usePages.tsx": {
         "exports": 1
       },
       "client/src/domain/fleet/health.ts": {
@@ -340,16 +242,7 @@
       "client/src/kit/AgentPanel.tsx": {
         "exports": 1
       },
-      "client/src/kit/AnsiText.tsx": {
-        "exports": 1
-      },
       "client/src/kit/DocsDrawer.tsx": {
-        "exports": 3
-      },
-      "client/src/kit/FakeControl.tsx": {
-        "types": 1
-      },
-      "client/src/kit/FollowWork.tsx": {
         "exports": 1
       },
       "client/src/kit/HandoffLineMarks.tsx": {
@@ -364,41 +257,23 @@
       "client/src/kit/PageHeader.tsx": {
         "exports": 1
       },
-      "client/src/kit/RigFiles.tsx": {
-        "types": 1
-      },
       "client/src/kit/RigInfo.tsx": {
         "exports": 1
-      },
-      "client/src/kit/RigPicker.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/SampleData.tsx": {
-        "exports": 1,
-        "types": 1
       },
       "client/src/kit/SchemaRows.tsx": {
         "exports": 1
       },
       "client/src/kit/SchemaView.tsx": {
-        "exports": 2
-      },
-      "client/src/kit/SeatCardLines.tsx": {
-        "exports": 4
-      },
-      "client/src/kit/TerminalCard.tsx": {
-        "exports": 2,
-        "types": 1
-      },
-      "client/src/kit/WallCard.tsx": {
         "exports": 1
       },
-      "client/src/kit/data/index.tsx": {
-        "exports": 1,
-        "types": 2
+      "client/src/kit/SeatCardLines.tsx": {
+        "exports": 2
+      },
+      "client/src/kit/TerminalCard.tsx": {
+        "exports": 2
       },
       "client/src/kit/index.ts": {
-        "exports": 16
+        "exports": 15
       },
       "client/src/kit/legendData.ts": {
         "exports": 1
@@ -410,60 +285,32 @@
         "exports": 1
       },
       "client/src/lib/markdown.ts": {
-        "exports": 2,
-        "types": 1
+        "exports": 2
       },
       "client/src/lib/stableOrder.ts": {
         "exports": 1
       },
-      "client/src/lib/yamlLines.ts": {
-        "types": 2
-      },
       "client/src/pages/agent/index.tsx": {
         "exports": 1
-      },
-      "client/src/pages/agent/useAgentData.ts": {
-        "exports": 1,
-        "types": 2
       },
       "client/src/pages/flow/HandoffFlow.tsx": {
         "exports": 1
       },
-      "client/src/pages/graph/FakeRunner.tsx": {
-        "exports": 1
-      },
-      "client/src/pages/graph/RigInside.tsx": {
-        "exports": 2
-      },
       "client/src/pages/graph/index.tsx": {
-        "exports": 5
-      },
-      "client/src/pages/graph/openRigs.ts": {
-        "exports": 1,
-        "types": 1
-      },
-      "client/src/pages/history/index.tsx": {
-        "exports": 3,
-        "types": 1
+        "exports": 3
       },
       "client/src/pages/learn/index.tsx": {
         "exports": 1
       },
-      "client/src/pages/needs-you/index.tsx": {
-        "exports": 1
-      },
       "client/src/pages/run/index.tsx": {
-        "exports": 2,
+        "exports": 1,
         "types": 1
       },
       "client/src/pages/specs/index.tsx": {
-        "exports": 3
-      },
-      "client/src/shell/RigDrawer.tsx": {
-        "exports": 1
+        "exports": 2
       },
       "client/src/shell/urlState.ts": {
-        "exports": 2
+        "exports": 1
       },
       "collector/src/adapters/account.ts": {
         "exports": 3,

@@ -26,30 +26,8 @@ export function RoleTag({ agentRole }: { agentRole?: string | null }) {
   );
 }
 
-const short = (n: string) => n.slice(n.lastIndexOf(':') + 1);
-
-export function KeySkills({ skills }: { skills?: string[] }) {
-  if (!skills?.length) {
-    return null;
-  }
-
-  return (
-    <span
-      className="seat-key-skills"
-      data-testid="seat-key-skills"
-      title={`Key skills (from AppyRig's allowlist, all loaded in this seat): ${skills.join(', ')}`}
-    >
-      {skills.map((s) => (
-        <span key={s} className="seat-key-skill">
-          {short(s)}
-        </span>
-      ))}
-    </span>
-  );
-}
-
 /** v15 UI-A: figures never show 0 for "not reported": missing is an em dash. */
-export const DASH = '—';
+const DASH = '—';
 
 /** `119_000` → `119k`, `1_250_000` → `1.3M`, small numbers as they are; missing → `—`. */
 export function tokensText(n: number | null | undefined): string {

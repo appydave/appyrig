@@ -10,7 +10,7 @@ import YamlView from './YamlView.js';
  * v1.5 · L1: a file handed to the viewer instead of fetched (the Debug view's prompt layers), so
  * they open in this same viewer. `sub` replaces the "team folder" line under its name.
  */
-export interface PresetFile {
+interface PresetFile {
   id: string;
   name: string;
   sub: string;

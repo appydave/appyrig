@@ -45,7 +45,7 @@ export function answeringSocket(answers: Record<string, unknown> = {}) {
 }
 
 /** Test helper: a socket whose every read verb is answered at once with `unknown_verb` (a page that only draws the snapshot). */
-export function unknownVerbSocket(): FleetSocket {
+function unknownVerbSocket(): FleetSocket {
   const s = {
     connected: true,
     on: () => s,

@@ -33,11 +33,7 @@ type Polled<T> =
   | { phase: 'refused'; message: string; last: T | null };
 
 /** One read verb, asked now and again every `everyMs`; the last good answer stays while it re-asks. */
-export function usePolledVerb<T>(
-  getSocket: () => FleetSocket,
-  verb: string,
-  everyMs: number
-): Polled<T> {
+function usePolledVerb<T>(getSocket: () => FleetSocket, verb: string, everyMs: number): Polled<T> {
   const [state, setState] = useState<Polled<T>>({ phase: 'loading' });
   const last = useRef<T | null>(null);
 

@@ -27,7 +27,7 @@ type Run = (ask: FakeAsk) => void;
 
 const FakeCtx = createContext<Run>(() => {});
 
-export const useFake = () => useContext(FakeCtx);
+const useFake = () => useContext(FakeCtx);
 
 const TOAST_MS = 4000;
 

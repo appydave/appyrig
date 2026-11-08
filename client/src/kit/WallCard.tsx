@@ -54,8 +54,7 @@ export interface WallCardProps {
 }
 
 /** A card is frosted when its session is not live: stopped, asleep, or state unknown (plain tmux). */
-export const isFrosted = (s: PipKey): boolean =>
-  s === 'stopped' || s === 'asleep' || s === 'unknown';
+const isFrosted = (s: PipKey): boolean => s === 'stopped' || s === 'asleep' || s === 'unknown';
 
 /** The folder line: a long path loses its START, not its end (the last folders are the part that
  *  differs, e.g. a worktree under .claude/worktrees/...). The branch stays whole; the title has all. */

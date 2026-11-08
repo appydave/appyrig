@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import type {
   Refusal,
-  RigFileOutput,
   RigFilesOutput,
   RigWaitingOutput,
   SeatDetailOutput,
@@ -55,7 +54,7 @@ function useVerb<T>(socket: FleetSocket, { verb, input, dep }: VerbRequest): Loa
   return got;
 }
 
-export type DetailState =
+type DetailState =
   | { state: 'loading' }
   | { state: 'ok'; view: SeatDetailView }
   /** The seat is not an OpenRig seat: no spec or startup files exist, and none are invented. */
@@ -109,37 +108,4 @@ export function useAgentData(
   }
 
   return { loadout, files, waiting, detail };
-}
-
-export type OpenDoc =
-  | { state: 'loading' }
-  | { state: 'ok'; name: string; bytes: number; truncated: boolean; content: string }
-  | { state: 'refused'; error: Refusal };
-
-/** One rig file's text, fetched when `fileId` is set. */
-export function useRigFile(
-  socket: FleetSocket,
-  { machineId, rig, fileId }: { machineId: string; rig: string | null; fileId: string | null }
-): OpenDoc | null {
-  const loaded = useVerb<RigFileOutput>(socket, {
-    verb: 'rig.file',
-    input: rig && fileId ? { machine: machineId, rig, fileId } : null,
-    dep: `${machineId}/${rig}/${fileId}`,
-  });
-
-  if (!rig || !fileId || loaded.state === 'na') {
-    return null;
-  }
-
-  if (loaded.state === 'loading') {
-    return { state: 'loading' };
-  }
-
-  if (loaded.state === 'refused') {
-    return { state: 'refused', error: loaded.error };
-  }
-
-  const f = loaded.value.file;
-
-  return { state: 'ok', name: f.name, bytes: f.bytes, truncated: f.truncated, content: f.content };
 }

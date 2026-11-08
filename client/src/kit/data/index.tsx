@@ -14,11 +14,9 @@ import './coverage.css';
 
 export type {
   DataMachine,
-  DataStatus,
   HistoryTransitionRow,
   HistoryTransitionsOutput,
   LibraryGetOutput,
-  LibraryGroup,
   LibraryItem,
   LibraryListOutput,
   WorkflowListOutput,
@@ -80,7 +78,7 @@ const STATUS_WORD: Record<DataStatus, string> = {
 };
 
 /** One line per machine whose data is not `ok`, so a missing machine is never read as an empty one. */
-export function machineNotes(machines: DataMachine[], label: (id: string) => string): string[] {
+function machineNotes(machines: DataMachine[], label: (id: string) => string): string[] {
   return machines
     .filter((m) => m.status !== 'ok')
     .map((m) => `${label(m.machine)} ${STATUS_WORD[m.status]}${m.reason ? ` (${m.reason})` : ''}.`);

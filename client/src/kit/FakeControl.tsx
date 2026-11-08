@@ -9,7 +9,7 @@ import { useMockNote } from './MockNote.js';
  * (Start / Restore / Launch, Settings edits, schedules), so David can judge the flow before anyone
  * builds it. Always carries MockMark.
  */
-export type FakePhase = 'idle' | 'confirm' | 'working' | 'done';
+type FakePhase = 'idle' | 'confirm' | 'working' | 'done';
 
 export interface FakeAction {
   phase: FakePhase;

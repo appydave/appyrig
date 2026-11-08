@@ -7,7 +7,7 @@ import type { PageContext } from '@client/app/types.js';
  * module-level store (survives leaving and returning to the page) mirrored to localStorage (survives
  * a reload). When the ctx provides them, they win and this store is not touched.
  */
-export interface NavOpenRigs {
+interface NavOpenRigs {
   openRigs?: string[];
   setOpenRigs?: (keys: string[]) => void;
 }
@@ -36,16 +36,6 @@ function writeStore(keys: string[]) {
     localStorage.setItem(STORE_KEY, JSON.stringify(keys));
   } catch {
     /* private window: it just is not remembered across a reload */
-  }
-}
-
-/** Test hook: forget the module-level copy (and the stored one). */
-export function resetOpenRigs() {
-  memory = null;
-  try {
-    localStorage.removeItem(STORE_KEY);
-  } catch {
-    /* ignore */
   }
 }
 

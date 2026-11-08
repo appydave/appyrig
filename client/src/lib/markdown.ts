@@ -13,7 +13,7 @@ export type Inline =
   | { t: 'em'; children: Inline[] }
   | { t: 'link'; href: string; children: Inline[] };
 
-export interface ListItem {
+interface ListItem {
   inline: Inline[];
   children: Block[];
 }

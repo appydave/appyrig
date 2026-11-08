@@ -84,7 +84,7 @@ export function useRead<T>(
 }
 
 /** Everything the drawer lists for one target (also used by the Agent page, so both match). */
-export function useDocsData(getSocket: () => FleetSocket, t: DocsTarget) {
+function useDocsData(getSocket: () => FleetSocket, t: DocsTarget) {
   const seatId = t.seat?.id ?? null;
   const rig = t.rig ?? t.seat?.rig ?? null;
   const loadout = useRead<SeatLoadoutOutput>(
@@ -248,7 +248,7 @@ function useContent(
   return c;
 }
 
-export function DocReader({
+function DocReader({
   getSocket,
   machineId,
   rig,

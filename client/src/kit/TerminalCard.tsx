@@ -21,7 +21,7 @@ export { tailLine };
  * Pure and presentational: it takes plain values, so a page maps its own data in. It never reads a
  * seat. Status is drawn by shape as well as colour (the bar and outline), as on V1's tiles.
  */
-export type CardSize = 'wall' | 'compact';
+type CardSize = 'wall' | 'compact';
 
 export interface TerminalCardProps {
   size: CardSize;

@@ -25,7 +25,7 @@ type Loaded =
   | { state: 'refused'; error: Refusal };
 
 /** How long ago, in words a person reads. */
-export const ago = (ms: number): string => {
+const ago = (ms: number): string => {
   const s = Math.max(0, Math.round(ms / 1000));
 
   if (s < 90) {

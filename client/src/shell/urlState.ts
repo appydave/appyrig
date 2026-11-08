@@ -65,7 +65,7 @@ export function readUrlState(search: string = window.location.search): UrlState 
 }
 
 /** Fired after the address is rewritten by this module, so `useUrlParam` readers update. */
-export const URL_EVENT = 'appyrig:url';
+const URL_EVENT = 'appyrig:url';
 
 /** Marks a history entry as the one opening the Agent panel, so closing it can go Back. */
 export const PANEL_ENTRY = 'agent-panel';
