@@ -589,6 +589,18 @@ describe('LoadoutReader', () => {
     expect(p?.loadouts[0]).toMatchObject({ status: 'ok', listing: { skillCount: 5 } });
   });
 
+  it('skillNames lists a seat only when it has a listing; skillCounts says null for the rest', async () => {
+    const { reader, seats } = setup();
+
+    await reader.next(seats, new Map(), new Map());
+
+    expect([...reader.skillNames().keys()]).toEqual(['dev-build@demo']);
+    expect(Object.fromEntries(reader.skillCounts())).toEqual({
+      'dev-build@demo': 5,
+      'dev-cx@demo': null,
+    });
+  });
+
   it('only reads transcripts titled as a known seat', async () => {
     const { reader, seats } = setup();
     const p = await reader.next(seats, new Map(), new Map());

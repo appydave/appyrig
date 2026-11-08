@@ -162,6 +162,26 @@ interface ScanState {
 
 const BLOCK = 1024 * 1024;
 
+/** Folds every whole line of `chunk` into `s`; returns the unfinished last line, to be read again. */
+function foldLines(s: ScanState, chunk: Buffer): Buffer {
+  let rest = chunk;
+  let nl = rest.indexOf(10);
+
+  while (nl !== -1) {
+    const found = listingOfLine(rest.subarray(0, nl).toString('utf8'));
+
+    if (found) {
+      s.latest = foldListing(s.latest, found);
+      s.count += 1;
+    }
+
+    rest = rest.subarray(nl + 1);
+    nl = rest.indexOf(10);
+  }
+
+  return rest;
+}
+
 /**
  * Remembers, per transcript, how far it was read and the skills shown so far (foldListing). A transcript only
  * grows, so each scan reads just the new bytes; a file that shrank is read again from the start.
@@ -192,7 +212,7 @@ export class ListingTracker {
 
     try {
       let pos = s.offset;
-      let carry = Buffer.alloc(0);
+      let carry: Buffer = Buffer.alloc(0);
 
       while (pos < size) {
         const buf = Buffer.alloc(Math.min(BLOCK, size - pos));
@@ -204,22 +224,7 @@ export class ListingTracker {
 
         pos += bytesRead;
 
-        let chunk = Buffer.concat([carry, buf.subarray(0, bytesRead)]);
-        let nl = chunk.indexOf(10);
-
-        while (nl !== -1) {
-          const found = listingOfLine(chunk.subarray(0, nl).toString('utf8'));
-
-          if (found) {
-            s.latest = foldListing(s.latest, found);
-            s.count += 1;
-          }
-
-          chunk = chunk.subarray(nl + 1);
-          nl = chunk.indexOf(10);
-        }
-
-        carry = chunk;
+        carry = foldLines(s, Buffer.concat([carry, buf.subarray(0, bytesRead)]));
       }
 
       // Only whole lines count as read: an unfinished last line is read again next time.
@@ -248,48 +253,56 @@ export interface SkillPlaces {
   cwdKnown?: boolean;
 }
 
+function sourceOf(name: string, places: SkillPlaces): SkillSource {
+  if (name.indexOf(':') > 0) {
+    return 'plugin';
+  }
+
+  if (places.cwd.has(name)) {
+    return places.tracked.has(name) ? 'repo' : 'role';
+  }
+
+  if (places.personal.has(name)) {
+    return 'personal';
+  }
+
+  return places.cwdKnown === false ? 'unplaced' : 'builtin';
+}
+
+/** Every place a short skill name exists. */
+function foundIn(short: string, places: SkillPlaces, pluginShort: Set<string>): SkillSource[] {
+  const out: SkillSource[] = [];
+
+  if (places.cwd.has(short)) {
+    out.push(places.tracked.has(short) ? 'repo' : 'role');
+  }
+
+  if (places.personal.has(short)) {
+    out.push('personal');
+  }
+
+  if (pluginShort.has(short)) {
+    out.push('plugin');
+  }
+
+  return out;
+}
+
 /** Sorts each listed name by where it came from, and flags names that exist in more than one place. */
 export function classifySkills(names: string[], places: SkillPlaces): LoadoutSkill[] {
   const pluginShort = new Set(names.filter((n) => n.includes(':')).map(shortSkillName));
-  const placesOf = (short: string): SkillSource[] => {
-    const out: SkillSource[] = [];
-
-    if (places.cwd.has(short)) {
-      out.push(places.tracked.has(short) ? 'repo' : 'role');
-    }
-
-    if (places.personal.has(short)) {
-      out.push('personal');
-    }
-
-    if (pluginShort.has(short)) {
-      out.push('plugin');
-    }
-
-    return out;
-  };
 
   return [...new Set(names)].slice(0, LOADOUT_SKILLS_MAX).map((name) => {
     const colon = name.indexOf(':');
     const short = shortSkillName(name);
-    const where = placesOf(short);
-    let source: SkillSource;
-
-    if (colon > 0) {
-      source = 'plugin';
-    } else if (places.cwd.has(name)) {
-      source = places.tracked.has(name) ? 'repo' : 'role';
-    } else if (places.personal.has(name)) {
-      source = 'personal';
-    } else {
-      source = places.cwdKnown === false ? 'unplaced' : 'builtin';
-    }
-
+    const source = sourceOf(name, places);
     // A plugin skill is "also in" a plugin only when it is a different plugin's skill of that name.
     const otherPlugins =
       source === 'plugin' &&
       names.some((n) => n !== name && n.includes(':') && shortSkillName(n) === short);
-    const alsoIn = where.filter((w) => w !== source || (w === 'plugin' && otherPlugins));
+    const alsoIn = foundIn(short, places, pluginShort).filter(
+      (w) => w !== source || (w === 'plugin' && otherPlugins)
+    );
 
     return {
       name,
@@ -833,6 +846,71 @@ async function claudeLoadout(c: ClaudeSeat): Promise<SeatLoadout> {
   };
 }
 
+/** What one scan shares across its seats. */
+interface SeatScan {
+  machineId: string;
+  now: () => Date;
+  topologyRoot: string | null;
+  tracker: ListingTracker;
+  transcripts: Map<string, TranscriptFile[]>;
+  placesFor: (cwd: string) => Promise<Where>;
+  personal: Set<string>;
+  specs: Map<string, SpecInfo>;
+  agentDirs: Map<string, string>;
+}
+
+/** One seat's loadout: what OpenRig gave it, plus (for a Claude seat) what it listed and where from. */
+async function loadoutFor(seat: LoadoutSeat, scan: SeatScan): Promise<SeatLoadout> {
+  const spec = seat.rig ? scan.specs.get(seat.rig) : undefined;
+  const member = memberOf(spec, seat.logicalId);
+  const agentDir = scan.agentDirs.get(seat.id);
+  const base = {
+    machineId: scan.machineId,
+    seat: seat.id,
+    collectedAt: scan.now().toISOString(),
+    runtime: seat.runtime,
+    cwd: seat.cwd,
+  };
+  // What OpenRig gave the seat, for every runtime (stripped for a hub without HUB_CAPS.SEAT_SPEC).
+  const given = {
+    topologyRoot: scan.topologyRoot,
+    topologyDocs: await readTopologyDocs(seat, scan.topologyRoot),
+    member,
+    agentSpec: await agentSpecOf(agentDir, member?.profile ?? null),
+  };
+
+  if (seat.runtime !== 'claude-code') {
+    return notClaudeLoadout(base, given);
+  }
+
+  return claudeLoadout({
+    base,
+    given,
+    seat,
+    spec,
+    agentDir,
+    best: await newestListing(scan.tracker, scan.transcripts.get(seat.id)),
+    where: seat.cwd ? await scan.placesFor(seat.cwd) : null,
+    personal: scan.personal,
+    topologyRoot: scan.topologyRoot,
+  });
+}
+
+/** The pill and the card's key skills: the seat's skillCount (null: none), and its names when it has a listing. */
+function notePill(
+  loadout: SeatLoadout,
+  counts: Map<string, number | null>,
+  names: Map<string, string[]>
+): void {
+  counts.set(loadout.seat, loadout.listing?.skillCount ?? null);
+  if (loadout.status === 'ok') {
+    names.set(
+      loadout.seat,
+      loadout.skills.map((k) => k.name)
+    );
+  }
+}
+
 /** What the hub was last sent for a seat, ignoring the scan time. Key order matters: it is hashed. */
 function signatureOf(loadout: SeatLoadout): string {
   return createHash('sha1')
@@ -898,75 +976,50 @@ export class LoadoutReader {
 
     this.lastScan = this.now().getTime();
 
-    const claude = seats.filter((s) => s.runtime === 'claude-code');
-    const transcripts = await this.index.scan(new Set(claude.map((s) => s.id)));
-    const personal = await skillFolders(join(this.home, '.claude', 'skills'));
-    const placesFor = placesCache(personal, this.exec);
+    const scan = await this.startScan(seats, specs, agentDirs);
     const out: SeatLoadout[] = [];
     const sigs = new Map<string, string>();
     const counts = new Map<string, number | null>();
     const names = new Map<string, string[]>();
 
     for (const seat of seats) {
-      const spec = seat.rig ? specs.get(seat.rig) : undefined;
-      const member = memberOf(spec, seat.logicalId);
-      const agentDir = agentDirs.get(seat.id);
-      const base = {
-        machineId: this.machineId,
-        seat: seat.id,
-        collectedAt: this.now().toISOString(),
-        runtime: seat.runtime,
-        cwd: seat.cwd,
-      };
-      // What OpenRig gave the seat, for every runtime (stripped for a hub without HUB_CAPS.SEAT_SPEC).
-      const given = {
-        topologyRoot: this.topologyRoot,
-        topologyDocs: await readTopologyDocs(seat, this.topologyRoot),
-        member,
-        agentSpec: await agentSpecOf(agentDir, member?.profile ?? null),
-      };
-      const loadout =
-        seat.runtime !== 'claude-code'
-          ? notClaudeLoadout(base, given)
-          : await claudeLoadout({
-              base,
-              given,
-              seat,
-              spec,
-              agentDir,
-              best: await newestListing(this.tracker, transcripts.get(seat.id)),
-              where: seat.cwd ? await placesFor(seat.cwd) : null,
-              personal,
-              topologyRoot: this.topologyRoot,
-            });
-
-      counts.set(seat.id, loadout.listing?.skillCount ?? null);
-      if (loadout.status === 'ok') {
-        names.set(
-          seat.id,
-          loadout.skills.map((k) => k.name)
-        );
-      }
-
+      const loadout = await loadoutFor(seat, scan);
       const sig = signatureOf(loadout);
 
-      if (this.sent.get(seat.id) === sig) {
-        continue;
+      notePill(loadout, counts, names);
+      if (this.sent.get(seat.id) !== sig) {
+        out.push(loadout);
+        sigs.set(seat.id, sig);
       }
-
-      out.push(loadout);
-      sigs.set(seat.id, sig);
     }
 
     this.counts = counts;
     this.names = names;
-    if (out.length === 0) {
-      return null;
-    }
+
+    return out.length === 0
+      ? null
+      : { loadouts: out, markSent: () => sigs.forEach((sig, seat) => this.sent.set(seat, sig)) };
+  }
+
+  /** What this scan shares across its seats: the transcripts found, and a lookup per cwd. */
+  private async startScan(
+    seats: LoadoutSeat[],
+    specs: Map<string, SpecInfo>,
+    agentDirs: Map<string, string>
+  ): Promise<SeatScan> {
+    const claude = seats.filter((s) => s.runtime === 'claude-code');
+    const personal = await skillFolders(join(this.home, '.claude', 'skills'));
 
     return {
-      loadouts: out,
-      markSent: () => sigs.forEach((sig, seat) => this.sent.set(seat, sig)),
+      machineId: this.machineId,
+      now: this.now,
+      topologyRoot: this.topologyRoot,
+      tracker: this.tracker,
+      transcripts: await this.index.scan(new Set(claude.map((s) => s.id))),
+      placesFor: placesCache(personal, this.exec),
+      personal,
+      specs,
+      agentDirs,
     };
   }
 }
