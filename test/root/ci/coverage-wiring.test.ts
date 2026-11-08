@@ -33,4 +33,30 @@ describe('Feature: every workspace with a coverage floor is measured in CI', () 
       expect(config).toMatch(new RegExp(`const UNCOVERED_${measure} = \\d+;`));
     }
   );
+
+  it.each([
+    ['LINES', 319],
+    ['STATEMENTS', 338],
+    ['FUNCTIONS', 69],
+    ['BRANCHES', 367],
+  ])(
+    'Scenario: given the collector config, then UNCOVERED_%s is pinned at %i',
+    (measure, pinned) => {
+      const config = read('collector/vitest.config.ts');
+
+      // Lowering the floor is fine: edit this number and the config together. Raising it is a loosening
+      // that the judge must withdraw; raising it here as well does not make it acceptable.
+      expect(
+        config,
+        `UNCOVERED_${measure} is pinned at ${pinned} in this test. Added tests? Lower it here and in collector/vitest.config.ts in the same PR. Raising it loosens the coverage floor and needs the judge's ruling.`
+      ).toContain(`const UNCOVERED_${measure} = ${pinned};`);
+    }
+  );
+
+  it('Scenario: given the collector config, then coverage measures all of src except tests', () => {
+    const config = read('collector/vitest.config.ts');
+
+    expect(config).toContain("include: ['src/**/*.ts'],");
+    expect(config).toContain("exclude: ['src/**/*.test.ts'],");
+  });
 });
