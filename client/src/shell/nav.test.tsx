@@ -83,6 +83,12 @@ describe('URL parameters', () => {
 });
 
 describe('the URL is the state', () => {
+  // jsdom's history outlives a test, and an earlier history.back() leaves the index mid-stack: the next push
+  // then drops the forward entries, so history.length stops counting pushes. Push first to land on the end.
+  beforeEach(() => {
+    history.pushState(null, '', '/');
+  });
+
   it('a cold open is the Wall with nothing picked, and the banner in the flow', () => {
     renderAt('?v=2');
     // the old version switch is dropped from the address
