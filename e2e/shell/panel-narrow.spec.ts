@@ -4,7 +4,8 @@ import { chooseRigInDrawer, watchErrors } from '@root/e2e/support/fleet';
 // The Agent panel takes ~520 px from the page. With it open, the Run board and the Handoff Flow must
 // still lay out: on the Run board the ledger moves below the job panel, the document tabs keep their
 // own row, the job panel keeps a usable width and the header actions are not clipped; on the Flow the
-// diagram keeps a readable scale and scrolls sideways in its own box. Checked at 1440 and 1100 px.
+// diagram scales to its box down to a readable 640 px and below that scrolls sideways in its own box.
+// Checked at 1440 and 1100 px.
 
 const FROZEN = '/?frozen=busy-2026-10-18&v=2';
 
@@ -77,7 +78,7 @@ for (const width of [1440, 1100]) {
       expect(errors).toEqual([]);
     });
 
-    test('Flow: the diagram keeps a readable scale and scrolls sideways in its own box', async ({
+    test('Flow: the diagram scales to its box down to 640 px, then scrolls sideways in it', async ({
       page,
     }) => {
       const errors = watchErrors(page);
@@ -96,15 +97,23 @@ for (const width of [1440, 1100]) {
         panel.x + 1
       );
 
-      const svgWidth = await scroller.evaluate(
-        (el) => el.querySelector('svg')!.getBoundingClientRect().width
-      );
+      // The drawing scales to its box down to a 640 px floor, then scrolls sideways inside it
+      // (8645aef, V34; the floor was 760 before).
+      const [svgWidth, sw, cw] = await scroller.evaluate((el) => [
+        el.querySelector('svg')!.getBoundingClientRect().width,
+        el.scrollWidth,
+        el.clientWidth,
+      ]);
 
-      expect(svgWidth, 'the drawing never shrinks below 760 px').toBeGreaterThanOrEqual(759);
+      expect(svgWidth, 'the drawing never shrinks below 640 px').toBeGreaterThanOrEqual(639);
 
-      const [sw, cw] = await scroller.evaluate((el) => [el.scrollWidth, el.clientWidth]);
+      if (cw >= 640) {
+        expect(Math.abs(svgWidth - cw), 'a wide box: the drawing fills it').toBeLessThanOrEqual(1);
+        expect(sw, 'a wide box: nothing to scroll').toBeLessThanOrEqual(cw + 1);
+      } else {
+        expect(sw, 'a narrow box: the drawing scrolls sideways inside it').toBeGreaterThan(cw);
+      }
 
-      expect(sw, 'the drawing scrolls sideways inside its box').toBeGreaterThan(cw);
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
       expect(errors).toEqual([]);
     });
