@@ -1490,9 +1490,6 @@
     }
   },
   "collector/src/adapters/dbschema.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-magic-numbers": {
       "count": 4
     }

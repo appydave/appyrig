@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
+import type { DatabaseSync, SQLOutputValue } from 'node:sqlite';
 import {
   DB_CELL_MAX,
   DB_HIDDEN_CELL,
@@ -12,6 +13,7 @@ import {
 } from '@appydave/shared';
 import { redactString } from '@collector/redact.js';
 import { defaultOpenrigDb, openReadOnly } from './dbschema.js';
+import { CountRow, NameRow, parseRow, parseRows } from './narrow/dbRows.js';
 
 /**
  * Batch 1 · B5 (fb-0003): the OpenRig database's rows, read-only, for the schema view.
@@ -50,6 +52,25 @@ export function cellOf(v: unknown): DbCell {
     : s;
 }
 
+/** The newest rows of a table; a WITHOUT ROWID table has no rowid, so its stored order. */
+function newestRows(
+  db: DatabaseSync,
+  table: string
+): { raw: Record<string, SQLOutputValue>[]; order: 'rowid' | null } {
+  try {
+    const raw = db
+      .prepare(`SELECT * FROM ${quote(table)} ORDER BY rowid DESC LIMIT ${DB_ROWS_MAX}`)
+      .all();
+
+    return { raw, order: 'rowid' };
+  } catch {
+    return {
+      raw: db.prepare(`SELECT * FROM ${quote(table)} LIMIT ${DB_ROWS_MAX}`).all(),
+      order: null,
+    };
+  }
+}
+
 export function readAllTableRows(
   machineId: string,
   dbPath: string,
@@ -60,36 +81,28 @@ export function readAllTableRows(
   try {
     db.exec('PRAGMA query_only = ON');
 
-    const tables = (
+    const tables = parseRows(
+      NameRow,
       db
         .prepare(
           "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
         )
-        .all() as { name: string }[]
+        .all(),
+      'table list'
     ).map((t) => t.name);
     const colsOf = db.prepare('SELECT name FROM pragma_table_info(?) ORDER BY cid');
     const out: DbRowsPush[] = [];
 
     for (const table of tables) {
-      const columns = (colsOf.all(table) as { name: string }[]).map((c) => String(c.name));
-      const total = Number(
-        (db.prepare(`SELECT COUNT(*) AS n FROM ${quote(table)}`).get() as { n: number }).n
+      const columns = parseRows(NameRow, colsOf.all(table), `columns of ${table}`).map(
+        (c) => c.name
       );
-      let raw: Record<string, unknown>[];
-      let order: 'rowid' | null = 'rowid';
-
-      try {
-        raw = db
-          .prepare(`SELECT * FROM ${quote(table)} ORDER BY rowid DESC LIMIT ${DB_ROWS_MAX}`)
-          .all() as Record<string, unknown>[];
-      } catch {
-        // WITHOUT ROWID tables have no rowid: their stored order
-        order = null;
-        raw = db.prepare(`SELECT * FROM ${quote(table)} LIMIT ${DB_ROWS_MAX}`).all() as Record<
-          string,
-          unknown
-        >[];
-      }
+      const total = parseRow(
+        CountRow,
+        db.prepare(`SELECT COUNT(*) AS n FROM ${quote(table)}`).get(),
+        `row count of ${table}`
+      ).n;
+      const { raw, order } = newestRows(db, table);
 
       const hidden = columns.filter((c) => DB_SECRET_COLUMN.test(c));
       const rows: DbCell[][] = [];

@@ -248,14 +248,6 @@
       "no-unsafe-dictionary-type": 2,
       "require-safety-comment-for-type-assertion": 13
     },
-    "collector/src/adapters/dbrows.ts": {
-      "no-unsafe-dictionary-type": 3,
-      "require-safety-comment-for-type-assertion": 5
-    },
-    "collector/src/adapters/dbschema.ts": {
-      "no-unsafe-dictionary-type": 2,
-      "require-safety-comment-for-type-assertion": 5
-    },
     "collector/src/adapters/health.ts": {
       "require-safety-comment-for-type-assertion": 3
     },

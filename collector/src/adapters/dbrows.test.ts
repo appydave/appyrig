@@ -159,6 +159,21 @@ describe('B5 DbRowsReader', () => {
     expect((await r.next())?.pushes).toHaveLength(4);
   });
 
+  it('a table whose name is a blob is refused by name, and the reader stays silent', async () => {
+    const path = makeDb();
+    const db = new DatabaseSync(path);
+
+    db.enableDefensive(false);
+    db.exec('PRAGMA writable_schema = ON');
+    db.exec("UPDATE sqlite_master SET name = CAST(name AS BLOB) WHERE name = 'big'");
+    db.close();
+
+    expect(() => readAllTableRows('m2', path, '2026-10-11T12:00:00.000Z')).toThrow(
+      'unexpected table list row from the OpenRig database: name=(blob 3 bytes)'
+    );
+    expect(await new DbRowsReader('m2', path, () => new Date(60_000)).next()).toBeNull();
+  });
+
   it('no database: nothing to send', async () => {
     expect(
       await new DbRowsReader('m2', '/nope/openrig.sqlite', () => new Date(60_000)).next()
