@@ -20,7 +20,7 @@ const unavailable = <T>(reason: string): Reading<T> => ({
 
 // ── parsers (pure) ─────────────────────────────────────────────────────────────────────────────
 
-export function parseSysctl(text: string): Map<string, string> {
+function parseSysctl(text: string): Map<string, string> {
   const out = new Map<string, string>();
 
   for (const line of text.split('\n')) {
@@ -35,7 +35,7 @@ export function parseSysctl(text: string): Map<string, string> {
 }
 
 /** hw.memsize → bytes. */
-export function parseMemsize(v: string | undefined): number | null {
+function parseMemsize(v: string | undefined): number | null {
   const n = Number(v);
 
   return Number.isFinite(n) && n > 0 ? Math.round(n) : null;

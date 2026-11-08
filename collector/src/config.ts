@@ -110,7 +110,7 @@ export function specFoldersOf(env: NodeJS.ProcessEnv, readFile: (p: string) => s
  * The folders a rig's MISSION.md may name spec files under: `APPYRIG_MISSION_ROOTS` (colon-separated),
  * else `missionRoots` from AppyRig's config file, else `~/dev`. A broken file falls back to the default.
  */
-export function missionRootsOf(env: NodeJS.ProcessEnv, readFile: (p: string) => string): string[] {
+function missionRootsOf(env: NodeJS.ProcessEnv, readFile: (p: string) => string): string[] {
   const fromEnv = env.APPYRIG_MISSION_ROOTS?.split(':')
     .map((x) => x.trim())
     .filter(Boolean);

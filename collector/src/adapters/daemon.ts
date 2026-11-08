@@ -54,7 +54,7 @@ export function parsePs(raw: unknown): RigSummary[] {
 }
 
 /** D4: stopped when the session is not running; blocked when anyone needs input; else the oracle. */
-export function deriveStatus(node: LenientNodeT): {
+function deriveStatus(node: LenientNodeT): {
   status: SeatStatus;
   blockedReason: string | null;
 } {
@@ -88,7 +88,7 @@ export function deriveStatus(node: LenientNodeT): {
 }
 
 /** A non-empty string cut to `max`, else undefined: the collector omits what it cannot say. */
-export function optText(v: unknown, max: number): string | undefined {
+function optText(v: unknown, max: number): string | undefined {
   if (typeof v !== 'string') {
     return undefined;
   }
@@ -98,7 +98,7 @@ export function optText(v: unknown, max: number): string | undefined {
   return t ? t.slice(0, max) : undefined;
 }
 
-export function nodeToSeat(node: LenientNodeT): Seat {
+function nodeToSeat(node: LenientNodeT): Seat {
   const { status, blockedReason } = deriveStatus(node);
   const a = node.activityState;
   const g = node.recoveryGuidance;

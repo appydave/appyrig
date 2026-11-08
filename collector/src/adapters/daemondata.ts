@@ -79,11 +79,11 @@ interface Outcome {
 
 // ── lenient helpers ────────────────────────────────────────────────────────────────────────────
 
-export const isRec = (v: unknown): v is Record<string, unknown> =>
+const isRec = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
 /** A non-empty string cut to `max`, else null. `redact` for free text. */
-export function txt(v: unknown, max: number, redact = false): string | null {
+function txt(v: unknown, max: number, redact = false): string | null {
   if (typeof v !== 'string') {
     return null;
   }
@@ -93,12 +93,11 @@ export function txt(v: unknown, max: number, redact = false): string | null {
   return t ? t.slice(0, max) : null;
 }
 
-export const num = (v: unknown): number | null =>
-  typeof v === 'number' && Number.isFinite(v) ? v : null;
+const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 
-export const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
+const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
 
-export const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
 /** True for the error `sources.ts` throws on a non-2xx reply of 404. */
 export const isNotFound = (e: unknown): boolean => /HTTP 404\b/.test(errorMessage(e));
@@ -388,7 +387,7 @@ export function parseLibraryPacks(raw: unknown): LibraryRow[] {
 // ── step 4: queue transitions ──────────────────────────────────────────────────────────────────
 
 /** The daemon's page size cap for the telemetry streams is 128 (limit above it is a 400). */
-export const TRANSITIONS_PAGE = 128;
+const TRANSITIONS_PAGE = 128;
 
 /** Pages read per round, so the first read of a long history is spread over a few rounds. */
 const TRANSITIONS_PAGES_PER_ROUND = 12;
@@ -422,7 +421,7 @@ export function parseTransitionRow(r: unknown): TransitionRow | null {
 }
 
 /** What a page of GET /api/telemetry/v1/queue-transitions carries that the reader needs. */
-export function parseTransitionsPage(raw: unknown): {
+function parseTransitionsPage(raw: unknown): {
   rows: TransitionRow[];
   nextCursor: string | null;
   hasMore: boolean;
@@ -585,7 +584,7 @@ export function parseHealthFindings(
   };
 }
 
-export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
+function parseHealthPolicy(raw: unknown): HealthData['policy'] {
   if (!isRec(raw) || !isRec(raw.policy)) {
     throw new Error('health policy: expected {policy}');
   }
@@ -614,7 +613,7 @@ export function parseHealthPolicy(raw: unknown): HealthData['policy'] {
   };
 }
 
-export function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
+function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
   if (!isRec(raw)) {
     throw new Error('health summary: expected a JSON object');
   }
@@ -627,7 +626,7 @@ export function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
   };
 }
 
-export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
+function parseRestoreCheck(raw: unknown): HealthData['restore'] {
   if (!isRec(raw)) {
     throw new Error('restore check: expected a JSON object');
   }
@@ -642,7 +641,7 @@ export function parseRestoreCheck(raw: unknown): HealthData['restore'] {
   };
 }
 
-export function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
+function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
   if (!isRec(raw)) {
     throw new Error('healthz: expected a JSON object');
   }
@@ -800,7 +799,7 @@ export interface DaemonDataOptions {
   kinds?: DaemonKind[];
 }
 
-export const DAEMON_DATA_EVERY_MS: Record<DaemonKind, number> = {
+const DAEMON_DATA_EVERY_MS: Record<DaemonKind, number> = {
   seatdetail: 60_000,
   library: 5 * 60_000,
   transitions: 20_000,

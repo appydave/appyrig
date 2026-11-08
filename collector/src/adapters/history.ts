@@ -188,7 +188,8 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
 }
 
 /** How much of a transcript's start is read to find its seat title, and how many lines of it. */
-export const TITLE_HEAD_BYTES = 64 * 1024;
+const TITLE_HEAD_BYTES = 64 * 1024;
+
 export const TITLE_HEAD_LINES = 20;
 
 /**
@@ -228,7 +229,7 @@ async function seatOfFile(path: string): Promise<string | null> {
 }
 
 /** How much of a transcript's end is read for its newest event (F3). */
-export const TAIL_EVENT_BYTES = 256 * 1024;
+const TAIL_EVENT_BYTES = 256 * 1024;
 
 /**
  * F3 (truth #6): the newest event `timestamp` in a transcript's tail, in ms; null when it has none.

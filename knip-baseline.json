@@ -20,54 +20,8 @@
       "client/src/test/msw/server.ts": {
         "files": 1
       },
-      "collector/src/adapters/account.ts": {
-        "exports": 1
-      },
-      "collector/src/adapters/daemon.ts": {
-        "exports": 3
-      },
-      "collector/src/adapters/daemondata.ts": {
-        "exports": 12
-      },
-      "collector/src/adapters/dbrows.ts": {
-        "exports": 1
-      },
-      "collector/src/adapters/health.ts": {
-        "exports": 2
-      },
-      "collector/src/adapters/history.ts": {
-        "exports": 2
-      },
-      "collector/src/adapters/missionfiles.ts": {
-        "exports": 2
-      },
-      "collector/src/adapters/openrigShapes.ts": {
-        "exports": 6,
-        "types": 1
-      },
-      "collector/src/adapters/rigcommands.ts": {
-        "exports": 2
-      },
-      "collector/src/adapters/rigspecs.ts": {
-        "exports": 1
-      },
-      "collector/src/adapters/specs.ts": {
-        "exports": 1
-      },
-      "collector/src/builder.ts": {
-        "exports": 2
-      },
-      "collector/src/config.ts": {
-        "exports": 1
-      },
       "collector/src/install.test.ts": {
         "binaries": 1
-      },
-      "collector/src/pusher.ts": {
-        "exports": 2
-      },
-      "collector/src/redact.ts": {
-        "exports": 2
       },
       "e2e/support/global-teardown.ts": {
         "exports": 1
@@ -313,18 +267,18 @@
         "exports": 1
       },
       "collector/src/adapters/account.ts": {
-        "exports": 3,
+        "exports": 2,
         "types": 1
       },
       "collector/src/adapters/daemon.ts": {
-        "exports": 4
+        "exports": 1
       },
       "collector/src/adapters/daemondata.ts": {
-        "exports": 24,
+        "exports": 12,
         "types": 1
       },
       "collector/src/adapters/dbrows.ts": {
-        "exports": 2
+        "exports": 1
       },
       "collector/src/adapters/dbschema.ts": {
         "exports": 3
@@ -333,11 +287,11 @@
         "files": 1
       },
       "collector/src/adapters/health.ts": {
-        "exports": 8,
+        "exports": 6,
         "types": 1
       },
       "collector/src/adapters/history.ts": {
-        "exports": 9
+        "exports": 7
       },
       "collector/src/adapters/index.ts": {
         "exports": 10
@@ -347,21 +301,21 @@
         "types": 3
       },
       "collector/src/adapters/missionfiles.ts": {
-        "exports": 6,
+        "exports": 4,
         "types": 2
       },
       "collector/src/adapters/openrigShapes.ts": {
-        "exports": 12,
-        "types": 2
+        "exports": 6,
+        "types": 1
       },
       "collector/src/adapters/rigcommands.ts": {
-        "exports": 6
+        "exports": 4
       },
       "collector/src/adapters/rigfiles.ts": {
         "exports": 5
       },
       "collector/src/adapters/rigspecs.ts": {
-        "exports": 2
+        "exports": 1
       },
       "collector/src/adapters/seatcard.ts": {
         "exports": 1
@@ -370,25 +324,22 @@
         "exports": 1
       },
       "collector/src/adapters/specs.ts": {
-        "exports": 3
+        "exports": 2
       },
       "collector/src/adapters/tmux.ts": {
         "exports": 1
       },
       "collector/src/builder.ts": {
-        "exports": 5
+        "exports": 3
       },
       "collector/src/config.ts": {
-        "exports": 2
+        "exports": 1
       },
       "collector/src/index.ts": {
         "exports": 1
       },
       "collector/src/pusher.ts": {
-        "exports": 3
-      },
-      "collector/src/redact.ts": {
-        "exports": 2
+        "exports": 1
       },
       "collector/src/snapshotCases.ts": {
         "files": 1

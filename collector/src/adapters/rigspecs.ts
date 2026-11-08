@@ -61,11 +61,7 @@ function agentPlace(ref: string, spec: SpecInfo): { file: string; within: string
 /** Most bytes of an agent.yaml read. */
 const AGENT_YAML_MAX = 256 * 1024;
 
-export async function readSpecAgent(
-  ref: string,
-  spec: SpecInfo,
-  usedBy: string[]
-): Promise<SpecAgent> {
+async function readSpecAgent(ref: string, spec: SpecInfo, usedBy: string[]): Promise<SpecAgent> {
   const base = { ref: redactString(ref).slice(0, 500), usedBy: usedBy.slice(0, 200) };
 
   if (ref === 'builtin:terminal') {

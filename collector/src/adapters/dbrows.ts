@@ -26,7 +26,7 @@ import { CountRow, NameRow, parseRow, parseRows } from './narrow/dbRows.js';
 
 const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
-export function cellOf(v: unknown): DbCell {
+function cellOf(v: unknown): DbCell {
   if (v === null || v === undefined) {
     return null;
   }

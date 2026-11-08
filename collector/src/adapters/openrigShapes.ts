@@ -17,9 +17,9 @@ const num = z.number();
 const bool = z.boolean();
 const loose = z.looseObject({});
 
-export const NeedsInputStrict = z.strictObject({ count: z.number().int(), reason: strN });
+const NeedsInputStrict = z.strictObject({ count: z.number().int(), reason: strN });
 
-export const ActivityStateStrict = z.strictObject({
+const ActivityStateStrict = z.strictObject({
   activity: str,
   display: str,
   needsInput: NeedsInputStrict,
@@ -28,7 +28,7 @@ export const ActivityStateStrict = z.strictObject({
   lastSwap: z.unknown().nullable(),
 });
 
-export const ContextUsageStrict = z.strictObject({
+const ContextUsageStrict = z.strictObject({
   availability: str,
   reason: strN,
   source: strN,
@@ -45,14 +45,14 @@ export const ContextUsageStrict = z.strictObject({
   fresh: bool,
 });
 
-export const TranscriptIngestStrict = z.strictObject({
+const TranscriptIngestStrict = z.strictObject({
   state: str,
   reason: str,
   lastCapturedAt: str,
   runtime: str,
 });
 
-export const AgentActivityStrict = z.strictObject({
+const AgentActivityStrict = z.strictObject({
   state: str,
   reason: strN,
   evidenceSource: str,
@@ -68,7 +68,7 @@ export const AgentActivityStrict = z.strictObject({
   generationProvenance: str.optional(),
 });
 
-export const RecoveryGuidanceStrict = z.strictObject({ summary: str, action: str });
+const RecoveryGuidanceStrict = z.strictObject({ summary: str, action: str });
 
 /** One entry of GET /api/rigs/:id/nodes. */
 export const NodeStrict = z.strictObject({
@@ -126,7 +126,6 @@ export const NodeStrict = z.strictObject({
   blockedWorkCount: z.number().int(),
   hostSelfId: str,
 });
-export type OpenRigNodeStrict = z.infer<typeof NodeStrict>;
 
 /** One entry of GET /api/ps. */
 export const PsRowStrict = z.strictObject({
