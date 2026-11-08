@@ -25,6 +25,7 @@ import type { CallAnswer, CoreCallRequest } from './verbs.js';
  *   - A browser gets a session cookie (SESSION_COOKIE) by visiting `/?token=<hub token>` once.
  *     HTTP routes and the `/` socket are refused without that cookie, except the open API doors
  *     (`/v1/docs`, `/v1/openrpc.json`, `/v1/health`), which carry no fleet data.
+ *   - The `/` socket also refuses a foreign `Origin` (AUTH_ERRORS.browserOrigin), cookie or not.
  */
 
 export const SOCKET_NAMESPACES = {
@@ -72,6 +73,7 @@ export const TOKEN_QUERY_PARAM = 'token';
 export const AUTH_ERRORS = {
   collectorToken: 'collector token missing or invalid',
   browserSession: 'browser session missing or invalid',
+  browserOrigin: 'browser origin not allowed',
 } as const;
 
 /** `auth` payload a collector passes to `io(url + '/collector', { auth })`. */

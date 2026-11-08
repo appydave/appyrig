@@ -389,6 +389,68 @@ describe('AC 18 — browser auth', () => {
   });
 });
 
+describe('C92 — the browser socket checks Origin (audit CQ-S1)', () => {
+  const HUB = '100.126.70.25:7191';
+
+  it.each([
+    ['another site', 'https://evil.example'],
+    ['the same host on another port', 'http://127.0.0.1:1234'],
+    ['the literal null (sandboxed frame)', 'null'],
+  ])('refuses %s, even with a valid session cookie', async (_name, origin) => {
+    const h = await start();
+    const err = await connectError(h.browser(COOKIE, { origin }));
+
+    expect(err.message).toBe(AUTH_ERRORS.browserOrigin);
+  });
+
+  it("accepts the hub's own origin", async () => {
+    const h = await start();
+
+    expect((await nextUpdate(h.browser(COOKIE, { origin: h.url }))).full).toBe(true);
+  });
+
+  it('same-origin holds whatever address reaches the hub, and only on that port', async () => {
+    const h = await start();
+    const page = (origin: string) => h.browser(COOKIE, { host: HUB, origin });
+
+    expect((await nextUpdate(page(`http://${HUB}`))).full).toBe(true);
+    expect((await connectError(page('http://100.126.70.25:7190'))).message).toBe(
+      AUTH_ERRORS.browserOrigin
+    );
+  });
+
+  it('accepts the dev client (clientUrl)', async () => {
+    const h = await start({ clientUrl: 'http://localhost:7190' });
+    const browser = h.browser(COOKIE, { origin: 'http://localhost:7190' });
+
+    expect((await nextUpdate(browser)).full).toBe(true);
+  });
+
+  it('no Origin (a same-origin polling GET) goes on to the cookie check, which still decides', async () => {
+    const h = await start();
+
+    expect((await nextUpdate(h.browser())).full).toBe(true);
+    expect((await connectError(h.browser(''))).message).toBe(AUTH_ERRORS.browserSession);
+  });
+
+  it('an allowed Origin does not stand in for the session', async () => {
+    const h = await start();
+    const err = await connectError(h.browser('', { origin: h.url }));
+
+    expect(err.message).toBe(AUTH_ERRORS.browserSession);
+  });
+
+  it('a collector still connects on its own namespace', async () => {
+    const h = await start();
+    const ack = await push(
+      h.collector({ token: TOKEN, machineId: 'roamy' }),
+      loadSnapshot('roamy')
+    );
+
+    expect(ack.ok).toBe(true);
+  });
+});
+
 describe('S8 — disk store: a restarted hub shows last-known state at once', () => {
   it('writes data/snapshots/<machine>.json and a new hub loads it with its real lastSeen', async () => {
     const dataDir = tempDir();

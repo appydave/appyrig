@@ -240,7 +240,7 @@
     "server/src/hub/accounts.ts::windowOf": 52,
     "server/src/hub/collectorIngest.ts::attachCollectorIngest": 151,
     "server/src/hub/collectorIngest.ts::attachCollectorIngest>callback": 132,
-    "server/src/hub/createHub.ts::createHub": 189,
+    "server/src/hub/createHub.ts::createHub": 187,
     "server/src/hub/fleetStore.ts::load": 55,
     "server/src/hub/fleetStore.ts::loadHandoffs": 45,
     "server/src/hub/fleetStore.ts::putHandoffs": 60,
