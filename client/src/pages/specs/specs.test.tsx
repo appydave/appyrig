@@ -236,6 +236,23 @@ describe('N10: the Rig specs page', () => {
     expect(ctx.goTo).toHaveBeenCalledWith('map');
   });
 
+  it('a pick made the instant the list appears is kept, not replaced by the default first spec', async () => {
+    const { launched } = setup(() => ({ machines: [], commands: [] }));
+
+    // Click inside the poll that first sees the rows: that is before the default-pick effect has flushed.
+    await waitFor(() => {
+      const items = screen.getAllByTestId('rs-item');
+
+      expect(items).toHaveLength(2);
+      fireEvent.click(items[1]!);
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    expect(screen.getByTestId('rs-detail-name')).toHaveTextContent(launched.name);
+  });
+
   it('the rig focused in the Rigs drawer is the one selected here', async () => {
     const m2 = fleetMachine(snapshot('m2'));
     const launched = m2.snapshot.rigs[0]!;
