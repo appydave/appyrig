@@ -24,6 +24,26 @@ export interface SeatFlags {
   failing: boolean;
 }
 
+/** Up and not waiting on a person: neither blocked on a prompt nor stopped. */
+const isUp = (pip: string) => pip !== 'blocked' && pip !== 'stopped';
+
+/** Work waits, the seat is not working it, and its agent has been quiet for STUCK_AFTER_MS. */
+function waitsAndIdle(seat: Seat, pip: string, now: number): boolean {
+  const open = seat.work.pending + seat.work.inProgress + seat.work.blocked;
+  const at = agentActivityOf(seat);
+  const quiet = at ? now - Date.parse(at) > STUCK_AFTER_MS : false;
+
+  return pip !== 'working' && open > 0 && quiet;
+}
+
+/**
+ * Failing is a seat that is down (stopped while its rig runs, or stopped and flagged by OpenRig).
+ * A running seat OpenRig flags for attention is "stuck": it is up but needs a look.
+ */
+function isFailing(seat: Seat, rigRunning: boolean): boolean {
+  return seat.status === 'stopped' && (seat.lifecycleState === 'attention_required' || rigRunning);
+}
+
 export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags {
   if (fm.liveness === 'asleep') {
     return { needs: false, stuck: false, failing: false };
@@ -32,16 +52,8 @@ export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags 
   const pip = pipFor(seat, fm);
   const rig = seat.rig ? fm.snapshot.rigs.find((r) => r.name === seat.rig) : undefined;
   const attention = seat.lifecycleState === 'attention_required';
-  // Failing is a seat that is down (stopped while its rig runs, or stopped and flagged by OpenRig).
-  // A running seat OpenRig flags for attention is "stuck": it is up but needs a look.
-  const failing = seat.status === 'stopped' && (attention || rig?.status === 'running');
-  const open = seat.work.pending + seat.work.inProgress + seat.work.blocked;
-  const at = agentActivityOf(seat);
-  const quiet = at ? now - Date.parse(at) > STUCK_AFTER_MS : false;
-  const stuck =
-    pip !== 'blocked' &&
-    pip !== 'stopped' &&
-    (attention || seat.work.blocked > 0 || (pip !== 'working' && open > 0 && quiet));
+  const failing = isFailing(seat, rig?.status === 'running');
+  const stuck = isUp(pip) && (attention || seat.work.blocked > 0 || waitsAndIdle(seat, pip, now));
 
   return { needs: pip === 'blocked', stuck, failing };
 }
