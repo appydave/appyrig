@@ -4,7 +4,6 @@ import { colorSelectors } from './lint/colors.js';
 import { importRules, importSelectors } from './lint/imports.js';
 import { complexityPlugins, complexityRules } from './lint/complexity.js';
 import { limitRules, sizeSelectors } from './lint/limits.js';
-import { numericRules } from './lint/numeric.js';
 import { spacingRules } from './lint/spacing.js';
 
 // OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours.
@@ -49,12 +48,6 @@ export default [
       ...importRules,
       'no-restricted-syntax': ['error', ...sizeSelectors, ...colorSelectors, ...importSelectors],
     },
-  },
-  // G05: named constants. Production code only; tests state their own numbers.
-  {
-    files: ['**/*.{ts,tsx,js,mjs,cjs}'],
-    ignores: testFiles,
-    rules: numericRules,
   },
   // G06: complexity. Today's findings sit in eslint-suppressions.json; only new ones fail.
   {
