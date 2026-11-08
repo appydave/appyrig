@@ -112,5 +112,6 @@ describe('FleetStore liveness changes (logged by the hub, so AC 6 is visible in 
     expect(changes).toEqual([]); // loading is not a change; the hub logs what it loaded separately
     restarted.put(loadSnapshot('roamy'));
     expect(changes.map((c) => `${c.from} -> ${c.to}`)).toEqual(['asleep -> live']);
+    await restarted.flush(); // put() starts a write; afterEach must not remove the dir under it
   });
 });
