@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import type { FleetMachine, QueueItem } from '@appydave/shared';
-import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import type { FleetMachine } from '@appydave/shared';
+import { FLOW_RIG, flowItem, flowMachine } from '@client/test/queueFixtures.js';
 import { page as flowPage } from './index.js';
 import { rigPageCtx } from '@client/pages/page-test-kit.js';
 
@@ -11,41 +11,17 @@ import { rigPageCtx } from '@client/pages/page-test-kit.js';
  * panel holds its text, and the consoles follow the handoff unless pinned.
  */
 
-const T0 = Date.parse('2026-10-18T09:00:00.000Z');
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
-const RIG = 'fliedit-team';
+const RIG = FLOW_RIG;
 const LONG = 'A much longer brief: '.repeat(12);
 
-function q(id: string, from: string, to: string, min: number, summary: string): QueueItem {
-  const at = new Date(T0 + min * 60_000).toISOString();
-
-  return {
-    id,
-    source: `${from}@${RIG}`,
-    destination: `${to}@${RIG}`,
-    state: 'done',
-    priority: null,
-    tags: [],
-    summary,
-    createdAt: at,
-    updatedAt: new Date(T0 + (min + 2) * 60_000).toISOString(),
-  };
-}
-
-function fleet(): FleetMachine[] {
-  const fm = fleetMachine(snapshot('m2'));
-
-  fm.snapshot = {
-    ...fm.snapshot,
-    queue: [
-      q('s1', 'orch-lead', 'dev-overlay', 0, 'Short brief'),
-      q('s2', 'dev-overlay', 'dev-qa', 5, LONG),
-      q('s3', 'dev-qa', 'review-r1', 10, 'QA passed'),
-    ],
-  };
-
-  return [fm];
-}
+const fleet = (): FleetMachine[] => [
+  flowMachine([
+    flowItem('s1', { from: 'orch-lead', to: 'dev-overlay', min: 0, summary: 'Short brief' }),
+    flowItem('s2', { from: 'dev-overlay', to: 'dev-qa', min: 5, summary: LONG }),
+    flowItem('s3', { from: 'dev-qa', to: 'review-r1', min: 10, summary: 'QA passed' }),
+  ]),
+];
 
 const ctxFor = (machines: FleetMachine[]) => rigPageCtx(machines, RIG, NOW);
 
