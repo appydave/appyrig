@@ -11,7 +11,12 @@ import {
 import { statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { SEAT_DOC_MAX_BYTES, SeatLoadoutSchema } from '@appydave/shared';
+import {
+  SEAT_DOC_MAX_BYTES,
+  SeatLoadoutSchema,
+  TOPOLOGY_DOCS_MAX,
+  TOPOLOGY_DOC_MAX_BYTES,
+} from '@appydave/shared';
 import {
   classifySkills,
   foldListing,
@@ -955,5 +960,103 @@ describe('what OpenRig gave the seat: topology chain files, member spec, AgentSp
     expect(claude!.topologyDocs).toMatchObject([{ altitude: 'seat', name: 'LEARNED.md' }]);
     expect(claude!.layers.find((l) => l.id === 'learned')).toMatchObject({ present: true });
     expect(codex).toMatchObject({ status: 'not-claude', member: null, agentSpec: null });
+  });
+});
+
+describe('reading a document file: the edges (pinned before the readers were split)', () => {
+  const seat = (cwd: string | null): LoadoutSeat => ({
+    id: 'dev-build@demo',
+    rig: 'demo',
+    runtime: 'claude-code',
+    cwd,
+    logicalId: 'dev.build',
+  });
+  const find = async (cwd: string, id: string, topo: string | null = null) =>
+    (await readSeatDocs(seat(cwd), undefined, undefined, topo)).find((l) => l.id === id);
+
+  it('a binary file or a folder where a file should be is absent, not read', async () => {
+    const cwd = tmp();
+
+    writeFileSync(join(cwd, 'CLAUDE.md'), Buffer.from([0x23, 0x20, 0x00, 0x41]));
+    mkdirSync(join(cwd, 'CLAUDE.local.md'));
+
+    expect(await find(cwd, 'claude-md')).toMatchObject({ present: false, content: null });
+    expect(await find(cwd, 'claude-local')).toMatchObject({ present: false, content: null });
+  });
+
+  it('a found file lists the place it was read from; an absent one adds why', async () => {
+    const cwd = tmp();
+
+    put(join(cwd, 'CLAUDE.md'), '# hi\n');
+
+    expect(await find(cwd, 'claude-md')).toMatchObject({
+      present: true,
+      looked: [join(cwd, 'CLAUDE.md')],
+    });
+    expect(await find(cwd, 'recap')).toMatchObject({
+      present: false,
+      looked: ['(no OpenRig topology root on this machine)'],
+    });
+    expect(
+      (await readSeatDocs({ ...seat(cwd), id: 'plain' }, undefined, undefined, tmp())).find(
+        (l) => l.id === 'learned'
+      )?.looked
+    ).toEqual(['(this seat has no <member>@<rig> session name, so no topology seat folder)']);
+  });
+
+  it('a topology file is capped at its own, smaller limit and redacted', async () => {
+    const topo = tmp();
+    const dir = join(topo, 'rigs', 'demo', 'seats', 'dev-build');
+    const text = 'some words. '.repeat(Math.ceil(TOPOLOGY_DOC_MAX_BYTES / 12) + 10);
+
+    put(join(dir, 'LEARNED.md'), text);
+    put(join(dir, 'CRAFT.md'), 'token: sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n');
+
+    const docs = await readTopologyDocs(seat(null), topo);
+    const learned = docs.find((d) => d.name === 'LEARNED.md');
+
+    expect(learned).toMatchObject({ truncated: true, bytes: text.length });
+    expect(learned?.content.length).toBe(TOPOLOGY_DOC_MAX_BYTES);
+    expect(docs.find((d) => d.name === 'CRAFT.md')?.content).not.toContain('sk-ant-api03');
+  });
+
+  it('stops at TOPOLOGY_DOCS_MAX files, root first, so the last seat file is the one dropped', async () => {
+    const topo = tmp();
+    const dirs = ['', 'rigs/demo', 'rigs/demo/pods/dev', 'rigs/demo/seats/dev-build'];
+
+    for (const d of dirs) {
+      for (const n of [
+        'LEARNED.md',
+        'CRAFT.md',
+        'ORCHESTRATION-CRAFT.md',
+        'CULTURE.md',
+        'RECAP.md',
+      ]) {
+        if (n !== 'RECAP.md' || d.endsWith('dev-build')) {
+          put(join(topo, d, n), `# ${d} ${n}\n`);
+        }
+      }
+    }
+
+    const docs = await readTopologyDocs(seat(null), topo);
+
+    expect(docs).toHaveLength(TOPOLOGY_DOCS_MAX);
+    expect(docs.at(-1)).toMatchObject({ altitude: 'seat', name: 'CULTURE.md' });
+  });
+});
+
+describe('listingOfLine: field fallbacks', () => {
+  it('drops empty names, and keeps a reported skillCount that disagrees with the names', () => {
+    const line = JSON.stringify({
+      type: 'attachment',
+      timestamp: '2026-10-11T11:18:09.715Z',
+      attachment: { type: 'skill_listing', skillCount: 307, names: ['a', '', 7, 'b'] },
+    });
+
+    expect(listingOfLine(line)).toMatchObject({
+      skillCount: 307,
+      isInitial: false,
+      names: ['a', 'b'],
+    });
   });
 });

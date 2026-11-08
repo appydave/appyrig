@@ -117,6 +117,16 @@ export function foldListing(cur: ShownSkills | null, l: SkillListing): ShownSkil
   };
 }
 
+/** A timestamp as ISO text, or null when it is not a date. */
+function isoOf(v: unknown): string | null {
+  return typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
+}
+
+const numberOr = (v: unknown, fallback: number): number => (typeof v === 'number' ? v : fallback);
+
+const namesOf = (v: unknown): string[] =>
+  Array.isArray(v) ? v.filter((n): n is string => typeof n === 'string' && n.length > 0) : [];
+
 /** The listing on one transcript line, or null when the line is anything else. */
 export function listingOfLine(line: string): SkillListing | null {
   if (!line.includes('"skill_listing"')) {
@@ -130,22 +140,17 @@ export function listingOfLine(line: string): SkillListing | null {
       attachment?: { type?: unknown; skillCount?: unknown; isInitial?: unknown; names?: unknown };
     };
     const a = d.attachment;
+    const at = isoOf(d.timestamp);
 
-    if (d.type !== 'attachment' || !a || a.type !== 'skill_listing') {
+    if (d.type !== 'attachment' || !a || a.type !== 'skill_listing' || !at) {
       return null;
     }
 
-    if (typeof d.timestamp !== 'string' || Number.isNaN(Date.parse(d.timestamp))) {
-      return null;
-    }
-
-    const names = Array.isArray(a.names)
-      ? a.names.filter((n): n is string => typeof n === 'string' && n.length > 0)
-      : [];
+    const names = namesOf(a.names);
 
     return {
-      at: new Date(d.timestamp).toISOString(),
-      skillCount: typeof a.skillCount === 'number' ? a.skillCount : names.length,
+      at,
+      skillCount: numberOr(a.skillCount, names.length),
       isInitial: a.isInitial === true,
       names,
     };
@@ -381,23 +386,28 @@ interface DocSpot {
   within: string;
 }
 
-async function readDocFile(
-  spot: DocSpot,
-  maxBytes = SEAT_DOC_MAX_BYTES
-): Promise<{ path: string; text: string; bytes: number; mtime: Date; truncated: boolean } | null> {
-  let real: string;
-  let within: string;
+interface DocFile {
+  path: string;
+  text: string;
+  bytes: number;
+  mtime: Date;
+  truncated: boolean;
+}
 
+/** The real path of a doc spot, or null: absent, a broken link, no permission, outside its folder, not a file. */
+async function realDocPath(spot: DocSpot): Promise<string | null> {
   try {
-    real = await realpath(spot.path);
-    within = await realpath(spot.within);
-    if (!isUnder(dirname(real), within) || !(await lstat(real)).isFile()) {
-      return null;
-    }
-  } catch {
-    return null; // absent, a broken link, or no permission
-  }
+    const real = await realpath(spot.path);
+    const within = await realpath(spot.within);
 
+    return isUnder(dirname(real), within) && (await lstat(real)).isFile() ? real : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Up to `maxBytes` of a file as text; null when unreadable or binary. */
+async function readCapped(real: string, maxBytes: number): Promise<Omit<DocFile, 'path'> | null> {
   let fh;
 
   try {
@@ -414,7 +424,6 @@ async function readDocFile(
     } // binary
 
     return {
-      path: spot.path,
       text: slice.toString('utf8'),
       bytes: st.size,
       mtime: st.mtime,
@@ -425,6 +434,41 @@ async function readDocFile(
   } finally {
     await fh?.close();
   }
+}
+
+async function readDocFile(spot: DocSpot, maxBytes = SEAT_DOC_MAX_BYTES): Promise<DocFile | null> {
+  const real = await realDocPath(spot);
+  const r = real ? await readCapped(real, maxBytes) : null;
+
+  return r && { path: spot.path, ...r };
+}
+
+function presentDoc(id: SeatDocId, r: DocFile, spots: DocSpot[]): SeatDoc {
+  return {
+    id,
+    name: basename(r.path),
+    present: true,
+    path: r.path,
+    looked: spots.map((s) => s.path),
+    bytes: r.bytes,
+    modifiedAt: r.mtime.toISOString(),
+    truncated: r.truncated,
+    content: redactString(r.text),
+  };
+}
+
+function absentDoc(id: SeatDocId, name: string, looked: string[]): SeatDoc {
+  return {
+    id,
+    name,
+    present: false,
+    path: null,
+    looked,
+    bytes: null,
+    modifiedAt: null,
+    truncated: false,
+    content: null,
+  };
 }
 
 /** The first of `spots` that exists, as a seat document; absent (with where it looked) when none does. */
@@ -438,31 +482,11 @@ async function doc(
     const r = await readDocFile(spot);
 
     if (r) {
-      return {
-        id,
-        name: basename(r.path),
-        present: true,
-        path: r.path,
-        looked: spots.map((s) => s.path),
-        bytes: r.bytes,
-        modifiedAt: r.mtime.toISOString(),
-        truncated: r.truncated,
-        content: redactString(r.text),
-      };
+      return presentDoc(id, r, spots);
     }
   }
 
-  return {
-    id,
-    name,
-    present: false,
-    path: null,
-    looked: [...spots.map((s) => s.path), ...notes].slice(0, 8),
-    bytes: null,
-    modifiedAt: null,
-    truncated: false,
-    content: null,
-  };
+  return absentDoc(id, name, [...spots.map((s) => s.path), ...notes].slice(0, 8));
 }
 
 /** A plain file name (no folders, no dots-only), as rig.yaml `culture_file` should be. */
@@ -537,48 +561,70 @@ export function topologyRootOf(env: NodeJS.ProcessEnv, home: string = homedir())
   );
 }
 
+/** Where a layer's files are looked for, and why the list is empty when it is. */
+interface Spots {
+  at: (name: string) => DocSpot[];
+  why: string[];
+}
+
+function cwdSpots(cwd: string | null): Spots {
+  return {
+    at: (name) => (cwd ? [{ path: join(cwd, name), within: cwd }] : []),
+    why: cwd ? [] : ['(the daemon reports no folder for this seat)'],
+  };
+}
+
+function specSpots(spec: SpecInfo | undefined): Spots {
+  const specDir = spec ? dirname(spec.path) : null;
+
+  return {
+    at: (name) => (specDir && spec ? [{ path: join(specDir, name), within: spec.root }] : []),
+    why: specDir ? [] : ['(no rig.yaml found for this rig in the configured spec folders)'],
+  };
+}
+
+/** The seat's folder on OpenRig's topology tree. */
+function seatSpots(seat: LoadoutSeat, topologyRoot: string | null): Spots {
+  const seatName = topologySeatName(seat);
+  const seatDir =
+    topologyRoot && seat.rig && seatName
+      ? join(topologyRoot, OpenRig.topologyDir({ altitude: 'seat', rig: seat.rig, seat: seatName }))
+      : null;
+  const missing = topologyRoot
+    ? '(this seat has no <member>@<rig> session name, so no topology seat folder)'
+    : '(no OpenRig topology root on this machine)';
+
+  return {
+    at: (name) =>
+      seatDir && topologyRoot ? [{ path: join(seatDir, name), within: topologyRoot }] : [],
+    why: seatDir ? [] : [missing],
+  };
+}
+
 export async function readSeatDocs(
   seat: LoadoutSeat,
   spec: SpecInfo | undefined,
   agentDir: string | undefined,
   topologyRoot: string | null = null
 ): Promise<SeatDoc[]> {
-  const cwd = seat.cwd;
-  const specDir = spec ? dirname(spec.path) : null;
-  const inCwd = (name: string): DocSpot[] => (cwd ? [{ path: join(cwd, name), within: cwd }] : []);
-  const inSpec = (name: string): DocSpot[] =>
-    specDir && spec ? [{ path: join(specDir, name), within: spec.root }] : [];
-  const noSpec = specDir ? [] : ['(no rig.yaml found for this rig in the configured spec folders)'];
-  const noCwd = cwd ? [] : ['(the daemon reports no folder for this seat)'];
-  const seatName = topologySeatName(seat);
-  const seatDir =
-    topologyRoot && seat.rig && seatName
-      ? join(topologyRoot, OpenRig.topologyDir({ altitude: 'seat', rig: seat.rig, seat: seatName }))
-      : null;
-  const inSeat = (name: string): DocSpot[] =>
-    seatDir && topologyRoot ? [{ path: join(seatDir, name), within: topologyRoot }] : [];
-  const noSeat = seatDir
-    ? []
-    : [
-        topologyRoot
-          ? '(this seat has no <member>@<rig> session name, so no topology seat folder)'
-          : '(no OpenRig topology root on this machine)',
-      ];
+  const inCwd = cwdSpots(seat.cwd);
+  const inSpec = specSpots(spec);
+  const inSeat = seatSpots(seat, topologyRoot);
 
   return [
-    await doc('culture', 'CULTURE.md', spec ? inSpec(cultureName(spec)) : [], noSpec),
+    await doc('culture', 'CULTURE.md', spec ? inSpec.at(cultureName(spec)) : [], inSpec.why),
     await doc(
       'role',
       'role.md',
       agentDir ? [await roleSpot(agentDir)] : [],
       agentDir ? [] : ['(the daemon reports no agent spec folder for this seat)']
     ),
-    await doc('claude-md', 'CLAUDE.md', inCwd('CLAUDE.md'), noCwd),
-    await doc('claude-local', 'CLAUDE.local.md', inCwd('CLAUDE.local.md'), noCwd),
+    await doc('claude-md', 'CLAUDE.md', inCwd.at('CLAUDE.md'), inCwd.why),
+    await doc('claude-local', 'CLAUDE.local.md', inCwd.at('CLAUDE.local.md'), inCwd.why),
     // OpenRig keeps both on the seat's topology folder (seat-recap-store.ts, rebuild-priming-chain.ts),
     // never beside rig.yaml or in the cwd: those copies are a crew's own and are not read here.
-    await doc('recap', 'RECAP.md', inSeat('RECAP.md'), noSeat),
-    await doc('learned', 'LEARNED.md', inSeat('LEARNED.md'), noSeat),
+    await doc('recap', 'RECAP.md', inSeat.at('RECAP.md'), inSeat.why),
+    await doc('learned', 'LEARNED.md', inSeat.at('LEARNED.md'), inSeat.why),
   ];
 }
 
@@ -598,22 +644,30 @@ export async function readTopologyDocs(
   const out: TopologyDoc[] = [];
 
   for (const node of OpenRig.topologyTrace(seat.rig, pod, topologySeatName(seat))) {
-    const dir = join(topologyRoot, OpenRig.topologyDir(node));
+    out.push(...(await nodeDocs(node, topologyRoot)));
+    if (out.length >= TOPOLOGY_DOCS_MAX) {
+      return out.slice(0, TOPOLOGY_DOCS_MAX);
+    }
+  }
 
-    for (const name of OpenRig.TOPOLOGY_CHAIN_FILES) {
-      if (name === 'RECAP.md' && node.altitude !== 'seat') {
-        continue;
-      }
+  return out;
+}
 
-      const r = await readDocFile(
-        { path: join(dir, name), within: topologyRoot },
-        TOPOLOGY_DOC_MAX_BYTES
-      );
+/** The chain files present in one topology folder. RECAP.md counts at the seat altitude only. */
+async function nodeDocs(node: OpenRig.TopologyNode, topologyRoot: string): Promise<TopologyDoc[]> {
+  const dir = join(topologyRoot, OpenRig.topologyDir(node));
+  const out: TopologyDoc[] = [];
 
-      if (!r) {
-        continue;
-      }
+  for (const name of OpenRig.TOPOLOGY_CHAIN_FILES) {
+    const r =
+      name === 'RECAP.md' && node.altitude !== 'seat'
+        ? null
+        : await readDocFile(
+            { path: join(dir, name), within: topologyRoot },
+            TOPOLOGY_DOC_MAX_BYTES
+          );
 
+    if (r) {
       out.push({
         altitude: node.altitude,
         name,
@@ -623,9 +677,6 @@ export async function readTopologyDocs(
         truncated: r.truncated,
         content: redactString(r.text),
       });
-      if (out.length >= TOPOLOGY_DOCS_MAX) {
-        return out;
-      }
     }
   }
 
