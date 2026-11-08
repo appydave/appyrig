@@ -1488,13 +1488,7 @@
     "max-lines-per-function": {
       "count": 1
     },
-    "sonarjs/cognitive-complexity": {
-      "count": 3
-    },
     "sonarjs/cyclomatic-complexity": {
-      "count": 4
-    },
-    "sonarjs/expression-complexity": {
       "count": 1
     }
   },

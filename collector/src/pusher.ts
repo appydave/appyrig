@@ -1,21 +1,23 @@
 import { io as connect, type Socket } from 'socket.io-client';
 import {
   FLEET_EVENTS,
-  HUB_CAPS,
-  namesV2Key,
-  stripSpecFields,
-  stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
   type CollectorAuth,
   type MachineSnapshot,
-  type SeatHistory,
 } from '@appydave/shared';
 import type { PendingHistory } from './adapters/history.js';
 import type { PendingHandoffs } from './adapters/handoffs.js';
-import { errorMessage } from '@collector/adapters/narrow/errors.js';
 import { emitAcked } from '@collector/pusher/emitAcked.js';
 import { startChannel, type ChannelDeps } from '@collector/pusher/channel.js';
+import {
+  loop,
+  pushHandoffs,
+  pushHistories,
+  pushSnapshot,
+  type Loop,
+  type LoopDeps,
+} from '@collector/pusher/ticks.js';
 import { quietLog } from '@collector/pusher/quietLog.js';
 import { trackHubCaps } from '@collector/pusher/hubCaps.js';
 import { CHANNELS, type ChannelOptions } from '@collector/pusher/channelTable.js';
@@ -78,8 +80,8 @@ export function startPusher(opts: PusherOptions): Pusher {
 
   let stopped = false;
   const caps = trackHubCaps(socket, opts.capsWaitMs ?? 1000);
-  const { note, warnSometimes } = quietLog(log);
-  let timer: NodeJS.Timeout | undefined;
+  const quiet = quietLog(log);
+  const { note, warnSometimes } = quiet;
 
   socket.on('connect', () => {
     caps.reset();
@@ -89,131 +91,65 @@ export function startPusher(opts: PusherOptions): Pusher {
   socket.on('disconnect', (reason) => note(`disconnected: ${reason}`));
   socket.on('connect_error', (err) => note(`hub refused or unreachable: ${err.message}`));
 
+  const loopDeps: LoopDeps = { isStopped: () => stopped, connected: () => socket.connected, note };
   // A missing ack is a timeout, not a refusal: kept apart from the hub's own failure modes.
-  const push = (snapshot: MachineSnapshot) =>
-    emitAcked(socket.timeout(ackTimeout), FLEET_EVENTS.SNAPSHOT, snapshot);
+  const snapshots = loop({
+    name: 'tick',
+    step: () =>
+      pushSnapshot({
+        caps,
+        build: opts.build,
+        push: (s) => emitAcked(socket.timeout(ackTimeout), FLEET_EVENTS.SNAPSHOT, s),
+        note,
+        log,
+        intervalMs,
+        ackTimeoutMs: ackTimeout,
+      }),
+    everyMs: intervalMs,
+    deps: loopDeps,
+  });
 
-  const tick = async () => {
-    if (stopped) {
-      return;
-    }
+  snapshots.now();
 
-    try {
-      if (socket.connected) {
-        await caps.waitForFirst();
-
-        const built = await opts.build();
-        const sendV2 = caps.offers(HUB_CAPS.V2_FIELDS);
-        const sendSpec = caps.offers(HUB_CAPS.SPEC_FIELDS);
-        const v2 = sendV2 ? built : stripV2Fields(built);
-        const ack = await push(sendSpec ? v2 : stripSpecFields(v2));
-
-        if (!('timeout' in ack) && ack.ok) {
-          caps.learn(ack.caps ?? []);
-        }
-
-        if (!('timeout' in ack) && !ack.ok && (sendV2 || sendSpec) && namesV2Key(ack.message)) {
-          caps.refuseV2();
-          log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
-        }
-
-        note(
-          'timeout' in ack
-            ? `no ack from hub within ${ackTimeout}ms`
-            : ack.ok
-              ? `pushing every ${intervalMs}ms: acked by hub`
-              : `snapshot refused: ${ack.failureMode}: ${ack.message}`
-        );
-      }
-    } catch (e) {
-      note(`tick failed: ${errorMessage(e)}`);
-    }
-
-    if (!stopped) {
-      timer = setTimeout(tick, intervalMs);
-    }
-  };
-
-  void tick();
-
-  // Seat histories: one emit per changed seat, marked sent only when the hub accepts it.
-  let historyTimer: NodeJS.Timeout | undefined;
+  // Seat histories: first round shortly after the first snapshot, so known seats exist. Queue
+  // bodies are small and wanted promptly, so that loop is faster and starts sooner.
+  const optional: Loop[] = [];
   const historyInterval = opts.historyIntervalMs ?? HISTORY_INTERVAL_MS;
-  const pushHistory = (h: SeatHistory) =>
-    emitAcked(socket.timeout(ackTimeout * 2), FLEET_EVENTS.HISTORY, h);
-  const historyTick = async () => {
-    if (stopped || !opts.histories) {
-      return;
-    }
+  const handoffInterval = opts.handoffIntervalMs ?? HANDOFF_INTERVAL_MS;
+  const { histories, handoffs } = opts;
 
-    try {
-      if (socket.connected) {
-        for (const p of await opts.histories()) {
-          const ack = await pushHistory(p.history);
+  if (histories) {
+    const history = loop({
+      name: 'history tick',
+      step: () =>
+        pushHistories({
+          histories,
+          push: (h) => emitAcked(socket.timeout(ackTimeout * 2), FLEET_EVENTS.HISTORY, h),
+          note,
+        }),
+      everyMs: historyInterval,
+      deps: loopDeps,
+    });
 
-          if ('timeout' in ack) {
-            note(`no ack for history of ${p.history.seat}`);
-          } else if (ack.ok) {
-            p.markSent();
-          } else {
-            note(`history refused for ${p.history.seat}: ${ack.failureMode}: ${ack.message}`);
-          }
-        }
-      }
-    } catch (e) {
-      note(`history tick failed: ${errorMessage(e)}`);
-    }
-
-    if (!stopped) {
-      historyTimer = setTimeout(historyTick, historyInterval);
-    }
-  };
-
-  // First history round shortly after the first snapshot, so known seats exist.
-  if (opts.histories) {
-    historyTimer = setTimeout(historyTick, Math.min(historyInterval, 5_000));
+    history.after(Math.min(historyInterval, 5_000));
+    optional.push(history);
   }
 
-  // Queue bodies: one batch per tick, marked sent only when the hub accepts it. An older hub has
-  // no listener for this event, so no ack comes back: noted as a timeout, retried next tick.
-  let handoffTimer: NodeJS.Timeout | undefined;
-  const handoffInterval = opts.handoffIntervalMs ?? HANDOFF_INTERVAL_MS;
-  const handoffTick = async () => {
-    if (stopped || !opts.handoffs) {
-      return;
-    }
+  if (handoffs) {
+    const handoff = loop({
+      name: 'handoff tick',
+      step: () =>
+        pushHandoffs({
+          handoffs,
+          push: (b) => emitAcked(socket.timeout(ackTimeout * 2), FLEET_EVENTS.HANDOFFS, b),
+          log: quiet,
+        }),
+      everyMs: handoffInterval,
+      deps: loopDeps,
+    });
 
-    try {
-      if (socket.connected) {
-        const pending = await opts.handoffs();
-
-        if (pending) {
-          const ack = await emitAcked(
-            socket.timeout(ackTimeout * 2),
-            FLEET_EVENTS.HANDOFFS,
-            pending.bodies
-          );
-
-          if ('timeout' in ack) {
-            warnSometimes('handoffs', 'no ack for queue bodies (is the hub older than v1.4?)');
-          } else if (ack.ok) {
-            pending.markSent();
-          } else {
-            note(`queue bodies refused: ${ack.failureMode}: ${ack.message}`);
-          }
-        }
-      }
-    } catch (e) {
-      note(`handoff tick failed: ${errorMessage(e)}`);
-    }
-
-    if (!stopped) {
-      handoffTimer = setTimeout(handoffTick, handoffInterval);
-    }
-  };
-
-  if (opts.handoffs) {
-    handoffTimer = setTimeout(handoffTick, Math.min(handoffInterval, 3_000));
+    handoff.after(Math.min(handoffInterval, 3_000));
+    optional.push(handoff);
   }
 
   // v1.4 · S7: rig files (chunked, so no message nears socket.io's 1 MB limit) and the database
@@ -248,17 +184,10 @@ export function startPusher(opts: PusherOptions): Pusher {
         clearTimeout(t);
       }
 
-      if (handoffTimer) {
-        clearTimeout(handoffTimer);
-      }
-
       stopped = true;
-      if (timer) {
-        clearTimeout(timer);
-      }
-
-      if (historyTimer) {
-        clearTimeout(historyTimer);
+      snapshots.stop();
+      for (const l of optional) {
+        l.stop();
       }
 
       socket.close();
