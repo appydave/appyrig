@@ -189,7 +189,7 @@ export interface AccountView {
  * covers a push or two (every 3 s) without re-admitting a meaningful stretch of the old account's readings
  * (an old-account sample inside the window slips in: a small, brief error).
  */
-export const SWITCH_TOLERANCE_MS = 15_000;
+const SWITCH_TOLERANCE_MS = 15_000;
 
 const hasReading = (a: AccountUsage): boolean =>
   (a.fiveHourPct !== null || a.sevenDayPct !== null) && a.sampledAt !== null;

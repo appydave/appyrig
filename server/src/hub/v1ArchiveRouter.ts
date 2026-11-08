@@ -13,8 +13,8 @@ import { Router } from 'express';
  * A name must match V1_ARCHIVE_NAME and resolve to a direct child of the folder; anything else is 404.
  */
 
-export const V1_ARCHIVE_DIR = 'v1-archive';
-export const V1_ARCHIVE_NAME = /^v1-[a-z0-9-]+\.png$/;
+const V1_ARCHIVE_DIR = 'v1-archive';
+const V1_ARCHIVE_NAME = /^v1-[a-z0-9-]+\.png$/;
 
 export function v1ArchiveRouter(dataDir: string | undefined): Router {
   const router = Router();

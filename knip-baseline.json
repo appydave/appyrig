@@ -271,31 +271,6 @@
         "dependencies": 1,
         "devDependencies": 1
       },
-      "server/src/core/core.ts": {
-        "types": 1
-      },
-      "server/src/core/doors.ts": {
-        "exports": 4
-      },
-      "server/src/core/verbs.ts": {
-        "exports": 6,
-        "types": 1
-      },
-      "server/src/hub/accounts.ts": {
-        "exports": 1
-      },
-      "server/src/hub/browserAuth.ts": {
-        "exports": 2
-      },
-      "server/src/hub/v1ArchiveRouter.ts": {
-        "exports": 2
-      },
-      "server/src/index.ts": {
-        "exports": 1
-      },
-      "server/src/middleware/requestLogger.ts": {
-        "exports": 1
-      },
       "shared/src/accounts.ts": {
         "exports": 4
       },
@@ -728,37 +703,30 @@
       "server/package.json": {
         "dependencies": 1
       },
-      "server/src/core/core.ts": {
-        "types": 1
-      },
       "server/src/core/doors.ts": {
-        "exports": 10,
+        "exports": 6,
         "types": 1
       },
       "server/src/core/verbs.ts": {
-        "exports": 7,
-        "types": 1
+        "exports": 1
       },
       "server/src/helpers/response.ts": {
         "exports": 1
       },
       "server/src/hub/accounts.ts": {
-        "exports": 5
-      },
-      "server/src/hub/browserAuth.ts": {
         "exports": 4
       },
-      "server/src/hub/v1ArchiveRouter.ts": {
+      "server/src/hub/browserAuth.ts": {
         "exports": 2
       },
       "server/src/index.ts": {
-        "exports": 3
+        "exports": 2
       },
       "server/src/middleware/errorHandler.ts": {
         "exports": 1
       },
       "server/src/middleware/requestLogger.ts": {
-        "exports": 3
+        "exports": 2
       },
       "shared/src/accounts.ts": {
         "exports": 4

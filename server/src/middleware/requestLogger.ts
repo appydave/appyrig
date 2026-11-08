@@ -15,7 +15,7 @@ import { logger } from '@server/config/logger.js';
  */
 
 /** Paths agents and health checks poll; a success on them is logged at debug, not info. */
-export const QUIET_PATHS = new Set(['/v1/rpc', '/v1/call', '/v1/health', '/health']);
+const QUIET_PATHS = new Set(['/v1/rpc', '/v1/call', '/v1/health', '/health']);
 
 const TOKEN_IN_URL = new RegExp(`([?&]${TOKEN_QUERY_PARAM}=)[^&#]*`, 'gi');
 
