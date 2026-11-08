@@ -1,8 +1,10 @@
 import type { Namespace, Server } from 'socket.io';
+import type { z } from 'zod';
 import {
   AUTH_ERRORS,
   FLEET_EVENTS,
   HUB_CAPS,
+  CollectorAuthSchema,
   MachineSnapshotSchema,
   SeatHistorySchema,
   HandoffBodiesSchema,
@@ -16,7 +18,6 @@ import {
   RigSpecsPushSchema,
   SOCKET_NAMESPACES,
   type CollectorAck,
-  type CollectorAuth,
   type CollectorClientToServerEvents,
   type CollectorServerToClientEvents,
   type FleetMachine,
@@ -42,6 +43,14 @@ const HUB_CAP_LIST = [
   HUB_CAPS.RIG_COMMANDS,
 ];
 
+/** The first five schema issues as one line, for a refusal's message. */
+function summariseIssues(issues: { path: PropertyKey[]; message: string }[]): string {
+  return issues
+    .slice(0, 5)
+    .map((i) => `${i.path.join('.')}: ${i.message}`)
+    .join('; ');
+}
+
 export interface CollectorIngestOptions {
   /** Hub token. When undefined, every collector is refused (no open default). */
   hubToken: string | undefined;
@@ -57,9 +66,9 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
   >;
 
   nsp.use((socket, next) => {
-    const auth = socket.handshake.auth as Partial<CollectorAuth>;
+    const auth = CollectorAuthSchema.safeParse(socket.handshake.auth);
 
-    if (!opts.hubToken || !sameSecret(auth.token, opts.hubToken)) {
+    if (!opts.hubToken || !auth.success || !sameSecret(auth.data.token, opts.hubToken)) {
       next(new Error(AUTH_ERRORS.collectorToken));
 
       return;
@@ -72,7 +81,8 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     // Tell the collector what this hub understands before its first push (the ack repeats it).
     socket.emit(FLEET_EVENTS.CAPS, HUB_CAP_LIST);
 
-    const machineId = (socket.handshake.auth as CollectorAuth).machineId;
+    // The connect check above already refused anything that is not a token and a machineId.
+    const { machineId } = CollectorAuthSchema.parse(socket.handshake.auth);
 
     socket.on(FLEET_EVENTS.SNAPSHOT, (raw, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
@@ -83,10 +93,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
         const result: CollectorAck = {
           ok: false,
           failureMode: 'invalid_snapshot',
-          message: parsed.error.issues
-            .slice(0, 5)
-            .map((i) => `${i.path.join('.')}: ${i.message}`)
-            .join('; '),
+          message: summariseIssues(parsed.error.issues),
         };
 
         reply(result);
@@ -117,19 +124,13 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
 
     // The checks every push after the snapshot shares: valid shape, same machine as the socket, then store and ack.
     const guarded =
-      (
-        schema: {
-          safeParse: (
-            raw: unknown
-          ) =>
-            | { success: true; data: { machineId: string } }
-            | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
-        },
+      <S extends z.ZodType<{ machineId: string }>>(
+        schema: S,
         what: string,
-        store: (data: never) => void
+        store: (data: z.output<S>) => void
       ) =>
-      (raw: unknown, ack: unknown) => {
-        const reply = typeof ack === 'function' ? (ack as (a: unknown) => void) : () => {};
+      (raw: z.input<S>, ack: (result: CollectorAck) => void) => {
+        const reply = typeof ack === 'function' ? ack : () => {};
 
         const parsed = schema.safeParse(raw);
 
@@ -137,10 +138,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
           reply({
             ok: false,
             failureMode: 'invalid_snapshot',
-            message: parsed.error.issues
-              .slice(0, 5)
-              .map((i) => `${i.path.join('.')}: ${i.message}`)
-              .join('; '),
+            message: summariseIssues(parsed.error.issues),
           });
 
           return;
@@ -156,7 +154,7 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
           return;
         }
 
-        store(parsed.data as never);
+        store(parsed.data);
         reply({ ok: true, receivedAt: new Date().toISOString() });
       };
 

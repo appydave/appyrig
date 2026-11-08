@@ -364,8 +364,7 @@
     },
     "server/src/hub/collectorIngest.ts": {
       "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 4,
-      "require-safety-comment-for-type-assertion": 6
+      "require-safety-comment-for-type-assertion": 2
     },
     "server/src/hub/createHub.ts": {
       "no-unknown-parameters": 2

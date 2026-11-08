@@ -89,6 +89,16 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
     expect(wrong.message).toBe(AUTH_ERRORS.collectorToken);
   });
 
+  it.each([
+    ['no machineId', { token: TOKEN }],
+    ['a machineId that is not a string', { token: TOKEN, machineId: 7 }],
+  ])('refuses a collector with a good token but %s, at connect', async (_name, auth) => {
+    const h = await start();
+    const err = await connectError(h.collector(auth));
+
+    expect(err.message).toBe(AUTH_ERRORS.collectorToken);
+  });
+
   it('refuses every collector when the hub has no token', async () => {
     const h = await start({ hubToken: undefined });
     const err = await connectError(h.collector({ token: TOKEN, machineId: 'roamy' }));
