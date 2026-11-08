@@ -1969,19 +1969,19 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 7
+      "count": 5
     },
     "max-params": {
-      "count": 3
+      "count": 2
     },
     "no-magic-numbers": {
       "count": 26
     },
     "sonarjs/cognitive-complexity": {
-      "count": 4
+      "count": 2
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 6
+      "count": 4
     }
   },
   "server/src/helpers/response.ts": {
