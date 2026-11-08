@@ -27,6 +27,7 @@ import {
   type TransitionsData,
 } from '@appydave/shared';
 import { redactString } from '@collector/redact.js';
+import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
 /**
  * v2 data channels: the READ-ONLY reads of the OpenRig daemon that the v2 pages need, pushed on one
@@ -100,7 +101,7 @@ export const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v 
 export const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
 
 /** True for the error `sources.ts` throws on a non-2xx reply of 404. */
-export const isNotFound = (e: unknown): boolean => /HTTP 404\b/.test((e as Error)?.message ?? '');
+export const isNotFound = (e: unknown): boolean => /HTTP 404\b/.test(errorMessage(e));
 
 // ── step 2: seat detail ────────────────────────────────────────────────────────────────────────
 
@@ -217,7 +218,7 @@ export async function settle(get: DaemonGet, path: string): Promise<Settled> {
   try {
     return { ok: true, value: await get(path) };
   } catch (e) {
-    return { ok: false, notFound: isNotFound(e), error: (e as Error).message };
+    return { ok: false, notFound: isNotFound(e), error: errorMessage(e) };
   }
 }
 
@@ -933,7 +934,7 @@ export class DaemonDataReader {
           });
         } else {
           failed += 1;
-          firstError ||= `${t.seat}: ${(e as Error).message}`;
+          firstError ||= `${t.seat}: ${errorMessage(e)}`;
         }
       }
     }
@@ -994,7 +995,7 @@ export class DaemonDataReader {
         data[n] = reads[n].parse(r.value);
         this.failing.delete(key);
       } catch (e) {
-        this.fail(key, `${label} ${n} unreadable: ${(e as Error).message}`);
+        this.fail(key, `${label} ${n} unreadable: ${errorMessage(e)}`);
         data[n] = null as T[typeof n];
       }
     });
@@ -1037,7 +1038,7 @@ export class DaemonDataReader {
       parsed = parseHealthFindings(findings.value);
       this.failing.delete('health:findings');
     } catch (e) {
-      this.fail('health:findings', `health findings unreadable: ${(e as Error).message}`);
+      this.fail('health:findings', `health findings unreadable: ${errorMessage(e)}`);
     }
 
     const data: HealthData = {
@@ -1106,7 +1107,7 @@ export class DaemonDataReader {
 
         // Start over ONLY when the daemon rejected our cursor (400/410: its epoch or history
         // changed). A timeout or 5xx says nothing about the cursor: keep what we hold, retry.
-        if (st.cursor && /HTTP (400|410)\b/.test((e as Error).message)) {
+        if (st.cursor && /HTTP (400|410)\b/.test(errorMessage(e))) {
           this.tr = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null, high: null };
         }
 
@@ -1194,7 +1195,7 @@ export class DaemonDataReader {
 
         return rows;
       } catch (e) {
-        this.fail(`library:${name}`, `library ${name} unreadable: ${(e as Error).message}`);
+        this.fail(`library:${name}`, `library ${name} unreadable: ${errorMessage(e)}`);
 
         return null;
       }
@@ -1236,7 +1237,7 @@ export class DaemonDataReader {
         outcomes = await job.run();
         this.failing.delete(job.kind);
       } catch (e) {
-        this.fail(job.kind, `${job.kind} unreadable: ${(e as Error).message}`);
+        this.fail(job.kind, `${job.kind} unreadable: ${errorMessage(e)}`);
         continue;
       }
 

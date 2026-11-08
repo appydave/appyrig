@@ -197,8 +197,7 @@
         "exports": 3
       },
       "collector/src/adapters/daemondata.ts": {
-        "exports": 14,
-        "types": 1
+        "exports": 12
       },
       "collector/src/adapters/dbrows.ts": {
         "exports": 1

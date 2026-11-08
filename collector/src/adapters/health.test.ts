@@ -119,6 +119,23 @@ describe('sampleHealth', () => {
     expect(MachineHealthSchema.safeParse(full).success).toBe(true);
   });
 
+  it('a command that throws a plain string is reported by that text', async () => {
+    const ok = run();
+    const s = await sampleHealth(
+      async (bin, args) => {
+        if (bin === 'vm_stat') {
+          throw 'vm_stat-string-boom';
+        }
+
+        return ok(bin, args);
+      },
+      now,
+      'darwin'
+    );
+
+    expect(JSON.stringify(s.memory.usedBytes)).toContain('vm_stat: vm_stat-string-boom');
+  });
+
   it('a command that fails makes only its own readings unavailable, with the reason, never 0', async () => {
     const s = await sampleHealth(run({ vm_stat: new Error('vm_stat not found') }), now, 'darwin');
 

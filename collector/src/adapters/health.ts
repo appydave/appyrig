@@ -1,4 +1,5 @@
 import type { MachineHealth, MemoryPressureLevel, Reading, TerminalApp } from '@appydave/shared';
+import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
 /**
  * v1.4 · S6: machine health from five cheap, read-only macOS commands (`sysctl`, `vm_stat`,
@@ -174,7 +175,7 @@ async function attempt<T>(
   try {
     return { value: await fn() };
   } catch (e) {
-    return { error: `${label}: ${(e as Error).message}` };
+    return { error: `${label}: ${errorMessage(e)}` };
   }
 }
 
