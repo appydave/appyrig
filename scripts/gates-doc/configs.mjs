@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { make, quotedIn } from './entry.mjs';
 
 const SKIP_DIRS = /SKIP_DIRS\s*=\s*new Set\(\[([^\]]*)\]/;
