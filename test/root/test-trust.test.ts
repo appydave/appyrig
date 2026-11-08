@@ -150,6 +150,8 @@ describe('Feature: the test-trust gate fails a promise that sleeps in a unit tes
       expect(r.out).toContain('client/src/m.test.tsx:1 [sleep-unit]');
       expect(r.out).toContain('vi.waitFor');
       expect(r.out).toContain('some other helper');
+      expect(r.out).toContain('NOT detected');
+      expect(r.out).toContain('await import(node:timers/promises)');
     }
   );
 

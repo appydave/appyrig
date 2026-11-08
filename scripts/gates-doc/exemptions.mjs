@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { make } from './entry.mjs';
+import { collectLoaded } from './configs.mjs';
 import { collectFiles } from './files.mjs';
 
 const TEST_FILES_LABEL = 'tests';
@@ -49,11 +50,12 @@ const fromJscpd = (root) =>
   );
 
 /** Every scoped-out path and switched-off rule in the sources this generator reads. */
-export const collect = (root, eslintConfig) => [
-  ...fromEslint(eslintConfig),
+export const collect = (root, configs) => [
+  ...fromEslint(configs.eslint),
   ...fromKnip(root),
   ...fromJscpd(root),
   ...collectFiles(root),
+  ...collectLoaded(root, configs),
 ];
 
 /** Exemptions with no reason, and reasons whose exemption is gone. */

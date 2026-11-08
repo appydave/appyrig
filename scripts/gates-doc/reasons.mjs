@@ -27,6 +27,16 @@ const PI_OPENRIG =
   'OpenRig drops its own runtime files into every seat folder (git-excluded); added in 186c751 with no reason in its message.';
 const COV_TESTS =
   'reason unknown: no comment in the vitest config (the server one is from the scaffold, 5ef74dd). Find out: git log -S"exclude" -- <the config>';
+const OX_UNKNOWN =
+  'reason unknown: in the first oxlint.config.ts (G02, 37d255c), whose message and comments give none.';
+const RECORDED =
+  'Vendored or recorded files (comment in lint/folder-limits.mjs, G09 4b1b721: "the same ones oxlint.config.ts ignores").';
+const CRUISE_TESTS =
+  'Production code is src/ minus tests and test support (header comment in .dependency-cruiser.cjs, G12 211f10f).';
+const CRUISE_UNKNOWN =
+  'reason unknown: no comment; added in G12 (211f10f) or G11 (5c5f28a), whose messages give none. Find out: git log -S"<pattern>" -- <the cruiser config>';
+const TT_UNKNOWN =
+  'reason unknown: in the first test-trust.mjs (G00b, 48900cb), whose message and comments give none.';
 
 export const REASONS = {
   'eslint|ignore|.openrig/**': OPENRIG,
@@ -146,4 +156,37 @@ export const REASONS = {
     'reason unknown: the exclude arrived with the first tsconfig.e2e.json (G00b, 48900cb), whose message gives none; the folder holds OpenRig spec files copied as-is.',
   'vitest|client/vitest.config.ts|coverage exclude|src/**/*.test.{ts,tsx}': COV_TESTS,
   'vitest|client/vitest.config.ts|coverage exclude|src/test/**': COV_TESTS,
+  'oxlint|ignore|**/dist/**': GIT_IGNORED,
+  'oxlint|ignore|**/node_modules/**': GIT_IGNORED,
+  'oxlint|ignore|.claude/**': OX_UNKNOWN,
+  'oxlint|ignore|.openrig/**': OX_UNKNOWN,
+  'oxlint|ignore|.agents/**': OX_UNKNOWN,
+  'oxlint|ignore|.codex/**': OX_UNKNOWN,
+  'oxlint|ignore|api/**': OX_UNKNOWN,
+  'oxlint|ignore|scripts/provenance/out/**': RECORDED,
+  'oxlint|ignore|server/src/core/vendor/**': RECORDED,
+  'oxlint|ignore|test/fixtures/**': RECORDED,
+  'oxlint|ignore|test/root/fixtures/**': RECORDED,
+  'oxlint|off anti-slop/require-safety-comment-for-type-assertion|**/*.test.{ts,tsx,mjs,js}, **/*.spec.{ts,tsx,mjs,js}, e2e/**, test/**, **/test/**, **/*test-kit*':
+    'Production code only: tests, e2e, test support and recorded fixtures are not counted (comment in oxlint.config.ts).',
+  'oxlint|off anti-slop/no-unknown-parameters|collector/src/adapters/**':
+    'The I/O boundary: adapters turn daemon JSON into domain types, so taking `unknown` is their job (comment in oxlint.config.ts).',
+  'depcruise|pathNot|(^|/)test/': CRUISE_TESTS,
+  'depcruise|pathNot|test-kit': CRUISE_TESTS,
+  'depcruise|pathNot|\\.(test|spec)\\.[cm]?[jt]sx?$': CRUISE_TESTS,
+  'depcruise|pathNot|\\.test\\.tsx?$': CRUISE_UNKNOWN,
+  'depcruise|pathNot|\\.test\\.ts$': CRUISE_UNKNOWN,
+  'depcruise|doNotFollow|node_modules': GIT_IGNORED,
+  'depcruise|exclude|(^|/)dist/': GIT_IGNORED,
+  'depcruise-folders|doNotFollow|node_modules': GIT_IGNORED,
+  'depcruise-folders|exclude|(node_modules|dist)|\\.(test|spec)\\.tsx?$': CRUISE_UNKNOWN,
+  'folder-limits|not scanned|test/fixtures/': RECORDED,
+  'folder-limits|not scanned|test/root/fixtures/': RECORDED,
+  'folder-limits|not scanned|server/src/core/vendor/': RECORDED,
+  'folder-limits|not scanned|scripts/provenance/out/': RECORDED,
+  'test-trust|skip dir|node_modules': GIT_IGNORED,
+  'test-trust|skip dir|dist': GIT_IGNORED,
+  'test-trust|skip dir|fixtures': TT_UNKNOWN,
+  'test-trust|skip dir|test-results': GIT_IGNORED,
+  'test-trust|skip dir|playwright-report': TT_UNKNOWN,
 };
