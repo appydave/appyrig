@@ -826,11 +826,6 @@
       "count": 1
     }
   },
-  "client/src/pages/flow/clean.test.tsx": {
-    "max-params": {
-      "count": 1
-    }
-  },
   "client/src/pages/flow/flowLines.test.tsx": {
     "max-params": {
       "count": 1
@@ -847,11 +842,6 @@
       "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
-  "client/src/pages/flow/verdict.test.tsx": {
-    "max-params": {
       "count": 1
     }
   },

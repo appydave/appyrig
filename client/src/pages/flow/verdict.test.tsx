@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { FleetMachine, QueueItem } from '@appydave/shared';
+import type { FleetMachine } from '@appydave/shared';
 import { buildFlow } from '@client/domain/fleet/views/flow/flow.js';
 import { flowChapters } from '@client/domain/fleet/views/flow/chapters.js';
-import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { FLOW_RIG, FLOW_T0, flowItem, flowMachine } from '@client/test/queueFixtures.js';
 import { page as flowPage } from './index.js';
 import { rigPageCtx } from '@client/pages/page-test-kit.js';
 
@@ -13,47 +13,27 @@ import { rigPageCtx } from '@client/pages/page-test-kit.js';
  * backwards-stage rule, and buildFlow without the option behaves exactly as before.
  */
 
-const T0 = Date.parse('2026-10-18T09:00:00.000Z');
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
-const RIG = 'fliedit-team';
-
-function q(id: string, from: string, to: string, min: number, tags: string[] = []): QueueItem {
-  const at = new Date(T0 + min * 60_000).toISOString();
-
-  return {
-    id,
-    source: `${from}@${RIG}`,
-    destination: `${to}@${RIG}`,
-    state: 'done',
-    priority: null,
-    tags,
-    summary: id,
-    createdAt: at,
-    updatedAt: at,
-  };
-}
+const T0 = FLOW_T0;
+const RIG = FLOW_RIG;
 
 /** fliedit-team (roles: lead, build, qa, review). */
 function rig(withVerdicts: boolean): FleetMachine {
-  const fm = fleetMachine(snapshot('m2'));
   const v = (tag: string) => (withVerdicts ? [`verdict:${tag}`] : []);
+  const item = (id: string, leg: Parameters<typeof flowItem>[1]) =>
+    flowItem(id, { span: 0, ...leg });
 
-  fm.snapshot = {
-    ...fm.snapshot,
-    queue: [
-      q('brief', 'orch-lead', 'dev-overlay', 0),
-      q('to-qa', 'dev-overlay', 'dev-qa', 5),
-      // backwards (qa → build), but a PASS: not sent back under verdicts
-      q('qa-pass', 'dev-qa', 'dev-overlay', 10, v('pass')),
-      // backwards and CHANGES: sent back under both rules
-      q('r1-changes', 'review-r1', 'dev-overlay', 15, v('changes')),
-      // forwards, but FAIL: sent back under verdicts only
-      q('build-fail', 'dev-overlay', 'review-r1', 20, v('fail')),
-      q('r1-accept', 'review-r1', 'orch-lead', 25, v('accept')),
-    ],
-  };
-
-  return fm;
+  return flowMachine([
+    item('brief', { from: 'orch-lead', to: 'dev-overlay', min: 0 }),
+    item('to-qa', { from: 'dev-overlay', to: 'dev-qa', min: 5 }),
+    // backwards (qa → build), but a PASS: not sent back under verdicts
+    item('qa-pass', { from: 'dev-qa', to: 'dev-overlay', min: 10, tags: v('pass') }),
+    // backwards and CHANGES: sent back under both rules
+    item('r1-changes', { from: 'review-r1', to: 'dev-overlay', min: 15, tags: v('changes') }),
+    // forwards, but FAIL: sent back under verdicts only
+    item('build-fail', { from: 'dev-overlay', to: 'review-r1', min: 20, tags: v('fail') }),
+    item('r1-accept', { from: 'review-r1', to: 'orch-lead', min: 25, tags: v('accept') }),
+  ]);
 }
 
 type FlowOpts = { sentBack?: 'stage' | 'verdict-or-stage' };
