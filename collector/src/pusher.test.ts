@@ -36,6 +36,8 @@ interface HubOpts {
   strictPreSpec?: boolean;
   /** Do not announce caps on connection (only in the ack), like the first v2 hub build. */
   ackOnly?: boolean;
+  /** Announce caps this long after the connection, not at once (the first push is already waiting). */
+  announceAfterMs?: number;
 }
 
 async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<Hub> {
@@ -52,7 +54,7 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
     )
     .on('connection', (socket) => {
       if (hopts.caps && !hopts.ackOnly) {
-        socket.emit('hub:caps', hopts.caps);
+        setTimeout(() => socket.emit('hub:caps', hopts.caps), hopts.announceAfterMs ?? 0);
       }
 
       if (modern) {
@@ -516,6 +518,37 @@ describe('pusher', () => {
     expect(Date.now() - t0).toBeGreaterThanOrEqual(240);
     expect(Date.now() - t0).toBeLessThan(2000);
     expect(hub.received.some(hasV2)).toBe(false);
+  });
+
+  it('flicker: a hub that announces while the first push waits releases it at once and clears the wait timer', async () => {
+    const WAIT_MS = 4321; // an odd delay, so the wait timer is the only one with it
+    const armed = vi.spyOn(globalThis, 'setTimeout');
+    const cleared = vi.spyOn(globalThis, 'clearTimeout');
+
+    hub = await startHub(0, false, { caps: [HUB_CAPS.V2_FIELDS], announceAfterMs: 150 });
+
+    const t0 = Date.now();
+
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build,
+      intervalMs: 20,
+      capsWaitMs: WAIT_MS,
+      log: () => {},
+    });
+    await until(() => hub!.received.length >= 1);
+    expect(Date.now() - t0).toBeLessThan(WAIT_MS / 2);
+
+    const waitTimers = armed.mock.calls
+      .map((call, i) => ({ delay: call[1], handle: armed.mock.results[i]!.value }))
+      .filter((t) => t.delay === WAIT_MS)
+      .map((t) => t.handle);
+
+    expect(waitTimers.length).toBeGreaterThan(0);
+    expect(cleared.mock.calls.map((c) => c[0])).toEqual(expect.arrayContaining(waitTimers));
+    vi.restoreAllMocks();
   });
 
   it('H1: a hub that refuses a snapshot naming a v2 key is treated as v1.5 until it reconnects, logged once', async () => {

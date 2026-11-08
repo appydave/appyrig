@@ -1485,11 +1485,8 @@
     }
   },
   "collector/src/pusher.ts": {
-    "max-lines": {
-      "count": 1
-    },
     "max-lines-per-function": {
-      "count": 2
+      "count": 1
     },
     "sonarjs/cognitive-complexity": {
       "count": 3
