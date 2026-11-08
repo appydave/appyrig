@@ -1,0 +1,12 @@
+import { redactString } from './redact.ts';
+const cases = [
+  'gh auth login --with-token hunter2Secret99',
+  'mytool --token Zq8xP2mL9vRt',
+  'mytool --password Zq8xP2mL9vRt',
+  "curl -H 'Authorization: Token Zq8xP2mL9vRt4kQ'",
+  'curl -u admin:Zq8xP2mL9vRt https://x',
+  'export OPENAI_KEY=Zq8xP2mL9vRt',
+  'curl https://x?token=Zq8xP2mL9vRt',
+  'X-Api-Key: Zq8xP2mL9vRt',
+];
+for (const c of cases) console.log(JSON.stringify(c), '=>', JSON.stringify(redactString(c)));

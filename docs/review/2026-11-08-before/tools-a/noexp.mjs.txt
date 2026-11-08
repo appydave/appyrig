@@ -1,0 +1,12 @@
+import { readFileSync } from 'node:fs';
+const files = readFileSync(process.argv[2], 'utf8').trim().split('\n');
+for (const f of files) {
+  const lines = readFileSync(f, 'utf8').split('\n');
+  const starts = [];
+  lines.forEach((l, i) => { if (/^\s*(it|test)(\.each\(.*?\))?\(/.test(l)) starts.push(i); });
+  starts.forEach((s, k) => {
+    const end = k + 1 < starts.length ? starts[k + 1] : lines.length;
+    const body = lines.slice(s, end).join('\n');
+    if (!/expect|assert|toPass|throw new Error/.test(body)) console.log(`${f}:${s + 1}: ${lines[s].trim().slice(0, 110)}`);
+  });
+}

@@ -1,0 +1,12 @@
+import fs from 'node:fs'; import path from 'node:path';
+const [tf, prod] = process.argv.slice(2).map(f => fs.readFileSync(f,'utf8').trim().split('\n'));
+const exists = p => { for (const e of ['.ts','.tsx','/index.ts','/index.tsx']) { if (fs.existsSync(p+e)) return p+e; } return fs.existsSync(p)&&fs.statSync(p).isFile()?p:null; };
+const resolve=(from,s)=>{ let r; if(s.startsWith('.')) r=path.normalize(path.join(path.dirname(from),s)); else if(s.startsWith('@client/')) r='client/src/'+s.slice(8); else return null; r=r.replace(/\.js$/,''); return exists(r)||exists(r.replace(/\.(tsx?)$/,'')); };
+const imps = f => [...fs.readFileSync(f,'utf8').matchAll(/(?:from|import\(|^import)\s*['"]([^'"]+)['"]/gm)].map(m=>resolve(f,m[1])).filter(Boolean);
+const direct=new Set(); const seen=new Set(); const q=[];
+for (const t of [...tf,'client/src/pages/page-test-kit.ts']) for (const d of imps(t)) { direct.add(d); q.push(d); }
+while(q.length){ const f=q.pop(); if(seen.has(f)) continue; seen.add(f); if(/\.(tsx?)$/.test(f)) for(const d of imps(f)) q.push(d); }
+const never=[], trans=[];
+for (const p of prod){ if(!seen.has(p)) never.push(p); else if(!direct.has(p)) trans.push(p); }
+console.log('NEVER LOADED by any test ('+never.length+'):'); never.forEach(p=>console.log('  '+fs.readFileSync(p,'utf8').split('\n').length+' '+p));
+console.log('ONLY TRANSITIVE ('+trans.length+'):'); trans.map(p=>[fs.readFileSync(p,'utf8').split('\n').length,p]).sort((a,b)=>b[0]-a[0]).forEach(([n,p])=>console.log('  '+n+' '+p));

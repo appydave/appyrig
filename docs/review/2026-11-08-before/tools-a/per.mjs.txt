@@ -1,0 +1,9 @@
+import fs from 'node:fs';
+const files = fs.readFileSync(process.argv[2],'utf8').trim().split('\n'); const rows=[]; let zero=[];
+for (const f of files){ const L=fs.readFileSync(f,'utf8').split('\n'); let cur=null;
+ for (let i=0;i<L.length;i++){ const m=L[i].match(/^\s*(?:it|test)(?:\.each\(.*?\))?\(\s*(['"`])(.*?)\1/); if(m){ if(cur) rows.push(cur); cur={f,line:i+1,name:m[2],n:0,len:0}; }
+  if(cur){ cur.n+=(L[i].match(/\bexpect(\.soft)?\(/g)||[]).length; cur.len++; } }
+ if(cur) rows.push(cur); }
+rows.sort((a,b)=>b.n-a.n); console.log('top by expects'); rows.slice(0,15).forEach(r=>console.log(r.n,r.len,r.f+':'+r.line,r.name.slice(0,80)));
+console.log('zero-expect tests (approx; may use helper asserts)'); rows.filter(r=>r.n===0).forEach(r=>console.log(r.f+':'+r.line,r.name.slice(0,100)));
+console.log('tests',rows.length,'>=15 expects',rows.filter(r=>r.n>=15).length,'>=10',rows.filter(r=>r.n>=10).length);
