@@ -43,7 +43,7 @@ jobs:
       - name: Dead code (Knip, normal and --production; baselined)
         run: npm run knip
 
-      - name: Module cohesion (archlint; baselined, may only shrink)
+      - name: Module cohesion (archlint; a printed report, exit 2 if the scan did not run)
         run: npm run cohesion
 
       - name: Coupling, hubs and stability (archlint; baselined, may only shrink)

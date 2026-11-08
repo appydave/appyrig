@@ -1,5 +1,5 @@
 /**
- * The ratchet every baselined architecture gate shares (G13 cohesion, G14 coupling): scan, compare
+ * The ratchet every baselined architecture gate shares (G14 coupling; G13 cohesion is now a printed report): scan, compare
  * with the committed baseline, and fail on anything above it or below it. A baseline may shrink and
  * never grow; `--init` writes the first one and refuses to overwrite one; a run that did not look
  * (the scan threw) exits 2 and is never reported as clean.
@@ -193,9 +193,9 @@ function check({ gate, command, actual, sections, grown, shrunk }) {
 
 /**
  * @param {object} gate
- * @param {string} gate.gate        name used to prefix messages: 'cohesion'
- * @param {string} gate.baselineFile  repo-relative baseline: 'cohesion-baseline.json'
- * @param {string} gate.command     the npm script that rewrites it: 'cohesion:baseline'
+ * @param {string} gate.gate        name used to prefix messages: 'coupling'
+ * @param {string} gate.baselineFile  repo-relative baseline: 'coupling-baseline.json'
+ * @param {string} gate.command     the npm script that rewrites it: 'coupling:baseline'
  * @param {string} gate.about       the baseline's own explanation line
  * @param {() => object} gate.scan  { section: { file: count } }; throws when the run did not look
  * @param {object} gate.sections    { section: (grownEntry) => message written for the agent that reads it }

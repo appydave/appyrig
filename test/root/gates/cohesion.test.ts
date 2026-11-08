@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { removeScratch, scanProbe } from './scratchWorkspace.js';
 // @ts-expect-error plain .mjs gate with no type declarations
-import { messageFor, scanDirectory } from '@root/lint/gates/cohesion.mjs';
+import { messageFor, report, scanDirectory } from '@root/lint/gates/cohesion.mjs';
 // @ts-expect-error plain .mjs gate with no type declarations
 import { compare } from '@root/lint/gates/ratchet-gate.mjs';
 
@@ -92,11 +92,45 @@ describe('comparing with the baseline', () => {
       { file: 'gone.ts', now: 0, was: 4 },
     ]);
   });
+});
 
-  it('tells the agent what to do, not just what is wrong', () => {
-    const text = messageFor({ file: 'client/src/x.ts', now: 3, was: 0 });
+describe('the printed report', () => {
+  it('prints every finding and exits 0, so a finding never fails the build', () => {
+    const { code, text } = report(() => ({ 'b.ts': 3, 'a.ts': 4 }));
+
+    expect(code).toBe(0);
+    expect(text.split('\n')).toHaveLength(3);
+    expect(text.indexOf('a.ts')).toBeLessThan(text.indexOf('b.ts'));
+    expect(text).toContain('a report, not a gate');
+  });
+
+  it('prints every finding when there are many, not just the first few', () => {
+    const many = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`f${i}.ts`, 3]));
+    const { text } = report(() => many);
+
+    expect(text.split('\n')).toHaveLength(8);
+    expect(text).toContain('f6.ts');
+  });
+
+  it('prints a report with no findings and still exits 0', () => {
+    expect(report(() => ({}))).toMatchObject({ code: 0 });
+  });
+
+  it('exits 2, and says nothing was checked, when the scan did not run', () => {
+    const { code, text } = report(() => {
+      throw new Error('archlint is not installed');
+    });
+
+    expect(code).toBe(2);
+    expect(text).toContain('nothing was checked');
+    expect(text).toContain('archlint is not installed');
+  });
+
+  it('tells the agent what to do, and that the finding is informational', () => {
+    const text = messageFor({ file: 'client/src/x.ts', now: 3 });
 
     expect(text).toContain('client/src/x.ts');
-    expect(text).toContain('Split it by responsibility');
+    expect(text).toContain('Informational');
+    expect(text).toContain('split it by responsibility');
   });
 });
