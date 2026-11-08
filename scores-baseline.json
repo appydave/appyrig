@@ -217,7 +217,7 @@
     "collector/src/builder.ts::mergeViewer": 48,
     "collector/src/config.ts::loadSettings": 60,
     "collector/src/main.ts::main": 117,
-    "collector/src/pusher.ts::startPusher": 466,
+    "collector/src/pusher.ts::startPusher": 448,
     "collector/src/pusher.ts::startPusher>channel": 70,
     "collector/src/pusher.ts::startPusher>channel>tick": 51,
     "collector/src/pusher.ts::startPusher>tick": 41,

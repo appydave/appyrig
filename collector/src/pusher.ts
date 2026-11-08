@@ -8,7 +8,6 @@ import {
   stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
-  type CollectorAck,
   type CollectorAuth,
   type DaemonDataPush,
   type MachineSnapshot,
@@ -25,6 +24,7 @@ import type { PendingMissionFiles } from './adapters/missionfiles.js';
 import type { PendingRigSpecs } from './adapters/rigspecs.js';
 import type { PendingRigCommands } from './adapters/rigcommands.js';
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
+import { emitAcked } from '@collector/pusher/emitAcked.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -178,13 +178,7 @@ export function startPusher(opts: PusherOptions): Pusher {
 
   // A missing ack is a timeout, not a refusal: kept apart from the hub's own failure modes.
   const push = (snapshot: MachineSnapshot) =>
-    new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
-      socket
-        .timeout(ackTimeout)
-        .emit(FLEET_EVENTS.SNAPSHOT, snapshot, (err: unknown, ack?: CollectorAck) => {
-          resolve(err || !ack ? { ok: false, timeout: true } : ack);
-        });
-    });
+    emitAcked(socket.timeout(ackTimeout), FLEET_EVENTS.SNAPSHOT, snapshot);
 
   const tick = async () => {
     if (stopped) {
@@ -234,13 +228,7 @@ export function startPusher(opts: PusherOptions): Pusher {
   let historyTimer: NodeJS.Timeout | undefined;
   const historyInterval = opts.historyIntervalMs ?? HISTORY_INTERVAL_MS;
   const pushHistory = (h: SeatHistory) =>
-    new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
-      socket
-        .timeout(ackTimeout * 2)
-        .emit(FLEET_EVENTS.HISTORY, h, (err: unknown, ack?: CollectorAck) => {
-          resolve(err || !ack ? { ok: false, timeout: true } : ack);
-        });
-    });
+    emitAcked(socket.timeout(ackTimeout * 2), FLEET_EVENTS.HISTORY, h);
   const historyTick = async () => {
     if (stopped || !opts.histories) {
       return;
@@ -288,13 +276,11 @@ export function startPusher(opts: PusherOptions): Pusher {
         const pending = await opts.handoffs();
 
         if (pending) {
-          const ack = await new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
-            socket
-              .timeout(ackTimeout * 2)
-              .emit(FLEET_EVENTS.HANDOFFS, pending.bodies, (err: unknown, a?: CollectorAck) => {
-                resolve(err || !a ? { ok: false, timeout: true } : a);
-              });
-          });
+          const ack = await emitAcked(
+            socket.timeout(ackTimeout * 2),
+            FLEET_EVENTS.HANDOFFS,
+            pending.bodies
+          );
 
           if ('timeout' in ack) {
             warnSometimes('handoffs', 'no ack for queue bodies (is the hub older than v1.4?)');
@@ -322,11 +308,7 @@ export function startPusher(opts: PusherOptions): Pusher {
   // shape. Same rules as queue bodies: marked sent only when the hub accepts, retried otherwise,
   // and an older hub (no listener, no ack) is warned about at most every 10 minutes.
   const sendAcked = (event: string, payload: unknown) =>
-    new Promise<CollectorAck | { ok: false; timeout: true }>((resolve) => {
-      socket.timeout(ackTimeout * 2).emit(event, payload, (err: unknown, a?: CollectorAck) => {
-        resolve(err || !a ? { ok: false, timeout: true } : a);
-      });
-    });
+    emitAcked(socket.timeout(ackTimeout * 2), event, payload);
   const timers: NodeJS.Timeout[] = [];
   const channel = (
     key: string,
