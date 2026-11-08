@@ -9,23 +9,6 @@ import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import { defaultAgent } from '@client/pages/agent/index.js';
 import { busiestRig } from '@client/domain/fleet/rigs.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 type Handler = (...args: unknown[]) => void;
 
 function spySocket() {
