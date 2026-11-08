@@ -144,20 +144,20 @@ export const FAILURE_CODES = defineFailureCodes({
   'library-item-not-found': -32011,
 });
 
-export const MachineNotFoundDetails = z.object({
+const MachineNotFoundDetails = z.object({
   machine: z.string(),
   known: z.array(z.string()),
 });
-export const SeatNotFoundDetails = z.object({
+const SeatNotFoundDetails = z.object({
   machine: z.string(),
   seat: z.string(),
   known: z.array(z.string()),
 });
-export const InvalidInputDetails = z.object({
+const InvalidInputDetails = z.object({
   issues: z.array(z.object({ path: z.string(), message: z.string() })),
 });
-export const UnknownCapabilityDetails = z.object({ known: z.array(z.string()) });
-export const PrincipalHeaderDetails = z.object({
+const UnknownCapabilityDetails = z.object({ known: z.array(z.string()) });
+const PrincipalHeaderDetails = z.object({
   expected: z.string(),
   got: z.array(z.string()),
 });
@@ -167,7 +167,7 @@ export const ALWAYS_POSSIBLE = ['forbidden', 'invalid-input', 'unknown-capabilit
 
 // ── context ────────────────────────────────────────────────────────────────────────────────────
 
-export interface VerbContext {
+interface VerbContext {
   store: FleetStore;
   now: () => Date;
   identity: AppIdentity;
@@ -562,7 +562,7 @@ function dataOf<K extends DaemonKind>(ctx: VerbContext, machine: string, kind: K
  * What an empty findings list means. Never "healthy": the answer is `findings`, `none-found` with
  * every reason it may not be all-clear, or `unknown`.
  */
-export function assess(data: DaemonDataFor<'health'> | null): {
+function assess(data: DaemonDataFor<'health'> | null): {
   assessment: 'findings' | 'none-found' | 'unknown';
   caveats: string[];
 } {

@@ -23,10 +23,12 @@ import type { AppIdentity } from './identity.js';
  * "open" = listed in OPEN_PATHS (hub/browserAuth.ts); everything else is behind the session.
  */
 
-export const RPC_PATH = '/v1/rpc';
+const RPC_PATH = '/v1/rpc';
+
 export const CONSOLE_PATH = '/v1/console';
-export const DOCS_PATH = '/v1/docs';
-export const CONSOLE_PRINCIPAL = 'agent:console';
+
+const DOCS_PATH = '/v1/docs';
+const CONSOLE_PRINCIPAL = 'agent:console';
 
 const DRY_RUN_HEADER = 'x-fli-dry-run';
 const NAMES = {
@@ -130,7 +132,7 @@ type HeaderCheck =
   | { ok: true; principal: string; dryRun: boolean | undefined }
   | { ok: false; failureMode: string; message: string; details: unknown };
 
-export function readCallHeaders(headers: IncomingHttpHeaders): HeaderCheck {
+function readCallHeaders(headers: IncomingHttpHeaders): HeaderCheck {
   const foreign = Object.keys(headers).filter(
     (h) => /^x-[a-z0-9-]+-principal$/.test(h) && h !== PRINCIPAL_HEADER
   );

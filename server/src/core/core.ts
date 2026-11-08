@@ -14,7 +14,7 @@ import type { AppIdentity } from './identity.js';
  * output (Zod). Every refusal is data with a named failureMode (B7); nothing throws to a door.
  */
 
-export interface CallOptions {
+interface CallOptions {
   /** Boolean or absent (B4). Every v1 verb is read-only, so a dry run answers exactly as a real call. */
   dryRun?: unknown;
 }

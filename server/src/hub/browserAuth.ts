@@ -17,12 +17,7 @@ import { AUTH_ERRORS, SESSION_COOKIE, TOKEN_QUERY_PARAM } from '@appydave/shared
  * Open without auth, and carrying no fleet data: OPEN_PATHS.
  */
 
-export const OPEN_PATHS: readonly string[] = [
-  '/v1/docs',
-  '/v1/openrpc.json',
-  '/v1/health',
-  '/health',
-];
+const OPEN_PATHS: readonly string[] = ['/v1/docs', '/v1/openrpc.json', '/v1/health', '/health'];
 
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 
@@ -45,7 +40,7 @@ export function sessionCookieHeader(hubToken: string): string {
   return `${SESSION_COOKIE}=${sessionValue(hubToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_S}`;
 }
 
-export function readCookie(header: string | undefined, name: string): string | undefined {
+function readCookie(header: string | undefined, name: string): string | undefined {
   if (!header) {
     return undefined;
   }
