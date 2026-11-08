@@ -75,11 +75,27 @@ export function problems(entries, reasons) {
 const isUnknown = (reason) => reason.startsWith('reason unknown');
 const cell = (text) => text.replaceAll('|', '\\|');
 
+/** Reasons in order of first use, each with a short id the table rows point at. */
+function numbered(entries, reasons) {
+  const ids = new Map();
+
+  for (const e of entries) {
+    const reason = reasons[e.key] ?? 'NO REASON';
+
+    if (!ids.has(reason)) {
+      ids.set(reason, `R${ids.size + 1}`);
+    }
+  }
+
+  return ids;
+}
+
 /** The text of docs/gates.md. */
 export function render(entries, reasons) {
+  const ids = numbered(entries, reasons);
   const rows = entries.map(
     (e) =>
-      `| ${e.source} | ${cell(e.where || '-')} | ${cell(e.kind)} | \`${cell(e.pattern)}\` | ${cell(reasons[e.key] ?? 'NO REASON')} |`
+      `| ${e.source} | ${cell(e.where || '-')} | ${cell(e.kind)} | \`${cell(e.pattern)}\` | ${ids.get(reasons[e.key] ?? 'NO REASON')} |`
   );
   const unknown = entries.filter((e) => isUnknown(reasons[e.key] ?? '')).length;
 
@@ -96,6 +112,10 @@ export function render(entries, reasons) {
     '| Source | Where | Kind | Path or rule | Reason |',
     '| --- | --- | --- | --- | --- |',
     ...rows,
+    '',
+    '## Reasons',
+    '',
+    ...[...ids].map(([reason, id]) => `- **${id}**: ${cell(reason)}`),
     '',
   ].join('\n');
 }

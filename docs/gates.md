@@ -9,61 +9,80 @@ Reasons live in `scripts/gates-doc/reasons.mjs`. A reason starting "reason unkno
 
 | Source | Where | Kind | Path or rule | Reason |
 | --- | --- | --- | --- | --- |
-| eslint | - | ignore | `.openrig/**` | OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours. |
-| eslint | - | ignore | `.claude/**` | OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours. |
-| eslint | - | ignore | `.agents/**` | OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours. |
-| eslint | - | ignore | `.codex/**` | OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours. |
-| eslint | - | ignore | `test/fixtures/**` | reason unknown: listed among the OpenRig files in eslint.config.js, whose comment does not cover it. Find out: git log -S"test/fixtures" -- eslint.config.js |
-| eslint | - | ignore | `server/src/core/vendor/**` | Keeps upstream bytes (server/src/core/vendor/LICENSE), so it is not reformatted or linted. |
-| eslint | - | ignore | `test/root/fixtures/**` | OpenRig files copied in for the provenance check (Apache-2.0) keep upstream bytes. |
-| eslint | - | ignore | `**/dist/**` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | ignore | `**/build/**` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | ignore | `**/node_modules/**` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | ignore | `**/coverage/**` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off no-undef | `**/*.{js,mjs,cjs,ts,tsx}` | TypeScript handles this (comment in the shared config). |
-| eslint | - | off no-unused-vars | `**/*.{js,mjs,cjs,ts,tsx}` | The TypeScript-aware version is used instead (comment in the shared config). |
-| eslint | - | off no-array-constructor | `**/*.{js,mjs,cjs,ts,tsx}` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off no-unused-expressions | `**/*.{js,mjs,cjs,ts,tsx}` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off no-console | `**/*.{js,mjs,cjs,ts,tsx}` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off react/no-unsafe | `**/*.{ts,tsx}` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off react/prop-types | `**/*.{ts,tsx}` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off react/react-in-jsx-scope | `**/*.{ts,tsx}` | reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner |
-| eslint | - | off max-lines-per-function | `tests` | A describe() callback is a list of tests, not a long function (comment in eslint.config.js). max-lines still applies to test files. |
-| knip | . | ignore | `test/fixtures/**` | reason unknown: no comment in knip.json. Find out: git log -S"test/fixtures" -- knip.json |
-| knip | . | ignore | `test/root/fixtures/**` | reason unknown: same folder eslint treats as upstream bytes (provenance check). Find out: git log -S"test/root/fixtures" -- knip.json |
-| knip | client | project | `!src/**/*.test.{ts,tsx}!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | client | project | `!src/**/test/**!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | client | project | `!src/**/*test-kit*!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | server | ignore | `src/core/vendor/**` | Vendored fli-core files keep upstream bytes (added in G11, 5c5f28a). |
-| knip | server | project | `!src/**/*.test.{ts,tsx}!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | server | project | `!src/**/test/**!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | server | project | `!src/**/*test-kit*!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | collector | project | `!src/**/*.test.{ts,tsx}!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | collector | project | `!src/**/test/**!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | collector | project | `!src/**/*test-kit*!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | shared | project | `!src/**/*.test.{ts,tsx}!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | shared | project | `!src/**/test/**!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| knip | shared | project | `!src/**/*test-kit*!` | Tests, e2e and test support are not production code, so knip does not count them as the project. |
-| jscpd | - | ignore | `**/node_modules/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/dist/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/.git/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/.mochaccino/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/.claude/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/package-lock.json` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/playwright-report/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/test-results/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/coverage/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/.quality-results/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/.jscpd/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `.dependency-cruiser-known-*.json` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `scores-baseline.json` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `**/*.css` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `api/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `test/fixtures/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `test/root/fixtures/**` | reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json |
-| jscpd | - | ignore | `client/src/domain/learn/atlas.json` | Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-atlas.mjs. |
-| jscpd | - | ignore | `client/src/domain/learn/rig-commands.json` | Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-rig-commands.mjs. |
-| jscpd | - | ignore | `client/src/domain/learn/commands.ts` | reason unknown: a content or data table (see its head); added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<file>" -- .jscpd.json |
-| jscpd | - | ignore | `client/src/domain/learn/glossary.ts` | reason unknown: a content or data table (see its head); added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<file>" -- .jscpd.json |
-| jscpd | - | ignore | `client/src/domain/learn/lessons.ts` | reason unknown: a content or data table (see its head); added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<file>" -- .jscpd.json |
-| jscpd | - | ignore | `client/src/kit/v1ArchiveManifest.ts` | reason unknown: a content or data table (see its head); added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<file>" -- .jscpd.json |
+| eslint | - | ignore | `.openrig/**` | R1 |
+| eslint | - | ignore | `.claude/**` | R1 |
+| eslint | - | ignore | `.agents/**` | R1 |
+| eslint | - | ignore | `.codex/**` | R1 |
+| eslint | - | ignore | `test/fixtures/**` | R2 |
+| eslint | - | ignore | `server/src/core/vendor/**` | R3 |
+| eslint | - | ignore | `test/root/fixtures/**` | R4 |
+| eslint | - | ignore | `**/dist/**` | R5 |
+| eslint | - | ignore | `**/build/**` | R5 |
+| eslint | - | ignore | `**/node_modules/**` | R5 |
+| eslint | - | ignore | `**/coverage/**` | R5 |
+| eslint | - | off no-undef | `**/*.{js,mjs,cjs,ts,tsx}` | R6 |
+| eslint | - | off no-unused-vars | `**/*.{js,mjs,cjs,ts,tsx}` | R7 |
+| eslint | - | off no-array-constructor | `**/*.{js,mjs,cjs,ts,tsx}` | R5 |
+| eslint | - | off no-unused-expressions | `**/*.{js,mjs,cjs,ts,tsx}` | R5 |
+| eslint | - | off no-console | `**/*.{js,mjs,cjs,ts,tsx}` | R5 |
+| eslint | - | off react/no-unsafe | `**/*.{ts,tsx}` | R5 |
+| eslint | - | off react/prop-types | `**/*.{ts,tsx}` | R5 |
+| eslint | - | off react/react-in-jsx-scope | `**/*.{ts,tsx}` | R5 |
+| eslint | - | off max-lines-per-function | `tests` | R8 |
+| knip | . | ignore | `test/fixtures/**` | R9 |
+| knip | . | ignore | `test/root/fixtures/**` | R10 |
+| knip | client | project | `!src/**/*.test.{ts,tsx}!` | R11 |
+| knip | client | project | `!src/**/test/**!` | R11 |
+| knip | client | project | `!src/**/*test-kit*!` | R11 |
+| knip | server | ignore | `src/core/vendor/**` | R12 |
+| knip | server | project | `!src/**/*.test.{ts,tsx}!` | R11 |
+| knip | server | project | `!src/**/test/**!` | R11 |
+| knip | server | project | `!src/**/*test-kit*!` | R11 |
+| knip | collector | project | `!src/**/*.test.{ts,tsx}!` | R11 |
+| knip | collector | project | `!src/**/test/**!` | R11 |
+| knip | collector | project | `!src/**/*test-kit*!` | R11 |
+| knip | shared | project | `!src/**/*.test.{ts,tsx}!` | R11 |
+| knip | shared | project | `!src/**/test/**!` | R11 |
+| knip | shared | project | `!src/**/*test-kit*!` | R11 |
+| jscpd | - | ignore | `**/node_modules/**` | R13 |
+| jscpd | - | ignore | `**/dist/**` | R13 |
+| jscpd | - | ignore | `**/.git/**` | R13 |
+| jscpd | - | ignore | `**/.mochaccino/**` | R13 |
+| jscpd | - | ignore | `**/.claude/**` | R13 |
+| jscpd | - | ignore | `**/package-lock.json` | R13 |
+| jscpd | - | ignore | `**/playwright-report/**` | R13 |
+| jscpd | - | ignore | `**/test-results/**` | R13 |
+| jscpd | - | ignore | `**/coverage/**` | R13 |
+| jscpd | - | ignore | `**/.quality-results/**` | R13 |
+| jscpd | - | ignore | `**/.jscpd/**` | R13 |
+| jscpd | - | ignore | `.dependency-cruiser-known-*.json` | R13 |
+| jscpd | - | ignore | `scores-baseline.json` | R13 |
+| jscpd | - | ignore | `**/*.css` | R13 |
+| jscpd | - | ignore | `api/**` | R13 |
+| jscpd | - | ignore | `test/fixtures/**` | R13 |
+| jscpd | - | ignore | `test/root/fixtures/**` | R13 |
+| jscpd | - | ignore | `client/src/domain/learn/atlas.json` | R14 |
+| jscpd | - | ignore | `client/src/domain/learn/rig-commands.json` | R15 |
+| jscpd | - | ignore | `client/src/domain/learn/commands.ts` | R16 |
+| jscpd | - | ignore | `client/src/domain/learn/glossary.ts` | R16 |
+| jscpd | - | ignore | `client/src/domain/learn/lessons.ts` | R16 |
+| jscpd | - | ignore | `client/src/kit/v1ArchiveManifest.ts` | R16 |
+
+## Reasons
+
+- **R1**: OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours.
+- **R2**: reason unknown: listed among the OpenRig files in eslint.config.js, whose comment does not cover it. Find out: git log -S"test/fixtures" -- eslint.config.js
+- **R3**: Keeps upstream bytes (server/src/core/vendor/LICENSE), so it is not reformatted or linted.
+- **R4**: OpenRig files copied in for the provenance check (Apache-2.0) keep upstream bytes.
+- **R5**: reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner
+- **R6**: TypeScript handles this (comment in the shared config).
+- **R7**: The TypeScript-aware version is used instead (comment in the shared config).
+- **R8**: A describe() callback is a list of tests, not a long function (comment in eslint.config.js). max-lines still applies to test files.
+- **R9**: reason unknown: no comment in knip.json. Find out: git log -S"test/fixtures" -- knip.json
+- **R10**: reason unknown: same folder eslint treats as upstream bytes (provenance check). Find out: git log -S"test/root/fixtures" -- knip.json
+- **R11**: Tests, e2e and test support are not production code, so knip does not count them as the project.
+- **R12**: Vendored fli-core files keep upstream bytes (added in G11, 5c5f28a).
+- **R13**: reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json
+- **R14**: Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-atlas.mjs.
+- **R15**: Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-rig-commands.mjs.
+- **R16**: reason unknown: a content or data table (see its head); added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<file>" -- .jscpd.json
