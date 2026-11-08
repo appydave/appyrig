@@ -251,10 +251,6 @@
     "collector/src/adapters/health.ts": {
       "require-safety-comment-for-type-assertion": 2
     },
-    "collector/src/adapters/history.ts": {
-      "no-unsafe-dictionary-type": 1,
-      "require-safety-comment-for-type-assertion": 5
-    },
     "collector/src/adapters/loadout.ts": {
       "require-safety-comment-for-type-assertion": 1
     },

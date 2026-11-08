@@ -71,6 +71,94 @@ describe('seat history adapter', () => {
     expect(toolSummary('TodoWrite', { todos: [] })).toBe('TodoWrite');
   });
 
+  it('a malformed block is skipped, not the whole line, and never the whole file', () => {
+    const at = (n: number) => `2026-10-09T14:00:0${n}.000Z`;
+    const bad = [
+      null,
+      'text',
+      7,
+      [],
+      { type: 'text', text: 5 },
+      { type: 7, text: 'x' },
+      { name: 'n' },
+    ];
+    const ev = parseTranscript(
+      [
+        line({
+          type: 'assistant',
+          timestamp: at(1),
+          message: {
+            content: [
+              { type: 'text', text: 'first' },
+              ...bad,
+              { type: 'text', text: 'second' },
+              { type: 'tool_use', name: 'Bash', input: { command: 'ls' } },
+            ],
+          },
+        }),
+        line({
+          type: 'user',
+          timestamp: at(2),
+          message: {
+            content: [{ type: 'text', text: 'one' }, ...bad, { type: 'text', text: 'two' }],
+          },
+        }),
+      ].join('\n')
+    );
+
+    expect(ev.map((e) => `${e.kind}:${e.text}`)).toEqual([
+      'reply:first',
+      'reply:second',
+      'tool:Bash: ls',
+      'prompt:one',
+      'prompt:two',
+    ]);
+  });
+
+  it('a row with an odd field keeps its good fields; a row that is not an object is skipped', () => {
+    const ok = {
+      type: 'user',
+      timestamp: '2026-10-09T14:00:00.000Z',
+      message: { content: 'hello' },
+    };
+    const lines = [
+      line({ ...ok, timestamp: 2026 }),
+      line({ ...ok, message: 'hello' }),
+      line({ ...ok, message: { content: { nope: 1 } } }),
+      line({ ...ok, type: 5 }),
+      '"timestamp"',
+      '[{"timestamp":"2026-10-09T14:00:00.000Z"}]',
+      line({ ...ok, extra: { anything: [1, 2] } }),
+    ];
+
+    expect(parseTranscript(lines.join('\n')).map((e) => e.text)).toEqual(['hello']);
+  });
+
+  it('a seat title must be a title row with a string seat name', () => {
+    expect(seatOfFirstLine('null')).toBeNull();
+    expect(seatOfFirstLine('[]')).toBeNull();
+    expect(seatOfFirstLine(line({ type: 'custom-title', customTitle: 7 }))).toBeNull();
+    expect(seatOfFirstLine(line({ type: 'custom-title' }))).toBeNull();
+    expect(seatOfFirstLine(line({ type: 'custom-title', customTitle: ['a@b'] }))).toBeNull();
+    expect(seatOfFirstLine(line({ type: 'title', customTitle: 'a@b' }))).toBeNull();
+  });
+
+  it('a tool summary takes the first non-empty string field, whatever else the input holds', () => {
+    expect(toolSummary('Bash', { command: 'ls', file_path: '/a' })).toBe('Bash: ls');
+    expect(toolSummary('Read', { command: '', file_path: 7, path: '/p', url: 'u' })).toBe(
+      'Read: /p'
+    );
+    expect(toolSummary('Grep', { query: 'q', pattern: 'p' })).toBe('Grep: p');
+    expect(toolSummary('Task', { description: 'd', prompt: 'x' })).toBe('Task: d');
+    expect(toolSummary('Agent', { prompt: 'x' })).toBe('Agent: x');
+    expect(toolSummary('Fetch', { url: 'https://x' })).toBe('Fetch: https://x');
+    expect(toolSummary('Q', { query: 'z' })).toBe('Q: z');
+
+    for (const input of [undefined, null, 'ls', 7, [], { command: 5 }]) {
+      expect(toolSummary('T', input)).toBe('T');
+    }
+  });
+
   it('reads only known seats, and resends a seat only after its transcript changes', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'appyrig-hist-'));
 
