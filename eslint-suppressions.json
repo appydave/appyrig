@@ -1302,16 +1302,16 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 6
+      "count": 3
     },
     "max-params": {
       "count": 2
     },
     "sonarjs/cognitive-complexity": {
-      "count": 4
+      "count": 2
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 5
+      "count": 3
     }
   },
   "collector/src/adapters/missionfiles.ts": {
