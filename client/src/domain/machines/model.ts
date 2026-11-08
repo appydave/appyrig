@@ -114,7 +114,6 @@ export interface MachineView {
   memTotal: number | null;
   freePct: number | null;
   swapUsed: number | null;
-  swapTotal: number | null;
   claude: number | null;
   tmux: number | null;
   shells: number | null;
@@ -145,7 +144,6 @@ export function machineView(
     memTotal: v(h?.memory.totalBytes),
     freePct: v(h?.memory.freePct),
     swapUsed: v(h?.memory.swapUsedBytes),
-    swapTotal: v(h?.memory.swapTotalBytes),
     claude: v(h?.processes.claude),
     tmux: v(h?.processes.tmuxSessions),
     shells: v(h?.processes.terminalShells),

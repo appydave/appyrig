@@ -128,17 +128,11 @@
     }
   },
   "client/src/domain/fleet/health.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "no-magic-numbers": {
-      "count": 8
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
+      "count": 5
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/domain/fleet/model.test.ts": {

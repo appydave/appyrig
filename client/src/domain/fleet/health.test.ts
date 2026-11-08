@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FleetMachine, MachineHealth } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { clockAheadText } from '@appydave/shared';
+import { swapAllocated } from '@client/lib/readings.js';
 import { HEALTH_STALE_MS, healthAge, pressureOf } from './health.js';
 
 const GB = 1024 ** 3;
@@ -28,22 +29,49 @@ function machine(
   return { ...fm, snapshot: { ...fm.snapshot, health } };
 }
 
-describe('C2 (F26): the Machines badge tells the truth', () => {
-  it("Roamy's case: macOS says normal, swap 12.8 of 14 GB (91%): under pressure, never green normal", () => {
+describe('C89: the badge is the kernel pressure level, and swap never moves it', () => {
+  it("Roamy's case: macOS says normal, swap 12.8 of 14 GB: normal, with swap only as allocated", () => {
     const p = pressureOf(machine('normal', 12.8, 14));
 
-    expect(p).toMatchObject({ kind: 'critical', word: 'under pressure', glyph: '■' });
-    expect(p.basis).toContain('macOS memory pressure says "normal"');
-    expect(p.basis).toContain('swap 12.8 GB of 14 GB used (91%)');
-    expect(p.basis).toContain('not based on "% free"');
+    expect(p).toMatchObject({ kind: 'normal', word: 'normal', glyph: '●' });
+    expect(p.basis).toContain('macOS memory pressure');
+    expect(p.basis).toContain('12.8 GiB allocated');
+    expect(p.basis).not.toMatch(/\d\s*%|14 G/);
   });
 
-  it('swap above half is at least tight; the kernel level is never lowered by low swap', () => {
-    expect(pressureOf(machine('normal', 8, 14)).word).toBe('tight');
-    expect(pressureOf(machine('normal', 2, 14)).word).toBe('normal');
-    expect(pressureOf(machine('warn', 0, 14)).word).toBe('tight');
-    expect(pressureOf(machine('critical', 0, 14)).word).toBe('under pressure');
-    expect(pressureOf(machine('normal', 0, 0)).word).toBe('normal'); // no swap allocated
+  const SWAP: [number, number][] = [
+    [0, 0],
+    [0, 14],
+    [8, 14],
+    [12.8, 14],
+    [14, 14],
+    [200, 200],
+  ];
+
+  it.each(['normal', 'warn', 'critical'] as const)('kernel says %s: so does the badge', (level) => {
+    for (const [used, total] of SWAP) {
+      expect(pressureOf(machine(level, used, total)).kind, `${used}/${total}`).toBe(level);
+    }
+  });
+
+  it('no alarm in the client can divide swap used by swap total: nothing reads the total', () => {
+    const sources = import.meta.glob<string>(
+      ['../../**/*.{ts,tsx}', '!../../**/*.test.{ts,tsx}', '!../../test/**'],
+      {
+        query: '?raw',
+        import: 'default',
+        eager: true,
+      }
+    );
+    const readers = Object.keys(sources).filter((f) => /swapTotal/.test(sources[f]!));
+
+    expect(Object.keys(sources).length).toBeGreaterThan(100); // the glob really saw the client
+    expect(readers).toEqual([]);
+  });
+
+  it('swap shows as GiB allocated', () => {
+    expect(swapAllocated(12.8 * GB)).toBe('12.8 GiB allocated');
+    expect(swapAllocated(0)).toBe('0 GiB allocated');
   });
 });
 
@@ -140,9 +168,9 @@ describe('F4 (resilience: worst dishonesty): stale never looks green', () => {
     expect(p).toMatchObject({ kind: 'stale', word: 'old reading', last: 'normal' });
   });
 
-  it('Roamy at 92% swap is never "normal", and when stale it still says what it last was', () => {
-    expect(pressureOf(at('normal', 12.88, 2_000), NOW)).toMatchObject({ kind: 'critical' });
-    expect(pressureOf(at('normal', 12.88, 2_000, 10 * 60_000), NOW)).toMatchObject({
+  it('when stale it still says what the last reading was', () => {
+    expect(pressureOf(at('critical', 12.88, 2_000), NOW)).toMatchObject({ kind: 'critical' });
+    expect(pressureOf(at('critical', 12.88, 2_000, 10 * 60_000), NOW)).toMatchObject({
       kind: 'stale',
       last: 'critical',
     });
