@@ -378,10 +378,13 @@ function useSelectedSpec(ctx: PageProps['ctx'], specs: ShownSpec[], loaded: bool
 
   // (Declared before the pick below, so a focused rig's choice lands last and wins.)
   useEffect(() => {
-    if (picked === null && loaded && specs[0]) {
-      setPicked(specs[0].key);
+    const first = specs[0]?.key;
+
+    if (loaded && first) {
+      // Functional, so a click that landed before this effect flushed is kept, not overwritten.
+      setPicked((current) => current ?? first);
     }
-  }, [picked, loaded, specs]);
+  }, [loaded, specs]);
   useEffect(() => {
     const stamp = `${focusKey}#${ctx.focusNonce}`;
 
