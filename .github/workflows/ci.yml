@@ -73,6 +73,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Smoke the real app (built hub on a spare port, /health, /, one collector push)
+        run: scripts/ci/smoke-real-app.sh
+
       - name: Coverage thresholds (server, client)
         run: npm run test:coverage
 
