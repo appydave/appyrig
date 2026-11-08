@@ -33,8 +33,6 @@ const RECORDED =
   'Vendored or recorded files (comment in lint/folder-limits.mjs, G09 4b1b721: "the same ones oxlint.config.ts ignores").';
 const CRUISE_TESTS =
   'Production code is src/ minus tests and test support (header comment in .dependency-cruiser.cjs, G12 211f10f).';
-const CRUISE_UNKNOWN =
-  'reason unknown: no comment; added in G12 (211f10f) or G11 (5c5f28a), whose messages give none. Find out: git log -S"<pattern>" -- <the cruiser config>';
 const TT_UNKNOWN =
   'reason unknown: in the first test-trust.mjs (G00b, 48900cb), whose message and comments give none.';
 
@@ -174,12 +172,15 @@ export const REASONS = {
   'depcruise|pathNot|(^|/)test/': CRUISE_TESTS,
   'depcruise|pathNot|test-kit': CRUISE_TESTS,
   'depcruise|pathNot|\\.(test|spec)\\.[cm]?[jt]sx?$': CRUISE_TESTS,
-  'depcruise|pathNot|\\.test\\.tsx?$': CRUISE_UNKNOWN,
-  'depcruise|pathNot|\\.test\\.ts$': CRUISE_UNKNOWN,
+  'depcruise|pathNot|\\.test\\.tsx?$':
+    'reason unknown: added to the client layer rules in W4 (7034ac9), whose message gives none.',
+  'depcruise|pathNot|\\.test\\.ts$':
+    'reason unknown: added with the collector adapters rule in G12 (211f10f), whose message gives none.',
   'depcruise|doNotFollow|node_modules': GIT_IGNORED,
   'depcruise|exclude|(^|/)dist/': GIT_IGNORED,
   'depcruise-folders|doNotFollow|node_modules': GIT_IGNORED,
-  'depcruise-folders|exclude|(node_modules|dist)|\\.(test|spec)\\.tsx?$': CRUISE_UNKNOWN,
+  'depcruise-folders|exclude|(node_modules|dist)|\\.(test|spec)\\.tsx?$':
+    'reason unknown: in the first .dependency-cruiser-folders.cjs (G11, 5c5f28a), whose message gives none. node_modules and dist are git-ignored; the test-file part has no comment.',
   'folder-limits|not scanned|test/fixtures/': RECORDED,
   'folder-limits|not scanned|test/root/fixtures/': RECORDED,
   'folder-limits|not scanned|server/src/core/vendor/': RECORDED,

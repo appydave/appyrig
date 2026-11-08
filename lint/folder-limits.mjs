@@ -36,7 +36,11 @@ export const SCANNED = [
   'lint',
 ];
 
-/** Vendored and recorded files: the same ones oxlint.config.ts ignores. */
+/**
+ * Vendored and recorded files: the same ones oxlint.config.ts ignores.
+ * Read by regex for docs/gates.md (scripts/gates-doc): keep this one plain literal list, nothing
+ * appended with .concat or spread, or the extra entries are left out of the doc without an error.
+ */
 export const NOT_SCANNED = [
   'test/fixtures/',
   'test/root/fixtures/',

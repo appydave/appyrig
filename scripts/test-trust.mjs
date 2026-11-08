@@ -16,6 +16,8 @@ import { join, relative, resolve } from 'node:path';
 const rootArg = process.argv.indexOf('--root');
 const root = resolve(rootArg > 0 ? process.argv[rootArg + 1] : join(import.meta.dirname, '..'));
 const DIRS = ['client/src', 'server/src', 'collector/src', 'shared/src', 'e2e', 'test'];
+// Read by regex for docs/gates.md (scripts/gates-doc): keep this one plain literal list, nothing
+// appended with .concat or spread, or the extra entries are left out of the doc without an error.
 const SKIP_DIRS = new Set([
   'node_modules',
   'dist',
