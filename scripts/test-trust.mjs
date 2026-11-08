@@ -6,6 +6,7 @@
  *   snapshot  a switch that rewrites the expected value, so every change passes
  *   env       an assertion that runs only when an environment variable is set
  *   sleep     a wall-clock sleep in a browser test
+ *   sleep-unit  a promise that sleeps (or waitForTimeout) in a unit test
  * Scans *.test.* and *.spec.* files. `--root <dir>` points it at another tree (test/root/test-trust.test.ts
  * uses that to prove it fails). Each message says what to do instead.
  */
@@ -52,6 +53,13 @@ const RULES = [
     why: 'a fixed sleep (waitForTimeout or a setTimeout promise) is slow when the page is ready and flaky when it is not. Wait on a locator expectation, expect.poll, or run page.clock forward.',
     only: /(^|\/)e2e\//,
   },
+  {
+    id: 'sleep-unit',
+    // new Promise((r) => setTimeout(r, ms)) / (resolve) => { setTimeout(() => resolve(), ms) }; the promise's own resolver is the timer's callback.
+    re: /\bwaitForTimeout\s*\(|new Promise(?:<[^>]*>)?\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\{?\s*setTimeout\(\s*(?:\1\b|\(\)\s*=>\s*\1\s*\()/,
+    why: 'a promise that sleeps is slow when the code is ready and flaky when it is not. Wait for the thing itself: vi.waitFor / expect.poll / await screen.findBy... for a result, `await act(async () => {})` to flush effects, or fake timers (vi.useFakeTimers + advanceTimersByTimeAsync) for time. Limit: this is a pattern match on the promise-sleep shape, so a sleep written another way (`await sleep(50)` from a helper, a timers/promises import) gets past it; do not write those either.',
+    not: /(^|\/)e2e\//,
+  },
 ];
 
 function* walk(dir) {
@@ -86,7 +94,7 @@ for (const d of DIRS) {
     const text = readFileSync(file, 'utf8');
 
     for (const rule of RULES) {
-      if (rule.only && !rule.only.test(rel)) {
+      if ((rule.only && !rule.only.test(rel)) || rule.not?.test(rel)) {
         continue;
       }
 

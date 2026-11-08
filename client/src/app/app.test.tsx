@@ -149,8 +149,12 @@ describe('one version: V2 is the whole app', () => {
 
     const n = history.length;
 
-    press('Escape');
-    await new Promise((r) => setTimeout(r, 50));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await act(async () => {
+      press('Escape');
+      await vi.advanceTimersByTimeAsync(50); // anything Esc scheduled for later has run before we look
+    });
+    vi.useRealTimers();
     expect(screen.getByTestId('ar-about')).toBeInTheDocument();
     expect(history.length).toBe(n);
   });
