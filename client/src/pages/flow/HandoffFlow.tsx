@@ -16,7 +16,7 @@ import FollowWork from '@client/kit/FollowWork.js';
 import { entryWords, medianSentence } from '@client/domain/flow/words.js';
 import { emptySeatsWord, fitText, seatsLine } from '@client/domain/flow/boxText.js';
 import { followWork } from '@client/domain/fleet/timeline.js';
-import { isShortcutBlocked, isSlider } from '@client/lib/keys.js';
+import { useReplayClock, useStepKeys } from './useReplay.js';
 import {
   HandoffLegend,
   PageHeader,
@@ -185,7 +185,6 @@ interface HoverCard {
   lines: string[];
 }
 
-const REPLAY_SECONDS = 40;
 const CALM_KEY = 'appyrig.v2.flowCalm';
 
 function readCalm(): boolean {
@@ -195,9 +194,6 @@ function readCalm(): boolean {
     return false;
   }
 }
-
-/** Replay holds on each chapter for this many 100 ms ticks, so the narration can be read. */
-const CHAPTER_HOLD_TICKS = 30;
 
 const clock = (t: number) =>
   new Date(t).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
@@ -257,10 +253,6 @@ export default function HandoffFlow({
     () => (machine && rig ? flowRange(rigQueue(machine, rig)) : null),
     [machine, rig]
   );
-  const [at, setAt] = useState<number | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const atRef = useRef<number | null>(null);
-  const hold = useRef(0);
   // Chapters only need the open/closed picture to 10-minute precision.
   const tenMin = Math.floor(now / 600_000) * 600_000;
   const chapters = useMemo(
@@ -268,57 +260,15 @@ export default function HandoffFlow({
     [machine, rig, tenMin]
   );
   const steps = useMemo(() => (machine && rig ? replaySteps(machine, rig) : []), [machine, rig]);
-  // Set while stepping one handoff at a time; any other move clears it.
-  const [stepId, setStepId] = useState<string | null>(null);
-  // Nothing moves under the cursor: a replay move never scrolls the page. The panel scrolls its
-  // current item into view (`block: 'nearest'`), which also scrolls the window when the panel runs
-  // below the fold; this puts the window back after that effect, in the same commit.
-  const keepScroll = useRef<number | null>(null);
-  const jump = (t: number | null, step: string | null = null) => {
-    keepScroll.current = window.scrollY;
-    atRef.current = t;
-    setAt(t);
-    setStepId(step);
-  };
-
-  useEffect(() => {
-    const y = keepScroll.current;
-
-    keepScroll.current = null;
-    if (y !== null && window.scrollY !== y) {
-      window.scrollTo({ top: y });
-    }
+  const { at, playing, setPlaying, stepId, jump, hold } = useReplayClock({
+    range,
+    chapters,
+    machineId,
+    rig,
   });
 
-  // S2: ← → press the step buttons. The handler reads the latest step functions from a ref.
-  const stepKeys = useRef<{ prev: () => void; next: () => void } | null>(null);
-
-  useEffect(() => {
-    if (!keys) {
-      return;
-    }
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
-        return;
-      }
-
-      if (isShortcutBlocked(e) || isSlider(e.target) || !stepKeys.current) {
-        return;
-      }
-
-      e.preventDefault();
-      if (e.key === 'ArrowLeft') {
-        stepKeys.current.prev();
-      } else {
-        stepKeys.current.next();
-      }
-    };
-
-    window.addEventListener('keydown', onKey);
-
-    return () => window.removeEventListener('keydown', onKey);
-  }, [keys]);
+  // S2: ← → press the step buttons (useStepKeys); the handler reads the latest step functions from a ref.
+  const stepKeys = useStepKeys(keys);
 
   // S4: where this rig's work came in (rig.entry, read-only), once per rig.
   useEffect(() => {
@@ -372,45 +322,6 @@ export default function HandoffFlow({
 
     return () => window.removeEventListener('keydown', onKey, true);
   }, [sel, chain, keys]);
-
-  // A new rig starts at its end (the current state).
-  useEffect(() => {
-    jump(null);
-    setPlaying(false);
-  }, [machine?.machine.id, rig]);
-
-  useEffect(() => {
-    if (!playing || !range) {
-      return;
-    }
-
-    const step = (range.end - range.start) / (REPLAY_SECONDS * 10);
-    const id = window.setInterval(() => {
-      if (hold.current > 0) {
-        hold.current -= 1;
-
-        return;
-      }
-
-      const cur = atRef.current ?? range.start;
-      let next = cur + step;
-      const chapter = chapters.find((c) => c.at > cur && c.at <= next);
-
-      if (chapter) {
-        next = chapter.at;
-        hold.current = CHAPTER_HOLD_TICKS;
-      }
-
-      if (next >= range.end) {
-        setPlaying(false);
-        next = range.end;
-      }
-
-      jump(next);
-    }, 100);
-
-    return () => window.clearInterval(id);
-  }, [playing, range, chapters]);
 
   // Step logic sits above the early returns so the key handler can read it from an effect
   // (r1 S2: a ref written during render is not safe under concurrent rendering).

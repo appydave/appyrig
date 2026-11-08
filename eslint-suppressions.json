@@ -809,7 +809,7 @@
       "count": 5
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 7
+      "count": 6
     },
     "sonarjs/expression-complexity": {
       "count": 1
