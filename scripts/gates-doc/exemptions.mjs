@@ -87,7 +87,7 @@ function numbered(entries, reasons) {
 
 /** Exemption lists this document does not read yet: their absence here is not an absence of exemptions. */
 const NOT_LISTED =
-  'Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.mjs ARCHLINT_EXCLUDES and SKIPPED_FILE, scripts/arch-strings.mjs SKIP, lint/root-imports-codemod.mjs NOT_SCANNED.';
+  'Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.mjs ARCHLINT_EXCLUDES and SKIPPED_FILE, scripts/arch-strings.mjs SKIP, ALLOWED and COPY_ALLOWED, lint/root-imports-codemod.mjs NOT_SCANNED; also not listed: the inline disables in source (eslint-disable, v8 and istanbul ignore, oxlint-disable; 30 when counted on 2026-11-09) and the suppression baselines (eslint-suppressions.json, stylelint-suppressions.json, and the scores, oxlint, coupling and folder baselines).';
 
 /** The text of docs/gates.md. */
 export function render(entries, reasons) {

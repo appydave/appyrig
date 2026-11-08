@@ -5,7 +5,7 @@
 Generated: do not edit. Regenerate with `npm run docs:gates`; `test/root/docs/gates-doc.test.ts` fails when this file is stale.
 Reasons live in `scripts/gates-doc/reasons.mjs`. A reason starting "reason unknown" means nothing in the repo says why.
 
-Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.mjs ARCHLINT_EXCLUDES and SKIPPED_FILE, scripts/arch-strings.mjs SKIP, lint/root-imports-codemod.mjs NOT_SCANNED.
+Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.mjs ARCHLINT_EXCLUDES and SKIPPED_FILE, scripts/arch-strings.mjs SKIP, ALLOWED and COPY_ALLOWED, lint/root-imports-codemod.mjs NOT_SCANNED; also not listed: the inline disables in source (eslint-disable, v8 and istanbul ignore, oxlint-disable; 30 when counted on 2026-11-09) and the suppression baselines (eslint-suppressions.json, stylelint-suppressions.json, and the scores, oxlint, coupling and folder baselines).
 
 127 exemptions, 47 with reason unknown.
 
