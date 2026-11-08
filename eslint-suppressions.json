@@ -1761,19 +1761,16 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 4
-    },
-    "max-params": {
-      "count": 1
+      "count": 2
     },
     "no-magic-numbers": {
-      "count": 19
+      "count": 10
     },
     "sonarjs/cognitive-complexity": {
-      "count": 5
+      "count": 3
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 5
+      "count": 4
     },
     "sonarjs/expression-complexity": {
       "count": 1
