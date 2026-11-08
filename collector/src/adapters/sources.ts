@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
+import { causeOf, errnoCode, errorMessage } from './narrow/errors.js';
 import { createSpecIndex } from './specs.js';
 import { createHealthSampler } from './health.js';
 import {
@@ -73,15 +74,12 @@ export function createSources(opts: SourceOptions = {}): Sources {
   const run = (bin: string, args: string[]): Promise<ExecResult> =>
     new Promise((resolve, reject) => {
       execFile(bin, args, { timeout, maxBuffer: MAX_BUFFER, env }, (err, stdout, stderr) => {
-        if (err && (err as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (err?.code === 'ENOENT') {
           reject(new Error(`${bin} not found`));
-        } else if (err && (err as { killed?: boolean }).killed) {
+        } else if (err?.killed) {
           reject(new Error(`${bin} timed out after ${timeout}ms`));
         } else {
-          const code =
-            typeof (err as { code?: unknown } | null)?.code === 'number'
-              ? (err as { code: number }).code
-              : 0;
+          const code = typeof err?.code === 'number' ? err.code : 0;
 
           resolve({ stdout: String(stdout), stderr: String(stderr), code });
         }
@@ -95,7 +93,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
       res = await fetch(new URL(path, daemonUrl), { signal: AbortSignal.timeout(timeout) });
     } catch (e) {
       // Plain words for the common case: a machine without OpenRig (the M4) refuses the port.
-      if ((e as { cause?: { code?: string } }).cause?.code === 'ECONNREFUSED') {
+      if (errnoCode(causeOf(e)) === 'ECONNREFUSED') {
         throw new Error('no OpenRig daemon running on this machine');
       }
 
@@ -167,7 +165,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
 
       return { edges };
     } catch (e) {
-      return { edges: hit?.edges, error: (e as Error).message };
+      return { edges: hit?.edges, error: errorMessage(e) };
     }
   };
 
@@ -212,7 +210,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
           read.agentDirs.forEach((dir, seat) => dirs.set(seat, dir));
           read.agentRefs.forEach((ref, seat) => refs.set(seat, ref));
         } catch (e) {
-          failures.push(`${rig.name}: ${(e as Error).message}`);
+          failures.push(`${rig.name}: ${errorMessage(e)}`);
         }
 
         const g = await readEdges(rig.id);
@@ -243,7 +241,7 @@ export function createSources(opts: SourceOptions = {}): Sources {
       try {
         queue = await readQueue();
       } catch (e) {
-        warnings.push(`queue unreadable: ${(e as Error).message}`);
+        warnings.push(`queue unreadable: ${errorMessage(e)}`);
       }
 
       agentDirs = dirs;

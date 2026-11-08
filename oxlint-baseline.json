@@ -280,9 +280,6 @@
     "collector/src/adapters/seatcard.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "collector/src/adapters/sources.ts": {
-      "require-safety-comment-for-type-assertion": 8
-    },
     "collector/src/adapters/specs.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
