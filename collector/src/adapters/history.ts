@@ -9,6 +9,7 @@ import {
   type SeatHistoryOrigin,
 } from '@appydave/shared';
 import { redactString } from '@collector/redact.js';
+import { blocksOf, TitleRow, ToolInput, TranscriptRow } from './narrow/transcript.js';
 
 /**
  * v1.2 · seat history for the replay consoles, from Claude Code transcripts on disk.
@@ -26,13 +27,9 @@ const SEAT_TITLE = /^[\w.-]+@[\w.-]+$/;
 /** The seat a transcript belongs to, from its first line; null for anything else. */
 export function seatOfFirstLine(line: string): string | null {
   try {
-    const d = JSON.parse(line) as { type?: unknown; customTitle?: unknown };
+    const row = TitleRow.safeParse(JSON.parse(line));
 
-    if (d.type !== 'custom-title' || typeof d.customTitle !== 'string') {
-      return null;
-    }
-
-    return SEAT_TITLE.test(d.customTitle) ? d.customTitle : null;
+    return row.success && SEAT_TITLE.test(row.data.customTitle) ? row.data.customTitle : null;
   } catch {
     return null;
   }
@@ -93,19 +90,41 @@ export function classifyPrompt(raw: string): { origin: SeatHistoryOrigin; text: 
 
 /** One line for a tool call: its name and the input that says what it did. */
 export function toolSummary(name: string, input: unknown): string {
-  const i = (input ?? {}) as Record<string, unknown>;
-  const pick = ['command', 'file_path', 'path', 'pattern', 'url', 'query', 'description', 'prompt']
-    .map((k) => i[k])
-    .find((v) => typeof v === 'string' && v.length > 0) as string | undefined;
+  const fields = ToolInput.safeParse(input);
+  const pick = fields.success
+    ? [
+        fields.data.command,
+        fields.data.file_path,
+        fields.data.path,
+        fields.data.pattern,
+        fields.data.url,
+        fields.data.query,
+        fields.data.description,
+        fields.data.prompt,
+      ].find((v) => v)
+    : undefined;
 
   return `${name}${pick ? `: ${pick}` : ''}`;
 }
 
-interface Block {
-  type?: string;
-  text?: string;
-  name?: string;
-  input?: unknown;
+/** A transcript line's type, content and moment; null when it is not JSON, not a row or has no valid timestamp. */
+function rowOf(line: string): { type?: string; content: unknown; at: string } | null {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    return null;
+  }
+
+  const row = TranscriptRow.safeParse(parsed);
+  const at = row.success ? row.data.timestamp : undefined;
+
+  if (!row.success || !at || Number.isNaN(Date.parse(at))) {
+    return null;
+  }
+
+  return { type: row.data.type, content: row.data.message?.content, at };
 }
 
 /** Prompts, replies and tool calls from a transcript's JSONL, oldest first. */
@@ -117,21 +136,13 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
       continue;
     }
 
-    let d: { type?: string; timestamp?: string; message?: { content?: unknown } };
+    const d = rowOf(line);
 
-    try {
-      d = JSON.parse(line);
-    } catch {
+    if (!d) {
       continue;
     }
 
-    const at = d.timestamp;
-
-    if (!at || Number.isNaN(Date.parse(at))) {
-      continue;
-    }
-
-    const content = d.message?.content;
+    const { at, content } = d;
     const push = (kind: SeatHistoryEvent['kind'], t: string) => {
       if (kind === 'prompt') {
         const { origin, text } = classifyPrompt(t);
@@ -155,15 +166,15 @@ export function parseTranscript(text: string): SeatHistoryEvent[] {
     if (d.type === 'user') {
       if (typeof content === 'string') {
         push('prompt', content);
-      } else if (Array.isArray(content)) {
-        for (const b of content as Block[]) {
+      } else {
+        for (const b of blocksOf(content)) {
           if (b.type === 'text' && b.text) {
             push('prompt', b.text);
           }
         }
       }
-    } else if (d.type === 'assistant' && Array.isArray(content)) {
-      for (const b of content as Block[]) {
+    } else if (d.type === 'assistant') {
+      for (const b of blocksOf(content)) {
         if (b.type === 'text' && b.text) {
           push('reply', b.text);
         } else if (b.type === 'tool_use' && b.name) {
