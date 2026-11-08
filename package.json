@@ -5,7 +5,7 @@
   "description": "Live view of agent teams across machines",
   "type": "module",
   "imports": {
-    "#root/*": "./*"
+    "#root/eslint.config.js": "./eslint.config.js"
   },
   "workspaces": [
     "shared",
