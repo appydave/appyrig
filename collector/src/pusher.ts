@@ -16,6 +16,8 @@ import type { PendingHandoffs } from './adapters/handoffs.js';
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
 import { emitAcked } from '@collector/pusher/emitAcked.js';
 import { startChannel, type ChannelDeps } from '@collector/pusher/channel.js';
+import { quietLog } from '@collector/pusher/quietLog.js';
+import { trackHubCaps } from '@collector/pusher/hubCaps.js';
 import { CHANNELS, type ChannelOptions } from '@collector/pusher/channelTable.js';
 
 /**
@@ -75,68 +77,12 @@ export function startPusher(opts: PusherOptions): Pusher {
   });
 
   let stopped = false;
-  // What the connected hub advertised in its last snapshot ack (HUB_CAPS). Nothing until the first
-  // ack, and forgotten on every (re)connect: a restarted hub may be an older build. With no
-  // V2_FIELDS cap the snapshot goes out in exactly the v1.5 shape.
-  let hubCaps = new Set<string>();
-  // Belt and braces: a hub that refused a snapshot naming a v2 key is treated as v1.5 until reconnect.
-  let forceV15 = false;
-  // The hub says what it understands as soon as we connect (`hub:caps`); the first push waits briefly
-  // for it so v2 fields do not vanish for one push after every reconnect. An older hub never says,
-  // so the wait ends after capsWaitMs and its first snapshot goes out as v1.5.
-  let capsSeen = false;
-  let capsWaiter: (() => void) | undefined;
-  const capsWaitMs = opts.capsWaitMs ?? 1000;
-
-  socket.on(FLEET_EVENTS.CAPS, (caps: unknown) => {
-    if (Array.isArray(caps)) {
-      hubCaps = new Set(caps.filter((c): c is string => typeof c === 'string'));
-    }
-
-    capsSeen = true;
-    capsWaiter?.();
-  });
-
-  const waitForCaps = () =>
-    capsSeen || capsWaitMs <= 0
-      ? Promise.resolve()
-      : new Promise<void>((resolve) => {
-          const t = setTimeout(resolve, capsWaitMs);
-
-          capsWaiter = () => {
-            clearTimeout(t);
-            resolve();
-          };
-        }).then(() => {
-          capsSeen = true; // waited once for this connection
-          capsWaiter = undefined;
-        });
+  const caps = trackHubCaps(socket, opts.capsWaitMs ?? 1000);
+  const { note, warnSometimes } = quietLog(log);
   let timer: NodeJS.Timeout | undefined;
-  let lastNote = '';
-  const note = (line: string) => {
-    if (line !== lastNote) {
-      lastNote = line;
-      log(line);
-    }
-  };
-
-  // A warning that repeats for as long as its cause lasts (an older hub with no listener for queue
-  // bodies) is logged once per WARN_EVERY_MS, however much other news arrives in between.
-  const WARN_EVERY_MS = 10 * 60_000;
-  const lastWarn = new Map<string, number>();
-  const warnSometimes = (key: string, line: string) => {
-    const t = Date.now();
-
-    if (t - (lastWarn.get(key) ?? 0) >= WARN_EVERY_MS) {
-      lastWarn.set(key, t);
-      log(line);
-    }
-  };
 
   socket.on('connect', () => {
-    hubCaps = new Set();
-    forceV15 = false;
-    capsSeen = false;
+    caps.reset();
     opts.onConnect?.();
     note(`connected to ${opts.hubUrl} as ${opts.machineId}`);
   });
@@ -154,21 +100,20 @@ export function startPusher(opts: PusherOptions): Pusher {
 
     try {
       if (socket.connected) {
-        await waitForCaps();
+        await caps.waitForFirst();
 
         const built = await opts.build();
-        const sendV2 = hubCaps.has(HUB_CAPS.V2_FIELDS) && !forceV15;
-        const sendSpec = hubCaps.has(HUB_CAPS.SPEC_FIELDS) && !forceV15;
+        const sendV2 = caps.offers(HUB_CAPS.V2_FIELDS);
+        const sendSpec = caps.offers(HUB_CAPS.SPEC_FIELDS);
         const v2 = sendV2 ? built : stripV2Fields(built);
         const ack = await push(sendSpec ? v2 : stripSpecFields(v2));
 
         if (!('timeout' in ack) && ack.ok) {
-          hubCaps = new Set(ack.caps ?? []);
+          caps.learn(ack.caps ?? []);
         }
 
         if (!('timeout' in ack) && !ack.ok && (sendV2 || sendSpec) && namesV2Key(ack.message)) {
-          forceV15 = true;
-          hubCaps = new Set();
+          caps.refuseV2();
           log('hub refused a v2 snapshot field: sending the v1.5 shape until it reconnects');
         }
 
@@ -280,7 +225,7 @@ export function startPusher(opts: PusherOptions): Pusher {
   const deps: ChannelDeps = {
     isStopped: () => stopped,
     connected: () => socket.connected,
-    hubCaps: () => hubCaps,
+    hubCaps: caps.current,
     maxPayloadBytes: CHANNEL_PAYLOAD_MAX,
     note,
     warnSometimes,

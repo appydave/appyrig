@@ -284,7 +284,10 @@
       "require-safety-comment-for-type-assertion": 1
     },
     "collector/src/pusher.ts": {
-      "no-unknown-parameters": 2
+      "no-unknown-parameters": 1
+    },
+    "collector/src/pusher/hubCaps.ts": {
+      "no-unknown-parameters": 1
     },
     "collector/src/redact.ts": {
       "no-unsafe-dictionary-type": 1,
