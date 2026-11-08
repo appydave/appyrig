@@ -94,7 +94,7 @@ function isAllowedOrigin(headers: IncomingHttpHeaders, clientUrl: string): boole
 }
 
 /** True when the request headers carry a valid session cookie or a bearer hub token. */
-export function isAuthorised(headers: IncomingHttpHeaders, hubToken: string | undefined): boolean {
+function isAuthorised(headers: IncomingHttpHeaders, hubToken: string | undefined): boolean {
   if (!hubToken) {
     return false;
   }
