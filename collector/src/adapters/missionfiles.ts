@@ -42,7 +42,7 @@ export interface MissionAllowlist {
   roots: string[];
 }
 
-export const defaultMissionRoots = (): string[] => [join(homedir(), 'dev')];
+const defaultMissionRoots = (): string[] => [join(homedir(), 'dev')];
 
 const under = (p: string, roots: string[]): boolean =>
   roots.some((r) => p.startsWith(r.endsWith(sep) ? r : r + sep));
@@ -277,7 +277,7 @@ export interface PendingMissionFiles {
 }
 
 /** Most raw bytes one tick hands over; the rest of a big fleet goes out on the next tick. */
-export const MISSION_TICK_BYTES = 6 * 1024 * 1024;
+const MISSION_TICK_BYTES = 6 * 1024 * 1024;
 
 /**
  * Finds rigs whose mission files changed since the hub last accepted them. Cheap when nothing

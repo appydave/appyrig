@@ -51,10 +51,10 @@ export interface PusherOptions extends ChannelOptions {
 export const CHANNEL_PAYLOAD_MAX = 800 * 1024;
 
 /** Seat history changes slowly and is large next to a snapshot, so it is checked once a minute. */
-export const HISTORY_INTERVAL_MS = 60_000;
+const HISTORY_INTERVAL_MS = 60_000;
 
 /** New queue bodies are small and wanted promptly, so this loop runs faster than history's. */
-export const HANDOFF_INTERVAL_MS = 10_000;
+const HANDOFF_INTERVAL_MS = 10_000;
 
 export interface Pusher {
   stop(): Promise<void>;

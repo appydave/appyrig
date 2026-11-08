@@ -162,9 +162,9 @@ const STARTS_WITH_RUN = new RegExp(`^${RUN_CHAR}{4,}`);
  * is full width and carries on into the next, so prose stops it at once. QA F2 MEDIUM-1: 4 rows let
  * a 600-char JWT leak its later rows; 40 rows covers ~3,000 chars at 80 columns.
  */
-export const WRAP_MAX_ROWS = 40;
+const WRAP_MAX_ROWS = 40;
 /** Columns short of the widest row that still count as a full (wrapped) row. */
-export const WRAP_SLACK = 6;
+const WRAP_SLACK = 6;
 
 /**
  * Fix-first F2 (QA HIGH-1, ruling 2026-10-13): Claude Code draws its own UI and breaks a long line

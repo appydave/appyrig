@@ -20,7 +20,7 @@ export interface AccountPaths {
   usageLog: string;
 }
 
-export function defaultAccountPaths(home = homedir()): AccountPaths {
+function defaultAccountPaths(home = homedir()): AccountPaths {
   return {
     claudeJson: join(home, '.claude.json'),
     usageLog: join(home, '.claude', 'usage-log.csv'),

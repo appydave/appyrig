@@ -23,7 +23,7 @@ import { REDACTED, redactString } from '@collector/redact.js';
 export const RIG_COMMANDS_FILE = join(homedir(), '.appyrig', 'rig-commands.jsonl');
 
 /** Most bytes read from the end of the file: enough for RIG_COMMANDS_MAX long lines. */
-export const RIG_COMMANDS_READ_BYTES = 2 * 1024 * 1024;
+const RIG_COMMANDS_READ_BYTES = 2 * 1024 * 1024;
 
 /**
  * Shell-line secrets the general filter does not know, on top of it:
@@ -61,7 +61,7 @@ const str = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 ? v.slice(0, max) : null;
 
 /** One logged line as AppyRig sends it; null for a line that is not a command entry. */
-export function commandOf(raw: unknown): (RigCommand & { key: string | null }) | null {
+function commandOf(raw: unknown): (RigCommand & { key: string | null }) | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     return null;
   }

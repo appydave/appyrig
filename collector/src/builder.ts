@@ -230,8 +230,6 @@ export function enrichRigs(
   });
 }
 
-export { podOf, rigSpecOf } from './adapters/specView.js';
-
 /** One machine, one snapshot. Never throws on a source failure: it reports it in `sources`. */
 export async function buildSnapshot(
   sources: Sources,
