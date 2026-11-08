@@ -852,6 +852,47 @@ describe('pusher', () => {
     expect(skipped.every((k) => k === 'workflows')).toBe(true);
   }, 15_000);
 
+  it('a tick loop that throws a non-Error logs what was thrown, not "undefined"', async () => {
+    hub = await startHub(0, true, { caps: [HUB_CAPS.V2_FIELDS, HUB_CAPS.DAEMONDATA] });
+
+    const lines: string[] = [];
+
+    pusher = startPusher({
+      hubUrl: hub.url,
+      token: TOKEN,
+      machineId: 'roamy',
+      build: async () => {
+        throw 'build-boom';
+      },
+      intervalMs: 30,
+      historyIntervalMs: 30,
+      handoffIntervalMs: 30,
+      daemonDataIntervalMs: 20,
+      log: (l) => lines.push(l),
+      histories: async () => {
+        throw 'history-boom';
+      },
+      handoffs: async () => {
+        throw 'handoff-boom';
+      },
+      daemonData: async () => {
+        throw 'daemon-boom';
+      },
+    });
+    await until(
+      () =>
+        ['build-boom', 'history-boom', 'handoff-boom', 'daemon-boom'].every((w) =>
+          lines.some((l) => l.endsWith(w))
+        ),
+      10_000
+    );
+    expect(lines).toContain('tick failed: build-boom');
+    expect(lines).toContain('history tick failed: history-boom');
+    expect(lines).toContain('handoff tick failed: handoff-boom');
+    expect(lines.some((l) => /tick failed: daemon-boom$/.test(l))).toBe(true);
+    expect(lines.some((l) => l.endsWith('undefined'))).toBe(false);
+  }, 15_000);
+
   it('does not overlap ticks when a build is slow', async () => {
     hub = await startHub();
 

@@ -6,10 +6,10 @@ import { defineConfig } from 'vitest/config';
 // go DOWN: when you add tests, lower these numbers to the new count in the same PR. Raising one needs the
 // judge's say. New code arrives with its own tests, or the uncovered count grows and `npm run test:coverage`
 // fails with "Uncovered lines (N) exceed global threshold (M)".
-const UNCOVERED_LINES = 243;
-const UNCOVERED_STATEMENTS = 262;
-const UNCOVERED_FUNCTIONS = 57;
-const UNCOVERED_BRANCHES = 323;
+const UNCOVERED_LINES = 232;
+const UNCOVERED_STATEMENTS = 251;
+const UNCOVERED_FUNCTIONS = 56;
+const UNCOVERED_BRANCHES = 315;
 
 export default defineConfig({
   resolve: { alias: { '@collector': path.resolve(__dirname, 'src') } },

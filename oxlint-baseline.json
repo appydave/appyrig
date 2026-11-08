@@ -246,10 +246,10 @@
     },
     "collector/src/adapters/daemondata.ts": {
       "no-unsafe-dictionary-type": 2,
-      "require-safety-comment-for-type-assertion": 13
+      "require-safety-comment-for-type-assertion": 5
     },
     "collector/src/adapters/health.ts": {
-      "require-safety-comment-for-type-assertion": 3
+      "require-safety-comment-for-type-assertion": 2
     },
     "collector/src/adapters/history.ts": {
       "no-unsafe-dictionary-type": 1,
@@ -269,9 +269,6 @@
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 3
     },
-    "collector/src/adapters/seatcard.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
     "collector/src/adapters/specs.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
@@ -288,11 +285,11 @@
       "no-unknown-parameters": 1
     },
     "collector/src/main.ts": {
-      "require-safety-comment-for-type-assertion": 2
+      "require-safety-comment-for-type-assertion": 1
     },
     "collector/src/pusher.ts": {
       "no-unknown-parameters": 8,
-      "require-safety-comment-for-type-assertion": 5
+      "require-safety-comment-for-type-assertion": 1
     },
     "collector/src/redact.ts": {
       "no-unsafe-dictionary-type": 1,

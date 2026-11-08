@@ -15,6 +15,7 @@ import {
 } from './index.js';
 import { readFixtureJson } from './fixtureSources.js';
 import { parseNodes } from './daemon.js';
+import { isNotFound, settle } from './daemondata.js';
 
 /** A node record shaped like the live 0.6.6 GET /api/rigs/:id/nodes/:logicalId. */
 const node = (over: Record<string, unknown> = {}) => ({
@@ -245,6 +246,20 @@ describe('v2 · seat detail (step 2)', () => {
     tick(61_000);
     expect((await r.next([T]))!.pushes).toHaveLength(1);
     expect(lines).toHaveLength(1);
+  });
+
+  it('a seat whose read throws a plain string is reported by that text, not "undefined"', async () => {
+    const lines: string[] = [];
+    const { r } = reader(
+      async () => {
+        throw 'node-route-boom';
+      },
+      (l) => lines.push(l)
+    );
+
+    expect(await r.next([T])).toBeNull();
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain(`first ${T.seat}: node-route-boom`);
   });
 
   it('one bad seat does not stop the others', async () => {
@@ -742,6 +757,28 @@ describe('v2 · queue transitions (step 4)', () => {
     expect(data(again).rows).toHaveLength(12);
   });
 
+  it('a rejected cursor thrown as a plain string starts over, same as an Error', async () => {
+    const d = fakeTelemetry({ n: 10 });
+    let down: unknown = null;
+    const { r, tick } = trReader(async (p) => {
+      if (down) {
+        throw down;
+      }
+
+      return d.get(p);
+    });
+
+    (await r.next([]))!.markSent();
+    d.grow(2);
+    down = 'GET x -> HTTP 410';
+    tick();
+    expect(await r.next([])).toBeNull();
+    down = null;
+    tick();
+    await r.next([]);
+    expect(d.calls.at(-1)).toContain('start=retained');
+  });
+
   it('404 is unsupported, never none', async () => {
     const { r } = trReader(async () => {
       throw new Error('GET /api/telemetry/v1/queue-transitions -> HTTP 404');
@@ -1059,5 +1096,32 @@ describe('v2 · settings (step 5)', () => {
       ).next([])
     ).toBeNull();
     expect(lines).toEqual([expect.stringMatching(/settings unreadable/)]);
+  });
+});
+
+describe('settle and isNotFound read what was thrown, not .message', () => {
+  it('a thrown string, an Error, undefined', async () => {
+    expect(
+      await settle(async () => {
+        throw 'HTTP 404 gone';
+      }, '/x')
+    ).toEqual({ ok: false, notFound: true, error: 'HTTP 404 gone' });
+    expect(
+      await settle(async () => {
+        throw new Error('GET -> HTTP 404');
+      }, '/x')
+    ).toEqual({ ok: false, notFound: true, error: 'GET -> HTTP 404' });
+    expect(
+      await settle(async () => {
+        throw 'HTTP 4040';
+      }, '/x')
+    ).toMatchObject({ notFound: false });
+    expect(
+      await settle(async () => {
+        throw undefined;
+      }, '/x')
+    ).toMatchObject({ notFound: false, error: 'undefined' });
+    expect(isNotFound('HTTP 404')).toBe(true);
+    expect(isNotFound(null)).toBe(false);
   });
 });

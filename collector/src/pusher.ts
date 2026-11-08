@@ -24,6 +24,7 @@ import type { PendingDaemonData } from './adapters/daemondata.js';
 import type { PendingMissionFiles } from './adapters/missionfiles.js';
 import type { PendingRigSpecs } from './adapters/rigspecs.js';
 import type { PendingRigCommands } from './adapters/rigcommands.js';
+import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -219,7 +220,7 @@ export function startPusher(opts: PusherOptions): Pusher {
         );
       }
     } catch (e) {
-      note(`tick failed: ${(e as Error).message}`);
+      note(`tick failed: ${errorMessage(e)}`);
     }
 
     if (!stopped) {
@@ -260,7 +261,7 @@ export function startPusher(opts: PusherOptions): Pusher {
         }
       }
     } catch (e) {
-      note(`history tick failed: ${(e as Error).message}`);
+      note(`history tick failed: ${errorMessage(e)}`);
     }
 
     if (!stopped) {
@@ -305,7 +306,7 @@ export function startPusher(opts: PusherOptions): Pusher {
         }
       }
     } catch (e) {
-      note(`handoff tick failed: ${(e as Error).message}`);
+      note(`handoff tick failed: ${errorMessage(e)}`);
     }
 
     if (!stopped) {
@@ -385,7 +386,7 @@ export function startPusher(opts: PusherOptions): Pusher {
           }
         }
       } catch (e) {
-        note(`${key} tick failed: ${(e as Error).message}`);
+        note(`${key} tick failed: ${errorMessage(e)}`);
       }
 
       if (!stopped) {

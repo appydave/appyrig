@@ -2,6 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { AppConfigSchema, KEY_SKILLS_MAX, type SeatConfig } from '@appydave/shared';
+import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
 /**
  * D09 W3: what a seat card says about the seat beyond its terminal: its role (the last folder of
@@ -98,7 +99,7 @@ export function seatConfigReader(
       // Not a valid config: no allowlists, so cards show the count alone. Said once per change,
       // as the hub does (r1 W3 MEDIUM-1).
       onError(
-        `${file} is not a valid AppyRig config; key skills off: ${(e as Error).message.slice(0, 200)}`
+        `${file} is not a valid AppyRig config; key skills off: ${errorMessage(e).slice(0, 200)}`
       );
     }
 

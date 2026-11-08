@@ -23,6 +23,7 @@ import { HUB_CAPS } from '@appydave/shared';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
 import { startPusher } from './pusher.js';
+import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
 /** Entry point for launchd: `node dist/main.js`. Settings come from APPYRIG_* environment variables. */
 const VERSION = (
@@ -152,6 +153,6 @@ function main() {
 try {
   main();
 } catch (e) {
-  console.error(`${new Date().toISOString()} collector not started: ${(e as Error).message}`);
+  console.error(`${new Date().toISOString()} collector not started: ${errorMessage(e)}`);
   process.exit(2);
 }
