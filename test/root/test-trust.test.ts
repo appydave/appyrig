@@ -33,6 +33,8 @@ function gate(files: Record<string, string>) {
   return { status: r.status, out: `${r.stdout}${r.stderr}` };
 }
 
+const IMPORT = `${'im'}${'port'}`;
+const TIMERS = `${'timers'}/${'promises'}`;
 const ENV = (name: string) => `process.env.${'T'}${name}`;
 const EXPECT = `${'ex'}${'pect'}`;
 
@@ -100,6 +102,10 @@ describe('Feature: the test-trust gate leaves honest tests alone', () => {
       'the word in a string fixture',
       `const code = 'return ${'setTimeout'}(() => undefined, 5000);';`,
     ],
+    [
+      'an import from timers/promises that is not setTimeout',
+      `${IMPORT} { setImmediate } from 'node:${TIMERS}';`,
+    ],
     ['a promise that resolves on an event', `await new Promise((r) => socket.once('open', r));`],
   ])('Scenario: given %s in a unit test, then it is not flagged', (_name, body) => {
     const r = gate({ 'client/src/l.test.tsx': body });
@@ -127,6 +133,14 @@ describe('Feature: the test-trust gate fails a promise that sleeps in a unit tes
     ['block body', `await new Promise((r) => { ${'setTimeout'}(r, 50); });`],
     ['called resolver', `await new Promise<void>((r) => ${'setTimeout'}(() => r(), 50));`],
     ['waitForTimeout', `await page.${'waitForTimeout'}(50);`],
+    ['renamed timers/promises import', `${IMPORT} { ${'setTimeout'} as sleep } from '${TIMERS}';`],
+    ['bare timers/promises import', `${IMPORT} { ${'setTimeout'} } from 'node:${TIMERS}';`],
+    [
+      'multi-line timers/promises import',
+      `${IMPORT} {\n  ${'setTimeout'} as wait,\n} from '${TIMERS}';`,
+    ],
+    ['namespace timers/promises import', `${IMPORT} * as timers from '${TIMERS}';`],
+    ['default timers/promises import', `${IMPORT} timers from 'node:${TIMERS}';`],
   ])(
     'Scenario: given a %s sleep in a unit test, then it exits 1 and says what to write',
     (_n, body) => {
@@ -135,7 +149,7 @@ describe('Feature: the test-trust gate fails a promise that sleeps in a unit tes
       expect(r.status, r.out).toBe(1);
       expect(r.out).toContain('client/src/m.test.tsx:1 [sleep-unit]');
       expect(r.out).toContain('vi.waitFor');
-      expect(r.out).toContain('a sleep written another way');
+      expect(r.out).toContain('some other helper');
     }
   );
 

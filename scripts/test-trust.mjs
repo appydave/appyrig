@@ -55,9 +55,9 @@ const RULES = [
   },
   {
     id: 'sleep-unit',
-    // new Promise((r) => setTimeout(r, ms)) / (resolve) => { setTimeout(() => resolve(), ms) }; the promise's own resolver is the timer's callback.
-    re: /\bwaitForTimeout\s*\(|new Promise(?:<[^>]*>)?\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\{?\s*setTimeout\(\s*(?:\1\b|\(\)\s*=>\s*\1\s*\()/,
-    why: 'a promise that sleeps is slow when the code is ready and flaky when it is not. Wait for the thing itself: vi.waitFor / expect.poll / await screen.findBy... for a result, `await act(async () => {})` to flush effects, or fake timers (vi.useFakeTimers + advanceTimersByTimeAsync) for time. Limit: this is a pattern match on the promise-sleep shape, so a sleep written another way (`await sleep(50)` from a helper, a timers/promises import) gets past it; do not write those either.',
+    // new Promise((r) => setTimeout(r, ms)) / (resolve) => { setTimeout(() => resolve(), ms) } (the promise's own resolver is the timer's callback), or setTimeout imported from timers/promises (any rename; a namespace or default import too).
+    re: /\bwaitForTimeout\s*\(|\bimport\s*(?:\{[^}]*\bsetTimeout\b[^}]*\}|\*\s*as\s+\w+|\w+)\s*from\s*['"](?:node:)?timers\/promises['"]|new Promise(?:<[^>]*>)?\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\{?\s*setTimeout\(\s*(?:\1\b|\(\)\s*=>\s*\1\s*\()/,
+    why: 'a promise that sleeps is slow when the code is ready and flaky when it is not. Wait for the thing itself: vi.waitFor / expect.poll / await screen.findBy... for a result, `await act(async () => {})` to flush effects, or fake timers (vi.useFakeTimers + advanceTimersByTimeAsync) for time. Limit: this is a pattern match on the promise-sleep shape, so a sleep written through some other helper (your own `sleep(50)`, a delay from a library) gets past it; do not write those either. An import of setTimeout from timers/promises is flagged on the import line, whatever it is renamed to.',
     not: /(^|\/)e2e\//,
   },
 ];

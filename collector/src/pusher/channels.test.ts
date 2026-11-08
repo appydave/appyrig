@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { setTimeout as sleep } from 'node:timers/promises';
 import { Server } from 'socket.io';
 import { FLEET_EVENTS, HUB_CAPS, PUSH_INTERVAL_MS, type CollectorAck } from '@appydave/shared';
 import { buildSnapshot } from '@collector/builder.js';
@@ -258,6 +257,22 @@ const build = () =>
     pid: null,
   });
 
+/** Resolves once the pusher is connected and has heard the hub's caps. Call straight after run(). */
+async function ready() {
+  const socket = pusher!.socket;
+  const capsIn = new Promise<void>((resolve) => {
+    socket.once(FLEET_EVENTS.CAPS, () => resolve());
+  });
+
+  if (!socket.connected) {
+    await new Promise<void>((resolve) => {
+      socket.once('connect', () => resolve());
+    });
+  }
+
+  await capsIn;
+}
+
 function run(h: Hub, extra: Partial<PusherOptions>, lines: string[] = []) {
   pusher = startPusher({
     hubUrl: h.url,
@@ -320,14 +335,17 @@ describe.each(CHANNELS)('Feature: the $key channel', (c) => {
   });
 
   it('Scenario: it is read only from a hub that advertised the cap it needs', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     hub = await startHub(c.needs ? ALL_CAPS.filter((x) => x !== c.needs) : []);
     run(hub, c.on(p, 20));
-    await sleep(300);
+    await ready();
+    await vi.advanceTimersByTimeAsync(300); // fifteen ticks of the channel's 20 ms loop
     expect(p.takes > 0).toBe(!c.needs);
 
     if (c.needs) {
       await pusher?.stop();
       await hub.close();
+      vi.useRealTimers();
       hub = await startHub([c.needs]);
       run(hub, c.on(p, 20));
       await vi.waitFor(() => expect(p.takes).toBeGreaterThan(0), { timeout: 8000, interval: 20 });
@@ -344,11 +362,7 @@ describe.each(CHANNELS)('Feature: the $key channel', (c) => {
 
     hub = await startHub(ALL_CAPS);
     run(hub, c.on(quiet, ms));
-    while (!pusher?.socket.connected) {
-      await sleep(10);
-    }
-
-    await sleep(100); // the hub's caps arrive
+    await ready();
 
     const first = Math.min(every, 4000);
 
@@ -377,12 +391,9 @@ describe('Feature: a stopped pusher does not start a channel up again', () => {
           release = () => r(null);
         }),
     });
-    while (!pusher?.socket.connected) {
-      await sleep(10);
-    }
-
+    await ready();
     await vi.advanceTimersByTimeAsync(50);
-    await pusher.stop();
+    await pusher?.stop();
 
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(0);
@@ -443,6 +454,7 @@ describe('Feature: what a channel does when things go wrong', () => {
   it('Scenario: a channel is not read while the hub is unreachable', async () => {
     let n = 0;
 
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     hub = await startHub(ALL_CAPS);
 
     const gone = hub.url;
@@ -460,7 +472,10 @@ describe('Feature: what a channel does when things go wrong', () => {
         },
       }
     );
-    await sleep(400);
+    await new Promise<void>((resolve) => {
+      pusher!.socket.once('connect_error', () => resolve());
+    });
+    await vi.advanceTimersByTimeAsync(400); // twenty ticks while the hub is gone
 
     expect(n).toBe(0);
   });
