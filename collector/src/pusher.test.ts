@@ -776,6 +776,7 @@ describe('pusher', () => {
     pusher = startPusher(opts(hub.url));
     await until(
       () =>
+        hub!.received.length > 0 &&
         hub!.extra.some((e) => e.event === 'collector:rigspecs') &&
         hub!.extra.some((e) => e.event === 'collector:rigcommands'),
       10_000
