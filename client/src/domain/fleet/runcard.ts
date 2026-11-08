@@ -23,13 +23,13 @@ export const RUN_WORD: Record<RunWord, { glyph: string; label: string }> = {
   asleep: { glyph: '◌', label: 'not reporting' },
 };
 
-export interface RunState {
+interface RunState {
   word: RunWord;
   /** The evidence for the word, in plain words. */
   why: string;
 }
 
-export interface RunStep {
+interface RunStep {
   item: QueueItem;
   /** "ylo-check → ylo-lead: check: pair A FIX LIST" (time rendered by the screen). */
   text: string;

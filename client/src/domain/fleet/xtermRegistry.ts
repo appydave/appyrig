@@ -22,7 +22,7 @@ export function trackTerminal(): () => void {
   };
 }
 
-export function xtermCount(): number {
+function xtermCount(): number {
   return live;
 }
 

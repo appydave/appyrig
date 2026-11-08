@@ -50,7 +50,7 @@ export const DOT_STATE_LABEL: Record<DotState, string> = {
   stopped: 'blocked, failed or cancelled',
 };
 
-export interface TimelineLane {
+interface TimelineLane {
   /** The seat's bare name, or OUTSIDE_LANE. */
   id: string;
   label: string;
@@ -237,26 +237,6 @@ export function timeScale(phases: TimelinePhase[], pxPerMin: number): TimeScale 
   return { width: x, x: xOf, breaks, spans };
 }
 
-/** Axis ticks inside each phase, every `step` minutes on the local clock. */
-export function timeTicks(phases: TimelinePhase[], pxPerMin: number): number[] {
-  const step = pxPerMin >= 12 ? 5 : pxPerMin >= 6 ? 10 : pxPerMin >= 3 ? 15 : 30;
-  const out: number[] = [];
-
-  for (const p of phases) {
-    const from = p.start - PHASE_PAD_MS;
-    const to = p.end + PHASE_PAD_MS;
-    const d = new Date(from);
-
-    d.setSeconds(0, 0);
-    d.setMinutes(Math.ceil(d.getMinutes() / step) * step);
-    for (let t = d.getTime(); t <= to; t += step * 60_000) {
-      out.push(t);
-    }
-  }
-
-  return out;
-}
-
 /**
  * Marks on the same lane closer than `minPx` take the next free row, so a fan-out sent in the same
  * second stays clickable: no two marks ever overlap. Returns the row per mark (in `marks` order)
@@ -288,9 +268,9 @@ export function stackRows(
 
 // ---------------------------------------------------------------- V2 follow one piece of work
 
-export type ChainRule = 'tag' | 'words' | 'alone';
+type ChainRule = 'tag' | 'words' | 'alone';
 
-export interface ChainStep {
+interface ChainStep {
   item: QueueItem;
   /** 'in': what started it (linked by time and seat); 'out': the report that left the rig. */
   role: 'in' | 'step' | 'out';

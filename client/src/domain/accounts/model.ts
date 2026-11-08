@@ -1,7 +1,7 @@
 import type { AccountWindow } from '@appydave/shared';
 
 /** Under this share of the window gone, a burn rate is noise (a few minutes of use, scaled up). */
-export const MIN_ELAPSED_PCT = 3;
+const MIN_ELAPSED_PCT = 3;
 
 /**
  * Burn per hour at the reading: used ÷ time gone. Null without a reading, and null whenever the

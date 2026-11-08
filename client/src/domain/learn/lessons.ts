@@ -10,7 +10,7 @@ import type { OpenRigFact } from './glossary.js';
  *   ~/dev/ad/brains/appyrig-build/      the cost lessons (REPORT.md, DEBRIEF.md)
  */
 
-export type LiveExample = 'seats' | 'rigs' | 'queue' | 'health' | 'accounts' | 'none';
+type LiveExample = 'seats' | 'rigs' | 'queue' | 'health' | 'accounts' | 'none';
 
 export interface Lesson {
   id: string;

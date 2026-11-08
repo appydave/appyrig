@@ -2,7 +2,7 @@ import type { FleetMachine, SettingsGetOutput } from '@appydave/shared';
 
 /** One machine's row of settings.get, one setting, one value (shared/src/daemondata.ts). */
 export type SettingsMachine = SettingsGetOutput['machines'][number];
-export type SettingRow = SettingsMachine['settings'][number];
+type SettingRow = SettingsMachine['settings'][number];
 export type SettingValue = SettingRow['value'];
 
 /** A settings group is the key's first part (`queue.wake_retry_cap` → queue); known groups first. */
@@ -22,7 +22,7 @@ const ORDER = [
   'ui',
 ];
 
-export function groupOf(key: string): string {
+function groupOf(key: string): string {
   return key.includes('.') ? key.slice(0, key.indexOf('.')) : 'general';
 }
 
@@ -102,7 +102,7 @@ export function groupSettings(machines: SettingsMachine[], changedOnly: boolean)
 }
 
 /** What the collector puts in place of a path; the page uses the same words as its backstop. */
-export const PATH_HIDDEN = '(path hidden)';
+const PATH_HIDDEN = '(path hidden)';
 
 /**
  * UI backstop (the collector already hides paths): a string that is, or contains, a path-like

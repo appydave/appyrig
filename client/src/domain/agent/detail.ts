@@ -9,7 +9,7 @@ import type { Seat, SeatDetailData, SeatDetailOutput } from '@appydave/shared';
  * as labelled sample data built from the seat's real names, or, for a seat that is not an OpenRig
  * seat, says so instead of inventing files.
  */
-export interface StartupFile {
+interface StartupFile {
   path: string;
   deliveryHint: string | null;
   required: boolean | null;

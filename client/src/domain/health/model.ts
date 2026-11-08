@@ -21,7 +21,7 @@ export type { HealthData };
 /** How often the page asks the hub again (the collector re-reads the daemon on its own cadence). */
 export const HEALTH_REFRESH_MS = 60_000;
 
-export type VerdictKind = 'findings' | 'none-found' | 'not-all-clear' | 'cannot-tell' | 'asking';
+type VerdictKind = 'findings' | 'none-found' | 'not-all-clear' | 'cannot-tell' | 'asking';
 
 export interface Verdict {
   kind: VerdictKind;
@@ -43,7 +43,7 @@ export interface VerdictContext {
 const trim = (s: string) => s.replace(/\.+$/, '');
 
 /** Hub caveats first, then any the row's own data adds; each once. */
-export function caveatsOf(m: HealthFindingsMachine): string[] {
+function caveatsOf(m: HealthFindingsMachine): string[] {
   const own = m.data ? healthCaveats(m.data) : [];
 
   return [...new Set([...m.caveats, ...own])];
@@ -167,8 +167,8 @@ export function staleWords(fm: FleetMachine, now: number, hubConnected: boolean)
 // ---------------------------------------------------------------- context pressure
 
 /** OpenRig's documented defaults, used only when neither the policy nor the settings say. */
-export const ASSUMED_CRITICAL = 80;
-export const ASSUMED_WARNING = 60;
+const ASSUMED_CRITICAL = 80;
+const ASSUMED_WARNING = 60;
 
 export interface Thresholds {
   critical: number;
@@ -192,7 +192,7 @@ const fromRecord = (rec: Record<string, number>, word: RegExp): number | null =>
 };
 
 /** Percent thresholds that make sense: 0 < warning < critical <= 100, and not a 0–1 fraction. */
-export function validThresholds(critical: number | null, warning: number | null): boolean {
+function validThresholds(critical: number | null, warning: number | null): boolean {
   return (
     critical !== null &&
     warning !== null &&

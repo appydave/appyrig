@@ -170,7 +170,7 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 4
+      "count": 3
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 3

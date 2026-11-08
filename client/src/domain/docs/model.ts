@@ -12,7 +12,7 @@ export const DOC_GROUPS: { id: DocGroup; label: string; about: string }[] = [
   { id: 'mission', label: 'Mission', about: 'the mission folder' },
 ];
 
-export type DocSource =
+type DocSource =
   | { kind: 'text'; text: string; truncated: boolean }
   | { kind: 'rig'; fileId: string }
   | { kind: 'mission'; path: string }
@@ -31,7 +31,7 @@ export interface DocItem {
   source: DocSource;
 }
 
-export const LAYER_ORDER: LoadoutLayer['id'][] = [
+const LAYER_ORDER: LoadoutLayer['id'][] = [
   'role',
   'claude-md',
   'claude-local',
@@ -40,7 +40,7 @@ export const LAYER_ORDER: LoadoutLayer['id'][] = [
   'learned',
 ];
 
-export const kb = (n: number | null): string =>
+const kb = (n: number | null): string =>
   n === null
     ? ''
     : n >= 10_240

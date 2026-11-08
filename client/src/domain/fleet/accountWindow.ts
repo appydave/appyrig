@@ -8,8 +8,9 @@ import type { AccountWindow } from '@appydave/shared';
 
 /** A reading older than this gets an "old reading" mark. */
 export const STALE_READING_MS = 15 * 60_000;
+
 /** Projected use at reset from which the verdict turns to "be careful". */
-export const CAREFUL_PCT = 80;
+const CAREFUL_PCT = 80;
 
 export type VerdictKind = 'plenty' | 'careful' | 'runs-out' | 'spent' | 'early' | 'ended' | 'none';
 
