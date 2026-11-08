@@ -144,7 +144,7 @@ function Card({ item, ctx }: { item: NeedItem; ctx: PageProps['ctx'] }) {
   );
 }
 
-export const GATES_REFRESH_MS = 60_000;
+const GATES_REFRESH_MS = 60_000;
 
 interface GatesState {
   byRig: GatesByRig;

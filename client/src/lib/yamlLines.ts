@@ -5,7 +5,7 @@
  * block scalars (`summary: >`), whose lines are shown as plain text rather than mis-read as keys.
  */
 
-export type YamlTokenKind =
+type YamlTokenKind =
   | 'indent'
   | 'dash'
   | 'key'
@@ -20,7 +20,7 @@ export type YamlTokenKind =
   | 'block'
   | 'text';
 
-export interface YamlToken {
+interface YamlToken {
   kind: YamlTokenKind;
   text: string;
 }

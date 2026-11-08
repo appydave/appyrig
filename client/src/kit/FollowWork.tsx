@@ -26,7 +26,7 @@ const clock = (iso: string) =>
   });
 const who = (raw: string | null) => (raw ?? '?').split('@')[0];
 
-export const STATE_GLYPH = { done: '●', 'handed-on': '◆', open: '○', stopped: '■' } as const;
+const STATE_GLYPH = { done: '●', 'handed-on': '◆', open: '○', stopped: '■' } as const;
 
 const ROLE = {
   in: 'what started it',

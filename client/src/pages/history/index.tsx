@@ -24,13 +24,13 @@ import {
 } from '@client/domain/history/model.js';
 
 /** Rows asked for per page (the verb's own maximum). */
-export const PAGE_SIZE = 200;
+const PAGE_SIZE = 200;
 /** Rows drawn before "Show more": a long list stays quick, and the caption always says how many are on screen. */
-export const RENDER_STEP = 500;
-export const SEARCH_DEBOUNCE_MS = 150;
+const RENDER_STEP = 500;
+const SEARCH_DEBOUNCE_MS = 150;
 
 /** Which field the search box searches (sent to the verb as seat, rig or closureReason; "anything" is text). */
-export type SearchBy = 'text' | 'seat' | 'rig' | 'closureReason';
+type SearchBy = 'text' | 'seat' | 'rig' | 'closureReason';
 
 const SEARCH_BY: { key: SearchBy; label: string }[] = [
   { key: 'text', label: 'anything' },

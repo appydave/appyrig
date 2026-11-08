@@ -53,7 +53,7 @@ interface Props {
 }
 
 /** Under this the page is too narrow to share the window with a pinned drawer and the open panel. */
-export const MIN_PAGE_PX = 640;
+const MIN_PAGE_PX = 640;
 
 /** Width the pinned drawer takes (tab, gap, list) and the space the page keeps clear of the panel. */
 const PINNED_W = 30 + 8 + 272 + 10;

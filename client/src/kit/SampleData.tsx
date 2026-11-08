@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export { realNames, type RealNames } from '@client/domain/fleet/realNames.js';
+export { realNames } from '@client/domain/fleet/realNames.js';
 
 /**
  * v2 kit · SampleData: the convention for data AppyRig does not collect yet.
@@ -10,7 +10,7 @@ export { realNames, type RealNames } from '@client/domain/fleet/realNames.js';
  * - Wrap the section in <SampleData> so it carries the "sample data" label, and say in `what`
  *   which part is made up.
  */
-export const SAMPLE_TEXT = 'Sample data: believable, built from real names, but not collected';
+const SAMPLE_TEXT = 'Sample data: believable, built from real names, but not collected';
 
 export function SampleLabel() {
   return (

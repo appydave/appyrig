@@ -8,7 +8,7 @@ import { stripOsc } from '@client/domain/fleet/model.js';
  * are not turned into links. A fresh converter per render: ansi_up carries colour state between
  * calls, and tiles must not bleed into each other.
  */
-export function ansiToHtml(lines: string[]): string {
+function ansiToHtml(lines: string[]): string {
   const au = new AnsiUp();
 
   au.escape_html = true;

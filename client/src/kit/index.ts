@@ -40,8 +40,6 @@ export { default as TerminalCard, tailLine } from './TerminalCard.js';
 export { DocsLayout, useDocsDrawer } from './DocsDrawer.js';
 export { default as SkillsPanel } from './SkillsPanel.js';
 
-export { default as AgentPanel } from './AgentPanel.js';
-
 export { default as Legend2 } from './Legend2.js';
 export { LEGEND_TITLE } from './legendData.js';
 export { default as PageInfo } from './PageInfo.js';

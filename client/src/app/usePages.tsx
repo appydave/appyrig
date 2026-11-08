@@ -9,7 +9,7 @@ import './app.css';
 import './w2.css';
 
 /** The page the address names (`?page=`), or null when it names none or one that does not exist. */
-export function urlPage(): PageKey | null {
+function urlPage(): PageKey | null {
   const p = readUrlState().page as PageKey | null;
 
   return p && pageFor(p) ? p : null;

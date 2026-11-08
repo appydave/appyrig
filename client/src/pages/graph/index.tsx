@@ -46,7 +46,7 @@ function useStable<A extends unknown[], R>(fn: (...a: A) => R): (...a: A) => R {
 }
 
 /** How often the graph is rebuilt from the live fleet (the hub pushes about once a second). */
-export const REBUILD_MS = 3000;
+const REBUILD_MS = 3000;
 
 /**
  * The value, refreshed at most once per `ms`: the first value at once (leading edge), then the
@@ -137,7 +137,7 @@ interface Geom {
 const pairKey = (p: { a: string; b: string }) => `${p.a}↔${p.b}`;
 
 /** The breakdown behind "+N not drawn": by what the unplaced name is, then the commonest names. */
-export function unplacedText(u: Graph['unplaced']): string {
+function unplacedText(u: Graph['unplaced']): string {
   const top = (kind: 'machine' | 'rig') =>
     u.names
       .filter((n) => n.kind === kind)

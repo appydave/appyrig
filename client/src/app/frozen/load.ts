@@ -1,7 +1,7 @@
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { createFrozenSocket, type FrozenFile, type FrozenMeta } from './frozenSocket.js';
 
-export const FROZEN_PARAM = 'frozen';
+const FROZEN_PARAM = 'frozen';
 
 /**
  * The committed snapshots (`test/fixtures/frozen/*.json`), each its own lazy chunk: nothing is
@@ -11,17 +11,6 @@ const FILES: Record<string, () => Promise<FrozenFile>> = import.meta.env.DEV
   ? import.meta.glob<FrozenFile>('../../../../test/fixtures/frozen/*.json', { import: 'default' })
   : // Dev only: a production build ships no snapshot. Preview frozen data with the dev client.
     {};
-
-export function frozenNames(): string[] {
-  return Object.keys(FILES)
-    .map((p) =>
-      p
-        .split('/')
-        .pop()!
-        .replace(/\.json$/, '')
-    )
-    .sort();
-}
 
 export function frozenFromSearch(search: string): string | null {
   const v = new URLSearchParams(search).get(FROZEN_PARAM);

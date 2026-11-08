@@ -792,7 +792,7 @@
       "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/pages/flow/HandoffFlow.tsx": {

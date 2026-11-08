@@ -35,13 +35,6 @@ import './run.css';
  */
 export type DocKey = 'spec' | 'rig' | 'culture' | 'mission';
 export const DOC_DEFAULT_TAB: DocKey = 'spec';
-/** Which documents are shown at load (one tab: Spec). Kept for callers that read it as a map. */
-export const DOC_DEFAULTS: Record<DocKey, boolean> = {
-  spec: true,
-  rig: false,
-  culture: false,
-  mission: false,
-};
 
 const DOC_LABEL: Record<DocKey, string> = {
   spec: 'Spec',
