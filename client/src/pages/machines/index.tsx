@@ -1,4 +1,5 @@
 import { gb } from '@client/lib/readings.js';
+import { swapAllocated } from '@client/domain/fleet/health.js';
 import { FakeControl, MockNote, SampleLabel } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
 import {
@@ -43,6 +44,17 @@ function Meter({
   );
 }
 
+/** C89: the Meter's row with its bar column left empty, so the card keeps its shape. No total to draw against. */
+function SwapRow({ used }: { used: number | null }) {
+  return (
+    <div className="mc2-meter" data-testid="mc2-swap">
+      <span className="mc2-meter-label">swap</span>
+      <span aria-hidden="true" />
+      <span className="mono mc2-meter-num">{used === null ? 'not read' : swapAllocated(used)}</span>
+    </div>
+  );
+}
+
 function Card({ m, newest }: { m: MachineView; newest: string | null }) {
   const load = sampleLoad(m);
 
@@ -80,7 +92,7 @@ function Card({ m, newest }: { m: MachineView; newest: string | null }) {
             : ''}
         </span>
       </p>
-      <Meter label="swap" used={m.swapUsed} total={m.swapTotal} testId="mc2-swap" />
+      <SwapRow used={m.swapUsed} />
       <dl className="w4-stats mono">
         <div>
           <dt>claude processes</dt>
@@ -145,8 +157,8 @@ function Card({ m, newest }: { m: MachineView; newest: string | null }) {
 }
 
 /**
- * v2 Machines: one card per machine. Memory and swap as meters, the pressure verdict (the worse of
- * macOS memory pressure and swap use), processes, and the OpenRig and collector versions against
+ * v2 Machines: one card per machine. Memory as a meter, swap as what is allocated, the pressure
+ * verdict (macOS memory pressure), processes, and the OpenRig and collector versions against
  * the newest OpenRig version the fleet reports (C21). Load is sample data, labelled.
  */
 function MachinesPage({ ctx }: PageProps) {

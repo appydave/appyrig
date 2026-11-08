@@ -141,7 +141,7 @@ const EVERYWHERE: LegendSection[] = [
       { mark: 'TIGHT', means: 'Memory is getting short.', swatch: 'pressure:warn' },
       {
         mark: 'UNDER PRESSURE',
-        means: 'Swap or memory is near its limit. Read as a real warning, never green.',
+        means: 'macOS says memory is critically short. Read as a real warning, never green.',
         swatch: 'pressure:critical',
       },
       { mark: 'Machines →', means: 'In the open strip: the one link to the Machines page.' },
@@ -665,7 +665,7 @@ const PAGES: Partial<Record<PageKey, LegendSection[]>> = {
       entries: [
         {
           mark: 'Pressure',
-          means: 'normal, tight or under pressure, from swap as well as macOS’s own word.',
+          means: 'normal, tight or under pressure: macOS’s own memory pressure level.',
           swatch: 'pressure:critical',
         },
         { mark: 'Processes', means: 'Memory by terminal app and process, biggest first.' },

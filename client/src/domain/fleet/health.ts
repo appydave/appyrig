@@ -1,5 +1,4 @@
 import { sampleAge, type FleetMachine, type MachineHealth, type SampleAge } from '@appydave/shared';
-import { gb } from '@client/lib/readings.js';
 
 /**
  * v1.4 S6: machine health in words (mochaccino machine-health, B). The collector re-samples every
@@ -23,12 +22,12 @@ export interface PressureView {
   last?: 'normal' | 'warn' | 'critical';
 }
 
-/** C2: swap used ≥ this share of swap total makes a machine at least "tight". */
-const SWAP_TIGHT = 0.5;
-/** …and ≥ this share, "under pressure". */
-const SWAP_PRESSURE = 0.8;
+const BYTES_PER_GIB = 1024 ** 3;
 
-const RANK: Record<'normal' | 'warn' | 'critical', number> = { normal: 0, warn: 1, critical: 2 };
+/** C89: swap in use, never against a total: on macOS "total" is only what is allocated so far. */
+export const swapAllocated = (bytes: number): string =>
+  `${Number((bytes / BYTES_PER_GIB).toFixed(1))} GiB allocated`;
+
 const WORD = { normal: 'normal', warn: 'tight', critical: 'under pressure' } as const;
 const GLYPH = { normal: '●', warn: '▲', critical: '■' } as const;
 
@@ -103,35 +102,19 @@ function verdictOf(fm: FleetMachine): PressureView {
     };
   }
 
-  // Batch 2 · C2 (F26): macOS's own pressure level said "normal" for a Mac with swap 91% full,
-  // shown in green beside "59% free". The verdict now takes the worse of the kernel's level and
-  // swap use, so a machine swapping above half its swap can never read "normal".
-  const used = h.memory.swapUsedBytes;
-  const total = h.memory.swapTotalBytes;
-  const share =
-    used.status === 'ok' && total.status === 'ok' && total.value > 0
-      ? used.value / total.value
-      : null;
-  const fromSwap: 'normal' | 'warn' | 'critical' =
-    share === null
-      ? 'normal'
-      : share >= SWAP_PRESSURE
-        ? 'critical'
-        : share >= SWAP_TIGHT
-          ? 'warn'
-          : 'normal';
-  const kind = RANK[fromSwap] > RANK[p.value] ? fromSwap : p.value;
+  // C89: the kernel's level alone. vm.swapusage's total grows on demand up to free disk, so swap
+  // used / total measures nothing, and it alarmed on healthy machines.
+  const kind = p.value;
+  const swap = h.memory.swapUsedBytes;
   const swapWords =
-    share === null
-      ? 'swap use not readable'
-      : `swap ${gb(used.status === 'ok' ? used.value : 0)} of ${gb(total.status === 'ok' ? total.value : 0)} used (${Math.round(share * 100)}%)`;
+    swap.status === 'ok' ? `Swap: ${swapAllocated(swap.value)}` : 'Swap not readable';
 
   return {
     kind,
     glyph: GLYPH[kind],
     word: WORD[kind],
     reason: null,
-    basis: `"${WORD[kind]}" is the worse of two readings: macOS memory pressure says "${WORD[p.value]}" (the kernel's own level), and ${swapWords}; swap at ${SWAP_TIGHT * 100}% or more is at least "tight", at ${SWAP_PRESSURE * 100}% or more "under pressure". It is not based on "% free".`,
+    basis: `"${WORD[kind]}" is macOS memory pressure, the kernel's own level. ${swapWords}, which is not counted. It is not based on "% free".`,
   };
 }
 
