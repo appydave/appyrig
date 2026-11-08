@@ -6,7 +6,12 @@ import { Server } from 'socket.io';
 import { FLEET_EVENTS, HUB_CAPS, PUSH_INTERVAL_MS, type CollectorAck } from '@appydave/shared';
 import { buildSnapshot } from '@collector/builder.js';
 import { fixtureSources } from '@collector/adapters/fixtureSources.js';
-import { startPusher, type Pusher, type PusherOptions } from '@collector/pusher.js';
+import {
+  CHANNEL_PAYLOAD_MAX,
+  startPusher,
+  type Pusher,
+  type PusherOptions,
+} from '@collector/pusher.js';
 
 /**
  * G04 · channel(): the eight side channels the pusher registers (rig files, loadout, database
@@ -388,5 +393,89 @@ describe('Feature: a stopped pusher does not start a channel up again', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(vi.getTimerCount()).toBe(before);
+  });
+});
+
+describe('Feature: what a channel does when things go wrong', () => {
+  const lines: string[] = [];
+  const small = { ...RF, rig: 'small' };
+  const huge = { ...RF, rig: 'x'.repeat(CHANNEL_PAYLOAD_MAX) };
+
+  it('Scenario: a payload over the size guard is skipped and logged, and the ones after it are still sent', async () => {
+    const p: Probe = { takes: 0, marks: 0 };
+
+    hub = await startHub(ALL_CAPS);
+    run(
+      hub,
+      {
+        rigFilesIntervalMs: 30,
+        rigFiles: async () => (fresh(p) ? { pushes: [huge, small], ...mark(p) } : null),
+      },
+      lines
+    );
+    await vi.waitFor(() => expect(p.marks).toBe(1), { timeout: 8000, interval: 20 });
+
+    expect(sentOn(hub, CHANNELS[0]!)).toEqual([small]);
+    expect(has(lines, 'rig files: a payload over 800 KB was not sent')).toBe(true);
+  });
+
+  it('Scenario: a read that throws is logged under its key, and the channel carries on', async () => {
+    let n = 0;
+    const out: string[] = [];
+
+    hub = await startHub(ALL_CAPS);
+    run(
+      hub,
+      {
+        rigFilesIntervalMs: 30,
+        rigFiles: async () => {
+          n++;
+          throw new Error('boom');
+        },
+      },
+      out
+    );
+    await vi.waitFor(() => expect(n).toBeGreaterThan(1), { timeout: 8000, interval: 20 });
+
+    expect(has(out, 'rig files tick failed: boom')).toBe(true);
+  });
+
+  it('Scenario: a channel is not read while the hub is unreachable', async () => {
+    let n = 0;
+
+    hub = await startHub(ALL_CAPS);
+
+    const gone = hub.url;
+
+    await hub.close();
+    hub = undefined;
+    run(
+      { url: gone, got: [], close: async () => {} },
+      {
+        rigFilesIntervalMs: 20,
+        rigFiles: async () => {
+          n++;
+
+          return null;
+        },
+      }
+    );
+    await sleep(400);
+
+    expect(n).toBe(0);
+  });
+
+  it('Scenario: a hub without seat-spec gets loadouts without the member, AgentSpec and topology keys', async () => {
+    const p: Probe = { takes: 0, marks: 0 };
+
+    hub = await startHub([]);
+    run(hub, CHANNELS[1]!.on(p, 30));
+    await vi.waitFor(() => expect(p.marks).toBe(1), { timeout: 8000, interval: 20 });
+
+    const [sent] = sentOn(hub, CHANNELS[1]!);
+
+    expect(sent).not.toHaveProperty('topologyRoot');
+    expect(sent).not.toHaveProperty('member');
+    expect(sent).toHaveProperty('seat', LO.seat);
   });
 });
