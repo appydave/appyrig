@@ -123,6 +123,35 @@ function stagesOf(seats: Seat[]): { seat: Seat; stage: Stage }[] {
     );
 }
 
+const acceptedOf = (items: QueueItem[]) => items.filter((q) => verdictOf(q.tags) === 'accept');
+
+/** First handoff to accept (or now, while open); null before it started. */
+function durationOf(items: QueueItem[], done: boolean, now: number): number | null {
+  const first = items[0];
+  const end = acceptedOf(items).at(-1);
+
+  if (!first) {
+    return null;
+  }
+
+  return Math.max(0, (done && end ? Date.parse(end.updatedAt) : now) - Date.parse(first.createdAt));
+}
+
+/** The receiver of the newest open item, else of the newest item; null with no items. */
+function holderOf(items: QueueItem[]): string | null {
+  const item = items.filter(isOpen).at(-1) ?? items.at(-1);
+
+  return item ? bare(item.destination) : null;
+}
+
+function stationState(pip: ReturnType<typeof pipFor>, holds: number): Station['state'] {
+  if (pip === 'working' || pip === 'blocked') {
+    return pip;
+  }
+
+  return holds > 0 ? 'waiting' : 'idle';
+}
+
 export function buildRun(
   fm: FleetMachine,
   rig: string,
@@ -150,13 +179,9 @@ export function buildRun(
 
   const states: JobState[] = jobs.map((job, i) => {
     const items = bySlice.get(job.slice) ?? [];
-    const accepted = items.filter((q) => verdictOf(q.tags) === 'accept');
+    const accepted = acceptedOf(items);
     // Without verdict tags a job counts as done once a later job has started: the pipeline is sequential.
     const done = verdictTagged ? accepted.length > 0 : items.length > 0 && i < lastStarted;
-    const first = items[0];
-    const end = accepted.at(-1);
-    const open = items.filter(isOpen);
-    const holderItem = open.at(-1) ?? items.at(-1);
 
     return {
       job,
@@ -165,12 +190,8 @@ export function buildRun(
         (q) => stageOf(bare(q.source)) === 'build' && stageOf(bare(q.destination)) === 'qa'
       ).length,
       rework: items.filter((q) => SENT_BACK.includes(verdictOf(q.tags) as Verdict)).length,
-      durationMs: first
-        ? Math.max(0, (done && end ? Date.parse(end.updatedAt) : now) - Date.parse(first.createdAt))
-        : null,
-      holder: holderItem
-        ? bare(open.length ? holderItem.destination : holderItem.destination)
-        : null,
+      durationMs: durationOf(items, done, now),
+      holder: holderOf(items),
       items,
     };
   });
@@ -200,14 +221,7 @@ export function buildRun(
       seat: name,
       stage,
       word: STAGE_WORD[stage],
-      state:
-        pip === 'working'
-          ? 'working'
-          : pip === 'blocked'
-            ? 'blocked'
-            : holds > 0
-              ? 'waiting'
-              : 'idle',
+      state: stationState(pip, holds),
       holds,
       doing: pip === 'working' || pip === 'blocked' ? tail : null,
     };
