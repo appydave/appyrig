@@ -7,6 +7,7 @@ import {
   type Timeline,
 } from '@client/domain/fleet/timeline.js';
 import { endpointRig, isOpen } from '@client/domain/fleet/views/core/queue.js';
+import { median } from '@client/domain/fleet/views/core/stats.js';
 import { STALE_MS } from '@client/domain/fleet/views/core/time.js';
 
 /**
@@ -84,17 +85,6 @@ const ms = (iso: string) => {
 };
 
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] ?? '?';
-
-const median = (xs: number[]) => {
-  if (!xs.length) {
-    return null;
-  }
-
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-
-  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
-};
 
 export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | null {
   const timeline = buildTimeline(fm, rig, now);
