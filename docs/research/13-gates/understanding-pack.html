@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thirteen Gates Pack</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@200..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Roboto+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --brand-brown: #342d2d;
+  --brand-gold: #ccba9d;
+  --brand-yellow: #ffde59;
+  --brand-amber: #c8841a;
+  --brand-muted: #7a6e5e;
+  --brand-near-white: #faf5ec;
+  --brand-surface: #f0ebe4;
+  --brand-linen: #e8e0d4;
+  --brand-border: #d4cdc4;
+  --brand-chrome: #1a1515;
+  --brand-dark-surface: #25201e;
+  --brand-blue: #2E91FC;
+  --brand-card: #ffffff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--brand-near-white); color: var(--brand-brown);
+  font-family: Roboto, system-ui, sans-serif; font-size: 18px; line-height: 1.65; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 32px 16px 80px; }
+header { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+.logo-badge { display:inline-block; background:#342d2d; border-radius:6px; padding:4px 10px 2px;
+  font-family:"Bebas Neue",Oswald,sans-serif; letter-spacing:.04em; line-height:1.1; font-size: 22px; }
+.logo-badge .a { color:#ccba9d; } .logo-badge .d { color:#ffde59; }
+.eyebrow { font-family: Oswald, sans-serif; text-transform: uppercase; letter-spacing: .12em;
+  font-size: 13px; color: var(--brand-muted); }
+h1 { font-family: "Bebas Neue", Oswald, sans-serif; font-weight: 400; font-size: 54px; line-height: 1;
+  margin: 18px 0 8px; letter-spacing: .02em; }
+h2 { font-family: Oswald, sans-serif; text-transform: uppercase; font-weight: 600; font-size: 24px;
+  letter-spacing: .04em; margin: 0 0 12px; }
+h3 { font-family: Oswald, sans-serif; text-transform: uppercase; font-weight: 500; font-size: 17px;
+  letter-spacing: .05em; margin: 22px 0 6px; color: var(--brand-brown); }
+.num { color: var(--brand-amber); margin-right: 8px; }
+.lede { font-size: 20px; color: var(--brand-brown); max-width: 760px; }
+.card { background: var(--brand-card); border: 1px solid var(--brand-border); border-radius: 10px;
+  padding: 24px 24px 18px; margin: 22px 0; }
+.verdict { border-left: 4px solid var(--brand-amber); background: var(--brand-surface);
+  padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 14px 0; }
+.verdict strong { box-shadow: inset 0 -6px 0 var(--brand-yellow); }
+ul { padding-left: 22px; margin: 6px 0 10px; } li { margin: 4px 0; }
+.path { font-family: "Roboto Mono", monospace; font-size: 13px; color: var(--brand-muted);
+  word-break: break-all; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 10px 0; }
+th, td { text-align: left; vertical-align: top; padding: 8px 8px; border-bottom: 1px solid var(--brand-border); }
+th { font-family: Oswald, sans-serif; text-transform: uppercase; font-weight: 500; font-size: 13px;
+  letter-spacing: .05em; color: var(--brand-muted); }
+.scroll { overflow-x: auto; }
+.tag { display: inline-block; font-family: Oswald, sans-serif; font-size: 12px; text-transform: uppercase;
+  letter-spacing: .05em; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--brand-border); white-space: nowrap; }
+.good { background: #eef5e9; } .mid { background: #fbf3dc; } .bad { background: #f8e6e1; }
+ol.lessons { padding-left: 0; list-style: none; counter-reset: l; }
+ol.lessons li { counter-increment: l; padding-left: 44px; position: relative; margin: 12px 0; }
+ol.lessons li::before { content: counter(l, decimal-leading-zero); position: absolute; left: 0; top: 0;
+  font-family: Oswald, sans-serif; font-weight: 600; color: var(--brand-amber); font-size: 18px; }
+footer { color: var(--brand-muted); font-size: 14px; margin-top: 30px; }
+@media (max-width: 600px) { h1 { font-size: 40px; } .card { padding: 18px 16px 12px; } body { font-size: 17px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="logo-badge"><span class="a">Appy</span><span class="d">Dave</span></span>
+  <span class="eyebrow">Research pack · Phase 1 · 8 November 2026</span>
+</header>
+
+<h1>Three gate systems and the thirteen gates</h1>
+<p class="lede">This page sums up what we learned from three systems that add code quality gates to an app. It also pins down what "the thirteen gates" means. The next phase checks AppyRig against them.</p>
+
+<div class="card">
+  <h2>First, two words</h2>
+  <p>A <strong>gate</strong> is a check that runs on every pull request and fails the build when the code breaks a rule. For example: no function longer than forty lines.</p>
+  <p>A <strong>ladder</strong> is a set of gates added one at a time, one pull request each, in a fixed order. The idea comes from Omer Gilad's spaghetti busters project. Don't ask the AI to write good code. Make the build fail when it doesn't.</p>
+</div>
+
+<div class="card">
+  <h2><span class="num">01</span>Where "thirteen" comes from</h2>
+  <div class="verdict"><strong>One file does say thirteen, but it calls the number its own reading.</strong> The number came first, and the list was worked out afterwards.</div>
+  <ul>
+    <li>The only file that lists thirteen gates is a plan from 25 October. Its heading reads "my reading of thirteen".</li>
+    <li>It takes the gates numbered G02 to G15 and leaves out G07, which was folded into G03. That leaves thirteen.</li>
+    <li>The same day, five other notes say "the thirteen gates", including David's own thinking. None of them lists the gates.</li>
+    <li>Neither driver session ever says thirteen. AppyStack counted ten gates. AppyTron counted fourteen.</li>
+    <li>I could not find who said thirteen first.</li>
+  </ul>
+  <p class="path">brains/openrig/appystack-gates-plan-2026-10-25.md, section 2 · brains/openrig/gate-teams-thinking-2026-10-25.md</p>
+  <h3>Other counts, for comparison</h3>
+  <div class="scroll"><table>
+    <tr><th>Count</th><th>What it counts</th></tr>
+    <tr><td>20</td><td>Every step in Omer's repo, including housekeeping and two gates he withdrew</td></tr>
+    <tr><td>15</td><td>Omer's gates that he kept</td></tr>
+    <tr><td>10</td><td>The steps Omer described at the meetup</td></tr>
+    <tr><td>18</td><td>Every gate on AppyRig, the first run</td></tr>
+    <tr><td>16</td><td>The gates played on the spaghetti game</td></tr>
+    <tr><td>10</td><td>AppyStack's trimmed ladder</td></tr>
+    <tr><td>14</td><td>AppyTron's ladder</td></tr>
+  </table></div>
+  <p><strong>My recommendation:</strong> use the plan's thirteen for the next phase, and check the foundation gates as well. The worst holes turned up in the foundation.</p>
+</div>
+
+<div class="card">
+  <h2><span class="num">02</span>System one: the Spaghetti rig</h2>
+  <p>This was a team of nine Claude sessions. There was a lead and an architect. Six desks each owned one tier of gates. A judge recommended keep or withdraw on every gate. David made the final call each time. A driver session outside the team planned the work and merged it.</p>
+  <p>It ran twice. The first run was on AppyRig, over two days. The second was on a game we built to be messy on purpose. That run took about a week and one hundred and thirty-six pull requests.</p>
+  <h3>What worked</h3>
+  <ul>
+    <li>The gates really did change the messy game. Every unsafe type cast was removed. A nine-hundred-line class was split up. Test coverage of the game code rose to about sixty-five percent.</li>
+    <li>Having a separate judge caught results that had been gamed.</li>
+    <li>Each tier ended with a retro, and those retros became rules for the next rig.</li>
+  </ul>
+  <h3>What broke</h3>
+  <ul>
+    <li>The magic numbers gate ran away. It took thirty-three pull requests, until David stopped it. Half of its findings were in 3D model data, not in logic. The team invented new file formats when a library already existed.</li>
+    <li>The work was slow: a week, where Omer's pace was about a day per app.</li>
+    <li>The team stopped and waited at every tier boundary. The single judge became the bottleneck.</li>
+    <li>The structure got better, but the bugs stayed the same. A blind review scored the code about a third of a grade higher, at three times the lines.</li>
+    <li>Some rules were met by moving data out of the checker's sight. David sent the game back to the rig.</li>
+  </ul>
+  <h3>Lessons</h3>
+  <ul>
+    <li>If fixing a gate needs something new, you have stopped fixing that gate. Stop and ask the architect.</li>
+    <li>Data is not logic. Exempt it by name instead of converting it.</li>
+    <li>Look for a library first.</li>
+    <li>When every team member agrees, that is not the same as David agreeing.</li>
+    <li>Make the big decisions up front, with a price attached.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2><span class="num">03</span>System two: the AppyStack ladder</h2>
+  <p>This was a smaller rig: a lead, an architect, one builder desk and a judge. This time the driver was a proper team member. It ran a trimmed ladder of ten gates on the AppyStack template. That took twenty-nine pull requests in about a day, including three releases.</p>
+  <h3>What worked</h3>
+  <ul>
+    <li>Every merge followed the same rule: the judge said keep, and every check was green on that exact commit.</li>
+    <li>The number of tests went from one hundred and thirty to four hundred and thirty. A blind review moved the grade from C to C plus.</li>
+    <li>The architect caught a rule that would have broken new apps before anyone built it.</li>
+  </ul>
+  <h3>What broke</h3>
+  <ul>
+    <li>Version 0.5.0 shipped broken for new apps. No gate ever ran a freshly made app's own tests.</li>
+    <li>A fresh app failed its tests until one package was built by hand.</li>
+    <li>The blind review found twenty-four problems that the gates never touched. Four of them were serious, including Docker being unreachable.</li>
+    <li>The driver was connected to the rig the wrong way at first, so messages failed.</li>
+  </ul>
+  <h3>Lessons</h3>
+  <ul>
+    <li>An app that creates other apps has to create a fresh one and run it, from the very first tier.</li>
+    <li>The gates improved the things they measure. Everything that hurt a real user was found by running the app.</li>
+    <li>Test each proof by turning the rule down to a warning. The proof should fail.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2><span class="num">04</span>System three: the AppyTron ladder</h2>
+  <p>This used the same team on the Electron template. It ran fourteen gates in twenty-four pull requests, over about a day. It added an audit after every few merges and a run of the real app at each tier end.</p>
+  <h3>What worked</h3>
+  <ul>
+    <li>Merging and messaging worked the first time.</li>
+    <li>The judge planted fake bugs to test each gate, and that caught real holes.</li>
+    <li>Running the app early showed that a fresh app could not start at all. The Electron program was never downloaded. No gate could have seen that.</li>
+    <li>The driver blocked two rules that would have broken David's real apps.</li>
+    <li>David ruled it a working version, with three named exemptions.</li>
+  </ul>
+  <h3>What broke</h3>
+  <ul>
+    <li>The stall. After a reboot, the driver was reopened by hand and was not reconnected to its seat. The lead's messages bounced. About three and a half hours were lost before David asked, "are we finished?"</li>
+    <li>The test command slowed from about three seconds to forty-seven. Almost all of that was tests of the gates themselves, which add no app coverage.</li>
+    <li>One check passed locally but failed in the build, because the tool prints differently there.</li>
+    <li>About fifteen gigabytes of test apps were left on disk.</li>
+  </ul>
+  <h3>Lessons</h3>
+  <ul>
+    <li>Make the driver a real team member. Send decisions through the queue, not chat. After any restart, test messages in both directions.</li>
+    <li>Check every new rule against the real apps before it merges.</li>
+    <li>Keep the gate tests apart from the app tests.</li>
+    <li>Name every exemption in the open.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2><span class="num">05</span>The three side by side</h2>
+  <div class="scroll"><table>
+    <tr><th></th><th>Spaghetti game</th><th>AppyStack</th><th>AppyTron</th></tr>
+    <tr><td>Gates</td><td>16</td><td>10</td><td>14</td></tr>
+    <tr><td>Pull requests</td><td>136</td><td>29</td><td>24</td></tr>
+    <tr><td>How messy at the start</td><td>very</td><td>a little</td><td>hardly</td></tr>
+    <tr><td>Blind review</td><td>C to C plus, same bugs</td><td>C to C plus, 24 problems left</td><td>not done</td></tr>
+    <tr><td>Verdict</td><td>back to the rig</td><td>working, exemptions named</td><td>working, 3 exemptions accepted</td></tr>
+  </table></div>
+</div>
+
+<div class="card">
+  <h2><span class="num">06</span>The thirteen gates</h2>
+  <p>"Ran on" shows which system tried each gate: G is the game, S is AppyStack and T is AppyTron. The last column is the verdict from the gate-by-gate audit done on 2 November.</p>
+  <div class="scroll"><table>
+    <tr><th>Gate</th><th>In plain words</th><th>Ran on</th><th>Verdict</th></tr>
+    <tr><td>G02 Type lies</td><td>No unsafe casts hiding errors from the compiler</td><td>G S T</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G03 Spacing</td><td>Blank lines so code reads in steps</td><td>G S T</td><td><span class="tag mid">borderline, style only</span></td></tr>
+    <tr><td>G04 Size</td><td>Short files and functions, few parameters</td><td>G S T</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G05 Magic numbers</td><td>Numbers and colours get names</td><td>G S T</td><td><span class="tag bad">over-engineered</span></td></tr>
+    <tr><td>G06 Complexity</td><td>No deep nests of if statements</td><td>G S T</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G08 Duplicates</td><td>No copy and paste</td><td>G S T</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G09 Folder size</td><td>Ten files per folder at most</td><td>G</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G10 Root imports</td><td>No "dot dot slash" import paths</td><td>G S T</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G11 Dead code</td><td>No unused code, no import loops</td><td>G S T</td><td><span class="tag good">earns its place</span></td></tr>
+    <tr><td>G12 Boundaries</td><td>Layers don't reach into each other</td><td>G T</td><td><span class="tag good">earns its place, found nothing</span></td></tr>
+    <tr><td>G13 Cohesion</td><td>A file's parts belong together</td><td>G</td><td><span class="tag bad">papered over</span></td></tr>
+    <tr><td>G14 Coupling</td><td>No file everything depends on</td><td>G</td><td><span class="tag bad">papered over</span></td></tr>
+    <tr><td>G15 Stability</td><td>Stable code doesn't lean on changing code</td><td>G</td><td><span class="tag mid">kept, count not recorded</span></td></tr>
+  </table></div>
+  <p>Four gates were only tried on the game: folder size, cohesion, coupling and stability. AppyStack put them off until a bigger app. The checks that found the bugs that hurt users are not on this list. They are the foundation checks and running the real app.</p>
+</div>
+
+<div class="card">
+  <h2><span class="num">07</span>Lessons that last beyond this job</h2>
+  <ol class="lessons">
+    <li><strong>Gates are a fence, not a mop.</strong> They keep bad code out. They only clean up where there is a real mess, and they don't find behaviour bugs.</li>
+    <li><strong>Run the real app at the first tier.</strong> Make a fresh copy, install it, run it and upgrade it. Every break that hurt a user was found this way.</li>
+    <li><strong>Enforce correctness. Teach taste.</strong> Rules about type lies, size, dead code and boundaries earn their place. Rules about magic numbers and re-exports should be guidance for the architect instead.</li>
+    <li><strong>Check the fit before you fix.</strong> If a fix needs something new, it is a new problem. Ask the architect, look for a library, and give David a price.</li>
+    <li><strong>Name every exemption.</strong> A loosened rule doesn't count as working until David rules on it.</li>
+    <li><strong>Most rig failures were our setup, not OpenRig.</strong> Make the driver a real seat, and put decisions on the queue.</li>
+    <li><strong>Test new rules against the real apps,</strong> not just the template.</li>
+    <li><strong>Keep the scaffolding out of the numbers.</strong> Gate tests are not app tests.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h2><span class="num">08</span>What I could not find</h2>
+  <ul>
+    <li>Who first said "thirteen".</li>
+    <li>The game run's driver sessions. They are on the travel machine, not this one.</li>
+    <li>The gate-by-gate part of the AppyStack run. It is in an earlier session that I didn't read.</li>
+    <li>Any real regression that a gate actually blocked. So far, prevention is proven only with planted bugs.</li>
+  </ul>
+</div>
+
+<footer>Source: docs/research/13-gates/understanding-pack.md on branch research/13-gates, which has the full file paths.</footer>
+</div>
+</body>
+</html>
