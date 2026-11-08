@@ -11,8 +11,15 @@ const G3 = 'g_cccccccccc';
 const TS = `https://box.tail1.ts.net/x?gate=${G1}`;
 const LOCAL = `http://localhost:5500/x?gate=${G1}`;
 
-type Item = { id: string; src: string; dst: string; at: string; body?: string };
-type Sent = { id: string; day: string; body?: string; to?: string };
+type Item = {
+  id: string;
+  src: string;
+  dst: string | null;
+  at: string;
+  body?: string;
+  summary?: string | null;
+};
+type Sent = { id: string; day: string; body?: string; to?: string | null; summary?: string | null };
 
 /** Answers one verb for a machine with one rig `run1` and these handoffs; a missing body is one the hub never received. */
 function answer(items: Item[], verb: 'rig.waiting' | 'rig.outputs'): unknown {
@@ -26,7 +33,7 @@ function answer(items: Item[], verb: 'rig.waiting' | 'rig.outputs'): unknown {
     id: i.id,
     source: i.src,
     destination: i.dst,
-    summary: '',
+    summary: i.summary === undefined ? '' : i.summary,
     createdAt: i.at,
   }));
   store.put(snap);
@@ -56,9 +63,10 @@ const items = (sent: Sent[]): Item[] =>
   sent.map((s) => ({
     id: s.id,
     src: 'lead@run1',
-    dst: s.to ?? 'desk@other',
+    dst: s.to === undefined ? 'desk@other' : s.to,
     at: `2026-11-0${s.day}T00:00:00.000Z`,
     body: s.body,
+    summary: s.summary,
   }));
 const waiting = (sent: Sent[]) => RigWaitingOutputSchema.parse(answer(items(sent), 'rig.waiting'));
 const outputs = (sent: Sent[]) => RigOutputsOutputSchema.parse(answer(items(sent), 'rig.outputs'));
@@ -132,6 +140,53 @@ describe('Feature: rig.waiting lists the gates a rig last called open', () => {
     expect(r.scanned).toBe(3);
   });
 
+  it('Scenario: a gate named in the summary, or in a handoff with no destination, still opens', () => {
+    const summary = waiting([{ id: 'q1', day: '1', summary: `gate ${G1} is open`, body: '' }]);
+    const noDestination = waiting([
+      { id: 'q1', day: '1', body: `gate ${G2} open`, to: null, summary: null },
+    ]);
+
+    expect(summary.gates.map((g) => g.gate)).toEqual([G1]);
+    expect(noDestination.gates.map((g) => g.gate)).toEqual([G2]);
+  });
+
+  it('Scenario: the context is the words around the first open mention, 60 before and 70 after', () => {
+    const body = `${'a'.repeat(90)} gate ${G1} open ${'b'.repeat(90)} gate ${G1} waiting ${'c'.repeat(90)}`;
+    const at = `\n${body}`.indexOf(G1);
+    const r = waiting([{ id: 'q1', day: '1', body }]);
+
+    expect(r.gates[0]!.context).toBe(`\n${body}`.slice(at - 60, at + 70).trim());
+    expect(r.gates[0]!.context).not.toContain('waiting');
+  });
+
+  it('Scenario: handoffs are read oldest first whatever order the queue holds them in', () => {
+    const r = waiting([
+      { id: 'q2', day: '2', body: `gate ${G1} approved` },
+      { id: 'q1', day: '1', body: `gate ${G1} is open` },
+    ]);
+
+    expect(r.gates).toEqual([]);
+  });
+
+  it("Scenario: David's mailbox is no rig, even when it is written with the rig's name", () => {
+    const r = RigWaitingOutputSchema.parse(
+      answer(
+        [
+          {
+            id: 'q1',
+            src: 'human@run1',
+            dst: 'b@z',
+            at: '2026-11-01T00:00:00.000Z',
+            body: `gate ${G1} open`,
+          },
+        ],
+        'rig.waiting'
+      )
+    );
+
+    expect(r.scanned).toBe(0);
+  });
+
   it('Scenario: a handoff with no seat in the rig is not scanned', () => {
     const r = RigWaitingOutputSchema.parse(
       answer(
@@ -169,6 +224,14 @@ describe('Feature: rig.outputs lists the commits and FliStudio ids a rig named',
     expect(r.commits[1]!.context).toContain('dead1eef');
   });
 
+  it('Scenario: the context is the words around the id, 50 before and 60 after', () => {
+    const body = `${'a'.repeat(90)} abc1234 ${'b'.repeat(90)}`;
+    const at = `\n${body}`.indexOf('abc1234');
+    const r = outputs([{ id: 'q1', day: '1', body }]);
+
+    expect(r.commits[0]!.context).toBe(`\n${body}`.slice(at - 50, at + 60).trim());
+  });
+
   it('Scenario: gate and resource ids carry the link their handoff gave, localhost last', () => {
     const r = outputs([
       { id: 'q1', day: '1', body: `see r_1234567890 and ${LOCAL} ${TS} and g_dddddddddd\\n` },
@@ -203,6 +266,18 @@ describe('Feature: rig.outputs lists the commits and FliStudio ids a rig named',
 
     expect(kept.flistudio[0]).toMatchObject({ itemId: 'q2', mentions: 2, link: TS });
     expect(replaced.flistudio[0]!.link).toBe(TS);
+  });
+
+  it('Scenario: at the same time the id named by most handoffs comes first, and only 40 FliStudio ids are returned', () => {
+    const ids = Array.from({ length: 45 }, (_, i) => `r_${String(i).padStart(10, '0')}`);
+    const tie = outputs([
+      { id: 'q1', day: '1', body: 'abc1234 dead1eef' },
+      { id: 'q2', day: '1', body: 'dead1eef' },
+    ]);
+    const many = outputs([{ id: 'q1', day: '1', body: ids.join(' ') }]);
+
+    expect(tie.commits.map((c) => c.sha)).toEqual(['dead1eef', 'abc1234']);
+    expect(many.flistudio).toHaveLength(40);
   });
 
   it('Scenario: only the newest 20 commits are returned', () => {
