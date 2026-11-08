@@ -117,6 +117,50 @@ describe('applyRigLabels', () => {
   });
 });
 
+describe('applyRigLabels, which rigs change', () => {
+  const rigOf = (over: object) => {
+    const m = machine();
+    const rig = { ...m.snapshot.rigs[0]!, ...over };
+
+    return { m: { ...m, snapshot: { ...m.snapshot, rigs: [rig] } }, rig };
+  };
+
+  it.each([[{ displayName: 'P' }], [{ owner: 'O' }]])(
+    'one label %j is enough to change it',
+    (label) => {
+      const { m, rig } = rigOf({});
+      const out = applyRigLabels(m, { rigs: { [rig.name]: label } });
+
+      expect(out).not.toBe(m);
+      expect(out.snapshot.rigs[0]).toMatchObject(label);
+    }
+  );
+
+  it('a label with empty strings changes nothing on a rig that carries neither key', () => {
+    const { m, rig } = rigOf({});
+
+    expect(applyRigLabels(m, { rigs: { [rig.name]: { displayName: '', owner: '' } } })).toBe(m);
+  });
+
+  it.each([['displayName'], ['owner']])(
+    'a collector-sent %s with no label is stripped, and the machine changes',
+    (key) => {
+      const { m } = rigOf({ [key]: 'Sent' });
+      const out = applyRigLabels(m, { rigs: {} });
+
+      expect(out).not.toBe(m);
+      expect(out.snapshot.rigs[0]).not.toHaveProperty(key);
+    }
+  );
+
+  it('empty-string label over a collector-sent key strips the key and writes nothing', () => {
+    const { m, rig } = rigOf({ displayName: 'Sent' });
+    const out = applyRigLabels(m, { rigs: { [rig.name]: { displayName: '' } } });
+
+    expect(out.snapshot.rigs[0]).not.toHaveProperty('displayName');
+  });
+});
+
 describe('S3 over the hub', () => {
   it('a config edit shows on the next read, through fleet:update and rig.topology', async () => {
     const file = join(tmp(), 'config.json');

@@ -184,25 +184,28 @@ export function missionLine(md: string): string | null {
   return clip(plain(h.replace(/^#\s+/, '').replace(/^mission\s*[:—-]\s*/i, '')));
 }
 
-/**
- * What a report ended with: its first paragraph line under the title (headings, front matter and
- * the brains' **Purpose** / **For Agents** boilerplate skipped). Null: nothing readable.
- */
-export function reportLine(md: string): string | null {
-  // QA R1 MEDIUM-1: paragraphs are the unit. A hard-wrapped **For Agents** paragraph is skipped
-  // whole, and the paragraph shown is all its lines joined, never its tail.
-  const paras: string[][] = [[]];
+const isFence = (line: string) => /^\s*```/.test(line);
+
+/** The lines outside fenced code; the fence lines themselves go too. */
+function outsideFences(lines: string[]): string[] {
   let fenced = false;
 
-  for (const line of body(md)) {
-    if (/^\s*```/.test(line)) {
+  return lines.filter((line) => {
+    if (isFence(line)) {
       fenced = !fenced;
+
+      return false;
     }
 
-    if (fenced || /^\s*```/.test(line)) {
-      continue;
-    }
+    return !fenced;
+  });
+}
 
+/** The blank-line-separated paragraphs of a report body, fenced code left out. */
+function paragraphsOf(lines: string[]): string[][] {
+  const paras: string[][] = [[]];
+
+  for (const line of outsideFences(lines)) {
     if (line.trim()) {
       paras[paras.length - 1]!.push(line);
     } else if (paras[paras.length - 1]!.length) {
@@ -210,15 +213,24 @@ export function reportLine(md: string): string | null {
     }
   }
 
+  return paras;
+}
+
+/** A table, a quote, a rule, or the brains' **Purpose** / **For Agents** boilerplate. */
+const isBoilerplate = (first: string) =>
+  /^\s*(\||>|-{3,})/.test(first) || /^\s*\*\*(purpose|for agents)\*\*/i.test(first);
+
+/**
+ * What a report ended with: its first paragraph line under the title (headings, front matter and
+ * the brains' **Purpose** / **For Agents** boilerplate skipped). Null: nothing readable.
+ */
+export function reportLine(md: string): string | null {
+  // QA R1 MEDIUM-1: paragraphs are the unit. A hard-wrapped **For Agents** paragraph is skipped
+  // whole, and the paragraph shown is all its lines joined, never its tail.
   // A heading glued to its paragraph (no blank line after "# Title") is not part of it.
-  const p = paras
+  const p = paragraphsOf(body(md))
     .map((lines) => lines.filter((l) => !/^\s*#/.test(l)))
-    .find(
-      (lines) =>
-        lines.length > 0 &&
-        !/^\s*(\||>|-{3,})/.test(lines[0]!) &&
-        !/^\s*\*\*(purpose|for agents)\*\*/i.test(lines[0]!)
-    );
+    .find((lines) => lines.length > 0 && !isBoilerplate(lines[0]!));
 
   return p ? clip(plain(p.join(' '))) : null;
 }

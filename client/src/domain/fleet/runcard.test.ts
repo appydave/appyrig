@@ -169,3 +169,44 @@ describe('R1 · one line from a rig file', () => {
     );
   });
 });
+
+describe('reportLine, which paragraph is shown', () => {
+  it.each([
+    ['nothing at all', ''],
+    ['only headings', '# T\n\n## U'],
+    ['a table first', '# T\n\n| a | b |\n| - | - |'],
+    ['a quote first', '# T\n\n> quoted'],
+    ['a rule first', '# T\n\n---\n'],
+    ['an unclosed fence swallowing the rest', '# T\n\n```\ncode\n\nafter the fence'],
+    ['a heading glued to a table', '# T\n| a | b |'],
+  ])('%s gives null', (_n, md) => {
+    expect(reportLine(md)).toBeNull();
+  });
+
+  it.each([['**Purpose**: x'], ['**PURPOSE** x'], ['  **For Agents**: x']])(
+    'skips the boilerplate paragraph %s',
+    (first) => {
+      expect(reportLine(`# T\n\n${first}\n\nReal line.`)).toBe('Real line.');
+    }
+  );
+
+  it('keeps a paragraph that only mentions purpose or a table later on', () => {
+    expect(reportLine('# T\n\nThe purpose of this | was **Purpose** x.')).toBe(
+      'The purpose of this | was Purpose x.'
+    );
+    expect(reportLine('# T\n\nIntro line\n| a | b |')).toBe('Intro line | a | b |');
+  });
+
+  it('a heading glued to its paragraph is dropped; the paragraph lines join with a space', () => {
+    expect(reportLine('# T\nfirst line\nsecond line')).toBe('first line second line');
+    expect(reportLine('# T\n\n## Sub\nonly here\n\nlater')).toBe('only here');
+  });
+
+  it('a paragraph left empty by dropping headings is skipped for the next one', () => {
+    expect(reportLine('# T\n\n## Sub\n### Sub2\n\nNext one.')).toBe('Next one.');
+  });
+
+  it('a fence glued to text hides only the fenced lines', () => {
+    expect(reportLine('# T\n\nbefore\n```\ncode\n```\nafter')).toBe('before after');
+  });
+});

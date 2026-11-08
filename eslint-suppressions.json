@@ -145,10 +145,10 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/domain/fleet/timeline.test.ts": {
@@ -1640,11 +1640,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 2
-    }
-  },
-  "server/src/hub/appConfig.ts": {
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
     }
   },
   "server/src/hub/browserAuth.ts": {

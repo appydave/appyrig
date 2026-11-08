@@ -55,6 +55,10 @@ export function watchConfig(
   };
 }
 
+const hasLabel = (label: { displayName?: string; owner?: string } | undefined) =>
+  Boolean(label?.displayName || label?.owner);
+const carriesLabel = (rig: object) => 'displayName' in rig || 'owner' in rig;
+
 /** Lays displayName and owner from the config over each rig. Returns the same object when nothing applies. */
 export function applyRigLabels(machine: FleetMachine, config: AppConfig): FleetMachine {
   // displayName and owner belong to the hub's config. A collector that sends them is ignored: config wins.
@@ -71,7 +75,7 @@ export function applyRigLabels(machine: FleetMachine, config: AppConfig): FleetM
 
     delete bare.displayName;
     delete bare.owner;
-    if (!label?.displayName && !label?.owner && !('displayName' in rig) && !('owner' in rig)) {
+    if (!hasLabel(label) && !carriesLabel(rig)) {
       return rig;
     }
 
