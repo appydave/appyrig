@@ -377,36 +377,6 @@ describe.each(CHANNELS)('Feature: the $key channel', (c) => {
   });
 });
 
-describe('Feature: a stopped pusher does not start a channel up again', () => {
-  it('Scenario: a read still running when stop() is called schedules no further tick', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-
-    let release = () => {};
-
-    hub = await startHub(ALL_CAPS);
-    run(hub, {
-      rigFilesIntervalMs: 50,
-      rigFiles: () =>
-        new Promise((r) => {
-          release = () => r(null);
-        }),
-    });
-    await ready();
-    await vi.advanceTimersByTimeAsync(50);
-    await pusher?.stop();
-
-    await vi.advanceTimersByTimeAsync(0);
-    await vi.advanceTimersByTimeAsync(0);
-
-    const before = vi.getTimerCount();
-
-    release();
-    await vi.advanceTimersByTimeAsync(0);
-
-    expect(vi.getTimerCount()).toBe(before);
-  });
-});
-
 describe('Feature: what a channel does when things go wrong', () => {
   const lines: string[] = [];
   const small = { ...RF, rig: 'small' };

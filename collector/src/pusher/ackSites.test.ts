@@ -14,11 +14,12 @@ import { startPusher, type Pusher } from '@collector/pusher.js';
  */
 
 type Ack = (a?: CollectorAck) => void;
-type Mode = 'ok' | 'refuse' | 'silent' | 'empty' | 'late';
+type Mode = 'ok' | 'refuse' | 'silent' | 'empty' | 'late' | 'later';
 
 const SHORT_MS = 60;
 const SLOW_MS = 300;
 const LATE_MS = 450; // between SLOW_MS and 2 * SLOW_MS: late for a 1x timeout, in time for a 2x one
+const LATER_MS = 750; // between 2 * SLOW_MS and 3 * SLOW_MS: late even for a 2x timeout
 const OK: CollectorAck = { ok: true, receivedAt: '2026-11-08T00:00:00.000Z' };
 
 const ANSWERS: Record<Mode, (ack: Ack) => void> = {
@@ -28,6 +29,9 @@ const ANSWERS: Record<Mode, (ack: Ack) => void> = {
   empty: (ack) => ack(),
   late: (ack) => {
     setTimeout(() => ack(OK), LATE_MS);
+  },
+  later: (ack) => {
+    setTimeout(() => ack(OK), LATER_MS);
   },
 };
 
@@ -216,13 +220,11 @@ describe.each(SITES)('Feature: $name tells a hub that answers from one that does
   it.each(['silent', 'empty'] as const)(
     'Scenario: an ack that never comes (%s) is a timeout, not a refusal, and nothing is marked sent',
     async (mode) => {
-      const ms = site.waits === 1 ? SHORT_MS : SHORT_MS * 2;
       const seen = await run(site, mode, {
         ackMs: SHORT_MS,
         until: (s) => logged(s, site.silent(SHORT_MS)),
       });
 
-      expect(ms).toBe(SHORT_MS * site.waits);
       expect(seen.marked).toBe(0);
       expect(logged(seen, site.refused)).toBe(false);
       expect(logged(seen, /tick failed/)).toBe(false);
@@ -235,6 +237,16 @@ describe.each(SITES)('Feature: $name tells a hub that answers from one that does
       until: site.waits === 1 ? (s) => logged(s, site.silent(SLOW_MS)) : accepted(site),
     });
 
+    expect(logged(seen, site.refused)).toBe(false);
+  });
+
+  it('Scenario: an ack that arrives after two timeouts is late for every site, so nothing is marked sent', async () => {
+    const seen = await run(site, 'later', {
+      ackMs: SLOW_MS,
+      until: (s) => logged(s, site.silent(SLOW_MS)),
+    });
+
+    expect(seen.marked).toBe(0);
     expect(logged(seen, site.refused)).toBe(false);
   });
 });
