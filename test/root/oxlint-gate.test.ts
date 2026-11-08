@@ -293,10 +293,12 @@ describe('Feature: the gate runs in CI and the baseline is well formed', () => {
     expect(ci).toMatch(/run:\s*npm run oxlint\s*$/m);
   });
 
-  it('Scenario: given every CI job that installs, then pnpm is there first (the plugin builds with it)', () => {
-    const installs = ci.match(/run: npm install\s*$/gm)?.length ?? 0;
+  it('Scenario: given every CI job that installs, then it uses npm ci and pnpm is there first (the plugin builds with it)', () => {
+    // installs are strict (npm ci, from the lockfile); a loose npm install would hide lockfile drift
+    const installs = ci.match(/run: npm ci\s*$/gm)?.length ?? 0;
     const pnpm = ci.match(/run: npm install -g pnpm\s*$/gm)?.length ?? 0;
 
+    expect(ci).not.toMatch(/run: npm install\s*$/m);
     expect(installs).toBeGreaterThan(0);
     expect(pnpm).toBe(installs);
   });
