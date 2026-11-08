@@ -692,6 +692,154 @@ export interface LoadoutReaderOptions {
   topologyRoot?: string | null;
 }
 
+type Where = { places: SkillPlaces; isRepo: boolean; exists: boolean };
+type Best = { listing: ShownSkills; count: number; path: string };
+type Base = Pick<SeatLoadout, 'machineId' | 'seat' | 'collectedAt' | 'runtime' | 'cwd'>;
+type Given = Pick<SeatLoadout, 'topologyRoot' | 'topologyDocs' | 'member' | 'agentSpec'>;
+
+/** Where a cwd keeps its skills; a missing folder gets none of its own (`cwdKnown: false`). */
+async function whereIs(cwd: string, personal: Set<string>, exec: Exec): Promise<Where> {
+  const exists = await stat(cwd).then(
+    (st) => st.isDirectory(),
+    () => false
+  );
+
+  if (!exists) {
+    const places = {
+      cwd: new Set<string>(),
+      tracked: new Set<string>(),
+      personal,
+      cwdKnown: false,
+    };
+
+    return { places, isRepo: false, exists };
+  }
+
+  const [dirs, git] = await Promise.all([
+    skillFolders(join(cwd, '.claude', 'skills')),
+    trackedSkills(exec, cwd),
+  ]);
+
+  return { places: { cwd: dirs, tracked: git.tracked, personal }, isRepo: git.isRepo, exists };
+}
+
+/** One lookup per cwd for a whole scan, however many seats share it. */
+function placesCache(personal: Set<string>, exec: Exec): (cwd: string) => Promise<Where> {
+  const byCwd = new Map<string, Promise<Where>>();
+
+  return (cwd) => {
+    let p = byCwd.get(cwd);
+
+    if (!p) {
+      p = whereIs(cwd, personal, exec);
+      byCwd.set(cwd, p);
+    }
+
+    return p;
+  };
+}
+
+/** The newest skill listing across a seat's transcripts; one unreadable file only drops itself. */
+async function newestListing(
+  tracker: ListingTracker,
+  files: TranscriptFile[] = []
+): Promise<Best | null> {
+  let best: Best | null = null;
+
+  for (const f of files) {
+    try {
+      const r = await tracker.latest(f);
+
+      if (!r) {
+        continue;
+      }
+
+      if (newerSet(r.listing, best?.listing ?? null)) {
+        best = { ...r, path: f.path };
+      }
+    } catch {
+      // unreadable this round
+    }
+  }
+
+  return best;
+}
+
+function notClaudeLoadout(base: Base, given: Given): SeatLoadout {
+  return {
+    ...base,
+    status: 'not-claude',
+    listing: null,
+    cwdIsGitRepo: null,
+    cwdExists: null,
+    skills: [],
+    layers: [],
+    ...given,
+  };
+}
+
+interface ClaudeSeat {
+  base: Base;
+  given: Given;
+  seat: LoadoutSeat;
+  spec: SpecInfo | undefined;
+  agentDir: string | undefined;
+  best: Best | null;
+  where: Where | null;
+  personal: Set<string>;
+  topologyRoot: string | null;
+}
+
+function listingOf(best: Best | null): SeatLoadout['listing'] {
+  if (!best) {
+    return null;
+  }
+
+  return {
+    at: best.listing.at,
+    skillCount: best.listing.skillCount,
+    isInitial: best.listing.isInitial,
+    deltas: best.listing.deltas,
+    reported: best.listing.reported,
+    listings: Math.max(1, best.count),
+    transcript: best.path,
+  };
+}
+
+/** A seat with no known cwd classifies against the personal folder alone. */
+function placesOf(where: Where | null, personal: Set<string>): SkillPlaces {
+  return (
+    where?.places ?? {
+      cwd: new Set<string>(),
+      tracked: new Set<string>(),
+      personal,
+      cwdKnown: false,
+    }
+  );
+}
+
+async function claudeLoadout(c: ClaudeSeat): Promise<SeatLoadout> {
+  const { best, where } = c;
+
+  return {
+    ...c.base,
+    status: best ? 'ok' : 'no-listing',
+    listing: listingOf(best),
+    cwdIsGitRepo: where?.exists ? where.isRepo : null,
+    cwdExists: where ? where.exists : null,
+    skills: best ? classifySkills(best.listing.names, placesOf(where, c.personal)) : [],
+    layers: await readSeatDocs(c.seat, c.spec, c.agentDir, c.topologyRoot),
+    ...c.given,
+  };
+}
+
+/** What the hub was last sent for a seat, ignoring the scan time. Key order matters: it is hashed. */
+function signatureOf(loadout: SeatLoadout): string {
+  return createHash('sha1')
+    .update(JSON.stringify({ ...loadout, collectedAt: '' }))
+    .digest('hex');
+}
+
 /**
  * Builds each OpenRig seat's loadout at most every `ttlMs`, and hands over only the seats whose
  * loadout changed since the hub last accepted it.
@@ -753,50 +901,7 @@ export class LoadoutReader {
     const claude = seats.filter((s) => s.runtime === 'claude-code');
     const transcripts = await this.index.scan(new Set(claude.map((s) => s.id)));
     const personal = await skillFolders(join(this.home, '.claude', 'skills'));
-    const byCwd = new Map<
-      string,
-      Promise<{ places: SkillPlaces; isRepo: boolean; exists: boolean }>
-    >();
-    const placesFor = (cwd: string) => {
-      let p = byCwd.get(cwd);
-
-      if (!p) {
-        p = (async () => {
-          const exists = await stat(cwd).then(
-            (st) => st.isDirectory(),
-            () => false
-          );
-
-          if (!exists) {
-            return {
-              places: {
-                cwd: new Set<string>(),
-                tracked: new Set<string>(),
-                personal,
-                cwdKnown: false,
-              },
-              isRepo: false,
-              exists,
-            };
-          }
-
-          const [dirs, git] = await Promise.all([
-            skillFolders(join(cwd, '.claude', 'skills')),
-            trackedSkills(this.exec, cwd),
-          ]);
-
-          return {
-            places: { cwd: dirs, tracked: git.tracked, personal },
-            isRepo: git.isRepo,
-            exists,
-          };
-        })();
-        byCwd.set(cwd, p);
-      }
-
-      return p;
-    };
-
+    const placesFor = placesCache(personal, this.exec);
     const out: SeatLoadout[] = [];
     const sigs = new Map<string, string>();
     const counts = new Map<string, number | null>();
@@ -805,6 +910,7 @@ export class LoadoutReader {
     for (const seat of seats) {
       const spec = seat.rig ? specs.get(seat.rig) : undefined;
       const member = memberOf(spec, seat.logicalId);
+      const agentDir = agentDirs.get(seat.id);
       const base = {
         machineId: this.machineId,
         seat: seat.id,
@@ -817,69 +923,22 @@ export class LoadoutReader {
         topologyRoot: this.topologyRoot,
         topologyDocs: await readTopologyDocs(seat, this.topologyRoot),
         member,
-        agentSpec: await agentSpecOf(agentDirs.get(seat.id), member?.profile ?? null),
+        agentSpec: await agentSpecOf(agentDir, member?.profile ?? null),
       };
-      let loadout: SeatLoadout;
-
-      if (seat.runtime !== 'claude-code') {
-        loadout = {
-          ...base,
-          status: 'not-claude',
-          listing: null,
-          cwdIsGitRepo: null,
-          cwdExists: null,
-          skills: [],
-          layers: [],
-          ...given,
-        };
-      } else {
-        let best: { listing: ShownSkills; count: number; path: string } | null = null;
-
-        for (const f of transcripts.get(seat.id) ?? []) {
-          try {
-            const r = await this.tracker.latest(f);
-
-            if (!r) {
-              continue;
-            }
-
-            if (newerSet(r.listing, best?.listing ?? null)) {
-              best = { ...r, path: f.path };
-            }
-          } catch {
-            // unreadable this round
-          }
-        }
-
-        const where = seat.cwd ? await placesFor(seat.cwd) : null;
-        const places = where?.places ?? {
-          cwd: new Set<string>(),
-          tracked: new Set<string>(),
-          personal,
-          cwdKnown: false,
-        };
-
-        loadout = {
-          ...base,
-          status: best ? 'ok' : 'no-listing',
-          listing: best
-            ? {
-                at: best.listing.at,
-                skillCount: best.listing.skillCount,
-                isInitial: best.listing.isInitial,
-                deltas: best.listing.deltas,
-                reported: best.listing.reported,
-                listings: Math.max(1, best.count),
-                transcript: best.path,
-              }
-            : null,
-          cwdIsGitRepo: where?.exists ? where.isRepo : null,
-          cwdExists: where ? where.exists : null,
-          skills: best ? classifySkills(best.listing.names, places) : [],
-          layers: await readSeatDocs(seat, spec, agentDirs.get(seat.id), this.topologyRoot),
-          ...given,
-        };
-      }
+      const loadout =
+        seat.runtime !== 'claude-code'
+          ? notClaudeLoadout(base, given)
+          : await claudeLoadout({
+              base,
+              given,
+              seat,
+              spec,
+              agentDir,
+              best: await newestListing(this.tracker, transcripts.get(seat.id)),
+              where: seat.cwd ? await placesFor(seat.cwd) : null,
+              personal,
+              topologyRoot: this.topologyRoot,
+            });
 
       counts.set(seat.id, loadout.listing?.skillCount ?? null);
       if (loadout.status === 'ok') {
@@ -889,9 +948,7 @@ export class LoadoutReader {
         );
       }
 
-      const sig = createHash('sha1')
-        .update(JSON.stringify({ ...loadout, collectedAt: '' }))
-        .digest('hex');
+      const sig = signatureOf(loadout);
 
       if (this.sent.get(seat.id) === sig) {
         continue;
