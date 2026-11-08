@@ -45,10 +45,11 @@ describe('Feature: every workspace with a coverage floor is measured in CI', () 
       const config = read('collector/vitest.config.ts');
 
       // Lowering the floor is fine: edit this number and the config together. Raising it is a loosening
-      // that the judge must WITHDRAW (D7); raising it here as well does not make it acceptable.
-      expect(config, `UNCOVERED_${measure} must stay ${pinned}; see D7 before raising`).toContain(
-        `const UNCOVERED_${measure} = ${pinned};`
-      );
+      // that the judge must withdraw; raising it here as well does not make it acceptable.
+      expect(
+        config,
+        `UNCOVERED_${measure} is pinned at ${pinned} in this test. Added tests? Lower it here and in collector/vitest.config.ts in the same PR. Raising it loosens the coverage floor and needs the judge's ruling.`
+      ).toContain(`const UNCOVERED_${measure} = ${pinned};`);
     }
   );
 
