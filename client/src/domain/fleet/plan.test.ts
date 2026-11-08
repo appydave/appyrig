@@ -3,7 +3,15 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { QueueItem } from '@appydave/shared';
 import { queueMachine } from '@client/test/queueFixtures.js';
-import { changeOrders, choosePlan, names, numberedSteps, planIn, sliceTable } from './plan.js';
+import {
+  changeOrders,
+  choosePlan,
+  names,
+  numberedSteps,
+  planIn,
+  sliceTable,
+  type PlanKind,
+} from './plan.js';
 
 const brief = (n: string) =>
   readFileSync(path.resolve(__dirname, '../../../../test/fixtures/plans', n), 'utf8');
@@ -232,5 +240,39 @@ describe('R3 · choosing the plan and marking the live step', () => {
     expect(names(q('x', 'K d3b9313 (J/K keys)'), k, 'slices')).toBe(true);
     expect(names(q('x', 'fold', ['c6a-1']), { id: 'C6-A1', title: '' }, 'slices')).toBe(false);
     expect(names(q('x', 'fold', ['c6a']), { id: 'C6-A', title: '' }, 'slices')).toBe(true);
+  });
+});
+
+describe('which tag names a step, with no words in the summary', () => {
+  const byTag = (id: string, kind: PlanKind, ...tags: string[]) =>
+    names(q('x', '', tags), { id, title: '' }, kind);
+
+  it('change orders: the mission by any step-* tag, change-N by its own tag', () => {
+    expect(byTag('mission', 'changes', 'step-7')).toBe(true);
+    expect(byTag('mission', 'changes', 'change-1')).toBe(false);
+    expect(byTag('change-04', 'changes', 'change-04')).toBe(true);
+    expect(byTag('change-04', 'changes', 'change-4', 'step-04')).toBe(false);
+  });
+
+  it('numbered steps, and any id that starts with a digit, by step-<id>', () => {
+    expect(byTag('5', 'steps', 'step-5')).toBe(true);
+    expect(byTag('5', 'steps', '5')).toBe(false);
+    expect(byTag('3', 'slices', 'step-3')).toBe(true);
+    expect(byTag('3', 'slices', '3')).toBe(false);
+    expect(byTag('2a', 'slices', 'step-2a', 'STEP-2A')).toBe(true);
+  });
+
+  it('a slice id by the same tag, in any case, with or without its dashes', () => {
+    expect(byTag('C6-A1', 'slices', 'c6-a1')).toBe(true);
+    expect(byTag('C6-A1', 'slices', 'C6A1')).toBe(true);
+    expect(byTag('C6-A1', 'slices', 'c6-a')).toBe(false);
+    expect(byTag('F4', 'slices', 'step-f4')).toBe(false);
+  });
+
+  it('the one-digit tags r1 to r9 are the reviewer seat, never a slice', () => {
+    expect(byTag('R1', 'slices', 'r1')).toBe(false);
+    expect(byTag('R9', 'slices', 'r9')).toBe(false);
+    expect(byTag('R10', 'slices', 'r10')).toBe(true);
+    expect(byTag('R2', 'steps', 'step-r2')).toBe(true);
   });
 });

@@ -161,21 +161,33 @@ function spots(text: string, step: PlanStep, kind: PlanKind): number[] {
   ];
 }
 
+/** Does a tag of the handoff name the step? Which tag depends on the kind of plan. */
+function tagMatches(tags: string[], step: PlanStep, kind: PlanKind): boolean {
+  const id = step.id.toLowerCase();
+
+  if (kind === 'changes') {
+    return step.id === 'mission'
+      ? tags.some((t) => /^step-/.test(t))
+      : tags.includes(`change-${step.id.slice(7)}`);
+  }
+
+  if (kind === 'steps' || /^\d/.test(step.id)) {
+    return tags.includes(`step-${id}`);
+  }
+
+  // r1 R3 LOW-2: a tag "r1"/"r2" is the reviewer seat, not slice R1.
+  if (/^r\d$/.test(id)) {
+    return false;
+  }
+
+  return tags.some((t) => t === id || t === id.replace(/-/g, ''));
+}
+
 /** Does this handoff name the step? By its summary words or by a tag. */
 export function names(q: QueueItem, step: PlanStep, kind: PlanKind): boolean {
   const tags = q.tags.map((t) => t.toLowerCase());
-  const id = step.id.toLowerCase();
-  const byTag =
-    kind === 'changes'
-      ? step.id === 'mission'
-        ? tags.some((t) => /^step-/.test(t))
-        : tags.includes(`change-${step.id.slice(7)}`)
-      : kind === 'steps' || /^\d/.test(step.id)
-        ? tags.includes(`step-${id}`)
-        : // r1 R3 LOW-2: a tag "r1"/"r2" is the reviewer seat, not slice R1.
-          !/^r\d$/.test(id) && tags.some((t) => t === id || t === id.replace(/-/g, ''));
 
-  return byTag || spots(q.summary ?? '', step, kind).length > 0;
+  return tagMatches(tags, step, kind) || spots(q.summary ?? '', step, kind).length > 0;
 }
 
 /** "R1-R4", "F1–F4", "R2 to R4" name every slice between: where in the text such ranges name `id`. */
