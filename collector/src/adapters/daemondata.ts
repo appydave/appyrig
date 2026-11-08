@@ -392,20 +392,38 @@ const TRANSITIONS_PAGE = 128;
 /** Pages read per round, so the first read of a long history is spread over a few rounds. */
 const TRANSITIONS_PAGES_PER_ROUND = 12;
 
+/** The transition id: a string (trimmed) or a number (as text); anything else has none. */
+function idOf(raw: unknown): string {
+  if (typeof raw === 'string') {
+    return raw.trim();
+  }
+
+  return typeof raw === 'number' ? String(raw) : '';
+}
+
+/** An id of 1 to 30 characters and a time that parsed: what a row needs besides its qitem and state. */
+function hasRequired(id: string, ms: number): boolean {
+  return id !== '' && id.length <= 30 && Number.isFinite(ms);
+}
+
+/** When the transition happened, in ms: originalTimestamp if present, else createdAt; NaN if neither parses. */
+function whenOf(original: unknown, created: unknown): number {
+  const when = txt(original, TEXT_SHORT_MAX) ?? txt(created, TEXT_SHORT_MAX);
+
+  return when ? Date.parse(when) : NaN;
+}
+
 export function parseTransitionRow(r: unknown): TransitionRow | null {
   if (!isRec(r)) {
     return null;
   }
 
-  const rawId = r.transitionId;
-  const id =
-    typeof rawId === 'string' ? rawId.trim() : typeof rawId === 'number' ? String(rawId) : '';
+  const id = idOf(r.transitionId);
   const qitemId = txt(r.qitemId, TEXT_XLONG_MAX);
   const state = txt(r.state, TEXT_SHORT_MAX);
-  const when = txt(r.originalTimestamp, TEXT_SHORT_MAX) ?? txt(r.createdAt, TEXT_SHORT_MAX);
-  const ms = when ? Date.parse(when) : NaN;
+  const ms = whenOf(r.originalTimestamp, r.createdAt);
 
-  if (!id || id.length > 30 || !qitemId || !state || !Number.isFinite(ms)) {
+  if (!qitemId || !state || !hasRequired(id, ms)) {
     return null;
   }
 
