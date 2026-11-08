@@ -532,7 +532,7 @@ describe('LoadoutReader', () => {
       { id: 'dev-cx@demo', rig: 'demo', runtime: 'codex', cwd },
     ];
 
-    return { reader, seats, clock, transcript };
+    return { reader, seats, clock, transcript, projects };
   }
 
   it('builds a valid loadout per seat, sorted by source; a Codex seat is "not-claude", never empty skills pretending', async () => {
@@ -556,6 +556,37 @@ describe('LoadoutReader', () => {
       'canvas:x': 'plugin',
     });
     expect(codex).toMatchObject({ status: 'not-claude', skills: [], layers: [] });
+  });
+
+  it('serializes each loadout with its keys in one fixed order (the hub-sent signature hashes the JSON)', async () => {
+    const { reader, seats } = setup();
+    const [claude, codex] = (await reader.next(seats, new Map(), new Map()))!.loadouts;
+    const base = ['machineId', 'seat', 'collectedAt', 'runtime', 'cwd'];
+    const given = ['topologyRoot', 'topologyDocs', 'member', 'agentSpec'];
+
+    expect(Object.keys(claude!)).toEqual([
+      ...base,
+      ...['status', 'listing', 'cwdIsGitRepo', 'cwdExists', 'skills', 'layers'],
+      ...given,
+    ]);
+    expect(Object.keys(claude!.listing!)).toEqual([
+      ...['at', 'skillCount', 'isInitial', 'deltas', 'reported', 'listings', 'transcript'],
+    ]);
+    expect(Object.keys(codex!)).toEqual([
+      ...base,
+      ...['status', 'listing', 'cwdIsGitRepo', 'cwdExists', 'skills', 'layers'],
+      ...given,
+    ]);
+  });
+
+  it('a seat transcript with a title but no listing is passed over; the one with a listing is used', async () => {
+    const { reader, seats, projects } = setup();
+
+    put(join(projects, '-w', 'empty.jsonl'), `${titleLine('dev-build@demo')}\n`);
+
+    const p = await reader.next(seats, new Map(), new Map());
+
+    expect(p?.loadouts[0]).toMatchObject({ status: 'ok', listing: { skillCount: 5 } });
   });
 
   it('only reads transcripts titled as a known seat', async () => {
