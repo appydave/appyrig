@@ -92,10 +92,17 @@ describe('Feature: the test-trust gate leaves honest tests alone', () => {
     expect(r.status, r.out).toBe(0);
   });
 
-  it('Scenario: given a promise sleep in a unit test, then it is not flagged (only browser tests)', () => {
-    const r = gate({
-      'server/src/l.test.ts': `await new Promise((r) => ${'setTimeout'}(r, 5));`,
-    });
+  // The four shapes that look like a sleep but are not (found by the architect; real examples in the repo).
+  it.each([
+    ['a fake peer replying after a delay', `${'setTimeout'}(() => ack(OK), LATE_MS);`],
+    ['a retry helper that is itself the wait', `else { ${'setTimeout'}(check, 50); }`],
+    [
+      'the word in a string fixture',
+      `const code = 'return ${'setTimeout'}(() => undefined, 5000);';`,
+    ],
+    ['a promise that resolves on an event', `await new Promise((r) => socket.once('open', r));`],
+  ])('Scenario: given %s in a unit test, then it is not flagged', (_name, body) => {
+    const r = gate({ 'client/src/l.test.tsx': body });
 
     expect(r.status, r.out).toBe(0);
   });
@@ -110,6 +117,34 @@ describe('Feature: the test-trust gate leaves honest tests alone', () => {
     const r = gate({ 'test/fixtures/n.test.ts': `it.${'skip'}('a', () => {});` });
 
     expect(r.status, r.out).toBe(0);
+  });
+});
+
+describe('Feature: the test-trust gate fails a promise that sleeps in a unit test', () => {
+  it.each([
+    ['arrow', `await new Promise((r) => ${'setTimeout'}(r, 50));`],
+    ['named resolver', `await new Promise((resolve) => ${'setTimeout'}(resolve, 50));`],
+    ['block body', `await new Promise((r) => { ${'setTimeout'}(r, 50); });`],
+    ['called resolver', `await new Promise<void>((r) => ${'setTimeout'}(() => r(), 50));`],
+    ['waitForTimeout', `await page.${'waitForTimeout'}(50);`],
+  ])(
+    'Scenario: given a %s sleep in a unit test, then it exits 1 and says what to write',
+    (_n, body) => {
+      const r = gate({ 'client/src/m.test.tsx': body });
+
+      expect(r.status, r.out).toBe(1);
+      expect(r.out).toContain('client/src/m.test.tsx:1 [sleep-unit]');
+      expect(r.out).toContain('vi.waitFor');
+      expect(r.out).toContain('a sleep written another way');
+    }
+  );
+
+  it('Scenario: given a browser test, then the existing rule reports it, once', () => {
+    const r = gate({ 'e2e/n.spec.ts': `await new Promise((r) => ${'setTimeout'}(r, 500));` });
+
+    expect(r.status, r.out).toBe(1);
+    expect(r.out).toContain('[sleep]');
+    expect(r.out).not.toContain('[sleep-unit]');
   });
 });
 

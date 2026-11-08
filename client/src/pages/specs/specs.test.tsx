@@ -246,9 +246,7 @@ describe('N10: the Rig specs page', () => {
       expect(items).toHaveLength(2);
       fireEvent.click(items[1]!);
     });
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    });
+    await act(async () => {}); // the default-pick effect has now run; a replaced pick would show
 
     expect(screen.getByTestId('rs-detail-name')).toHaveTextContent(launched.name);
   });

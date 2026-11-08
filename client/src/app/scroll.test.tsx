@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { io } from 'socket.io-client';
 import App from './App.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
@@ -32,7 +32,13 @@ const scrollTo = (to: number) => {
   });
 };
 
-const flush = () => act(async () => void (await new Promise((r) => setTimeout(r, 50))));
+/** Runs a history move and waits until the address has actually changed (jsdom delivers popstate later). */
+const move = async (go: () => void) => {
+  const before = window.location.href;
+
+  act(go);
+  await waitFor(() => expect(window.location.href).not.toBe(before));
+};
 
 describe('V55: scroll across pages', () => {
   it('a new page starts at the top; Back puts the old page back where it was', async () => {
@@ -45,23 +51,17 @@ describe('V55: scroll across pages', () => {
     // the group opened Needs You on the way (a page of its own, left at the top)
     // Back, Back: the Wall, left at 640
     for (let i = 0; i < 2; i++) {
-      act(() => {
-        history.back();
-      });
-      await flush();
+      await move(() => history.back());
     }
 
     expect(window.location.search).toContain('wall');
-    expect(y).toBe(640);
+    await waitFor(() => expect(y).toBe(640));
     // Forward, Forward: the Flow page again, left at 90
     for (let i = 0; i < 2; i++) {
-      act(() => {
-        history.forward();
-      });
-      await flush();
+      await move(() => history.forward());
     }
 
     expect(window.location.search).toContain('flow');
-    expect(y).toBe(90);
+    await waitFor(() => expect(y).toBe(90));
   });
 });
