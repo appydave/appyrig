@@ -22,7 +22,6 @@ export const LifecycleSchema = z.object({
   restore_policy: z.enum(['resume_if_possible', 'relaunch_fresh', 'checkpoint_only']).optional(),
   mechanic: z.string().optional(),
 });
-export type Lifecycle = z.infer<typeof LifecycleSchema>;
 
 const IdPath = z.object({ id: z.string().min(1), path: z.string().min(1) });
 
@@ -50,7 +49,6 @@ export const AgentResourcesSchema = z.object({
     .array(IdPath.extend({ runtime: z.string().min(1), type: z.string().min(1) }))
     .optional(),
 });
-export type AgentResources = z.infer<typeof AgentResourcesSchema>;
 
 /** Ids are bare (own resources first, then imports) or qualified `<import>:<id>`. `hooks` is refused. */
 export const ProfileUsesSchema = z.object({
@@ -81,7 +79,6 @@ export const AgentProfileSchema = z.object({
    */
   activity: z.object({ silence_window_seconds: z.number().optional() }).optional(),
 });
-export type AgentProfile = z.infer<typeof AgentProfileSchema>;
 
 export const AgentSpecSchema = z.object({
   name: z.string().min(1),
@@ -104,4 +101,3 @@ export const AgentSpecSchema = z.object({
   /** The agent layer of startup: typically `guidance/role.md` as `send_text`. */
   startup: StartupBlockSchema.optional(),
 });
-export type AgentSpec = z.infer<typeof AgentSpecSchema>;

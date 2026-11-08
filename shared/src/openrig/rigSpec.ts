@@ -24,8 +24,8 @@ export const EDGE_KINDS = [
   'collaborates_with',
   'escalates_to',
 ] as const;
-export const EdgeKindSchema = z.enum(EDGE_KINDS);
-export type EdgeKind = z.infer<typeof EdgeKindSchema>;
+
+const EdgeKindSchema = z.enum(EDGE_KINDS);
 
 /** Within one pod: `from` / `to` are bare member ids (`build`, never `dev.build`). */
 export const PodEdgeSchema = z.strictObject({
@@ -33,7 +33,6 @@ export const PodEdgeSchema = z.strictObject({
   from: z.string().min(1),
   to: z.string().min(1),
 });
-export type PodEdge = z.infer<typeof PodEdgeSchema>;
 
 /** Between pods: `from` / `to` are `pod.member`, in different pods. */
 export const CrossPodEdgeSchema = z.strictObject({
@@ -41,15 +40,15 @@ export const CrossPodEdgeSchema = z.strictObject({
   from: z.string().regex(/^[^.@]+\.[^.@]+$/, 'pod.member'),
   to: z.string().regex(/^[^.@]+\.[^.@]+$/, 'pod.member'),
 });
-export type CrossPodEdge = z.infer<typeof CrossPodEdgeSchema>;
 
 /** Mirrors `permission-policy/policy-ref.ts` BUILTIN_POLICY_NAMES. */
 export const BUILTIN_POLICIES = ['locked', 'standard', 'open', 'yolo', 'auto'] as const;
+
 /** `builtin:<name>`, a safe relative path to a policy file, or `none` (the floor, chosen). */
-export const PermissionPolicyRefSchema = z.string().min(1);
+const PermissionPolicyRefSchema = z.string().min(1);
 
 /** Names match ^[A-Z_][A-Z0-9_]*$; `OPENRIG_*` is reserved. Values are not secret. */
-export const SeatEnvSchema = z.record(z.string().regex(/^[A-Z_][A-Z0-9_]*$/), z.string().min(1));
+const SeatEnvSchema = z.record(z.string().regex(/^[A-Z_][A-Z0-9_]*$/), z.string().min(1));
 
 export const RESTORE_POLICIES = [
   'resume_if_possible',
@@ -65,7 +64,7 @@ export const COMPACTION_STRATEGIES = [
 export const RUNTIMES = ['claude-code', 'codex', 'pi', 'omp', 'terminal', 'stub'] as const;
 
 /** Mirrors types.ts SessionSourceSpec (fork | rebuild | agent_image). */
-export const SessionSourceSchema = z.discriminatedUnion('mode', [
+const SessionSourceSchema = z.discriminatedUnion('mode', [
   z.object({
     mode: z.literal('fork'),
     ref: z.object({
@@ -86,7 +85,6 @@ export const SessionSourceSchema = z.discriminatedUnion('mode', [
     }),
   }),
 ]);
-export type SessionSource = z.infer<typeof SessionSourceSchema>;
 
 /**
  * A pod member: one SEAT's spec. Its session name is `{pod}-{member}@{rig}` and its logical id
@@ -137,7 +135,6 @@ export const ContinuityPolicySchema = z.object({
     .object({ peer_driven: z.boolean().optional(), verify_via_quiz: z.boolean().optional() })
     .optional(),
 });
-export type ContinuityPolicy = z.infer<typeof ContinuityPolicySchema>;
 
 /** A POD: a bounded context of members. Doc: rig-spec.md "## Pod". */
 export const PodSpecSchema = z.strictObject({
@@ -157,7 +154,7 @@ export type PodSpec = z.infer<typeof PodSpecSchema>;
 export const WORKSPACE_KINDS = ['user', 'project', 'knowledge', 'lab', 'delivery'] as const;
 
 /** The rig's workspace (PL-007). Relative repo paths resolve against `workspace_root`. */
-export const RigWorkspaceSchema = z.object({
+const RigWorkspaceSchema = z.object({
   workspace_root: z.string().min(1),
   repos: z
     .array(
@@ -167,7 +164,6 @@ export const RigWorkspaceSchema = z.object({
   default_repo: z.string().optional(),
   knowledge_root: z.string().optional(),
 });
-export type RigWorkspace = z.infer<typeof RigWorkspaceSchema>;
 
 /** Docker Compose services `rig up` boots before agents. Mirrors types.ts RigServicesSpec. */
 export const RigServicesSchema = z.object({
@@ -202,7 +198,6 @@ export const RigServicesSchema = z.object({
     )
     .optional(),
 });
-export type RigServices = z.infer<typeof RigServicesSchema>;
 
 /** The RIG: `rig.yaml`. Doc: rig-spec.md "Top-Level Fields". */
 export const RigSpecSchema = z.strictObject({

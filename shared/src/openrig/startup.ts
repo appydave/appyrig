@@ -11,15 +11,15 @@ import { z } from 'zod';
  */
 
 export const DELIVERY_HINTS = ['auto', 'guidance_merge', 'skill_install', 'send_text'] as const;
-export const DeliveryHintSchema = z.enum(DELIVERY_HINTS);
-export type DeliveryHint = z.infer<typeof DeliveryHintSchema>;
+
+const DeliveryHintSchema = z.enum(DELIVERY_HINTS);
 
 export const APPLIES_ON = ['fresh_start', 'restore'] as const;
-export const AppliesOnSchema = z.enum(APPLIES_ON);
-export type AppliesOn = z.infer<typeof AppliesOnSchema>;
+
+const AppliesOnSchema = z.enum(APPLIES_ON);
 
 /** One startup file. `path` is a safe relative path (no `..`, not absolute). */
-export const StartupFileSchema = z.object({
+const StartupFileSchema = z.object({
   path: z.string().min(1),
   /** `role` marks the per-seat role file (read by `rig queue whoami --json` and refocus). */
   orientation: z.literal('role').optional(),
@@ -32,7 +32,6 @@ export const StartupFileSchema = z.object({
   /** Default both. */
   applies_on: z.array(AppliesOnSchema).optional(),
 });
-export type StartupFile = z.infer<typeof StartupFileSchema>;
 
 export const STARTUP_ACTION_TYPES = ['slash_command', 'send_text', 'startup_proof'] as const;
 
@@ -47,13 +46,11 @@ export const StartupActionSchema = z.object({
   idempotent: z.boolean(),
   applies_on: z.array(AppliesOnSchema).optional(),
 });
-export type StartupAction = z.infer<typeof StartupActionSchema>;
 
 export const StartupBlockSchema = z.object({
   files: z.array(StartupFileSchema).optional(),
   actions: z.array(StartupActionSchema).optional(),
 });
-export type StartupBlock = z.infer<typeof StartupBlockSchema>;
 
 /**
  * The order startup content reaches a seat (each layer appends; nothing replaces).
@@ -69,7 +66,6 @@ export const STARTUP_LAYERS = [
   'member',
   'operator',
 ] as const;
-export type StartupLayer = (typeof STARTUP_LAYERS)[number];
 
 /**
  * Files OpenRig itself adds (by logical name), from its own install, not from the rig's folder.
@@ -82,4 +78,3 @@ export const BUILTIN_STARTUP_FILES = [
   'openrig-onboarding-01.md',
   'openrig-onboarding-02.md',
 ] as const;
-export type BuiltinStartupFile = (typeof BUILTIN_STARTUP_FILES)[number];

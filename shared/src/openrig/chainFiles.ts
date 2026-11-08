@@ -13,9 +13,9 @@ import { z } from 'zod';
 // ── the topology tree: how work is done here ────────────────────────────────────────────────────
 
 /** instance → rig → pod → seat. */
-export const TOPOLOGY_ALTITUDES = ['instance', 'rig', 'pod', 'seat'] as const;
+const TOPOLOGY_ALTITUDES = ['instance', 'rig', 'pod', 'seat'] as const;
+
 export const TopologyAltitudeSchema = z.enum(TOPOLOGY_ALTITUDES);
-export type TopologyAltitude = z.infer<typeof TopologyAltitudeSchema>;
 
 /**
  * Established names on the topology tree. RECAP.md is seat-only (older ones under
@@ -29,7 +29,6 @@ export const TOPOLOGY_CHAIN_FILES = [
   'CULTURE.md',
   'RECAP.md',
 ] as const;
-export type TopologyChainFile = (typeof TOPOLOGY_CHAIN_FILES)[number];
 
 /** Where a topology node is, relative to `topology.root` (default `$OPENRIG_HOME/topology`). */
 export const TopologyNodeSchema = z.discriminatedUnion('altitude', [
@@ -43,6 +42,7 @@ export const TopologyNodeSchema = z.discriminatedUnion('altitude', [
    */
   z.object({ altitude: z.literal('seat'), rig: z.string().min(1), seat: z.string().min(1) }),
 ]);
+
 export type TopologyNode = z.infer<typeof TopologyNodeSchema>;
 
 /**
@@ -81,6 +81,3 @@ export function topologyTrace(
 
   return out;
 }
-
-/** Pre-convention location, still read with an advisory: `~/.openrig/shared-docs/rigs/` (rig and seat). */
-export const LEGACY_TOPOLOGY_ROOT = '~/.openrig/shared-docs/rigs';

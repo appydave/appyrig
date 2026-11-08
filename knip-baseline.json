@@ -285,8 +285,7 @@
         "exports": 1
       },
       "shared/src/daemondata.ts": {
-        "exports": 20,
-        "types": 11
+        "exports": 1
       },
       "shared/src/dbrows.ts": {
         "exports": 1,
@@ -321,24 +320,8 @@
         "exports": 3,
         "types": 2
       },
-      "shared/src/openrig/agentSpec.ts": {
-        "types": 4
-      },
       "shared/src/openrig/chainFiles.ts": {
-        "exports": 3,
-        "types": 2
-      },
-      "shared/src/openrig/project.ts": {
-        "exports": 5,
-        "types": 6
-      },
-      "shared/src/openrig/rigSpec.ts": {
-        "exports": 5,
-        "types": 7
-      },
-      "shared/src/openrig/startup.ts": {
-        "exports": 3,
-        "types": 7
+        "exports": 1
       },
       "shared/src/rigfiles.ts": {
         "exports": 1,
@@ -742,8 +725,7 @@
         "exports": 1
       },
       "shared/src/daemondata.ts": {
-        "exports": 20,
-        "types": 11
+        "exports": 1
       },
       "shared/src/dbrows.ts": {
         "exports": 1,
@@ -779,24 +761,19 @@
         "types": 2
       },
       "shared/src/openrig/agentSpec.ts": {
-        "exports": 3,
-        "types": 4
+        "exports": 3
       },
       "shared/src/openrig/chainFiles.ts": {
-        "exports": 3,
-        "types": 2
+        "exports": 1
       },
       "shared/src/openrig/project.ts": {
-        "exports": 10,
-        "types": 6
+        "exports": 5
       },
       "shared/src/openrig/rigSpec.ts": {
-        "exports": 14,
-        "types": 7
+        "exports": 9
       },
       "shared/src/openrig/startup.ts": {
-        "exports": 9,
-        "types": 7
+        "exports": 6
       },
       "shared/src/rigfiles.ts": {
         "exports": 2,
