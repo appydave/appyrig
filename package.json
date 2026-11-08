@@ -5,7 +5,10 @@
   "description": "Live view of agent teams across machines",
   "type": "module",
   "imports": {
-    "#root/eslint.config.js": "./eslint.config.js"
+    "#root/eslint.config.js": "./eslint.config.js",
+    "#root/oxlint.config.ts": "./oxlint.config.ts",
+    "#root/.dependency-cruiser.cjs": "./.dependency-cruiser.cjs",
+    "#root/.dependency-cruiser-folders.cjs": "./.dependency-cruiser-folders.cjs"
   },
   "workspaces": [
     "shared",

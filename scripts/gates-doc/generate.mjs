@@ -3,12 +3,16 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import eslintConfig from '#root/eslint.config.js';
+import eslint from '#root/eslint.config.js';
+import oxlint from '#root/oxlint.config.ts';
+import depcruise from '#root/.dependency-cruiser.cjs';
+import depcruiseFolders from '#root/.dependency-cruiser-folders.cjs';
 import { collect, problems, render } from './exemptions.mjs';
 import { REASONS } from './reasons.mjs';
 
 const ROOT = join(fileURLToPath(import.meta.url), '../../..');
-const entries = collect(ROOT, eslintConfig);
+const configs = { eslint, oxlint, depcruise, depcruiseFolders };
+const entries = collect(ROOT, configs);
 const { missing, stale } = problems(entries, REASONS);
 
 if (missing.length > 0 || stale.length > 0) {

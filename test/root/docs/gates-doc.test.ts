@@ -3,14 +3,31 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain ESM config with no types
-import eslintConfig from '@root/eslint.config.js';
+import eslint from '@root/eslint.config.js';
+import oxlint from '@root/oxlint.config';
+// @ts-expect-error CommonJS config with no types
+import depcruise from '@root/.dependency-cruiser.cjs';
+// @ts-expect-error CommonJS config with no types
+import depcruiseFolders from '@root/.dependency-cruiser-folders.cjs';
 // @ts-expect-error plain ESM script with no types
 import { collect, problems, render } from '@root/scripts/gates-doc/exemptions.mjs';
 // @ts-expect-error plain ESM script with no types
 import { REASONS } from '@root/scripts/gates-doc/reasons.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
-const SOURCES = ['eslint', 'knip', 'jscpd', 'tsconfig', 'vitest', 'prettier'];
+const SOURCES = [
+  'eslint',
+  'knip',
+  'jscpd',
+  'tsconfig',
+  'vitest',
+  'prettier',
+  'oxlint',
+  'depcruise',
+  'depcruise-folders',
+  'folder-limits',
+  'test-trust',
+];
 
 interface Entry {
   key: string;
@@ -22,7 +39,7 @@ interface Entry {
 type Reasons = Record<string, string>;
 type Problems = { missing: string[]; stale: string[] };
 
-const entries: Entry[] = collect(ROOT, eslintConfig);
+const entries: Entry[] = collect(ROOT, { eslint, oxlint, depcruise, depcruiseFolders });
 const reasons: Reasons = REASONS;
 const check: (e: Entry[], r: Reasons) => Problems = problems;
 const draw: (e: Entry[], r: Reasons) => string = render;
