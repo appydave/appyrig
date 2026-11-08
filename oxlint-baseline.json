@@ -34,8 +34,7 @@
       "no-unknown-parameters": 3
     },
     "client/src/domain/fleet/coreCall.ts": {
-      "no-unknown-parameters": 1,
-      "require-safety-comment-for-type-assertion": 1
+      "no-unknown-parameters": 1
     },
     "client/src/domain/fleet/health.test.ts": {
       "no-chained-type-assertions": 1

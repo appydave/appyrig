@@ -204,6 +204,17 @@ export type Refusal = z.infer<typeof RefusalSchema>;
 
 export type CallAnswer<T = unknown> = { ok: true; value: T } | { ok: false; error: Refusal };
 
+/**
+ * Schema for the answer envelope only (`ok`, then `value` or `error`). The payload is NOT checked:
+ * `value` is whatever the hub sent, trusted as `T`, and may be any JSON except "missing".
+ */
+export function callAnswerSchema<T>() {
+  return z.discriminatedUnion('ok', [
+    z.object({ ok: z.literal(true), value: z.custom<T>((v) => v !== undefined) }),
+    z.object({ ok: z.literal(false), error: RefusalSchema }),
+  ]);
+}
+
 /** Payload of the browser socket's `core:call` (and the body of `POST /v1/call`). */
 export interface CoreCallRequest {
   verb: string;
