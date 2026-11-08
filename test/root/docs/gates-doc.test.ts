@@ -113,6 +113,20 @@ describe('Feature: a new tsconfig or vitest config cannot sit outside the list u
     .split('\n')
     .filter(Boolean);
 
+  it('Scenario: given the two exemption-free configs, then neither has gained an exclude', () => {
+    const tsconfig = JSON.parse(readFileSync(join(ROOT, 'tsconfig.json'), 'utf8'));
+    const vitest = readFileSync(join(ROOT, 'test/root/vitest.config.ts'), 'utf8');
+
+    expect(
+      tsconfig,
+      'tsconfig.json gained an exclude: list it in scripts/gates-doc/files.mjs'
+    ).not.toHaveProperty('exclude');
+    expect(
+      vitest,
+      'test/root/vitest.config.ts gained an exclude: list it in scripts/gates-doc/files.mjs'
+    ).not.toMatch(/\bexclude\b/);
+  });
+
   it('Scenario: given the tracked tsconfigs and vitest configs, then each is listed or named exemption-free', () => {
     const known = new Set([...entries.map((e) => e.where), ...EXEMPTION_FREE]);
 

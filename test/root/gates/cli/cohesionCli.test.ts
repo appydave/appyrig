@@ -3,6 +3,7 @@ import {
   cpSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   realpathSync,
   rmSync,
   symlinkSync,
@@ -73,5 +74,15 @@ describe('Feature: the cohesion CLI reports, and only fails when the scan did no
     expect(run.status).toBe(0);
     expect(run.stdout).toContain('server/src/mixed.ts');
     expect(run.stdout).toContain('Informational');
+  });
+});
+
+describe('Feature: the cohesion npm script runs the gate bare', () => {
+  it('Scenario: given package.json, then scripts.cohesion is exactly the gate command, with no wrapper that swallows exit 2', () => {
+    const pkg = JSON.parse(
+      readFileSync(join(import.meta.dirname, '../../../../package.json'), 'utf8')
+    );
+
+    expect(pkg.scripts.cohesion).toBe('node lint/gates/cohesion.mjs');
   });
 });
