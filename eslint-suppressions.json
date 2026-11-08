@@ -129,7 +129,7 @@
   },
   "client/src/domain/fleet/health.ts": {
     "no-magic-numbers": {
-      "count": 7
+      "count": 5
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 1

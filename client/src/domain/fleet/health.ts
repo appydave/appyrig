@@ -1,4 +1,5 @@
 import { sampleAge, type FleetMachine, type MachineHealth, type SampleAge } from '@appydave/shared';
+import { swapAllocated } from '@client/lib/readings.js';
 
 /**
  * v1.4 S6: machine health in words (mochaccino machine-health, B). The collector re-samples every
@@ -21,12 +22,6 @@ export interface PressureView {
   /** F4: on a stale pill, what the last reading said (normal / warn / critical); else absent. */
   last?: 'normal' | 'warn' | 'critical';
 }
-
-const BYTES_PER_GIB = 1024 ** 3;
-
-/** C89: swap in use, never against a total: on macOS "total" is only what is allocated so far. */
-export const swapAllocated = (bytes: number): string =>
-  `${Number((bytes / BYTES_PER_GIB).toFixed(1))} GiB allocated`;
 
 const WORD = { normal: 'normal', warn: 'tight', critical: 'under pressure' } as const;
 const GLYPH = { normal: '●', warn: '▲', critical: '■' } as const;

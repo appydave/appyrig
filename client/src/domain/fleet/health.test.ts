@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { FleetMachine, MachineHealth } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { clockAheadText } from '@appydave/shared';
-import { HEALTH_STALE_MS, healthAge, pressureOf, swapAllocated } from './health.js';
+import { swapAllocated } from '@client/lib/readings.js';
+import { HEALTH_STALE_MS, healthAge, pressureOf } from './health.js';
 
 const GB = 1024 ** 3;
 const ok = <T>(value: T) => ({ status: 'ok' as const, value });
