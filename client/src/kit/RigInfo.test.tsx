@@ -40,7 +40,7 @@ describe('<RigPicker> with S3 fields', () => {
       owner: 'openrig-orch-m4',
       summary: 'Builds AppyRig v1.4 from David’s feedback.',
       specStatus: 'found',
-      specPath: '/Users/davidcruwys/dev/ad/brains/north-star/appyrig-v1.4/team/rig.yaml',
+      specPath: '/Users/davidcruwys/dev/ad/brains/appyrig-v1.4/team/rig.yaml',
     }),
     rig({ key: 'm2:flicut-ab', name: 'flicut-ab', status: 'stopped', specStatus: 'not-found' }),
   ];

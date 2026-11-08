@@ -15,7 +15,7 @@ tags: [appyrig, views, timeline, handoffs, keyboard]
 - **Router for this batch: openrig-org-roamy** (Roamy), because openrig-orch-m4 is offline until 2026-10-14. Reports go to `human@kernel` as usual; Roamy reads the M2 queue.
 - **Same flow as earlier batches:** build → gates → QA via the real URL → r1 → merge = push + redeploy, hub first (David's standing rule: "If you're merging a domain, you can push and redeploy"). dev-build merges and redeploys the hub after r1 PASS; the Roamy collector is pulled by openrig-org-roamy; the M4 collector is updated when the M4 is back. Old collectors must keep working (fields optional).
 - **Working mock of V1:** https://claude.ai/artifact/LU37zQShzFsCyDqSgFYy4E — built from the hub's data alone (queue list + bodies). Match its idea, not its pixels.
-- **Data truth:** use F1's `ownerRig`; use the queue list (source, destination, state, createdAt/updatedAt) for structure and `data/handoffs` bodies for text. Background: `/Users/davidcruwys/dev/ad/brains/north-star/appyrig-schema-gap-2026-10-13/findings.md`.
+- **Data truth:** use F1's `ownerRig`; use the queue list (source, destination, state, createdAt/updatedAt) for structure and `data/handoffs` bodies for text. Background: `/Users/davidcruwys/dev/ad/brains/appyrig-schema-gap-2026-10-13/findings.md`.
 
 ## Slices, in order
 

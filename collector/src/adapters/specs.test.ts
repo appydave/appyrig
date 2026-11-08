@@ -115,6 +115,23 @@ describe('scanSpecs', () => {
     expect(found.get('beta')!.summary).toBeNull();
   });
 
+  it('the default spec folders list brains/appyrig first and keep brains/north-star', () => {
+    const folders: readonly string[] = DEFAULT_SPEC_FOLDERS;
+
+    expect(folders[0]).toBe('/Users/davidcruwys/dev/ad/brains/appyrig');
+    expect(folders).toContain('/Users/davidcruwys/dev/ad/brains/north-star');
+  });
+
+  it('finds a rig.yaml under a moved brains/appyrig-style folder', async () => {
+    const root = tmp();
+
+    write(join(root, 'appyrig-v1.5', 'team', 'rig.yaml'), 'name: moved\nsummary: new home\n');
+
+    const found = await scanSpecs([root]);
+
+    expect(found.get('moved')!.path).toBe(join(root, 'appyrig-v1.5', 'team', 'rig.yaml'));
+  });
+
   it('reuses a scan inside the ttl, and rescans after it', async () => {
     const d = tmp();
 

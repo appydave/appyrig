@@ -13,10 +13,10 @@ tags: [appyrig, fix-first, truth, freshness, redactor, handoff-attribution, d10,
 
 **For Agents**:
 - **Sources** (findings with screenshots):
-  - `/Users/davidcruwys/dev/ad/brains/north-star/appyrig-truth-review-2026-10-12/findings.md`
-  - `/Users/davidcruwys/dev/ad/brains/north-star/appyrig-resilience-review-2026-10-12/findings.md`
-  - `/Users/davidcruwys/dev/ad/brains/north-star/appyrig-security-review-2026-10-12/findings.md`
-  - `/Users/davidcruwys/dev/ad/brains/north-star/appyrig-usability-review-2026-10-12/findings.md` (for D0, T4-3)
+  - `/Users/davidcruwys/dev/ad/brains/appyrig-truth-review-2026-10-12/findings.md`
+  - `/Users/davidcruwys/dev/ad/brains/appyrig-resilience-review-2026-10-12/findings.md`
+  - `/Users/davidcruwys/dev/ad/brains/appyrig-security-review-2026-10-12/findings.md`
+  - `/Users/davidcruwys/dev/ad/brains/appyrig-usability-review-2026-10-12/findings.md` (for D0, T4-3)
 - **Same team and flow as batches 1–2:** build → gates → QA via the real URL → r1 → `openrig-orch-m4` merges, pushes and redeploys (hub first; collectors after; Roamy's collector is pulled by openrig-org-roamy). One slice at a time, in order.
 - **Done means the finding no longer reproduces**, shown with a before/after pair.
 - **Speed matters, rigour doesn't drop.** David is waiting to film. Keep each slice to its findings; no extras.
