@@ -41,7 +41,6 @@
     "knip": "node lint/knip-gate.mjs",
     "knip:baseline": "node lint/knip-gate.mjs --update",
     "cohesion": "node lint/gates/cohesion.mjs",
-    "cohesion:baseline": "node lint/gates/cohesion.mjs --update",
     "coupling": "node lint/gates/coupling.mjs",
     "coupling:baseline": "node lint/gates/coupling.mjs --update",
     "scores": "node lint/gates/scores.mjs",

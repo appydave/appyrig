@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 /**
- * G13: module cohesion. A file's exports should belong together. Runs archlint's `module_cohesion`
- * over the production code of client, server and collector and compares the findings with
- * cohesion-baseline.json, so only NEW findings fail while today's are recorded.
+ * G13: module cohesion, a PRINTED REPORT (List 7b), not a gate. A file's exports should belong together.
+ * Runs archlint's `module_cohesion` over the production code of client, server and collector and prints
+ * today's findings. It has no baseline and never fails the build over a finding (David's ruling: rule 2,
+ * "no warning-only gates", is set aside for this one).
  *
- *   npm run cohesion           fail on a file above its baseline (or not in it), or below it
- *   npm run cohesion:baseline  rewrite the baseline; refuses if anything would grow
+ *   npm run cohesion           print the findings; exit 0
  *
- * Exit: 0 clean, 1 findings above the baseline (or a baseline that can shrink), 2 the run itself
- * failed: a run that did not look is never reported as a clean one.
+ * Exit: 0 the scan looked (with or without findings), 2 the run itself failed: a scan that did not
+ * look must never read as a report with nothing in it.
  */
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ARCHLINT_EXCLUDES, ROOT, WORKSPACES, archlintSmells, metric } from './archlint-scan.mjs';
-import { runRatchetGate } from './ratchet-gate.mjs';
-
-const BASELINE_FILE = 'cohesion-baseline.json';
 
 /**
  * `shared/` is not scanned for cohesion: it is the wire contract (zod schemas with their inferred
@@ -64,21 +61,33 @@ function scanApplication() {
   return counts;
 }
 
-/** What to do about a file that is over the limit, written for the agent that reads it as its prompt. */
-export function messageFor({ file, now, was }) {
-  const status = was ? `was ${was} groups in the baseline` : 'not in the baseline';
+/** One finding, written for the agent that reads it as its prompt. */
+export function messageFor({ file, now }) {
+  return `${file}: its exports fall into ${now} unconnected groups (limit ${MAX_COMPONENTS} once a file has ${MIN_EXPORTS} exports). Informational. If you are changing this file anyway, split it by responsibility: move each group of exports that do not use each other into its own file, named for what it does.`;
+}
 
-  return `${file}: its exports fall into ${now} unconnected groups (${status}; limit ${MAX_COMPONENTS} once a file has ${MIN_EXPORTS} exports). Split it by responsibility: move each group of exports that do not use each other into its own file, named for what it does.`;
+/** The report for one scan: the exit code and the text. A scan that throws is code 2, never an empty report. */
+export function report(scan) {
+  let found;
+
+  try {
+    found = scan();
+  } catch (error) {
+    return { code: 2, text: `cohesion: the run failed, so nothing was checked.\n${error.message}` };
+  }
+
+  const files = Object.keys(found).sort();
+  const head = `cohesion (a report, not a gate; nothing fails over it): ${files.length} file(s) have exports in more than ${MAX_COMPONENTS} unconnected groups.`;
+
+  return {
+    code: 0,
+    text: [head, ...files.map((file) => messageFor({ file, now: found[file] }))].join('\n'),
+  };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  runRatchetGate({
-    gate: 'cohesion',
-    baselineFile: BASELINE_FILE,
-    command: 'cohesion:baseline',
-    about:
-      'Files whose exports fall into more groups than G13 allows, with the group count when it was recorded. It may shrink, never grow. Rewrite with npm run cohesion:baseline.',
-    scan: () => ({ findings: scanApplication() }),
-    sections: { findings: messageFor },
-  });
+  const { code, text } = report(scanApplication);
+
+  (code === 0 ? console.log : console.error)(text);
+  process.exit(code);
 }
