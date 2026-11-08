@@ -1,8 +1,26 @@
-import { FLEET_EVENTS, type CallAnswer, type CoreCallRequest } from '@appydave/shared';
+import {
+  FLEET_EVENTS,
+  callAnswerSchema,
+  type CallAnswer,
+  type CoreCallRequest,
+} from '@appydave/shared';
 import type { FleetSocket } from './useFleet.js';
 
 /** How long the UI waits for a verb's answer before saying so. */
 export const CALL_TIMEOUT_MS = 5_000;
+
+const SENT_PREVIEW_CHARS = 120;
+
+/** A hub answer that is not `{ ok, value }` or `{ ok: false, error }`, refused as data with what it sent. */
+function badAnswer(verb: string, text: string): CallAnswer<never> {
+  return {
+    ok: false,
+    error: {
+      failureMode: 'bad_answer',
+      message: `${verb}: the hub's answer was not a call answer (ok with a value, or not ok with an error). It sent: ${text.slice(0, SENT_PREVIEW_CHARS)}`,
+    },
+  };
+}
 
 /**
  * Calls one read-only API core verb over the browser socket (`core:call`, principal `human:ui`).
@@ -34,7 +52,9 @@ export function callVerb<T>(
           return;
         }
 
-        resolve(answer as CallAnswer<T>);
+        const parsed = callAnswerSchema<T>().safeParse(answer);
+
+        resolve(parsed.success ? parsed.data : badAnswer(verb, JSON.stringify(answer)));
       });
   });
 }

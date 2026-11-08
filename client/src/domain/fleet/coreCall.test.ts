@@ -26,4 +26,29 @@ describe('callVerb', () => {
       error: { failureMode: 'timeout', message: 'seat.tail: no answer from the hub within 2s' },
     });
   });
+
+  it.each([
+    ['not an object', 'hello', '"hello"'],
+    ['ok missing', { value: 1 }, '{"value":1}'],
+    ['ok true without value', { ok: true }, '{"ok":true}'],
+    ['ok false without error', { ok: false }, '{"ok":false}'],
+  ])('refuses a malformed answer (%s), saying what the hub sent', async (_name, sent, text) => {
+    const s = socketAnswering((ack) => ack(null, sent));
+    const answer = await callVerb(s, 'system.status', {});
+
+    expect(answer).toEqual({
+      ok: false,
+      error: {
+        failureMode: 'bad_answer',
+        message: `system.status: the hub's answer was not a call answer (ok with a value, or not ok with an error). It sent: ${text}`,
+      },
+    });
+  });
+
+  it('passes a refusal from the hub through as is', async () => {
+    const refusal = { ok: false, error: { failureMode: 'denied', message: 'no', details: [1] } };
+    const s = socketAnswering((ack) => ack(null, refusal));
+
+    await expect(callVerb(s, 'seat.tail', {})).resolves.toEqual(refusal);
+  });
 });
