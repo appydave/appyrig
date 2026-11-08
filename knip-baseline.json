@@ -159,7 +159,7 @@
       },
       "client/src/domain/fleet/plan.ts": {
         "exports": 3,
-        "types": 2
+        "types": 1
       },
       "client/src/domain/fleet/timeline.ts": {
         "exports": 3,

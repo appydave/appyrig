@@ -540,10 +540,10 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 2
+      "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/kit/RigFiles.tsx": {

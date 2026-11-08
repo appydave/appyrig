@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import type { FleetMachine } from '@appydave/shared';
+import type { FleetMachine, QueueItem } from '@appydave/shared';
+import type { PlanSource } from '@client/domain/fleet/plan.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { queueMachine } from '@client/test/queueFixtures.js';
+import PlanStrip from './PlanStrip.js';
 import RunCard from './RunCard.js';
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');
@@ -103,5 +105,127 @@ describe('Run card R3 · the plan strip', () => {
       )
     );
     expect(screen.queryByTestId('run-plan-step')).toBeNull();
+  });
+});
+
+/**
+ * The four marks of the plan strip, pinned straight on the component: every step is done, live,
+ * worked on or not reached, and each mark has its own glyph, screen-reader note, title and chips.
+ */
+
+const item = ({
+  id,
+  summary,
+  tag,
+  at,
+}: {
+  id: string;
+  summary: string;
+  tag: string;
+  at: string;
+}): QueueItem => ({
+  id,
+  source: 'review-r1@rig',
+  destination: 'human@kernel',
+  state: 'done',
+  priority: null,
+  tags: [tag],
+  summary,
+  createdAt: at,
+  updatedAt: at,
+});
+const source: PlanSource = {
+  file: 'x-brief.md',
+  kind: 'slices',
+  steps: [
+    { id: 'S1', title: 'First' },
+    { id: 'S2', title: 'Second' },
+    { id: 'S3', title: 'Third' },
+    { id: 'S4', title: 'Fourth' },
+  ],
+};
+const items = [
+  item({ id: 'a', summary: 'S1 accepted', tag: 's1', at: '2026-10-13T10:00:00.000Z' }),
+  item({ id: 'b', summary: 'S2 started', tag: 's2', at: '2026-10-13T11:00:00.000Z' }),
+  item({ id: 'c', summary: 'S3 under way', tag: 's3', at: '2026-10-13T12:00:00.000Z' }),
+];
+
+function steps() {
+  render(<PlanStrip sources={[source]} items={items} why={null} />);
+
+  return screen.getAllByTestId('run-plan-step');
+}
+
+describe('PlanStrip · one mark per step', () => {
+  it('done, worked, live and todo, each with its own mark, glyph and screen-reader note', () => {
+    const rows = steps();
+
+    expect(rows.map((r) => r.getAttribute('data-mark'))).toEqual([
+      'done',
+      'worked',
+      'live',
+      'todo',
+    ]);
+    expect(rows.map((r) => r.querySelector('[aria-hidden="true"]')?.textContent)).toEqual([
+      '✓',
+      '◐',
+      '●',
+      '○',
+    ]);
+    expect(rows.map((r) => r.querySelector('.sr-only')?.textContent)).toEqual([
+      ' (accepted)',
+      ' (worked on, no acceptance found)',
+      ' (the newest handoff names it)',
+      ' (not reached: no handoff names it)',
+    ]);
+  });
+
+  it('only the live step carries data-live and the "latest named" chip', () => {
+    const rows = steps();
+
+    expect(rows.map((r) => r.getAttribute('data-live'))).toEqual([null, null, 'true', null]);
+    expect(rows.map((r) => r.querySelector('.plan-live')?.textContent ?? null)).toEqual([
+      null,
+      null,
+      ' · latest named',
+      null,
+    ]);
+  });
+
+  it('only the accepted step shows its acceptance, in the chip and in the title', () => {
+    const rows = steps();
+
+    expect(rows.map((r) => r.querySelectorAll('[data-testid="run-plan-why"]').length)).toEqual([
+      1, 0, 0, 0,
+    ]);
+    expect(rows[0]!.querySelector('[data-testid="run-plan-why"]')?.textContent).toMatch(
+      /^ · “S1 accepted”, /
+    );
+    expect(rows[0]!.getAttribute('title')).toMatch(
+      /^S1: First\n✓ “S1 accepted” \(review-r1, .+\)$/
+    );
+    expect(rows[1]!.getAttribute('title')).toBe('S2: Second');
+    expect(rows[2]!.getAttribute('title')).toBe('S3: Third');
+    expect(rows[3]!.getAttribute('title')).toBe('S4: Fourth');
+  });
+
+  it('a step the newest handoff names and that was also accepted is done, and still live', () => {
+    render(
+      <PlanStrip
+        sources={[source]}
+        items={[
+          ...items,
+          item({ id: 'd', summary: 'S3 accepted', tag: 's3', at: '2026-10-13T13:00:00.000Z' }),
+        ]}
+        why={null}
+      />
+    );
+
+    const s3 = screen.getAllByTestId('run-plan-step')[2]!;
+
+    expect(s3).toHaveAttribute('data-mark', 'done');
+    expect(s3).toHaveAttribute('data-live', 'true');
+    expect(s3.querySelector('[aria-hidden="true"]')?.textContent).toBe('✓');
+    expect(s3.querySelector('.sr-only')?.textContent).toBe(' (accepted)');
   });
 });
