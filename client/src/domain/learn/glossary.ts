@@ -8,7 +8,7 @@
  * Tags: DEMONSTRATED = seen in code or on a live install; CLAIMED = OpenRig's docs only.
  */
 
-export type Tag = 'DEMONSTRATED' | 'CLAIMED';
+type Tag = 'DEMONSTRATED' | 'CLAIMED';
 
 export interface OpenRigFact {
   text: string;
@@ -449,7 +449,3 @@ export const GLOSSARY: Record<string, Term> = {
     why: 'It is not proof those seats spend this account: each seat uses whatever login its session found (Keychain or ~/.claude/.credentials.json), which AppyRig never reads.',
   },
 };
-
-export function termFor(id: string | null | undefined): Term | null {
-  return id ? (GLOSSARY[id] ?? null) : null;
-}

@@ -8,7 +8,7 @@ import { swapAllocated } from '@client/lib/readings.js';
  */
 export const HEALTH_STALE_MS = 90_000;
 
-export type PressureKind = 'normal' | 'warn' | 'critical' | 'unavailable' | 'no-data' | 'stale';
+type PressureKind = 'normal' | 'warn' | 'critical' | 'unavailable' | 'no-data' | 'stale';
 
 export interface PressureView {
   kind: PressureKind;

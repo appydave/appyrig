@@ -14,84 +14,6 @@
       "client/src/app/usePages.tsx": {
         "exports": 1
       },
-      "client/src/domain/accounts/model.ts": {
-        "exports": 1
-      },
-      "client/src/domain/agent/detail.ts": {
-        "types": 1
-      },
-      "client/src/domain/docs/model.ts": {
-        "exports": 2,
-        "types": 1
-      },
-      "client/src/domain/fleet/accountWindow.ts": {
-        "exports": 1
-      },
-      "client/src/domain/fleet/coreCall.ts": {
-        "exports": 1
-      },
-      "client/src/domain/fleet/health.ts": {
-        "types": 1
-      },
-      "client/src/domain/fleet/plan.ts": {
-        "exports": 1
-      },
-      "client/src/domain/fleet/runcard.ts": {
-        "types": 2
-      },
-      "client/src/domain/fleet/store.ts": {
-        "exports": 1
-      },
-      "client/src/domain/fleet/timeline.ts": {
-        "exports": 1,
-        "types": 3
-      },
-      "client/src/domain/fleet/xtermRegistry.ts": {
-        "exports": 1
-      },
-      "client/src/domain/graph/model.ts": {
-        "exports": 1,
-        "types": 3
-      },
-      "client/src/domain/health/model.ts": {
-        "exports": 4,
-        "types": 1
-      },
-      "client/src/domain/learn/glossary.ts": {
-        "exports": 1,
-        "types": 1
-      },
-      "client/src/domain/learn/lessons.ts": {
-        "types": 1
-      },
-      "client/src/domain/missions/model.ts": {
-        "exports": 2,
-        "types": 4
-      },
-      "client/src/domain/needs-you/model.ts": {
-        "exports": 4
-      },
-      "client/src/domain/rig-map/lines.ts": {
-        "exports": 1,
-        "types": 1
-      },
-      "client/src/domain/run/model.ts": {
-        "exports": 2,
-        "types": 3
-      },
-      "client/src/domain/settings/model.ts": {
-        "exports": 2,
-        "types": 1
-      },
-      "client/src/domain/specs/model.ts": {
-        "types": 1
-      },
-      "client/src/domain/timeline/model.ts": {
-        "types": 2
-      },
-      "client/src/domain/workflows/model.ts": {
-        "types": 2
-      },
       "client/src/kit/AnsiText.tsx": {
         "exports": 1
       },
@@ -131,7 +53,7 @@
       },
       "client/src/kit/data/index.tsx": {
         "exports": 1,
-        "types": 3
+        "types": 2
       },
       "client/src/kit/index.ts": {
         "exports": 1
@@ -373,63 +295,26 @@
       "client/src/app/usePages.tsx": {
         "exports": 1
       },
-      "client/src/domain/accounts/model.ts": {
-        "exports": 1
-      },
-      "client/src/domain/agent/detail.ts": {
-        "types": 1
-      },
-      "client/src/domain/docs/model.ts": {
-        "exports": 2,
-        "types": 1
-      },
-      "client/src/domain/fleet/accountWindow.ts": {
-        "exports": 1
-      },
-      "client/src/domain/fleet/coreCall.ts": {
-        "exports": 1
-      },
       "client/src/domain/fleet/health.ts": {
-        "exports": 2,
-        "types": 1
+        "exports": 2
       },
       "client/src/domain/fleet/model.ts": {
         "exports": 3
       },
       "client/src/domain/fleet/plan.ts": {
-        "exports": 4,
+        "exports": 3,
         "types": 2
-      },
-      "client/src/domain/fleet/runcard.ts": {
-        "types": 2
-      },
-      "client/src/domain/fleet/store.ts": {
-        "exports": 1
       },
       "client/src/domain/fleet/timeline.ts": {
-        "exports": 4,
-        "types": 4
+        "exports": 3,
+        "types": 1
       },
       "client/src/domain/fleet/views/accounts/accounts.ts": {
         "exports": 1
       },
-      "client/src/domain/fleet/xtermRegistry.ts": {
-        "exports": 1
-      },
       "client/src/domain/graph/model.ts": {
-        "exports": 5,
-        "types": 5
-      },
-      "client/src/domain/health/model.ts": {
         "exports": 4,
-        "types": 1
-      },
-      "client/src/domain/learn/glossary.ts": {
-        "exports": 1,
-        "types": 1
-      },
-      "client/src/domain/learn/lessons.ts": {
-        "types": 1
+        "types": 2
       },
       "client/src/domain/lines/handoffLines.ts": {
         "exports": 6,
@@ -439,36 +324,18 @@
         "exports": 3,
         "types": 1
       },
-      "client/src/domain/missions/model.ts": {
-        "exports": 2,
-        "types": 4
-      },
       "client/src/domain/needs-you/model.ts": {
-        "exports": 5
+        "exports": 1
       },
       "client/src/domain/rig-map/lines.ts": {
-        "exports": 2,
-        "types": 3
-      },
-      "client/src/domain/run/model.ts": {
-        "exports": 2,
-        "types": 3
+        "exports": 1,
+        "types": 2
       },
       "client/src/domain/settings/model.ts": {
-        "exports": 3,
-        "types": 1
-      },
-      "client/src/domain/specs/model.ts": {
-        "types": 1
-      },
-      "client/src/domain/timeline/model.ts": {
-        "types": 2
+        "exports": 1
       },
       "client/src/domain/wall/model.ts": {
         "exports": 2
-      },
-      "client/src/domain/workflows/model.ts": {
-        "types": 2
       },
       "client/src/kit/AgentPanel.tsx": {
         "exports": 1
@@ -528,7 +395,7 @@
       },
       "client/src/kit/data/index.tsx": {
         "exports": 1,
-        "types": 3
+        "types": 2
       },
       "client/src/kit/index.ts": {
         "exports": 16

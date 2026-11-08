@@ -15,9 +15,10 @@ import type { JobRow } from './jobs.js';
  */
 
 export type Verdict = 'accept' | 'changes' | 'pass' | 'fail';
-export const VERDICTS: Verdict[] = ['accept', 'changes', 'pass', 'fail'];
+
+const VERDICTS: Verdict[] = ['accept', 'changes', 'pass', 'fail'];
 /** A handoff is "sent back" only when its verdict says so. */
-export const SENT_BACK: Verdict[] = ['changes', 'fail'];
+const SENT_BACK: Verdict[] = ['changes', 'fail'];
 
 export function verdictOf(tags: string[]): Verdict | null {
   const t = tags.find((x) => x.startsWith('verdict:'));
@@ -39,7 +40,7 @@ const STAGE_WORD: Record<Stage, string> = {
   review: 'Review',
 };
 
-export type JobStatus = 'done' | 'current' | 'waiting';
+type JobStatus = 'done' | 'current' | 'waiting';
 
 export interface JobState {
   job: JobRow;
@@ -67,13 +68,13 @@ export interface Station {
   doing: string | null;
 }
 
-export interface Arrow {
+interface Arrow {
   from: string;
   to: string;
   count: number;
 }
 
-export type RunPhase = 'no-jobs' | 'waiting' | 'running' | 'finished';
+type RunPhase = 'no-jobs' | 'waiting' | 'running' | 'finished';
 
 export interface RunModel {
   phase: RunPhase;

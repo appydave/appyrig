@@ -7,7 +7,7 @@ import {
 import type { FleetSocket } from './useFleet.js';
 
 /** How long the UI waits for a verb's answer before saying so. */
-export const CALL_TIMEOUT_MS = 5_000;
+const CALL_TIMEOUT_MS = 5_000;
 
 const SENT_PREVIEW_CHARS = 120;
 

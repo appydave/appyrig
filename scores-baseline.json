@@ -320,7 +320,6 @@
     "client/src/domain/fleet/timeline.ts::buildTimeline": 20,
     "client/src/domain/fleet/timeline.ts::followWork": 27,
     "client/src/domain/fleet/timeline.ts::ruleText": 14,
-    "client/src/domain/fleet/timeline.ts::timeTicks": 9,
     "client/src/domain/graph/lineRoute.ts::routeLines": 33,
     "client/src/domain/graph/model.ts::boxOf": 10,
     "client/src/domain/graph/model.ts::crossRigEdges": 45,

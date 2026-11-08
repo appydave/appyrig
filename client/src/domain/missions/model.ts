@@ -11,14 +11,14 @@ import { realNames } from '@client/domain/fleet/realNames.js';
  * model, and the page says so. The sample tree is separate and labelled.
  */
 
-export const WHOLE_MISSION = '(whole mission)';
+const WHOLE_MISSION = '(whole mission)';
 
 /** Closed states that mean the work did NOT get done. Other closed states (done, handed-off, closed) count as done. */
 const NOT_DONE = new Set(['cancelled', 'canceled', 'rejected', 'expired']);
 
-export type Outcome = 'open' | 'done' | 'closed-not-done';
+type Outcome = 'open' | 'done' | 'closed-not-done';
 
-export interface Job {
+interface Job {
   item: QueueItem;
   machineId: string;
   machineLabel: string;
@@ -73,7 +73,7 @@ export interface Unattributed {
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] || '?';
 const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep'));
 
-export function tagValue(tags: string[], prefix: string): string | null {
+function tagValue(tags: string[], prefix: string): string | null {
   const t = tags.find((x) => x.startsWith(`${prefix}:`));
 
   return t ? t.slice(prefix.length + 1) : null;
@@ -260,14 +260,14 @@ export const pct = (p: number) => `${Math.round(p * 100)}%`;
 
 // ---------------------------------------------------------------- sample
 
-export interface SampleJob {
+interface SampleJob {
   title: string;
   holder: string;
   rig: string;
   machine: string;
   state: 'done' | 'working' | 'queued';
 }
-export interface SampleSlice {
+interface SampleSlice {
   name: string;
   jobs: SampleJob[];
   progress: number;

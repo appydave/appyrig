@@ -39,7 +39,7 @@ export const OUTCOME: Record<Outcome, { glyph: string; word: string; says: strin
   },
 };
 
-export interface PhaseView {
+interface PhaseView {
   index: number;
   start: number;
   end: number;
@@ -50,7 +50,7 @@ export interface PhaseView {
   last: QueueItem;
 }
 
-export interface WaitRow {
+interface WaitRow {
   /** The seat that handed the work over, and so waited. */
   from: string;
   /** The seat it waited on. */

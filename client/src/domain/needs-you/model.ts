@@ -83,7 +83,7 @@ function item(fm: FleetMachine, now: number, p: Draft): NeedItem {
 }
 
 /** Open queue items addressed to David (`human@…`); OpenRig's own stuck-sweep notices are left out. */
-export function actionItems(fm: FleetMachine, now: number): NeedItem[] {
+function actionItems(fm: FleetMachine, now: number): NeedItem[] {
   const seats = new Set(fm.snapshot.seats.map((s) => s.id));
 
   return fm.snapshot.queue
@@ -102,7 +102,7 @@ export function actionItems(fm: FleetMachine, now: number): NeedItem[] {
 }
 
 /** Seats stopped on a prompt, on machines that are reporting now. */
-export function blockedItems(fm: FleetMachine, now: number): NeedItem[] {
+function blockedItems(fm: FleetMachine, now: number): NeedItem[] {
   if (fm.liveness === 'asleep') {
     return [];
   }
@@ -126,7 +126,7 @@ export function blockedItems(fm: FleetMachine, now: number): NeedItem[] {
 }
 
 /** Gates a rig's handoffs still call open (from rig.waiting; one list per rig). */
-export function gateItems(
+function gateItems(
   fm: FleetMachine,
   { rig, gates }: { rig: string; gates: RigGate[] },
   now: number
@@ -195,7 +195,7 @@ export function buildNeeds(machines: FleetMachine[], gates: GatesByRig, now: num
 }
 
 /** Fresh before stale; within each, the longest wait first. */
-export function sortNeeds(items: NeedItem[]): NeedItem[] {
+function sortNeeds(items: NeedItem[]): NeedItem[] {
   return [...items].sort(
     (a, b) =>
       Number(a.stale) - Number(b.stale) || b.waitedMs - a.waitedMs || a.id.localeCompare(b.id)

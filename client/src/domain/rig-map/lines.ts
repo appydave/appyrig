@@ -1,6 +1,6 @@
 import type { QueueItem } from '@appydave/shared';
 import { plannedWord } from '@client/domain/fleet/views/map/rigMap.js';
-import { type MapEdge, type RigMap } from '@client/domain/fleet/views/map/types.js';
+import { type RigMap } from '@client/domain/fleet/views/map/types.js';
 import {
   mergePairs,
   podRail,
@@ -55,7 +55,7 @@ export function mapPairs(map: RigMap): MapPair[] {
   });
 }
 
-export interface Box {
+interface Box {
   x: number;
   y: number;
   w: number;
@@ -177,18 +177,4 @@ export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
   }
 
   return out;
-}
-
-/** The synthetic edge the original router lays out for a line (it only reads from, to, count). */
-export function routerEdge(l: PlannedLine): MapEdge {
-  return {
-    from: l.a,
-    to: l.b,
-    count: l.total,
-    open: l.waiting,
-    stale: l.leftOpen,
-    self: false,
-    items: [],
-    ...(l.planned ? { planned: l.planned } : {}),
-  };
 }

@@ -220,7 +220,7 @@ const OWED = /^\S+\s+(next|pending|to do|todo|NOT YET|in progress|WIP)\b/i;
  * names the step (within ~30 characters), outside brackets, not negated just before ("NOT merged",
  * "not done yet"), and REPORT only as a word, not a file name (REPORT.md). Returns what counted.
  */
-export function acceptance(q: QueueItem, step: PlanStep, kind: PlanKind): string | null {
+function acceptance(q: QueueItem, step: PlanStep, kind: PlanKind): string | null {
   const text = q.summary ?? '';
   const where = spots(text, step, kind);
 

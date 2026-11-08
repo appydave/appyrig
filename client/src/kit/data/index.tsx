@@ -25,7 +25,7 @@ export type {
 } from '@appydave/shared';
 import type { DataMachine, DataStatus } from '@appydave/shared';
 
-export type { WorkflowSpec, WorkflowInstance } from '@client/domain/workflows/model.js';
+export type { WorkflowSpec } from '@client/domain/workflows/model.js';
 
 // ---------------------------------------------------------------- calling
 

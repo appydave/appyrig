@@ -19,7 +19,7 @@ export const initialFleetState: FleetState = { machines: {}, received: false, er
  * before validation, so an over-long tail is trimmed (newest lines kept) rather than costing the
  * whole update.
  */
-export function clampTails(raw: unknown): unknown {
+function clampTails(raw: unknown): unknown {
   const machines = (raw as { machines?: unknown })?.machines;
 
   if (!Array.isArray(machines)) {

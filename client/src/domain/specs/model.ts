@@ -33,7 +33,7 @@ export interface ShownEdge {
   to: string;
 }
 
-export interface ShownPod {
+interface ShownPod {
   id: string;
   label: string;
   summary: string | null;

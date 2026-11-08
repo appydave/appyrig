@@ -3,7 +3,6 @@ import type { WorkflowListOutput } from '@appydave/shared';
 import { realNames } from '@client/domain/fleet/realNames.js';
 
 export type WorkflowSpec = WorkflowListOutput['specs'][number];
-export type WorkflowInstance = WorkflowListOutput['instances'][number];
 
 /** OpenRig 0.6.6's six built-in workflow specs (names seen live), with a plain-words purpose each. */
 const BUILT_INS: [string, string, string][] = [
@@ -35,7 +34,7 @@ export function sampleSpecs(machines: FleetMachine[]): WorkflowSpec[] {
 }
 
 export type StepClosure = 'handoff' | 'waiting' | 'done' | 'failed' | null;
-export interface TraceStep {
+interface TraceStep {
   stepId: string;
   role: string;
   actor: string;

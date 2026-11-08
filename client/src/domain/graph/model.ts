@@ -15,7 +15,7 @@ import { type RigRef } from '@client/domain/fleet/views/core/types.js';
  */
 
 /** What the filter buttons look for, on a rig. */
-export interface RigFlags {
+interface RigFlags {
   /** Seats blocked, or that asked David something still open and fresh. */
   needsMe: number;
   /** Seats with work addressed to them open longer than STALE_MS. */
@@ -25,7 +25,7 @@ export interface RigFlags {
 }
 
 /** The newest handoff that touched a rig, in parts (the page words it against the clock). */
-export interface LastHandoff {
+interface LastHandoff {
   from: string;
   to: string;
   summary: string | null;
@@ -52,7 +52,7 @@ export interface GraphRig {
   crossIn: number;
 }
 
-export interface GraphMachine {
+interface GraphMachine {
   id: string;
   label: string;
   liveness: FleetMachine['liveness'];
@@ -93,7 +93,8 @@ export interface Graph {
 export type GroupKey = string;
 
 /** `m2:~loose`: the sessions on a machine that are in no rig (orchestrators, research seats). */
-export const LOOSE = '~loose';
+const LOOSE = '~loose';
+
 export const looseKey = (machineId: string): GroupKey => `${machineId}:${LOOSE}`;
 export const isLoose = (key: GroupKey) => key.endsWith(`:${LOOSE}`);
 
