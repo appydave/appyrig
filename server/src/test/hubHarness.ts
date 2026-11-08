@@ -31,7 +31,7 @@ export interface RunningHub {
   hub: Hub;
   url: string;
   sockets: Socket[];
-  browser: (cookie?: string) => Socket;
+  browser: (cookie?: string, headers?: Record<string, string>) => Socket;
   collector: (auth: object) => Socket;
   stop: () => Promise<void>;
 }
@@ -64,7 +64,8 @@ export async function startHub(opts: Partial<HubOptions> = {}): Promise<RunningH
     hub,
     url,
     sockets,
-    browser: (cookie = COOKIE) => open('/', cookie ? { extraHeaders: { cookie } } : {}),
+    browser: (cookie = COOKIE, headers = {}) =>
+      open('/', { extraHeaders: { ...(cookie ? { cookie } : {}), ...headers } }),
     collector: (auth) => open('/collector', { auth }),
     stop: async () => {
       sockets.splice(0).forEach((s) => s.close());

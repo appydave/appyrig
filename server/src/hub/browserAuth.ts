@@ -61,6 +61,38 @@ export function readCookie(header: string | undefined, name: string): string | u
   return undefined;
 }
 
+const parsed = (url: string): URL | null => (URL.canParse(url) ? new URL(url) : null);
+
+/**
+ * C92 (audit CQ-S1): may this browser-socket handshake come from this page? SameSite=Lax ignores the
+ * port, so another page on the same host carries the session cookie, and socket.io's `cors` option
+ * does not cover a WebSocket upgrade.
+ *
+ * Allowed: the hub's own origin (Origin's host:port equals the request's Host, whatever name or IP
+ * was used to reach it) and the dev client (`clientUrl`).
+ *
+ * No Origin passes, on to the cookie/bearer check: the client opens on polling, and a browser sends
+ * no Origin on a same-origin GET, so refusing it would lock the hub's own page out. It is not a way
+ * round this check, because a browser always sends Origin on a WebSocket upgrade and on a cross-origin
+ * fetch; a no-cors GET (<img>) omits it, but its response, holding the session id, cannot be read.
+ */
+function isAllowedOrigin(headers: IncomingHttpHeaders, clientUrl: string): boolean {
+  if (headers.origin === undefined) {
+    return true;
+  }
+
+  const origin = parsed(headers.origin); // the literal "null" (sandboxed frame, file:) does not parse
+
+  if (!origin) {
+    return false;
+  }
+
+  // Through URL so case and a default port compare the same on both sides.
+  const host = headers.host ? parsed(`${origin.protocol}//${headers.host}`) : null;
+
+  return host?.host === origin.host || parsed(clientUrl)?.origin === origin.origin;
+}
+
 /** True when the request headers carry a valid session cookie or a bearer hub token. */
 export function isAuthorised(headers: IncomingHttpHeaders, hubToken: string | undefined): boolean {
   if (!hubToken) {
@@ -97,6 +129,19 @@ function refuse(res: Response, status: number, error: string): void {
  * Express gate, mounted before every route. Lets OPEN_PATHS through, turns a `/?token=` visit
  * into a session cookie, and refuses everything else without a session.
  */
+/** Why this browser-socket handshake is refused, or null when it may connect. */
+export function browserSocketRefusal(
+  headers: IncomingHttpHeaders,
+  hubToken: string | undefined,
+  clientUrl: string
+): string | null {
+  if (!isAllowedOrigin(headers, clientUrl)) {
+    return AUTH_ERRORS.browserOrigin;
+  }
+
+  return isAuthorised(headers, hubToken) ? null : AUTH_ERRORS.browserSession;
+}
+
 export function browserAuth(opts: BrowserAuthOptions) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (OPEN_PATHS.includes(req.path)) {

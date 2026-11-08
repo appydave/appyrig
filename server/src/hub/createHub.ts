@@ -5,7 +5,6 @@ import helmet from 'helmet';
 import compression from 'compression';
 import cors from 'cors';
 import {
-  AUTH_ERRORS,
   FLEET_EVENTS,
   HUB_MAX_BUFFER,
   SOCKET_NAMESPACES,
@@ -25,7 +24,7 @@ import healthRouter from '@server/routes/health.js';
 import infoRouter from '@server/routes/info.js';
 import { accountViews, applyAccountDerived } from './accounts.js';
 import { applyRigLabels, defaultConfigPath, watchConfig } from './appConfig.js';
-import { browserAuth, isAuthorised } from './browserAuth.js';
+import { browserAuth, browserSocketRefusal } from './browserAuth.js';
 import { attachCollectorIngest } from './collectorIngest.js';
 import { FleetStore, type LivenessChange } from './fleetStore.js';
 import { listenOnHosts, type Listening } from './listen.js';
@@ -169,11 +168,9 @@ export function createHub(opts: HubOptions): Hub {
   const browsers = io.of(SOCKET_NAMESPACES.BROWSER);
 
   browsers.use((socket, next) => {
-    if (isAuthorised(socket.handshake.headers, opts.hubToken)) {
-      next();
-    } else {
-      next(new Error(AUTH_ERRORS.browserSession));
-    }
+    const refused = browserSocketRefusal(socket.handshake.headers, opts.hubToken, opts.clientUrl);
+
+    next(refused ? new Error(refused) : undefined);
   });
   browsers.on('connection', (socket) => {
     const update: FleetUpdate = {

@@ -2,6 +2,7 @@ import { defineConfig, loadEnv, type HttpProxy } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { readFileSync } from 'node:fs';
+import type { ClientRequest } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { guardPortFor, isLocalDevRequest } from './src/app/devProxy';
@@ -25,6 +26,13 @@ function remoteHubAuth(hubUrl: string | undefined, tokenFile: string | undefined
   } catch {
     return null;
   }
+}
+
+// The guard has checked this page is ours, so the proxy speaks for it: the bearer goes on, and the
+// localhost Origin comes off (a remote hub's socket would refuse it as foreign, C92).
+function vouchFor(proxyReq: ClientRequest, auth: string) {
+  proxyReq.setHeader('authorization', auth);
+  proxyReq.removeHeader('origin');
 }
 
 // Ports come from this tree's root .env (PORT = hub, CLIENT_URL = this dev server), so each lane
@@ -57,12 +65,12 @@ export default defineConfig(({ mode }) => {
           configure: (proxy: HttpProxy.Server) => {
             proxy.on('proxyReq', (proxyReq, req) => {
               if (isLocalDevRequest(req.headers, guardPort)) {
-                proxyReq.setHeader('authorization', auth);
+                vouchFor(proxyReq, auth);
               }
             });
             proxy.on('proxyReqWs', (proxyReq, req, socket) => {
               if (isLocalDevRequest(req.headers, guardPort)) {
-                proxyReq.setHeader('authorization', auth);
+                vouchFor(proxyReq, auth);
               } else {
                 proxyReq.destroy();
                 socket.destroy();
