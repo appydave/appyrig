@@ -33,6 +33,8 @@ const PATTERNS: RegExp[] = [
   /(?<=hooks\.slack\.com\/(?:services|workflows|triggers)\/)[A-Za-z0-9/_-]{8,}/g,
   // mysql -pPASSWORD (the password glued to -p; a bare -p prompts and holds nothing)
   /(?<=\bmysql(?:dump|admin|sh)?\b[^\n]*?\s-p)[^\s'"]+/g,
+  // curl -u user:password (the user stays). Only on a curl line: `docker run -u 1000:1000` is a uid.
+  /(?<=\bcurl\b[^\n]*?\s(?:-[a-zA-Z]*u\s*|--user[\s=]+)["']?[^\s:"']*:)(?![$<])[^\s"']+/g,
   // JWTs
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{4,}/g,
   // any hex run of 40+ characters (hashes, long keys)
@@ -64,6 +66,22 @@ const TAILSCALE_KEY = /\btskey-[A-Za-z0-9-]{12,}/g;
 // one: "secret key is wJal…", "aws secret access key: wJal…", "token \"abc123…\"".
 const LABELLED_VALUE =
   /\b((?:secret|private|access|api|auth|signing|aws|session|client)[ _-]*(?:[a-z]+[ _-]+)?(?:key|token|secret|password|passwd)s?\b(?:\s+(?:is|was|are|=|:))?[\s:="'`(]{1,8})([A-Za-z0-9/+=_.~-]{12,})/gi;
+
+// C93 (audit CQ-K2): shell-line forms. A flag that names a secret, then its value (the flag stays):
+// `--token abc1`, `--with-token "abc1"`, `--api-key=abc1`. Not `--token-file x` or `--max-tokens 9`.
+const FLAG_SECRET =
+  /(?<![\w-])(--(?:[a-z0-9]+[-_])*(?:token|password|passwd|secret|api[-_]?key)(?:\s+|=)["']?)([^\s"']{6,})/gi;
+
+// Any Authorization header, scheme or none (`Authorization: Token abc1`); Basic and Bearer go earlier.
+const AUTH_HEADER = /\b(authorization\s*:\s*(?:[a-z][a-z0-9-]*\s+)?)([^\s"'\\]{6,})/gi;
+
+// These two read pane text as well as commands, where the same words are prose ("use the --token
+// flag", "Authorization: required"), so only a value shaped like a credential goes. A placeholder,
+// a $VARIABLE, a path, a plain number or an all-one-case word stays.
+const credentialShaped = (v: string): boolean =>
+  !/^(?:[$</.~-]|\d+$)/.test(v) && /\d|[a-z].*[A-Z]|[A-Z].*[a-z]/.test(v);
+const labelOnly = (m: string, label: string, value: string): string =>
+  credentialShaped(value) ? `${label}${REDACTED}` : m;
 
 const hasAll = (t: string, ...res: RegExp[]) => res.every((re) => re.test(t));
 const entropy = (t: string): number => {
@@ -124,6 +142,8 @@ function redactPlain(input: string): string {
     /^authorization/i.test(m) ? `Authorization: Basic ${REDACTED}` : `Basic ${REDACTED}`
   );
   out = out.replace(TAILSCALE_KEY, REDACTED);
+  out = out.replace(FLAG_SECRET, labelOnly);
+  out = out.replace(AUTH_HEADER, labelOnly);
   out = out.replace(LABELLED_VALUE, (_m, label: string, value: string) =>
     value === REDACTED || label.endsWith(REDACTED) ? _m : `${label}${REDACTED}`
   );
