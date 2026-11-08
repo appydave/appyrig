@@ -7,23 +7,6 @@ import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import { agentFromParam, agentToParam, rigFromParam, rigToParam } from './urlState.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 type Handler = (...args: unknown[]) => void;
 
 function spySocket() {

@@ -33,23 +33,6 @@ import { sampleChanges } from '@client/domain/schema/model.js';
 import { CommandsPanel } from './learn/index.js';
 import { filterCommands, groupsOf, type RigCommands } from '@client/domain/learn/commands.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 
 type Handler = (...args: unknown[]) => void;

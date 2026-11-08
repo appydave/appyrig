@@ -11,23 +11,6 @@ import MoreMenu from './MoreMenu.js';
 import RigDrawer from './RigDrawer.js';
 import StripShell from './StripShell.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 type Handler = (...args: unknown[]) => void;
 
 function spySocket() {
