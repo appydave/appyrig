@@ -7,7 +7,7 @@ import type { OpenRigFact } from './glossary.js';
  * Provenance, as for glossary.ts: the brain is canonical, this file quotes it.
  *   ~/dev/ad/brains/openrig/study-guide.md         areas 1–5, with file:line at OpenRig 5aef0270
  *   ~/dev/ad/brains/openrig/chatgpt-pack/topics.md pods, the queue
- *   ~/dev/ad/brains/north-star/appyrig-build/      the cost lessons (REPORT.md, DEBRIEF.md)
+ *   ~/dev/ad/brains/appyrig-build/      the cost lessons (REPORT.md, DEBRIEF.md)
  */
 
 export type LiveExample = 'seats' | 'rigs' | 'queue' | 'health' | 'accounts' | 'none';

@@ -17,6 +17,7 @@ import { z } from 'zod';
  */
 
 export const DEFAULT_SPEC_FOLDERS = [
+  '/Users/davidcruwys/dev/ad/brains/appyrig',
   '/Users/davidcruwys/dev/ad/brains/north-star',
   '/Users/davidcruwys/dev/ad/brains/openrig/rigs',
   // N9: rigs written outside the brains, one folder each (rigs/<name>/rig.yaml)
