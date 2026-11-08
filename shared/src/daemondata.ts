@@ -28,6 +28,7 @@ export const DAEMON_KINDS = [
   'health',
   'settings',
 ] as const;
+
 export type DaemonKind = (typeof DAEMON_KINDS)[number];
 
 /**
@@ -105,7 +106,7 @@ export const LIBRARY_FILES_MAX = 30;
 const FactValue = z.union([z.string().max(TEXT_XLONG_MAX), z.number(), z.boolean(), z.null()]);
 
 /** One library row, the same shape for specs, skills and context packs. */
-export const LibraryRowSchema = z.strictObject({
+const LibraryRowSchema = z.strictObject({
   id: Text(TEXT_XXLONG_MAX),
   kind: TextN(TEXT_SHORT_MAX),
   name: Text(TEXT_XLONG_MAX),
@@ -127,15 +128,17 @@ export const LibraryRowSchema = z.strictObject({
     )
     .max(LIBRARY_FILES_MAX),
 });
+
 export type LibraryRow = z.infer<typeof LibraryRowSchema>;
 
 /** Each list is null when that endpoint could not be read this round (kept apart from an empty list). */
-export const LibraryDataSchema = z.strictObject({
+const LibraryDataSchema = z.strictObject({
   openrigVersion: TextN(TEXT_SHORT_MAX),
   specs: z.array(LibraryRowSchema).max(LIBRARY_ROWS_MAX).nullable(),
   skills: z.array(LibraryRowSchema).max(LIBRARY_ROWS_MAX).nullable(),
   contextPacks: z.array(LibraryRowSchema).max(LIBRARY_ROWS_MAX).nullable(),
 });
+
 export type LibraryData = z.infer<typeof LibraryDataSchema>;
 
 // ── transitions ──────────────────────────────────────
@@ -143,7 +146,7 @@ export type LibraryData = z.infer<typeof LibraryDataSchema>;
 /** Most transition rows a collector keeps and pushes (newest). */
 export const TRANSITIONS_MAX = 1000;
 
-export const TransitionRowSchema = z.strictObject({
+const TransitionRowSchema = z.strictObject({
   /** The daemon's id, a decimal string (telemetry ids are strings; per-daemon sequence). */
   id: Text(30),
   qitemId: Text(TEXT_XLONG_MAX),
@@ -153,9 +156,10 @@ export const TransitionRowSchema = z.strictObject({
   closureReason: TextN(TEXT_XLONG_MAX),
   closureTarget: TextN(TEXT_XLONG_MAX),
 });
+
 export type TransitionRow = z.infer<typeof TransitionRowSchema>;
 
-export const TransitionsDataSchema = z.strictObject({
+const TransitionsDataSchema = z.strictObject({
   /** Oldest to newest. */
   rows: z.array(TransitionRowSchema).max(TRANSITIONS_MAX),
   /** Rows the daemon had when last read (the collector keeps the newest TRANSITIONS_MAX). */
@@ -164,11 +168,12 @@ export const TransitionsDataSchema = z.strictObject({
   hostId: TextN(TEXT_MEDIUM_MAX),
   bootEpoch: TextN(TEXT_MEDIUM_MAX),
 });
+
 export type TransitionsData = z.infer<typeof TransitionsDataSchema>;
 
 // ── workflows ────────────────────────────────────
 
-export const WorkflowSpecSchema = z.strictObject({
+const WorkflowSpecSchema = z.strictObject({
   name: Text(TEXT_XLONG_MAX),
   version: TextN(TEXT_SHORT_MAX),
   purpose: TextN(TEXT_XXXLONG_MAX),
@@ -176,9 +181,8 @@ export const WorkflowSpecSchema = z.strictObject({
   terminalTurnRule: TextN(TEXT_MEDIUM_MAX),
   isBuiltIn: z.boolean().nullable(),
 });
-export type WorkflowSpec = z.infer<typeof WorkflowSpecSchema>;
 
-export const WorkflowInstanceSchema = z.strictObject({
+const WorkflowInstanceSchema = z.strictObject({
   instanceId: Text(TEXT_XLONG_MAX),
   workflowName: TextN(TEXT_XLONG_MAX),
   workflowVersion: TextN(TEXT_SHORT_MAX),
@@ -189,27 +193,26 @@ export const WorkflowInstanceSchema = z.strictObject({
   completedAt: TextN(TEXT_SHORT_MAX),
   deadlineState: TextN(TEXT_SHORT_MAX),
 });
-export type WorkflowInstance = z.infer<typeof WorkflowInstanceSchema>;
 
 /** Each list is null when that endpoint could not be read (kept apart from "none run"). */
-export const WorkflowsDataSchema = z.strictObject({
+const WorkflowsDataSchema = z.strictObject({
   specs: z.array(WorkflowSpecSchema).max(200).nullable(),
   instances: z.array(WorkflowInstanceSchema).max(300).nullable(),
 });
+
 export type WorkflowsData = z.infer<typeof WorkflowsDataSchema>;
 
 // ── health ──────
 
-export const HealthFindingSchema = z.strictObject({
+const HealthFindingSchema = z.strictObject({
   id: Text(TEXT_XLONG_MAX),
   detector: TextN(TEXT_LONG_MAX),
   severity: TextN(TEXT_SHORT_MAX),
   summary: TextN(TEXT_XXXLONG_MAX),
   evaluatedAt: TextN(TEXT_SHORT_MAX),
 });
-export type HealthFinding = z.infer<typeof HealthFindingSchema>;
 
-export const HealthCoverageSchema = z.strictObject({
+const HealthCoverageSchema = z.strictObject({
   source: Text(TEXT_LONG_MAX),
   unit: TextN(TEXT_LONG_MAX),
   evaluated: z.number().nonnegative().nullable(),
@@ -218,9 +221,8 @@ export const HealthCoverageSchema = z.strictObject({
   partial: z.boolean().nullable(),
   evaluatedAt: TextN(TEXT_SHORT_MAX),
 });
-export type HealthCoverage = z.infer<typeof HealthCoverageSchema>;
 
-export const HealthDataSchema = z.strictObject({
+const HealthDataSchema = z.strictObject({
   /** null = the findings endpoint could not be read; [] = it was read and holds none. */
   findings: z.array(HealthFindingSchema).max(100).nullable(),
   findingsTotal: z.number().int().nonnegative().nullable(),
@@ -259,6 +261,7 @@ export const HealthDataSchema = z.strictObject({
     })
     .nullable(),
 });
+
 export type HealthData = z.infer<typeof HealthDataSchema>;
 
 /**
@@ -320,20 +323,20 @@ export function healthCaveats(d: HealthData): string[] {
 
 const SettingValue = z.union([z.string().max(TEXT_XLONG_MAX), z.number(), z.boolean(), z.null()]);
 
-export const SettingSchema = z.strictObject({
+const SettingSchema = z.strictObject({
   value: SettingValue,
   source: TextN(TEXT_TINY_MAX),
   defaultValue: SettingValue,
 });
-export type Setting = z.infer<typeof SettingSchema>;
 
-export const SettingsDataSchema = z.strictObject({
+const SettingsDataSchema = z.strictObject({
   settings: z.record(z.string().max(TEXT_LONG_MAX), SettingSchema),
   /** Keys read but not forwarded (not on the allowlist, secret-looking name). */
   withheld: z.number().int().nonnegative(),
   /** Keys forwarded whose value looked like a path and was replaced by SETTING_PATH_HIDDEN. */
   pathsHidden: z.number().int().nonnegative(),
 });
+
 export type SettingsData = z.infer<typeof SettingsDataSchema>;
 
 export const SETTING_PATH_HIDDEN = '(path hidden)';
@@ -377,7 +380,8 @@ export type DaemonDataFor<K extends DaemonKind> = NonNullable<
 // ── verbs ──────────────────────────────────────────────────────────────────────────────────────
 
 /** `ok` = data present; `pending` = nothing from that collector yet (older, or not sent); `unsupported` = the daemon lacks the route. */
-export const DataStatusSchema = z.enum(['ok', 'pending', 'unsupported']);
+const DataStatusSchema = z.enum(['ok', 'pending', 'unsupported']);
+
 export type DataStatus = z.infer<typeof DataStatusSchema>;
 
 const MachineFilter = z.strictObject({
@@ -406,14 +410,17 @@ export const SeatDetailOutputSchema = z.strictObject({
 export type SeatDetailOutput = z.infer<typeof SeatDetailOutputSchema>;
 
 // library.list / library.get
-export const LibraryGroupSchema = z.enum(['spec', 'skill', 'context-pack']);
-export type LibraryGroup = z.infer<typeof LibraryGroupSchema>;
-export const LIBRARY_LIST_MAX = 500;
+const LibraryGroupSchema = z.enum(['spec', 'skill', 'context-pack']);
 
-export const LibraryItemSchema = LibraryRowSchema.omit({ files: true }).extend({
+export type LibraryGroup = z.infer<typeof LibraryGroupSchema>;
+
+const LIBRARY_LIST_MAX = 500;
+
+const LibraryItemSchema = LibraryRowSchema.omit({ files: true }).extend({
   machine: MachineId,
   group: LibraryGroupSchema,
 });
+
 export type LibraryItem = z.infer<typeof LibraryItemSchema>;
 
 export const LibraryListInputSchema = MachineFilter.extend({
@@ -433,7 +440,6 @@ export const LibraryListInputSchema = MachineFilter.extend({
     .optional()
     .describe(`at most N items (default 200, max ${LIBRARY_LIST_MAX})`),
 });
-export type LibraryListInput = z.infer<typeof LibraryListInputSchema>;
 
 export const LibraryListOutputSchema = z.strictObject({
   machines: z.array(
@@ -459,7 +465,6 @@ export const LibraryGetInputSchema = z.strictObject({
   group: LibraryGroupSchema,
   id: z.string().min(1).describe('the item id library.list returned'),
 });
-export type LibraryGetInput = z.infer<typeof LibraryGetInputSchema>;
 export const LibraryGetOutputSchema = z.strictObject({
   item: LibraryItemSchema,
   /** Skill file names and sizes (empty for specs and packs). File text is not carried. */
@@ -469,7 +474,8 @@ export const LibraryGetOutputSchema = z.strictObject({
 export type LibraryGetOutput = z.infer<typeof LibraryGetOutputSchema>;
 
 // history.transitions
-export const TRANSITIONS_PAGE_MAX = 200;
+const TRANSITIONS_PAGE_MAX = 200;
+
 export const HistoryTransitionsInputSchema = MachineFilter.extend({
   qitemId: z.string().min(1).optional().describe('only this queue item'),
   seat: z
@@ -505,15 +511,15 @@ export const HistoryTransitionsInputSchema = MachineFilter.extend({
       'cursor: the nextCursor of the previous page. A keyset (the last row of that page), so rows added between pages never shift or repeat a page'
     ),
 });
-export type HistoryTransitionsInput = z.infer<typeof HistoryTransitionsInputSchema>;
 
-export const HistoryTransitionRowSchema = TransitionRowSchema.extend({
+const HistoryTransitionRowSchema = TransitionRowSchema.extend({
   machine: MachineId,
   /** From the machine's last queue snapshot, when the item is still in it. */
   source: TextN(TEXT_XLONG_MAX),
   destination: TextN(TEXT_XLONG_MAX),
   summary: TextN(TEXT_XLONG_MAX),
 });
+
 export type HistoryTransitionRow = z.infer<typeof HistoryTransitionRowSchema>;
 
 export const HistoryTransitionsOutputSchema = z.strictObject({
@@ -539,7 +545,6 @@ export type HistoryTransitionsOutput = z.infer<typeof HistoryTransitionsOutputSc
 export const WorkflowListInputSchema = MachineFilter.extend({
   status: z.string().min(1).optional().describe('only instances in this status, e.g. active'),
 });
-export type WorkflowListInput = z.infer<typeof WorkflowListInputSchema>;
 export const WorkflowListOutputSchema = z.strictObject({
   machines: z.array(
     DataMachineSchema.extend({
@@ -556,8 +561,9 @@ export type WorkflowListOutput = z.infer<typeof WorkflowListOutputSchema>;
 
 // health.findings
 export const HealthFindingsInputSchema = MachineFilter;
-export type HealthFindingsInput = z.infer<typeof HealthFindingsInputSchema>;
-export const HealthAssessmentSchema = z.enum(['findings', 'none-found', 'unknown']);
+
+const HealthAssessmentSchema = z.enum(['findings', 'none-found', 'unknown']);
+
 export const HealthFindingsOutputSchema = z.strictObject({
   machines: z.array(
     DataMachineSchema.extend({
@@ -579,7 +585,6 @@ export const SettingsGetInputSchema = MachineFilter.extend({
   key: z.string().min(1).optional().describe('only this key, or this prefix ending in a dot'),
   changedOnly: z.boolean().optional().describe('only settings whose source is not the default'),
 });
-export type SettingsGetInput = z.infer<typeof SettingsGetInputSchema>;
 export const SettingsGetOutputSchema = z.strictObject({
   machines: z.array(
     DataMachineSchema.extend({

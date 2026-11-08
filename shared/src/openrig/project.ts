@@ -20,16 +20,10 @@ import { z } from 'zod';
 
 /** Chain names on the project tree. A node with no SPEC.md falls back to README.md. */
 export const PROJECT_CHAIN_FILES = ['SPEC.md', 'PROGRESS.md', 'PROOF.md', 'NOTES.md'] as const;
-export type ProjectChainFile = (typeof PROJECT_CHAIN_FILES)[number];
 export const NODE_FILE_PRECEDENCE = ['SPEC.md', 'README.md'] as const;
-
-export const PROJECT_ALTITUDES = ['project', 'mission', 'slice'] as const;
-export type ProjectAltitude = (typeof PROJECT_ALTITUDES)[number];
 
 /** Mirrors slice-indexer.ts SliceStatus (OpenRig maps the raw frontmatter `status` onto these). */
 export const SLICE_STATUSES = ['active', 'done', 'blocked', 'draft'] as const;
-export const SliceStatusSchema = z.enum(SLICE_STATUSES);
-export type SliceStatus = z.infer<typeof SliceStatusSchema>;
 
 /**
  * A slice's SPEC.md frontmatter, the keys OpenRig reads. Loose: authors add their own keys.
@@ -46,7 +40,6 @@ export const SliceSpecFrontmatterSchema = z.looseObject({
   /** `<name>@<version>` of a workflow spec. */
   workflow_spec: z.string().optional(),
 });
-export type SliceSpecFrontmatter = z.infer<typeof SliceSpecFrontmatterSchema>;
 
 /** `mission.yaml` (optional): the mission's arrangement. Loose beyond the keys OpenRig names. */
 export const MissionYamlSchema = z.looseObject({
@@ -64,19 +57,3 @@ export const MissionYamlSchema = z.looseObject({
     })
     .optional(),
 });
-export type MissionYaml = z.infer<typeof MissionYamlSchema>;
-
-/** `slice.yaml` (optional): the slice's execution data. Loose beyond the keys OpenRig names. */
-export const SliceYamlSchema = z.looseObject({
-  execution: z
-    .looseObject({ depends_on: z.array(z.string()).optional(), wave: z.string().optional() })
-    .optional(),
-});
-export type SliceYaml = z.infer<typeof SliceYamlSchema>;
-
-/**
- * How a queue item belongs to a slice: the tag `slice:<id>` (frontmatter `id` or folder name),
- * plus `project:<id>` when a project is selected. Fallback: the slice or mission id in the body.
- */
-export const SLICE_TAG_PREFIX = 'slice:';
-export const PROJECT_TAG_PREFIX = 'project:';
