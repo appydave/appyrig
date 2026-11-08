@@ -220,3 +220,68 @@ describe('N10b: reading the command log', () => {
     ]);
   });
 });
+
+describe('commandOf, each way a line is read (through parseRigCommands)', () => {
+  const one = (over: Parameters<typeof line>[0]) => parseRigCommands(line(over));
+  const first = (over: Parameters<typeof line>[0]) => one(over)[0]!;
+
+  it.each([
+    ['null', 'null'],
+    ['an array', '[]'],
+    ['a number', '7'],
+    ['a string', '"x"'],
+  ])('skips a line that is %s', (_n, body) => {
+    expect(parseRigCommands(body)).toEqual([]);
+  });
+
+  it.each([[undefined], [null], [12345], ['not a date']])('skips ts %s', (ts) => {
+    expect(one({ ts })).toEqual([]);
+  });
+
+  it('writes ts as an ISO string', () => {
+    expect(first({ ts: '2026-10-20T10:00:00+10:00' }).ts).toBe('2026-10-20T00:00:00.000Z');
+  });
+
+  it('takes rigs from commands: strings only, cut at 200, empties dropped, 10 at most', () => {
+    expect(first({ commands: 'rig ps' }).rigs).toEqual([]);
+    expect(first({ commands: [null, 4, 'x', { rig: 5 }, { rig: 'a' }, { rig: '' }] }).rigs).toEqual(
+      ['a']
+    );
+    expect(first({ commands: [{ rig: 'r'.repeat(300) }] }).rigs).toEqual(['r'.repeat(200)]);
+
+    const many = Array.from({ length: 14 }, (_, i) => ({ rig: `r${i}` }));
+
+    expect(first({ commands: many }).rigs).toEqual(many.slice(0, 10).map((m) => m.rig));
+    expect(first({ commands: [{ rig: 'a' }, { rig: 'a' }] }).rigs).toEqual(['a']);
+  });
+
+  it('cuts rig at 200 and reads a non-string rig as null', () => {
+    expect(first({ rig: 'r'.repeat(300) }).rig).toBe('r'.repeat(200));
+    expect(first({ rig: 5 }).rig).toBeNull();
+  });
+
+  it('exitCode is an integer or null', () => {
+    expect(first({ exit_code: 3 }).exitCode).toBe(3);
+    expect(first({ exit_code: 1.5 }).exitCode).toBeNull();
+    expect(first({ exit_code: '1' }).exitCode).toBeNull();
+    expect(first({ exit_code: undefined }).exitCode).toBeNull();
+  });
+
+  it('interrupted is a boolean or null', () => {
+    expect(first({ interrupted: true }).interrupted).toBe(true);
+    expect(first({ interrupted: 'yes' }).interrupted).toBeNull();
+  });
+
+  it('a non-string tool_use_id leaves the line unfolded', () => {
+    const body = [
+      line({ tool_use_id: 5, phase: 'attempted' }),
+      line({ tool_use_id: 5, phase: 'ran' }),
+    ];
+
+    expect(parseRigCommands(body.join('\n'))).toHaveLength(2);
+
+    const same = ['toolu_Z', 'toolu_Z'].map((id) => line({ tool_use_id: id }));
+
+    expect(parseRigCommands(same.join('\n'))).toHaveLength(1);
+  });
+});

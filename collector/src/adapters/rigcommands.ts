@@ -60,6 +60,27 @@ const text = (v: unknown, max: number): string | null =>
 const str = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 ? v.slice(0, max) : null;
 
+/** The line's time as an ISO string; null when it is missing or not a date. */
+function tsOf(v: unknown): string | null {
+  return typeof v === 'string' && !Number.isNaN(Date.parse(v)) ? new Date(v).toISOString() : null;
+}
+
+/** The rig names the line's `commands` mention: strings, cut at 200, no repeats, 10 at most. */
+function rigsOf(commands: unknown): string[] {
+  const rigs = new Set<string>();
+
+  for (const c of Array.isArray(commands) ? commands : []) {
+    if (c && typeof c === 'object' && typeof (c as { rig?: unknown }).rig === 'string') {
+      rigs.add((c as { rig: string }).rig.slice(0, 200));
+    }
+  }
+
+  return [...rigs].filter(Boolean).slice(0, 10);
+}
+
+const exitCodeOf = (v: unknown): number | null =>
+  typeof v === 'number' && Number.isInteger(v) ? v : null;
+
 /** One logged line as AppyRig sends it; null for a line that is not a command entry. */
 function commandOf(raw: unknown): (RigCommand & { key: string | null }) | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
@@ -67,20 +88,10 @@ function commandOf(raw: unknown): (RigCommand & { key: string | null }) | null {
   }
 
   const r = raw as Record<string, unknown>;
+  const ts = tsOf(r.ts);
 
-  if (typeof r.ts !== 'string' || Number.isNaN(Date.parse(r.ts))) {
+  if (ts === null) {
     return null;
-  }
-
-  const ts = new Date(r.ts).toISOString();
-  const rigs = new Set<string>();
-
-  if (Array.isArray(r.commands)) {
-    for (const c of r.commands) {
-      if (c && typeof c === 'object' && typeof (c as { rig?: unknown }).rig === 'string') {
-        rigs.add((c as { rig: string }).rig.slice(0, 200));
-      }
-    }
   }
 
   return {
@@ -91,10 +102,10 @@ function commandOf(raw: unknown): (RigCommand & { key: string | null }) | null {
     command: text(r.command, RIG_COMMAND_TEXT_MAX),
     raw: text(r.raw, RIG_COMMAND_RAW_MAX),
     rig: str(r.rig, 200),
-    rigs: [...rigs].filter(Boolean).slice(0, 10),
+    rigs: rigsOf(r.commands),
     cwd: text(r.cwd, 400),
     phase: str(r.phase, 40),
-    exitCode: typeof r.exit_code === 'number' && Number.isInteger(r.exit_code) ? r.exit_code : null,
+    exitCode: exitCodeOf(r.exit_code),
     interrupted: typeof r.interrupted === 'boolean' ? r.interrupted : null,
     stdoutHead: text(r.stdout_head, RIG_COMMAND_OUTPUT_MAX),
     stderrHead: text(r.stderr_head, RIG_COMMAND_OUTPUT_MAX),
