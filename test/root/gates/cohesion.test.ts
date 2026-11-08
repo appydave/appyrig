@@ -104,6 +104,14 @@ describe('the printed report', () => {
     expect(text).toContain('a report, not a gate');
   });
 
+  it('prints every finding when there are many, not just the first few', () => {
+    const many = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`f${i}.ts`, 3]));
+    const { text } = report(() => many);
+
+    expect(text.split('\n')).toHaveLength(8);
+    expect(text).toContain('f6.ts');
+  });
+
   it('prints a report with no findings and still exits 0', () => {
     expect(report(() => ({}))).toMatchObject({ code: 0 });
   });
