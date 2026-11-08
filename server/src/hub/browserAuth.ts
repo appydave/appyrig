@@ -125,10 +125,6 @@ function refuse(res: Response, status: number, error: string): void {
   });
 }
 
-/**
- * Express gate, mounted before every route. Lets OPEN_PATHS through, turns a `/?token=` visit
- * into a session cookie, and refuses everything else without a session.
- */
 /** Why this browser-socket handshake is refused, or null when it may connect. */
 export function browserSocketRefusal(
   headers: IncomingHttpHeaders,
@@ -142,6 +138,10 @@ export function browserSocketRefusal(
   return isAuthorised(headers, hubToken) ? null : AUTH_ERRORS.browserSession;
 }
 
+/**
+ * Express gate, mounted before every route. Lets OPEN_PATHS through, turns a `/?token=` visit
+ * into a session cookie, and refuses everything else without a session.
+ */
 export function browserAuth(opts: BrowserAuthOptions) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (OPEN_PATHS.includes(req.path)) {
