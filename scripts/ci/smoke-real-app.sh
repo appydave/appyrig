@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# smoke-real-app.sh: run the real, built hub once and check that it serves and takes a push.
+# scripts/ci/smoke-real-app.sh: run the real, built hub once and check that it serves and takes a push.
 #
-#   scripts/smoke-real-app.sh [--port <n>] [--no-build]
+#   scripts/ci/smoke-real-app.sh [--port <n>] [--no-build]
 #
 # 1. builds the bundle the hub serves (server/dist + client/dist; shared must already be built)
 # 2. starts the hub on a spare port (default 7391) with a throwaway DATA_DIR and token file
@@ -23,7 +23,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo"
 base="http://127.0.0.1:$port"
 started=$SECONDS
