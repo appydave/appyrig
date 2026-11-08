@@ -1234,10 +1234,10 @@
       "count": 5
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 12
+      "count": 11
     },
     "sonarjs/expression-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "collector/src/adapters/dbrows.ts": {

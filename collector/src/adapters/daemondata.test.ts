@@ -606,6 +606,55 @@ describe('v2 · queue transitions (step 4)', () => {
     ).toBeNull();
   });
 
+  describe('parseTransitionRow, each way a row is kept or dropped', () => {
+    const good = {
+      transitionId: 'tr-1',
+      qitemId: 'q',
+      state: 's',
+      createdAt: '2026-10-11T12:00:00Z',
+    };
+    const row = (over: object) => parseTransitionRow({ ...good, ...over });
+
+    it('keeps a string id trimmed, a number id as text, and nothing else as an id', () => {
+      expect(row({ transitionId: '  tr-9 ' })?.id).toBe('tr-9');
+      expect(row({ transitionId: 42 })?.id).toBe('42');
+      expect(row({ transitionId: '   ' })).toBeNull();
+      expect(row({ transitionId: null })).toBeNull();
+      expect(row({ transitionId: true })).toBeNull();
+      expect(row({ transitionId: undefined })).toBeNull();
+    });
+
+    it('keeps an id of 30 characters and drops one of 31', () => {
+      expect(row({ transitionId: 'x'.repeat(30) })?.id).toHaveLength(30);
+      expect(row({ transitionId: 'x'.repeat(31) })).toBeNull();
+    });
+
+    it('needs a qitem id and a state', () => {
+      expect(row({ qitemId: undefined })).toBeNull();
+      expect(row({ qitemId: '' })).toBeNull();
+      expect(row({ state: undefined })).toBeNull();
+      expect(row({ state: '' })).toBeNull();
+    });
+
+    it('needs a time that parses: originalTimestamp first, createdAt when it is absent', () => {
+      expect(row({ createdAt: 'not a date' })).toBeNull();
+      expect(row({ createdAt: undefined })).toBeNull();
+      expect(row({ originalTimestamp: '2026-01-02T03:04:05Z' })?.at).toBe(
+        '2026-01-02T03:04:05.000Z'
+      );
+      expect(row({ originalTimestamp: undefined })?.at).toBe('2026-10-11T12:00:00.000Z');
+      // A present but unparseable originalTimestamp does not fall back to createdAt.
+      expect(row({ originalTimestamp: 'bad' })).toBeNull();
+    });
+
+    it('carries the actor and the closure fields, null when absent', () => {
+      expect(row({})).toMatchObject({ actor: null, closureReason: null, closureTarget: null });
+      expect(
+        row({ actorSession: 'a@r', closureReason: 'denied', closureTarget: 'b@r' })
+      ).toMatchObject({ actor: 'a@r', closureReason: 'denied', closureTarget: 'b@r' });
+    });
+  });
+
   it('pages from start=retained, then continues from the cursor and reads only what is new', async () => {
     const d = fakeTelemetry({ n: 300 });
     const { r, tick } = trReader(d.get);
