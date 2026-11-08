@@ -2026,10 +2026,10 @@
   },
   "server/src/hub/collectorIngest.ts": {
     "max-lines-per-function": {
-      "count": 3
+      "count": 2
     },
     "no-magic-numbers": {
-      "count": 2
+      "count": 1
     }
   },
   "server/src/hub/createHub.ts": {

@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import type { SeatHistory } from './history.js';
 import type { HandoffBodies } from './handoffs.js';
 import type { RigFilesPush } from './rigfiles.js';
@@ -74,10 +75,8 @@ export const AUTH_ERRORS = {
 } as const;
 
 /** `auth` payload a collector passes to `io(url + '/collector', { auth })`. */
-export interface CollectorAuth {
-  token: string;
-  machineId: string;
-}
+export const CollectorAuthSchema = z.object({ token: z.string(), machineId: z.string() });
+export type CollectorAuth = z.infer<typeof CollectorAuthSchema>;
 
 /**
  * Ack for `collector:snapshot`. A refused snapshot is data, not a throw. `caps` (HUB_CAPS) is what
