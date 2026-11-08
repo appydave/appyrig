@@ -3,35 +3,27 @@ import {
   FLEET_EVENTS,
   HUB_CAPS,
   namesV2Key,
-  stripSeatSpec,
   stripSpecFields,
   stripV2Fields,
   PUSH_INTERVAL_MS,
   SOCKET_NAMESPACES,
   type CollectorAuth,
-  type DaemonDataPush,
   type MachineSnapshot,
   type SeatHistory,
 } from '@appydave/shared';
 import type { PendingHistory } from './adapters/history.js';
 import type { PendingHandoffs } from './adapters/handoffs.js';
-import type { PendingRigFiles } from './adapters/rigfiles.js';
-import type { PendingSchema } from './adapters/dbschema.js';
-import type { PendingLoadouts } from './adapters/loadout.js';
-import type { PendingDbRows } from './adapters/dbrows.js';
-import type { PendingDaemonData } from './adapters/daemondata.js';
-import type { PendingMissionFiles } from './adapters/missionfiles.js';
-import type { PendingRigSpecs } from './adapters/rigspecs.js';
-import type { PendingRigCommands } from './adapters/rigcommands.js';
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
 import { emitAcked } from '@collector/pusher/emitAcked.js';
+import { startChannel, type ChannelDeps } from '@collector/pusher/channel.js';
+import { CHANNELS, type ChannelOptions } from '@collector/pusher/channelTable.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
  * namespace. Never overlaps ticks, skips building while disconnected (socket.io-client reconnects
  * by itself), and logs only changes of state so the launchd log stays small.
  */
-export interface PusherOptions {
+export interface PusherOptions extends ChannelOptions {
   hubUrl: string;
   token: string;
   machineId: string;
@@ -45,31 +37,6 @@ export interface PusherOptions {
   /** v1.4: queue message bodies not yet accepted by the hub, one batch per call; null = nothing to send. */
   handoffs?: () => Promise<PendingHandoffs | null>;
   handoffIntervalMs?: number;
-  /** v1.4 · S7: rig files whose content changed since the hub accepted them; null = nothing to send. */
-  /** Given the caps the hub advertised, so it can send scope `rig` files only to a hub that takes them. */
-  rigFiles?: (caps: ReadonlySet<string>) => Promise<PendingRigFiles | null>;
-  rigFilesIntervalMs?: number;
-  /** v1.4 · S7: the OpenRig database shape, when it changed; null = nothing to send. */
-  schema?: () => Promise<PendingSchema | null>;
-  schemaIntervalMs?: number;
-  /** v1.5 · L1: seat loadouts that changed since the hub accepted them; null = nothing to send. */
-  loadouts?: () => Promise<PendingLoadouts | null>;
-  loadoutIntervalMs?: number;
-  /** Batch 1 · B5: OpenRig database rows (one push per changed table); null = nothing to send. */
-  dbRows?: () => Promise<PendingDbRows | null>;
-  dbRowsIntervalMs?: number;
-  /** v2 data channels: OpenRig daemon reads (seat detail, library, …) that changed; null = nothing to send. */
-  daemonData?: () => Promise<PendingDaemonData | null>;
-  daemonDataIntervalMs?: number;
-  /** Run board lane 1: a rig's list of servable mission files and the files; null = nothing to send. Sent only to a hub that advertised `missionfiles`. */
-  missionFiles?: () => Promise<PendingMissionFiles | null>;
-  missionFilesIntervalMs?: number;
-  /** N10: every rig spec found (launched or not), when it changed; sent only to a hub that advertised `rig-specs`. */
-  rigSpecs?: () => Promise<PendingRigSpecs | null>;
-  rigSpecsIntervalMs?: number;
-  /** N10b: the machine's `rig` command log, when it changed; sent only to a hub that advertised `rig-commands`. */
-  rigCommands?: () => Promise<PendingRigCommands | null>;
-  rigCommandsIntervalMs?: number;
   /** How long the first push waits for the hub's `hub:caps` (default 1000 ms; an older hub never sends it). */
   capsWaitMs?: number;
   /** Called on every (re)connect to the hub, e.g. to make queue bodies go out again. */
@@ -310,212 +277,23 @@ export function startPusher(opts: PusherOptions): Pusher {
   const sendAcked = (event: string, payload: unknown) =>
     emitAcked(socket.timeout(ackTimeout * 2), event, payload);
   const timers: NodeJS.Timeout[] = [];
-  const channel = (
-    key: string,
-    event: string,
-    everyMs: number,
-    /** The hub version that first listens for this event, for the "no ack" warning. */
-    since: string,
-    take: () => Promise<{
-      payloads: unknown[];
-      markSent(): void;
-      markSkipped?(payload: unknown): void;
-    } | null>,
-    /** A HUB_CAPS entry the hub must have advertised before anything is taken or sent. */
-    needs?: string
-  ) => {
-    let t: NodeJS.Timeout | undefined;
-    const tick = async () => {
-      if (stopped) {
-        return;
-      }
-
-      try {
-        if (socket.connected && (!needs || hubCaps.has(needs))) {
-          const pending = await take();
-
-          if (pending) {
-            let all = true;
-
-            for (const p of pending.payloads) {
-              if (Buffer.byteLength(JSON.stringify(p)) > CHANNEL_PAYLOAD_MAX) {
-                pending.markSkipped?.(p);
-                warnSometimes(
-                  `${key}:size`,
-                  `${key}: a payload over ${CHANNEL_PAYLOAD_MAX / 1024} KB was not sent`
-                );
-                continue;
-              }
-
-              const ack = await sendAcked(event, p);
-
-              if ('timeout' in ack) {
-                warnSometimes(key, `no ack for ${key} (is the hub older than ${since}?)`);
-                all = false;
-                break;
-              }
-
-              if (!ack.ok) {
-                note(`${key} refused: ${ack.failureMode}: ${ack.message}`);
-                all = false;
-                break;
-              }
-            }
-
-            if (all) {
-              pending.markSent();
-            }
-          }
-        }
-      } catch (e) {
-        note(`${key} tick failed: ${errorMessage(e)}`);
-      }
-
-      if (!stopped) {
-        t = setTimeout(tick, everyMs);
-        timers.push(t);
-      }
-    };
-
-    t = setTimeout(tick, Math.min(everyMs, 4_000));
-    timers.push(t);
+  const deps: ChannelDeps = {
+    isStopped: () => stopped,
+    connected: () => socket.connected,
+    hubCaps: () => hubCaps,
+    maxPayloadBytes: CHANNEL_PAYLOAD_MAX,
+    note,
+    warnSometimes,
+    sendAcked,
+    timers,
   };
 
-  if (opts.rigFiles) {
-    const take = opts.rigFiles;
+  for (const row of CHANNELS) {
+    const take = row.read(opts);
 
-    channel(
-      'rig files',
-      FLEET_EVENTS.RIGFILES,
-      opts.rigFilesIntervalMs ?? 15_000,
-      'v1.4',
-      async () => {
-        const p = await take(hubCaps);
-
-        return p && { payloads: p.pushes, markSent: p.markSent };
-      }
-    );
-  }
-
-  if (opts.loadouts) {
-    const take = opts.loadouts;
-
-    channel('loadout', FLEET_EVENTS.LOADOUT, opts.loadoutIntervalMs ?? 15_000, 'v1.5', async () => {
-      const p = await take();
-      // A hub without seat-spec refuses the member / AgentSpec / topology keys (strict schema).
-      const full = hubCaps.has(HUB_CAPS.SEAT_SPEC);
-
-      return (
-        p && { payloads: full ? p.loadouts : p.loadouts.map(stripSeatSpec), markSent: p.markSent }
-      );
-    });
-  }
-
-  if (opts.dbRows) {
-    const take = opts.dbRows;
-
-    channel(
-      'database rows',
-      FLEET_EVENTS.DBROWS,
-      opts.dbRowsIntervalMs ?? 30_000,
-      'v1.5',
-      async () => {
-        const p = await take();
-
-        return p && { payloads: p.pushes, markSent: p.markSent };
-      }
-    );
-  }
-
-  if (opts.daemonData) {
-    const take = opts.daemonData;
-
-    channel(
-      'daemon data',
-      FLEET_EVENTS.DAEMONDATA,
-      opts.daemonDataIntervalMs ?? 10_000,
-      'v2',
-      async () => {
-        const p = await take();
-
-        return (
-          p && {
-            payloads: p.pushes,
-            markSent: p.markSent,
-            markSkipped: (x: unknown) => p.markSkipped?.(x as DaemonDataPush),
-          }
-        );
-      },
-      HUB_CAPS.DAEMONDATA
-    );
-  }
-
-  if (opts.missionFiles) {
-    const take = opts.missionFiles;
-
-    channel(
-      'mission files',
-      FLEET_EVENTS.MISSIONFILES,
-      opts.missionFilesIntervalMs ?? 30_000,
-      'run board',
-      async () => {
-        const p = await take();
-
-        return p && { payloads: p.pushes, markSent: p.markSent };
-      },
-      HUB_CAPS.MISSIONFILES
-    );
-  }
-
-  if (opts.rigSpecs) {
-    const take = opts.rigSpecs;
-
-    channel(
-      'rig specs',
-      FLEET_EVENTS.RIGSPECS,
-      opts.rigSpecsIntervalMs ?? 15_000,
-      'N10',
-      async () => {
-        const p = await take();
-
-        return p && { payloads: [p.push], markSent: p.markSent };
-      },
-      HUB_CAPS.RIG_SPECS
-    );
-  }
-
-  if (opts.rigCommands) {
-    const take = opts.rigCommands;
-
-    // The snapshot's cadence: a new command shows on the page within a push or two.
-    channel(
-      'rig commands',
-      FLEET_EVENTS.RIGCOMMANDS,
-      opts.rigCommandsIntervalMs ?? PUSH_INTERVAL_MS,
-      'N10',
-      async () => {
-        const p = await take();
-
-        return p && { payloads: [p.push], markSent: p.markSent };
-      },
-      HUB_CAPS.RIG_COMMANDS
-    );
-  }
-
-  if (opts.schema) {
-    const take = opts.schema;
-
-    channel(
-      'database schema',
-      FLEET_EVENTS.SCHEMA,
-      opts.schemaIntervalMs ?? 30_000,
-      'v1.4',
-      async () => {
-        const p = await take();
-
-        return p && { payloads: [p.push], markSent: p.markSent };
-      }
-    );
+    if (take) {
+      startChannel({ ...row, every: row.every(opts), take }, deps);
+    }
   }
 
   return {

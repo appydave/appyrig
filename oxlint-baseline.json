@@ -284,8 +284,7 @@
       "require-safety-comment-for-type-assertion": 1
     },
     "collector/src/pusher.ts": {
-      "no-unknown-parameters": 4,
-      "require-safety-comment-for-type-assertion": 1
+      "no-unknown-parameters": 2
     },
     "collector/src/redact.ts": {
       "no-unsafe-dictionary-type": 1,
