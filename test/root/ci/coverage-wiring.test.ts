@@ -35,10 +35,10 @@ describe('Feature: every workspace with a coverage floor is measured in CI', () 
   );
 
   it.each([
-    ['LINES', 319],
-    ['STATEMENTS', 338],
-    ['FUNCTIONS', 69],
-    ['BRANCHES', 367],
+    ['LINES', 288],
+    ['STATEMENTS', 307],
+    ['FUNCTIONS', 62],
+    ['BRANCHES', 341],
   ])(
     'Scenario: given the collector config, then UNCOVERED_%s is pinned at %i',
     (measure, pinned) => {

@@ -208,7 +208,7 @@
     "collector/src/adapters/rigfiles.ts::next": 58,
     "collector/src/adapters/rigfiles.ts::specCandidatesFor": 41,
     "collector/src/adapters/rigspecs.ts::readSpecAgent": 74,
-    "collector/src/adapters/sources.ts::createSources": 250,
+    "collector/src/adapters/sources.ts::createSources": 247,
     "collector/src/adapters/sources.ts::createSources>daemon": 57,
     "collector/src/adapters/specView.ts::rigSpecOf": 42,
     "collector/src/adapters/tmux.ts::parsePanes": 51,
