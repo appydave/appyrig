@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createServer, type Server as HttpServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Server } from 'socket.io';
@@ -135,22 +135,28 @@ async function startHub(port = 0, modern = false, hopts: HubOpts = {}): Promise<
   };
 }
 
-const until = async (cond: () => boolean, ms = 4000) => {
-  const t0 = Date.now();
+const until = (cond: () => boolean, timeout = 4000) =>
+  vi.waitFor(
+    () => {
+      if (!cond()) {
+        throw new Error('condition not met yet');
+      }
+    },
+    { timeout, interval: 20 }
+  );
 
-  while (!cond()) {
-    if (Date.now() - t0 > ms) {
-      throw new Error('timed out waiting');
-    }
+/** Wait until the loop has demonstrably ticked `more` further times: the marker for "and still nothing". */
+const moreSnapshots = async (more: number) => {
+  const target = hub!.received.length + more;
 
-    await new Promise((r) => setTimeout(r, 20));
-  }
+  await until(() => hub!.received.length >= target);
 };
 
 let hub: Hub | undefined;
 let pusher: Pusher | undefined;
 
 afterEach(async () => {
+  vi.useRealTimers();
   await pusher?.stop();
   await hub?.close();
   pusher = hub = undefined;
@@ -181,19 +187,44 @@ describe('pusher', () => {
 
   it('a wrong token is refused and nothing is pushed', async () => {
     hub = await startHub();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
     const log: string[] = [];
+    let builds = 0;
+    let guardReads = 0; // every tick asks the socket whether it is connected: a count of ticks that ran
 
     pusher = startPusher({
       hubUrl: hub.url,
       token: 'wrong',
       machineId: 'roamy',
-      build,
+      build: async () => {
+        builds++;
+
+        return build();
+      },
       intervalMs: 50,
       log: (l) => log.push(l),
     });
+
+    let connected = pusher.socket.connected;
+
+    Object.defineProperty(pusher.socket, 'connected', {
+      get: () => {
+        guardReads++;
+
+        return connected;
+      },
+      set: (v: boolean) => {
+        connected = v;
+      },
+    });
     await until(() => log.some((l) => /refused or unreachable.*token/.test(l)));
-    await new Promise((r) => setTimeout(r, 200));
+
+    const ticksBefore = guardReads;
+
+    await vi.advanceTimersByTimeAsync(250); // five tick intervals on a refused connection
+    expect(guardReads).toBeGreaterThanOrEqual(ticksBefore + 4); // the loop kept ticking...
+    expect(builds).toBe(0); // ...and never built or pushed anything
     expect(hub.received).toHaveLength(0);
   });
 
@@ -344,7 +375,10 @@ describe('pusher', () => {
     });
     await until(() => marked === 1);
     expect(hub.extra.filter((e) => e.event === 'collector:rigfiles')).toHaveLength(2); // both chunks, in order
-    await new Promise((r) => setTimeout(r, 200));
+
+    const takesAtMark = fileTakes;
+
+    await until(() => fileTakes >= takesAtMark + 3); // it kept asking while the hub already had the files
     expect(marked).toBe(1);
     expect(fileTakes).toBeGreaterThan(1); // it kept asking, and got nothing new
   }, 15_000);
@@ -653,7 +687,7 @@ describe('pusher', () => {
       },
     });
     await until(() => hub!.received.length >= 5);
-    await new Promise((r) => setTimeout(r, 150));
+    await moreSnapshots(5);
     expect(takes).toBe(0);
   });
 
@@ -678,7 +712,7 @@ describe('pusher', () => {
       },
     });
     await until(() => hub!.received.length >= 5);
-    await new Promise((r) => setTimeout(r, 150));
+    await moreSnapshots(5);
     expect(takes).toBe(0);
     await pusher.stop();
     await hub.close();
@@ -764,7 +798,7 @@ describe('pusher', () => {
     });
     pusher = startPusher(opts(hub.url));
     await until(() => hub!.received.length >= 5);
-    await new Promise((r) => setTimeout(r, 150));
+    await moreSnapshots(5);
     expect(reads).toEqual({ specs: 0, cmds: 0 });
     expect(hub.extra.filter((e) => /rigspecs|rigcommands/.test(e.event))).toEqual([]);
     await pusher.stop();
@@ -895,7 +929,14 @@ describe('pusher', () => {
 
   it('does not overlap ticks when a build is slow', async () => {
     hub = await startHub();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] }); // the tick timer only; sockets stay real
 
+    let release = () => {};
+
+    const slowBuild = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started = 0;
     let running = 0;
     let max = 0;
 
@@ -906,14 +947,19 @@ describe('pusher', () => {
       intervalMs: 10,
       log: () => {},
       build: async () => {
+        started++;
         running++;
         max = Math.max(max, running);
-        await new Promise((r) => setTimeout(r, 60));
+        await slowBuild;
         running--;
 
         return build();
       },
     });
+    await until(() => started === 1); // connected, and the first build is now in flight
+    await vi.advanceTimersByTimeAsync(200); // twenty tick intervals pass while it is still building
+    expect(started).toBe(1);
+    release();
     await until(() => hub!.received.length >= 3);
     expect(max).toBe(1);
   });
