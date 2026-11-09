@@ -6,6 +6,7 @@ import { DbRowsStore } from './dbRowsStore.js';
 import { DaemonDataStore } from './daemonDataStore.js';
 import { RigFileStore } from './rigFileStore.js';
 import { MissionFileStore } from './missionFileStore.js';
+import { readJsonDir } from '@server/helpers/readJsonDir.js';
 import { SchemaStore } from './schemaStore.js';
 import { LatestByMachine } from './latestByMachine.js';
 import {
@@ -307,36 +308,16 @@ export class FleetStore {
       return 0;
     }
 
-    let names: string[];
+    const found = await readJsonDir(this.historyDir, SeatHistorySchema, {
+      label: 'a seat history',
+      onDiskError: this.onDiskError,
+    });
 
-    try {
-      names = (await readdir(this.historyDir)).filter((n) => n.endsWith('.json'));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        this.onDiskError(`cannot read ${this.historyDir}`, err);
-      }
+    for (const h of found) {
+      const key = `${h.machineId}/${h.seat}`;
 
-      return 0;
-    }
-
-    for (const name of names) {
-      const file = join(this.historyDir, name);
-
-      try {
-        const parsed = SeatHistorySchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
-
-        if (!parsed.success) {
-          this.onDiskError(`${file} is not a seat history; skipped`, parsed.error);
-          continue;
-        }
-
-        const key = `${parsed.data.machineId}/${parsed.data.seat}`;
-
-        if (!this.histories.has(key)) {
-          this.histories.set(key, parsed.data);
-        }
-      } catch (err) {
-        this.onDiskError(`cannot load ${file}; skipped`, err);
+      if (!this.histories.has(key)) {
+        this.histories.set(key, h);
       }
     }
 
@@ -415,42 +396,22 @@ export class FleetStore {
       return 0;
     }
 
-    let names: string[];
+    const found = await readJsonDir(this.handoffDir, StoredHandoffsSchema, {
+      label: 'stored queue bodies',
+      onDiskError: this.onDiskError,
+    });
 
-    try {
-      names = (await readdir(this.handoffDir)).filter((n) => n.endsWith('.json'));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        this.onDiskError(`cannot read ${this.handoffDir}`, err);
+    for (const stored of found) {
+      // Bodies that arrived while loading win; never overwrite them.
+      const m = this.handoffs.get(stored.machineId) ?? new Map();
+
+      for (const i of stored.items.slice(-HANDOFF_STORE_MAX)) {
+        if (!m.has(i.id)) {
+          m.set(i.id, { body: i.body, truncated: i.truncated });
+        }
       }
 
-      return 0;
-    }
-
-    for (const name of names) {
-      const file = join(this.handoffDir, name);
-
-      try {
-        const parsed = StoredHandoffsSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
-
-        if (!parsed.success) {
-          this.onDiskError(`${file} is not stored queue bodies; skipped`, parsed.error);
-          continue;
-        }
-
-        // Bodies that arrived while loading win; never overwrite them.
-        const m = this.handoffs.get(parsed.data.machineId) ?? new Map();
-
-        for (const i of parsed.data.items.slice(-HANDOFF_STORE_MAX)) {
-          if (!m.has(i.id)) {
-            m.set(i.id, { body: i.body, truncated: i.truncated });
-          }
-        }
-
-        this.handoffs.set(parsed.data.machineId, m);
-      } catch (err) {
-        this.onDiskError(`cannot load ${file}; skipped`, err);
-      }
+      this.handoffs.set(stored.machineId, m);
     }
 
     return [...this.handoffs.values()].reduce((n, m) => n + m.size, 0);
