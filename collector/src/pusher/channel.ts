@@ -23,7 +23,8 @@ export interface ChannelDeps {
   note(line: string): void;
   warnSometimes(key: string, line: string): void;
   sendAcked(event: string, payload: object): Promise<AckResult>;
-  timers: NodeJS.Timeout[];
+  /** Only the timers still armed, for stop() to clear. */
+  timers: Set<NodeJS.Timeout>;
 }
 
 export interface ChannelSpec {
@@ -37,8 +38,14 @@ export interface ChannelSpec {
   take(hubCaps: () => ReadonlySet<string>): Promise<Pending | null>;
 }
 
-const later = (fn: () => Promise<void>, ms: number, timers: NodeJS.Timeout[]) => {
-  timers.push(setTimeout(fn, ms));
+/** A timer drops out of the list as it fires, so the list holds only what is still armed. */
+const later = (fn: () => Promise<void>, ms: number, timers: Set<NodeJS.Timeout>) => {
+  const timer = setTimeout(() => {
+    timers.delete(timer);
+    void fn();
+  }, ms);
+
+  timers.add(timer);
 };
 
 /** Step 3 of a tick, then the loop: a tick that throws is logged, never fatal. */
