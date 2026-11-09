@@ -34,13 +34,11 @@ export const SeatListInputSchema = z.strictObject({
   rig: z.string().min(1).optional().describe('only seats of this rig'),
   status: SeatStatusSchema.optional().describe('only seats in this state, e.g. blocked'),
 });
-export type SeatListInput = z.infer<typeof SeatListInputSchema>;
 
 export const SeatRefSchema = z.strictObject({
   machine: MachineId.describe('machine id, e.g. m2'),
   seat: z.string().min(1).describe('seat id, e.g. dev-hub@appyrig-build'),
 });
-export type SeatRef = z.infer<typeof SeatRefSchema>;
 
 export const SeatTailInputSchema = SeatRefSchema.extend({
   lines: z
@@ -51,7 +49,6 @@ export const SeatTailInputSchema = SeatRefSchema.extend({
     .optional()
     .describe(`last N lines, at most ${TAIL_MAX_LINES} (default 50)`),
 });
-export type SeatTailInput = z.infer<typeof SeatTailInputSchema>;
 
 export const QueueListInputSchema = z.strictObject({
   machine: MachineId.optional().describe('only this machine'),
@@ -59,13 +56,11 @@ export const QueueListInputSchema = z.strictObject({
   destination: z.string().min(1).optional().describe('only rows sent to this seat'),
   limit: z.number().int().min(1).max(QUEUE_MAX_ITEMS).optional().describe('most recent N'),
 });
-export type QueueListInput = z.infer<typeof QueueListInputSchema>;
 
 export const MachineFilterSchema = z.strictObject({
   machine: MachineId.optional().describe('only this machine'),
   rig: z.string().min(1).optional().describe('only this rig'),
 });
-export type MachineFilter = z.infer<typeof MachineFilterSchema>;
 
 // ── outputs ────────────────────────────────────────────────────────────────────────────────────
 
@@ -80,7 +75,6 @@ export const FleetGetOutputSchema = z.strictObject({
   generatedAt: isoDate,
   machines: z.array(FleetMachineSchema),
 });
-export type FleetGetOutput = z.infer<typeof FleetGetOutputSchema>;
 
 export const MachineSummarySchema = z.strictObject({
   machine: MachineIdentitySchema,
@@ -114,7 +108,6 @@ export const SeatTailOutputSchema = z.strictObject({
   ansi: z.boolean(),
   capturedAt: isoDate.nullable(),
 });
-export type SeatTailOutput = z.infer<typeof SeatTailOutputSchema>;
 
 export const QueueRowSchema = z.strictObject({ machine: MachineId, item: QueueItemSchema });
 export type QueueRow = z.infer<typeof QueueRowSchema>;
@@ -176,7 +169,6 @@ export const HistoryListOutputSchema = z.strictObject({
   recorded: z.boolean(),
   entries: z.array(z.unknown()),
 });
-export type HistoryListOutput = z.infer<typeof HistoryListOutputSchema>;
 
 export const SystemStatusOutputSchema = z.strictObject({
   app: z.string(),
@@ -191,7 +183,6 @@ export const SystemStatusOutputSchema = z.strictObject({
   }),
   verbs: z.number().int().nonnegative(),
 });
-export type SystemStatusOutput = z.infer<typeof SystemStatusOutputSchema>;
 
 // ── the call envelope, as every door answers ───────────────────────────────────────────────────
 

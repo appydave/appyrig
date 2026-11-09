@@ -43,7 +43,6 @@ export type SeatStatus = z.infer<typeof SeatStatusSchema>;
 
 /** Where a seat came from. A plain tmux session outside OpenRig is still a seat (source `tmux`). */
 export const SeatSourceSchema = z.enum(['openrig', 'tmux']);
-export type SeatSource = z.infer<typeof SeatSourceSchema>;
 
 /** Status as reported by the terminal viewer app, when it is running and the pane is open. */
 export const ViewerStatusSchema = z.enum(['idle', 'working', 'blocked', 'done', 'unknown']);
@@ -57,7 +56,6 @@ export const SeatActivitySchema = z.strictObject({
   needsInputReason: z.string().nullable(),
   decidedBy: z.string().nullable(),
 });
-export type SeatActivity = z.infer<typeof SeatActivitySchema>;
 
 /** Bounded, redacted terminal text. Lines keep their ANSI escapes when `ansi` is true. */
 export const SeatTailSchema = z.strictObject({
@@ -65,14 +63,12 @@ export const SeatTailSchema = z.strictObject({
   ansi: z.boolean(),
   capturedAt: isoDate,
 });
-export type SeatTail = z.infer<typeof SeatTailSchema>;
 
 export const SeatWorkSchema = z.strictObject({
   pending: z.number().int().nonnegative(),
   inProgress: z.number().int().nonnegative(),
   blocked: z.number().int().nonnegative(),
 });
-export type SeatWork = z.infer<typeof SeatWorkSchema>;
 
 /** D09 W3: most key skills shown on a seat card. */
 export const KEY_SKILLS_MAX = 5;

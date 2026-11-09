@@ -41,7 +41,6 @@ export const HandoffGetInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m2'),
   id: z.string().min(1).describe('queue item id, e.g. qitem-20261011…'),
 });
-export type HandoffGetInput = z.infer<typeof HandoffGetInputSchema>;
 
 export const HandoffGetOutputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id,
@@ -68,7 +67,6 @@ export const RigEntryInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m2'),
   rig: z.string().min(1).describe('rig name, e.g. flicut-reapply'),
 });
-export type RigEntryInput = z.infer<typeof RigEntryInputSchema>;
 
 /**
  * Where a rig's work came in: the first seat of the rig to act (reply or tool call), and what woke
