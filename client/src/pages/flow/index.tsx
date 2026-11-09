@@ -2,8 +2,46 @@ import RigInfo from '@client/kit/RigInfo.js';
 import RigPicker from '@client/kit/RigPicker.js';
 import RunCard from '@client/kit/runcard/RunCard.js';
 import { runCard as runCardModel } from '@client/domain/fleet/runcard.js';
+import { queueCapNote } from '@client/domain/fleet/views/core/queueCap.js';
+import type { FleetMachine } from '@appydave/shared';
 import type { PageDef, PageProps } from '@client/app/types.js';
 import HandoffFlow from './HandoffFlow.js';
+
+/** Says when this machine's queue list was cut off; renders nothing otherwise. */
+function QueueCapNote({ machine }: { machine: FleetMachine | undefined }) {
+  const note = machine ? queueCapNote(machine) : null;
+
+  return note ? (
+    <p className="quiet" data-testid="queue-capped">
+      {note}
+    </p>
+  ) : null;
+}
+
+function flowRunCard(
+  ctx: PageProps['ctx'],
+  fm: FleetMachine | undefined,
+  rig: PageProps['ctx']['activeRig']
+) {
+  return fm && rig
+    ? runCardModel(fm, rig.name, ctx.now) && (
+        <RunCard
+          key={rig.key}
+          machine={fm}
+          rig={rig.name}
+          now={ctx.now}
+          socket={ctx.getSocket()}
+          details={
+            <RigInfo
+              rig={rig}
+              preview={false}
+              onOpenFiles={(r) => ctx.onOpenFiles(r.machineId, r.name)}
+            />
+          }
+        />
+      )
+    : null;
+}
 
 /**
  * v2 Handoff Flow: Current's live data and behaviour (No lead by design, From outside the rig,
@@ -13,25 +51,7 @@ import HandoffFlow from './HandoffFlow.js';
 function FlowPage({ ctx }: PageProps) {
   const rig = ctx.activeRig;
   const fm = rig ? ctx.allMachines.find((m) => m.machine.id === rig.machineId) : undefined;
-  const card =
-    fm && rig
-      ? runCardModel(fm, rig.name, ctx.now) && (
-          <RunCard
-            key={rig.key}
-            machine={fm}
-            rig={rig.name}
-            now={ctx.now}
-            socket={ctx.getSocket()}
-            details={
-              <RigInfo
-                rig={rig}
-                preview={false}
-                onOpenFiles={(r) => ctx.onOpenFiles(r.machineId, r.name)}
-              />
-            }
-          />
-        )
-      : null;
+  const card = flowRunCard(ctx, fm, rig);
 
   return (
     <main className="view ar-flow-page" data-testid="ar-flow">
@@ -43,6 +63,7 @@ function FlowPage({ ctx }: PageProps) {
         info={!card}
       />
       {card}
+      <QueueCapNote machine={fm} />
       <HandoffFlow
         machine={fm ?? null}
         rig={rig?.name ?? null}

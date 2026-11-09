@@ -6,7 +6,7 @@ import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { buildFlow, flowRange } from '@client/domain/fleet/views/flow/flow.js';
 import { flowChapters } from '@client/domain/fleet/views/flow/chapters.js';
 import { replaySteps } from '@client/domain/fleet/views/flow/console.js';
-import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { queueCapped, rigStoryQueue } from '@client/domain/fleet/views/core/queueCap.js';
 import { stageOf } from '@client/domain/fleet/views/flow/stages.js';
 import { type FlowOptions } from '@client/domain/fleet/views/flow/types.js';
 import ReplayConsoles from './ReplayConsoles.js';
@@ -198,6 +198,13 @@ function readCalm(): boolean {
 const clock = (t: number) =>
   new Date(t).toLocaleString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
+/** On a cut-off list, what is in view is all it can say. */
+const cut = (machine: FleetMachine | null) => machine !== null && queueCapped(machine);
+const nothingWaiting = (m: FleetMachine | null) => (cut(m) ? 'none in view' : 'nothing waiting');
+const nothingQueued = (m: FleetMachine | null) =>
+  cut(m) ? 'none queued in view' : 'nothing queued';
+const ticketsWord = (m: FleetMachine | null) => (cut(m) ? 'newest queue tickets' : 'queue tickets');
+
 /**
  * Concept 4 · Handoff Flow: queue handoffs moving lead → builders → QA → reviewer, as pulses.
  * Amber arcs below the row are items sent back to an earlier stage (rework, verdicts, answers).
@@ -250,7 +257,7 @@ export default function HandoffFlow({
   const machineId = machine?.machine.id ?? null;
 
   const range = useMemo(
-    () => (machine && rig ? flowRange(rigQueue(machine, rig)) : null),
+    () => (machine && rig ? flowRange(rigStoryQueue(machine, rig)) : null),
     [machine, rig]
   );
   // Chapters only need the open/closed picture to 10-minute precision.
@@ -635,7 +642,7 @@ export default function HandoffFlow({
               data-testid="flow-total"
               title="Queue tickets only. Messages the seats send each other are not counted yet."
             >
-              <b>{flow.total}</b> queue tickets
+              <b>{flow.total}</b> {ticketsWord(machine)}
             </span>
             {(flow.mode === 'roles' || flow.rework > 0) && (
               <span data-testid="flow-rework">
@@ -661,7 +668,7 @@ export default function HandoffFlow({
                   queue builds at <b className="amber">{labelOf(flow.bottleneck)}</b>
                 </>
               ) : (
-                'nothing queued'
+                nothingQueued(machine)
               )}
             </span>
             {staleCount > 0 && (
@@ -1091,7 +1098,7 @@ export default function HandoffFlow({
                           ? `${s.waiting} waiting · ${ago(s.oldestWaitMs ?? 0)}`
                           : s.stale
                             ? `${s.stale} open · ${ago(s.oldestStaleMs ?? 0)}`
-                            : 'nothing waiting'}
+                            : nothingWaiting(machine)}
                       </text>
                     </g>
                   )}
