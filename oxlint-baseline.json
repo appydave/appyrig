@@ -188,7 +188,6 @@
     },
     "client/src/pages/w4.test.tsx": {
       "no-chained-type-assertions": 1,
-      "no-module-mocking": 2,
       "no-unknown-parameters": 3,
       "no-unsafe-dictionary-type": 1
     },
@@ -214,16 +213,13 @@
       "require-safety-comment-for-type-assertion": 1
     },
     "client/src/shell/agentRig.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 1
     },
     "client/src/shell/nav.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 1
     },
     "client/src/shell/shell.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 1
     },
     "client/src/test/queueFixtures.ts": {
       "no-chained-type-assertions": 1
