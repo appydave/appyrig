@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { RigOutputsOutputSchema, RigWaitingOutputSchema } from '@appydave/shared';
 import { createCore } from '@server/core/core.js';
-import { FleetStore } from '@server/hub/fleetStore.js';
+import { FleetStore } from '@server/hub/stores/fleetStore.js';
 import { loadSnapshot } from '@server/test/hubHarness.js';
 
 const RIG = 'run1';

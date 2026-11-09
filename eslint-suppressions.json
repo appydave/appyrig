@@ -1657,7 +1657,12 @@
       "count": 1
     }
   },
-  "server/src/hub/daemonDataStore.ts": {
+  "server/src/hub/hub.test.ts": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "server/src/hub/stores/daemonDataStore.ts": {
     "max-params": {
       "count": 1
     },
@@ -1665,7 +1670,7 @@
       "count": 1
     }
   },
-  "server/src/hub/fleetStore.ts": {
+  "server/src/hub/stores/fleetStore.ts": {
     "max-lines": {
       "count": 1
     },
@@ -1685,12 +1690,7 @@
       "count": 1
     }
   },
-  "server/src/hub/hub.test.ts": {
-    "max-lines": {
-      "count": 1
-    }
-  },
-  "server/src/hub/missionFileStore.ts": {
+  "server/src/hub/stores/missionFileStore.ts": {
     "max-lines-per-function": {
       "count": 2
     },
@@ -1701,7 +1701,7 @@
       "count": 2
     }
   },
-  "server/src/hub/schemaStore.ts": {
+  "server/src/hub/stores/schemaStore.ts": {
     "max-lines-per-function": {
       "count": 1
     },

@@ -26,7 +26,7 @@ import { accountViews, applyAccountDerived } from './accounts.js';
 import { applyRigLabels, defaultConfigPath, watchConfig } from './appConfig.js';
 import { browserAuth, browserSocketRefusal } from './browserAuth.js';
 import { attachCollectorIngest } from './collectorIngest.js';
-import { FleetStore, type LivenessChange } from './fleetStore.js';
+import { FleetStore, type LivenessChange } from './stores/fleetStore.js';
 import { listenOnHosts, type Listening } from './listen.js';
 import { v1ArchiveRouter } from './v1ArchiveRouter.js';
 
