@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { RigFileMeta, RigSpecsOutput } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { rigFileMeta as meta, specsAnswer } from '@client/test/specsFixtures.js';
 import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
 import { page as specsPage } from './index.js';
 
@@ -10,46 +10,6 @@ configure({ asyncUtilTimeout: 4000 });
 
 const NOW = Date.parse('2026-10-20T12:00:00.000Z');
 
-/** One draft (spaghetti) and one launched rig, as rig.specs sends them. */
-function specsAnswer(
-  machine: string,
-  launchedName: string,
-  launchedStatus: string
-): RigSpecsOutput {
-  const base = { machine, specValid: true, summary: null, pods: [], specEdges: [], agents: [] };
-
-  return {
-    machines: [{ machine, status: 'ok', reason: null, collectedAt: '2026-10-20T11:59:00.000Z' }],
-    specs: [
-      {
-        ...base,
-        name: 'spaghetti',
-        launched: false,
-        rigStatus: null,
-        launchedOn: [],
-        specPath: '/Users/x/rigs/spaghetti/rig.yaml',
-      },
-      {
-        ...base,
-        name: launchedName,
-        launched: true,
-        rigStatus: launchedStatus,
-        launchedOn: [{ machine, status: launchedStatus }],
-        specPath: '/x/rig.yaml',
-      },
-    ],
-  };
-}
-
-const meta = (id: string, name: string, over: Partial<RigFileMeta> = {}) => ({
-  id,
-  name,
-  scope: 'spec' as const,
-  bytes: 40,
-  modifiedAt: '2026-10-20T10:00:00.000Z',
-  truncated: false,
-  ...over,
-});
 const RIG_YAML = 'name: x\nlong: ' + 'word '.repeat(80) + '\n  indented: 1\n';
 
 describe('V67: the files are the main view', () => {

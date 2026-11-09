@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { RigCommandsOutput, RigSpecsOutput } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
+import { specsAnswer as bareAnswer, withDraft } from '@client/test/specsFixtures.js';
 import { navGroups, pageFor } from '@client/app/registry.js';
 import { LEGEND_TITLE, PAGE_PURPOSE } from '@client/kit/index.js';
 import { answeringSocket, pageCtx } from '@client/pages/page-test-kit.js';
@@ -22,94 +23,73 @@ const seat = (pod: string, id: string, profile = id) => ({
 });
 
 /** The spaghetti rig as the collector sends it (shape of /Users/davidcruwys/dev/appyrigs/rigs/spaghetti). */
-function specsAnswer(
-  machine: string,
-  launchedName: string,
-  launchedStatus: string
-): RigSpecsOutput {
-  return {
-    machines: [{ machine, status: 'ok', reason: null, collectedAt: '2026-10-20T11:59:00.000Z' }],
-    specs: [
-      {
-        machine,
+const spaghetti = (machine: string): RigSpecsOutput['specs'][number] => ({
+  machine,
+  name: 'spaghetti',
+  launched: false,
+  rigStatus: null,
+  launchedOn: [],
+  specPath: '/Users/davidcruwys/dev/appyrigs/rigs/spaghetti/rig.yaml',
+  summary: 'Takes any application from spaghetti code to clean architecture.',
+  specValid: true,
+  pods: [
+    {
+      id: 'orch',
+      label: 'Orchestration',
+      summary: 'Hands each gate to its desk.',
+      members: ['lead'],
+      seats: [{ ...seat('orch', 'lead'), model: 'claude-opus-5-5' }],
+    },
+    {
+      id: 'gates',
+      label: 'Gate desks',
+      members: ['foundation', 'shape'],
+      seats: [seat('gates', 'foundation'), seat('gates', 'shape')],
+      edges: [{ kind: 'collaborates_with', from: 'foundation', to: 'shape' }],
+    },
+    {
+      id: 'review',
+      label: 'Review',
+      members: ['judge'],
+      seats: [seat('review', 'judge')],
+    },
+  ],
+  specEdges: [
+    { kind: 'delegates_to', from: 'orch.lead', to: 'gates.foundation' },
+    { kind: 'delegates_to', from: 'orch.lead', to: 'review.judge' },
+  ],
+  rigSpec: { version: '0.2', culture_file: 'CULTURE.md', docs: [{ path: 'RUNBOOK.md' }] },
+  agents: [
+    {
+      ref: 'local:agents/spaghetti',
+      status: 'ok',
+      usedBy: ['orch.lead', 'gates.foundation', 'gates.shape', 'review.judge'],
+      spec: {
         name: 'spaghetti',
-        launched: false,
-        rigStatus: null,
-        launchedOn: [],
-        specPath: '/Users/davidcruwys/dev/appyrigs/rigs/spaghetti/rig.yaml',
-        summary: 'Takes any application from spaghetti code to clean architecture.',
-        specValid: true,
-        pods: [
-          {
-            id: 'orch',
-            label: 'Orchestration',
-            summary: 'Hands each gate to its desk.',
-            members: ['lead'],
-            seats: [{ ...seat('orch', 'lead'), model: 'claude-opus-5-5' }],
+        version: '1.0',
+        description: 'A seat on the spaghetti rig.',
+        profiles: {
+          lead: {
+            summary: 'Hands each gate slice to its desk.',
+            preferences: { model: 'claude-opus-5-5' },
           },
-          {
-            id: 'gates',
-            label: 'Gate desks',
-            members: ['foundation', 'shape'],
-            seats: [seat('gates', 'foundation'), seat('gates', 'shape')],
-            edges: [{ kind: 'collaborates_with', from: 'foundation', to: 'shape' }],
+          foundation: {
+            summary: 'Desk, tier 1.',
+            preferences: { model: 'claude-sonnet-5-5' },
           },
-          {
-            id: 'review',
-            label: 'Review',
-            members: ['judge'],
-            seats: [seat('review', 'judge')],
+          shape: { summary: 'Desk, tier 2.', preferences: { model: 'claude-sonnet-5-5' } },
+          judge: {
+            summary: 'Independent judge.',
+            preferences: { model: 'claude-fable-5-1' },
           },
-        ],
-        specEdges: [
-          { kind: 'delegates_to', from: 'orch.lead', to: 'gates.foundation' },
-          { kind: 'delegates_to', from: 'orch.lead', to: 'review.judge' },
-        ],
-        rigSpec: { version: '0.2', culture_file: 'CULTURE.md', docs: [{ path: 'RUNBOOK.md' }] },
-        agents: [
-          {
-            ref: 'local:agents/spaghetti',
-            status: 'ok',
-            usedBy: ['orch.lead', 'gates.foundation', 'gates.shape', 'review.judge'],
-            spec: {
-              name: 'spaghetti',
-              version: '1.0',
-              description: 'A seat on the spaghetti rig.',
-              profiles: {
-                lead: {
-                  summary: 'Hands each gate slice to its desk.',
-                  preferences: { model: 'claude-opus-5-5' },
-                },
-                foundation: {
-                  summary: 'Desk, tier 1.',
-                  preferences: { model: 'claude-sonnet-5-5' },
-                },
-                shape: { summary: 'Desk, tier 2.', preferences: { model: 'claude-sonnet-5-5' } },
-                judge: {
-                  summary: 'Independent judge.',
-                  preferences: { model: 'claude-fable-5-1' },
-                },
-              },
-            },
-          },
-        ],
+        },
       },
-      {
-        machine,
-        name: launchedName,
-        launched: true,
-        rigStatus: launchedStatus,
-        launchedOn: [{ machine, status: launchedStatus }],
-        specPath: '/x/rig.yaml',
-        summary: null,
-        specValid: true,
-        pods: [],
-        specEdges: [],
-        agents: [],
-      },
-    ],
-  };
-}
+    },
+  ],
+});
+
+const specsAnswer = (machine: string, launchedName: string, launchedStatus: string) =>
+  withDraft(bareAnswer(machine, launchedName, launchedStatus), spaghetti(machine));
 
 const cmd = (ts: string, over: Partial<RigCommandsOutput['commands'][number]> = {}) => ({
   machine: 'm2',
