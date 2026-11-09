@@ -19,7 +19,8 @@ import {
 } from '@client/kit/index.js';
 import { mapPairs, type MapPair } from '@client/domain/rig-map/lines.js';
 import type { GraphRig } from '@client/domain/graph/model.js';
-import { TerminalCard, WallCard, tailLine } from '@client/kit/index.js';
+import { tailLine } from '@client/domain/fleet/terminal.js';
+import { TerminalCard, WallCard } from '@client/kit/index.js';
 import { cardBody } from '@client/domain/wall/model.js';
 import { findTile } from '@client/domain/fleet/seats.js';
 

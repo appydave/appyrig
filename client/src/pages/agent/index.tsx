@@ -8,9 +8,9 @@ import {
   modelChip,
   pipFor,
   seatName,
-  visibleTail,
   type TileRef,
 } from '@client/domain/fleet/model.js';
+import { visibleTail } from '@client/domain/fleet/terminal.js';
 import FocusTerminal from '@client/kit/FocusTerminal.js';
 import AnsiText from '@client/kit/AnsiText.js';
 import {

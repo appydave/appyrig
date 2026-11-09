@@ -1,14 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { FleetMachine, QueueItem, RigWaitingOutput } from '@appydave/shared';
-import {
-  PIP,
-  ago,
-  freshness,
-  modelChip,
-  pipFor,
-  seatName,
-  visibleTail,
-} from '@client/domain/fleet/model.js';
+import { PIP, ago, freshness, modelChip, pipFor, seatName } from '@client/domain/fleet/model.js';
+import { visibleTail } from '@client/domain/fleet/terminal.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import {
   CopyAttach,
