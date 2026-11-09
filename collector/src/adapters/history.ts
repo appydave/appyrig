@@ -1,4 +1,5 @@
 import { open, readdir, readFile, stat } from 'node:fs/promises';
+import type { Stats } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -280,6 +281,18 @@ export interface TranscriptFile {
   lastEventMs: number | null;
 }
 
+const isUnchanged = (info: FileInfo, st: Stats) =>
+  info.size === st.size && info.mtimeMs === st.mtimeMs;
+
+async function readFileInfo(path: string, st: Stats, knownSeat?: string | null): Promise<FileInfo> {
+  // A title never changes once found. A file without one is looked at again when it changes:
+  // a new transcript can be seen before its title row is written.
+  const seat = knownSeat ?? (await seatOfFile(path));
+  const lastEventMs = seat ? await lastEventOfFile(path, st.size) : null;
+
+  return { seat, size: st.size, mtimeMs: st.mtimeMs, lastEventMs };
+}
+
 /**
  * Finds seat transcripts: every `.jsonl` under the projects folder whose first line titles it as a
  * seat the daemon reports. The title never changes, so only a new file has its first line read.
@@ -319,18 +332,7 @@ export class TranscriptIndex {
         const path = join(this.projectsDir, dir, name);
 
         try {
-          const st = await stat(path);
-          let info = this.files.get(path);
-
-          if (!info || info.size !== st.size || info.mtimeMs !== st.mtimeMs) {
-            // A title never changes once found. A file without one is looked at again when it changes:
-            // a new transcript can be seen before its title row is written.
-            const seat = info?.seat ?? (await seatOfFile(path));
-            const last = seat ? await lastEventOfFile(path, st.size) : null;
-
-            info = { seat, size: st.size, mtimeMs: st.mtimeMs, lastEventMs: last };
-            this.files.set(path, info);
-          }
+          const info = await this.current(path, await stat(path));
 
           if (info.seat && knownSeats.has(info.seat)) {
             const f = {
@@ -350,6 +352,30 @@ export class TranscriptIndex {
 
     return bySeat;
   }
+
+  private async current(path: string, st: Stats): Promise<FileInfo> {
+    const info = this.files.get(path);
+
+    if (info && isUnchanged(info, st)) {
+      return info;
+    }
+
+    try {
+      const fresh = await readFileInfo(path, st, info?.seat);
+
+      this.files.set(path, fresh);
+
+      return fresh;
+    } catch (err) {
+      // A file we know belongs to a seat stays listed as last read, so a reader finds it can't be
+      // read and holds that seat. Dropped from the list, it would look like the file was never there.
+      if (info?.seat) {
+        return info;
+      }
+
+      throw err;
+    }
+  }
 }
 
 export interface PendingHistory {
@@ -362,6 +388,24 @@ export interface PendingHistory {
  * Finds seat transcripts and builds a SeatHistory per seat whose files changed since the last
  * accepted push. A seat with several transcripts (a rebuilt or resumed seat) gets them merged.
  */
+/** Every event of a seat's transcripts, or null when any one of them could not be read. */
+async function readAllEvents(list: TranscriptFile[]): Promise<SeatHistoryEvent[] | null> {
+  const events: SeatHistoryEvent[] = [];
+
+  try {
+    for (const f of list) {
+      // A loop, not push(...): a long transcript overflows the call stack when spread.
+      for (const event of parseTranscript(await readFile(f.path, 'utf8'))) {
+        events.push(event);
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return events;
+}
+
 export class HistoryReader {
   private readonly index: TranscriptIndex;
   private readonly sent = new Map<string, string>();
@@ -411,14 +455,12 @@ export class HistoryReader {
         continue;
       }
 
-      const events: SeatHistoryEvent[] = [];
+      const events = await readAllEvents(list);
 
-      for (const f of list) {
-        try {
-          events.push(...parseTranscript(await readFile(f.path, 'utf8')));
-        } catch {
-          // unreadable this round; the next round retries
-        }
+      // One unreadable file: send nothing and leave the seat unmarked. The hub replaces its copy with
+      // whatever arrives, so a part would overwrite the whole. The next round retries.
+      if (!events) {
+        continue;
       }
 
       events.sort((a, b) => a.at.localeCompare(b.at));
