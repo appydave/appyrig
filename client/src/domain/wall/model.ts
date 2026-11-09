@@ -1,4 +1,4 @@
-import type { FleetMachine, Seat } from '@appydave/shared';
+import type { FleetMachine, RigSummary, Seat } from '@appydave/shared';
 import {
   agentActivityOf,
   groupSeats,
@@ -40,8 +40,10 @@ function waitsAndIdle(seat: Seat, pip: string, now: number): boolean {
  * Failing is a seat that is down (stopped while its rig runs, or stopped and flagged by OpenRig).
  * A running seat OpenRig flags for attention is "stuck": it is up but needs a look.
  */
-function isFailing(seat: Seat, rigRunning: boolean): boolean {
-  return seat.status === 'stopped' && (seat.lifecycleState === 'attention_required' || rigRunning);
+function isFailing(seat: Seat, rig: RigSummary | undefined): boolean {
+  const rigUp = rig !== undefined && isLiveStatus(rig.status);
+
+  return seat.status === 'stopped' && (seat.lifecycleState === 'attention_required' || rigUp);
 }
 
 export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags {
@@ -52,7 +54,7 @@ export function seatFlags(seat: Seat, fm: FleetMachine, now: number): SeatFlags 
   const pip = pipFor(seat, fm);
   const rig = seat.rig ? fm.snapshot.rigs.find((r) => r.name === seat.rig) : undefined;
   const attention = seat.lifecycleState === 'attention_required';
-  const failing = isFailing(seat, rig?.status === 'running');
+  const failing = isFailing(seat, rig);
   const stuck = isUp(pip) && (attention || seat.work.blocked > 0 || waitsAndIdle(seat, pip, now));
 
   return { needs: pip === 'blocked', stuck, failing };

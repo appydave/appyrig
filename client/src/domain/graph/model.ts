@@ -414,7 +414,7 @@ function boxOf(
 ): GraphRig {
   const asked = askedDavid(fm, now);
   const stale = staleSeats(fm, now);
-  const running = ref?.status === 'running';
+  const running = isLiveStatus(ref?.status ?? '');
   const pips = seats.map((s) => pipFor(s, fm));
   const flags = seats.reduce(
     (acc, s, i) => {

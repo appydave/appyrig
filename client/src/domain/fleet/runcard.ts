@@ -1,4 +1,4 @@
-import type { FleetMachine, QueueItem } from '@appydave/shared';
+import type { FleetMachine, QueueItem, RigSummary } from '@appydave/shared';
 import { pipFor, seatName } from './model.js';
 import { endpointRig, isOpen, rigQueue } from './views/core/queue.js';
 
@@ -12,12 +12,13 @@ import { endpointRig, isOpen, rigQueue } from './views/core/queue.js';
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] || '?';
 const byCreated = (a: QueueItem, b: QueueItem) => a.createdAt.localeCompare(b.createdAt);
 
-export type RunWord = 'working' | 'waiting' | 'idle' | 'ended' | 'stopping' | 'asleep';
+export type RunWord = 'working' | 'waiting' | 'idle' | 'partial' | 'ended' | 'stopping' | 'asleep';
 
 export const RUN_WORD: Record<RunWord, { glyph: string; label: string }> = {
   working: { glyph: '●', label: 'working' },
   waiting: { glyph: '▲', label: 'waiting on David' },
   idle: { glyph: '○', label: 'idle' },
+  partial: { glyph: '◐', label: 'partly up' },
   ended: { glyph: '■', label: 'ended' },
   stopping: { glyph: '■', label: 'not running' },
   asleep: { glyph: '◌', label: 'not reporting' },
@@ -49,6 +50,22 @@ const firstLine = (s: string | null) => (s ?? '').split('\n')[0]!.trim();
 
 export const stepText = (q: QueueItem) =>
   `${bare(q.source)} → ${bare(q.destination)}: ${firstLine(q.summary) || q.tags.join(', ') || q.id}`;
+
+/** The same rule as `isLiveStatus`; importing it would make this file too unstable for plan.ts. */
+const isDown = (status: string) => status !== 'running' && status !== 'partial';
+
+/** A live rig with no seat mid-turn and nothing open to David: idle, or part of it is down. */
+function quietState(rig: RigSummary): RunState {
+  return rig.status === 'partial'
+    ? {
+        word: 'partial',
+        why: `OpenRig says only part of this rig is up: ${rig.runningCount} of ${rig.nodeCount} seats.`,
+      }
+    : {
+        word: 'idle',
+        why: 'Running, no seat mid-turn, and its newest handoff is not an open item to David.',
+      };
+}
 
 /**
  * R1: the state in words. Order: machine asleep (we cannot know now) > rig stopped or archived
@@ -89,7 +106,7 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
     };
   } else if (summary.status === 'stopped' || summary.status === 'archived') {
     state = { word: 'ended', why: `OpenRig says the rig is ${summary.status}.` };
-  } else if (summary.status !== 'running') {
+  } else if (isDown(summary.status)) {
     // r1 LOW-1: a status that is neither running nor finished is said as it is, not "ended".
     state = { word: 'stopping', why: `OpenRig says the rig is ${summary.status}.` };
   } else if (blocked.length) {
@@ -111,10 +128,7 @@ export function runCard(fm: FleetMachine, rig: string, now: number): RunCardMode
       why: `Its newest handoff went to David (${bare(newest.source)} → ${newest.destination}) and is still open; no seat is working.`,
     };
   } else {
-    state = {
-      word: 'idle',
-      why: 'Running, no seat mid-turn, and its newest handoff is not an open item to David.',
-    };
+    state = quietState(summary);
   }
 
   return {

@@ -5,6 +5,7 @@ import { isLiveStatus } from '@client/domain/fleet/views/core/rigState.js';
 import '@client/kit/data/coverage.css';
 import { FakeControl, MockMark, MockNote, PageHeader, SampleData } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
+import { emptyWords } from '@client/domain/needs-you/emptyWords.js';
 import {
   FILTERS,
   KIND_LABEL,
@@ -218,6 +219,12 @@ function useGates(ctx: PageProps['ctx']): GatesState {
   return state;
 }
 
+/** The filter's name, when it is one nothing real is collected for yet. */
+const uncollectedLabel = (filter: NeedFilter) =>
+  filter === 'approval' || filter === 'shipped' || filter === 'progress'
+    ? FILTERS.find((f) => f.key === filter)!.label.toLowerCase()
+    : null;
+
 function NeedsYou({ ctx }: PageProps) {
   const [filter, setFilter] = useState<NeedFilter>('all');
   const [showStale, setShowStale] = useState(false);
@@ -320,13 +327,12 @@ function NeedsYou({ ctx }: PageProps) {
 
       {fresh.length === 0 && stale.length === 0 && (
         <p className="quiet" data-testid="ny-empty">
-          {filter === 'approval' || filter === 'shipped' || filter === 'progress'
-            ? `Nothing real is collected for ${FILTERS.find((f) => f.key === filter)!.label.toLowerCase()} yet; the sample cards below show the shape.`
-            : ctx.machines.length === 0
-              ? 'No machine is reporting, so this cannot say what is waiting (not the same as nothing waiting).'
-              : unread > 0 || !loaded
-                ? 'Nothing found so far, but not every rig could be read for gates (see above): that is not the same as nothing waiting.'
-                : 'Nothing is waiting on David.'}
+          {emptyWords({
+            uncollected: uncollectedLabel(filter),
+            machineCount: ctx.machines.length,
+            asleep: asleep.map((m) => m.machine.label),
+            gatesUnread: unread > 0 || !loaded,
+          })}
         </p>
       )}
       {fresh.length > 0 && (

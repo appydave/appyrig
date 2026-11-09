@@ -14,7 +14,7 @@ import {
  * fields), with less detail (no profiles, no AgentSpecs). Nothing here is made up.
  */
 
-export type SpecState = 'draft' | 'running' | 'launched';
+export type SpecState = 'draft' | 'running' | 'partial' | 'launched';
 
 export interface ShownSeat {
   id: string;
@@ -69,7 +69,7 @@ export interface ShownSpec {
 }
 
 const stateOf = (launched: boolean, rigStatus: string | null): SpecState =>
-  !launched ? 'draft' : rigStatus === 'running' ? 'running' : 'launched';
+  !launched ? 'draft' : rigStatus === 'running' || rigStatus === 'partial' ? rigStatus : 'launched';
 
 /** Where the rig lives: its own machine if launched there, else the machine running it (else any that knows it). */
 function liveOf(s: RigSpecsOutput['specs'][number]): {
@@ -184,7 +184,7 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
   }
 
   // Drafts first (the ones being written now), then running, then the rest; by name inside each.
-  const rank: Record<SpecState, number> = { draft: 0, running: 1, launched: 2 };
+  const rank: Record<SpecState, number> = { draft: 0, running: 1, partial: 2, launched: 3 };
 
   return out.sort(
     (a, b) =>
@@ -195,6 +195,7 @@ export function shownSpecs(value: RigSpecsOutput | null, machines: FleetMachine[
 export const STATE_WORD: Record<SpecState, string> = {
   draft: 'draft (not launched)',
   running: 'running',
+  partial: 'partly running',
   launched: 'launched, not running',
 };
 

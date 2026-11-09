@@ -989,9 +989,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 2
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
     }
   },
   "client/src/pages/needs-you/needs-you.test.tsx": {

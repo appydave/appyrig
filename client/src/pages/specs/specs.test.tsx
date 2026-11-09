@@ -443,3 +443,14 @@ describe('N10: the Rig specs model', () => {
     expect(shownCommands(rows, null, false)).toHaveLength(3);
   });
 });
+
+describe('a partial rig is not "launched, not running" (AFTER audit)', () => {
+  it('says only part of it is running', () => {
+    const base = fleetMachine(snapshot('m2'));
+    const rig = { ...base.snapshot.rigs[0]!, status: 'partial' };
+    const m2 = { ...base, snapshot: { ...base.snapshot, rigs: [rig] } };
+    const shown = shownSpecs(specsAnswer('m2', rig.name, 'partial'), [m2]);
+
+    expect(shown.find((s) => s.name === rig.name)!.state).toBe('partial');
+  });
+});
