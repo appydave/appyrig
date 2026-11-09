@@ -10,6 +10,8 @@ export const STATE_HELP: Record<SpecState, string> = {
     'Draft (not launched): the rig.yaml is written, but no OpenRig on any machine has a record of this rig, so there are no live seats. It stays a draft until someone starts it (rig up); then it becomes running. If OpenRig later forgets the rig, it goes back to draft.',
   running:
     'Running: OpenRig has this rig and its status is running (on this machine, or on another one that launched it from its own copy of the spec). It was a draft until it was started. It becomes "launched, not running" when the rig is stopped.',
+  partial:
+    'Partly running: OpenRig has this rig and says only some of its seats are up. It is live, not stopped; the seats that are down may need restarting.',
   launched:
     'Launched, not running: OpenRig has a record of this rig, but its status is not running (stopped, for example). It got here by being started once and then stopped. Starting it again makes it running.',
 };
