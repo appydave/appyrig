@@ -308,23 +308,23 @@
         "exports": 6,
         "types": 1
       },
-      "collector/src/adapters/rigcommands.ts": {
+      "collector/src/adapters/rig/rigcommands.ts": {
         "exports": 4
       },
-      "collector/src/adapters/rigfiles.ts": {
+      "collector/src/adapters/rig/rigfiles.ts": {
         "exports": 5
       },
-      "collector/src/adapters/rigspecs.ts": {
+      "collector/src/adapters/rig/rigspecs.ts": {
         "exports": 1
+      },
+      "collector/src/adapters/rig/specs.ts": {
+        "exports": 2
       },
       "collector/src/adapters/seatcard.ts": {
         "exports": 1
       },
       "collector/src/adapters/sources.ts": {
         "exports": 1
-      },
-      "collector/src/adapters/specs.ts": {
-        "exports": 2
       },
       "collector/src/adapters/tmux.ts": {
         "exports": 1

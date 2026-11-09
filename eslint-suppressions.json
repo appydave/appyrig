@@ -1323,7 +1323,7 @@
       "count": 1
     }
   },
-  "collector/src/adapters/rigcommands.ts": {
+  "collector/src/adapters/rig/rigcommands.ts": {
     "max-params": {
       "count": 2
     },
@@ -1331,12 +1331,12 @@
       "count": 1
     }
   },
-  "collector/src/adapters/rigfiles.test.ts": {
+  "collector/src/adapters/rig/rigfiles.test.ts": {
     "max-lines": {
       "count": 1
     }
   },
-  "collector/src/adapters/rigfiles.ts": {
+  "collector/src/adapters/rig/rigfiles.ts": {
     "max-lines": {
       "count": 1
     },
@@ -1353,7 +1353,7 @@
       "count": 1
     }
   },
-  "collector/src/adapters/rigspecs.ts": {
+  "collector/src/adapters/rig/rigspecs.ts": {
     "max-lines-per-function": {
       "count": 1
     },
@@ -1362,6 +1362,25 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 3
+    }
+  },
+  "collector/src/adapters/rig/specView.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    }
+  },
+  "collector/src/adapters/rig/specs.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
     }
   },
   "collector/src/adapters/seatcard.ts": {
@@ -1381,25 +1400,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 1
-    }
-  },
-  "collector/src/adapters/specView.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
-  "collector/src/adapters/specs.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 2
     }
   },
   "collector/src/adapters/tmux.ts": {

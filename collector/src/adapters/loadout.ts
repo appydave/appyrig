@@ -22,7 +22,7 @@ import {
 } from '@appydave/shared';
 import { redactDeep, redactString } from '@collector/redact.js';
 import { defaultProjectsDir, TranscriptIndex, type TranscriptFile } from './history.js';
-import type { SpecInfo } from './specs.js';
+import type { SpecInfo } from './rig/specs.js';
 
 /**
  * v1.5 · L1: what a seat runs with, for the Debug view.

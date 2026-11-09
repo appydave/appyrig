@@ -235,14 +235,14 @@
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 1
     },
-    "collector/src/adapters/rigcommands.test.ts": {
+    "collector/src/adapters/rig/rigcommands.test.ts": {
       "no-unsafe-dictionary-type": 1
     },
-    "collector/src/adapters/rigcommands.ts": {
+    "collector/src/adapters/rig/rigcommands.ts": {
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 3
     },
-    "collector/src/adapters/specs.ts": {
+    "collector/src/adapters/rig/specs.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
     "collector/src/adapters/tmux.ts": {

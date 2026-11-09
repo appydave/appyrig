@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readAccount } from './account.js';
 import { causeOf, errnoCode, errorMessage } from './narrow/errors.js';
-import { createSpecIndex } from './specs.js';
+import { createSpecIndex } from './rig/specs.js';
 import { createHealthSampler } from './health.js';
 import {
   parseGraphEdges,

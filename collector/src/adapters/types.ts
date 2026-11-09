@@ -1,4 +1,4 @@
-import type { SpecInfo } from './specs.js';
+import type { SpecInfo } from './rig/specs.js';
 import type { HealthSample } from './health.js';
 import type { AccountUsage, QueueItem, RigSummary, Seat, ViewerStatus } from '@appydave/shared';
 

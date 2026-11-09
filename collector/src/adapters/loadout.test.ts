@@ -36,7 +36,7 @@ import {
   type Exec,
   type LoadoutSeat,
 } from './loadout.js';
-import { parseSpec, type SpecInfo } from './specs.js';
+import { parseSpec, type SpecInfo } from './rig/specs.js';
 
 const dirs: string[] = [];
 const tmp = () => {
