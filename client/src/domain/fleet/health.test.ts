@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FleetMachine, MachineHealth } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import { clockAheadText } from '@appydave/shared';
-import { swapAllocated } from '@client/lib/readings.js';
+import { swapUsed } from '@client/lib/readings.js';
 import { HEALTH_STALE_MS, healthAge, pressureOf } from './health.js';
 
 const GB = 1024 ** 3;
@@ -30,12 +30,12 @@ function machine(
 }
 
 describe('C89: the badge is the kernel pressure level, and swap never moves it', () => {
-  it("Roamy's case: macOS says normal, swap 12.8 of 14 GB: normal, with swap only as allocated", () => {
+  it("Roamy's case: macOS says normal, swap 12.8 of 14 GB: normal, with swap only as used", () => {
     const p = pressureOf(machine('normal', 12.8, 14));
 
     expect(p).toMatchObject({ kind: 'normal', word: 'normal', glyph: '●' });
     expect(p.basis).toContain('macOS memory pressure');
-    expect(p.basis).toContain('12.8 GiB allocated');
+    expect(p.basis).toContain('12.8 GiB used');
     expect(p.basis).not.toMatch(/\d\s*%|14 G/);
   });
 
@@ -69,9 +69,9 @@ describe('C89: the badge is the kernel pressure level, and swap never moves it',
     expect(readers).toEqual([]);
   });
 
-  it('swap shows as GiB allocated', () => {
-    expect(swapAllocated(12.8 * GB)).toBe('12.8 GiB allocated');
-    expect(swapAllocated(0)).toBe('0 GiB allocated');
+  it('swap shows as GiB used, never against a total', () => {
+    expect(swapUsed(12.8 * GB)).toBe('12.8 GiB used');
+    expect(swapUsed(0)).toBe('0 GiB used');
   });
 });
 

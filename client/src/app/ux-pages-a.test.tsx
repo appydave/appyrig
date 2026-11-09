@@ -197,7 +197,7 @@ describe('#8 and #10: the Wall', () => {
 });
 
 describe('#6 Machines', () => {
-  it('shows swap as allocated GiB, "could be freed" beside memory, and the latest release as a small sample line', () => {
+  it('shows swap as GiB used, "could be freed" beside memory, and the latest release as a small sample line', () => {
     const fm = fleetMachine(snapshot('m2'));
 
     fm.snapshot.health = {
@@ -224,7 +224,7 @@ describe('#6 Machines', () => {
 
     const swap = screen.getByTestId('mc2-swap');
 
-    expect(swap).toHaveTextContent('0.9 GiB allocated');
+    expect(swap).toHaveTextContent('0.9 GiB used');
     expect(swap).not.toHaveTextContent(/%|\//);
     expect(swap.querySelector('.mc2-meter-bar')).toBeNull();
 

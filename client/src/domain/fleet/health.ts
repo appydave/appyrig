@@ -1,5 +1,5 @@
 import { sampleAge, type FleetMachine, type MachineHealth, type SampleAge } from '@appydave/shared';
-import { swapAllocated } from '@client/lib/readings.js';
+import { swapUsed } from '@client/lib/readings.js';
 
 /**
  * v1.4 S6: machine health in words (mochaccino machine-health, B). The collector re-samples every
@@ -101,8 +101,7 @@ function verdictOf(fm: FleetMachine): PressureView {
   // used / total measures nothing, and it alarmed on healthy machines.
   const kind = p.value;
   const swap = h.memory.swapUsedBytes;
-  const swapWords =
-    swap.status === 'ok' ? `Swap: ${swapAllocated(swap.value)}` : 'Swap not readable';
+  const swapWords = swap.status === 'ok' ? `Swap: ${swapUsed(swap.value)}` : 'Swap not readable';
 
   return {
     kind,
