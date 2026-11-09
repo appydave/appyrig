@@ -65,3 +65,30 @@ describe('V55: scroll across pages', () => {
     await waitFor(() => expect(y).toBe(90));
   });
 });
+
+describe('the top-offset measure when the app closes', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    document.documentElement.removeAttribute('data-agent-panel');
+  });
+
+  it('leaves no timer or frame behind, and never measures after the app is gone', async () => {
+    vi.useFakeTimers();
+
+    const socket: FleetSocket = io('http://localhost:1', { autoConnect: false });
+    const { unmount } = render(<App getSocket={() => socket} />);
+    const told = vi.fn();
+
+    window.addEventListener('appyrig:top-offset', told);
+    // a panel flag change re-measures once the layout settles (a frame and a 250 ms timer)
+    document.documentElement.setAttribute('data-agent-panel', 'peek');
+    await act(async () => {});
+    expect(vi.getTimerCount()).toBeGreaterThan(0);
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(1000);
+    expect(told).not.toHaveBeenCalled();
+    expect(document.documentElement.style.getPropertyValue('--ar-top-offset')).toBe('');
+    window.removeEventListener('appyrig:top-offset', told);
+  });
+});
