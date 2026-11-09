@@ -15,6 +15,31 @@ const positions = (page: Page, selector: string) =>
     selector
   );
 
+/**
+ * Waits for the web fonts, then for the boxes to hold still across a gap. On a cold open the Wall's
+ * header wraps in the fallback font and unwraps when the web font lands, moving every card 35 px,
+ * so a comparison made across that reads the page settling as a card moving.
+ */
+async function settled(page: Page, selector: string) {
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+
+  let last = '';
+
+  await expect
+    .poll(
+      async () => {
+        const now = JSON.stringify(await positions(page, selector));
+        const still = now === last;
+
+        last = now;
+
+        return still;
+      },
+      { message: `${selector} never held still`, intervals: [300], timeout: 10_000 }
+    )
+    .toBe(true);
+}
+
 test('pressing Replay run and Pause moves nothing on the replay bar', async ({ page }) => {
   await page.goto('/?frozen=busy-2026-10-18&v=2&page=flow');
   await expect(page.getByTestId('flow-play')).toBeVisible({ timeout: 20_000 });
@@ -42,11 +67,14 @@ test('a seat turning working or blocked moves nothing inside its card', async ({
     }, state);
 
   await setStates('idle');
+  await settled(page, parts);
 
   const before = await positions(page, parts);
 
   for (const state of ['working', 'blocked', 'idle']) {
     await setStates(state);
+    // Settling here too, so a shift that arrives late (a transition) is measured, not missed.
+    await settled(page, parts);
     expect(await positions(page, parts)).toEqual(before);
   }
 });
