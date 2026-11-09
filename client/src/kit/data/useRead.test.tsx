@@ -117,6 +117,20 @@ describe('useRead: one verb call, four states', () => {
     expect(asked.map((a) => a.request.input)).toEqual([{ rig: 'a' }, { rig: 'b' }]);
   });
 
+  it('a changed verb asks again, with the new verb and the same input', () => {
+    const { asked, getSocket } = holdingSocket();
+    const { rerender } = renderHook(({ verb }) => useRead(getSocket, verb, { rig: 'a' }), {
+      initialProps: { verb: 'rig.files' },
+    });
+
+    rerender({ verb: 'rig.waiting' });
+
+    expect(asked.map((a) => a.request)).toEqual([
+      { verb: 'rig.files', input: { rig: 'a' } },
+      { verb: 'rig.waiting', input: { rig: 'a' } },
+    ]);
+  });
+
   it('a late answer to an earlier input is ignored', async () => {
     const { asked, getSocket } = holdingSocket();
     const { result, rerender } = renderHook(({ rig }) => useRead(getSocket, 'rig.files', { rig }), {
