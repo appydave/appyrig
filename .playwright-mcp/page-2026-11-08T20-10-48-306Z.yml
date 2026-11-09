@@ -1,0 +1,50 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic "AppyRig" [ref=e5]
+    - navigation "Screens" [ref=e6]:
+      - group "Groups" [ref=e7]:
+        - button "Fleet" [pressed] [ref=e8] [cursor=pointer]
+        - button "Work" [ref=e9] [cursor=pointer]
+        - button "Agents" [ref=e10] [cursor=pointer]
+        - button "Under the hood" [ref=e11] [cursor=pointer]
+      - group "Pages" [ref=e12]:
+        - button "Wall" [ref=e13] [cursor=pointer]
+        - button "Graph" [ref=e14] [cursor=pointer]
+        - button "Rig specs" [ref=e15] [cursor=pointer]
+        - button "Run board" [ref=e16] [cursor=pointer]
+        - button "Machines" [ref=e17] [cursor=pointer]
+        - button "Accounts" [ref=e18] [cursor=pointer]
+      - 'img "What this page is for: Every agent on every machine as a card, grouped by rig. Which ones are working, which need you, which are stopped." [ref=e19]': ⓘ
+    - button "Legend · L" [ref=e20] [cursor=pointer]
+    - button "More helpers" [ref=e22] [cursor=pointer]: ⋯
+  - generic [ref=e23]:
+    - complementary [ref=e24]:
+      - button "Rigs" [ref=e25] [cursor=pointer]:
+        - generic [aria-hidden] [ref=e27]: ›
+    - generic [ref=e28]:
+      - note "AppyRig shows your OpenRig teams. Pick a rig on the left. Legend names every mark." [ref=e30]:
+        - generic [ref=e31]: AppyRig shows your OpenRig teams across your machines · pick a rig on the left · Legend · L names every mark
+        - button "Got it" [ref=e32] [cursor=pointer]
+      - button "Fleet 0 seats · 0 machines" [ref=e33] [cursor=pointer]:
+        - region "Fleet" [ref=e35]:
+          - generic [ref=e36]: Connecting to hub…
+        - generic [ref=e37]: 0 seats · 0 machines
+      - main "The Wall" [ref=e38]:
+        - generic [ref=e39]:
+          - heading "Wall" [level=2] [ref=e40]
+          - generic [ref=e41]: 0 agents
+          - generic [ref=e43]:
+            - group "Wall filters" [ref=e44]:
+              - button "All 0" [pressed] [ref=e45] [cursor=pointer]
+              - button "Needs me 0" [ref=e46] [cursor=pointer]
+              - button "Stuck 0" [ref=e47] [cursor=pointer]
+              - button "Failing 0" [ref=e48] [cursor=pointer]
+              - group "Wall order" [ref=e49]:
+                - generic [ref=e50]: "Order:"
+                - button "By machine" [pressed] [ref=e51] [cursor=pointer]
+                - button "Busiest first" [ref=e52] [cursor=pointer]
+              - button "● Hide stopped" [pressed] [ref=e53] [cursor=pointer]
+            - generic [ref=e54]:
+              - button "Mock controls" [ref=e55] [cursor=pointer]: ⋯
+              - 'generic "mock. Not wired: this control is a mock and changes nothing" [ref=e56]': mock
+        - paragraph [ref=e57]: "Reads the default tmux server on each machine only: a session on another tmux server, in herdr or in iTerm is not shown."

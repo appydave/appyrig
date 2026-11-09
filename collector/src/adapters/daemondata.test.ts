@@ -101,6 +101,32 @@ describe('v2 · seat detail (step 2)', () => {
     expect(() => parseSeatDetail('not an object')).toThrow(/object/);
   });
 
+  it('pins each skip and cap rule of the seat-detail rows', () => {
+    const d = parseSeatDetail({
+      compactSpec: { name: 'compact-name', profile: 'compact-profile' },
+      startupFiles: [{ path: '' }, { path: 'a.md', appliesOn: [1, 'x', ...Array(12).fill('y')] }],
+      startupActions: ['junk', { phase: 'p' }, { type: 'send_text', value: 5 }],
+      peers: [{ canonicalSessionName: 's' }, { logicalId: 'dev.qa' }],
+      recoveryGuidance: { summary: 'first', notes: [1, 'second', ...Array(12).fill('n')] },
+      installedResources: [{ id: 'r1' }],
+    });
+
+    expect(d.spec).toEqual({
+      name: 'compact-name',
+      version: null,
+      profile: 'compact-profile',
+      hash: null,
+    });
+    expect(d.startupFiles).toHaveLength(1);
+    expect(d.startupFiles[0]!.appliesOn).toEqual(['x', ...Array(9).fill('y')]);
+    expect(d.startupActions).toEqual([{ type: 'send_text', phase: null, text: null }]);
+    expect(d.peers).toEqual([{ logicalId: 'dev.qa', session: null, runtime: null }]);
+    expect(d.recoveryNotes).toHaveLength(10);
+    expect(d.recoveryNotes.slice(0, 2)).toEqual(['first', 'second']);
+    expect(d.installedResources).toEqual([{ id: 'r1', category: null }]);
+    expect(parseSeatDetail({}).spec).toBeNull();
+  });
+
   const T = { seat: 'dev-build@r', rigId: 'RIG1', logicalId: 'dev.build' };
   const reader = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) => {
     let t = 1_000_000;
@@ -1121,6 +1147,39 @@ describe('v2 · settings (step 5)', () => {
     });
 
     expect(risky.settings).toEqual({});
+  });
+
+  it('pins how each kind of setting value is read', () => {
+    const entry = (value: unknown, defaultValue?: unknown) => ({
+      value,
+      source: 'file',
+      defaultValue,
+    });
+    const s = parseSettings({
+      settings: {
+        'daemon.port': entry(Number.POSITIVE_INFINITY),
+        'ui.timezone': entry('x'.repeat(300), '~/mine'),
+        'feed.subscriptions.approvals': entry(false, Number.NaN),
+        'retention.transitions_days': entry(null, [1, 2]),
+        'health.context_pressure.warning_percent': 'not a record',
+      },
+    });
+
+    // a non-finite number is skipped, not counted as withheld
+    expect(s.settings['daemon.port']).toBeUndefined();
+    expect((s.settings['ui.timezone']!.value as string).length).toBe(200);
+    expect(s.settings['ui.timezone']!.defaultValue).toBe('(path hidden)');
+    expect(s.settings['feed.subscriptions.approvals']).toMatchObject({
+      value: false,
+      defaultValue: null,
+    });
+    expect(s.settings['retention.transitions_days']).toMatchObject({
+      value: null,
+      defaultValue: '[1,2]',
+    });
+    expect(s.pathsHidden).toBe(1);
+    expect(s.withheld).toBe(0);
+    expect(() => parseSettings({ settings: 'x' })).toThrow(/settings/);
   });
 
   it('is read, validated and 404-aware; an unreadable config pushes nothing', async () => {
