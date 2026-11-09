@@ -73,9 +73,6 @@
     "client/src/domain/settings/model.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/kit/DocsDrawer.tsx": {
-      "no-unsafe-dictionary-type": 1
-    },
     "client/src/kit/ErrorFallback.test.tsx": {
       "no-chained-type-assertions": 1
     },
@@ -115,7 +112,10 @@
     "client/src/kit/data/index.tsx": {
       "no-unsafe-dictionary-type": 1
     },
-    "client/src/kit/docs.test.tsx": {
+    "client/src/kit/drawer/DocsDrawer.tsx": {
+      "no-unsafe-dictionary-type": 1
+    },
+    "client/src/kit/drawer/docs.test.tsx": {
       "no-chained-type-assertions": 1
     },
     "client/src/kit/legendData.ts": {

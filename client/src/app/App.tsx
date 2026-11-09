@@ -18,7 +18,7 @@ import RigDrawer from '@client/shell/RigDrawer.js';
 import StripShell from '@client/shell/StripShell.js';
 import MoreMenu from '@client/shell/MoreMenu.js';
 import V1Archive from '@client/kit/V1Archive.js';
-import AgentPanel from '@client/kit/AgentPanel.js';
+import AgentPanel from '@client/kit/drawer/AgentPanel.js';
 import { readUrlState, rigFromParam, rigToParam, writeParams } from '@client/shell/urlState.js';
 import '@client/shell/shell.css';
 

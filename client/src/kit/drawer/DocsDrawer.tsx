@@ -11,8 +11,8 @@ import { callVerb } from '@client/domain/fleet/coreCall.js';
 import { readRigFile } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { seatName } from '@client/domain/fleet/model.js';
-import MarkdownView from './MarkdownView.js';
-import YamlView from './YamlView.js';
+import MarkdownView from '@client/kit/MarkdownView.js';
+import YamlView from '@client/kit/YamlView.js';
 import {
   DOC_GROUPS,
   buildDocItems,

@@ -10,7 +10,13 @@ import {
   visibleTail,
 } from '@client/domain/fleet/model.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
-import { CopyAttach, HarnessMark, RoleTag, pctText, tokensText } from './SeatCardLines.js';
+import {
+  CopyAttach,
+  HarnessMark,
+  RoleTag,
+  pctText,
+  tokensText,
+} from '@client/kit/SeatCardLines.js';
 import type { AgentPanelTab, AgentPanelTarget } from '@client/app/types.js';
 import { findTile, seatAddresses } from '@client/domain/fleet/seats.js';
 import { plainLine } from '@client/domain/fleet/terminal.js';

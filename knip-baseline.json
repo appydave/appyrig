@@ -193,12 +193,6 @@
       "client/src/domain/wall/model.ts": {
         "exports": 2
       },
-      "client/src/kit/AgentPanel.tsx": {
-        "exports": 1
-      },
-      "client/src/kit/DocsDrawer.tsx": {
-        "exports": 1
-      },
       "client/src/kit/HandoffLineMarks.tsx": {
         "exports": 2
       },
@@ -226,13 +220,19 @@
       "client/src/kit/TerminalCard.tsx": {
         "exports": 2
       },
+      "client/src/kit/drawer/AgentPanel.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/drawer/DocsDrawer.tsx": {
+        "exports": 1
+      },
+      "client/src/kit/drawer/useTopOffset.ts": {
+        "exports": 1
+      },
       "client/src/kit/index.ts": {
         "exports": 15
       },
       "client/src/kit/legendData.ts": {
-        "exports": 1
-      },
-      "client/src/kit/useTopOffset.ts": {
         "exports": 1
       },
       "client/src/kit/v1ArchiveManifest.ts": {
