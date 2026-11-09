@@ -111,6 +111,27 @@ const stabilityWorld = (stableImports: string): Record<string, string> => ({
   'stable.ts': `${stableImports}\nexport const stable = 1;\n`,
 });
 
+describe('the two files exempt from the coupling limit by name (G14, D107)', () => {
+  const from = (depth: string) => importer(21).replaceAll("'./", `'${depth}`);
+
+  it('leaves the page list and useFleet alone, and still flags a third file over the limit', () => {
+    const found = scan({
+      ...leaves(21),
+      'app/registry.ts': from('../'),
+      'domain/fleet/useFleet.ts': from('../../'),
+      'wide.ts': importer(21),
+    });
+
+    expect(found.coupling).toEqual({ 'probe/src/wide.ts': 21 });
+  });
+
+  it('exempts those paths only: a file merely named registry.ts elsewhere is still flagged', () => {
+    const found = scan({ ...leaves(21), 'other/registry.ts': from('../') });
+
+    expect(found.coupling).toEqual({ 'probe/src/other/registry.ts': 21 });
+  });
+});
+
 describe('which imports the stability rule flags', () => {
   it('flags a stable module that imports a volatile one', () => {
     const found = scan(stabilityWorld("import { all } from './volatile.js';\nvoid all;"));
