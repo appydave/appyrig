@@ -115,98 +115,105 @@ export function parseSeatDetail(raw: unknown): SeatDetailData {
     throw new Error('node detail: expected a JSON object');
   }
 
-  const compact = isRec(raw.compactSpec) ? raw.compactSpec : {};
-  const specName = txt(raw.resolvedSpecName, TEXT_LONG_MAX) ?? txt(compact.name, TEXT_LONG_MAX);
-  const specVersion =
-    txt(raw.resolvedSpecVersion, TEXT_SHORT_MAX) ?? txt(compact.version, TEXT_SHORT_MAX);
-  const profile = txt(raw.profile, TEXT_LONG_MAX) ?? txt(compact.profile, TEXT_LONG_MAX);
-  const hash = txt(raw.resolvedSpecHash, TEXT_LONG_MAX);
-  const spec =
-    specName || specVersion || profile || hash
-      ? { name: specName, version: specVersion, profile, hash }
-      : null;
-  const guidance = isRec(raw.recoveryGuidance) ? raw.recoveryGuidance : {};
-  const notes = [
+  return SeatDetailDataSchema.parse({
+    spec: specOf(raw),
+    startupFiles: kept(list(raw.startupFiles), startupFileOf),
+    startupActions: kept(list(raw.startupActions), startupActionOf),
+    peers: kept(list(raw.peers), peerOf),
+    recoveryNotes: notesOf(raw),
+    installedResources: kept(list(raw.installedResources), resourceOf),
+  });
+}
+
+/** The record, or an empty one: a field that is not an object reads as "nothing there". */
+const recOf = (v: unknown) => (isRec(v) ? v : {});
+
+/** The rows `one` accepts, in order; a row it returns null for is skipped, never guessed. */
+const kept = <T>(rows: unknown[], one: (row: unknown) => T | null): T[] =>
+  rows.map(one).filter((r): r is T => r !== null);
+
+/** A text field from the node itself, else the same field of its compact spec. */
+const specText = (own: unknown, compact: unknown, max: number) =>
+  txt(own, max) ?? txt(compact, max);
+
+/** The resolved spec (name, version, profile, hash); null when the node names none of them. */
+function specOf(raw: unknown) {
+  const node = recOf(raw);
+  const compact = recOf(node.compactSpec);
+  const spec = {
+    name: specText(node.resolvedSpecName, compact.name, TEXT_LONG_MAX),
+    version: specText(node.resolvedSpecVersion, compact.version, TEXT_SHORT_MAX),
+    profile: specText(node.profile, compact.profile, TEXT_LONG_MAX),
+    hash: txt(node.resolvedSpecHash, TEXT_LONG_MAX),
+  };
+
+  return Object.values(spec).some((v) => v !== null) ? spec : null;
+}
+
+/** The recovery guidance: its summary then its notes, redacted, at most ten. */
+function notesOf(raw: unknown): string[] {
+  const guidance = recOf(recOf(raw).recoveryGuidance);
+
+  return [
     txt(guidance.summary, TEXT_XXLONG_MAX, true),
     ...list(guidance.notes).map((n) => txt(n, TEXT_XXLONG_MAX, true)),
   ]
     .filter((n): n is string => n !== null)
     .slice(0, 10);
+}
 
-  return SeatDetailDataSchema.parse({
-    spec,
-    startupFiles: list(raw.startupFiles).flatMap((f) => {
-      if (!isRec(f)) {
-        return [];
+/** One startup file; a row with no path is not a file. */
+function startupFileOf(f: unknown) {
+  const row = recOf(f);
+  const path = txt(row.path, TEXT_XXXLONG_MAX);
+
+  return path
+    ? {
+        path,
+        deliveryHint: txt(row.deliveryHint, TEXT_SHORT_MAX),
+        required: bool(row.required),
+        appliesOn: list(row.appliesOn)
+          .map((a) => txt(a, TEXT_SHORT_MAX))
+          .filter((a): a is string => a !== null)
+          .slice(0, 10),
       }
+    : null;
+}
 
-      const path = txt(f.path, TEXT_XXXLONG_MAX);
+/** One startup action; a row with no type is not an action. Its text is redacted. */
+function startupActionOf(a: unknown) {
+  const row = recOf(a);
+  const type = txt(row.type, TEXT_SHORT_MAX);
 
-      if (!path) {
-        return [];
+  return type
+    ? {
+        type,
+        phase: txt(row.phase, TEXT_SHORT_MAX),
+        text: txt(row.value, TEXT_XXXLONG_MAX, true),
       }
+    : null;
+}
 
-      return [
-        {
-          path,
-          deliveryHint: txt(f.deliveryHint, TEXT_SHORT_MAX),
-          required: bool(f.required),
-          appliesOn: list(f.appliesOn)
-            .map((a) => txt(a, TEXT_SHORT_MAX))
-            .filter((a): a is string => a !== null)
-            .slice(0, 10),
-        },
-      ];
-    }),
-    startupActions: list(raw.startupActions).flatMap((a) => {
-      if (!isRec(a)) {
-        return [];
+/** One peer seat; a row with no logical id is not a peer. */
+function peerOf(p: unknown) {
+  const row = recOf(p);
+  const logicalId = txt(row.logicalId, TEXT_XLONG_MAX);
+
+  return logicalId
+    ? {
+        logicalId,
+        session: txt(row.canonicalSessionName, TEXT_XLONG_MAX),
+        runtime: txt(row.runtime, TEXT_SHORT_MAX),
       }
+    : null;
+}
 
-      const type = txt(a.type, TEXT_SHORT_MAX);
+/** One installed resource; a row with no id is not a resource. */
+function resourceOf(r: unknown) {
+  const row = recOf(r);
+  const id = txt(row.id, TEXT_XLONG_MAX);
 
-      if (!type) {
-        return [];
-      }
-
-      return [
-        {
-          type,
-          phase: txt(a.phase, TEXT_SHORT_MAX),
-          text: txt(a.value, TEXT_XXXLONG_MAX, true),
-        },
-      ];
-    }),
-    peers: list(raw.peers).flatMap((p) => {
-      if (!isRec(p)) {
-        return [];
-      }
-
-      const logicalId = txt(p.logicalId, TEXT_XLONG_MAX);
-
-      if (!logicalId) {
-        return [];
-      }
-
-      return [
-        {
-          logicalId,
-          session: txt(p.canonicalSessionName, TEXT_XLONG_MAX),
-          runtime: txt(p.runtime, TEXT_SHORT_MAX),
-        },
-      ];
-    }),
-    recoveryNotes: notes,
-    installedResources: list(raw.installedResources).flatMap((r) => {
-      if (!isRec(r)) {
-        return [];
-      }
-
-      const id = txt(r.id, TEXT_XLONG_MAX);
-
-      return id ? [{ id, category: txt(r.category, TEXT_SMALL_MAX) }] : [];
-    }),
-  });
+  return id ? { id, category: txt(row.category, TEXT_SMALL_MAX) } : null;
 }
 
 /** One GET that never throws: the value, or what went wrong (404 kept apart from the rest). */
@@ -741,65 +748,83 @@ const PATH_LIKE = /^(\/|~\/|[A-Za-z]:[\\/])|\/Users\/|\/home\//;
 
 const isAllowed = (key: string): boolean => SETTINGS_ALLOW.includes(key);
 
-/** GET /api/config: the allowlisted settings, with path-like values replaced and text redacted. */
-export function parseSettings(raw: unknown): SettingsData {
+/** A setting's text: the string itself, or JSON for a list or object; null for anything else. */
+const settingText = (v: unknown): string | null =>
+  typeof v === 'string' ? v : Array.isArray(v) || isRec(v) ? JSON.stringify(v) : null;
+
+/** A value that needs no text handling: null, a flag, or a finite number. */
+const isPlainSetting = (v: unknown): v is boolean | number | null =>
+  v === null || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v));
+
+/** What a setting value reads as, and whether a path was hidden to get there. Undefined: skip it. */
+function settingValue(v: unknown) {
+  const text = settingText(v);
+
+  if (text === null) {
+    return isPlainSetting(v) ? { value: v, hidden: false } : undefined;
+  }
+
+  return PATH_LIKE.test(text)
+    ? { value: SETTING_PATH_HIDDEN, hidden: true }
+    : { value: redactString(text).slice(0, TEXT_XLONG_MAX), hidden: false };
+}
+
+/** One allowlisted entry: its value (skipped when unreadable) and default, and how many paths were hidden. */
+function settingOf(entry: unknown) {
+  const e = recOf(entry);
+  const v = settingValue(e.value);
+
+  if (!v) {
+    return null;
+  }
+
+  const d = settingValue(e.defaultValue);
+
+  return {
+    setting: {
+      value: v.value,
+      source: txt(e.source, TEXT_TINY_MAX),
+      defaultValue: d?.value ?? null,
+    },
+    hidden: Number(v.hidden) + Number(d?.hidden ?? false),
+  };
+}
+
+/** Held back whatever its value: not on the list, secret-looking by name, or an oversize key. */
+const isWithheld = (key: string): boolean =>
+  !isAllowed(key) || WITHHELD_KEY.test(key) || key.length > TEXT_LONG_MAX;
+
+/** The `settings` object of the config reply; any other shape is an error. */
+function settingsIn(raw: unknown) {
   if (!isRec(raw) || !isRec(raw.settings)) {
     throw new Error('config: expected {settings}');
   }
 
+  return raw.settings;
+}
+
+/** GET /api/config: the allowlisted settings, with path-like values replaced and text redacted. */
+export function parseSettings(raw: unknown): SettingsData {
   const settings: SettingsData['settings'] = {};
   let withheld = 0;
   let pathsHidden = 0;
-  const value = (v: unknown): string | number | boolean | null | undefined => {
-    if (v === null) {
-      return null;
-    }
 
-    if (typeof v === 'boolean') {
-      return v;
-    }
-
-    if (typeof v === 'number') {
-      return Number.isFinite(v) ? v : undefined;
-    }
-
-    const text =
-      typeof v === 'string' ? v : Array.isArray(v) || isRec(v) ? JSON.stringify(v) : null;
-
-    if (text === null) {
-      return undefined;
-    }
-
-    if (PATH_LIKE.test(text)) {
-      pathsHidden += 1;
-
-      return SETTING_PATH_HIDDEN;
-    }
-
-    return redactString(text).slice(0, TEXT_XLONG_MAX);
-  };
-
-  for (const [key, entry] of Object.entries(raw.settings)) {
+  for (const [key, entry] of Object.entries(settingsIn(raw))) {
     if (!isRec(entry)) {
       continue;
     }
 
-    if (!isAllowed(key) || WITHHELD_KEY.test(key) || key.length > TEXT_LONG_MAX) {
+    if (isWithheld(key)) {
       withheld += 1;
       continue;
     }
 
-    const v = value(entry.value);
+    const read = settingOf(entry);
 
-    if (v === undefined) {
-      continue;
+    if (read) {
+      settings[key] = read.setting;
+      pathsHidden += read.hidden;
     }
-
-    settings[key] = {
-      value: v,
-      source: txt(entry.source, TEXT_TINY_MAX),
-      defaultValue: value(entry.defaultValue) ?? null,
-    };
   }
 
   return { settings, withheld, pathsHidden };
