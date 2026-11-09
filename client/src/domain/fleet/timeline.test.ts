@@ -323,6 +323,43 @@ describe('V2 · followWork rule edges (small made-up runs)', () => {
     expect(c.steps.map((x) => x.item.id)).toEqual(['me', 'x2', 'x3']);
   });
 
+  it('links through a grandparent tag when no nearer parent has two items', () => {
+    const queue = [
+      item({ id: 'a', m: 0, from: 'lead', to: 'dev', tags: ['x-a-b'] }),
+      item({ id: 'b', m: 1, from: 'dev', to: 'qa', tags: ['x-c'] }),
+    ];
+    const c = followWork(run(queue), 'r', 'a')!;
+
+    expect(c.key).toEqual(['x']);
+    expect(c.steps.map((s) => s.item.id)).toEqual(['a', 'b']);
+  });
+
+  it('a family that shares two steps but never answers itself is not pulled into the chain', () => {
+    const queue = [
+      item({ id: 'a', m: 0, from: 's1', to: 's2', tags: ['w', 'v'] }),
+      item({ id: 'b', m: 1, from: 's2', to: 's3', tags: ['w'] }),
+      item({ id: 'c', m: 2, from: 's3', to: 's4', tags: ['w', 'v'] }),
+      item({ id: 'z', m: 3, from: 's5', to: 's6', tags: ['v'] }),
+    ];
+    const c = followWork(run(queue), 'r', 'a')!;
+
+    expect(c.key).toEqual(['w']);
+    expect(c.steps.map((s) => s.item.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('a chain member is never also shown as the item that came in or went out', () => {
+    const queue = [
+      { ...item({ id: 'a1', m: 0, from: 's3', to: 'x', tags: ['t'] }), destination: 'david' },
+      { ...item({ id: 'a2', m: 0, from: 'x', to: 's3', tags: ['t'] }), source: 'david' },
+    ];
+    const c = followWork(run(queue), 'r', 'a1')!;
+
+    expect(c.steps.map((s) => [s.item.id, s.role])).toEqual([
+      ['a1', 'step'],
+      ['a2', 'step'],
+    ]);
+  });
+
   it('two tied families join when together they are exactly the limit (13 of 49), not before', () => {
     const a = (i: number) =>
       item({
