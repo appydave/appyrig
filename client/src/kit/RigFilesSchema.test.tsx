@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { DbSchemaOutput, DbTable, RigFile, RigFilesOutput } from '@appydave/shared';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { rigFileMeta } from '@client/test/specsFixtures.js';
 import RigFiles from './RigFiles.js';
 import SchemaView, { changeSummary } from './SchemaView.js';
 import YamlView from './YamlView.js';
@@ -36,15 +37,12 @@ function socketWith(onCall: Handler) {
   return { socket, calls };
 }
 
-const meta = (name: string, over: Partial<RigFilesOutput['files'][number]> = {}) => ({
-  id: `spec:${name}` as const,
-  name,
-  scope: 'spec' as const,
-  bytes: 120,
-  modifiedAt: '2026-10-11T06:00:00.000Z',
-  truncated: false,
-  ...over,
-});
+const meta = (name: string, over: Partial<RigFilesOutput['files'][number]> = {}) =>
+  rigFileMeta(`spec:${name}`, name, {
+    bytes: 120,
+    modifiedAt: '2026-10-11T06:00:00.000Z',
+    ...over,
+  });
 const RIG_YAML =
   'version: "0.2"\nname: flicut-ab\nsummary: >\n  FliCut fixes.\npods:\n  - id: orch\n    members:\n      - id: lead\n# end\n';
 const MISSION =
