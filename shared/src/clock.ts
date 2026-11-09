@@ -59,3 +59,16 @@ export function clockAheadText(a: SampleAge): string | null {
 export function onHubClock(at: string, push: { collectedAt: string; receivedAt: string }): string {
   return new Date(Date.parse(at) - clockSkewMs(push.collectedAt, push.receivedAt)).toISOString();
 }
+
+const instant = (iso: string): number => {
+  const t = Date.parse(iso);
+
+  return Number.isNaN(t) ? 0 : t;
+};
+
+/**
+ * Oldest first, by the moment each stamp names. The contract allows any UTC offset, so comparing the
+ * text puts `10:00+07:00` after `05:00Z` when it is two hours before it. A stamp that can't be read
+ * sorts as the oldest, and two naming the same moment tie (so a caller's `||` tie-break still runs).
+ */
+export const compareTimes = (a: string, b: string): number => instant(a) - instant(b);

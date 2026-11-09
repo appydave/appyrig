@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  compareTimes,
   healthCaveats,
   type AccountListOutput,
   sampleAge,
@@ -332,7 +333,7 @@ type RowKey = Pick<HistoryTransitionRow, 'at' | 'machine' | 'id'>;
 const numId = (id: string) => (/^\d+$/.test(id) ? Number(id) : -1);
 /** Newest first; ties by machine, then id (numeric when both are). Total order, so a keyset is exact. */
 const compareRows = (a: RowKey, b: RowKey): number =>
-  b.at.localeCompare(a.at) ||
+  compareTimes(b.at, a.at) ||
   a.machine.localeCompare(b.machine) ||
   numId(b.id) - numId(a.id) ||
   b.id.localeCompare(a.id);
@@ -893,7 +894,7 @@ const VERB_SET = {
         .flatMap((m) => m.snapshot.queue.map((item) => ({ machine: m.machine.id, item })))
         .filter((r) => input.state === undefined || r.item.state === input.state)
         .filter((r) => input.destination === undefined || r.item.destination === input.destination)
-        .sort((a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt))
+        .sort((a, b) => compareTimes(b.item.updatedAt, a.item.updatedAt))
         .slice(0, input.limit ?? QUEUE_MAX_ITEMS)
   ),
 
@@ -919,7 +920,7 @@ const VERB_SET = {
         .filter(
           (h) => input.rig === undefined || [h.from, h.to].some((s) => s?.endsWith(`@${input.rig}`))
         )
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .sort((a, b) => compareTimes(b.updatedAt, a.updatedAt))
   ),
 
   'health.get': query(
@@ -1138,7 +1139,7 @@ const VERB_SET = {
         }
       }
 
-      out.commands.sort((a, b) => b.ts.localeCompare(a.ts) || a.machine.localeCompare(b.machine));
+      out.commands.sort((a, b) => compareTimes(b.ts, a.ts) || a.machine.localeCompare(b.machine));
       out.commands = out.commands.slice(0, input.limit ?? RIG_COMMANDS_MAX);
 
       return out;

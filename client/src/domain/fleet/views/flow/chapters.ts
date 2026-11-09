@@ -1,4 +1,4 @@
-import { type FleetMachine, type QueueItem } from '@appydave/shared';
+import { compareTimes, type FleetMachine, type QueueItem } from '@appydave/shared';
 import { isOpen } from '@client/domain/fleet/views/core/queue.js';
 import { rigStoryQueue } from '@client/domain/fleet/views/core/queueCap.js';
 import { bare } from '@client/domain/fleet/views/core/addresses.js';
@@ -35,7 +35,7 @@ interface Peak {
  * the first handoff, the first item sent back, the biggest fresh queue, the longest real wait, the end.
  */
 export function flowChapters({ fm, rig, now, opts = {} }: ChapterQuery): Chapter[] {
-  const items = [...rigStoryQueue(fm, rig)].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const items = [...rigStoryQueue(fm, rig)].sort((a, b) => compareTimes(a.createdAt, b.createdAt));
   const range = flowRange(items);
 
   if (!range) {

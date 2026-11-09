@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
 import { pipFor, seatName } from '@client/domain/fleet/model.js';
 import { plainLine } from '@client/domain/fleet/terminal.js';
@@ -29,7 +30,7 @@ export function verdictOf(tags: string[]): Verdict | null {
 
 const bare = (raw: string | null) => (raw ?? '').split('@')[0] ?? '';
 const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep'));
-const byCreated = (a: QueueItem, b: QueueItem) => a.createdAt.localeCompare(b.createdAt);
+const byCreated = (a: QueueItem, b: QueueItem) => compareTimes(a.createdAt, b.createdAt);
 
 /** Pipeline order of the stages: work enters at the lead, is built, tested, reviewed. */
 const RANK: Record<Stage, number> = { lead: 0, build: 1, qa: 2, review: 3 };
