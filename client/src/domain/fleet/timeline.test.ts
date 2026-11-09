@@ -14,6 +14,17 @@ import {
 
 const NOW = Date.parse('2026-10-13T14:00:00Z');
 const d10 = queueMachine('ylo-d10');
+
+/** A one-rig (`r`) machine holding just this queue. */
+function machineWith(queue: QueueItem[], lastSeen: string): FleetMachine {
+  return {
+    machine: { id: 'm9', label: 'M9', hostname: null },
+    liveness: 'live',
+    lastSeen,
+    snapshot: { seats: [], rigs: [{ name: 'r' }], queue },
+  } as unknown as FleetMachine;
+}
+
 const q = (summary: string) =>
   d10.snapshot.queue.find((x) => (x.summary ?? '').startsWith(summary))!;
 
@@ -236,12 +247,7 @@ describe('V2 · followWork', () => {
       item('c', 9, 'lead@r', 'dev@r', 'Unrelated chore about logs'),
       item('d', 12, 'qa@r', 'lead@r', 'QA PASS: walrus importer handles zebra'),
     ];
-    const fm = {
-      machine: { id: 'm9', label: 'M9', hostname: null },
-      liveness: 'live',
-      lastSeen: at(0),
-      snapshot: { seats: [], rigs: [{ name: 'r' }], queue },
-    } as unknown as FleetMachine;
+    const fm = machineWith(queue, at(0));
     const chain = followWork(fm, 'r', 'b')!;
 
     expect(chain.rule).toBe('words');
@@ -252,5 +258,118 @@ describe('V2 · followWork', () => {
 
     expect(alone.rule).toBe('alone');
     expect(alone.ruleText).toMatch(/stands alone/);
+  });
+});
+
+describe('V2 · followWork rule edges (small made-up runs)', () => {
+  const t0 = Date.parse('2026-10-13T01:00:00Z');
+
+  interface Spec {
+    id: string;
+    m: number;
+    from: string;
+    to: string;
+    tags?: string[];
+    summary?: string;
+  }
+
+  const item = (s: Spec): QueueItem => ({
+    id: s.id,
+    source: `${s.from}@r`,
+    destination: `${s.to}@r`,
+    state: 'done',
+    priority: null,
+    tags: s.tags ?? [],
+    summary: s.summary ?? `${s.id} note`,
+    createdAt: new Date(t0 + s.m * 60_000).toISOString(),
+    updatedAt: new Date(t0 + s.m * 60_000 + 1000).toISOString(),
+  });
+  const filler = (count: number, from: number) =>
+    Array.from({ length: count }, (_, i) =>
+      item({ id: `f${i}`, m: from + i, from: `fs${i}`, to: `fd${i}`, summary: `chore filler${i}x` })
+    );
+  const run = (queue: QueueItem[]) => machineWith(queue, new Date(t0).toISOString());
+  const chainOf = (n: number, tag: string, start = 0) =>
+    Array.from({ length: n }, (_, i) =>
+      item({
+        id: `${tag}${i}`,
+        m: start + i,
+        from: `${tag}s${i}`,
+        to: `${tag}s${i + 1}`,
+        tags: [tag],
+        summary: `step ${tag}${i}x`,
+      })
+    );
+
+  it('a tag family of exactly the quarter-of-the-run limit (12) still links; the steps are all of it', () => {
+    const queue = [...chainOf(12, 'w'), ...filler(18, 20)];
+    const c = followWork(run(queue), 'r', 'w0')!;
+
+    expect(c.rule).toBe('tag');
+    expect(c.steps.filter((x) => x.role === 'step')).toHaveLength(12);
+  });
+
+  it('of two equally large families the one with more reply links is used alone', () => {
+    const queue = [
+      item({ id: 'me', m: 0, from: 'lead', to: 'dev', tags: ['t2', 't1'] }),
+      item({ id: 'x2', m: 1, from: 'dev', to: 'qa', tags: ['t1'] }),
+      item({ id: 'y2', m: 2, from: 'dev', to: 'ops', tags: ['t2'] }),
+      item({ id: 'x3', m: 3, from: 'qa', to: 'lead', tags: ['t1'] }),
+      item({ id: 'y3', m: 4, from: 'ops2', to: 'lead', tags: ['t2'] }),
+    ];
+    const c = followWork(run(queue), 'r', 'me')!;
+
+    expect(c.key).toEqual(['t1']);
+    expect(c.steps.map((x) => x.item.id)).toEqual(['me', 'x2', 'x3']);
+  });
+
+  it('two tied families join when together they are exactly the limit (13 of 49), not before', () => {
+    const a = (i: number) =>
+      item({
+        id: `a${i}`,
+        m: 2 * i,
+        from: i === 1 ? 'm1' : `as${i - 1}`,
+        to: `as${i}`,
+        tags: ['ta'],
+      });
+    const b = (i: number) =>
+      item({
+        id: `b${i}`,
+        m: 2 * i + 1,
+        from: i === 1 ? 'm1' : `bs${i - 1}`,
+        to: `bs${i}`,
+        tags: ['tb'],
+      });
+    const mine = item({ id: 'me', m: -1, from: 'm0', to: 'm1', tags: ['ta', 'tb'] });
+    const rows = Array.from({ length: 6 }, (_, k) => k + 1);
+    const queue = [mine, ...rows.flatMap((i) => [a(i), b(i)]), ...filler(36, 40)];
+
+    expect(queue).toHaveLength(49);
+
+    const c = followWork(run(queue), 'r', 'me')!;
+
+    expect(c.key).toEqual(['ta', 'tb']);
+    expect(c.steps.filter((x) => x.role === 'step')).toHaveLength(13);
+  });
+
+  it('a word that 6 of 40 handoffs carry is not uncommon, so nothing links by it', () => {
+    const same = Array.from({ length: 6 }, (_, i) =>
+      item({ id: `s${i}`, m: i, from: `ss${i}`, to: `sd${i}`, summary: 'walrus zebra importer' })
+    );
+    const c = followWork(run([...same, ...filler(34, 10)]), 'r', 's0')!;
+
+    expect(c.rule).toBe('alone');
+  });
+
+  it('the words that link are the ones another step shares, not the item’s own odd ones', () => {
+    const queue = [
+      item({ id: 'a', m: 0, from: 'lead', to: 'dev', summary: 'Build walrus zebra quokka' }),
+      item({ id: 'b', m: 2, from: 'dev', to: 'qa', summary: 'walrus zebra ready' }),
+      ...filler(8, 5),
+    ];
+    const c = followWork(run(queue), 'r', 'a')!;
+
+    expect(c.rule).toBe('words');
+    expect(c.key).toEqual(['walrus', 'zebra']);
   });
 });

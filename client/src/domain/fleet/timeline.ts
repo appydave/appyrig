@@ -333,6 +333,186 @@ function titleWords(q: QueueItem): string[] {
  * Then, by time and seat: what came in to the first sender just before the first step, and the
  * first item the last receiver sent out of the rig (back to David or another rig) after it.
  */
+interface Family {
+  tag: string;
+  group: QueueItem[];
+}
+
+interface Found {
+  rule: ChainRule;
+  key: string[];
+  group: QueueItem[];
+}
+
+/** A tag's parents, nearest first (`pair-a-alt` -> `pair-a`, `pair`). */
+function parentsOf(tag: string): string[] {
+  const out: string[] = [];
+
+  for (let t = tag; t.includes('-');) {
+    t = t.slice(0, t.lastIndexOf('-'));
+    out.push(t);
+  }
+
+  return out;
+}
+
+const under = (c: { tag: string }, p: { tag: string }) => c.tag.startsWith(`${p.tag}-`);
+
+/**
+ * The item's tags and their parents that two or more items carry, no more than `limit` of them,
+ * whose items answer one another (a reply or hand-on, never only a fan-out sent at once).
+ */
+function qualifyingFamilies(items: QueueItem[], me: QueueItem, limit: number): Family[] {
+  return [...new Set(me.tags.flatMap((t) => [t, ...parentsOf(t)]))]
+    .map((tag) => ({ tag, group: items.filter((q) => hasFamily(q, tag)) }))
+    .filter((c) => c.group.length >= 2 && c.group.length <= limit && replyLinks(c.group) > 0);
+}
+
+/**
+ * A parent wins only when it adds steps (`pair-a` over `pair-a-alt`); when it covers exactly the
+ * same items, the more specific tag names the work (`group-3`, not a bare `group`). Rarest first.
+ */
+function rarestFamilies(qualifying: Family[]): Family[] {
+  return qualifying
+    .filter(
+      (c) =>
+        !qualifying.some((p) => under(c, p) && p.group.length > c.group.length) &&
+        !qualifying.some((ch) => under(ch, c) && ch.group.length === c.group.length)
+    )
+    .sort((a, b) => a.group.length - b.group.length || replyLinks(b.group) - replyLinks(a.group));
+}
+
+/** A family no larger than the tied ones (`merged[0]` is one of them) that shares two or more steps with `merged`, else null. */
+function sharingFamily(items: QueueItem[], tag: string, merged: Family[]) {
+  if (merged.some((c) => c.tag === tag || tag.startsWith(`${c.tag}-`))) {
+    return null;
+  }
+
+  const fam = items.filter((x) => hasFamily(x, tag));
+  const shared = fam.filter((x) => merged.some((c) => c.group.includes(x))).length;
+
+  return fam.length <= merged[0]!.group.length && shared >= 2 && replyLinks(fam) > 0
+    ? { tag, group: fam }
+    : null;
+}
+
+/**
+ * Families tied with the best on size and reply links are all used, never settled by tag order
+ * (`exact`); `merged` adds the families no larger that share two or more steps with them, so a
+ * step carrying only one of two tied tags still finds the same chain.
+ */
+function tiedFamilies(items: QueueItem[], best: Family, tagged: Family[]) {
+  const exact = tagged.filter(
+    (c) => c.group.length === best.group.length && replyLinks(c.group) === replyLinks(best.group)
+  );
+  const merged = [...exact];
+
+  for (const q of items.filter((x) => exact.some((c) => c.group.includes(x)))) {
+    for (const tag of q.tags) {
+      const more = sharingFamily(items, tag, merged);
+
+      if (more) {
+        merged.push(more);
+      }
+    }
+  }
+
+  return { exact, merged };
+}
+
+/**
+ * Rule 1: the chain linked by a shared work tag. The merged chain obeys the same quarter-of-the-run
+ * bound as one family; past it, fall back to the exact ties, then to the single rarest family.
+ */
+function chainByTag(items: QueueItem[], me: QueueItem, limit: number): Found | null {
+  const tagged = rarestFamilies(qualifyingFamilies(items, me, limit));
+  const best = tagged[0];
+
+  if (!best) {
+    return null;
+  }
+
+  const { exact, merged } = tiedFamilies(items, best, tagged);
+  const union = (fams: Family[]) => items.filter((q) => fams.some((c) => c.group.includes(q)));
+  const chosen = [merged, exact, [best]].find((fams) => union(fams).length <= limit) ?? [best];
+
+  return { rule: 'tag', key: chosen.map((c) => c.tag).sort(), group: union(chosen) };
+}
+
+/** How many items carry each title word. */
+function wordCounts(items: QueueItem[]): Map<string, number> {
+  const df = new Map<string, number>();
+
+  for (const q of items) {
+    for (const w of titleWords(q)) {
+      df.set(w, (df.get(w) ?? 0) + 1);
+    }
+  }
+
+  return df;
+}
+
+/** Rule 2: two or more uncommon title words in common, inside the same phase of the run. */
+function chainByWords(items: QueueItem[], me: QueueItem): Found | null {
+  const df = wordCounts(items);
+  const rare = titleWords(me).filter((w) => (df.get(w) ?? 0) <= Math.max(3, items.length / 10));
+  const near = phaseOf(items, me).filter(
+    (q) => q === me || titleWords(q).filter((w) => rare.includes(w)).length >= 2
+  );
+
+  if (near.length < 2 || rare.length < 2) {
+    return null;
+  }
+
+  return {
+    rule: 'words',
+    key: rare.filter((w) => near.some((q) => q !== me && titleWords(q).includes(w))),
+    group: near,
+  };
+}
+
+/**
+ * The chain with what came in to its first sender just before it, and the first item its last
+ * receiver sent out of the rig (back to David or another rig) after it.
+ */
+function withFraming(items: QueueItem[], found: Found, inRig: (raw: string | null) => boolean) {
+  const { group } = found;
+  const first = group[0]!;
+  const last = group[group.length - 1]!;
+  const ids = new Set(group.map((q) => q.id));
+  const came = [...phaseOf(items, first)]
+    .reverse()
+    .find(
+      (q) => !ids.has(q.id) && q.destination === first.source && q.createdAt <= first.createdAt
+    );
+  const sentOut = (q: QueueItem) =>
+    q.source === last.destination && inRig(q.source) && !inRig(q.destination);
+  const went = phaseOf(items, last).find(
+    (q) => !ids.has(q.id) && q.createdAt >= last.createdAt && sentOut(q)
+  );
+  const steps: ChainStep[] = [
+    ...(came ? [{ item: came, role: 'in' as const }] : []),
+    ...group.map((item) => ({ item, role: 'step' as const })),
+    ...(went ? [{ item: went, role: 'out' as const }] : []),
+  ];
+
+  return {
+    steps,
+    rule: found.rule,
+    key: found.key,
+    ruleText: ruleText(
+      found.rule,
+      found.key,
+      variantsOf(group, found.key),
+      group.length,
+      first,
+      last,
+      !!came,
+      !!went
+    ),
+  };
+}
+
 export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkChain | null {
   const items = [...rigQueue(fm, rig)].sort(byCreated);
   const me = items.find((q) => q.id === itemId);
@@ -341,141 +521,12 @@ export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkC
     return null;
   }
 
-  const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
-
-  let rule: ChainRule = 'alone';
-  let key: string[] = [];
-  let group: QueueItem[] = [me];
-
-  // r1 MEDIUM-1: a tag's parents are candidates too (`pair-a-alt` → `pair-a`), and a family whose
-  // parent family also qualifies gives way to it, so every step of one piece of work finds the
-  // same chain.
-  const parents = (tag: string) => {
-    const out: string[] = [];
-
-    for (let t = tag; t.includes('-');) {
-      out.push((t = t.slice(0, t.lastIndexOf('-'))));
-    }
-
-    return out;
-  };
-
   // A chain (and any one family) never takes more than a quarter of the run.
   const limit = Math.max(12, Math.ceil(items.length / 4));
-  const qualifying = [...new Set(me.tags.flatMap((t) => [t, ...parents(t)]))]
-    .map((tag) => ({ tag, group: items.filter((q) => hasFamily(q, tag)) }))
-    .filter((c) => c.group.length >= 2 && c.group.length <= limit && replyLinks(c.group) > 0);
-  // A parent wins only when it adds steps (`pair-a` over `pair-a-alt`); when it covers exactly the
-  // same items, the more specific tag names the work (`group-3`, not a bare `group`).
-  const under = (c: { tag: string }, p: { tag: string }) => c.tag.startsWith(`${p.tag}-`);
-  const tagged = qualifying
-    .filter(
-      (c) =>
-        !qualifying.some((p) => under(c, p) && p.group.length > c.group.length) &&
-        !qualifying.some((ch) => under(ch, c) && ch.group.length === c.group.length)
-    )
-    .sort((a, b) => a.group.length - b.group.length || replyLinks(b.group) - replyLinks(a.group));
+  const found = chainByTag(items, me, limit) ??
+    chainByWords(items, me) ?? { rule: 'alone' as const, key: [], group: [me] };
 
-  if (tagged[0]) {
-    // r1 LOW-1: families tied on size and reply links are both used, never settled by tag order.
-    const best = tagged[0];
-    const tied = tagged.filter(
-      (c) => c.group.length === best.group.length && replyLinks(c.group) === replyLinks(best.group)
-    );
-    const exact = [...tied];
-    // ...and so are families no larger that share two or more steps with the chain, so a step
-    // carrying only one of two tied tags still finds the same chain.
-    const size = best.group.length;
-
-    for (const q of items.filter((x) => tied.some((c) => c.group.includes(x)))) {
-      for (const tag of q.tags) {
-        if (tied.some((c) => c.tag === tag || tag.startsWith(`${c.tag}-`))) {
-          continue;
-        }
-
-        const fam = items.filter((x) => hasFamily(x, tag));
-        const shared = fam.filter((x) => tied.some((c) => c.group.includes(x))).length;
-
-        if (fam.length <= size && shared >= 2 && replyLinks(fam) > 0) {
-          tied.push({ tag, group: fam });
-        }
-      }
-    }
-
-    // r1 MEDIUM-3: the merged chain obeys the same quarter-of-the-run bound; past it, fall back to
-    // the exact ties, then to the single rarest family.
-    const union = (fams: { group: QueueItem[] }[]) =>
-      items.filter((q) => fams.some((c) => c.group.includes(q)));
-    const chosen = [tied, exact, [best]].find((fams) => union(fams).length <= limit) ?? [best];
-
-    rule = 'tag';
-    key = chosen.map((c) => c.tag).sort();
-    group = union(chosen);
-  } else {
-    const phase = phaseOf(items, me);
-    const df = new Map<string, number>();
-
-    for (const q of items) {
-      for (const w of titleWords(q)) {
-        df.set(w, (df.get(w) ?? 0) + 1);
-      }
-    }
-
-    const rare = titleWords(me).filter((w) => (df.get(w) ?? 0) <= Math.max(3, items.length / 10));
-    const near = phase.filter(
-      (q) => q === me || titleWords(q).filter((w) => rare.includes(w)).length >= 2
-    );
-
-    if (near.length >= 2 && rare.length >= 2) {
-      rule = 'words';
-      key = rare.filter((w) => near.some((q) => q !== me && titleWords(q).includes(w)));
-      group = near;
-    }
-  }
-
-  const steps: ChainStep[] = group.map((item) => ({ item, role: 'step' }));
-  const first = group[0]!;
-  const last = group[group.length - 1]!;
-  const ids = new Set(group.map((q) => q.id));
-  const phase = phaseOf(items, first);
-  const came = [...phase]
-    .reverse()
-    .find(
-      (q) => !ids.has(q.id) && q.destination === first.source && q.createdAt <= first.createdAt
-    );
-
-  if (came) {
-    steps.unshift({ item: came, role: 'in' });
-  }
-
-  const went = phaseOf(items, last).find(
-    (q) =>
-      !ids.has(q.id) &&
-      q.createdAt >= last.createdAt &&
-      q.source === last.destination &&
-      inRig(q.source) &&
-      !inRig(q.destination)
-  );
-
-  if (went) {
-    steps.push({ item: went, role: 'out' });
-  }
-
-  return {
-    steps,
-    rule,
-    key,
-    ruleText: ruleText(
-      rule,
-      key,
-      variantsOf(group, key),
-      group.length,
-      first,
-      last,
-      !!came,
-      !!went
-    ),
-  };
+  return withFraming(items, found, (raw) => endpointRig(fm, raw) === rig);
 }
 
 /** The items in the same phase of the run as `q` (pauses over PHASE_GAP_MS split phases). */
