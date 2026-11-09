@@ -1,6 +1,11 @@
 {
   "$schema": "./node_modules/knip/schema.json",
   "includeEntryExports": true,
+  "ignoreIssues": {
+    "scripts/oxlint-gate.d.mts": ["exports", "types"],
+    "playwright.config.ts": ["exports"],
+    "e2e/support/global-teardown.ts": ["exports"]
+  },
   "workspaces": {
     ".": {
       "entry": [
@@ -16,7 +21,8 @@
       ],
       "project": ["bin/**", "scripts/**", "lint/**", "e2e/**", "test/**", "*.{js,ts,mjs}!"],
       "ignore": ["test/fixtures/**", "test/root/fixtures/**"],
-      "playwright": false
+      "playwright": false,
+      "ignoreBinaries": ["tsx", "vitest"]
     },
     "client": {
       "entry": ["src/main.tsx!"],
@@ -25,7 +31,11 @@
         "!src/**/*.test.{ts,tsx}!",
         "!src/**/test/**!",
         "!src/**/*test-kit*!"
-      ]
+      ],
+      "ignoreDependencies": ["tailwindcss"],
+      "ignoreIssues": {
+        "src/app/devProxy.ts": ["files"]
+      }
     },
     "server": {
       "entry": ["src/index.ts!", "scripts/*.mjs"],
@@ -36,7 +46,8 @@
         "!src/**/test/**!",
         "!src/**/*test-kit*!"
       ],
-      "ignore": ["src/core/vendor/**"]
+      "ignore": ["src/core/vendor/**"],
+      "ignoreDependencies": ["pino-pretty"]
     },
     "collector": {
       "entry": ["src/main.ts!", "src/index.ts!", "scripts/*.{ts,mjs}"],
@@ -46,7 +57,12 @@
         "!src/**/*.test.{ts,tsx}!",
         "!src/**/test/**!",
         "!src/**/*test-kit*!"
-      ]
+      ],
+      "ignoreBinaries": ["plutil"],
+      "ignoreIssues": {
+        "src/snapshotCases.ts": ["files"],
+        "src/adapters/fixtureSources.ts": ["files"]
+      }
     },
     "shared": {
       "entry": ["src/index.ts!"],
