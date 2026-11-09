@@ -46,6 +46,25 @@ interface Props {
   frozen?: FrozenMeta;
 }
 
+/** Runs `fn` on the next frame and again after `ms`; a new `run` replaces the last, `cancel` stops both. */
+function settler(fn: () => void, ms: number) {
+  let frame = 0;
+  let later = 0;
+  const cancel = () => {
+    cancelAnimationFrame(frame);
+    window.clearTimeout(later);
+  };
+
+  return {
+    cancel,
+    run: () => {
+      cancel();
+      frame = requestAnimationFrame(fn);
+      later = window.setTimeout(fn, ms);
+    },
+  };
+}
+
 export default function App({ getSocket = getFleetSocket, frozen }: Props) {
   const { state, link } = useFleet(getSocket);
   const now = frozenNow(useNow(), frozen);
@@ -241,12 +260,8 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
 
     // The bar can wrap to another row when the page gains a scrollbar or the panel opens, a moment
     // after the panel lands: measure again once things settle, so the panel never starts under the bar.
-    const settle = () => {
-      requestAnimationFrame(measure);
-      window.setTimeout(measure, 250);
-    };
-
-    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(settle);
+    const settle = settler(measure, 250);
+    const mo = typeof MutationObserver === 'undefined' ? null : new MutationObserver(settle.run);
 
     mo?.observe(root, { attributes: true, attributeFilter: ['data-agent-panel'] });
     void document.fonts?.ready.then(measure);
@@ -254,6 +269,7 @@ export default function App({ getSocket = getFleetSocket, frozen }: Props) {
     return () => {
       mo?.disconnect();
       ro?.disconnect();
+      settle.cancel();
       window.removeEventListener('resize', measure);
       window.removeEventListener('scroll', measure);
       root.style.removeProperty('--ar-top-offset');

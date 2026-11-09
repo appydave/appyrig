@@ -2,8 +2,8 @@
   "about": "The score of every frozen G04 / G06 finding (function length, parameters, cognitive, cyclomatic, expression), keyed by file::function. It may shrink, never grow. Rewrite with npm run scores:baseline.",
   "max-lines-per-function": {
     "bin/appyrig.mjs::run": 142,
-    "client/src/app/App.tsx::App": 405,
-    "client/src/app/App.tsx::App>callback": 50,
+    "client/src/app/App.tsx::App": 402,
+    "client/src/app/App.tsx::App>callback": 47,
     "client/src/app/frozen/frozenSocket.ts::createFrozenSocket": 60,
     "client/src/app/usePages.tsx::usePages": 306,
     "client/src/domain/docs/model.ts::buildDocItems": 71,
