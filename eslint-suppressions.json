@@ -723,10 +723,10 @@
       "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 2
+      "count": 1
     },
     "sonarjs/expression-complexity": {
-      "count": 2
+      "count": 1
     }
   },
   "client/src/lib/stableOrder.ts": {
@@ -1020,7 +1020,7 @@
       "count": 3
     },
     "sonarjs/expression-complexity": {
-      "count": 3
+      "count": 2
     }
   },
   "client/src/pages/run/run.test.tsx": {
@@ -1664,9 +1664,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 3
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
     }
   },
   "server/src/hub/stores/missionFileStore.ts": {

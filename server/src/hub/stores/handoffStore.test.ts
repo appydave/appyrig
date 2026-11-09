@@ -54,6 +54,19 @@ describe('queue body store cap (QA D1)', () => {
     expect(store.getHandoff('roamy', ids[99]!)).toBeUndefined();
   });
 
+  it('items of the same age go in id order, so what is dropped never depends on arrival', () => {
+    const store = new FleetStore();
+    const ids = Array.from(
+      { length: HANDOFF_STORE_MAX + 3 },
+      (_, i) => `q${String(i).padStart(6, '0')}`
+    );
+
+    store.putHandoffs(bodies([...ids].reverse()));
+
+    expect(store.getHandoff('roamy', ids[2]!)).toBeUndefined();
+    expect(store.getHandoff('roamy', ids[3]!)).toBeDefined();
+  });
+
   it('with no queue rows known yet it still stays within the cap', () => {
     const store = new FleetStore();
     const ids = Array.from(
