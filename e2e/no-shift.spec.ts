@@ -78,3 +78,57 @@ test('a seat turning working or blocked moves nothing inside its card', async ({
     expect(await positions(page, parts)).toEqual(before);
   }
 });
+
+test('a cold open of the Wall moves nothing when the web fonts land', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+
+  let release = () => {};
+
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  // The font files wait until the Wall has drawn, so a Wall drawn in the fallback font is always
+  // seen. A Wall that waits for its fonts never draws first, so they are let go after a second.
+  await page.route(/fonts\.gstatic\.com/, async (route) => {
+    await released;
+    await route.continue();
+  });
+  await page.addInitScript(() => {
+    const tops = new Set<number>();
+    const sample = () => {
+      const card = document.querySelector('.wcard');
+
+      if (card) {
+        tops.add(Math.round(card.getBoundingClientRect().y));
+        document.documentElement.dataset.cardTops = [...tops].join(',');
+      }
+
+      requestAnimationFrame(sample);
+    };
+
+    requestAnimationFrame(sample);
+  });
+
+  // Not the load event: a font that is being held would hold that too.
+  await page.goto('/?frozen=busy-2026-10-18&v=2&page=wall', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(
+    () => document.querySelector('.wcard') !== null || performance.now() > 1000
+  );
+  release();
+  await expect(page.locator('.wcard').first()).toBeVisible({ timeout: 20_000 });
+  await settled(page, '.wcard');
+
+  // Without the real font there was no swap to survive, and the test would prove nothing.
+  const fontLoaded = await page.evaluate(() =>
+    [...document.fonts].some((f) => f.family.includes('Bebas Neue') && f.status === 'loaded')
+  );
+
+  expect(fontLoaded).toBe(true);
+
+  const tops = (await page.evaluate(() => document.documentElement.dataset.cardTops ?? ''))
+    .split(',')
+    .map(Number);
+
+  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(2);
+});
