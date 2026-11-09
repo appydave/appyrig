@@ -416,3 +416,73 @@ describe('F3 (truth #6): agent activity comes from the transcript, not the termi
     expect(snap.seats.every((s) => s.agentActivityAt === undefined)).toBe(true);
   });
 });
+
+describe('Feature: one odd row does not lose the machine', () => {
+  const daemon = recordedDaemon('roamy');
+  // Exactly at the 200 limit going in; redaction makes it longer, so only the final parse sees it.
+  const LENGTHENED = `${'x'.repeat(185)} --token abc123`;
+
+  const build = (over: Partial<typeof daemon>, notes: string[] = []) =>
+    buildSnapshot(
+      fixtureSources({ machine: 'roamy', daemon: async () => ({ ...daemon, ...over }) }),
+      { ...ROAMY, note: (l: string) => notes.push(l) },
+      NOW
+    );
+
+  it('Scenario: given a queue row redaction pushed over its limit, then only that row goes, and the source and the log say so', async () => {
+    const notes: string[] = [];
+    const odd = { ...daemon.queue[0]!, id: 'odd-row', closureReason: LENGTHENED };
+
+    expect(LENGTHENED).toHaveLength(200);
+
+    const snap = await build({ queue: [odd, ...daemon.queue] }, notes);
+
+    expect(snap.queue.map((q) => q.id)).toEqual(daemon.queue.map((q) => q.id));
+    expect(snap.seats).toHaveLength(7);
+    expect(snap.sources.daemon.ok).toBe(false);
+    expect(snap.sources.daemon.error).toContain('queue row odd-row: closureReason');
+    expect(notes).toEqual([expect.stringContaining('1 row dropped: queue row odd-row')]);
+    expect(notes.join()).not.toContain('abc123');
+  });
+
+  it('Scenario: given one seat the schema refuses, then the other seats and the queue stay', async () => {
+    const notes: string[] = [];
+    const [first, ...rest] = daemon.seats;
+    const snap = await build({ seats: [{ ...first!, contextUsedPct: 150 }, ...rest] }, notes);
+
+    expect(snap.seats.map((s) => s.id)).not.toContain(first!.id);
+    expect(snap.seats).toHaveLength(6);
+    expect(snap.queue).toHaveLength(daemon.queue.length);
+    expect(notes).toEqual([expect.stringContaining(`seat row ${first!.id}: contextUsedPct`)]);
+  });
+
+  it('Scenario: given a daemon that already warned, then its warning stays beside the dropped row', async () => {
+    const odd = { ...daemon.queue[0]!, id: 'odd-row', closureReason: LENGTHENED };
+    const snap = await build({ queue: [odd], warnings: ['queue unreadable: boom'] });
+
+    expect(snap.sources.daemon.error).toMatch(/^queue unreadable: boom \| 1 row dropped/);
+  });
+
+  it('Scenario: given every row is bad, then the source names five and counts the rest', async () => {
+    const rows = Array.from({ length: 8 }, (_, i) => ({
+      ...daemon.queue[0]!,
+      id: `odd-${i}`,
+      closureReason: LENGTHENED,
+    }));
+    const snap = await build({ queue: rows });
+
+    expect(snap.queue).toEqual([]);
+    expect(snap.sources.daemon.error).toContain('8 rows dropped');
+    expect(snap.sources.daemon.error).toContain('odd-4');
+    expect(snap.sources.daemon.error).not.toContain('odd-5');
+    expect(snap.sources.daemon.error).toContain('and 3 more');
+  });
+
+  it('Scenario: given clean rows, then nothing is logged and the source is untouched', async () => {
+    const notes: string[] = [];
+    const snap = await build({}, notes);
+
+    expect(notes).toEqual([]);
+    expect(snap.sources.daemon.ok).toBe(true);
+  });
+});

@@ -23,6 +23,7 @@ import { HUB_CAPS } from '@appydave/shared';
 import { buildSnapshot } from './builder.js';
 import { loadSettings } from './config.js';
 import { startPusher } from './pusher.js';
+import { quietLog } from '@collector/pusher/quietLog.js';
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
 /** Entry point for launchd: `node dist/main.js`. Settings come from APPYRIG_* environment variables. */
@@ -32,10 +33,12 @@ const VERSION = (
   }
 ).version;
 
+const stamped = (line: string) => console.log(`${new Date().toISOString()} ${line}`);
+
 function main() {
   const settings = loadSettings();
   const sources = createSources(settings.sources);
-  const config = { machine: settings.machine, version: VERSION, pid };
+  const config = { machine: settings.machine, version: VERSION, pid, note: quietLog(stamped).note };
   // Seat histories are read only for seats the daemon reported in the latest snapshot.
   let knownSeats = new Set<string>();
   let openrigSeats: LoadoutSeat[] = [];
@@ -61,7 +64,7 @@ function main() {
   });
   let daemonTargets: SeatTarget[] = [];
   const daemonData = new DaemonDataReader(settings.machine.id, sources.daemonGet!, {
-    log: (line) => console.log(`${new Date().toISOString()} ${line}`),
+    log: stamped,
   });
   const seatConfig = seatConfigReader();
   const pusher = startPusher({
