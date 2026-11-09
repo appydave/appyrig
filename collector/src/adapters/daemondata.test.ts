@@ -127,6 +127,21 @@ describe('v2 · seat detail (step 2)', () => {
     expect(parseSeatDetail({}).spec).toBeNull();
   });
 
+  it('never lets a secret through the notes or the startup-action text, and the node beats its compact spec', () => {
+    const key = 'sk-abcdefghijklmnop1234';
+    const d = parseSeatDetail({
+      resolvedSpecName: 'own-name',
+      compactSpec: { name: 'compact-name' },
+      recoveryGuidance: { summary: `use ${key}`, notes: [`ANTHROPIC_API_KEY=${key}`] },
+      startupActions: [{ type: 'send_text', value: `export TOKEN=${key}` }],
+    });
+
+    expect(d.spec?.name).toBe('own-name');
+    expect(JSON.stringify(d)).not.toContain(key);
+    expect(d.recoveryNotes).toEqual(['use <REDACTED>', 'ANTHROPIC_API_KEY=<REDACTED>']);
+    expect(d.startupActions[0]!.text).toBe('export TOKEN=<REDACTED>');
+  });
+
   const T = { seat: 'dev-build@r', rigId: 'RIG1', logicalId: 'dev.build' };
   const reader = (get: (p: string) => Promise<unknown>, log: (l: string) => void = () => {}) => {
     let t = 1_000_000;
@@ -1180,6 +1195,24 @@ describe('v2 · settings (step 5)', () => {
     expect(s.pathsHidden).toBe(1);
     expect(s.withheld).toBe(0);
     expect(() => parseSettings({ settings: 'x' })).toThrow(/settings/);
+  });
+
+  it('never lets a secret through a setting value, and counts only record entries it holds back', () => {
+    const key = 'ghp_abcdefghijklmnop1234';
+    const s = parseSettings({
+      settings: {
+        'ui.timezone': { value: `tz ${key}`, source: 'file', defaultValue: `dflt ${key}` },
+        'not.on.the.list': { value: 1 },
+        'also.not.listed': 'not a record',
+      },
+    });
+
+    expect(JSON.stringify(s)).not.toContain(key);
+    expect(s.settings['ui.timezone']).toMatchObject({
+      value: 'tz <REDACTED>',
+      defaultValue: 'dflt <REDACTED>',
+    });
+    expect(s.withheld).toBe(1);
   });
 
   it('is read, validated and 404-aware; an unreadable config pushes nothing', async () => {
