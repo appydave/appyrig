@@ -138,7 +138,8 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)dist/' },
+    // Only a build folder of ours. A bare `dist/` also matched node_modules/vitest/dist/..., which hid vitest and @testing-library from not-to-dev-dep.
+    exclude: { path: '^(client|server|collector|shared)/dist/' },
     // Resolves the @client/@server/... aliases, so the boundary rules still see aliased imports.
     tsConfig: { fileName: 'tsconfig.json' },
     tsPreCompilationDeps: 'specify',

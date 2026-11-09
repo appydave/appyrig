@@ -177,7 +177,7 @@ export const REASONS = {
   'depcruise|pathNot|\\.test\\.ts$':
     'reason unknown: added with the collector adapters rule in G12 (211f10f), whose message gives none.',
   'depcruise|doNotFollow|node_modules': GIT_IGNORED,
-  'depcruise|exclude|(^|/)dist/': GIT_IGNORED,
+  'depcruise|exclude|^(client|server|collector|shared)/dist/': GIT_IGNORED,
   'depcruise-folders|doNotFollow|node_modules': GIT_IGNORED,
   'depcruise-folders|exclude|(node_modules|dist)|\\.(test|spec)\\.tsx?$':
     'reason unknown: in the first .dependency-cruiser-folders.cjs (G11, 5c5f28a), whose message gives none. node_modules and dist are git-ignored; the test-file part has no comment.',
