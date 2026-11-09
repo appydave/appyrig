@@ -48,11 +48,23 @@ const HUB_MAX_COMPLEXITY = 5;
 const SDP_MIN_FAN_TOTAL = 2;
 const SDP_MIN_INSTABILITY_GAP = 0.1;
 
+/**
+ * Exempt by name from the coupling limit only (hubs and stability still see them). David's ruling, 9 Nov
+ * (D107 option a). A renamed or moved file loses its exemption and fails loudly.
+ * - registry.ts: the list of pages. Each page is one import by design, so a 21st page must not fail CI.
+ * - useFleet.ts: its connections are nearly all type-only imports of FleetSocket and HubLink.
+ */
+const COUPLING_EXEMPT = ['**/app/registry.ts', '**/domain/fleet/useFleet.ts'];
+
 /** `shared/` is the wire contract that everything imports: scanned, and measured at zero on both rules. */
 const SCANNED = [...WORKSPACES, 'shared'];
 
 const RULES = {
-  high_coupling: { severity: 'high', max_cbo: MAX_CBO, exclude: ARCHLINT_EXCLUDES },
+  high_coupling: {
+    severity: 'high',
+    max_cbo: MAX_CBO,
+    exclude: [...ARCHLINT_EXCLUDES, ...COUPLING_EXEMPT],
+  },
   hub_module: {
     severity: 'high',
     min_fan_in: HUB_FAN_IN,
