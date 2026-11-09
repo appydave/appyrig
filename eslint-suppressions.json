@@ -385,9 +385,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 1
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
     }
   },
   "client/src/domain/wall/model.ts": {
@@ -825,14 +822,6 @@
       "count": 1
     },
     "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
-  "client/src/pages/flow/index.tsx": {
-    "max-lines-per-function": {
       "count": 1
     },
     "sonarjs/cyclomatic-complexity": {

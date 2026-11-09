@@ -3,7 +3,17 @@ import RigPicker from '@client/kit/RigPicker.js';
 import { DOT_STATE_LABEL, dotState, timeScale } from '@client/domain/fleet/timeline.js';
 import { PageHeader } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
-import { buildRun, dur, OUTCOME, OUTSIDE_LANE } from '@client/domain/timeline/model.js';
+import { queueCapNote } from '@client/domain/fleet/views/core/queueCap.js';
+import {
+  buildRun,
+  dur,
+  noRunWords,
+  openWord,
+  OUTCOME,
+  OUTSIDE_LANE,
+  runFacts,
+} from '@client/domain/timeline/model.js';
+import type { FleetMachine } from '@appydave/shared';
 import '@client/pages/w4.css';
 
 const clock = (t: number) =>
@@ -13,6 +23,16 @@ const day = (t: number) =>
 
 const LANE_H = 28;
 const LABEL_W = 150;
+
+const capNoteOf = (fm: FleetMachine | undefined) => (fm ? queueCapNote(fm) : null);
+
+function CapNote({ text }: { text: string | null }) {
+  return text ? (
+    <p className="quiet" data-testid="queue-capped">
+      {text}
+    </p>
+  ) : null;
+}
 
 /**
  * v2 Run Timeline: the run at a glance. Its outcome first (one word and why), then a compact strip
@@ -26,6 +46,7 @@ function TimelinePage({ ctx }: PageProps) {
   const fm = rig ? ctx.allMachines.find((m) => m.machine.id === rig.machineId) : undefined;
   const tenMin = Math.floor(ctx.now / 600_000) * 600_000;
   const run = useMemo(() => (fm && rig ? buildRun(fm, rig.name, tenMin) : null), [fm, rig, tenMin]);
+  const capNote = capNoteOf(fm);
 
   const seat = (name: string) => {
     const key = run?.seatOf[name];
@@ -54,22 +75,16 @@ function TimelinePage({ ctx }: PageProps) {
         onSelect={ctx.chooseRig}
         info={false}
       />
-      <PageHeader
-        title="Run Timeline"
-        facts={[
-          rig ? `${rig.name} on ${rig.machineLabel}` : 'no rig chosen',
-          ...(run ? [`${OUTCOME[run.outcome].glyph} ${OUTCOME[run.outcome].word}`] : []),
-          ...(run ? [`${run.timeline.total} handoffs`] : []),
-        ]}
-      />
+      <PageHeader title="Run Timeline" facts={runFacts(rig, run, capNote)} />
       {!rig && <p className="empty">Pick a rig.</p>}
       {rig && !run && (
         <p className="empty" data-testid="tl2-empty">
-          {rig.name} has no handoffs in its queue yet, so there is no run to show.
+          {noRunWords(rig.name, capNote)}
         </p>
       )}
       {run && rig && (
         <>
+          <CapNote text={capNote} />
           <section className="w4-hero" data-testid="tl2-outcome" data-outcome={run.outcome}>
             <span className="w4-hero-big">
               {OUTCOME[run.outcome].glyph} {OUTCOME[run.outcome].word}
@@ -85,7 +100,7 @@ function TimelinePage({ ctx }: PageProps) {
                 <dd>{run.done}</dd>
               </div>
               <div>
-                <dt>still open</dt>
+                <dt>{openWord(capNote)}</dt>
                 <dd data-testid="tl2-open">{run.open}</dd>
               </div>
               <div>

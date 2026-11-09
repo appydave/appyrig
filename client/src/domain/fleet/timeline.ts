@@ -1,6 +1,7 @@
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { seatName } from './model.js';
 import { endpointRig, ownerRig, rigQueue } from './views/core/queue.js';
+import { rigStoryQueue } from './views/core/queueCap.js';
 import { flowChapters } from './views/flow/chapters.js';
 import { type Chapter } from './views/flow/types.js';
 
@@ -97,7 +98,7 @@ export interface Timeline {
  * the run paused for more than PHASE_GAP_MS.
  */
 export function buildTimeline(fm: FleetMachine, rig: string, now: number): Timeline | null {
-  const items = [...rigQueue(fm, rig)].sort(byCreated);
+  const items = [...rigStoryQueue(fm, rig)].sort(byCreated);
 
   if (!items.length) {
     return null;

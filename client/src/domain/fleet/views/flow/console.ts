@@ -1,6 +1,6 @@
 import { type FleetMachine, type QueueItem, type SeatHistoryEvent } from '@appydave/shared';
 import { bare } from '@client/domain/fleet/views/core/addresses.js';
-import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { rigStoryQueue } from '@client/domain/fleet/views/core/queueCap.js';
 import { ms } from '@client/domain/fleet/views/core/time.js';
 import { type ConsoleLine } from '@client/domain/fleet/views/flow/types.js';
 
@@ -47,7 +47,7 @@ function handoffLine(q: QueueItem, me: (raw: string | null) => boolean): Console
 
 /** A rig's handoffs in time order: the replay's single steps. */
 export function replaySteps(fm: FleetMachine, rig: string): QueueItem[] {
-  return [...rigQueue(fm, rig)].sort(
+  return [...rigStoryQueue(fm, rig)].sort(
     (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
   );
 }

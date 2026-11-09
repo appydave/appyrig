@@ -6,7 +6,8 @@ import {
   OUTSIDE_LANE,
   type Timeline,
 } from '@client/domain/fleet/timeline.js';
-import { endpointRig, isOpen } from '@client/domain/fleet/views/core/queue.js';
+import { endpointRig, isOpen, rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { queueCapped } from '@client/domain/fleet/views/core/queueCap.js';
 import { median } from '@client/domain/fleet/views/core/stats.js';
 import { STALE_MS } from '@client/domain/fleet/views/core/time.js';
 
@@ -15,7 +16,7 @@ import { STALE_MS } from '@client/domain/fleet/views/core/time.js';
  * and who waited on whom. Pure, over the shared timeline model (buildTimeline) read-only.
  */
 
-export type Outcome = 'running' | 'stalled' | 'stopped' | 'finished';
+export type Outcome = 'running' | 'stalled' | 'stopped' | 'finished' | 'unseen';
 
 export const OUTCOME: Record<Outcome, { glyph: string; word: string; says: string }> = {
   running: {
@@ -37,6 +38,11 @@ export const OUTCOME: Record<Outcome, { glyph: string; word: string; says: strin
     glyph: '✓',
     word: 'finished',
     says: 'Nothing is open: every handoff was done or passed on.',
+  },
+  unseen: {
+    glyph: '…',
+    word: 'partly seen',
+    says: 'Nothing is open among these, but this is only the newest part of the run.',
   },
 };
 
@@ -86,6 +92,22 @@ const ms = (iso: string) => {
 
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] ?? '?';
 
+function outcomeOf(r: { fresh: number; open: number; stopped: boolean; capped: boolean }): Outcome {
+  if (r.fresh) {
+    return 'running';
+  }
+
+  if (r.open) {
+    return 'stalled';
+  }
+
+  if (r.stopped) {
+    return 'stopped';
+  }
+
+  return r.capped ? 'unseen' : 'finished';
+}
+
 export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | null {
   const timeline = buildTimeline(fm, rig, now);
 
@@ -96,7 +118,8 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
   const items = timeline.marks
     .filter((m, i, all) => all.findIndex((x) => x.item.id === m.item.id) === i)
     .map((m) => m.item);
-  const open = items.filter(isOpen);
+  // From every row we hold, not the story's window: an old row that is still open is still open.
+  const open = rigQueue(fm, rig).filter(isOpen);
   const fresh = open.filter((q) => now - ms(q.createdAt) <= STALE_MS);
   const phases: PhaseView[] = timeline.phases.map((p) => {
     const inPhase = items.filter((q) => {
@@ -123,13 +146,12 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
     };
   });
   const lastPhase = phases[phases.length - 1];
-  const outcome: Outcome = fresh.length
-    ? 'running'
-    : open.length
-      ? 'stalled'
-      : lastPhase && dotState(lastPhase.last.state) === 'stopped'
-        ? 'stopped'
-        : 'finished';
+  const outcome = outcomeOf({
+    fresh: fresh.length,
+    open: open.length,
+    stopped: !!lastPhase && dotState(lastPhase.last.state) === 'stopped',
+    capped: queueCapped(fm),
+  });
 
   // Who waited on whom: per sender → receiver, inside the rig (David and other rigs are flags, not seats).
   const inRig = (raw: string | null) => endpointRig(fm, raw) === rig;
@@ -190,7 +212,7 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
     timeline,
     outcome,
     open: open.length,
-    done: items.length - open.length,
+    done: items.filter((q) => !isOpen(q)).length,
     spanMs: timeline.end - timeline.start,
     activeMs: timeline.phases.reduce((n, p) => n + (p.end - p.start), 0),
     phases,
@@ -198,6 +220,28 @@ export function buildRun(fm: FleetMachine, rig: string, now: number): RunView | 
     seatOf,
   };
 }
+
+export function runFacts(
+  rig: { name: string; machineLabel: string } | null,
+  run: RunView | null,
+  note: string | null
+): string[] {
+  const where = rig ? `${rig.name} on ${rig.machineLabel}` : 'no rig chosen';
+
+  return run
+    ? [
+        where,
+        `${OUTCOME[run.outcome].glyph} ${OUTCOME[run.outcome].word}`,
+        `${note ? 'newest ' : ''}${run.timeline.total} handoffs`,
+      ]
+    : [where];
+}
+
+export const openWord = (note: string | null) => (note ? 'open in view' : 'still open');
+export const noRunWords = (rig: string, note: string | null) =>
+  note
+    ? `${rig} has none of the newest handoffs this machine keeps, so there is no run to show.`
+    : `${rig} has no handoffs in its queue yet, so there is no run to show.`;
 
 /** "4 min", "2 h 10 min", "3 d 2 h". */
 export function dur(msv: number | null): string {

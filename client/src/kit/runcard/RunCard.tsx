@@ -7,6 +7,7 @@ import PlanStrip from './PlanStrip.js';
 import RunOutputs from './RunOutputs.js';
 import { changeOrders, planIn, type PlanSource } from '@client/domain/fleet/plan.js';
 import { rigQueue } from '@client/domain/fleet/views/core/queue.js';
+import { queueCapped } from '@client/domain/fleet/views/core/queueCap.js';
 import {
   RUN_WORD,
   clip,
@@ -74,6 +75,15 @@ function missingWhy(files: RigFilesOutput | null, machineLabel: string, what: st
     default:
       return `no ${what} file found next to its rig.yaml`;
   }
+}
+
+/** On a cut-off list, none in view is all that can be said. */
+function waitingPhrase(waiting: number, gates: number | 'loading' | null, cut: boolean): string {
+  const count = waiting === 0 ? (cut ? 'none in view' : 'nothing') : waiting;
+  const note =
+    gates === 'loading' ? ' (checking gates…)' : gates === null ? ' (gates not checked)' : '';
+
+  return `${count} waiting on you${note}`;
 }
 
 /**
@@ -235,9 +245,7 @@ export default function RunCard({ machine, rig, now, socket, details }: Props) {
   // open items wait on David (a count only; Details lists them).
   // QA MEDIUM-1: open items to David plus the FliStudio gates Details lists, so the two agree.
   const waiting = model.toDavid.length + (typeof gates === 'number' ? gates : 0);
-  const waitingWords = `${waiting === 0 ? 'nothing' : waiting} waiting on you${
-    gates === 'loading' ? ' (checking gates…)' : gates === null ? ' (gates not checked)' : ''
-  }`;
+  const waitingWords = waitingPhrase(waiting, gates, queueCapped(machine));
   const lastWords = last
     ? `${ended ? 'ended with' : 'last'}: ${clip(last.text, 110)}`
     : 'no handoffs yet';

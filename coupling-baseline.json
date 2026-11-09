@@ -9,7 +9,6 @@
   "stability": {
     "client/src/app/usePages.tsx -> client/src/app/registry.ts": 1,
     "client/src/domain/fleet/timeline.ts -> client/src/domain/fleet/views/flow/chapters.ts": 1,
-    "client/src/pages/flow/index.tsx -> client/src/pages/flow/HandoffFlow.tsx": 1,
     "client/src/pages/learn/index.tsx -> client/src/kit/Learn.tsx": 1
   }
 }
