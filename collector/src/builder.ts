@@ -23,11 +23,14 @@ import type {
 } from './adapters/index.js';
 import { redactDeep, redactString, redactWrapped } from './redact.js';
 import { podOf, rigSpecOf } from './adapters/rig/specView.js';
+import { keepGoodRows } from './snapshotRows/keepGoodRows.js';
 
 export interface BuilderConfig {
   machine: MachineIdentity;
   version: string;
   pid: number | null;
+  /** Hears about any seat or queue row dropped from a snapshot. */
+  note?: (line: string) => void;
 }
 
 const CAPTURE_CONCURRENCY = 6;
@@ -376,5 +379,5 @@ export async function buildSnapshot(
     ...(sources.health ? { health: withTmux(healthR, tmuxR) } : {}),
   };
 
-  return MachineSnapshotSchema.parse(redactDeep(snapshot));
+  return MachineSnapshotSchema.parse(keepGoodRows(redactDeep(snapshot), config.note));
 }
