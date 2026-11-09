@@ -1,13 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  renameSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -60,29 +52,16 @@ describe('provenance exit codes', () => {
   });
 
   it('a report that cannot be written goes to the temp folder and a clean run still exits 0', () => {
-    // A FILE where scripts/provenance/out should be: mkdir and the writes under it fail, as on a
-    // read-only tree. The real folder is set aside and put back whatever happens.
-    const out = join(ROOT, 'scripts/provenance/out');
-    const aside = join(scratch, 'out-aside');
-    const had = existsSync(out);
+    // PROVENANCE_OUT points at a path under a FILE, so mkdir and the writes fail as on a read-only
+    // tree. The shared scripts/provenance/out is never touched, so parallel runs cannot collide on it.
+    const blocker = join(scratch, 'not-a-folder');
 
-    if (had) {
-      renameSync(out, aside);
-    }
+    writeFileSync(blocker, 'not a folder');
 
-    try {
-      writeFileSync(out, 'not a folder');
+    const r = run(['--source', SOURCE], { ...NO_CLI, PROVENANCE_OUT: join(blocker, 'out') });
 
-      const r = run(['--source', SOURCE], NO_CLI);
-
-      expect(r.out).toContain('# OpenRig provenance: clean');
-      expect(r.status, r.out).toBe(0);
-      expect(r.out).toMatch(/provenance: could not write .*; wrote the report to /);
-    } finally {
-      rmSync(out, { force: true });
-      if (had) {
-        renameSync(aside, out);
-      }
-    }
+    expect(r.out).toContain('# OpenRig provenance: clean');
+    expect(r.status, r.out).toBe(0);
+    expect(r.out).toMatch(/provenance: could not write .*; wrote the report to /);
   });
 });
