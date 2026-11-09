@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fireEvent, render, screen } from '@testing-library/react';
-import TerminalCard, { skillChips, tailLine, SKILL_CHIPS } from './TerminalCard.js';
+import { tailLine } from '@client/domain/fleet/terminal.js';
+import TerminalCard, { skillChips, SKILL_CHIPS } from './TerminalCard.js';
 
 const base = {
   name: 'dev-build',

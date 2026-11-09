@@ -41,3 +41,113 @@ export function tailLine(lines: readonly string[] | null | undefined): string | 
       .at(-1) ?? null
   );
 }
+
+// eslint-disable-next-line no-control-regex
+const ANSI = /\u001b\[[0-9;?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)/g;
+
+/**
+ * Every OSC sequence: ESC ] … (BEL | ESC \\). That covers OSC 8 hyperlinks (r1 L1: the link text
+ * stays, the link goes) and OSC 52 clipboard writes (qa-backend: a pane must never reach the
+ * viewer's clipboard), plus titles and the rest. Applied before ANSI → HTML on tiles and before
+ * writing to the Focus terminal, so neither renderer ever sees one.
+ */
+export function stripOsc(text: string): string {
+  return text.replace(OSC, '');
+}
+
+export function stripAnsi(line: string): string {
+  return line.replace(ANSI, '');
+}
+
+/**
+ * Claude Code's input box and footer, which sit under every turn: rules, the empty prompt, the mode
+ * line ("auto mode on (shift+tab to cycle)"), "? for shortcuts" and tips. None of it says what the
+ * seat is doing.
+ */
+const CHROME = [
+  /^[\s─━—-]{8,}[\w@.-]*[\s─━—-]*$/, // a rule, maybe with the session name in it
+  /^\s*[❯›>]\s*$/, // the empty prompt
+  /shift\+tab to cycle|\? for shortcuts|esc to interrupt|ctrl\+[a-z] to /i,
+  /^\s*[⏵▶►⏸]{1,2}\s/,
+  /^\s*[└⎿│|]?\s*Tip: /,
+  /Update installed|Restart to update|new task\? \/clear/,
+  /paste again to expand|Press up to edit queued messages|queued messages?$/i,
+  // A draft typed into the input box, or Claude Code's dimmed suggestion (ghost text) there: the
+  // viewer's text or a guess, never the seat's work. D09 W3: Claude Code puts a NO-BREAK SPACE after
+  // the ❯, which a plain " " never matched, so "❯ rig capture …" was shown as the seat's activity.
+  /^\s*[❯›>]\s/,
+];
+const TIP = /^\s*[└⎿│|]?\s*Tip: |^\s{2,}current work\s*$/;
+const isChrome = (line: string) => {
+  const t = stripAnsi(line);
+
+  return t.trim() === '' || CHROME.some((re) => re.test(t));
+};
+
+const RULE = /^[\s─━—-]{8,}[\w@.-]*[\s─━—-]*$/;
+const PROMPT_LINE = /^\s*[❯›>](\s|$)/;
+
+/**
+ * D09 W3 (QA MEDIUM-2): where Claude Code's input box starts: a rule, then the ❯ prompt line, with
+ * another rule below it. Everything from there down is the box (a draft of any length, wrapped or
+ * with shift+enter lines, a dimmed suggestion) and its footer, never the seat's work. -1 = none.
+ */
+function inputBoxStart(lines: string[]): number {
+  for (let i = lines.length - 1; i > 0; i -= 1) {
+    if (isInputBox(lines, i)) {
+      return i - 1;
+    }
+  }
+
+  return -1;
+}
+
+/** Whether the prompt line at `i` sits between two rules with only footer chrome (or blank) below the lower one. */
+function isInputBox(lines: string[], i: number): boolean {
+  if (!PROMPT_LINE.test(stripAnsi(lines[i]!)) || !RULE.test(stripAnsi(lines[i - 1]!))) {
+    return false;
+  }
+
+  const lower = lines.findIndex((l, k) => k > i && RULE.test(stripAnsi(l)));
+
+  // r1 W3 LOW-2: only the box when what follows its lower rule is footer chrome (or blank), so a
+  // plain pane with "> quoted" between two long rules keeps the output after it.
+  return lower !== -1 && lines.slice(lower + 1).every(isChrome);
+}
+
+/**
+ * S3: the last n lines of what the seat is doing, for a Wall tile. Trailing input-box chrome is
+ * dropped first, so a short tile still shows the work. Focus keeps the exact screen.
+ */
+export function contentTail(all: string[], n: number): string[] {
+  const box = inputBoxStart(all);
+  const lines = box >= 0 ? all.slice(0, box) : all;
+  let end = lines.length;
+
+  while (end > 0 && isChrome(lines[end - 1]!)) {
+    end -= 1;
+  }
+
+  if (end === 0) {
+    return visibleTail(lines, n);
+  }
+
+  // Blank lines and Claude Code's tips carry nothing on a small tile; keep the n last lines that
+  // say something.
+  const said = lines
+    .slice(0, end)
+    .filter((l) => stripAnsi(l).trim() !== '' && !TIP.test(stripAnsi(l)));
+
+  return said.slice(Math.max(0, said.length - n));
+}
+
+/** Drop trailing blank lines (panes are mostly padding at the bottom), then keep the last `n`. */
+export function visibleTail(lines: string[], n: number): string[] {
+  let end = lines.length;
+
+  while (end > 0 && stripAnsi(lines[end - 1]).trim() === '') {
+    end -= 1;
+  }
+
+  return lines.slice(Math.max(0, end - n), end);
+}

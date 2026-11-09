@@ -36,7 +36,7 @@ export {
   labelClass,
   lineClass,
 } from './HandoffLineMarks.js';
-export { default as TerminalCard, tailLine } from './TerminalCard.js';
+export { default as TerminalCard } from './TerminalCard.js';
 export { DocsLayout, useDocsDrawer } from './drawer/DocsDrawer.js';
 export { default as SkillsPanel } from './drawer/SkillsPanel.js';
 

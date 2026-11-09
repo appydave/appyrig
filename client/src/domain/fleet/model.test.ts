@@ -12,7 +12,6 @@ import {
   countSeats,
   findSeat,
   freshness,
-  contentTail,
   roleWord,
   groupSeats,
   groupState,
@@ -20,11 +19,15 @@ import {
   modelChip,
   pipFor,
   seatName,
+} from './model.js';
+import {
+  contentTail,
+  isDimSuggestion,
   stripAnsi,
   stripOsc,
+  tailLine,
   visibleTail,
-} from './model.js';
-import { isDimSuggestion, tailLine } from './terminal.js';
+} from './terminal.js';
 
 const NOW = Date.parse('2026-10-09T14:00:00.000Z');
 const at = (msAgo: number) => new Date(NOW - msAgo).toISOString();

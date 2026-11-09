@@ -122,11 +122,14 @@
         "exports": 2
       },
       "client/src/domain/fleet/model.ts": {
-        "exports": 3
+        "exports": 1
       },
       "client/src/domain/fleet/plan.ts": {
         "exports": 3,
         "types": 1
+      },
+      "client/src/domain/fleet/terminal.ts": {
+        "exports": 1
       },
       "client/src/domain/fleet/timeline.ts": {
         "exports": 3,

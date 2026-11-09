@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react';
 import { PIP, type ModelFamily, type PipKey } from '@client/domain/fleet/model.js';
 import { HarnessMark, pctText, tokensText } from './SeatCardLines.js';
-import { tailLine } from '@client/domain/fleet/terminal.js';
 import './terminalCard.css';
-
-export { tailLine };
 
 /**
  * v2 kit · TerminalCard: ONE look for an agent on every v2 page. A dark, terminal-like card, because
