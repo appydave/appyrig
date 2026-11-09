@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { seatName } from './model.js';
 import { endpointRig, ownerRig, rigQueue } from './views/core/queue.js';
@@ -15,7 +16,7 @@ import { type Chapter } from './views/flow/types.js';
 const ms = (iso: string) => Date.parse(iso);
 const bare = (raw: string | null) => (raw ?? '').split('@')[0] || (raw ?? '?');
 const byCreated = (a: QueueItem, b: QueueItem) =>
-  a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
+  compareTimes(a.createdAt, b.createdAt) || a.id.localeCompare(b.id);
 
 // ---------------------------------------------------------------- V1 run timeline
 

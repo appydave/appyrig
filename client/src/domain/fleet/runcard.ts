@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { FleetMachine, QueueItem, RigSummary } from '@appydave/shared';
 import { pipFor, seatName } from './model.js';
 import { endpointRig, isOpen, rigQueue } from './views/core/queue.js';
@@ -10,7 +11,7 @@ import { endpointRig, isOpen, rigQueue } from './views/core/queue.js';
  */
 
 const bare = (raw: string | null) => (raw ?? '?').split('@')[0] || '?';
-const byCreated = (a: QueueItem, b: QueueItem) => a.createdAt.localeCompare(b.createdAt);
+const byCreated = (a: QueueItem, b: QueueItem) => compareTimes(a.createdAt, b.createdAt);
 
 export type RunWord = 'working' | 'waiting' | 'idle' | 'partial' | 'ended' | 'stopping' | 'asleep';
 

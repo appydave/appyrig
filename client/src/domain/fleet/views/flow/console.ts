@@ -1,4 +1,9 @@
-import { type FleetMachine, type QueueItem, type SeatHistoryEvent } from '@appydave/shared';
+import {
+  compareTimes,
+  type FleetMachine,
+  type QueueItem,
+  type SeatHistoryEvent,
+} from '@appydave/shared';
 import { bare } from '@client/domain/fleet/views/core/addresses.js';
 import { rigStoryQueue } from '@client/domain/fleet/views/core/queueCap.js';
 import { ms } from '@client/domain/fleet/views/core/time.js';
@@ -17,7 +22,7 @@ export function consoleLines({ seatName, rig, items, history, at }: ConsoleQuery
     .filter((line): line is ConsoleLine => line !== null);
   const events = (history ?? []).filter((e) => ms(e.at) <= at);
 
-  return [...handoffs, ...events].sort((a, b) => a.at.localeCompare(b.at));
+  return [...handoffs, ...events].sort((a, b) => compareTimes(a.at, b.at));
 }
 
 interface ConsoleQuery {
@@ -48,6 +53,6 @@ function handoffLine(q: QueueItem, me: (raw: string | null) => boolean): Console
 /** A rig's handoffs in time order: the replay's single steps. */
 export function replaySteps(fm: FleetMachine, rig: string): QueueItem[] {
   return [...rigStoryQueue(fm, rig)].sort(
-    (a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
+    (a, b) => compareTimes(a.createdAt, b.createdAt) || a.id.localeCompare(b.id)
   );
 }

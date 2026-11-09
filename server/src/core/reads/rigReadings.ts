@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 /** What the rig run cards read from a rig's handoffs: open gates (`rig.waiting`), commits and
  * FliStudio ids (`rig.outputs`). Pure reading of the FleetStore; the verb handlers call in. */
 
@@ -133,7 +134,7 @@ function openGates(newest: Map<string, Verdict>, links: Map<string, string[]>): 
   return [...newest.values()]
     .filter((g) => g.open)
     .map((g) => ({ ...g.gate, link: bestLink(links.get(g.gate.gate)) }))
-    .sort((a, b) => b.at.localeCompare(a.at));
+    .sort((a, b) => compareTimes(b.at, a.at));
 }
 
 /**
@@ -181,7 +182,7 @@ function rigItems(m: FleetMachine, rig: string) {
 
   return m.snapshot.queue
     .filter((q) => inRig(q.source) || inRig(q.destination))
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    .sort((a, b) => compareTimes(a.createdAt, b.createdAt));
 }
 
 const SHA = /(?<![\w/.-])([0-9a-f]{7,10})(?![\w-])/g;
@@ -258,7 +259,7 @@ function noteFli(
 
 /** Newest first; in one handoff, the most-named first. */
 function newestFirst<T extends { at: string; mentions: number }>(xs: T[]): T[] {
-  return xs.sort((a, b) => b.at.localeCompare(a.at) || b.mentions - a.mentions);
+  return xs.sort((a, b) => compareTimes(b.at, a.at) || b.mentions - a.mentions);
 }
 
 /** Run card R4: commits and FliStudio ids named in the rig's handoffs (see 'rig.outputs'). */
