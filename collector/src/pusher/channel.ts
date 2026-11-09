@@ -5,7 +5,7 @@ import { isOversize, oversizeLine } from '@collector/pusher/size/payloadSize.js'
 /** A channel's first tick never waits longer than this, whatever its interval. */
 const FIRST_TICK_MAX_MS = 4_000;
 
-/** What a channel's read hands over: payloads to send in order, marked sent only when all are accepted. */
+/** What a channel's read hands over: payloads to send in order, marked sent once the hub answered each. */
 interface Pending {
   payloads: object[];
   markSent(): void;
@@ -81,7 +81,11 @@ async function takeAndSend(spec: ChannelSpec, deps: ChannelDeps): Promise<void> 
   }
 }
 
-/** Step 2: one payload at a time, skipping any over the size guard; false when the hub did not take one. */
+/**
+ * Step 2: one payload at a time, skipping any over the size guard. False only when the hub did not
+ * answer. A refusal is the hub's answer about this content, so sending it again gets the same one:
+ * it is logged and the batch goes on. It goes out again when the content changes or on a reconnect.
+ */
 async function sendEach(pending: Pending, spec: ChannelSpec, deps: ChannelDeps): Promise<boolean> {
   for (const p of pending.payloads) {
     if (isOversize(p, deps.maxPayloadBytes)) {
@@ -98,6 +102,7 @@ async function sendEach(pending: Pending, spec: ChannelSpec, deps: ChannelDeps):
   return true;
 }
 
+/** False when no ack came. */
 async function sendOne(p: object, spec: ChannelSpec, deps: ChannelDeps): Promise<boolean> {
   const ack = await deps.sendAcked(spec.event, p);
 
@@ -109,8 +114,6 @@ async function sendOne(p: object, spec: ChannelSpec, deps: ChannelDeps): Promise
 
   if (!ack.ok) {
     deps.note(`${spec.key} refused: ${ack.failureMode}: ${ack.message}`);
-
-    return false;
   }
 
   return true;

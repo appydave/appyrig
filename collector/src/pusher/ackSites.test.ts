@@ -96,6 +96,8 @@ interface Site {
   /** What the pusher logs for a refusal and for no ack. */
   refused: RegExp;
   silent: (ms: number) => RegExp;
+  /** A side channel settles a refused batch; history and queue bodies stay unmarked. */
+  refusalMarks: 0 | 1;
   /** An accepted ack is seen in the log (the snapshot push) or as markSent (the others). */
   accepted: RegExp | null;
 }
@@ -109,6 +111,7 @@ const SITES: Site[] = [
     on: () => ({}),
     refused: /snapshot refused: invalid_snapshot: nope/,
     silent: (ms) => new RegExp(`no ack from hub within ${ms}ms`),
+    refusalMarks: 0,
     accepted: /acked by hub/,
   },
   {
@@ -122,6 +125,7 @@ const SITES: Site[] = [
     }),
     refused: /history refused for seat1@r: invalid_snapshot: nope/,
     silent: () => /no ack for history of seat1@r/,
+    refusalMarks: 0,
     accepted: null,
   },
   {
@@ -135,6 +139,7 @@ const SITES: Site[] = [
     }),
     refused: /queue bodies refused: invalid_snapshot: nope/,
     silent: () => /no ack for queue bodies \(is the hub older than v1\.4\?\)/,
+    refusalMarks: 0,
     accepted: null,
   },
   {
@@ -148,6 +153,7 @@ const SITES: Site[] = [
     }),
     refused: /rig files refused: invalid_snapshot: nope/,
     silent: () => /no ack for rig files \(is the hub older than v1\.4\?\)/,
+    refusalMarks: 1,
     accepted: null,
   },
 ];
@@ -208,13 +214,13 @@ describe.each(SITES)('Feature: $name tells a hub that answers from one that does
     expect(logged(seen, site.refused)).toBe(false);
   });
 
-  it('Scenario: a refusal is reported with its reason and nothing is marked sent', async () => {
+  it('Scenario: a refusal is reported with its reason and marked only where it settles the batch', async () => {
     const seen = await run(site, 'refuse', {
       ackMs: SHORT_MS,
-      until: (s) => logged(s, site.refused),
+      until: (s) => logged(s, site.refused) && s.marked >= site.refusalMarks,
     });
 
-    expect(seen.marked).toBe(0);
+    expect(Math.min(seen.marked, 1)).toBe(site.refusalMarks);
   });
 
   it.each(['silent', 'empty'] as const)(
