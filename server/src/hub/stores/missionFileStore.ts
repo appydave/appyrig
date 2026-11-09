@@ -4,6 +4,7 @@ import {
   type MissionFilePush,
   type MissionFilesPush,
 } from '@appydave/shared';
+import { MEMORY_LIMITS, RecentMap } from './bounded/recentMap.js';
 
 /**
  * Run board, lane 1: the mission files each collector pushed, in memory only. A hub restart forgets
@@ -41,9 +42,9 @@ const empty = (machine: string, rig: string, path: string) => ({
 });
 
 export class MissionFileStore {
-  private readonly lists = new Map<string, Set<string>>();
-  private readonly files = new Map<string, Map<string, Held>>();
-  private readonly partial = new Map<string, Partial_>();
+  private readonly lists = new RecentMap<string, Set<string>>(MEMORY_LIMITS.missionRigs);
+  private readonly files = new RecentMap<string, Map<string, Held>>(MEMORY_LIMITS.missionRigs);
+  private readonly partial = new RecentMap<string, Partial_>(MEMORY_LIMITS.missionUploads);
 
   private key(machine: string, rig: string): string {
     return `${machine}\u0000${rig}`;
