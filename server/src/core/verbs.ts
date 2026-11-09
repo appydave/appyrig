@@ -519,6 +519,26 @@ function seatOf(ctx: VerbContext, machine: string, seat: string) {
   return { m: m!, seat: found };
 }
 
+/** The machine and the rig named by `input`, or the one refusal every rig verb gives: it names the rigs the machine does report. */
+function requireRig(ctx: VerbContext, input: { machine: string; rig: string }) {
+  const [m] = machinesOf(ctx, input.machine);
+  const rig = m!.snapshot.rigs.find((r) => r.name === input.rig);
+
+  if (!rig) {
+    throw new CapabilityRefusal(
+      'rig-not-found',
+      `Machine "${input.machine}" has no rig "${input.rig}".`,
+      {
+        machine: input.machine,
+        rig: input.rig,
+        known: m!.snapshot.rigs.map((r) => r.name),
+      }
+    );
+  }
+
+  return { m: m!, rig };
+}
+
 const place = (m: FleetMachine) => ({
   machine: m.machine.id,
   liveness: m.liveness,
@@ -1253,20 +1273,7 @@ const VERB_SET = {
     RigFilesOutputSchema,
     RIG_NOT_FOUND,
     (input, ctx): RigFilesOutput => {
-      const [m] = machinesOf(ctx, input.machine);
-      const rig = m!.snapshot.rigs.find((r) => r.name === input.rig);
-
-      if (!rig) {
-        throw new CapabilityRefusal(
-          'rig-not-found',
-          `Machine "${input.machine}" has no rig "${input.rig}".`,
-          {
-            machine: input.machine,
-            rig: input.rig,
-            known: m!.snapshot.rigs.map((r) => r.name),
-          }
-        );
-      }
+      const { rig } = requireRig(ctx, input);
 
       const out = (status: RigFilesOutput['status'], reason: string | null): RigFilesOutput => {
         const specFiles = ctx.store.rigFiles.listSpecNamed(input.machine, input.rig);
@@ -1307,19 +1314,7 @@ const VERB_SET = {
     RigFileOutputSchema,
     FILE_NOT_FOUND,
     (input, ctx) => {
-      const [m] = machinesOf(ctx, input.machine);
-
-      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
-        throw new CapabilityRefusal(
-          'rig-not-found',
-          `Machine "${input.machine}" has no rig "${input.rig}".`,
-          {
-            machine: input.machine,
-            rig: input.rig,
-            known: m!.snapshot.rigs.map((r) => r.name),
-          }
-        );
-      }
+      requireRig(ctx, input);
 
       const file = ctx.store.rigFiles.get(input.machine, input.rig, input.fileId);
 
@@ -1436,19 +1431,7 @@ const VERB_SET = {
     MissionFileOutputSchema,
     RIG_NOT_FOUND,
     (input, ctx) => {
-      const [m] = machinesOf(ctx, input.machine);
-
-      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
-        throw new CapabilityRefusal(
-          'rig-not-found',
-          `Machine "${input.machine}" has no rig "${input.rig}".`,
-          {
-            machine: input.machine,
-            rig: input.rig,
-            known: m!.snapshot.rigs.map((r) => r.name),
-          }
-        );
-      }
+      requireRig(ctx, input);
 
       return ctx.store.missionFiles.get(input.machine, input.rig, input.path);
     }
@@ -1472,15 +1455,7 @@ const VERB_SET = {
     RigWaitingOutputSchema,
     RIG_NOT_FOUND,
     (input, ctx): RigWaitingOutput => {
-      const [m] = machinesOf(ctx, input.machine);
-
-      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
-        throw new CapabilityRefusal(
-          'rig-not-found',
-          `Machine "${input.machine}" has no rig "${input.rig}".`,
-          { machine: input.machine, rig: input.rig }
-        );
-      }
+      const { m } = requireRig(ctx, input);
 
       return rigWaiting(m!, input.rig, ctx);
     }
@@ -1492,15 +1467,7 @@ const VERB_SET = {
     RigOutputsOutputSchema,
     RIG_NOT_FOUND,
     (input, ctx): RigOutputsOutput => {
-      const [m] = machinesOf(ctx, input.machine);
-
-      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
-        throw new CapabilityRefusal(
-          'rig-not-found',
-          `Machine "${input.machine}" has no rig "${input.rig}".`,
-          { machine: input.machine, rig: input.rig }
-        );
-      }
+      const { m } = requireRig(ctx, input);
 
       return rigOutputs(m!, input.rig, ctx.store);
     }
@@ -1512,15 +1479,7 @@ const VERB_SET = {
     RigEntryOutputSchema,
     RIG_NOT_FOUND,
     (input, ctx) => {
-      const [m] = machinesOf(ctx, input.machine);
-
-      if (!m!.snapshot.rigs.some((r) => r.name === input.rig)) {
-        throw new CapabilityRefusal(
-          'rig-not-found',
-          `Machine "${input.machine}" has no rig "${input.rig}".`,
-          { machine: input.machine, rig: input.rig, known: m!.snapshot.rigs.map((r) => r.name) }
-        );
-      }
+      const { m } = requireRig(ctx, input);
 
       const seats = m!.snapshot.seats.filter((s) => s.rig === input.rig).map((s) => s.id);
 

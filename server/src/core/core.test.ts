@@ -1319,12 +1319,12 @@ describe('batch 1 · B5 — db.rows', () => {
 });
 
 /** The six verbs that refuse an unknown rig: the extra input each needs, and whether its refusal lists the known rigs. */
-const RIG_VERBS: [string, Record<string, unknown>, boolean][] = [
+const RIG_VERBS: [string, { fileId?: string; path?: string }, boolean][] = [
   ['rig.files', {}, true],
   ['rig.file', { fileId: 'spec:rig.yaml' }, true],
   ['mission.file', { path: '/x/spec.md' }, true],
-  ['rig.waiting', {}, false],
-  ['rig.outputs', {}, false],
+  ['rig.waiting', {}, true],
+  ['rig.outputs', {}, true],
   ['rig.entry', {}, true],
 ];
 
