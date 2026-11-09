@@ -7,7 +7,7 @@ Reasons live in `scripts/gates-doc/reasons.mjs`. A reason starting "reason unkno
 
 Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.mjs ARCHLINT_EXCLUDES and SKIPPED_FILE, scripts/arch-strings.mjs SKIP, ALLOWED and COPY_ALLOWED, lint/root-imports-codemod.mjs NOT_SCANNED; also not listed: the inline disables in source (eslint-disable, v8 and istanbul ignore, oxlint-disable; 30 when counted on 2026-11-09) and the suppression baselines (eslint-suppressions.json, stylelint-suppressions.json, and the scores, oxlint, coupling and folder baselines).
 
-127 exemptions, 47 with reason unknown.
+128 exemptions, 47 with reason unknown.
 
 | Source | Where | Kind | Path or rule | Reason |
 | --- | --- | --- | --- | --- |
@@ -94,50 +94,51 @@ Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.m
 | prettier | - | ignore | `test-results` | R5 |
 | prettier | - | ignore | `playwright-report` | R23 |
 | prettier | - | ignore | `.openrig` | R24 |
+| prettier | - | ignore | `.appynet` | R25 |
 | prettier | - | ignore | `.claude` | R24 |
 | prettier | - | ignore | `.agents` | R24 |
 | prettier | - | ignore | `.codex` | R24 |
-| prettier | - | ignore | `test/fixtures` | R25 |
-| prettier | - | ignore | `CLAUDE.local.md` | R26 |
-| prettier | - | ignore | `.mcp.json` | R27 |
-| prettier | - | ignore | `server/src/core/vendor` | R28 |
-| prettier | - | ignore | `/api` | R29 |
-| prettier | - | ignore | `test/root/fixtures` | R30 |
-| prettier | - | ignore | `scripts/provenance/out` | R31 |
-| prettier | - | ignore | `eslint-suppressions.json` | R32 |
-| prettier | - | ignore | `stylelint-suppressions.json` | R33 |
-| prettier | - | ignore | `docs/gates.md` | R34 |
+| prettier | - | ignore | `test/fixtures` | R26 |
+| prettier | - | ignore | `CLAUDE.local.md` | R27 |
+| prettier | - | ignore | `.mcp.json` | R28 |
+| prettier | - | ignore | `server/src/core/vendor` | R29 |
+| prettier | - | ignore | `/api` | R30 |
+| prettier | - | ignore | `test/root/fixtures` | R31 |
+| prettier | - | ignore | `scripts/provenance/out` | R32 |
+| prettier | - | ignore | `eslint-suppressions.json` | R33 |
+| prettier | - | ignore | `stylelint-suppressions.json` | R34 |
+| prettier | - | ignore | `docs/gates.md` | R35 |
 | oxlint | - | ignore | `**/dist/**` | R5 |
 | oxlint | - | ignore | `**/node_modules/**` | R5 |
-| oxlint | - | ignore | `.claude/**` | R35 |
-| oxlint | - | ignore | `.openrig/**` | R35 |
-| oxlint | - | ignore | `.agents/**` | R35 |
-| oxlint | - | ignore | `.codex/**` | R35 |
-| oxlint | - | ignore | `api/**` | R35 |
-| oxlint | - | ignore | `scripts/provenance/out/**` | R36 |
-| oxlint | - | ignore | `server/src/core/vendor/**` | R36 |
-| oxlint | - | ignore | `test/fixtures/**` | R36 |
-| oxlint | - | ignore | `test/root/fixtures/**` | R36 |
-| oxlint | - | off anti-slop/require-safety-comment-for-type-assertion | `**/*.test.{ts,tsx,mjs,js}, **/*.spec.{ts,tsx,mjs,js}, e2e/**, test/**, **/test/**, **/*test-kit*` | R37 |
-| oxlint | - | off anti-slop/no-unknown-parameters | `collector/src/adapters/**` | R38 |
-| depcruise | - | pathNot | `\.test\.tsx?$` | R39 |
-| depcruise | - | pathNot | `\.test\.ts$` | R40 |
-| depcruise | - | pathNot | `\.(test\|spec)\.[cm]?[jt]sx?$` | R41 |
-| depcruise | - | pathNot | `(^\|/)test/` | R41 |
-| depcruise | - | pathNot | `test-kit` | R41 |
+| oxlint | - | ignore | `.claude/**` | R36 |
+| oxlint | - | ignore | `.openrig/**` | R36 |
+| oxlint | - | ignore | `.agents/**` | R36 |
+| oxlint | - | ignore | `.codex/**` | R36 |
+| oxlint | - | ignore | `api/**` | R36 |
+| oxlint | - | ignore | `scripts/provenance/out/**` | R37 |
+| oxlint | - | ignore | `server/src/core/vendor/**` | R37 |
+| oxlint | - | ignore | `test/fixtures/**` | R37 |
+| oxlint | - | ignore | `test/root/fixtures/**` | R37 |
+| oxlint | - | off anti-slop/require-safety-comment-for-type-assertion | `**/*.test.{ts,tsx,mjs,js}, **/*.spec.{ts,tsx,mjs,js}, e2e/**, test/**, **/test/**, **/*test-kit*` | R38 |
+| oxlint | - | off anti-slop/no-unknown-parameters | `collector/src/adapters/**` | R39 |
+| depcruise | - | pathNot | `\.test\.tsx?$` | R40 |
+| depcruise | - | pathNot | `\.test\.ts$` | R41 |
+| depcruise | - | pathNot | `\.(test\|spec)\.[cm]?[jt]sx?$` | R42 |
+| depcruise | - | pathNot | `(^\|/)test/` | R42 |
+| depcruise | - | pathNot | `test-kit` | R42 |
 | depcruise | - | doNotFollow | `node_modules` | R5 |
 | depcruise | - | exclude | `^(client\|server\|collector\|shared)/dist/` | R5 |
 | depcruise-folders | - | doNotFollow | `node_modules` | R5 |
-| depcruise-folders | - | exclude | `(node_modules\|dist)\|\.(test\|spec)\.tsx?$` | R42 |
-| folder-limits | - | not scanned | `test/fixtures/` | R36 |
-| folder-limits | - | not scanned | `test/root/fixtures/` | R36 |
-| folder-limits | - | not scanned | `server/src/core/vendor/` | R36 |
-| folder-limits | - | not scanned | `scripts/provenance/out/` | R36 |
+| depcruise-folders | - | exclude | `(node_modules\|dist)\|\.(test\|spec)\.tsx?$` | R43 |
+| folder-limits | - | not scanned | `test/fixtures/` | R37 |
+| folder-limits | - | not scanned | `test/root/fixtures/` | R37 |
+| folder-limits | - | not scanned | `server/src/core/vendor/` | R37 |
+| folder-limits | - | not scanned | `scripts/provenance/out/` | R37 |
 | test-trust | - | skip dir | `node_modules` | R5 |
 | test-trust | - | skip dir | `dist` | R5 |
-| test-trust | - | skip dir | `fixtures` | R43 |
+| test-trust | - | skip dir | `fixtures` | R44 |
 | test-trust | - | skip dir | `test-results` | R5 |
-| test-trust | - | skip dir | `playwright-report` | R43 |
+| test-trust | - | skip dir | `playwright-report` | R44 |
 
 ## Reasons
 
@@ -165,22 +166,23 @@ Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.m
 - **R22**: reason unknown: no comment in the vitest config (the server one is from the scaffold, 5ef74dd). Find out: git log -S"exclude" -- <the config>
 - **R23**: reason unknown: in the first scaffold commit (5ef74dd, create-appystack), whose message gives none. Find out: git show 5ef74dd -- .prettierignore
 - **R24**: OpenRig drops its own runtime files into every seat folder (git-excluded); added in 186c751 with no reason in its message.
-- **R25**: reason unknown: added in 186c751 (P0b, the snapshot fixtures), message gives none. Find out: git show 186c751 -- .prettierignore
-- **R26**: reason unknown: added in 186c751, message gives none (the file is OpenRig-written and git-excluded). Find out: git show 186c751 -- .prettierignore
-- **R27**: OpenRig writes this file (dev-hub): D6, commit 988b51b.
-- **R28**: Vendored fli-core files keep upstream bytes; "excluded from prettier/eslint" in eb1a7a2 and the comment in .prettierignore.
-- **R29**: reason unknown: anchored to the repo root in fc51624 ("r1 collector P4 L1"), which gives no reason. Find out: git show fc51624
-- **R30**: OpenRig spec files copied as-is (Apache-2.0) so the schema test parses the real bytes (comment in .prettierignore, b07fa02).
-- **R31**: Provenance check output (comment in .prettierignore, 79e0d1f).
-- **R32**: ESLint rewrites this file itself (--prune-suppressions) in its own format (comment in .prettierignore).
-- **R33**: Stylelint writes this file itself (--suppress) in its own format (comment in .prettierignore).
-- **R34**: Generated by npm run docs:gates; prettier would pad the table and the pin test would then fail (List 7a-1, #85).
-- **R35**: reason unknown: in the first oxlint.config.ts (G02, 37d255c), whose message and comments give none.
-- **R36**: Vendored or recorded files (comment in lint/folder-limits.mjs, G09 4b1b721: "the same ones oxlint.config.ts ignores").
-- **R37**: Production code only: tests, e2e, test support and recorded fixtures are not counted (comment in oxlint.config.ts).
-- **R38**: The I/O boundary: adapters turn daemon JSON into domain types, so taking `unknown` is their job (comment in oxlint.config.ts).
-- **R39**: reason unknown: added to the client layer rules in W4 (7034ac9), whose message gives none.
-- **R40**: reason unknown: added with the collector adapters rule in G12 (211f10f), whose message gives none.
-- **R41**: Production code is src/ minus tests and test support (header comment in .dependency-cruiser.cjs, G12 211f10f).
-- **R42**: reason unknown: in the first .dependency-cruiser-folders.cjs (G11, 5c5f28a), whose message gives none. node_modules and dist are git-ignored; the test-file part has no comment.
-- **R43**: reason unknown: in the first test-trust.mjs (G00b, 48900cb), whose message and comments give none.
+- **R25**: An agent run folder inside a worktree (briefs and screenshots), git-ignored and not app source.
+- **R26**: reason unknown: added in 186c751 (P0b, the snapshot fixtures), message gives none. Find out: git show 186c751 -- .prettierignore
+- **R27**: reason unknown: added in 186c751, message gives none (the file is OpenRig-written and git-excluded). Find out: git show 186c751 -- .prettierignore
+- **R28**: OpenRig writes this file (dev-hub): D6, commit 988b51b.
+- **R29**: Vendored fli-core files keep upstream bytes; "excluded from prettier/eslint" in eb1a7a2 and the comment in .prettierignore.
+- **R30**: reason unknown: anchored to the repo root in fc51624 ("r1 collector P4 L1"), which gives no reason. Find out: git show fc51624
+- **R31**: OpenRig spec files copied as-is (Apache-2.0) so the schema test parses the real bytes (comment in .prettierignore, b07fa02).
+- **R32**: Provenance check output (comment in .prettierignore, 79e0d1f).
+- **R33**: ESLint rewrites this file itself (--prune-suppressions) in its own format (comment in .prettierignore).
+- **R34**: Stylelint writes this file itself (--suppress) in its own format (comment in .prettierignore).
+- **R35**: Generated by npm run docs:gates; prettier would pad the table and the pin test would then fail (List 7a-1, #85).
+- **R36**: reason unknown: in the first oxlint.config.ts (G02, 37d255c), whose message and comments give none.
+- **R37**: Vendored or recorded files (comment in lint/folder-limits.mjs, G09 4b1b721: "the same ones oxlint.config.ts ignores").
+- **R38**: Production code only: tests, e2e, test support and recorded fixtures are not counted (comment in oxlint.config.ts).
+- **R39**: The I/O boundary: adapters turn daemon JSON into domain types, so taking `unknown` is their job (comment in oxlint.config.ts).
+- **R40**: reason unknown: added to the client layer rules in W4 (7034ac9), whose message gives none.
+- **R41**: reason unknown: added with the collector adapters rule in G12 (211f10f), whose message gives none.
+- **R42**: Production code is src/ minus tests and test support (header comment in .dependency-cruiser.cjs, G12 211f10f).
+- **R43**: reason unknown: in the first .dependency-cruiser-folders.cjs (G11, 5c5f28a), whose message gives none. node_modules and dist are git-ignored; the test-file part has no comment.
+- **R44**: reason unknown: in the first test-trust.mjs (G00b, 48900cb), whose message and comments give none.

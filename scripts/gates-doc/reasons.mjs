@@ -111,6 +111,8 @@ export const REASONS = {
   'prettier|ignore|package-lock.json': PI_SCAFFOLD,
   'prettier|ignore|test-results': GIT_IGNORED,
   'prettier|ignore|playwright-report': PI_SCAFFOLD,
+  'prettier|ignore|.appynet':
+    'An agent run folder inside a worktree (briefs and screenshots), git-ignored and not app source.',
   'prettier|ignore|.openrig': PI_OPENRIG,
   'prettier|ignore|.claude': PI_OPENRIG,
   'prettier|ignore|.agents': PI_OPENRIG,
