@@ -1639,16 +1639,6 @@
       "count": 2
     }
   },
-  "server/src/hub/browserAuth.ts": {
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
-  "server/src/hub/collectorIngest.ts": {
-    "max-lines-per-function": {
-      "count": 2
-    }
-  },
   "server/src/hub/createHub.ts": {
     "max-lines-per-function": {
       "count": 1
@@ -1659,6 +1649,21 @@
   },
   "server/src/hub/hub.test.ts": {
     "max-lines": {
+      "count": 1
+    }
+  },
+  "server/src/hub/ingress/browserAuth.ts": {
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    }
+  },
+  "server/src/hub/ingress/collectorIngest.ts": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "server/src/hub/ingress/v1ArchiveRouter.ts": {
+    "max-lines-per-function": {
       "count": 1
     }
   },
@@ -1706,11 +1711,6 @@
       "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
-  "server/src/hub/v1ArchiveRouter.ts": {
-    "max-lines-per-function": {
       "count": 1
     }
   },
