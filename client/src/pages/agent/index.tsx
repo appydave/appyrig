@@ -3,7 +3,6 @@ import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
 import {
   PIP,
   ago,
-  blockedBecause,
   freshness,
   modelChip,
   pipFor,
@@ -34,6 +33,7 @@ import type { PageContext, PageDef, PageProps } from '@client/app/types.js';
 import { isOpenRigSeat, sampleDetail, type SeatDetailView } from '@client/domain/agent/detail.js';
 import { useAgentData } from './useAgentData.js';
 import './agent.css';
+import { blockedBecause } from '@client/domain/fleet/blocked/blocked.js';
 
 const RESUME_WHY =
   'The resume command holds a session id that AppyRig deliberately never carries, so this is a mock.';
