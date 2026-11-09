@@ -6,6 +6,7 @@ import { FLEET_EVENTS, HUB_CAPS } from '@appydave/shared';
 import { buildSnapshot } from '@collector/builder.js';
 import { fixtureSources } from '@collector/adapters/fixtureSources.js';
 import { startPusher, type Pusher } from '@collector/pusher.js';
+import { startChannel, type ChannelDeps } from '@collector/pusher/channel.js';
 
 /**
  * G04 · stop(): a stopped pusher arms no new channel timer and clears the ones it had. Counts only
@@ -109,7 +110,7 @@ describe('Feature: a stopped pusher does not start a channel up again', () => {
     expect(timers.armedIds()).toHaveLength(before);
   });
 
-  it('Scenario: stop() clears every timer the channel armed, the first tick and the ones after it', async () => {
+  it('Scenario: stop() clears the timer still armed, so a stopped channel never ticks again', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
     const timers = watchTimers();
@@ -125,6 +126,49 @@ describe('Feature: a stopped pusher does not start a channel up again', () => {
 
     expect(takes).toBeGreaterThanOrEqual(2);
     expect(timers.armedIds().length).toBeGreaterThanOrEqual(2);
-    expect(timers.clearedIds()).toEqual(expect.arrayContaining(timers.armedIds()));
+    // Only the newest is still armed; the ones that fired have left the list and need no clearing.
+    expect(timers.clearedIds()).toContain(timers.armedIds().at(-1));
+
+    const atStop = takes;
+
+    await vi.advanceTimersByTimeAsync(EVERY * 5);
+
+    expect(takes).toBe(atStop);
+  });
+});
+
+describe('a running channel keeps one timer handle, not one per tick (AFTER audit CQ-8)', () => {
+  it('holds the same number of handles after 10,000 ticks as after 10', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+    // The pusher's own list of handles, the thing that grew. Spread so it counts any iterable.
+    let takes = 0;
+    const deps: ChannelDeps = {
+      isStopped: () => false,
+      connected: () => {
+        takes++;
+
+        return false;
+      },
+      hubCaps: () => new Set<string>(),
+      maxPayloadBytes: 1024,
+      note: () => {},
+      warnSometimes: () => {},
+      sendAcked: async () => ({ ok: true, receivedAt: ACK.receivedAt }),
+      timers: new Set<NodeJS.Timeout>(),
+    };
+    const held = () => [...deps.timers].length;
+
+    startChannel({ key: 'k', event: 'e', every: EVERY, since: 'v', take: async () => null }, deps);
+
+    await vi.advanceTimersByTimeAsync(EVERY * 10);
+
+    const after10 = held();
+
+    await vi.advanceTimersByTimeAsync(EVERY * 9_990);
+
+    expect(takes).toBeGreaterThanOrEqual(10_000);
+    expect(after10).toBe(1);
+    expect(held()).toBe(1);
   });
 });

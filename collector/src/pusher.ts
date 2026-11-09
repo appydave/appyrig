@@ -157,7 +157,7 @@ export function startPusher(opts: PusherOptions): Pusher {
   // and an older hub (no listener, no ack) is warned about at most every 10 minutes.
   const sendAcked = (event: string, payload: unknown) =>
     emitAcked(socket.timeout(ackTimeout * 2), event, payload);
-  const timers: NodeJS.Timeout[] = [];
+  const timers = new Set<NodeJS.Timeout>();
   const deps: ChannelDeps = {
     isStopped: () => stopped,
     connected: () => socket.connected,
