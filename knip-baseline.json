@@ -5,20 +5,8 @@
       "bin/appyrig.mjs": {
         "exports": 2
       },
-      "client/package.json": {
-        "devDependencies": 2
-      },
       "client/src/kit/HandoffLineMarks.tsx": {
         "exports": 1
-      },
-      "client/src/test/msw/browser.ts": {
-        "files": 1
-      },
-      "client/src/test/msw/handlers.ts": {
-        "files": 1
-      },
-      "client/src/test/msw/server.ts": {
-        "files": 1
       },
       "lint/folder-limits.mjs": {
         "exports": 4
