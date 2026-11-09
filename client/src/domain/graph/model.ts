@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { FleetMachine, QueueItem, Seat } from '@appydave/shared';
 import { pipFor, seatName, type PipKey } from '@client/domain/fleet/model.js';
 import { mergePairs, pairKey, type LinePair } from '@client/domain/lines/handoffLines.js';
@@ -301,7 +302,7 @@ export function crossRigEdges(
   const edges = [...map.values()]
     .map((e) => ({
       ...e,
-      items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      items: [...e.items].sort((a, b) => compareTimes(a.createdAt, b.createdAt)),
     }))
     .sort((a, b) => b.count - a.count || `${a.from}${a.to}`.localeCompare(`${b.from}${b.to}`));
 
@@ -493,7 +494,7 @@ export function pairEdges(cross: CrossEdge[]): PairEdge[] {
   ).map((p) => ({
     ...p,
     items: [...(items.get(pairKey(p.a, p.b)) ?? [])].sort((x, y) =>
-      x.createdAt.localeCompare(y.createdAt)
+      compareTimes(x.createdAt, y.createdAt)
     ),
   }));
 }

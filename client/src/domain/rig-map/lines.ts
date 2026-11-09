@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { QueueItem } from '@appydave/shared';
 import { plannedWord } from '@client/domain/fleet/views/map/rigMap.js';
 import { type RigMap } from '@client/domain/fleet/views/map/types.js';
@@ -45,7 +46,7 @@ export function mapPairs(map: RigMap): MapPair[] {
         (e) => !e.self && ((e.from === p.a && e.to === p.b) || (e.from === p.b && e.to === p.a))
       )
       .flatMap((e) => e.items)
-      .sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+      .sort((x, y) => compareTimes(x.createdAt, y.createdAt));
 
     return {
       ...p,
@@ -172,7 +173,7 @@ export function planLines(pairs: MapPair[], look: PlanLook): PlannedLine[] {
       planned: null,
       rail: true,
       pairs: members.length,
-      items: members.flatMap((m) => m.items).sort((u, v) => u.createdAt.localeCompare(v.createdAt)),
+      items: members.flatMap((m) => m.items).sort((u, v) => compareTimes(u.createdAt, v.createdAt)),
     });
   }
 

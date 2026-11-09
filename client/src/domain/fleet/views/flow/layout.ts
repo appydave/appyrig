@@ -1,4 +1,4 @@
-import { type FleetMachine, type QueueItem, type Seat } from '@appydave/shared';
+import { compareTimes, type FleetMachine, type QueueItem, type Seat } from '@appydave/shared';
 import { seatName } from '@client/domain/fleet/model.js';
 import { bare, seatAnswersTo } from '@client/domain/fleet/views/core/addresses.js';
 import { endpointRig } from '@client/domain/fleet/views/core/queue.js';
@@ -97,7 +97,7 @@ function firstSeen(
   const counts = new Map<string, number>();
   const seatOrder: string[] = [];
 
-  for (const q of [...items].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+  for (const q of [...items].sort((a, b) => compareTimes(a.createdAt, b.createdAt))) {
     for (const raw of [q.source, q.destination]) {
       const id = nodeOfRaw(raw);
 

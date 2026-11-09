@@ -1,4 +1,4 @@
-import { type FleetMachine } from '@appydave/shared';
+import { compareTimes, type FleetMachine } from '@appydave/shared';
 import { seatKey } from '@client/domain/fleet/model.js';
 import { type MapEdge } from '@client/domain/fleet/views/map/types.js';
 
@@ -9,7 +9,7 @@ import { type MapEdge } from '@client/domain/fleet/views/map/types.js';
 export function oldestFirst(edges: Map<string, MapEdge>): MapEdge[] {
   return [...edges.values()].map((e) => ({
     ...e,
-    items: [...e.items].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    items: [...e.items].sort((a, b) => compareTimes(a.createdAt, b.createdAt)),
   }));
 }
 
