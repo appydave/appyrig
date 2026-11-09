@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import {
   ASLEEP_AFTER_MS,
   AUTH_ERRORS,
+  FLEET_EVENTS,
   SESSION_COOKIE,
   SeatHistoryEventSchema,
   MachineSnapshotSchema,
@@ -207,6 +208,46 @@ describe('AC 5 — collector → hub → browser over Socket.IO', () => {
       failureMode: 'machine_mismatch',
     });
     expect(h.hub.store.list()).toEqual([]);
+  });
+});
+
+describe('a malformed socket frame is refused and the hub stays up (AFTER audit CQ-S-001)', () => {
+  const call = (s: ReturnType<RunningHub['browser']>, request: object) =>
+    new Promise<{ ok: boolean; error?: { failureMode?: string } }>((r) =>
+      s.emit(FLEET_EVENTS.CALL, request as never, r)
+    );
+  const sendHistory = (s: ReturnType<RunningHub['collector']>, history: object) =>
+    new Promise<{ ok: boolean; failureMode?: string }>((r) =>
+      s.emit(FLEET_EVENTS.HISTORY, history, r)
+    );
+
+  it('a verb that cannot become a string is an unknown verb, and the next call still answers', async () => {
+    const h = await start();
+    const browser = h.browser();
+
+    const refused = await call(browser, { verb: { toString: 1 }, input: {} });
+
+    expect(refused.ok).toBe(false);
+    expect(refused.error?.failureMode).toBe('unknown-capability');
+    expect((await call(browser, { verb: 'seat.list', input: {} })).ok).toBe(true);
+  });
+
+  it('a seat name that cannot become a filename is refused and not kept, and the next push lands', async () => {
+    const h = await start({ dataDir: tempDir() });
+    const collector = h.collector({ token: TOKEN, machineId: 'm2' });
+    const history = {
+      machineId: 'm2',
+      collectedAt: '2026-10-10T00:00:00.000Z',
+      events: [],
+      truncated: false,
+    };
+
+    const refused = await sendHistory(collector, { ...history, seat: 'bad\ud800@rig' });
+
+    expect(refused).toMatchObject({ ok: false, failureMode: 'invalid_snapshot' });
+    expect(h.hub.store.getHistory('m2', 'bad\ud800@rig')).toBeUndefined();
+    expect((await sendHistory(collector, { ...history, seat: 'good@rig' })).ok).toBe(true);
+    expect(h.hub.store.getHistory('m2', 'good@rig')?.seat).toBe('good@rig');
   });
 });
 

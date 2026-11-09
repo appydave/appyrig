@@ -51,12 +51,49 @@ function summariseIssues(issues: { path: PropertyKey[]; message: string }[]): st
     .join('; ');
 }
 
+type FaultSink = (what: string, err: Error) => void;
+
+function refuseInvalid(
+  reply: (result: CollectorAck) => void,
+  issues: { path: PropertyKey[]; message: string }[]
+): void {
+  reply({ ok: false, failureMode: 'invalid_snapshot', message: summariseIssues(issues) });
+}
+
+/**
+ * Socket.IO runs listeners with no try/catch, so a throw from one ends the hub process. A push
+ * that gets past the schema and still can't be stored is refused like any other bad push.
+ */
+function refusingOnThrow<Raw>(
+  what: string,
+  listener: (raw: Raw, ack: (result: CollectorAck) => void) => void,
+  onFault?: FaultSink
+) {
+  return (raw: Raw, ack: (result: CollectorAck) => void) => {
+    try {
+      listener(raw, ack);
+    } catch (err) {
+      onFault?.(what, err instanceof Error ? err : new Error(`${what} failed`));
+
+      if (typeof ack === 'function') {
+        ack({
+          ok: false,
+          failureMode: 'invalid_snapshot',
+          message: `could not store this ${what}`,
+        });
+      }
+    }
+  };
+}
+
 export interface CollectorIngestOptions {
   /** Hub token. When undefined, every collector is refused (no open default). */
   hubToken: string | undefined;
   store: FleetStore;
   /** Called with the stored entry after every accepted snapshot. */
   onSnapshot: (machine: FleetMachine) => void;
+  /** A push passed its checks but could not be stored; it has been refused. */
+  onFault?: FaultSink;
 }
 
 export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions): void {
@@ -84,19 +121,13 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
     // The connect check above already refused anything that is not a token and a machineId.
     const { machineId } = CollectorAuthSchema.parse(socket.handshake.auth);
 
-    socket.on(FLEET_EVENTS.SNAPSHOT, (raw, ack) => {
+    const onSnapshotPush: Parameters<typeof refusingOnThrow<unknown>>[1] = (raw, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};
 
       const parsed = MachineSnapshotSchema.safeParse(raw);
 
       if (!parsed.success) {
-        const result: CollectorAck = {
-          ok: false,
-          failureMode: 'invalid_snapshot',
-          message: summariseIssues(parsed.error.issues),
-        };
-
-        reply(result);
+        refuseInvalid(reply, parsed.error.issues);
 
         return;
       }
@@ -120,43 +151,44 @@ export function attachCollectorIngest(io: Server, opts: CollectorIngestOptions):
         receivedAt: entry.lastSeen,
         caps: HUB_CAP_LIST,
       });
-    });
+    };
+
+    socket.on(FLEET_EVENTS.SNAPSHOT, refusingOnThrow('snapshot', onSnapshotPush, opts.onFault));
 
     // The checks every push after the snapshot shares: valid shape, same machine as the socket, then store and ack.
-    const guarded =
-      <S extends z.ZodType<{ machineId: string }>>(
-        schema: S,
-        what: string,
-        store: (data: z.output<S>) => void
-      ) =>
-      (raw: z.input<S>, ack: (result: CollectorAck) => void) => {
-        const reply = typeof ack === 'function' ? ack : () => {};
+    const guarded = <S extends z.ZodType<{ machineId: string }>>(
+      schema: S,
+      what: string,
+      store: (data: z.output<S>) => void
+    ) =>
+      refusingOnThrow<z.input<S>>(
+        what,
+        (raw, ack) => {
+          const reply = typeof ack === 'function' ? ack : () => {};
 
-        const parsed = schema.safeParse(raw);
+          const parsed = schema.safeParse(raw);
 
-        if (!parsed.success) {
-          reply({
-            ok: false,
-            failureMode: 'invalid_snapshot',
-            message: summariseIssues(parsed.error.issues),
-          });
+          if (!parsed.success) {
+            refuseInvalid(reply, parsed.error.issues);
 
-          return;
-        }
+            return;
+          }
 
-        if (parsed.data.machineId !== machineId) {
-          reply({
-            ok: false,
-            failureMode: 'machine_mismatch',
-            message: `socket authenticated as ${machineId}, ${what} is for ${parsed.data.machineId}`,
-          });
+          if (parsed.data.machineId !== machineId) {
+            reply({
+              ok: false,
+              failureMode: 'machine_mismatch',
+              message: `socket authenticated as ${machineId}, ${what} is for ${parsed.data.machineId}`,
+            });
 
-          return;
-        }
+            return;
+          }
 
-        store(parsed.data);
-        reply({ ok: true, receivedAt: new Date().toISOString() });
-      };
+          store(parsed.data);
+          reply({ ok: true, receivedAt: new Date().toISOString() });
+        },
+        opts.onFault
+      );
 
     // v1.2: one seat's history (replay consoles). Same checks as a snapshot.
     socket.on(

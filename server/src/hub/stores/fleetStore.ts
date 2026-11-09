@@ -265,16 +265,20 @@ export class FleetStore {
 
   /** v1.2: keep the latest history a collector sent for one seat (memory + disk). */
   putHistory(h: SeatHistory): void {
+    // Named first: a seat that can't be encoded throws here, before anything is kept.
+    const file = this.historyDir
+      ? join(
+          this.historyDir,
+          `${encodeURIComponent(h.machineId)}__${encodeURIComponent(h.seat)}.json`
+        )
+      : undefined;
+
     this.histories.set(`${h.machineId}/${h.seat}`, h);
-    if (!this.historyDir) {
+    if (!file) {
       return;
     }
 
     const key = `history:${h.machineId}/${h.seat}`;
-    const file = join(
-      this.historyDir,
-      `${encodeURIComponent(h.machineId)}__${encodeURIComponent(h.seat)}.json`
-    );
     const prev = this.writes.get(key) ?? Promise.resolve();
     const run = prev.then(async () => {
       const tmp = `${file}.${process.pid}.tmp`;

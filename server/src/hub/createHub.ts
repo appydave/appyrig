@@ -74,6 +74,17 @@ export interface Hub {
   close: () => Promise<void>;
 }
 
+/**
+ * A browser's call frame, unchecked. Never String(verb): Socket.IO runs the listener with no
+ * try/catch, and { verb: { toString: 1 } } makes String() throw, which would end the hub process.
+ */
+function readCall(request: CoreCallRequest) {
+  const r: Partial<CoreCallRequest> =
+    typeof request === 'object' && request !== null ? request : {};
+
+  return { verb: typeof r.verb === 'string' ? r.verb : '', input: r.input, dryRun: r.dryRun };
+}
+
 export function createHub(opts: HubOptions): Hub {
   const now = opts.now ?? (() => new Date());
   const viewsOf = new WeakMap<FleetMachine[], ReturnType<typeof accountViews>>();
@@ -186,10 +197,9 @@ export function createHub(opts: HubOptions): Hub {
         return;
       }
 
-      const r: Partial<CoreCallRequest> =
-        typeof request === 'object' && request !== null ? request : {};
+      const r = readCall(request);
 
-      ack(core.call(UI_PRINCIPAL, String(r.verb ?? ''), r.input, { dryRun: r.dryRun }));
+      ack(core.call(UI_PRINCIPAL, r.verb, r.input, { dryRun: r.dryRun }));
     });
   });
 
@@ -207,6 +217,7 @@ export function createHub(opts: HubOptions): Hub {
     hubToken: opts.hubToken,
     store,
     onSnapshot: (entry) => emitChanged([entry]),
+    onFault: opts.onFault,
   });
 
   const sweep = () => {
