@@ -335,7 +335,7 @@
     },
     "server/src/hub/fleetStore.ts": {
       "no-unknown-parameters": 2,
-      "require-safety-comment-for-type-assertion": 3
+      "require-safety-comment-for-type-assertion": 1
     },
     "server/src/hub/hub.test.ts": {
       "no-chained-type-assertions": 1,
@@ -348,8 +348,7 @@
       "no-unknown-parameters": 3
     },
     "server/src/hub/schemaStore.ts": {
-      "no-unknown-parameters": 1,
-      "require-safety-comment-for-type-assertion": 1
+      "no-unknown-parameters": 1
     },
     "server/src/middleware/errorHandler.ts": {
       "require-safety-comment-for-type-assertion": 2

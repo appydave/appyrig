@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import {
@@ -10,6 +10,7 @@ import {
   type SchemaPush,
 } from '@appydave/shared';
 import { diffSchemas } from '@server/core/schemaDiff.js';
+import { readJsonDir } from '@server/helpers/readJsonDir.js';
 
 /**
  * v1.4 · S7: the OpenRig database shape per machine, and the schema seen under each OpenRig
@@ -179,34 +180,14 @@ export class SchemaStore {
       return 0;
     }
 
-    let names: string[];
+    const found = await readJsonDir(this.dir, StoredSchema, {
+      label: 'a stored schema',
+      onDiskError: this.onDiskError,
+    });
 
-    try {
-      names = (await readdir(this.dir)).filter((n) => n.endsWith('.json'));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        this.onDiskError(`cannot read ${this.dir}`, err);
-      }
-
-      return 0;
-    }
-
-    for (const name of names) {
-      const file = join(this.dir, name);
-
-      try {
-        const parsed = StoredSchema.safeParse(JSON.parse(await readFile(file, 'utf8')));
-
-        if (!parsed.success) {
-          this.onDiskError(`${file} is not a stored schema; skipped`, parsed.error);
-          continue;
-        }
-
-        if (!this.byMachine.has(parsed.data.machineId)) {
-          this.byMachine.set(parsed.data.machineId, parsed.data);
-        }
-      } catch (err) {
-        this.onDiskError(`cannot load ${file}; skipped`, err);
+    for (const s of found) {
+      if (!this.byMachine.has(s.machineId)) {
+        this.byMachine.set(s.machineId, s);
       }
     }
 
