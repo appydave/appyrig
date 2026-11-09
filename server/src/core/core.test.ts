@@ -1317,3 +1317,48 @@ describe('batch 1 · B5 — db.rows', () => {
     );
   });
 });
+
+/** The six verbs that refuse an unknown rig: the extra input each needs, and whether its refusal lists the known rigs. */
+const RIG_VERBS: [string, Record<string, unknown>, boolean][] = [
+  ['rig.files', {}, true],
+  ['rig.file', { fileId: 'spec:rig.yaml' }, true],
+  ['mission.file', { path: '/x/spec.md' }, true],
+  ['rig.waiting', {}, false],
+  ['rig.outputs', {}, false],
+  ['rig.entry', {}, true],
+];
+
+describe('a rig the machine does not report is refused the same way by every rig verb', () => {
+  it.each(RIG_VERBS)(
+    '%s: rig-not-found names the machine, the rig and the rigs it knows',
+    (verb, extra, listsKnown) => {
+      const { core, store } = fleet();
+      const known = store.get('roamy')!.snapshot.rigs.map((r) => r.name);
+
+      expect(core.call('agent:test', verb, { machine: 'roamy', rig: 'nope', ...extra })).toEqual({
+        ok: false,
+        error: {
+          failureMode: 'rig-not-found',
+          message: 'Machine "roamy" has no rig "nope".',
+          details: listsKnown
+            ? { machine: 'roamy', rig: 'nope', known }
+            : { machine: 'roamy', rig: 'nope' },
+        },
+      });
+    }
+  );
+
+  it.each(RIG_VERBS)(
+    '%s: an unknown machine is refused as machine-not-found first',
+    (verb, extra) => {
+      const { core } = fleet();
+
+      expect(
+        core.call('agent:test', verb, { machine: 'ghost', rig: 'nope', ...extra })
+      ).toMatchObject({
+        ok: false,
+        error: { failureMode: 'machine-not-found' },
+      });
+    }
+  );
+});
