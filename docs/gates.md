@@ -126,7 +126,7 @@ Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.m
 | depcruise | - | pathNot | `(^\|/)test/` | R41 |
 | depcruise | - | pathNot | `test-kit` | R41 |
 | depcruise | - | doNotFollow | `node_modules` | R5 |
-| depcruise | - | exclude | `(^\|/)dist/` | R5 |
+| depcruise | - | exclude | `^(client\|server\|collector\|shared)/dist/` | R5 |
 | depcruise-folders | - | doNotFollow | `node_modules` | R5 |
 | depcruise-folders | - | exclude | `(node_modules\|dist)\|\.(test\|spec)\.tsx?$` | R42 |
 | folder-limits | - | not scanned | `test/fixtures/` | R36 |
