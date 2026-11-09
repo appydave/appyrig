@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import type { FleetMachine } from '@appydave/shared';
 import { seatKey } from '@client/domain/fleet/model.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
@@ -16,7 +17,9 @@ export default function FlowDocsBar({
   socket: FleetSocket | undefined;
   seatKeys: string[];
 }) {
-  const { openDocs, drawer } = useDocsDrawer({ getSocket: () => socket as FleetSocket });
+  // One getter per socket: a new one each render would make the open drawer ask its reads again.
+  const getSocket = useCallback(() => socket as FleetSocket, [socket]);
+  const { openDocs, drawer } = useDocsDrawer({ getSocket });
   const seats = seatKeys
     .map((k) => machine.snapshot.seats.find((s) => seatKey(machine.machine.id, s.id) === k))
     .filter((s): s is NonNullable<typeof s> => !!s);
