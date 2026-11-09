@@ -21,7 +21,7 @@ export type {
   LibraryListOutput,
   WorkflowListOutput,
 } from '@appydave/shared';
-import type { DataMachine, DataStatus } from '@appydave/shared';
+import type { DataMachine, DataStatus, Refusal } from '@appydave/shared';
 
 export type { WorkflowSpec } from '@client/domain/workflows/model.js';
 
@@ -63,6 +63,50 @@ export function useVerb<T>(
   }, [getSocket, verb, key]);
 
   return state;
+}
+
+type Got<T> =
+  | { state: 'loading' }
+  | { state: 'ok'; value: T }
+  | { state: 'refused'; error: Refusal }
+  | { state: 'na' };
+
+/**
+ * Asks one read verb once (again when its input changes) and keeps the four states a page shows: loading,
+ * ok, refused (with the hub's error) and na (a null input asks nothing). Never throws. The call repeats when
+ * `getSocket`, the verb or the input changes, so pass a getter that is stable across renders.
+ */
+export function useRead<T>(
+  getSocket: () => FleetSocket,
+  verb: string,
+  input: object | null
+): Got<T> {
+  const dep = JSON.stringify(input);
+  const [got, setGot] = useState<Got<T>>({ state: input ? 'loading' : 'na' });
+
+  useEffect(() => {
+    if (!input) {
+      return setGot({ state: 'na' });
+    }
+
+    setGot({ state: 'loading' });
+
+    let live = true;
+
+    void callVerb<T>(getSocket(), verb, input).then((a) => {
+      if (live) {
+        setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
+      }
+    });
+
+    return () => {
+      live = false;
+    };
+    // `dep` describes `input`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getSocket, verb, dep]);
+
+  return got;
 }
 
 /** What to show for one verb: real data, or sample data and the reason why. */

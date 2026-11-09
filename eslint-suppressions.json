@@ -782,9 +782,6 @@
     }
   },
   "client/src/pages/agent/useAgentData.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    },
     "sonarjs/cognitive-complexity": {
       "count": 1
     },

@@ -99,9 +99,6 @@
     "client/src/kit/data/index.tsx": {
       "no-unsafe-dictionary-type": 1
     },
-    "client/src/kit/drawer/DocsDrawer.tsx": {
-      "no-unsafe-dictionary-type": 1
-    },
     "client/src/kit/drawer/docs.test.tsx": {
       "no-chained-type-assertions": 1
     },

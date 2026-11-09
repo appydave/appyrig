@@ -13,7 +13,8 @@ import {
 import type { AgentPanelTab, AgentPanelTarget } from '@client/app/types.js';
 import { findTile, seatAddresses } from '@client/domain/fleet/seats.js';
 import { plainLine } from '@client/domain/fleet/terminal.js';
-import { DocsLayout, useRead } from './DocsDrawer.js';
+import { useRead } from '@client/kit/data/index.js';
+import { DocsLayout } from './DocsDrawer.js';
 import { useTopOffset } from './useTopOffset.js';
 import './docs.css';
 
