@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import type { FleetMachine, RigFilesOutput } from '@appydave/shared';
 import { readRigFile, readRigFiles } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
-import WaitingOnDavid from './WaitingOnDavid.js';
+import WaitingOnDavid from '@client/kit/WaitingOnDavid.js';
 import PlanStrip from './PlanStrip.js';
 import RunOutputs from './RunOutputs.js';
 import { changeOrders, planIn, type PlanSource } from '@client/domain/fleet/plan.js';
