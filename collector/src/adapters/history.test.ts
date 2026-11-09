@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -186,6 +186,77 @@ describe('seat history adapter', () => {
     const again = await reader.changed(new Set(['dev-hub@appyrig-build']));
 
     expect(again[0]!.history.events.at(-1)!.text).toBe('done');
+  });
+});
+
+describe('an unreadable transcript never publishes part of a history', () => {
+  const SEAT = 'dev-hub@appyrig-build';
+  const said = (at: string, text: string) =>
+    line({ type: 'assistant', timestamp: at, message: { content: [{ type: 'text', text }] } });
+  const transcript = (text: string, at: string) => `${title(SEAT)}\n${said(at, text)}`;
+
+  function twoTranscripts() {
+    const dir = mkdtempSync(join(tmpdir(), 'appyrig-hist-'));
+    const one = join(dir, 'proj', 'one.jsonl');
+    const two = join(dir, 'proj', 'two.jsonl');
+
+    mkdirSync(join(dir, 'proj'));
+    writeFileSync(one, transcript('from one', '2026-10-09T13:00:00.000Z'));
+    writeFileSync(two, transcript('from two', '2026-10-09T14:00:00.000Z'));
+
+    return { reader: new HistoryReader('m2', dir), one, two, seats: new Set([SEAT]) };
+  }
+
+  const textsOf = (p: { history: { events: { text: string }[] } }) =>
+    p.history.events.map((e) => e.text);
+
+  it('holds the push, and sends the whole history once the file reads again', async () => {
+    const { reader, one, two, seats } = twoTranscripts();
+    const [first] = await reader.changed(seats);
+
+    first!.markSent();
+    appendFileSync(one, `\n${said('2026-10-09T15:00:00.000Z', 'one more')}`);
+    chmodSync(two, 0o000);
+
+    expect(await reader.changed(seats)).toEqual([]);
+
+    chmodSync(two, 0o644);
+
+    const [retried] = await reader.changed(seats);
+
+    expect(textsOf(retried!)).toEqual(['from one', 'from two', 'one more']);
+    expect(retried!.history.truncated).toBe(false);
+  });
+
+  it('holds the push when the unreadable file has also grown since the last scan', async () => {
+    const { reader, one, two, seats } = twoTranscripts();
+    const [first] = await reader.changed(seats);
+
+    first!.markSent();
+    appendFileSync(one, `\n${said('2026-10-09T15:00:00.000Z', 'one more')}`);
+    appendFileSync(two, `\n${said('2026-10-09T16:00:00.000Z', 'two more')}`);
+    chmodSync(two, 0o000);
+
+    expect(await reader.changed(seats)).toEqual([]);
+
+    chmodSync(two, 0o644);
+
+    const [retried] = await reader.changed(seats);
+
+    expect(textsOf(retried!)).toEqual(['from one', 'from two', 'one more', 'two more']);
+  });
+
+  it('a transcript too big to spread into one call is read, not treated as unreadable', async () => {
+    const { reader, one, seats } = twoTranscripts();
+    const events = Array.from({ length: 200_000 }, () =>
+      said('2026-10-09T15:00:00.000Z', 'x')
+    ).join('\n');
+
+    appendFileSync(one, `\n${events}`);
+
+    const [pushed] = await reader.changed(seats);
+
+    expect(pushed!.history.truncated).toBe(true);
   });
 });
 
