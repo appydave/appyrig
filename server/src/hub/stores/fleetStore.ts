@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -23,6 +24,7 @@ import {
   type RigCommandsPush,
   type RigSpecsPush,
 } from '@appydave/shared';
+import { MEMORY_LIMITS, RecentMap } from './bounded/recentMap.js';
 
 /**
  * The hub's last-known state: one FleetMachine per machine, in memory, mirrored to
@@ -107,7 +109,7 @@ export class FleetStore {
   private readonly writes = new Map<string, Promise<void>>();
   private readonly pending = new Map<string, FleetMachine>();
   /** v1.2: seat histories for the replay consoles, by `<machine>/<seat>`. */
-  private readonly histories = new Map<string, SeatHistory>();
+  private readonly histories = new RecentMap<string, SeatHistory>(MEMORY_LIMITS.historySeats);
   private readonly historyDir: string | undefined;
   /** v1.4 · S4: queue message bodies by machine, then queue id. Over the cap the oldest items (by queue createdAt) are dropped. */
   private readonly handoffs = new Map<string, Map<string, { body: string; truncated: boolean }>>();
@@ -272,12 +274,7 @@ export class FleetStore {
   /** v1.2: keep the latest history a collector sent for one seat (memory + disk). */
   putHistory(h: SeatHistory): void {
     // Named first: a seat that can't be encoded throws here, before anything is kept.
-    const file = this.historyDir
-      ? join(
-          this.historyDir,
-          `${encodeURIComponent(h.machineId)}__${encodeURIComponent(h.seat)}.json`
-        )
-      : undefined;
+    const file = this.historyFile(h.machineId, h.seat);
 
     this.histories.set(`${h.machineId}/${h.seat}`, h);
     if (!file) {
@@ -291,7 +288,8 @@ export class FleetStore {
 
       try {
         await mkdir(this.historyDir!, { recursive: true, mode: 0o700 });
-        await writeFile(tmp, JSON.stringify(this.histories.get(`${h.machineId}/${h.seat}`)), {
+        // The newest for this seat; `h` itself if the limit dropped it from memory before this ran.
+        await writeFile(tmp, JSON.stringify(this.histories.get(`${h.machineId}/${h.seat}`) ?? h), {
           mode: 0o600,
         });
         await rename(tmp, file);
@@ -309,7 +307,31 @@ export class FleetStore {
   }
 
   getHistory(machineId: string, seat: string): SeatHistory | undefined {
-    return this.histories.get(`${machineId}/${seat}`);
+    return this.histories.get(`${machineId}/${seat}`) ?? this.historyFromDisk(machineId, seat);
+  }
+
+  private historyFile(machineId: string, seat: string): string | undefined {
+    return this.historyDir
+      ? join(this.historyDir, `${encodeURIComponent(machineId)}__${encodeURIComponent(seat)}.json`)
+      : undefined;
+  }
+
+  /** A seat the memory limit dropped. Anything unreadable reads as no history, as it did at load. */
+  private historyFromDisk(machineId: string, seat: string): SeatHistory | undefined {
+    try {
+      const file = this.historyFile(machineId, seat);
+      const parsed = file
+        ? SeatHistorySchema.parse(JSON.parse(readFileSync(file, 'utf8')))
+        : undefined;
+
+      if (parsed) {
+        this.histories.set(`${machineId}/${seat}`, parsed);
+      }
+
+      return parsed;
+    } catch {
+      return undefined;
+    }
   }
 
   /** Load stored histories; invalid files are reported and skipped. */

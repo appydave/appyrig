@@ -5,6 +5,7 @@ import {
   type RigFileMeta,
   type RigFilesPush,
 } from '@appydave/shared';
+import { MEMORY_LIMITS, RecentMap } from './bounded/recentMap.js';
 
 /**
  * v1.4 · S7: the rig files each collector pushed, in memory only. A hub restart forgets them and
@@ -12,7 +13,7 @@ import {
  * takes a path: a client names a file id, and only ids a collector pushed can be found.
  */
 export class RigFileStore {
-  private readonly byRig = new Map<string, Map<string, RigFile>>();
+  private readonly byRig = new RecentMap<string, Map<string, RigFile>>(MEMORY_LIMITS.fileRigs);
 
   private key(machine: string, rig: string): string {
     return `${machine}\u0000${rig}`;
