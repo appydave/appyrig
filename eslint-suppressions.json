@@ -633,9 +633,6 @@
     }
   },
   "client/src/kit/drawer/AgentPanel.tsx": {
-    "max-lines": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 2
     },

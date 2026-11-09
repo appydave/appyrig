@@ -11,7 +11,7 @@ import {
   tokensText,
 } from '@client/kit/SeatCardLines.js';
 import type { AgentPanelTab, AgentPanelTarget } from '@client/app/types.js';
-import { findTile, seatAddresses } from '@client/domain/fleet/seats.js';
+import { findTile, seatAddresses, seatQueueRows } from '@client/domain/fleet/seats.js';
 import { plainLine } from '@client/domain/fleet/terminal.js';
 import { useRead } from '@client/kit/data/index.js';
 import { DocsLayout } from './DocsDrawer.js';
@@ -266,10 +266,7 @@ function MessagesTab({
 }) {
   const mine = useMemo(() => seatAddresses(seat), [seat]);
   const rows: QueueItem[] = useMemo(
-    () =>
-      machine.snapshot.queue
-        .filter((q) => mine.has(q.destination ?? '') || mine.has(q.source ?? ''))
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    () => seatQueueRows(machine.snapshot.queue, mine),
     [machine.snapshot.queue, mine]
   );
   const inbox = rows.filter((q) => mine.has(q.destination ?? ''));

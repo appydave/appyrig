@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import { useMemo, useState } from 'react';
 import type { FleetMachine, HistoryTransitionsOutput, QueueItem } from '@appydave/shared';
 import MarkdownView from '@client/kit/MarkdownView.js';
@@ -537,7 +538,7 @@ function Ledger({
       exact: false,
     }));
   }, [t, items, byId]);
-  const sorted = [...rows].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 60);
+  const sorted = [...rows].sort((a, b) => compareTimes(b.at, a.at)).slice(0, 60);
 
   void fm;
 

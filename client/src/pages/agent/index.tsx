@@ -28,7 +28,7 @@ import {
   SampleData,
   SkillsPanel,
 } from '@client/kit/index.js';
-import { allTiles, findTile, seatAddresses } from '@client/domain/fleet/seats.js';
+import { allTiles, findTile, seatAddresses, seatQueueRows } from '@client/domain/fleet/seats.js';
 import type { PageContext, PageDef, PageProps } from '@client/app/types.js';
 import { isOpenRigSeat, sampleDetail, type SeatDetailView } from '@client/domain/agent/detail.js';
 import { useAgentData } from './useAgentData.js';
@@ -296,10 +296,7 @@ function Messages({ tile, now }: { tile: TileRef; now: number }) {
   const mine = useMemo(() => seatAddresses(seat), [seat]);
   const [all, setAll] = useState(false);
   const rows: QueueItem[] = useMemo(
-    () =>
-      machine.snapshot.queue
-        .filter((q) => mine.has(q.destination ?? '') || mine.has(q.source ?? ''))
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    () => seatQueueRows(machine.snapshot.queue, mine),
     [machine.snapshot.queue, mine]
   );
   const inbox = rows.filter((q) => mine.has(q.destination ?? ''));
