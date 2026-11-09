@@ -1,12 +1,12 @@
 import { FLEET_EVENTS, HUB_CAPS, PUSH_INTERVAL_MS, stripSeatSpec } from '@appydave/shared';
-import type { PendingRigFiles } from '@collector/adapters/rigfiles.js';
+import type { PendingRigFiles } from '@collector/adapters/rig/rigfiles.js';
 import type { PendingSchema } from '@collector/adapters/dbschema.js';
 import type { PendingLoadouts } from '@collector/adapters/loadout.js';
 import type { PendingDbRows } from '@collector/adapters/dbrows.js';
 import type { PendingDaemonData } from '@collector/adapters/daemondata.js';
 import type { PendingMissionFiles } from '@collector/adapters/missionfiles.js';
-import type { PendingRigSpecs } from '@collector/adapters/rigspecs.js';
-import type { PendingRigCommands } from '@collector/adapters/rigcommands.js';
+import type { PendingRigSpecs } from '@collector/adapters/rig/rigspecs.js';
+import type { PendingRigCommands } from '@collector/adapters/rig/rigcommands.js';
 import type { ChannelSpec } from '@collector/pusher/channel.js';
 
 /** The side channels a pusher can be given, each with the interval it runs at. */

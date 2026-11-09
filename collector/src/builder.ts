@@ -22,7 +22,7 @@ import type {
   ViewerAgent,
 } from './adapters/index.js';
 import { redactDeep, redactString, redactWrapped } from './redact.js';
-import { podOf, rigSpecOf } from './adapters/specView.js';
+import { podOf, rigSpecOf } from './adapters/rig/specView.js';
 
 export interface BuilderConfig {
   machine: MachineIdentity;

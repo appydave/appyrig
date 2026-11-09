@@ -3,9 +3,9 @@ export { createSources, type SourceOptions } from './sources.js';
 export { tailLines, runtimeOfCommand, stripAnsi } from './tmux.js';
 
 export { type HealthSample } from './health.js';
-export { type SpecInfo } from './specs.js';
+export { type SpecInfo } from './rig/specs.js';
 export { HandoffReader } from './handoffs.js';
-export { RigFilesReader } from './rigfiles.js';
+export { RigFilesReader } from './rig/rigfiles.js';
 export { MissionFilesReader } from './missionfiles.js';
 export { SchemaReader } from './dbschema.js';
 export { LoadoutReader, topologyRootOf, withSkillCounts, type LoadoutSeat } from './loadout.js';
@@ -25,5 +25,5 @@ export {
   parseLibraryPacks,
   type SeatTarget,
 } from './daemondata.js';
-export { RigSpecsReader } from './rigspecs.js';
-export { RigCommandsReader } from './rigcommands.js';
+export { RigSpecsReader } from './rig/rigspecs.js';
+export { RigCommandsReader } from './rig/rigcommands.js';

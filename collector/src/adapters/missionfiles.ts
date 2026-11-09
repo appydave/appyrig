@@ -12,8 +12,8 @@ import {
   type MissionFilesPush,
 } from '@appydave/shared';
 import { redactString } from '@collector/redact.js';
-import { candidatesFor } from './rigfiles.js';
-import type { SpecInfo } from './specs.js';
+import { candidatesFor } from './rig/rigfiles.js';
+import type { SpecInfo } from './rig/specs.js';
 
 /**
  * Run board, lane 1: which mission files the collector will ever read, and the reading of them.

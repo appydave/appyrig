@@ -10,7 +10,7 @@ import {
   MissionFilesReader,
   readMissionFile,
 } from './missionfiles.js';
-import type { SpecInfo } from './specs.js';
+import type { SpecInfo } from './rig/specs.js';
 
 /** The trust root for these tests: every temp folder below sits under it (the real default is ~/dev). */
 const ROOTS = [realpathSync(tmpdir())];

@@ -12,7 +12,7 @@ These are Zod schemas and inferred types for what OpenRig really stores. Import 
 
 ## Source of truth
 
-These schemas are what the collector parses rig.yaml and agent.yaml with (`collector/src/adapters/specs.ts`, `loadout.ts`). A rig.yaml that fails `RigSpecSchema` is still matched by its `name:`, but none of its other fields are used: OpenRig would refuse it. New spec-shaped data must be typed from here, never from an ad-hoc read of the YAML.
+These schemas are what the collector parses rig.yaml and agent.yaml with (`collector/src/adapters/rig/specs.ts`, `loadout.ts`). A rig.yaml that fails `RigSpecSchema` is still matched by its `name:`, but none of its other fields are used: OpenRig would refuse it. New spec-shaped data must be typed from here, never from an ad-hoc read of the YAML.
 
 ## Why hand-written
 
