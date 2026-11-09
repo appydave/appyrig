@@ -5,8 +5,7 @@
       "require-safety-comment-for-type-assertion": 1
     },
     "client/src/app/app.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 1
     },
     "client/src/app/frozen/frozenSocket.ts": {
       "no-chained-type-assertions": 1,
@@ -21,12 +20,10 @@
       "require-safety-comment-for-type-assertion": 2
     },
     "client/src/app/ux-nav.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 1
     },
     "client/src/app/w2.test.tsx": {
       "no-chained-type-assertions": 1,
-      "no-module-mocking": 2,
       "no-unsafe-dictionary-type": 2
     },
     "client/src/domain/fleet/coreCall.test.ts": {
@@ -143,8 +140,7 @@
       "require-safety-comment-for-type-assertion": 2
     },
     "client/src/pages/graph/graph.test.tsx": {
-      "no-chained-type-assertions": 4,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 4
     },
     "client/src/pages/graph/index.tsx": {
       "require-safety-comment-for-type-assertion": 2
@@ -175,8 +171,7 @@
       "no-unsafe-dictionary-type": 4
     },
     "client/src/pages/rig-map/rigmap.test.tsx": {
-      "no-chained-type-assertions": 3,
-      "no-module-mocking": 2
+      "no-chained-type-assertions": 3
     },
     "client/src/pages/run/index.tsx": {
       "require-safety-comment-for-type-assertion": 2

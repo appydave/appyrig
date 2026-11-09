@@ -10,23 +10,6 @@ import type { PageContext } from '@client/app/types.js';
 import { groupOf, navGroups } from '@client/app/registry.js';
 import { page } from './index.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 function busy(): { machines: FleetMachine[]; now: number } {
   const file = JSON.parse(
     readFileSync(
