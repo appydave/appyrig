@@ -39,6 +39,14 @@ export const safeHref = (href: string): string | null => {
   return /^(https?:\/\/|mailto:)/i.test(h) ? h : null;
 };
 
+/** `*` opens emphasis anywhere, `_` only at a word start (so snake_case stays text); never before a space. */
+function opensEmphasis(src: string, i: number): boolean {
+  const c = src[i];
+  const underscoreOpens = c === '_' && (i === 0 || /\W/.test(src[i - 1]!));
+
+  return (c === '*' || underscoreOpens) && src[i + 1] !== ' ';
+}
+
 export function parseInline(src: string): Inline[] {
   const out: Inline[] = [];
   let text = '';
@@ -83,11 +91,7 @@ export function parseInline(src: string): Inline[] {
       }
     }
 
-    if (
-      (c === '*' || c === '_') &&
-      src[i + 1] !== ' ' &&
-      (c === '*' || i === 0 || /\W/.test(src[i - 1]!))
-    ) {
+    if (opensEmphasis(src, i)) {
       const end = src.indexOf(c, i + 1);
 
       if (end > i + 1 && src[end - 1] !== ' ') {
@@ -147,13 +151,16 @@ const cells = (line: string): string[] => {
   return s.split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
 };
 
+const headsTable = (line: string, next: string | undefined): boolean =>
+  line.includes('|') && next !== undefined && TABLE_SEP.test(next) && next.includes('-');
+
 const startsBlock = (line: string, next: string | undefined): boolean =>
   FENCE.test(line) ||
   HEADING.test(line) ||
   HR.test(line) ||
   /^\s*>/.test(line) ||
   ITEM.test(line) ||
-  (line.includes('|') && next !== undefined && TABLE_SEP.test(next) && next.includes('-'));
+  headsTable(line, next);
 
 export function parseMarkdown(source: string): Block[] {
   let lines = source.replace(/\r\n?/g, '\n').split('\n');

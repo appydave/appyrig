@@ -72,6 +72,12 @@ export interface LivenessChange {
   lastSeen: string;
 }
 
+const byId = (x: string, y: string) => (x < y ? -1 : x > y ? 1 : 0);
+
+/** Oldest first; an id with no known age goes before any that has one; same age falls back to id. */
+const oldestThenId = (created: Map<string, number>) => (x: string, y: string) =>
+  (created.get(x) ?? -Infinity) - (created.get(y) ?? -Infinity) || byId(x, y);
+
 export class FleetStore {
   /** v1.4 · S7: rig files and the OpenRig database shape, as collectors pushed them. */
   readonly rigFiles = new RigFileStore();
@@ -347,11 +353,7 @@ export class FleetStore {
           Date.parse(q.createdAt),
         ])
       );
-      const oldestFirst = [...m.keys()].sort(
-        (x, y) =>
-          (created.get(x) ?? -Infinity) - (created.get(y) ?? -Infinity) ||
-          (x < y ? -1 : x > y ? 1 : 0)
-      );
+      const oldestFirst = [...m.keys()].sort(oldestThenId(created));
 
       for (const id of oldestFirst.slice(0, m.size - HANDOFF_STORE_MAX)) {
         m.delete(id);

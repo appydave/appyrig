@@ -139,3 +139,33 @@ describe('blocks', () => {
     expect(Date.now() - t0).toBeLessThan(1500);
   });
 });
+
+describe('what opens emphasis (pinned before tidying the test that decides it)', () => {
+  const em = (children: string) => ({ t: 'em', children: [{ t: 'text', text: children }] });
+  const text = (t: string) => ({ t: 'text', text: t });
+
+  it.each([
+    ['*x*', [em('x')]],
+    ['a*x*b', [text('a'), em('x'), text('b')]],
+    ['_x_', [em('x')]],
+    ['(_x_)', [text('('), em('x'), text(')')]],
+    ['a _x_', [text('a '), em('x')]],
+    ['a_x_b', [text('a_x_b')]],
+    ['* x*', [text('* x*')]],
+    ['_ x_', [text('_ x_')]],
+    ['*x *', [text('*x *')]],
+    ['*x', [text('*x')]],
+  ])('%s', (src, expected) => {
+    expect(parseInline(src)).toEqual(expected);
+  });
+});
+
+describe('what starts a table inside a paragraph (pinned before tidying)', () => {
+  const kinds = (src: string) => parseMarkdown(src).map((b) => b.t);
+
+  it('a piped line stops a paragraph only when a real separator follows it', () => {
+    expect(kinds('para\n| a | b |\n|---|---|\n| 1 | 2 |')).toEqual(['para', 'table']);
+    expect(kinds('para\n| a | b |\nnot a separator')).toEqual(['para']);
+    expect(kinds('para\n| a | b |')).toEqual(['para']);
+  });
+});

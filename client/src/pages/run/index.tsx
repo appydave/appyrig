@@ -593,6 +593,21 @@ function Ledger({
 
 // ---------------------------------------------------------------- the page
 
+const hasJobs = (run: RunModel | null): run is RunModel => run !== null && run.jobs.length > 0;
+
+/** The sample, when asked for and there is a real run with jobs to base it on; else the real run. */
+function shownRun(s: {
+  preview: boolean;
+  real: RunModel | null;
+  fm: FleetMachine | undefined;
+  rigName: string | undefined;
+}): RunModel | null {
+  const { preview, real, fm, rigName } = s;
+  const canSample = preview && hasJobs(real) && fm && rigName;
+
+  return canSample ? sampleRun(real, fm, rigName) : real;
+}
+
 function RunBoard({ ctx }: PageProps) {
   const rig = ctx.activeRig;
   const fm = rig ? ctx.allMachines.find((m) => m.machine.id === rig.machineId) : undefined;
@@ -612,8 +627,7 @@ function RunBoard({ ctx }: PageProps) {
   );
   const [preview, setPreview] = useState(false);
   const run = useMemo(
-    () =>
-      preview && real && fm && rig && real.jobs.length > 0 ? sampleRun(real, fm, rig.name) : real,
+    () => shownRun({ preview, real, fm, rigName: rig?.name }),
     [preview, real, fm, rig]
   );
   const { openDocs, drawer } = useDocsDrawer(ctx);
