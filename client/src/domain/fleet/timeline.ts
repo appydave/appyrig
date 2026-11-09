@@ -321,18 +321,7 @@ function titleWords(q: QueueItem): string[] {
   ];
 }
 
-/**
- * V2: the chain a handoff belongs to, oldest → newest. The snapshot carries no hand-on links
- * (OpenRig's handed_off_to/from), so steps are linked, in order of preference, by:
- *  1. a shared work tag (`pair-a` also covers `pair-a-alt`): of the item's tags that two or more of
- *     the rig's items carry, no more than a quarter of them (a mission tag names the whole run, not
- *     one piece of work), and whose items answer one another (a reply or hand-on, never only a
- *     fan-out sent at once), the rarest;
- *  2. else two or more uncommon title words in common, inside the same phase of the run;
- *  3. else the item alone.
- * Then, by time and seat: what came in to the first sender just before the first step, and the
- * first item the last receiver sent out of the rig (back to David or another rig) after it.
- */
+/** The items that carry one work tag (or a tag and its sub-tags). */
 interface Family {
   tag: string;
   group: QueueItem[];
@@ -513,6 +502,18 @@ function withFraming(items: QueueItem[], found: Found, inRig: (raw: string | nul
   };
 }
 
+/**
+ * V2: the chain a handoff belongs to, oldest → newest. The snapshot carries no hand-on links
+ * (OpenRig's handed_off_to/from), so steps are linked, in order of preference, by:
+ *  1. a shared work tag (`pair-a` also covers `pair-a-alt`): of the item's tags that two or more of
+ *     the rig's items carry, no more than a quarter of them (a mission tag names the whole run, not
+ *     one piece of work), and whose items answer one another (a reply or hand-on, never only a
+ *     fan-out sent at once), the rarest;
+ *  2. else two or more uncommon title words in common, inside the same phase of the run;
+ *  3. else the item alone.
+ * Then, by time and seat: what came in to the first sender just before the first step, and the
+ * first item the last receiver sent out of the rig (back to David or another rig) after it.
+ */
 export function followWork(fm: FleetMachine, rig: string, itemId: string): WorkChain | null {
   const items = [...rigQueue(fm, rig)].sort(byCreated);
   const me = items.find((q) => q.id === itemId);
