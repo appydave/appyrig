@@ -304,9 +304,12 @@
     "server/src/core/identity.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
+    "server/src/core/reads/rigReadings.ts": {
+      "require-safety-comment-for-type-assertion": 2
+    },
     "server/src/core/verbs.ts": {
       "no-chained-type-assertions": 1,
-      "require-safety-comment-for-type-assertion": 12
+      "require-safety-comment-for-type-assertion": 10
     },
     "server/src/hub/accounts.test.ts": {
       "no-unsafe-dictionary-type": 1
