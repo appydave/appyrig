@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Server } from 'socket.io';
-import { FLEET_EVENTS, HUB_CAPS } from '@appydave/shared';
+import { FLEET_EVENTS, HUB_CAPS, type CollectorAck } from '@appydave/shared';
 import { buildSnapshot } from '@collector/builder.js';
 import { fixtureSources } from '@collector/adapters/fixtureSources.js';
-import { startPusher, type Pusher } from '@collector/pusher.js';
+import { CHANNEL_PAYLOAD_MAX, startPusher, type Pusher } from '@collector/pusher.js';
 import { startChannel, type ChannelDeps } from '@collector/pusher/channel.js';
 
 /**
@@ -170,5 +170,67 @@ describe('a running channel keeps one timer handle, not one per tick (AFTER audi
     expect(takes).toBeGreaterThanOrEqual(10_000);
     expect(after10).toBe(1);
     expect(held()).toBe(1);
+  });
+});
+
+describe('Feature: a batch with one payload the hub will not take', () => {
+  const [A, B, C] = [{ n: 'a' }, { n: 'b' }, { n: 'c' }];
+
+  /** Runs one channel for several ticks; like the real readers, it offers the batch until marked sent. */
+  async function ticks(answer: (p: object) => Awaited<ReturnType<ChannelDeps['sendAcked']>>) {
+    vi.useFakeTimers();
+
+    const sent: object[] = [];
+    const notes: string[] = [];
+    let marks = 0;
+    let stopped = false;
+    const timers = new Set<NodeJS.Timeout>();
+
+    startChannel(
+      {
+        key: 'rig files',
+        event: 'e',
+        every: EVERY,
+        since: 'v1.4',
+        take: async () => (marks ? null : { payloads: [A, B, C], markSent: () => void marks++ }),
+      },
+      {
+        isStopped: () => stopped,
+        connected: () => true,
+        hubCaps: () => new Set(),
+        maxPayloadBytes: CHANNEL_PAYLOAD_MAX,
+        note: (l) => notes.push(l),
+        warnSometimes: (_k, l) => notes.push(l),
+        sendAcked: async (_e, p) => {
+          sent.push(p);
+
+          return answer(p);
+        },
+        timers,
+      }
+    );
+    await vi.advanceTimersByTimeAsync(EVERY * 4);
+    stopped = true;
+
+    return { sent, notes, marks: () => marks };
+  }
+
+  const OK: CollectorAck = { ok: true, receivedAt: ACK.receivedAt };
+  const REFUSED: CollectorAck = { ok: false, failureMode: 'invalid_snapshot', message: 'nope' };
+
+  it('Scenario: given the hub refuses the first, then the rest still go, and none is sent twice', async () => {
+    const r = await ticks((p) => (p === A ? REFUSED : OK));
+
+    expect(r.sent).toEqual([A, B, C]);
+    expect(r.marks()).toBe(1);
+    expect(r.notes).toEqual(['rig files refused: invalid_snapshot: nope']);
+  });
+
+  it('Scenario: given no ack for the second, then the batch stops, nothing is marked, and it is retried', async () => {
+    const r = await ticks((p) => (p === B ? { ok: false, timeout: true } : OK));
+
+    expect(r.sent.slice(0, 3)).toEqual([A, B, A]);
+    expect(r.sent).not.toContain(C);
+    expect(r.marks()).toBe(0);
   });
 });

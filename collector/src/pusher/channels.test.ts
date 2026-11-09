@@ -307,17 +307,18 @@ describe.each(CHANNELS)('Feature: the $key channel', (c) => {
     expect(sentOn(hub, c)).toEqual(c.sent);
   });
 
-  it('Scenario: a refusal is logged under its key and nothing is marked sent', async () => {
+  it('Scenario: a refusal is logged under its key and the batch is settled, so it is not sent again', async () => {
     const lines: string[] = [];
 
     hub = await startHub(ALL_CAPS, c.event, 'refuse');
     run(hub, c.on(p, 30), lines);
     await vi.waitFor(
-      () => expect(has(lines, `${c.key} refused: invalid_snapshot: nope`)).toBe(true),
+      () => {
+        expect(has(lines, `${c.key} refused: invalid_snapshot: nope`)).toBe(true);
+        expect(p.marks).toBe(1);
+      },
       { timeout: 8000, interval: 20 }
     );
-
-    expect(p.marks).toBe(0);
   });
 
   it('Scenario: a missing ack is a warning that names its key and the hub version it needs', async () => {
