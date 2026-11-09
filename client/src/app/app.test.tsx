@@ -20,23 +20,6 @@ import { guardPortFor, isLocalDevRequest } from './devProxy.js';
 import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from '@client/kit/index.js';
 import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 type Handler = (...args: unknown[]) => void;
 
 /** A live-socket stand-in that records every emit, so a test can prove nothing was sent. */
