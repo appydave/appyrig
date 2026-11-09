@@ -137,5 +137,5 @@ export interface AppyRigTestHooks {
   xtermCount: () => number;
 }
 
-/** socket.io maxHttpBufferSize on the hub (bytes). Collectors keep side-channel payloads under CHANNEL_PAYLOAD_MAX. */
+/** socket.io maxHttpBufferSize on the hub (bytes). Collectors keep every payload under CHANNEL_PAYLOAD_MAX. */
 export const HUB_MAX_BUFFER = 1_048_576;

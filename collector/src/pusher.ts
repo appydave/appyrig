@@ -21,6 +21,7 @@ import {
 import { quietLog } from '@collector/pusher/quietLog.js';
 import { trackHubCaps } from '@collector/pusher/hubCaps.js';
 import { CHANNELS, type ChannelOptions } from '@collector/pusher/channelTable.js';
+import { CHANNEL_PAYLOAD_MAX } from '@collector/pusher/size/payloadSize.js';
 
 /**
  * Pushes one whole-machine snapshot to the hub every PUSH_INTERVAL_MS over the `/collector`
@@ -47,12 +48,7 @@ export interface PusherOptions extends ChannelOptions {
   onConnect?: () => void;
 }
 
-/**
- * Largest serialized payload a side channel will send (bytes). The hub's socket.io limit is
- * HUB_MAX_BUFFER (1 MiB); anything over this is skipped and logged, never sent, and never touches
- * the snapshot push.
- */
-export const CHANNEL_PAYLOAD_MAX = 800 * 1024;
+export { CHANNEL_PAYLOAD_MAX };
 
 /** Seat history changes slowly and is large next to a snapshot, so it is checked once a minute. */
 const HISTORY_INTERVAL_MS = 60_000;
@@ -125,7 +121,7 @@ export function startPusher(opts: PusherOptions): Pusher {
         pushHistories({
           histories,
           push: (h) => emitAcked(socket.timeout(ackTimeout * 2), FLEET_EVENTS.HISTORY, h),
-          note,
+          log: quiet,
         }),
       everyMs: historyInterval,
       deps: loopDeps,
