@@ -320,13 +320,6 @@
       "no-unsafe-dictionary-type": 1,
       "require-safety-comment-for-type-assertion": 1
     },
-    "server/src/hub/browserAuth.ts": {
-      "no-unknown-parameters": 1
-    },
-    "server/src/hub/collectorIngest.ts": {
-      "no-chained-type-assertions": 1,
-      "require-safety-comment-for-type-assertion": 2
-    },
     "server/src/hub/createHub.ts": {
       "no-unknown-parameters": 2
     },
@@ -334,7 +327,14 @@
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 9
     },
-    "server/src/hub/listen.ts": {
+    "server/src/hub/ingress/browserAuth.ts": {
+      "no-unknown-parameters": 1
+    },
+    "server/src/hub/ingress/collectorIngest.ts": {
+      "no-chained-type-assertions": 1,
+      "require-safety-comment-for-type-assertion": 2
+    },
+    "server/src/hub/ingress/listen.ts": {
       "require-safety-comment-for-type-assertion": 1
     },
     "server/src/hub/rigspecs.test.ts": {

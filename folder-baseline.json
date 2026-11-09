@@ -28,9 +28,6 @@
     "server/src/core": {
       "files": 11
     },
-    "server/src/hub": {
-      "files": 14
-    },
     "shared/src": {
       "files": 21
     },

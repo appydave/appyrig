@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { io as ioc, type Socket } from 'socket.io-client';
 import { FLEET_EVENTS, type FleetUpdate, type MachineSnapshot } from '@appydave/shared';
 import { createHub, type Hub, type HubOptions } from '@server/hub/createHub.js';
-import { sessionCookieHeader } from '@server/hub/browserAuth.js';
+import { sessionCookieHeader } from '@server/hub/ingress/browserAuth.js';
 
 /** Test-only helpers: real hubs on random localhost ports, real Socket.IO clients. */
 
