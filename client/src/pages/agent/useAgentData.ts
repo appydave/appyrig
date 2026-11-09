@@ -1,58 +1,12 @@
-import { useEffect, useState } from 'react';
 import type {
-  Refusal,
   RigFilesOutput,
   RigWaitingOutput,
   SeatDetailOutput,
   SeatLoadoutOutput,
 } from '@appydave/shared';
-import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { useRead } from '@client/kit/data/index.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { parseSeatDetail, type SeatDetailView } from '@client/domain/agent/detail.js';
-
-export type Loaded<T> =
-  | { state: 'loading' }
-  | { state: 'ok'; value: T }
-  | { state: 'refused'; error: Refusal }
-  /** Nothing to ask: the input does not apply (a seat with no rig has no rig files). */
-  | { state: 'na' };
-
-interface VerbRequest {
-  verb: string;
-  input: unknown | null;
-  /** Describes `input`: the call is repeated when it changes. */
-  dep: string;
-}
-
-function useVerb<T>(socket: FleetSocket, { verb, input, dep }: VerbRequest): Loaded<T> {
-  const [got, setGot] = useState<Loaded<T>>({ state: 'loading' });
-
-  useEffect(() => {
-    if (input === null) {
-      setGot({ state: 'na' });
-
-      return;
-    }
-
-    setGot({ state: 'loading' });
-
-    let current = true;
-
-    void callVerb<T>(socket, verb, input).then((a) => {
-      if (current) {
-        setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
-      }
-    });
-
-    return () => {
-      current = false;
-    };
-    // The input is described by `dep`; the socket is the page's one socket.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [socket, verb, dep]);
-
-  return got;
-}
 
 type DetailState =
   | { state: 'loading' }
@@ -64,31 +18,16 @@ type DetailState =
 
 /** Everything the Agent page reads for one seat. All read-only verbs. */
 export function useAgentData(
-  socket: FleetSocket,
+  getSocket: () => FleetSocket,
   machineId: string,
   { id: seatId, rig }: { id: string; rig: string | null }
 ) {
-  const dep = `${machineId}/${seatId}`;
-  const loadout = useVerb<SeatLoadoutOutput>(socket, {
-    verb: 'seat.loadout',
-    input: { machine: machineId, seat: seatId },
-    dep,
-  });
-  const files = useVerb<RigFilesOutput>(socket, {
-    verb: 'rig.files',
-    input: rig ? { machine: machineId, rig } : null,
-    dep: `${machineId}/${rig}`,
-  });
-  const waiting = useVerb<RigWaitingOutput>(socket, {
-    verb: 'rig.waiting',
-    input: rig ? { machine: machineId, rig } : null,
-    dep: `${machineId}/${rig}`,
-  });
-  const raw = useVerb<SeatDetailOutput>(socket, {
-    verb: 'seat.detail',
-    input: { machine: machineId, seat: seatId },
-    dep,
-  });
+  const seatInput = { machine: machineId, seat: seatId };
+  const rigInput = rig ? { machine: machineId, rig } : null;
+  const loadout = useRead<SeatLoadoutOutput>(getSocket, 'seat.loadout', seatInput);
+  const files = useRead<RigFilesOutput>(getSocket, 'rig.files', rigInput);
+  const waiting = useRead<RigWaitingOutput>(getSocket, 'rig.waiting', rigInput);
+  const raw = useRead<SeatDetailOutput>(getSocket, 'seat.detail', seatInput);
   let detail: DetailState;
 
   if (raw.state === 'loading') {

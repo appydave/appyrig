@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   MissionFileOutput,
-  Refusal,
   RigFilesOutput,
   Seat,
   SeatDetailOutput,
   SeatLoadoutOutput,
 } from '@appydave/shared';
 import { callVerb } from '@client/domain/fleet/coreCall.js';
+import { useRead } from '@client/kit/data/index.js';
 import { readRigFile } from '@client/kit/data/rigReads.js';
 import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { seatName } from '@client/domain/fleet/model.js';
@@ -42,45 +42,6 @@ export interface DocsTarget {
   missionPaths?: string[];
   /** Open this file first (matched on name, case-insensitive). */
   open?: string;
-}
-
-type Got<T> =
-  | { state: 'loading' }
-  | { state: 'ok'; value: T }
-  | { state: 'refused'; error: Refusal }
-  | { state: 'na' };
-
-export function useRead<T>(
-  getSocket: () => FleetSocket,
-  verb: string,
-  input: Record<string, unknown> | null
-): Got<T> {
-  const dep = JSON.stringify(input);
-  const [got, setGot] = useState<Got<T>>({ state: input ? 'loading' : 'na' });
-
-  useEffect(() => {
-    if (!input) {
-      return setGot({ state: 'na' });
-    }
-
-    setGot({ state: 'loading' });
-
-    let live = true;
-
-    void callVerb<T>(getSocket(), verb, input).then((a) => {
-      if (live) {
-        setGot(a.ok ? { state: 'ok', value: a.value } : { state: 'refused', error: a.error });
-      }
-    });
-
-    return () => {
-      live = false;
-    };
-    // `dep` describes `input`.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getSocket, verb, dep]);
-
-  return got;
 }
 
 /** Everything the drawer lists for one target (also used by the Agent page, so both match). */
