@@ -32,7 +32,6 @@ import {
   RigOutputsInputSchema,
   RigOutputsOutputSchema,
   type RigOutputsOutput,
-  type QueueItem,
   type RigWaitingOutput,
   type AppConfig,
   type HandoffGetOutput,
@@ -112,7 +111,7 @@ import {
 } from './vendor/failure-codes.js';
 import type { FleetStore } from '@server/hub/stores/fleetStore.js';
 import { rigEntryOf } from './rigEntry.js';
-import { rigItems, rigWaiting, around, handoffText, bestLink } from './reads/rigReadings.js';
+import { rigOutputs, rigWaiting } from './reads/rigReadings.js';
 import type { AppIdentity } from './identity.js';
 
 /**
@@ -207,120 +206,6 @@ const query = <I extends z.ZodType, O extends z.ZodType>(
 });
 
 // ── lookups ────────────────────────────────────────────────────────────────────────────────────
-
-const SHA = /(?<![\w/.-])([0-9a-f]{7,10})(?![\w-])/g;
-const FLI_ID = /(?<![\w-])([rg]_[0-9a-f]{10})(?![\w-])/g;
-
-type Named = {
-  itemId: string;
-  at: string;
-  from: string | null;
-  to: string | null;
-  context: string;
-  mentions: number;
-};
-type Noter = (map: Map<string, Named>, key: string, at: number) => void;
-
-/** Notes a key as named by this handoff: once per handoff, counting the handoffs that name it. */
-function noterFor(q: QueueItem, text: string): Noter {
-  const seen = new Set<string>();
-
-  return (map, key, at) => {
-    if (seen.has(key)) {
-      return;
-    }
-
-    seen.add(key);
-
-    const prev = map.get(key);
-
-    map.set(key, {
-      ...(prev ?? {}),
-      itemId: q.id,
-      at: q.createdAt,
-      from: q.source,
-      to: q.destination,
-      context: around(text, at - 50, at + 60).trim(),
-      mentions: (prev?.mentions ?? 0) + 1,
-    } as Named);
-  };
-}
-
-function noteCommits(text: string, note: Noter, commits: Map<string, Named>): void {
-  for (const hit of text.matchAll(SHA)) {
-    const sha = hit[1]!;
-
-    if (/\d/.test(sha) && /[a-f]/.test(sha)) {
-      note(commits, sha, hit.index ?? 0);
-    }
-  }
-}
-
-function noteFli(
-  text: string,
-  note: Noter,
-  fli: Map<string, Named & { link: string | null }>
-): void {
-  for (const hit of text.matchAll(FLI_ID)) {
-    const id = hit[1]!;
-
-    note(fli as Map<string, Named>, id, hit.index ?? 0);
-
-    const url = text.match(
-      new RegExp(`https?:\\/\\/[^\\s"'<>)\\]]*(?:gate|resource)=${id}[^\\s"'<>)\\]]*`, 'g')
-    );
-    const f = fli.get(id)!;
-    const pick = bestLink(url ?? []);
-
-    if (pick) {
-      f.link = pick.replace(/\\n.*$/, '');
-    } else {
-      f.link ??= null;
-    }
-  }
-}
-
-/** Newest first; in one handoff, the most-named first. */
-function newestFirst<T extends { at: string; mentions: number }>(xs: T[]): T[] {
-  return xs.sort((a, b) => b.at.localeCompare(a.at) || b.mentions - a.mentions);
-}
-
-/** Run card R4: commits and FliStudio ids named in the rig's handoffs (see 'rig.outputs'). */
-function rigOutputs(m: FleetMachine, rig: string, store: FleetStore): RigOutputsOutput {
-  const items = rigItems(m, rig);
-  const commits = new Map<string, Named>();
-  const fli = new Map<string, Named & { link: string | null }>();
-  let bodiesMissing = 0;
-
-  for (const q of items) {
-    const { text, missing } = handoffText(store, m.machine.id, q);
-
-    if (missing) {
-      bodiesMissing += 1;
-    }
-
-    const note = noterFor(q, text);
-
-    noteCommits(text, note, commits);
-    noteFli(text, note, fli);
-  }
-
-  return {
-    machine: m.machine.id,
-    rig,
-    commits: newestFirst([...commits].map(([sha, n]) => ({ sha, ...n }))).slice(0, 20),
-    flistudio: newestFirst(
-      [...fli].map(([id, n]) => ({
-        id,
-        kind: id.startsWith('g_') ? ('gate' as const) : ('resource' as const),
-        ...n,
-        link: n.link ?? null,
-      }))
-    ).slice(0, 40),
-    scanned: items.length,
-    bodiesMissing,
-  };
-}
 
 function machinesOf(ctx: VerbContext, id?: string): FleetMachine[] {
   if (id === undefined) {
@@ -1304,7 +1189,7 @@ const VERB_SET = {
     (input, ctx): RigOutputsOutput => {
       const { m } = requireRig(ctx, input);
 
-      return rigOutputs(m!, input.rig, ctx.store);
+      return rigOutputs(m!, input.rig, ctx);
     }
   ),
 

@@ -1,27 +1,23 @@
+/** What the rig run cards read from a rig's handoffs: open gates (`rig.waiting`), commits and
+ * FliStudio ids (`rig.outputs`). Pure reading of the FleetStore; the verb handlers call in. */
+
 import type {
   AppConfig,
   FleetMachine,
   QueueItem,
   RigGate,
+  RigOutputsOutput,
   RigWaitingOutput,
 } from '@appydave/shared';
 
 /** What reading a handoff needs from the hub's FleetStore (which satisfies it): a body by id. */
-interface HandoffSource {
-  getHandoff(machineId: string, id: string): { body: string } | undefined;
-}
+type HandoffSource = { getHandoff(machineId: string, id: string): { body: string } | undefined };
 
-/** What `rigWaiting` reads from the verb context: the handoffs and AppyRig's own config. */
+/** What `rigWaiting` and `rigOutputs` read from the verb context: the handoffs and AppyRig's own config. */
 interface RigSources {
   store: HandoffSource;
   config?: () => AppConfig;
 }
-
-/**
- * What the rig run cards read out of a rig's handoffs: the gates a rig is waiting on David for
- * (`rig.waiting`) and the handoff list both run-card verbs start from. Pure reading of the hub's
- * FleetStore; the verb handlers in verbs.ts call in.
- */
 
 const GATE = /\bg_[0-9a-f]{10}\b/g;
 const SAYS_OPEN = /\bopen(ed)?\b|\bwaiting\b|\bawaits?\b/i;
@@ -40,7 +36,7 @@ function inRigOf(m: FleetMachine, rig: string): (raw: string | null) => boolean 
 }
 
 /** A handoff's summary and body as one text; `missing` when the hub never received the body. */
-export function handoffText(
+function handoffText(
   store: HandoffSource,
   machineId: string,
   q: QueueItem
@@ -51,12 +47,12 @@ export function handoffText(
 }
 
 /** The words of `text` from one place to another, with whitespace squeezed to single spaces. */
-export function around(text: string, from: number, to: number): string {
+function around(text: string, from: number, to: number): string {
   return text.slice(Math.max(0, from), to).replace(/\s+/g, ' ');
 }
 
 /** Of the links a handoff carried, a Tailscale address before localhost. */
-export function bestLink(urls: string[] = []): string | null {
+function bestLink(urls: string[] = []): string | null {
   return urls.find((u) => !/\/\/(localhost|127\.0\.0\.1)[:/]/.test(u)) ?? urls[0] ?? null;
 }
 
@@ -180,10 +176,124 @@ export function rigWaiting(m: FleetMachine, rig: string, src: RigSources): RigWa
 }
 
 /** The rig's handoffs (either end in the rig; David's mailbox is no rig), oldest first. */
-export function rigItems(m: FleetMachine, rig: string) {
+function rigItems(m: FleetMachine, rig: string) {
   const inRig = inRigOf(m, rig);
 
   return m.snapshot.queue
     .filter((q) => inRig(q.source) || inRig(q.destination))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+const SHA = /(?<![\w/.-])([0-9a-f]{7,10})(?![\w-])/g;
+const FLI_ID = /(?<![\w-])([rg]_[0-9a-f]{10})(?![\w-])/g;
+
+type Named = {
+  itemId: string;
+  at: string;
+  from: string | null;
+  to: string | null;
+  context: string;
+  mentions: number;
+};
+type Noter = (map: Map<string, Named>, key: string, at: number) => void;
+
+/** Notes a key as named by this handoff: once per handoff, counting the handoffs that name it. */
+function noterFor(q: QueueItem, text: string): Noter {
+  const seen = new Set<string>();
+
+  return (map, key, at) => {
+    if (seen.has(key)) {
+      return;
+    }
+
+    seen.add(key);
+
+    const prev = map.get(key);
+
+    map.set(key, {
+      ...(prev ?? {}),
+      itemId: q.id,
+      at: q.createdAt,
+      from: q.source,
+      to: q.destination,
+      context: around(text, at - 50, at + 60).trim(),
+      mentions: (prev?.mentions ?? 0) + 1,
+    } as Named);
+  };
+}
+
+function noteCommits(text: string, note: Noter, commits: Map<string, Named>): void {
+  for (const hit of text.matchAll(SHA)) {
+    const sha = hit[1]!;
+
+    if (/\d/.test(sha) && /[a-f]/.test(sha)) {
+      note(commits, sha, hit.index ?? 0);
+    }
+  }
+}
+
+function noteFli(
+  text: string,
+  note: Noter,
+  fli: Map<string, Named & { link: string | null }>
+): void {
+  for (const hit of text.matchAll(FLI_ID)) {
+    const id = hit[1]!;
+
+    note(fli as Map<string, Named>, id, hit.index ?? 0);
+
+    const url = text.match(
+      new RegExp(`https?:\\/\\/[^\\s"'<>)\\]]*(?:gate|resource)=${id}[^\\s"'<>)\\]]*`, 'g')
+    );
+    const f = fli.get(id)!;
+    const pick = bestLink(url ?? []);
+
+    if (pick) {
+      f.link = pick.replace(/\\n.*$/, '');
+    } else {
+      f.link ??= null;
+    }
+  }
+}
+
+/** Newest first; in one handoff, the most-named first. */
+function newestFirst<T extends { at: string; mentions: number }>(xs: T[]): T[] {
+  return xs.sort((a, b) => b.at.localeCompare(a.at) || b.mentions - a.mentions);
+}
+
+/** Run card R4: commits and FliStudio ids named in the rig's handoffs (see 'rig.outputs'). */
+export function rigOutputs(m: FleetMachine, rig: string, src: RigSources): RigOutputsOutput {
+  const items = rigItems(m, rig);
+  const commits = new Map<string, Named>();
+  const fli = new Map<string, Named & { link: string | null }>();
+  let bodiesMissing = 0;
+
+  for (const q of items) {
+    const { text, missing } = handoffText(src.store, m.machine.id, q);
+
+    if (missing) {
+      bodiesMissing += 1;
+    }
+
+    const note = noterFor(q, text);
+
+    noteCommits(text, note, commits);
+    noteFli(text, note, fli);
+  }
+
+  return {
+    machine: m.machine.id,
+    rig,
+    commits: newestFirst([...commits].map(([sha, n]) => ({ sha, ...n }))).slice(0, 20),
+    flistudio: newestFirst(
+      [...fli].map(([id, n]) => ({
+        id,
+        kind: id.startsWith('g_') ? ('gate' as const) : ('resource' as const),
+        ...n,
+        link: n.link ?? null,
+      }))
+    ).slice(0, 40),
+    scanned: items.length,
+    bodiesMissing,
+  };
 }
