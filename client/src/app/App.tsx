@@ -3,7 +3,7 @@ import FleetStrip from '@client/kit/FleetStrip.js';
 import RigFiles from '@client/kit/RigFiles.js';
 import { Legend2 } from '@client/kit/index.js';
 import { isShortcutBlocked, isTextEntry } from '@client/lib/keys.js';
-import { findSeat, orderedMachines, seatName } from '@client/domain/fleet/model.js';
+import { orderedMachines, seatName } from '@client/domain/fleet/model.js';
 import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
 import {
   getFleetSocket,
@@ -21,6 +21,7 @@ import V1Archive from '@client/kit/V1Archive.js';
 import AgentPanel from '@client/kit/drawer/AgentPanel.js';
 import { readUrlState, rigFromParam, rigToParam, writeParams } from '@client/shell/urlState.js';
 import '@client/shell/shell.css';
+import { findSeat } from '@client/domain/fleet/blocked/blocked.js';
 
 /** The `open` parameter as the address has it right now. */
 function readUrlOpen(): string | null {

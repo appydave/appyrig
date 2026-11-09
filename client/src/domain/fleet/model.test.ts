@@ -5,12 +5,6 @@ import { ASLEEP_AFTER_MS, type Seat } from '@appydave/shared';
 import { fleetMachine, snapshot } from '@client/test/fleetFixtures.js';
 import {
   ago,
-  blockedBecause,
-  blockedDetail,
-  blockedLine,
-  blockedSeats,
-  countSeats,
-  findSeat,
   freshness,
   roleWord,
   groupSeats,
@@ -28,6 +22,14 @@ import {
   tailLine,
   visibleTail,
 } from './terminal.js';
+import {
+  blockedBecause,
+  blockedDetail,
+  blockedLine,
+  blockedSeats,
+  countSeats,
+  findSeat,
+} from '@client/domain/fleet/blocked/blocked.js';
 
 const NOW = Date.parse('2026-10-09T14:00:00.000Z');
 const at = (msAgo: number) => new Date(NOW - msAgo).toISOString();

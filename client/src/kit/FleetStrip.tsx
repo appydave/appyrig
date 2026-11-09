@@ -1,16 +1,14 @@
 import type { FleetMachine } from '@appydave/shared';
 import { pressureOf } from '@client/domain/fleet/health.js';
+import { freshness, seatName, type TileRef } from '@client/domain/fleet/model.js';
+import type { HubLink } from '@client/domain/fleet/useFleet.js';
 import {
   blockedBecause,
   blockedDetail,
   blockedLine,
   blockedSeats,
   countSeats,
-  freshness,
-  seatName,
-  type TileRef,
-} from '@client/domain/fleet/model.js';
-import type { HubLink } from '@client/domain/fleet/useFleet.js';
+} from '@client/domain/fleet/blocked/blocked.js';
 
 const MAX_BLOCKED_ALERTS = 3;
 /** The collector's wording when nothing listens on the OpenRig port (collector/src/adapters/sources.ts). */

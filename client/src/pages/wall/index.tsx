@@ -2,7 +2,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import {
   PIP,
-  blockedLine,
   WALL_ORDER_TEXT,
   freshness,
   groupSeats,
@@ -31,6 +30,7 @@ import {
   type SeatFlags,
   type WallFilter,
 } from '@client/domain/wall/model.js';
+import { blockedLine } from '@client/domain/fleet/blocked/blocked.js';
 
 const MACHINE_ORDER_TEXT =
   'Order: by machine, as in the Rigs drawer · its rigs, then its plain tmux sessions, then its stopped rigs · stopped rigs collapsed';

@@ -1,7 +1,8 @@
 import type { FleetMachine, QueueItem, RigGate } from '@appydave/shared';
-import { agentActivityOf, blockedLine, seatKey, seatName } from '@client/domain/fleet/model.js';
+import { agentActivityOf, seatKey, seatName } from '@client/domain/fleet/model.js';
 import { endpointRig, isOpen } from '@client/domain/fleet/views/core/queue.js';
 import { realNames } from '@client/domain/fleet/realNames.js';
+import { blockedLine } from '@client/domain/fleet/blocked/blocked.js';
 
 /**
  * Needs You: everything waiting on David across every machine, as one list.
