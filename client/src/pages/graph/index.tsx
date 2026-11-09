@@ -160,63 +160,67 @@ function unplacedText(u: Graph['unplaced']): string {
 const LABEL_BOX_W = 48;
 const LABEL_BOX_H = 20;
 
+/** Spots to try along a line, as fractions of its length: outward from the middle, 4% to 96%. */
+const LABEL_SPOTS = Array.from({ length: 40 }, (_, k) => k + 1)
+  .flatMap((i) => [0.5 - i * 0.0125, 0.5 + i * 0.0125])
+  .filter((t) => t >= 0.04 && t <= 0.96);
+
+/** True when a label centred on (x, y) would sit on any of the rig boxes. */
+const labelHits = (boxes: Box[], x: number, y: number) =>
+  boxes.some(
+    (b) =>
+      x - LABEL_BOX_W / 2 < b.x + b.w &&
+      x + LABEL_BOX_W / 2 > b.x &&
+      y - LABEL_BOX_H / 2 < b.y + b.h &&
+      y + LABEL_BOX_H / 2 > b.y
+  );
+
+/** The nearest spot along a measurable path that is clear of every box; null where there is none. */
+function clearSpotOn(path: SVGPathElement, boxes: Box[]): { x: number; y: number } | null {
+  if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') {
+    return null;
+  }
+
+  const len = path.getTotalLength();
+
+  if (!(len > 0)) {
+    return null;
+  }
+
+  for (const t of LABEL_SPOTS) {
+    const pt = path.getPointAtLength(len * t);
+
+    if (!labelHits(boxes, pt.x, pt.y)) {
+      return { x: pt.x, y: pt.y };
+    }
+  }
+
+  return null;
+}
+
 /**
  * Where a between-rigs label sits: its own spot if no rig box is under it; otherwise the nearest point
  * along ITS OWN line (searched outward from the middle) where it is clear of every box, so a count
  * never lands on a box's text. With no clear point the original spot stays.
  */
 export function labelClearOf(
-  d: string,
-  lx: number,
-  ly: number,
+  line: { d: string; lx: number; ly: number },
   boxes: Box[],
   host?: SVGSVGElement | null
 ): { x: number; y: number } {
-  const hits = (x: number, y: number) =>
-    boxes.some(
-      (b) =>
-        x - LABEL_BOX_W / 2 < b.x + b.w &&
-        x + LABEL_BOX_W / 2 > b.x &&
-        y - LABEL_BOX_H / 2 < b.y + b.h &&
-        y + LABEL_BOX_H / 2 > b.y
-    );
+  const own = { x: line.lx, y: line.ly };
 
-  if (!hits(lx, ly)) {
-    return { x: lx, y: ly };
+  if (!labelHits(boxes, own.x, own.y)) {
+    return own;
   }
 
-  const NS = 'http://www.w3.org/2000/svg';
-  const path = document.createElementNS(NS, 'path');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
-  path.setAttribute('d', d);
+  path.setAttribute('d', line.d);
   // a path measures only while it is in the document: borrow the lines layer for a moment
   host?.appendChild(path);
   try {
-    if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') {
-      return { x: lx, y: ly };
-    }
-
-    const len = path.getTotalLength();
-
-    if (!(len > 0)) {
-      return { x: lx, y: ly };
-    }
-
-    for (let i = 1; i <= 40; i++) {
-      for (const t of [0.5 - i * 0.0125, 0.5 + i * 0.0125]) {
-        if (t < 0.04 || t > 0.96) {
-          continue;
-        }
-
-        const pt = path.getPointAtLength(len * t);
-
-        if (!hits(pt.x, pt.y)) {
-          return { x: pt.x, y: pt.y };
-        }
-      }
-    }
-
-    return { x: lx, y: ly };
+    return clearSpotOn(path, boxes) ?? own;
   } finally {
     path.parentNode?.removeChild(path);
   }
@@ -324,13 +328,7 @@ function GraphPage({ ctx, focusChosen = false }: PageProps & { focusChosen?: boo
       setGeom(
         new Map(
           routeLines(pairs, box).map((l) => {
-            const at = labelClearOf(
-              l.d,
-              l.lx,
-              l.ly,
-              rigBoxes,
-              el.querySelector<SVGSVGElement>('svg.g2-lines')
-            );
+            const at = labelClearOf(l, rigBoxes, el.querySelector<SVGSVGElement>('svg.g2-lines'));
 
             return [pairKey(l.pair), { d: l.d, lx: at.x, ly: at.y, tipA: l.tipA, tipB: l.tipB }];
           })

@@ -894,16 +894,10 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 6
-    },
-    "max-params": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
+      "count": 5
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 4
+      "count": 3
     },
     "sonarjs/expression-complexity": {
       "count": 1

@@ -920,16 +920,90 @@ describe('Graph: between-rigs labels stay off the boxes', () => {
       const box = { x: 40, y: -50, w: 50, h: 100 };
 
       // already clear: stays
-      expect(labelClearOf('M0,0', 200, 0, [box])).toEqual({ x: 200, y: 0 });
+      expect(labelClearOf({ d: 'M0,0', lx: 200, ly: 0 }, [box])).toEqual({ x: 200, y: 0 });
 
       // on the box: moves along the line to where a 48 px label misses it
-      const at = labelClearOf('M0,0 L100,0', 50, 0, [box]);
+      const at = labelClearOf({ d: 'M0,0 L100,0', lx: 50, ly: 0 }, [box]);
 
       expect(at.x + 24).toBeLessThanOrEqual(box.x);
       expect(at.y).toBe(0);
     } finally {
       spy.mockRestore();
     }
+  });
+
+  interface FakePath {
+    setAttribute: () => void;
+    getTotalLength?: () => number;
+    getPointAtLength?: (n: number) => { x: number; y: number };
+    parentNode?: { removeChild: ReturnType<typeof vi.fn> };
+  }
+
+  // A fake path along y = 0 whose length is `len` and whose x at a distance n is n.
+  const withPath = async (
+    path: FakePath,
+    run: (labelClearOf: typeof import('./index.js').labelClearOf) => void
+  ) => {
+    const { labelClearOf } = await import('./index.js');
+    const spy = vi.spyOn(document, 'createElementNS').mockReturnValue(path as never);
+
+    try {
+      run(labelClearOf);
+    } finally {
+      spy.mockRestore();
+    }
+  };
+
+  const line = (len: number) => ({
+    setAttribute: () => undefined,
+    getTotalLength: () => len,
+    getPointAtLength: (n: number) => ({ x: n, y: 0 }),
+  });
+
+  it('keeps the label where it is when the path cannot be measured, is empty, or has no clear spot', async () => {
+    const onIt = { x: 45, y: -50, w: 10, h: 100 };
+
+    await withPath({ setAttribute: () => undefined }, (f) =>
+      expect(f({ d: 'M0,0', lx: 50, ly: 0 }, [onIt])).toEqual({ x: 50, y: 0 })
+    );
+    await withPath({ setAttribute: () => undefined, getTotalLength: () => 100 }, (f) =>
+      expect(f({ d: 'M0,0', lx: 50, ly: 0 }, [onIt])).toEqual({ x: 50, y: 0 })
+    );
+    await withPath(
+      { setAttribute: () => undefined, getPointAtLength: () => ({ x: 0, y: 0 }) },
+      (f) => expect(f({ d: 'M0,0', lx: 50, ly: 0 }, [onIt])).toEqual({ x: 50, y: 0 })
+    );
+    await withPath(line(0), (f) =>
+      expect(f({ d: 'M0,0', lx: 50, ly: 0 }, [onIt])).toEqual({ x: 50, y: 0 })
+    );
+    // boxes from 28 to 72: the nearest clear spots would be x 4 and x 96, just outside the 4% to 96% search
+    await withPath(line(100), (f) =>
+      expect(f({ d: 'M0,0', lx: 50, ly: 0 }, [{ x: 28, y: -50, w: 44, h: 100 }])).toEqual({
+        x: 50,
+        y: 0,
+      })
+    );
+  });
+
+  it('tries the spot before the middle first, so the nearer clear spot on that side wins', async () => {
+    await withPath(line(100), (f) => {
+      const at = f({ d: 'M0,0', lx: 50, ly: 0 }, [{ x: 45, y: -50, w: 10, h: 100 }]);
+
+      expect(at.x).toBeCloseTo(20, 6);
+      expect(at.y).toBe(0);
+    });
+  });
+
+  it('borrows the lines layer to measure and takes the path out again, even without a clear spot', async () => {
+    const out = { removeChild: vi.fn() };
+    const path = { ...line(100), parentNode: out };
+    const host = { appendChild: vi.fn() };
+
+    await withPath(path, (f) => {
+      f({ d: 'M0,0', lx: 50, ly: 0 }, [{ x: 28, y: -50, w: 44, h: 100 }], host as never);
+      expect(host.appendChild).toHaveBeenCalledWith(path);
+      expect(out.removeChild).toHaveBeenCalledWith(path);
+    });
   });
 });
 
