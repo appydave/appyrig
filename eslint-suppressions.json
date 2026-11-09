@@ -1611,7 +1611,7 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 5
+      "count": 4
     },
     "max-params": {
       "count": 2
