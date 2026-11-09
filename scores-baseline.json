@@ -420,7 +420,6 @@
     "server/src/hub/stores/fleetStore.ts::load": 13,
     "server/src/hub/stores/missionFileStore.ts::put": 23,
     "shared/src/daemondata.ts::healthCaveats": 20,
-    "shared/src/loadout.ts::loadoutCounts": 9,
     "shared/src/missionJobs.ts::parseMissionJobs": 11
   },
   "sonarjs/cyclomatic-complexity": {
@@ -663,7 +662,6 @@
     "server/src/hub/stores/missionFileStore.ts::put": 30,
     "server/src/hub/stores/schemaStore.ts::get": 8,
     "shared/src/daemondata.ts::healthCaveats": 16,
-    "shared/src/loadout.ts::loadoutCounts": 8,
     "shared/src/missionJobs.ts::parseMissionJobs": 10
   },
   "sonarjs/expression-complexity": {

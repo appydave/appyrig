@@ -99,8 +99,6 @@ export type SeatDoc = z.infer<typeof SeatDocSchema>;
 export const LOADOUT_LAYER_MAX_BYTES = SEAT_DOC_MAX_BYTES;
 /** @deprecated Use SeatDocIdSchema. */
 export const LoadoutLayerIdSchema = SeatDocIdSchema;
-/** @deprecated Use SeatDocId. */
-export type LoadoutLayerId = SeatDocId;
 /** @deprecated Use SeatDocSchema. */
 export const LoadoutLayerSchema = SeatDocSchema;
 /** @deprecated Use SeatDoc. */
@@ -112,7 +110,6 @@ export type LoadoutLayer = SeatDoc;
  * `not-claude`  — not a Claude Code seat (Codex records skills differently: not read yet)
  */
 export const LoadoutStatusSchema = z.enum(['ok', 'no-listing', 'not-claude']);
-export type LoadoutStatus = z.infer<typeof LoadoutStatusSchema>;
 
 // ── what OpenRig gave the seat: its member spec, its AgentSpec, its topology chain files ────────
 
@@ -234,7 +231,6 @@ export const SeatLoadoutInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m2'),
   seat: z.string().min(1).describe('seat id, e.g. orch-lead@appyrig-v14'),
 });
-export type SeatLoadoutInput = z.infer<typeof SeatLoadoutInputSchema>;
 
 export const SeatLoadoutOutputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id,
@@ -250,61 +246,5 @@ export const SeatLoadoutOutputSchema = z.strictObject({
 });
 export type SeatLoadoutOutput = z.infer<typeof SeatLoadoutOutputSchema>;
 
-// ── counts, shared by the view and its tests ───────────────────────────────────────────────────
-
 /** The name without a plugin prefix: `canvas:visual-brief` → `visual-brief`. */
 export const shortSkillName = (name: string): string => name.slice(name.indexOf(':') + 1);
-
-export interface LoadoutCounts {
-  bySource: Record<SkillSource, number>;
-  /** Listed skills whose name also exists somewhere else. */
-  shadowed: number;
-  /**
-   * The Venn: names (without plugin prefix) by which of the three circles hold them. Key is the
-   * sorted circle list joined by '+', e.g. `role`, `plugin+repo`; `` = outside every circle.
-   */
-  regions: Record<string, number>;
-}
-
-const CIRCLES: SkillSource[] = ['role', 'repo', 'plugin'];
-
-export function loadoutCounts(skills: LoadoutSkill[]): LoadoutCounts {
-  const bySource: Record<SkillSource, number> = {
-    role: 0,
-    repo: 0,
-    personal: 0,
-    plugin: 0,
-    builtin: 0,
-    unplaced: 0,
-  };
-  let shadowed = 0;
-  const circlesOf = new Map<string, Set<SkillSource>>();
-
-  for (const s of skills) {
-    bySource[s.source] += 1;
-    if (s.alsoIn.length > 0) {
-      shadowed += 1;
-    }
-
-    const key = shortSkillName(s.name);
-    const set = circlesOf.get(key) ?? new Set<SkillSource>();
-
-    for (const src of [s.source, ...s.alsoIn]) {
-      if (CIRCLES.includes(src)) {
-        set.add(src);
-      }
-    }
-
-    circlesOf.set(key, set);
-  }
-
-  const regions: Record<string, number> = {};
-
-  for (const set of circlesOf.values()) {
-    const key = [...set].sort().join('+');
-
-    regions[key] = (regions[key] ?? 0) + 1;
-  }
-
-  return { bySource, shadowed, regions };
-}

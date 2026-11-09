@@ -145,7 +145,6 @@ export type RigCommandsPush = z.infer<typeof RigCommandsPushSchema>;
 export const RigSpecsInputSchema = z.strictObject({
   machine: MachineId.optional().describe('only this machine'),
 });
-export type RigSpecsInput = z.infer<typeof RigSpecsInputSchema>;
 
 export const RigSpecsOutputSchema = z.strictObject({
   machines: z.array(DataMachineSchema),
@@ -177,7 +176,6 @@ export const RigCommandsInputSchema = z.strictObject({
     .optional()
     .describe(`newest N (default ${RIG_COMMANDS_MAX})`),
 });
-export type RigCommandsInput = z.infer<typeof RigCommandsInputSchema>;
 
 export const RigCommandsOutputSchema = z.strictObject({
   machines: z.array(DataMachineSchema.extend({ fileFound: z.boolean().nullable() })),

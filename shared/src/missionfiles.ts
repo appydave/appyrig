@@ -72,7 +72,6 @@ export const MissionFilesPushSchema = z.discriminatedUnion('kind', [
   MissionFilePushSchema,
 ]);
 export type MissionFilesPush = z.infer<typeof MissionFilesPushSchema>;
-export type MissionManifest = z.infer<typeof MissionManifestSchema>;
 export type MissionFilePush = z.infer<typeof MissionFilePushSchema>;
 
 // verb
@@ -91,7 +90,6 @@ export const MissionFileInputSchema = z.strictObject({
       "an absolute path named by that rig's MISSION.md or in its qa/ or shots/, or the rig-relative form 'qa/<name>.md' / 'shots/<name>.png' (never '..')"
     ),
 });
-export type MissionFileInput = z.infer<typeof MissionFileInputSchema>;
 
 /**
  *  ok         text or base64 is present

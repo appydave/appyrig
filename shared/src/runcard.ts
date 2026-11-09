@@ -11,13 +11,10 @@ import { MachineIdentitySchema } from './snapshot.js';
 
 const isoDate = z.iso.datetime({ offset: true });
 
-export const GATE_ID = /\bg_[0-9a-f]{10}\b/g;
-
 export const RigWaitingInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m4'),
   rig: z.string().min(1).describe('rig name, e.g. ylo-d10'),
 });
-export type RigWaitingInput = z.infer<typeof RigWaitingInputSchema>;
 
 export const RigGateSchema = z.strictObject({
   gate: z.string().regex(/^g_[0-9a-f]{10}$/),
@@ -52,7 +49,6 @@ export type RigWaitingOutput = z.infer<typeof RigWaitingOutputSchema>;
  * was named. Files (REPORT, DEBRIEF, LEARNED) come from rig.files, not from here.
  */
 export const RigOutputsInputSchema = RigWaitingInputSchema;
-export type RigOutputsInput = z.infer<typeof RigOutputsInputSchema>;
 
 const NamedInSchema = z.strictObject({
   /** The newest handoff that names it. */
@@ -67,7 +63,6 @@ const NamedInSchema = z.strictObject({
 });
 
 export const RigCommitSchema = NamedInSchema.extend({ sha: z.string().regex(/^[0-9a-f]{7,10}$/) });
-export type RigCommit = z.infer<typeof RigCommitSchema>;
 
 export const RigFliIdSchema = NamedInSchema.extend({
   id: z.string().regex(/^[rg]_[0-9a-f]{10}$/),
@@ -75,7 +70,6 @@ export const RigFliIdSchema = NamedInSchema.extend({
   /** A FliStudio link a handoff carried for it; null: none did. */
   link: z.string().nullable(),
 });
-export type RigFliId = z.infer<typeof RigFliIdSchema>;
 
 export const RigOutputsOutputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id,
