@@ -1,3 +1,5 @@
+import { compareTimes } from '@appydave/shared';
+import type { QueueItem } from '@appydave/shared';
 import type { FleetMachine, Seat } from '@appydave/shared';
 import { seatKey, type TileRef } from './model.js';
 
@@ -44,4 +46,11 @@ export function seatAddresses(seat: Seat): Set<string> {
   }
 
   return ids;
+}
+
+/** The queue rows to or from a seat (`mine` is its addresses), newest update first. */
+export function seatQueueRows(queue: QueueItem[], mine: Set<string>): QueueItem[] {
+  return queue
+    .filter((q) => mine.has(q.destination ?? '') || mine.has(q.source ?? ''))
+    .sort((a, b) => compareTimes(b.updatedAt, a.updatedAt));
 }

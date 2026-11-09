@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FleetMachine, HandoffGetOutput, RigEntry, RigEntryOutput } from '@appydave/shared';
 import { ago } from '@client/domain/fleet/model.js';
@@ -453,14 +454,14 @@ export default function HandoffFlow({
   const pairTitle = (p: FlowPair) =>
     `${labelOf(p.a)} ⇄ ${labelOf(p.b)} · ${pairLabel(p)} · ${p.total} handoff${p.total === 1 ? '' : 's'}`;
   const pairItems = (p: FlowPair) =>
-    p.edges.flatMap((e) => e.items).sort((x, y) => x.createdAt.localeCompare(y.createdAt));
+    p.edges.flatMap((e) => e.items).sort((x, y) => compareTimes(x.createdAt, y.createdAt));
   const stageSelection = (stage: string, itemId: string | null): PanelSelection | null => {
     const lines = flow.edges.filter((e) => e.from === stage || e.to === stage);
     const seen = new Set<string>();
     const items = lines
       .flatMap((e) => e.items)
       .filter((q) => (seen.has(q.id) ? false : (seen.add(q.id), true)))
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      .sort((a, b) => compareTimes(a.createdAt, b.createdAt));
     const inN = lines.filter((e) => e.to === stage).reduce((n, e) => n + e.count, 0);
     const outN = lines.filter((e) => e.from === stage).reduce((n, e) => n + e.count, 0);
 
