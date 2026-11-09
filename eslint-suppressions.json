@@ -412,37 +412,6 @@
       "count": 1
     }
   },
-  "client/src/kit/AgentPanel.tsx": {
-    "max-lines": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 2
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
-  "client/src/kit/DocsDrawer.tsx": {
-    "max-lines": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 6
-    },
-    "max-params": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 6
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
-    }
-  },
   "client/src/kit/FakeControl.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -645,11 +614,6 @@
       "count": 1
     }
   },
-  "client/src/kit/SkillsPanel.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
   "client/src/kit/TerminalCard.tsx": {
     "max-lines-per-function": {
       "count": 1
@@ -707,6 +671,42 @@
       "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    }
+  },
+  "client/src/kit/drawer/AgentPanel.tsx": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    }
+  },
+  "client/src/kit/drawer/DocsDrawer.tsx": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 6
+    },
+    "max-params": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 6
+    },
+    "sonarjs/expression-complexity": {
+      "count": 1
+    }
+  },
+  "client/src/kit/drawer/SkillsPanel.tsx": {
+    "max-lines-per-function": {
       "count": 1
     }
   },
