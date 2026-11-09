@@ -3,6 +3,7 @@
  * must not import a folder that imports it back, counting only code that runs (no tests, no type-only or
  * dynamic imports). Its options differ from .dependency-cruiser.cjs (which keeps tests and type imports to
  * judge the layer rules), so it is a second file. Run with `npm run arch:folders`.
+ * Parent and child folders are not compared: a folder and one of its subfolders importing each other is not reported.
  */
 const SRC = '^(client|server|collector|shared)/src/';
 

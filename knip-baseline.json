@@ -6,7 +6,7 @@
         "exports": 2
       },
       "client/package.json": {
-        "devDependencies": 3
+        "devDependencies": 2
       },
       "client/src/kit/HandoffLineMarks.tsx": {
         "exports": 1
@@ -20,39 +20,19 @@
       "client/src/test/msw/server.ts": {
         "files": 1
       },
-      "collector/src/install.test.ts": {
-        "binaries": 1
-      },
-      "e2e/support/global-teardown.ts": {
-        "exports": 1
-      },
       "lint/folder-limits.mjs": {
         "exports": 4
       },
       "lint/root-imports-codemod.mjs": {
         "exports": 1
       },
-      "package.json": {
-        "binaries": 2
-      },
-      "playwright.config.ts": {
-        "exports": 1
-      },
-      "scripts/oxlint-gate.d.mts": {
-        "exports": 13,
-        "types": 3
-      },
       "scripts/oxlint-gate.mjs": {
         "exports": 1
-      },
-      "scripts/provenance/check.ts": {
-        "unlisted": 1
       },
       "scripts/record-frozen.mjs": {
         "unlisted": 1
       },
       "server/package.json": {
-        "dependencies": 1,
         "devDependencies": 1
       },
       "shared/src/accounts.ts": {
@@ -131,9 +111,6 @@
         "exports": 1,
         "types": 9
       },
-      "test/root/openrig-types.test.ts": {
-        "unlisted": 1
-      },
       "test/root/wire-compat.test.ts": {
         "unlisted": 1
       }
@@ -141,9 +118,6 @@
     "production": {
       "bin/appyrig.mjs": {
         "exports": 2
-      },
-      "client/src/app/devProxy.ts": {
-        "files": 1
       },
       "client/src/app/frozen/frozenSocket.ts": {
         "exports": 2
@@ -283,9 +257,6 @@
       "collector/src/adapters/dbschema.ts": {
         "exports": 3
       },
-      "collector/src/adapters/fixtureSources.ts": {
-        "files": 1
-      },
       "collector/src/adapters/health.ts": {
         "exports": 6,
         "types": 1
@@ -340,16 +311,6 @@
       },
       "collector/src/pusher.ts": {
         "exports": 1
-      },
-      "collector/src/snapshotCases.ts": {
-        "files": 1
-      },
-      "scripts/oxlint-gate.d.mts": {
-        "exports": 13,
-        "types": 3
-      },
-      "server/package.json": {
-        "dependencies": 1
       },
       "server/src/core/doors.ts": {
         "exports": 6,
