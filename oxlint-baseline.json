@@ -21,7 +21,6 @@
       "require-safety-comment-for-type-assertion": 2
     },
     "client/src/app/ux-nav.test.tsx": {
-      "no-chained-type-assertions": 1,
       "no-module-mocking": 2
     },
     "client/src/app/w2.test.tsx": {
@@ -212,20 +211,14 @@
     "client/src/shell/StripShell.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/shell/agentRig.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/shell/nav.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
-    "client/src/shell/shell.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
     "client/src/test/queueFixtures.ts": {
       "no-chained-type-assertions": 1
     },
     "client/src/test/setup.ts": {
       "no-module-mocking": 2
+    },
+    "client/src/test/socketWithEvents.ts": {
+      "no-chained-type-assertions": 1
     },
     "collector/src/adapters/account.ts": {
       "no-unsafe-dictionary-type": 1,

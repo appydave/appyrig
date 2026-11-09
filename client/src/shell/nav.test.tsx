@@ -1,47 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
 import App from '@client/app/App.js';
 import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
-import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
 import { agentFromParam, agentToParam, rigFromParam, rigToParam } from './urlState.js';
-
-type Handler = (...args: unknown[]) => void;
-
-function spySocket() {
-  const handlers = new Map<string, Set<Handler>>();
-  const s = {
-    connected: true,
-    on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) {
-        handlers.set(ev, new Set());
-      }
-
-      handlers.get(ev)!.add(h);
-
-      return s;
-    },
-    off(ev: string, h: Handler) {
-      handlers.get(ev)?.delete(h);
-
-      return s;
-    },
-    emit: vi.fn(),
-    timeout: vi.fn(() => ({ emit: () => undefined })),
-  };
-  const fire = (ev: string, ...args: unknown[]) =>
-    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
-
-  return { socket: s as unknown as FleetSocket, fire };
-}
 
 const fleet = () => [fleetMachine(snapshot('roamy--blocked')), fleetMachine(snapshot('m2'))];
 
 function renderAt(search: string) {
   history.replaceState(null, '', `/${search}`);
 
-  const spy = spySocket();
+  const spy = socketWithEvents();
 
   render(<App getSocket={() => spy.socket} />);
   spy.fire(FLEET_EVENTS.UPDATE, update(fleet()));
