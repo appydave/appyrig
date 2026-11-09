@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { QueueItem } from '@appydave/shared';
 import { clip, plain } from './runcard.js';
 
@@ -301,7 +302,7 @@ const isSweep = (q: QueueItem) => q.tags.some((t) => t.startsWith('stuck-sweep')
 export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | null {
   const work = [...items]
     .filter((q) => !isSweep(q))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => compareTimes(b.createdAt, a.createdAt));
   const scored = sources.map((s) => {
     const naming = work.filter((q) => s.steps.some((st) => names(q, st, s.kind)));
 
@@ -315,7 +316,7 @@ export function choosePlan(sources: PlanSource[], items: QueueItem[]): Plan | nu
   const pick = named.sort(
     (a, b) =>
       inRecent(b) - inRecent(a) ||
-      b.naming[0]!.createdAt.localeCompare(a.naming[0]!.createdAt) ||
+      compareTimes(b.naming[0]!.createdAt, a.naming[0]!.createdAt) ||
       b.naming.length - a.naming.length
   )[0];
   const chosen = pick ?? (scored.length === 1 ? scored[0] : undefined);

@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { FleetMachine, QueueItem } from '@appydave/shared';
 import { isOpen } from '@client/domain/fleet/views/core/queue.js';
 import { realNames } from '@client/domain/fleet/realNames.js';
@@ -176,7 +177,7 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
 
         return {
           id: sid,
-          jobs: [...jobs].sort((a, b) => a.item.createdAt.localeCompare(b.item.createdAt)),
+          jobs: [...jobs].sort((a, b) => compareTimes(a.item.createdAt, b.item.createdAt)),
           open,
           done,
           notDone,
@@ -206,7 +207,7 @@ export function deriveMissions(machines: FleetMachine[]): Mission[] {
     });
   }
 
-  return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt) || a.key.localeCompare(b.key));
+  return out.sort((a, b) => compareTimes(b.lastAt, a.lastAt) || a.key.localeCompare(b.key));
 }
 
 /** Jobs with a slice tag but no mission tag: a flat list per rig, with no progress (there is no mission to measure). */
@@ -236,7 +237,7 @@ export function deriveUnattributed(machines: FleetMachine[]): Unattributed[] {
   return [...groups.values()]
     .map((g) => ({
       ...g,
-      jobs: g.jobs.sort((a, b) => b.item.updatedAt.localeCompare(a.item.updatedAt)),
+      jobs: g.jobs.sort((a, b) => compareTimes(b.item.updatedAt, a.item.updatedAt)),
     }))
     .sort((a, b) => b.jobs.length - a.jobs.length);
 }

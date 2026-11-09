@@ -1,3 +1,4 @@
+import { compareTimes } from '@appydave/shared';
 import type { FleetMachine } from '@appydave/shared';
 import type { HistoryTransitionRow } from '@appydave/shared';
 import { endpointRig } from '@client/domain/fleet/views/core/queue.js';
@@ -97,7 +98,7 @@ export function filterHistory(rows: HistRow[], f: HistFilters): HistRow[] {
             r.summary,
           ].some((s) => (s ?? '').toLowerCase().includes(q)))
     )
-    .sort((a, b) => b.at.localeCompare(a.at) || a.key.localeCompare(b.key));
+    .sort((a, b) => compareTimes(b.at, a.at) || a.key.localeCompare(b.key));
 }
 
 export const statesOf = (rows: HistRow[]) => [...new Set(rows.map((r) => r.state))].sort();
