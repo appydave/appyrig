@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { FleetMachine } from '@appydave/shared';
 import { FLOW_RIG, flowItem, flowMachine } from '@client/test/queueFixtures.js';
+import { seatKey } from '@client/domain/fleet/model.js';
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
+import FlowDocsBar from './FlowDocsBar.js';
 import { page as flowPage } from './index.js';
 import { rigPageCtx } from '@client/pages/page-test-kit.js';
 
@@ -160,5 +163,44 @@ describe('v2 Handoff Flow replay (clean batch)', () => {
     ).toEqual(['dev-overlay', 'dev-qa', 'review-r1']);
     fireEvent.click(screen.getByTestId('console-follow'));
     expect(screen.getByTestId('console-mode')).toHaveTextContent('following the handoff');
+  });
+});
+
+describe('FlowDocsBar: the documents drawer it opens', () => {
+  /** A socket that counts the verb calls it is asked and never answers. */
+  const countingSocket = () => {
+    const verbs: string[] = [];
+    const emit = (_event: string, request: { verb: string }) => {
+      verbs.push(request.verb);
+    };
+
+    return { verbs, socket: socketWithEvents({ timeout: vi.fn(() => ({ emit })) }).socket };
+  };
+
+  it('asks its reads once however often Flow re-renders, and again only for a new socket', () => {
+    const machine = flowMachine([]);
+    const seatKeys = [seatKey(machine.machine.id, machine.snapshot.seats[0]!.id)];
+    const first = countingSocket();
+    const second = countingSocket();
+    const bar = (socket: typeof first.socket) => (
+      <FlowDocsBar machine={machine} socket={socket} seatKeys={seatKeys} />
+    );
+    const { rerender } = render(bar(first.socket));
+
+    fireEvent.click(screen.getByTestId('flow-docs'));
+
+    const asked = first.verbs.length;
+
+    expect(asked).toBeGreaterThan(0);
+
+    rerender(bar(first.socket));
+    rerender(bar(first.socket));
+
+    expect(first.verbs).toHaveLength(asked);
+
+    rerender(bar(second.socket));
+
+    expect(second.verbs).toHaveLength(asked);
+    expect(first.verbs).toHaveLength(asked);
   });
 });
