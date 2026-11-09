@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ASLEEP_AFTER_MS } from '@appydave/shared';
@@ -113,5 +113,106 @@ describe('FleetStore liveness changes (logged by the hub, so AC 6 is visible in 
     restarted.put(loadSnapshot('roamy'));
     expect(changes.map((c) => `${c.from} -> ${c.to}`)).toEqual(['asleep -> live']);
     await restarted.flush(); // put() starts a write; afterEach must not remove the dir under it
+  });
+});
+
+const AT = '2026-10-11T12:00:00.000Z';
+
+/** The three stores that load a folder of JSON files and skip what is bad, each with its own wording. */
+const FOLDER_STORES: {
+  name: string;
+  dir: string;
+  notA: string;
+  seed: (s: FleetStore) => void;
+  load: (s: FleetStore) => Promise<number>;
+}[] = [
+  {
+    name: 'histories',
+    dir: 'history',
+    notA: 'a seat history',
+    seed: (s) =>
+      s.putHistory({
+        machineId: 'roamy',
+        seat: 'a@r',
+        collectedAt: AT,
+        events: [],
+        truncated: false,
+      }),
+    load: (s) => s.loadHistories(),
+  },
+  {
+    name: 'handoffs',
+    dir: 'handoffs',
+    notA: 'stored queue bodies',
+    seed: (s) =>
+      s.putHandoffs({
+        machineId: 'roamy',
+        collectedAt: AT,
+        items: [{ id: 'q1', body: 'b', truncated: false }],
+      }),
+    load: (s) => s.loadHandoffs(),
+  },
+  {
+    name: 'schemas',
+    dir: 'schemas',
+    notA: 'a stored schema',
+    seed: (s) =>
+      s.schemas.put({
+        machineId: 'roamy',
+        collectedAt: AT,
+        status: 'ok',
+        reason: null,
+        openrigVersion: '1.0.0',
+        tables: [],
+      }),
+    load: (s) => s.schemas.load(),
+  },
+];
+
+describe.each(FOLDER_STORES)('$name load: a folder of JSON files, bad ones skipped', (kind) => {
+  function open() {
+    const dataDir = mkdtempSync(join(tmpdir(), 'appyrig-folder-'));
+
+    dirs.push(dataDir);
+
+    const told: string[] = [];
+    const store = () => new FleetStore({ dataDir, onDiskError: (m) => told.push(m) });
+
+    return { dataDir, told, store, dir: join(dataDir, kind.dir) };
+  }
+
+  it("loads the good file, skips bad JSON and a wrong shape, each said in this store's words", async () => {
+    const { store, told, dir } = open();
+    const first = store();
+
+    kind.seed(first);
+    await first.flush();
+    writeFileSync(join(dir, 'broken.json'), '{ not json');
+    writeFileSync(join(dir, 'wrong.json'), '{}');
+    writeFileSync(join(dir, 'ignored.txt'), 'not a .json file');
+
+    expect(await kind.load(store())).toBe(1);
+    expect(told.sort()).toEqual(
+      [
+        `cannot load ${join(dir, 'broken.json')}; skipped`,
+        `${join(dir, 'wrong.json')} is not ${kind.notA}; skipped`,
+      ].sort()
+    );
+  });
+
+  it('a folder that does not exist yet is silent', async () => {
+    const { store, told } = open();
+
+    expect(await kind.load(store())).toBe(0);
+    expect(told).toEqual([]);
+  });
+
+  it('a folder it cannot read is said once and loads nothing', async () => {
+    const { store, told, dir } = open();
+
+    writeFileSync(dir, 'a file where the folder should be');
+
+    expect(await kind.load(store())).toBe(0);
+    expect(told).toEqual([`cannot read ${dir}`]);
   });
 });
