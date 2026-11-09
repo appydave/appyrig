@@ -9,6 +9,7 @@
  * Exit codes (the gate contract): 0 = no drift · 1 = drift · 2 = the check could not run.
  * Writes scripts/provenance/out/report.json and report.md either way (except on exit 2); when out/
  * cannot be written, the report goes to <os tmpdir>/appyrig-provenance and stderr says so.
+ * PROVENANCE_OUT moves the report folder (the exit test points it at a path that cannot be made).
  * Run it through main.ts (`npm run provenance`): main.ts turns any unanticipated error into exit 2.
  *
  * Deterministic and read-only: OpenRig files are read with `git show <ref>:<path>` from the
@@ -598,7 +599,7 @@ const report = {
 
 // The report goes to out/; when that cannot be written (a read-only tree), to the temp folder
 // instead, said once on stderr. Where the report lands never changes the exit code.
-let outDir = join(here, 'out');
+let outDir = process.env.PROVENANCE_OUT ?? join(here, 'out');
 
 function writeReport(name: string, text: string): void {
   try {
