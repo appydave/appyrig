@@ -7,8 +7,8 @@ const BYTES_PER_GB = BYTES_PER_MB * BYTES_PER_KB;
 const WHOLE_GB_FROM = 100;
 
 /** C89: swap in use, never against a total: on macOS "total" is only what is allocated so far. */
-export const swapAllocated = (bytes: number): string =>
-  `${Number((bytes / BYTES_PER_GB).toFixed(1))} GiB allocated`;
+export const swapUsed = (bytes: number): string =>
+  `${Number((bytes / BYTES_PER_GB).toFixed(1))} GiB used`;
 
 /** Bytes in plain words: "812 MB", "7.4 GB", "128 GB". */
 export function gb(bytes: number): string {

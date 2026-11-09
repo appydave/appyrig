@@ -1,4 +1,4 @@
-import { gb, swapAllocated } from '@client/lib/readings.js';
+import { gb, swapUsed } from '@client/lib/readings.js';
 import { FakeControl, MockNote, SampleLabel } from '@client/kit/index.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
 import {
@@ -49,7 +49,7 @@ function SwapRow({ used }: { used: number | null }) {
     <div className="mc2-meter" data-testid="mc2-swap">
       <span className="mc2-meter-label">swap</span>
       <span aria-hidden="true" />
-      <span className="mono mc2-meter-num">{used === null ? 'not read' : swapAllocated(used)}</span>
+      <span className="mono mc2-meter-num">{used === null ? 'not read' : swapUsed(used)}</span>
     </div>
   );
 }
@@ -156,7 +156,7 @@ function Card({ m, newest }: { m: MachineView; newest: string | null }) {
 }
 
 /**
- * v2 Machines: one card per machine. Memory as a meter, swap as what is allocated, the pressure
+ * v2 Machines: one card per machine. Memory as a meter, swap as what is used, the pressure
  * verdict (macOS memory pressure), processes, and the OpenRig and collector versions against
  * the newest OpenRig version the fleet reports (C21). Load is sample data, labelled.
  */
