@@ -29,30 +29,12 @@ import {
   show,
   showSource,
 } from '@client/domain/settings/model.js';
-
-type Handler = (...args: unknown[]) => void;
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
 
 /** Answers the named verbs; any other verb is refused as unknown, like a hub without them. */
 function spySocket(answers: Record<string, unknown> = {}) {
-  const handlers = new Map<string, Set<Handler>>();
   const sent: string[] = [];
-  const s = {
-    connected: true,
-    on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) {
-        handlers.set(ev, new Set());
-      }
-
-      handlers.get(ev)!.add(h);
-
-      return s;
-    },
-    off(ev: string, h: Handler) {
-      handlers.get(ev)?.delete(h);
-
-      return s;
-    },
-    emit: vi.fn(),
+  const { socket, fire, raw } = socketWithEvents({
     timeout: vi.fn(() => ({
       emit: (_ev: string, req: { verb: string }, cb: (err: unknown, a: unknown) => void) => {
         sent.push(req.verb);
@@ -65,11 +47,9 @@ function spySocket(answers: Record<string, unknown> = {}) {
         queueMicrotask(() => cb(null, a));
       },
     })),
-  };
-  const fire = (ev: string, ...args: unknown[]) =>
-    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+  });
 
-  return { socket: s as unknown as FleetSocket, sent, fire, emit: s.emit };
+  return { socket, sent, fire, emit: raw.emit };
 }
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');

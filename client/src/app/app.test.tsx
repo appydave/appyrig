@@ -6,7 +6,7 @@ import { FLEET_EVENTS } from '@appydave/shared';
 import App from './App.js';
 import { callVerb } from '@client/domain/fleet/coreCall.js';
 import { applyFleetUpdate, initialFleetState } from '@client/domain/fleet/store.js';
-import { useFleet, type FleetSocket } from '@client/domain/fleet/useFleet.js';
+import { useFleet } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import {
   callKey,
@@ -19,38 +19,19 @@ import { loadFrozen } from './frozen/load.js';
 import { guardPortFor, isLocalDevRequest } from './devProxy.js';
 import { FakeControl, MockMark, MOCK_TEXT, SampleData, realNames } from '@client/kit/index.js';
 import { groupOf, navGroups, navLabel, pageFor } from './registry.js';
-
-type Handler = (...args: unknown[]) => void;
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
 
 /** A live-socket stand-in that records every emit, so a test can prove nothing was sent. */
 function spySocket() {
-  const handlers = new Map<string, Set<Handler>>();
   const sent: string[] = [];
-  const s = {
-    connected: true,
-    on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) {
-        handlers.set(ev, new Set());
-      }
-
-      handlers.get(ev)!.add(h);
-
-      return s;
-    },
-    off(ev: string, h: Handler) {
-      handlers.get(ev)?.delete(h);
-
-      return s;
-    },
+  const { socket, fire, raw } = socketWithEvents({
     emit: vi.fn((ev: string) => sent.push(ev)),
     timeout: vi.fn(() => ({
       emit: (_ev: string, req: { verb: string }) => sent.push(req.verb),
     })),
-  };
-  const fire = (ev: string, ...args: unknown[]) =>
-    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
+  });
 
-  return { socket: s as unknown as FleetSocket, fire, sent, raw: s };
+  return { socket, fire, sent, raw };
 }
 
 function renderLive() {
