@@ -46,9 +46,21 @@ export interface FleetView {
   link: HubLink;
 }
 
+/**
+ * The last fleet each socket showed. The error boundary's retry remounts the app; the hub sends the
+ * whole fleet only on connect and this socket stays connected, so a fresh start would stay empty.
+ */
+const lastFleet = new WeakMap<FleetSocket, FleetState>();
+const startingState = (getSocket: () => FleetSocket) =>
+  lastFleet.get(getSocket()) ?? initialFleetState;
+
 export function useFleet(getSocket: () => FleetSocket = getFleetSocket): FleetView {
-  const [state, dispatch] = useReducer(reducer, initialFleetState);
+  const [state, dispatch] = useReducer(reducer, getSocket, startingState);
   const [link, setLink] = useState<HubLink>('connecting');
+
+  useEffect(() => {
+    lastFleet.set(getSocket(), state);
+  }, [getSocket, state]);
 
   useEffect(() => {
     const s = getSocket();
