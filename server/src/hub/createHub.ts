@@ -133,7 +133,7 @@ export function createHub(opts: HubOptions): Hub {
     // a seat.get ack queues behind them on a slow link and the UI's 5 s timeout fires. socket.io
     // leaves per-message deflate off by default; a full push measured 5.2x smaller (486 KB to 93 KB).
     perMessageDeflate: { threshold: 1024 },
-    // Explicit (it is socket.io's default): a collector skips any side-channel payload over 800 KB
+    // Explicit (it is socket.io's default): a collector skips any payload over 800 KB
     // (CHANNEL_PAYLOAD_MAX) so one message always fits under this; the snapshot is ~300 KB.
     maxHttpBufferSize: HUB_MAX_BUFFER,
   });

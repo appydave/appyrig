@@ -1,7 +1,6 @@
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
 import type { AckResult } from '@collector/pusher/emitAcked.js';
-
-const BYTES_PER_KB = 1024;
+import { isOversize, oversizeLine } from '@collector/pusher/size/payloadSize.js';
 
 /** A channel's first tick never waits longer than this, whatever its interval. */
 const FIRST_TICK_MAX_MS = 4_000;
@@ -85,12 +84,9 @@ async function takeAndSend(spec: ChannelSpec, deps: ChannelDeps): Promise<void> 
 /** Step 2: one payload at a time, skipping any over the size guard; false when the hub did not take one. */
 async function sendEach(pending: Pending, spec: ChannelSpec, deps: ChannelDeps): Promise<boolean> {
   for (const p of pending.payloads) {
-    if (Buffer.byteLength(JSON.stringify(p)) > deps.maxPayloadBytes) {
+    if (isOversize(p, deps.maxPayloadBytes)) {
       pending.markSkipped?.(p);
-      deps.warnSometimes(
-        `${spec.key}:size`,
-        `${spec.key}: a payload over ${deps.maxPayloadBytes / BYTES_PER_KB} KB was not sent`
-      );
+      deps.warnSometimes(`${spec.key}:size`, oversizeLine(spec.key, deps.maxPayloadBytes));
       continue;
     }
 

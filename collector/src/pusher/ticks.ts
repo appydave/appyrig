@@ -12,6 +12,7 @@ import { errorMessage } from '@collector/adapters/narrow/errors.js';
 import type { AckResult } from '@collector/pusher/emitAcked.js';
 import type { HubCaps } from '@collector/pusher/hubCaps.js';
 import type { QuietLog } from '@collector/pusher/quietLog.js';
+import { isOversize, oversizeLine } from '@collector/pusher/size/payloadSize.js';
 
 /** What a loop needs from the pusher, as functions so no copy of its state goes stale. */
 export interface LoopDeps {
@@ -110,7 +111,10 @@ function learnFromAck(job: SnapshotJob, ack: AckResult, sentNewFields: boolean):
   }
 }
 
-/** One snapshot push: wait for the hub's caps, build, strip what the hub did not advertise, send. */
+/**
+ * One snapshot push: wait for the hub's caps, build, strip what the hub did not advertise, then
+ * send, unless it is over the size guard: sending that would only cost the connection, every tick.
+ */
 export async function pushSnapshot(job: SnapshotJob): Promise<void> {
   await job.caps.waitForFirst();
 
@@ -118,7 +122,15 @@ export async function pushSnapshot(job: SnapshotJob): Promise<void> {
   const sendV2 = job.caps.offers(HUB_CAPS.V2_FIELDS);
   const sendSpec = job.caps.offers(HUB_CAPS.SPEC_FIELDS);
   const v2 = sendV2 ? built : stripV2Fields(built);
-  const ack = await job.push(sendSpec ? v2 : stripSpecFields(v2));
+  const snapshot = sendSpec ? v2 : stripSpecFields(v2);
+
+  if (isOversize(snapshot)) {
+    job.note(oversizeLine('snapshot'));
+
+    return;
+  }
+
+  const ack = await job.push(snapshot);
 
   learnFromAck(job, ack, sendV2 || sendSpec);
   job.note(ackLine(ack, job.ackTimeoutMs, job.intervalMs));
@@ -127,7 +139,7 @@ export async function pushSnapshot(job: SnapshotJob): Promise<void> {
 export interface HistoryJob {
   histories(): Promise<PendingHistory[]>;
   push(history: SeatHistory): Promise<AckResult>;
-  note(line: string): void;
+  log: QuietLog;
 }
 
 /** Marked sent only when the hub accepts it. */
@@ -141,10 +153,17 @@ function settleHistory(p: PendingHistory, ack: AckResult, note: (line: string) =
   }
 }
 
-/** Seat histories: one emit per changed seat. */
+/** Seat histories: one emit per changed seat. One over the size guard stays unsent and warned about. */
 export async function pushHistories(job: HistoryJob): Promise<void> {
   for (const p of await job.histories()) {
-    settleHistory(p, await job.push(p.history), job.note);
+    if (isOversize(p.history)) {
+      const what = `history of ${p.history.seat}`;
+
+      job.log.warnSometimes(`${what}:size`, oversizeLine(what));
+      continue;
+    }
+
+    settleHistory(p, await job.push(p.history), job.log.note);
   }
 }
 
@@ -169,7 +188,15 @@ function settleHandoffs(pending: PendingHandoffs, ack: AckResult, log: QuietLog)
 export async function pushHandoffs(job: HandoffJob): Promise<void> {
   const pending = await job.handoffs();
 
-  if (pending) {
-    settleHandoffs(pending, await job.push(pending.bodies), job.log);
+  if (!pending) {
+    return;
   }
+
+  if (isOversize(pending.bodies)) {
+    job.log.warnSometimes('handoffs:size', oversizeLine('queue bodies'));
+
+    return;
+  }
+
+  settleHandoffs(pending, await job.push(pending.bodies), job.log);
 }
