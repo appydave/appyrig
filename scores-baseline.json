@@ -225,7 +225,7 @@
     "server/src/core/verbs.ts::callback#4": 41,
     "server/src/hub/accounts.ts::accountViews": 65,
     "server/src/hub/accounts.ts::windowOf": 52,
-    "server/src/hub/createHub.ts::createHub": 187,
+    "server/src/hub/createHub.ts::createHub": 186,
     "server/src/hub/ingress/collectorIngest.ts::attachCollectorIngest": 146,
     "server/src/hub/ingress/collectorIngest.ts::attachCollectorIngest>callback": 127,
     "server/src/hub/ingress/v1ArchiveRouter.ts::v1ArchiveRouter": 46,

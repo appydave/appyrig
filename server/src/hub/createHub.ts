@@ -85,6 +85,12 @@ function readCall(request: CoreCallRequest) {
   return { verb: typeof r.verb === 'string' ? r.verb : '', input: r.input, dryRun: r.dryRun };
 }
 
+/**
+ * Also closes the HTTP server. Run alongside the extra listeners' close, never after it: an extra
+ * listener's close only finishes once its connections end, and this is what ends them.
+ */
+const closeSockets = (io: Server) => new Promise<void>((r) => io.close(() => r()));
+
 export function createHub(opts: HubOptions): Hub {
   const now = opts.now ?? (() => new Date());
   const viewsOf = new WeakMap<FleetMachine[], ReturnType<typeof accountViews>>();
@@ -266,8 +272,7 @@ export function createHub(opts: HubOptions): Hub {
       }
 
       timer = undefined;
-      await listening?.close();
-      await new Promise<void>((r) => io.close(() => r())); // also closes httpServer
+      await Promise.all([listening?.close(), closeSockets(io)]);
       await store.flush();
     },
   };
