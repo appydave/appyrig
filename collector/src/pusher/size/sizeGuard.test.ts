@@ -74,13 +74,12 @@ describe('Feature: the size guard on every push', () => {
       },
     });
 
-    await vi.waitFor(() => expect(hub.seen.snapshots).toBeGreaterThan(0), { timeout: 8000 });
+    // Wait on the collector's own log: the hub counts a snapshot before its ack gets back here.
+    await vi.waitFor(() => expect(lines.at(-1)).toContain('acked by hub'), { timeout: 8000 });
 
     expect(hub.seen.connections).toBe(1);
     expect(lines.filter((l) => l.startsWith('disconnected'))).toEqual([]);
     expect(lines).toContain(`snapshot: ${LIMIT_LINE}`);
-    // the line that follows says it recovered, so the log never ends on a state that has passed
-    expect(lines.at(-1)).toContain('acked by hub');
   }, 12_000);
 
   it('Scenario: given a snapshot exactly at the limit, then it is sent', async () => {
