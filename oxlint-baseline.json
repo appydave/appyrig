@@ -4,9 +4,6 @@
     "client/src/app/App.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/app/app.test.tsx": {
-      "no-chained-type-assertions": 1
-    },
     "client/src/app/frozen/frozenSocket.ts": {
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 4,
@@ -137,7 +134,7 @@
       "require-safety-comment-for-type-assertion": 2
     },
     "client/src/pages/graph/graph.test.tsx": {
-      "no-chained-type-assertions": 4
+      "no-chained-type-assertions": 3
     },
     "client/src/pages/graph/index.tsx": {
       "require-safety-comment-for-type-assertion": 2
@@ -179,7 +176,6 @@
       "no-unsafe-dictionary-type": 1
     },
     "client/src/pages/w4.test.tsx": {
-      "no-chained-type-assertions": 1,
       "no-unknown-parameters": 3,
       "no-unsafe-dictionary-type": 1
     },
@@ -187,7 +183,6 @@
       "no-unsafe-dictionary-type": 2
     },
     "client/src/pages/w5b.test.tsx": {
-      "no-chained-type-assertions": 1,
       "no-unknown-parameters": 2,
       "no-unsafe-dictionary-type": 1
     },

@@ -10,7 +10,6 @@ import {
 } from '@appydave/shared';
 import App from '@client/app/App.js';
 import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
-import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
 import type { PageContext } from '@client/app/types.js';
@@ -25,6 +24,7 @@ import {
 import { routeLines } from '@client/domain/graph/lineRoute.js';
 import { relativeWidthLines } from '@client/kit/index.js';
 import RigBox, { lastWords } from './RigBox.js';
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 
@@ -77,36 +77,18 @@ function crossFleet(): FleetMachine[] {
   return [m2, roamy];
 }
 
-type Handler = (...args: unknown[]) => void;
-
 function spySocket() {
-  const handlers = new Map<string, Set<Handler>>();
   const sent: string[] = [];
-  const s = {
-    connected: true,
-    on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) {
-        handlers.set(ev, new Set());
-      }
 
-      handlers.get(ev)!.add(h);
-
-      return s;
-    },
-    off(ev: string, h: Handler) {
-      handlers.get(ev)?.delete(h);
-
-      return s;
-    },
-    emit: vi.fn((ev: string) => sent.push(ev)),
-    timeout: vi.fn(() => ({
-      emit: (_ev: string, req: { verb: string }) => sent.push(req.verb),
-    })),
+  return {
+    ...socketWithEvents({
+      emit: vi.fn((ev: string) => sent.push(ev)),
+      timeout: vi.fn(() => ({
+        emit: (_ev: string, req: { verb: string }) => sent.push(req.verb),
+      })),
+    }),
+    sent,
   };
-  const fire = (ev: string, ...args: unknown[]) =>
-    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
-
-  return { socket: s as unknown as FleetSocket, fire, sent };
 }
 
 /** A socket whose verbs get an answer (the hub's), so a hover card's ssh lookup completes. */

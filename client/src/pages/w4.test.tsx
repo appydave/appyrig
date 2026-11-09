@@ -11,7 +11,6 @@ import {
 } from '@appydave/shared';
 import App from '@client/app/App.js';
 import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
-import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
 import type { FrozenFile } from '@client/app/frozen/frozenSocket.js';
 import type { PageContext } from '@client/app/types.js';
@@ -32,51 +31,33 @@ import { page as schemaPage } from './schema/index.js';
 import { sampleChanges } from '@client/domain/schema/model.js';
 import { CommandsPanel } from './learn/index.js';
 import { filterCommands, groupsOf, type RigCommands } from '@client/domain/learn/commands.js';
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
 
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 
-type Handler = (...args: unknown[]) => void;
-
 function spySocket(answers: Record<string, unknown> = {}) {
-  const handlers = new Map<string, Set<Handler>>();
   const sent: { verb: string; input: unknown }[] = [];
-  const s = {
-    connected: true,
-    on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) {
-        handlers.set(ev, new Set());
-      }
 
-      handlers.get(ev)!.add(h);
+  return {
+    ...socketWithEvents({
+      timeout: vi.fn(() => ({
+        emit: (
+          _ev: string,
+          req: { verb: string; input: unknown },
+          cb: (err: unknown, a: unknown) => void
+        ) => {
+          sent.push(req);
 
-      return s;
-    },
-    off(ev: string, h: Handler) {
-      handlers.get(ev)?.delete(h);
+          const a = answers[req.verb];
 
-      return s;
-    },
-    emit: vi.fn(),
-    timeout: vi.fn(() => ({
-      emit: (
-        _ev: string,
-        req: { verb: string; input: unknown },
-        cb: (err: unknown, a: unknown) => void
-      ) => {
-        sent.push(req);
-
-        const a = answers[req.verb];
-
-        if (a !== undefined) {
-          queueMicrotask(() => cb(null, a));
-        }
-      },
-    })),
+          if (a !== undefined) {
+            queueMicrotask(() => cb(null, a));
+          }
+        },
+      })),
+    }),
+    sent,
   };
-  const fire = (ev: string, ...args: unknown[]) =>
-    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
-
-  return { socket: s as unknown as FleetSocket, sent, fire };
 }
 
 function ctxFor(machines: FleetMachine[], over: Partial<PageContext> = {}): PageContext {
