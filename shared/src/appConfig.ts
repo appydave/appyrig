@@ -28,7 +28,6 @@ export const RigLabelSchema = z.looseObject({
   displayName: z.string().trim().min(1).max(80).optional(),
   owner: z.string().trim().min(1).max(80).optional(),
 });
-export type RigLabel = z.infer<typeof RigLabelSchema>;
 
 /** What AppyRig is told about a Claude account when its login record does not say (v1.4 · S5). */
 export const AccountConfigSchema = z.looseObject({
@@ -45,7 +44,6 @@ export const MachineConfigSchema = z.looseObject({
     .regex(/^[A-Za-z0-9._-]+@[A-Za-z0-9.:-]+$/, 'user@host')
     .optional(),
 });
-export type MachineConfig = z.infer<typeof MachineConfigSchema>;
 
 /** D09 W3: what a seat's card names. Only skills the seat really has listed are shown. */
 export const SeatConfigSchema = z.looseObject({

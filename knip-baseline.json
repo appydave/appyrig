@@ -42,8 +42,7 @@
         "exports": 4
       },
       "shared/src/appConfig.ts": {
-        "exports": 4,
-        "types": 2
+        "exports": 4
       },
       "shared/src/clock.ts": {
         "exports": 2
@@ -63,16 +62,13 @@
         "types": 2
       },
       "shared/src/handoffs.ts": {
-        "exports": 1,
-        "types": 2
+        "exports": 1
       },
       "shared/src/health.ts": {
-        "exports": 4,
-        "types": 2
+        "exports": 4
       },
       "shared/src/history.ts": {
-        "exports": 1,
-        "types": 2
+        "exports": 1
       },
       "shared/src/index.ts": {
         "exports": 1,
@@ -91,8 +87,7 @@
         "exports": 1
       },
       "shared/src/rigfiles.ts": {
-        "exports": 1,
-        "types": 2
+        "exports": 1
       },
       "shared/src/rigspecs.ts": {
         "exports": 5,
@@ -104,15 +99,13 @@
         "types": 4
       },
       "shared/src/snapshot.ts": {
-        "exports": 6,
-        "types": 4
+        "exports": 6
       },
       "shared/src/types.ts": {
         "types": 1
       },
       "shared/src/verbs.ts": {
-        "exports": 1,
-        "types": 9
+        "exports": 1
       },
       "test/root/openrig-types.test.ts": {
         "unlisted": 1
@@ -347,8 +340,7 @@
         "exports": 4
       },
       "shared/src/appConfig.ts": {
-        "exports": 4,
-        "types": 2
+        "exports": 4
       },
       "shared/src/clock.ts": {
         "exports": 3
@@ -368,16 +360,13 @@
         "types": 2
       },
       "shared/src/handoffs.ts": {
-        "exports": 1,
-        "types": 2
+        "exports": 1
       },
       "shared/src/health.ts": {
-        "exports": 4,
-        "types": 2
+        "exports": 4
       },
       "shared/src/history.ts": {
-        "exports": 2,
-        "types": 2
+        "exports": 2
       },
       "shared/src/index.ts": {
         "exports": 1,
@@ -408,8 +397,7 @@
         "exports": 6
       },
       "shared/src/rigfiles.ts": {
-        "exports": 2,
-        "types": 2
+        "exports": 2
       },
       "shared/src/rigspecs.ts": {
         "exports": 5,
@@ -421,15 +409,13 @@
         "types": 4
       },
       "shared/src/snapshot.ts": {
-        "exports": 10,
-        "types": 4
+        "exports": 10
       },
       "shared/src/types.ts": {
         "types": 3
       },
       "shared/src/verbs.ts": {
-        "exports": 1,
-        "types": 9
+        "exports": 1
       }
     }
   }

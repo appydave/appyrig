@@ -70,7 +70,6 @@ export const HealthGetInputSchema = z.strictObject({
     .optional()
     .describe('only this machine'),
 });
-export type HealthGetInput = z.infer<typeof HealthGetInputSchema>;
 
 export const HealthRowSchema = z.strictObject({
   machine: z.string(),
@@ -85,4 +84,3 @@ export const HealthRowSchema = z.strictObject({
 export type HealthRow = z.infer<typeof HealthRowSchema>;
 
 export const HealthGetOutputSchema = z.array(HealthRowSchema);
-export type HealthGetOutput = z.infer<typeof HealthGetOutputSchema>;

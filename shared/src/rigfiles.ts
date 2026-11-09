@@ -79,7 +79,6 @@ export const RigFilesInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m2'),
   rig: z.string().min(1).describe('rig name, e.g. flicut-ab'),
 });
-export type RigFilesInput = z.infer<typeof RigFilesInputSchema>;
 
 /**
  *  ok        the files the collector sent for this rig
@@ -105,7 +104,6 @@ export type RigFilesOutput = z.infer<typeof RigFilesOutputSchema>;
 export const RigFileInputSchema = RigFilesInputSchema.extend({
   fileId: RigFileIdSchema.describe('a file id from rig.files, e.g. spec:rig.yaml'),
 });
-export type RigFileInput = z.infer<typeof RigFileInputSchema>;
 
 export const RigFileOutputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id,

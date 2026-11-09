@@ -20,7 +20,6 @@ export const HISTORY_TEXT_MAX = 280;
 const isoDate = z.iso.datetime({ offset: true });
 
 export const SeatHistoryKindSchema = z.enum(['prompt', 'reply', 'tool']);
-export type SeatHistoryKind = z.infer<typeof SeatHistoryKindSchema>;
 
 /**
  * v1.4 · S4. Where a prompt came from, set by the collector for `prompt` events:
@@ -71,7 +70,6 @@ export const SeatHistoryInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m2'),
   seat: z.string().min(1).describe('seat id, e.g. dev-hub@appyrig-build'),
 });
-export type SeatHistoryInput = z.infer<typeof SeatHistoryInputSchema>;
 
 export const SeatHistoryOutputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id,
