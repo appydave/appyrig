@@ -150,6 +150,10 @@ body:has(.ar-nav) header.app-header {
   min-width: 0;
   max-width: 100%;
 }
+/* the height with its tallest chip showing, so a blocked-seat alert appearing moves nothing */
+.ar-strip-body [data-testid='fleet-strip'] {
+  min-height: 32px;
+}
 .ar-strip-summary {
   flex: none;
   white-space: nowrap;
