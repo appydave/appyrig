@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { createServer, get } from 'node:http';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { io as ioc } from 'socket.io-client';
+import { createHub } from '@server/hub/createHub.js';
+import { COOKIE, TOKEN } from '@server/test/hubHarness.js';
 import { listenOnHosts, parseHosts } from './listen.js';
 
 const fetchStatus = (host: string, port: number) =>
@@ -46,6 +51,33 @@ describe('listenOnHosts — bind only the named addresses', () => {
     });
     expect(http.listening).toBe(false);
   });
+});
+
+describe('shutdown with a client on a later bind address (AFTER audit CQ-S-002)', () => {
+  it('hub.close() finishes while a browser is connected through the second address', async () => {
+    const hub = createHub({
+      hubToken: TOKEN,
+      clientUrl: 'http://localhost:1',
+      configPath: join(tmpdir(), 'appyrig-no-such-config.json'),
+    });
+    const { port } = await hub.listen(0, ['127.0.0.1', '::1']);
+    const browser = ioc(`http://[::1]:${port}/`, {
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+      extraHeaders: { cookie: COOKIE },
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      browser.once('connect', resolve);
+      browser.once('connect_error', reject);
+    });
+
+    await hub.close(); // on main this never returns, so the test times out
+
+    expect(hub.httpServer.listening).toBe(false);
+    browser.close();
+  }, 5000);
 });
 
 describe('parseHosts', () => {

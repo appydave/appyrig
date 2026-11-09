@@ -384,10 +384,6 @@ export interface PendingHistory {
   markSent(): void;
 }
 
-/**
- * Finds seat transcripts and builds a SeatHistory per seat whose files changed since the last
- * accepted push. A seat with several transcripts (a rebuilt or resumed seat) gets them merged.
- */
 /** Every event of a seat's transcripts, or null when any one of them could not be read. */
 async function readAllEvents(list: TranscriptFile[]): Promise<SeatHistoryEvent[] | null> {
   const events: SeatHistoryEvent[] = [];
@@ -406,6 +402,10 @@ async function readAllEvents(list: TranscriptFile[]): Promise<SeatHistoryEvent[]
   return events;
 }
 
+/**
+ * Finds seat transcripts and builds a SeatHistory per seat whose files changed since the last
+ * accepted push. A seat with several transcripts (a rebuilt or resumed seat) gets them merged.
+ */
 export class HistoryReader {
   private readonly index: TranscriptIndex;
   private readonly sent = new Map<string, string>();
