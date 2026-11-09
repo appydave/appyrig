@@ -1,6 +1,6 @@
 import RigInfo from '@client/kit/RigInfo.js';
 import RigPicker from '@client/kit/RigPicker.js';
-import RunCard from '@client/kit/RunCard.js';
+import RunCard from '@client/kit/runcard/RunCard.js';
 import { runCard as runCardModel } from '@client/domain/fleet/runcard.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
 import HandoffFlow from './HandoffFlow.js';

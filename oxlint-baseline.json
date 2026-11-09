@@ -85,25 +85,12 @@
     "client/src/kit/PageHeader.tsx": {
       "require-safety-comment-for-type-assertion": 1
     },
-    "client/src/kit/PlanStrip.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 1,
-      "no-unsafe-dictionary-type": 2
-    },
     "client/src/kit/RigFiles.tsx": {
       "require-safety-comment-for-type-assertion": 2
     },
     "client/src/kit/RigFilesSchema.test.tsx": {
       "no-chained-type-assertions": 1,
       "no-unsafe-dictionary-type": 3
-    },
-    "client/src/kit/RunCard.test.tsx": {
-      "no-chained-type-assertions": 3,
-      "no-unsafe-dictionary-type": 2
-    },
-    "client/src/kit/RunOutputs.test.tsx": {
-      "no-chained-type-assertions": 1,
-      "no-unknown-parameters": 2
     },
     "client/src/kit/WaitingOnDavid.test.tsx": {
       "no-chained-type-assertions": 3,
@@ -120,6 +107,19 @@
     },
     "client/src/kit/legendData.ts": {
       "require-safety-comment-for-type-assertion": 2
+    },
+    "client/src/kit/runcard/PlanStrip.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 1,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/kit/runcard/RunCard.test.tsx": {
+      "no-chained-type-assertions": 3,
+      "no-unsafe-dictionary-type": 2
+    },
+    "client/src/kit/runcard/RunOutputs.test.tsx": {
+      "no-chained-type-assertions": 1,
+      "no-unknown-parameters": 2
     },
     "client/src/lib/keys.ts": {
       "require-safety-comment-for-type-assertion": 1

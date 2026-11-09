@@ -504,17 +504,6 @@
       "count": 1
     }
   },
-  "client/src/kit/PlanStrip.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
   "client/src/kit/RigFiles.tsx": {
     "max-lines": {
       "count": 1
@@ -551,34 +540,6 @@
     },
     "sonarjs/cyclomatic-complexity": {
       "count": 1
-    }
-  },
-  "client/src/kit/RunCard.tsx": {
-    "max-lines": {
-      "count": 1
-    },
-    "max-lines-per-function": {
-      "count": 3
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 2
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 2
-    }
-  },
-  "client/src/kit/RunOutputs.tsx": {
-    "max-lines-per-function": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    },
-    "sonarjs/expression-complexity": {
-      "count": 3
     }
   },
   "client/src/kit/SchemaRows.tsx": {
@@ -713,6 +674,45 @@
   "client/src/kit/legendData.ts": {
     "max-lines": {
       "count": 1
+    }
+  },
+  "client/src/kit/runcard/PlanStrip.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    }
+  },
+  "client/src/kit/runcard/RunCard.tsx": {
+    "max-lines": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 3
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 2
+    }
+  },
+  "client/src/kit/runcard/RunOutputs.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/cyclomatic-complexity": {
+      "count": 1
+    },
+    "sonarjs/expression-complexity": {
+      "count": 3
     }
   },
   "client/src/lib/markdown.ts": {
