@@ -110,3 +110,11 @@ describe('createSources.daemon: what a partly failed read says in warnings', () 
     ]);
   });
 });
+
+describe('Feature: the daemon is only ever read on this machine', () => {
+  it('Scenario: given a daemon URL on another machine, then createSources refuses it', () => {
+    expect(() => createSources({ daemonUrl: 'http://100.89.32.35:7433' })).toThrow(
+      /must be loopback/
+    );
+  });
+});

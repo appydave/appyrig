@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { apiLimiter } from './rateLimiter.js';
 
 // Build a test-specific limiter with a very low limit so we can trigger 429 without
 // sending 100 real requests.
@@ -71,4 +72,27 @@ describe('rateLimiter middleware', () => {
     expect(res.headers['x-ratelimit-limit']).toBeUndefined();
     expect(res.headers['x-ratelimit-remaining']).toBeUndefined();
   });
+});
+
+describe('Feature: the limiter the hub really uses', () => {
+  it('Scenario: given 600 requests inside a minute, when one more arrives, then it gets a 429', async () => {
+    const server = express()
+      .use(apiLimiter)
+      .get('/ping', (_req, res) => {
+        res.json({ ok: true });
+      })
+      .listen(0, '127.0.0.1');
+    const statuses: number[] = [];
+
+    try {
+      for (let i = 0; i < 601; i++) {
+        statuses.push((await request(server).get('/ping')).status);
+      }
+    } finally {
+      server.close();
+    }
+
+    expect(statuses.slice(0, 600).every((s) => s === 200)).toBe(true);
+    expect(statuses[600]).toBe(429);
+  }, 30_000);
 });
