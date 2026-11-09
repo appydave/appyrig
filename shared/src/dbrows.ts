@@ -78,7 +78,6 @@ export const DbRowsInputSchema = z.strictObject({
     .optional()
     .describe(`rows to return, at most ${DB_ROWS_PAGE_MAX} (default 50)`),
 });
-export type DbRowsInput = z.infer<typeof DbRowsInputSchema>;
 
 export const DbRowsOutputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id,

@@ -1738,17 +1738,6 @@
       "count": 1
     }
   },
-  "shared/src/loadout.ts": {
-    "max-lines": {
-      "count": 1
-    },
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/cyclomatic-complexity": {
-      "count": 1
-    }
-  },
   "shared/src/missionJobs.ts": {
     "max-lines-per-function": {
       "count": 1

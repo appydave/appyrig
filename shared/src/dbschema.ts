@@ -34,7 +34,6 @@ export const DbForeignKeySchema = z.strictObject({
   /** The column it points at; null means "that table's primary key". */
   to: z.string().max(120).nullable(),
 });
-export type DbForeignKey = z.infer<typeof DbForeignKeySchema>;
 
 export const DbTableSchema = z.strictObject({
   name: z.string().min(1).max(120),
@@ -64,7 +63,6 @@ export type SchemaPush = z.infer<typeof SchemaPushSchema>;
 export const DbSchemaInputSchema = z.strictObject({
   machine: MachineIdentitySchema.shape.id.describe('machine id, e.g. m2'),
 });
-export type DbSchemaInput = z.infer<typeof DbSchemaInputSchema>;
 
 export const ColumnChangeSchema = z.strictObject({
   name: z.string(),

@@ -54,12 +54,10 @@
         "exports": 1
       },
       "shared/src/dbrows.ts": {
-        "exports": 1,
-        "types": 1
+        "exports": 1
       },
       "shared/src/dbschema.ts": {
-        "exports": 5,
-        "types": 2
+        "exports": 5
       },
       "shared/src/handoffs.ts": {
         "exports": 1
@@ -76,12 +74,10 @@
       },
       "shared/src/loadout.ts": {
         "duplicates": 3,
-        "exports": 6,
-        "types": 4
+        "exports": 5
       },
       "shared/src/missionfiles.ts": {
-        "exports": 3,
-        "types": 2
+        "exports": 3
       },
       "shared/src/openrig/chainFiles.ts": {
         "exports": 1
@@ -90,13 +86,11 @@
         "exports": 1
       },
       "shared/src/rigspecs.ts": {
-        "exports": 5,
-        "types": 2
+        "exports": 5
       },
       "shared/src/runcard.ts": {
         "duplicates": 1,
-        "exports": 4,
-        "types": 4
+        "exports": 3
       },
       "shared/src/snapshot.ts": {
         "exports": 6
@@ -352,12 +346,10 @@
         "exports": 1
       },
       "shared/src/dbrows.ts": {
-        "exports": 1,
-        "types": 1
+        "exports": 1
       },
       "shared/src/dbschema.ts": {
-        "exports": 5,
-        "types": 2
+        "exports": 5
       },
       "shared/src/handoffs.ts": {
         "exports": 1
@@ -374,12 +366,10 @@
       },
       "shared/src/loadout.ts": {
         "duplicates": 3,
-        "exports": 12,
-        "types": 4
+        "exports": 11
       },
       "shared/src/missionfiles.ts": {
-        "exports": 3,
-        "types": 2
+        "exports": 3
       },
       "shared/src/openrig/agentSpec.ts": {
         "exports": 3
@@ -400,13 +390,11 @@
         "exports": 2
       },
       "shared/src/rigspecs.ts": {
-        "exports": 5,
-        "types": 2
+        "exports": 5
       },
       "shared/src/runcard.ts": {
         "duplicates": 1,
-        "exports": 4,
-        "types": 4
+        "exports": 3
       },
       "shared/src/snapshot.ts": {
         "exports": 10
