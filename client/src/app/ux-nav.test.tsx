@@ -1,45 +1,16 @@
 import { readFileSync } from 'node:fs';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { FLEET_EVENTS } from '@appydave/shared';
 import App from './App.js';
 import { listRigs } from '@client/domain/fleet/views/core/rigList.js';
-import type { FleetSocket } from '@client/domain/fleet/useFleet.js';
 import { fleetMachine, snapshot, update } from '@client/test/fleetFixtures.js';
+import { socketWithEvents } from '@client/test/socketWithEvents.js';
 import { defaultAgent } from '@client/pages/agent/index.js';
 import { busiestRig } from '@client/domain/fleet/rigs.js';
 
-type Handler = (...args: unknown[]) => void;
-
-function spySocket() {
-  const handlers = new Map<string, Set<Handler>>();
-  const s = {
-    connected: true,
-    on(ev: string, h: Handler) {
-      if (!handlers.has(ev)) {
-        handlers.set(ev, new Set());
-      }
-
-      handlers.get(ev)!.add(h);
-
-      return s;
-    },
-    off(ev: string, h: Handler) {
-      handlers.get(ev)?.delete(h);
-
-      return s;
-    },
-    emit: vi.fn(),
-    timeout: vi.fn(() => ({ emit: () => undefined })),
-  };
-  const fire = (ev: string, ...args: unknown[]) =>
-    act(() => handlers.get(ev)?.forEach((h) => h(...args)));
-
-  return { socket: s as unknown as FleetSocket, fire };
-}
-
 function renderApp() {
-  const spy = spySocket();
+  const spy = socketWithEvents();
 
   render(<App getSocket={() => spy.socket} />);
   spy.fire(
