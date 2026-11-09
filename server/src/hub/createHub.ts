@@ -24,11 +24,11 @@ import healthRouter from '@server/routes/health.js';
 import infoRouter from '@server/routes/info.js';
 import { accountViews, applyAccountDerived } from './accounts.js';
 import { applyRigLabels, defaultConfigPath, watchConfig } from './appConfig.js';
-import { browserAuth, browserSocketRefusal } from './browserAuth.js';
-import { attachCollectorIngest } from './collectorIngest.js';
+import { browserAuth, browserSocketRefusal } from './ingress/browserAuth.js';
+import { attachCollectorIngest } from './ingress/collectorIngest.js';
 import { FleetStore, type LivenessChange } from './stores/fleetStore.js';
-import { listenOnHosts, type Listening } from './listen.js';
-import { v1ArchiveRouter } from './v1ArchiveRouter.js';
+import { listenOnHosts, type Listening } from './ingress/listen.js';
+import { v1ArchiveRouter } from './ingress/v1ArchiveRouter.js';
 
 /**
  * Builds the whole hub (HTTP app, Socket.IO, fleet store, collector ingest, liveness timer)

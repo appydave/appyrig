@@ -20,7 +20,7 @@ import type { AppIdentity } from './identity.js';
  *   POST /v1/rpc           session  JSON-RPC 2.0 (B3, B4, B5, B7)
  *   POST /v1/call          session  { verb, input, dryRun } → { ok, value | error }
  *
- * "open" = listed in OPEN_PATHS (hub/browserAuth.ts); everything else is behind the session.
+ * "open" = listed in OPEN_PATHS (hub/ingress/browserAuth.ts); everything else is behind the session.
  */
 
 const RPC_PATH = '/v1/rpc';

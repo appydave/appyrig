@@ -23,7 +23,7 @@ import {
   type FleetMachine,
 } from '@appydave/shared';
 import { sameSecret } from './browserAuth.js';
-import type { FleetStore } from './stores/fleetStore.js';
+import type { FleetStore } from '@server/hub/stores/fleetStore.js';
 
 /**
  * The hub's collector seam: the `/collector` namespace. Token check at connect, Zod validation

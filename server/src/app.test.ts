@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { io as ioc } from 'socket.io-client';
 import { SOCKET_EVENTS } from '@appydave/shared';
 import { app, httpServer } from './index.js';
-import { sessionCookieHeader } from './hub/browserAuth.js';
+import { sessionCookieHeader } from './hub/ingress/browserAuth.js';
 
 const TOKEN = process.env.HUB_TOKEN!;
 const BEARER = { Authorization: `Bearer ${TOKEN}` };

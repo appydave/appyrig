@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { env } from './config/env.js';
 import { logger } from './config/logger.js';
 import { createHub } from './hub/createHub.js';
-import { parseHosts } from './hub/listen.js';
+import { parseHosts } from './hub/ingress/listen.js';
 import { SOCKET_EVENTS } from '@appydave/shared';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
