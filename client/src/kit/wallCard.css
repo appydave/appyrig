@@ -60,23 +60,29 @@
 }
 .wcard-bar {
   flex: none;
+  /* the tallest state's height, whatever the state, so a seat changing state moves nothing */
+  height: 6px;
+}
+.wcard-bar::before {
+  content: '';
+  display: block;
   height: 3px;
   background: var(--pip);
 }
-.wcard[data-pip='working'] .wcard-bar {
+.wcard[data-pip='working'] .wcard-bar::before {
   height: 6px;
 }
-.wcard[data-pip='blocked'] .wcard-bar {
+.wcard[data-pip='blocked'] .wcard-bar::before {
   height: 6px;
 }
-.wcard[data-pip='idle'] .wcard-bar {
+.wcard[data-pip='idle'] .wcard-bar::before {
   background: repeating-linear-gradient(90deg, var(--pip) 0 10px, transparent 10px 16px);
 }
-.wcard[data-pip='unknown'] .wcard-bar {
+.wcard[data-pip='unknown'] .wcard-bar::before {
   background: repeating-linear-gradient(90deg, var(--pip) 0 3px, transparent 3px 7px);
 }
-.wcard[data-pip='stopped'] .wcard-bar,
-.wcard[data-pip='asleep'] .wcard-bar {
+.wcard[data-pip='stopped'] .wcard-bar::before,
+.wcard[data-pip='asleep'] .wcard-bar::before {
   background: transparent;
 }
 .wcard-main {
@@ -155,6 +161,8 @@
 }
 .wcard-pip {
   flex: none;
+  /* room for the longest state word, so the machine name beside it never slides */
+  min-width: 10ch;
   color: var(--pip);
 }
 .wcard[data-pip='working'] .wcard-pip {

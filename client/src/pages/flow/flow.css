@@ -139,6 +139,10 @@
   font-size: 14px;
   font-weight: 700;
 }
+/* wide enough for "Replay run", so pressing it and turning it into "Pause" moves nothing */
+.ar-flow .flow-replay [data-testid='flow-play'] {
+  min-width: 96px;
+}
 .ar-flow .ar-replay-time {
   width: auto;
   min-width: 60px;
