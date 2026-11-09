@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Learn from '@client/kit/Learn.js';
 import { copyText } from '@client/kit/WaitingOnDavid.js';
 import type { PageDef, PageProps } from '@client/app/types.js';
@@ -15,6 +15,9 @@ const SHOWN = 40;
 
 function CopyButton({ text }: { text: string }) {
   const [said, setSaid] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   return (
     <button
@@ -25,7 +28,8 @@ function CopyButton({ text }: { text: string }) {
       onClick={() =>
         void copyText(text).then((ok) => {
           setSaid(ok ? 'copied' : 'select it and ⌘C');
-          setTimeout(() => setSaid(null), 1500);
+          clearTimeout(timer.current);
+          timer.current = setTimeout(() => setSaid(null), 1500);
         })
       }
     >
