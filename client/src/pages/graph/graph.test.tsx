@@ -26,23 +26,6 @@ import { routeLines } from '@client/domain/graph/lineRoute.js';
 import { relativeWidthLines } from '@client/kit/index.js';
 import RigBox, { lastWords } from './RigBox.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 const NOW = Date.parse('2026-10-10T08:00:00.000Z');
 
 const q = (over: Partial<QueueItem>): QueueItem => ({

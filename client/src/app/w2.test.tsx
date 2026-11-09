@@ -14,23 +14,6 @@ import { pageFor, navGroups } from './registry.js';
 import type { PageContext } from './types.js';
 import { verbSocket, type Answers } from '@client/pages/page-test-kit.js';
 
-vi.mock('@xterm/xterm', () => ({
-  Terminal: class {
-    attachCustomKeyEventHandler() {}
-
-    loadAddon() {}
-
-    open() {}
-
-    reset() {}
-
-    write() {}
-
-    dispose() {}
-  },
-}));
-vi.mock('@xterm/addon-fit', () => ({ FitAddon: class {} }));
-
 const NOW = Date.parse('2026-10-18T12:00:00.000Z');
 
 function makeCtx(
