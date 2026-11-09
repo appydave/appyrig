@@ -1225,16 +1225,13 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 11
+      "count": 9
     },
     "sonarjs/cognitive-complexity": {
-      "count": 5
+      "count": 4
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 11
-    },
-    "sonarjs/expression-complexity": {
-      "count": 1
+      "count": 8
     }
   },
   "collector/src/adapters/dbrows.ts": {
