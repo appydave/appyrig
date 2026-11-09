@@ -330,13 +330,6 @@
     "server/src/hub/createHub.ts": {
       "no-unknown-parameters": 2
     },
-    "server/src/hub/daemonDataStore.ts": {
-      "require-safety-comment-for-type-assertion": 1
-    },
-    "server/src/hub/fleetStore.ts": {
-      "no-unknown-parameters": 2,
-      "require-safety-comment-for-type-assertion": 1
-    },
     "server/src/hub/hub.test.ts": {
       "no-chained-type-assertions": 1,
       "no-unknown-parameters": 9
@@ -347,7 +340,14 @@
     "server/src/hub/rigspecs.test.ts": {
       "no-unknown-parameters": 3
     },
-    "server/src/hub/schemaStore.ts": {
+    "server/src/hub/stores/daemonDataStore.ts": {
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "server/src/hub/stores/fleetStore.ts": {
+      "no-unknown-parameters": 2,
+      "require-safety-comment-for-type-assertion": 1
+    },
+    "server/src/hub/stores/schemaStore.ts": {
       "no-unknown-parameters": 1
     },
     "server/src/middleware/errorHandler.ts": {
