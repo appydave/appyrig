@@ -1,44 +1,17 @@
 import { createHash } from 'node:crypto';
-import {
-  DaemonDataPushSchema,
-  TEXT_SHORT_MAX,
-  TRANSITIONS_MAX,
-  type DaemonDataPush,
-  type DaemonKind,
-  type LibraryData,
-  type HealthData,
-  type LibraryRow,
-  type WorkflowsData,
-  type TransitionRow,
-  type TransitionsData,
-} from '@appydave/shared';
+import { DaemonDataPushSchema, type DaemonDataPush, type DaemonKind } from '@appydave/shared';
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
+import { type DaemonGet } from '@collector/adapters/daemondata/reads/get.js';
+import { readHealth } from '@collector/adapters/daemondata/reads/health.js';
+import { readLibrary } from '@collector/adapters/daemondata/reads/library.js';
+import { FailureLog, type Outcome } from '@collector/adapters/daemondata/reads/outcome.js';
 import {
-  isNotFound,
-  settle,
-  type DaemonGet,
-  type Settled,
-} from '@collector/adapters/daemondata/get.js';
-import { isRec, txt } from '@collector/adapters/daemondata/parse/lenient.js';
-import {
-  parseLibraryPacks,
-  parseLibrarySkills,
-  parseLibrarySpecs,
-} from '@collector/adapters/daemondata/parse/library.js';
-import {
-  parseDaemonHealth,
-  parseHealthContext,
-  parseHealthFindings,
-  parseHealthPolicy,
-  parseRestoreCheck,
-} from '@collector/adapters/daemondata/parse/health.js';
-import { parseSeatDetail } from '@collector/adapters/daemondata/parse/seatDetail.js';
-import { parseTransitionsPage } from '@collector/adapters/daemondata/parse/transitionsPage.js';
-import {
-  parseWorkflowInstances,
-  parseWorkflowSpecs,
-} from '@collector/adapters/daemondata/parse/workflows.js';
-import { parseSettings } from '@collector/adapters/daemondata/parse/settings.js';
+  readSeatDetails,
+  type SeatTarget,
+} from '@collector/adapters/daemondata/reads/seatDetail.js';
+import { readSettings } from '@collector/adapters/daemondata/reads/settings.js';
+import { TransitionsFeed } from '@collector/adapters/daemondata/reads/transitions.js';
+import { readWorkflows } from '@collector/adapters/daemondata/reads/workflows.js';
 
 /**
  * v2 data channels: the READ-ONLY reads of the OpenRig daemon that the v2 pages need, pushed on one
@@ -56,14 +29,11 @@ import { parseSettings } from '@collector/adapters/daemondata/parse/settings.js'
  *    until it recovers, and never touches the main snapshot push or the other reads.
  *  - Parsing is lenient: unknown values are read as `unknown` and checked with typeof, so one odd
  *    field drops that field (or that row), never the whole read.
+ *
+ * Where things are: daemondata/parse/ shapes one daemon reply into its contract type (no fetching);
+ * daemondata/reads/ fetches one kind and decides ok / unsupported / not-found; this class decides
+ * which reads are due and which results the hub does not have yet.
  */
-
-export interface SeatTarget {
-  /** The seat id (canonical session name). */
-  seat: string;
-  rigId: string;
-  logicalId: string;
-}
 
 export interface PendingDaemonData {
   pushes: DaemonDataPush[];
@@ -72,29 +42,12 @@ export interface PendingDaemonData {
   markSkipped?(push: DaemonDataPush): void;
 }
 
-/** One read: its kind, how often it may run, and what it returns (null = nothing to say this round). */
+/** One read: its kind, how often it may run, and what it returns. */
 interface Job {
   kind: DaemonKind;
   everyMs: number;
   run(): Promise<Outcome[]>;
 }
-
-interface Outcome {
-  key: string;
-  status: 'ok' | 'unsupported' | 'not-found';
-  reason: string | null;
-  data: unknown;
-}
-
-// ── step 4: queue transitions ──────────────────────────────────────────────────────────────────
-
-/** The daemon's page size cap for the telemetry streams is 128 (limit above it is a 400). */
-const TRANSITIONS_PAGE = 128;
-
-/** Pages read per round, so the first read of a long history is spread over a few rounds. */
-const TRANSITIONS_PAGES_PER_ROUND = 12;
-
-// ── the reader ─────────────────────────────────────────────────────────────────────────────────
 
 export interface DaemonDataOptions {
   now?: () => number;
@@ -122,42 +75,37 @@ const sigOf = (o: Outcome): string =>
 
 export class DaemonDataReader {
   private readonly now: () => number;
-  private readonly log: (line: string) => void;
   private readonly every: Record<DaemonKind, number>;
   /** `<kind>\0<key>` -> signature of what the hub last accepted. */
   private readonly sent = new Map<string, string>();
   private readonly lastRun = new Map<DaemonKind, number>();
-  /** Kinds whose failure was already logged (cleared on recovery). */
-  private readonly failing = new Set<string>();
+  /** Failing reads already logged (cleared on recovery). */
+  private readonly failures: FailureLog;
   private targets: SeatTarget[] = [];
   private readonly jobs: Job[];
-  /** Queue transitions: the cursor to continue from, and the newest rows read so far (oldest first). */
-  private tr: {
-    cursor: string | null;
-    rows: TransitionRow[];
-    read: number;
-    hostId: string | null;
-    bootEpoch: string | null;
-    /** page.retainedHighWatermark: the newest retained transition id. */
-    high: number | null;
-  } = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null, high: null };
 
   constructor(
     private readonly machineId: string,
-    private readonly get: DaemonGet,
+    get: DaemonGet,
     opts: DaemonDataOptions = {}
   ) {
     this.now = opts.now ?? Date.now;
-    this.log = opts.log ?? (() => {});
+    this.failures = new FailureLog(opts.log ?? (() => {}));
     this.every = { ...DAEMON_DATA_EVERY_MS, ...(opts.everyMs ?? {}) };
 
+    const ctx = { get, failures: this.failures };
+    const transitions = new TransitionsFeed(get);
     const jobs: Job[] = [
-      { kind: 'seatdetail', everyMs: this.every.seatdetail, run: () => this.seatDetail() },
-      { kind: 'library', everyMs: this.every.library, run: () => this.library() },
-      { kind: 'transitions', everyMs: this.every.transitions, run: () => this.transitions() },
-      { kind: 'workflows', everyMs: this.every.workflows, run: () => this.workflows() },
-      { kind: 'health', everyMs: this.every.health, run: () => this.health() },
-      { kind: 'settings', everyMs: this.every.settings, run: () => this.settingsRead() },
+      {
+        kind: 'seatdetail',
+        everyMs: this.every.seatdetail,
+        run: () => readSeatDetails(ctx, this.targets),
+      },
+      { kind: 'library', everyMs: this.every.library, run: () => readLibrary(ctx) },
+      { kind: 'transitions', everyMs: this.every.transitions, run: () => transitions.read() },
+      { kind: 'workflows', everyMs: this.every.workflows, run: () => readWorkflows(ctx) },
+      { kind: 'health', everyMs: this.every.health, run: () => readHealth(ctx) },
+      { kind: 'settings', everyMs: this.every.settings, run: () => readSettings(get) },
     ];
 
     this.jobs = jobs.filter((j) => !opts.kinds || opts.kinds.includes(j.kind));
@@ -184,341 +132,6 @@ export class DaemonDataReader {
     this.lastRun.clear();
   }
 
-  private fail(key: string, line: string): void {
-    if (!this.failing.has(key)) {
-      this.failing.add(key);
-      this.log(line);
-    }
-  }
-
-  private async seatDetail(): Promise<Outcome[]> {
-    const out: Outcome[] = [];
-    let failed = 0;
-    let firstError = '';
-    // A 404 on one seat is "the daemon does not know this seat" (or this rig), unless the rig's node
-    // list is missing too, which means the route itself is not there on this OpenRig.
-    const routeMissing = new Map<string, boolean>();
-    const probe = async (rigId: string): Promise<boolean | null> => {
-      if (routeMissing.has(rigId)) {
-        return routeMissing.get(rigId)!;
-      }
-
-      const r = await settle(this.get, `/api/rigs/${encodeURIComponent(rigId)}/nodes`);
-
-      if (!r.ok && !r.notFound) {
-        return null;
-      }
-
-      routeMissing.set(rigId, !r.ok);
-
-      return !r.ok;
-    };
-
-    for (const t of this.targets) {
-      try {
-        const raw = await this.get(
-          `/api/rigs/${encodeURIComponent(t.rigId)}/nodes/${encodeURIComponent(t.logicalId)}`
-        );
-
-        out.push({ key: t.seat, status: 'ok', reason: null, data: parseSeatDetail(raw) });
-      } catch (e) {
-        const missing = isNotFound(e) ? await probe(t.rigId) : null;
-
-        if (missing === true) {
-          out.push({
-            key: t.seat,
-            status: 'unsupported',
-            reason: 'this OpenRig has no node routes for this rig',
-            data: null,
-          });
-        } else if (missing === false) {
-          out.push({
-            key: t.seat,
-            status: 'not-found',
-            reason: 'the daemon does not know this seat',
-            data: null,
-          });
-        } else {
-          failed += 1;
-          firstError ||= `${t.seat}: ${errorMessage(e)}`;
-        }
-      }
-    }
-
-    if (failed > 0) {
-      this.fail(
-        'seatdetail:seats',
-        `seat detail unreadable for ${failed} seat(s), first ${firstError}`
-      );
-    } else {
-      this.failing.delete('seatdetail:seats');
-    }
-
-    return out;
-  }
-
-  /**
-   * Several independent GETs behind one push: each part that cannot be read is null (kept apart
-   * from "read, empty") and logged once under `<label>:<part>`. The whole read is `unsupported` when
-   * every part is a 404, and throws (nothing is pushed, logged once by the caller) when every part
-   * failed and at least one was not a 404.
-   */
-  private async parts<T extends Record<string, unknown>>(
-    label: string,
-    reads: { [K in keyof T]: { path: string; parse: (raw: unknown) => T[K] } }
-  ): Promise<Outcome[]> {
-    const names = Object.keys(reads) as (keyof T & string)[];
-    const settled = await Promise.all(names.map((n) => settle(this.get, reads[n].path)));
-
-    if (settled.every((r) => !r.ok)) {
-      if (settled.every((r) => !r.ok && r.notFound)) {
-        return [
-          {
-            key: '',
-            status: 'unsupported',
-            reason: `this OpenRig has no ${label} routes`,
-            data: null,
-          },
-        ];
-      }
-
-      const bad = settled.find((r) => !r.ok && !r.notFound);
-
-      throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
-    }
-
-    const data = {} as T;
-
-    names.forEach((n, i) => {
-      const r = settled[i]!;
-      const key = `${label}:${n}`;
-
-      try {
-        if (!r.ok) {
-          throw new Error(r.error);
-        }
-
-        data[n] = reads[n].parse(r.value);
-        this.failing.delete(key);
-      } catch (e) {
-        this.fail(key, `${label} ${n} unreadable: ${errorMessage(e)}`);
-        data[n] = null as T[typeof n];
-      }
-    });
-
-    return [{ key: '', status: 'ok', reason: null, data }];
-  }
-
-  private workflows(): Promise<Outcome[]> {
-    return this.parts<WorkflowsData>('workflows', {
-      specs: { path: '/api/workflow/specs', parse: parseWorkflowSpecs },
-      instances: { path: '/api/workflow/list', parse: parseWorkflowInstances },
-    });
-  }
-
-  private async health(): Promise<Outcome[]> {
-    type Rest = Pick<HealthData, 'policy' | 'contextSummary' | 'restore' | 'daemon'>;
-
-    const [findings, rest] = await Promise.all([
-      settle(this.get, '/api/health'),
-      this.parts<Rest>('health', {
-        policy: { path: '/api/health-diagnosis/policy', parse: parseHealthPolicy },
-        contextSummary: { path: '/api/health-summary/context', parse: parseHealthContext },
-        restore: { path: '/api/restore-check', parse: parseRestoreCheck },
-        daemon: { path: '/healthz', parse: parseDaemonHealth },
-      }),
-    ]);
-    const other = rest[0]!;
-
-    if (!findings.ok && findings.notFound && other.status === 'unsupported') {
-      return rest;
-    }
-
-    let parsed: ReturnType<typeof parseHealthFindings> | null = null;
-
-    try {
-      if (!findings.ok) {
-        throw new Error(findings.error);
-      }
-
-      parsed = parseHealthFindings(findings.value);
-      this.failing.delete('health:findings');
-    } catch (e) {
-      this.fail('health:findings', `health findings unreadable: ${errorMessage(e)}`);
-    }
-
-    const data: HealthData = {
-      findings: parsed?.findings ?? null,
-      findingsTotal: parsed?.findingsTotal ?? null,
-      findingsTruncated: parsed?.findingsTruncated ?? null,
-      coverage: parsed?.coverage ?? [],
-      ...(other.status === 'ok'
-        ? (other.data as Rest)
-        : { policy: null, contextSummary: null, restore: null, daemon: null }),
-    };
-
-    return [{ key: '', status: 'ok', reason: null, data }];
-  }
-
-  private async settingsRead(): Promise<Outcome[]> {
-    try {
-      const data = parseSettings(await this.get('/api/config'));
-
-      return [{ key: '', status: 'ok', reason: null, data }];
-    } catch (e) {
-      if (isNotFound(e)) {
-        return [
-          {
-            key: '',
-            status: 'unsupported',
-            reason: 'this OpenRig has no config route',
-            data: null,
-          },
-        ];
-      }
-
-      throw e;
-    }
-  }
-
-  /**
-   * Queue transitions, incrementally. The first read starts at the daemon's retained start
-   * (`start=retained`), every later one continues from the cursor it handed back (a cursor and
-   * `start` are mutually exclusive). The newest TRANSITIONS_MAX rows are kept. A rejected cursor
-   * (the daemon restarted with a new boot epoch, or its history was reset) throws away the rows and
-   * starts again from the retained start next round; the hub replaces, never appends.
-   */
-  private async transitions(): Promise<Outcome[]> {
-    const st = this.tr;
-
-    for (let page = 0; page < TRANSITIONS_PAGES_PER_ROUND; page++) {
-      const q = st.cursor ? `cursor=${encodeURIComponent(st.cursor)}` : 'start=retained';
-      let got: ReturnType<typeof parseTransitionsPage>;
-
-      try {
-        got = parseTransitionsPage(
-          await this.get(`/api/telemetry/v1/queue-transitions?limit=${TRANSITIONS_PAGE}&${q}`)
-        );
-      } catch (e) {
-        if (isNotFound(e)) {
-          return [
-            {
-              key: '',
-              status: 'unsupported',
-              reason: 'this OpenRig has no queue-transition telemetry',
-              data: null,
-            },
-          ];
-        }
-
-        // Start over ONLY when the daemon rejected our cursor (400/410: its epoch or history
-        // changed). A timeout or 5xx says nothing about the cursor: keep what we hold, retry.
-        if (st.cursor && /HTTP (400|410)\b/.test(errorMessage(e))) {
-          this.tr = { cursor: null, rows: [], read: 0, hostId: null, bootEpoch: null, high: null };
-        }
-
-        throw e;
-      }
-
-      if (st.bootEpoch && got.bootEpoch && st.bootEpoch !== got.bootEpoch) {
-        // the daemon's history is a different one now: what we hold no longer belongs to it
-        st.rows = [];
-        st.read = 0;
-      }
-
-      st.hostId = got.hostId ?? st.hostId;
-      st.bootEpoch = got.bootEpoch ?? st.bootEpoch;
-      st.read += got.rows.length;
-      st.high = got.retainedHigh ?? st.high;
-
-      // L2: a row is held once, whichever page it arrives on
-      const have = new Set(st.rows.map((r) => r.id));
-
-      st.rows = [...st.rows, ...got.rows.filter((r) => !have.has(r.id))].slice(-TRANSITIONS_MAX);
-      if (got.nextCursor) {
-        st.cursor = got.nextCursor;
-      }
-
-      if (!got.hasMore || got.rows.length === 0) {
-        break;
-      }
-    }
-
-    const data: TransitionsData = {
-      rows: st.rows,
-      // L1: the daemon's own retained high-water mark (its newest transition id), else rows read
-      retained: st.high ?? st.read,
-      // rows read vs rows held: ids are not counts once the daemon has pruned its history
-      truncated: st.read > st.rows.length,
-      hostId: st.hostId,
-      bootEpoch: st.bootEpoch,
-    };
-
-    return [{ key: '', status: 'ok', reason: null, data }];
-  }
-
-  /**
-   * The library: three lists read independently. A list that cannot be read is null (kept apart from
-   * an empty one) and logged once; the read as a whole fails only when all three do.
-   */
-  private async library(): Promise<Outcome[]> {
-    const [specs, skills, packs, health] = await Promise.all([
-      settle(this.get, '/api/specs/library'),
-      settle(this.get, '/api/skills/library'),
-      settle(this.get, '/api/context-packs/library'),
-      settle(this.get, '/healthz'),
-    ]);
-    const lists = [specs, skills, packs];
-
-    if (lists.every((l) => !l.ok)) {
-      if (lists.every((l) => !l.ok && l.notFound)) {
-        return [
-          {
-            key: '',
-            status: 'unsupported',
-            reason: 'this OpenRig has no library routes',
-            data: null,
-          },
-        ];
-      }
-
-      const bad = lists.find((l) => !l.ok && !l.notFound);
-
-      throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
-    }
-
-    const one = (name: string, r: Settled, parse: (raw: unknown) => LibraryRow[]) => {
-      if (!r.ok) {
-        this.fail(`library:${name}`, `library ${name} unreadable: ${r.error}`);
-
-        return null;
-      }
-
-      try {
-        const rows = parse(r.value);
-
-        this.failing.delete(`library:${name}`);
-
-        return rows;
-      } catch (e) {
-        this.fail(`library:${name}`, `library ${name} unreadable: ${errorMessage(e)}`);
-
-        return null;
-      }
-    };
-
-    const semver =
-      health.ok && isRec(health.value) ? txt(health.value.semver, TEXT_SHORT_MAX) : null;
-    const data: LibraryData = {
-      openrigVersion: semver,
-      specs: one('specs', specs, parseLibrarySpecs),
-      skills: one('skills', skills, parseLibrarySkills),
-      contextPacks: one('context packs', packs, parseLibraryPacks),
-    };
-
-    return [{ key: '', status: 'ok', reason: null, data }];
-  }
-
   /**
    * One round: runs every read that is due, and returns the pushes whose content differs from what
    * the hub last accepted. null = nothing to send. A read that throws is logged once and skipped.
@@ -541,9 +154,9 @@ export class DaemonDataReader {
 
       try {
         outcomes = await job.run();
-        this.failing.delete(job.kind);
+        this.failures.recovered(job.kind);
       } catch (e) {
-        this.fail(job.kind, `${job.kind} unreadable: ${errorMessage(e)}`);
+        this.failures.fail(job.kind, `${job.kind} unreadable: ${errorMessage(e)}`);
         continue;
       }
 
@@ -566,14 +179,14 @@ export class DaemonDataReader {
         });
 
         if (!parsed.success) {
-          this.fail(
+          this.failures.fail(
             `${job.kind}:shape`,
             `${job.kind} read did not fit its contract, not sent: ${parsed.error.issues[0]?.path.join('.')}: ${parsed.error.issues[0]?.message}`
           );
           continue;
         }
 
-        this.failing.delete(`${job.kind}:shape`);
+        this.failures.recovered(`${job.kind}:shape`);
         pushes.push(parsed.data);
         sigs.set(k, sig);
       }

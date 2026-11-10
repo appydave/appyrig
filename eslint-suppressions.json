@@ -1195,17 +1195,14 @@
     }
   },
   "collector/src/adapters/daemondata.ts": {
-    "max-lines": {
+    "max-lines-per-function": {
       "count": 1
     },
-    "max-lines-per-function": {
-      "count": 6
-    },
     "sonarjs/cognitive-complexity": {
-      "count": 3
+      "count": 1
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 4
+      "count": 1
     }
   },
   "collector/src/adapters/dbrows.ts": {
