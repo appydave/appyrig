@@ -1,0 +1,10 @@
+{
+  "about": "G11b: folders that import one of their own subfolders while it imports them back, recorded when the gate was added (10 Nov). It may shrink, never grow. Rewrite with npm run arch:parent-cycles:baseline.",
+  "cycles": {
+    "client/src/domain/fleet <-> client/src/domain/fleet/views/core": 1,
+    "client/src/domain/fleet <-> client/src/domain/fleet/views/flow": 1,
+    "client/src/kit <-> client/src/kit/drawer": 1,
+    "collector/src <-> collector/src/adapters": 1,
+    "collector/src <-> collector/src/adapters/rig": 1
+  }
+}
