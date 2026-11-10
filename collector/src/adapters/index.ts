@@ -13,15 +13,16 @@ export { DbRowsReader } from './dbrows.js';
 export { seatConfigReader, withSeatCards } from './seatcard.js';
 export {
   DaemonDataReader,
-  parseWorkflowSpecs,
-  parseWorkflowInstances,
   parseHealthFindings,
   parseTransitionRow,
+  type SeatTarget,
+} from './daemondata.js';
+export {
   parseLibrarySpecs,
   parseLibrarySkills,
   parseLibraryPacks,
-  type SeatTarget,
-} from './daemondata.js';
+} from './daemondata/parse/library.js';
+export { parseWorkflowSpecs, parseWorkflowInstances } from './daemondata/parse/workflows.js';
 export { parseSeatDetail } from './daemondata/parse/seatDetail.js';
 export { parseSettings } from './daemondata/parse/settings.js';
 export { SETTINGS_ALLOW } from './daemondata/parse/settingsAllowlist.js';

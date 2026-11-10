@@ -1,13 +1,9 @@
 import { createHash } from 'node:crypto';
 import {
   DaemonDataPushSchema,
-  LIBRARY_FILES_MAX,
-  LIBRARY_ROWS_MAX,
   TEXT_XLONG_MAX,
   TEXT_MEDIUM_MAX,
   TEXT_LONG_MAX,
-  TEXT_PATH_MAX,
-  TEXT_XXLONG_MAX,
   TEXT_XXXLONG_MAX,
   TEXT_SHORT_MAX,
   TRANSITIONS_MAX,
@@ -33,10 +29,18 @@ import {
   isRec,
   list,
   num,
-  rowsOf,
   txt,
 } from '@collector/adapters/daemondata/parse/lenient.js';
+import {
+  parseLibraryPacks,
+  parseLibrarySkills,
+  parseLibrarySpecs,
+} from '@collector/adapters/daemondata/parse/library.js';
 import { parseSeatDetail } from '@collector/adapters/daemondata/parse/seatDetail.js';
+import {
+  parseWorkflowInstances,
+  parseWorkflowSpecs,
+} from '@collector/adapters/daemondata/parse/workflows.js';
 import { parseSettings } from '@collector/adapters/daemondata/parse/settings.js';
 
 /**
@@ -83,156 +87,6 @@ interface Outcome {
   status: 'ok' | 'unsupported' | 'not-found';
   reason: string | null;
   data: unknown;
-}
-
-// ── step 3: library ────────────────────────────────────────────────────────────────────────────
-
-const FACT_TEXT_MAX = 200;
-
-/** Primitive facts picked from a record; anything else is skipped, never guessed. */
-function pickFacts(r: Record<string, unknown>, keys: string[]): LibraryRow['facts'] {
-  const out: LibraryRow['facts'] = {};
-
-  for (const k of keys) {
-    const v = r[k];
-
-    if (typeof v === 'string') {
-      out[k] = v.slice(0, FACT_TEXT_MAX);
-    } else if (typeof v === 'number' && Number.isFinite(v)) {
-      out[k] = v;
-    } else if (typeof v === 'boolean') {
-      out[k] = v;
-    }
-  }
-
-  return out;
-}
-
-/** GET /api/specs/library: agent, rig and workflow specs. Rows without an id or a name are skipped. */
-export function parseLibrarySpecs(raw: unknown): LibraryRow[] {
-  return rowsOf(raw, 'specs')
-    .flatMap((r): LibraryRow[] => {
-      if (!isRec(r)) {
-        return [];
-      }
-
-      const id = txt(r.id, TEXT_XXLONG_MAX);
-      const name = txt(r.name, TEXT_XLONG_MAX);
-
-      if (!id || !name) {
-        return [];
-      }
-
-      return [
-        {
-          id,
-          kind: txt(r.kind, TEXT_SHORT_MAX),
-          name,
-          version: txt(r.version, TEXT_SHORT_MAX),
-          sourceType: txt(r.sourceType, TEXT_SHORT_MAX),
-          summary: txt(r.summary, TEXT_XXXLONG_MAX, true),
-          path: txt(r.sourcePath, TEXT_PATH_MAX),
-          updatedAt: txt(r.updatedAt, TEXT_SHORT_MAX),
-          facts: pickFacts(r, [
-            'rolesCount',
-            'stepsCount',
-            'terminalTurnRule',
-            'targetRig',
-            'isBuiltIn',
-            'status',
-          ]),
-          files: [],
-        },
-      ];
-    })
-    .slice(0, LIBRARY_ROWS_MAX);
-}
-
-/** GET /api/skills/library. File text is NOT read: names and sizes only. */
-export function parseLibrarySkills(raw: unknown): LibraryRow[] {
-  return rowsOf(raw, 'skills')
-    .flatMap((r): LibraryRow[] => {
-      if (!isRec(r)) {
-        return [];
-      }
-
-      const id = txt(r.id, TEXT_XXLONG_MAX);
-      const name = txt(r.name, TEXT_XLONG_MAX);
-
-      if (!id || !name) {
-        return [];
-      }
-
-      const files = list(r.files).flatMap((f) => {
-        if (!isRec(f)) {
-          return [];
-        }
-
-        const fname = txt(f.name, TEXT_XLONG_MAX);
-
-        if (!fname) {
-          return [];
-        }
-
-        const size = num(f.size);
-
-        return [{ name: fname, size: size !== null && size >= 0 ? Math.round(size) : null }];
-      });
-
-      return [
-        {
-          id,
-          kind: 'skill',
-          name,
-          version: null,
-          sourceType: txt(r.source, TEXT_SHORT_MAX),
-          summary: null,
-          path: txt(r.absolutePath, TEXT_PATH_MAX),
-          updatedAt: null,
-          facts: {
-            fileCount: files.length,
-            totalBytes: files.reduce((n, f) => n + (f.size ?? 0), 0),
-          },
-          files: files.slice(0, LIBRARY_FILES_MAX),
-        },
-      ];
-    })
-    .slice(0, LIBRARY_ROWS_MAX);
-}
-
-/** GET /api/context-packs/library. */
-export function parseLibraryPacks(raw: unknown): LibraryRow[] {
-  return rowsOf(raw, 'contextPacks')
-    .flatMap((r): LibraryRow[] => {
-      if (!isRec(r)) {
-        return [];
-      }
-
-      const id = txt(r.id, TEXT_XXLONG_MAX);
-      const name = txt(r.name, TEXT_XLONG_MAX);
-
-      if (!id || !name) {
-        return [];
-      }
-
-      const tokens = num(r.manifestEstimatedTokens) ?? num(r.derivedEstimatedTokens);
-
-      return [
-        {
-          id,
-          kind: txt(r.kind, TEXT_SHORT_MAX) ?? 'context-pack',
-          name,
-          version: txt(r.version, TEXT_SHORT_MAX),
-          sourceType: txt(r.sourceType, TEXT_SHORT_MAX),
-          summary: txt(r.purpose, TEXT_XXXLONG_MAX, true),
-          path: txt(r.sourcePath, TEXT_PATH_MAX),
-          updatedAt: null,
-          facts: { ...pickFacts(r, ['taxonomy']), ...(tokens !== null ? { tokens } : {}) },
-          files: [],
-        },
-      ];
-    })
-    .slice(0, LIBRARY_ROWS_MAX);
 }
 
 // ── step 4: queue transitions ──────────────────────────────────────────────────────────────────
@@ -318,72 +172,7 @@ function parseTransitionsPage(raw: unknown): {
   };
 }
 
-// ── step 5: workflows, health findings, settings ───────────────────────────────────────────────
-
-export function parseWorkflowSpecs(raw: unknown): NonNullable<WorkflowsData['specs']> {
-  return rowsOf(raw, 'specs')
-    .flatMap((r) => {
-      if (!isRec(r)) {
-        return [];
-      }
-
-      const name = txt(r.name, TEXT_XLONG_MAX);
-
-      if (!name) {
-        return [];
-      }
-
-      return [
-        {
-          name,
-          version:
-            txt(r.version, TEXT_SHORT_MAX) ?? (num(r.version) !== null ? String(r.version) : null),
-          purpose: txt(r.purpose, TEXT_XXXLONG_MAX, true),
-          targetRig: txt(r.targetRig, TEXT_XLONG_MAX),
-          terminalTurnRule:
-            txt(r.coordinationTerminalTurnRule, TEXT_MEDIUM_MAX) ??
-            txt(r.terminalTurnRule, TEXT_MEDIUM_MAX),
-          isBuiltIn: bool(r.isBuiltIn),
-        },
-      ];
-    })
-    .slice(0, 200);
-}
-
-export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData['instances']> {
-  return rowsOf(raw, 'instances')
-    .flatMap((r) => {
-      if (!isRec(r)) {
-        return [];
-      }
-
-      const instanceId = txt(r.instanceId, TEXT_XLONG_MAX);
-
-      if (!instanceId) {
-        return [];
-      }
-
-      const hops = num(r.hopCount);
-      const deadline = isRec(r.deadline) ? r.deadline : {};
-
-      return [
-        {
-          instanceId,
-          workflowName: txt(r.workflowName, TEXT_XLONG_MAX),
-          workflowVersion:
-            txt(r.workflowVersion, TEXT_SHORT_MAX) ??
-            (num(r.workflowVersion) !== null ? String(r.workflowVersion) : null),
-          status: txt(r.status, TEXT_SHORT_MAX),
-          currentStepId: txt(r.currentStepId, TEXT_XLONG_MAX),
-          hopCount: hops !== null && hops >= 0 ? Math.round(hops) : null,
-          createdAt: txt(r.createdAt, TEXT_SHORT_MAX),
-          completedAt: txt(r.completedAt, TEXT_SHORT_MAX),
-          deadlineState: txt(deadline.state, TEXT_SHORT_MAX),
-        },
-      ];
-    })
-    .slice(0, 300);
-}
+// ── step 5: health findings ───────────────────────────────────────────────
 
 /** GET /api/health: the findings list, its truncation, and per-source coverage. */
 export function parseHealthFindings(

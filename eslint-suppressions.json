@@ -1199,13 +1199,13 @@
       "count": 1
     },
     "max-lines-per-function": {
-      "count": 9
+      "count": 7
     },
     "sonarjs/cognitive-complexity": {
       "count": 4
     },
     "sonarjs/cyclomatic-complexity": {
-      "count": 8
+      "count": 6
     }
   },
   "collector/src/adapters/dbrows.ts": {

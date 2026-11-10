@@ -232,7 +232,7 @@
         "exports": 1
       },
       "collector/src/adapters/daemondata.ts": {
-        "exports": 7
+        "exports": 2
       },
       "collector/src/adapters/dbrows.ts": {
         "exports": 1
