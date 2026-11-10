@@ -2,6 +2,7 @@
  * How the daemon-data reads talk to the daemon: the GET they are given (the sources adapter's, which
  * refuses any non-loopback daemon), a GET that never throws (`settle`), and how a 404 is told apart
  * from every other failure. A 404 means "this route is not on this OpenRig", never "none".
+ * `valueOf` and `allFailed` turn settled GETs back into a value, an `unsupported`, or a thrown error.
  */
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
 
@@ -20,4 +21,31 @@ export async function settle(get: DaemonGet, path: string): Promise<Settled> {
   } catch (e) {
     return { ok: false, notFound: isNotFound(e), error: errorMessage(e) };
   }
+}
+
+/** The value of a settled GET, or its error thrown again (for a parser's try). */
+export function valueOf(r: Settled): unknown {
+  if (!r.ok) {
+    throw new Error(r.error);
+  }
+
+  return r.value;
+}
+
+/**
+ * When every GET of a multi-part read failed: `unsupported` if each was a 404, else the first real
+ * error is thrown (nothing is pushed, logged once by the reader). Undefined when any part worked.
+ */
+export function allFailed(settled: Settled[]): 'unsupported' | undefined {
+  if (!settled.every((r) => !r.ok)) {
+    return undefined;
+  }
+
+  if (settled.every((r) => !r.ok && r.notFound)) {
+    return 'unsupported';
+  }
+
+  const bad = settled.find((r) => !r.ok && !r.notFound);
+
+  throw new Error(bad && !bad.ok ? bad.error : 'unreadable');
 }

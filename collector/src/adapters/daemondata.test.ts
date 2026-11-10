@@ -15,7 +15,7 @@ import {
 } from './index.js';
 import { readFixtureJson } from './fixtureSources.js';
 import { parseNodes } from './daemon.js';
-import { isNotFound, settle } from './daemondata/get.js';
+import { isNotFound, settle } from './daemondata/reads/get.js';
 
 /** A node record shaped like the live 0.6.6 GET /api/rigs/:id/nodes/:logicalId. */
 const node = (over: Record<string, unknown> = {}) => ({
