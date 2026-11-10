@@ -231,9 +231,6 @@
       "collector/src/adapters/daemon.ts": {
         "exports": 1
       },
-      "collector/src/adapters/daemondata.ts": {
-        "exports": 2
-      },
       "collector/src/adapters/dbrows.ts": {
         "exports": 1
       },

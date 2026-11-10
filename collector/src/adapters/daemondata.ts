@@ -1,10 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
   DaemonDataPushSchema,
-  TEXT_XLONG_MAX,
-  TEXT_MEDIUM_MAX,
-  TEXT_LONG_MAX,
-  TEXT_XXXLONG_MAX,
   TEXT_SHORT_MAX,
   TRANSITIONS_MAX,
   type DaemonDataPush,
@@ -23,20 +19,21 @@ import {
   type DaemonGet,
   type Settled,
 } from '@collector/adapters/daemondata/get.js';
-import {
-  bool,
-  countOrNull,
-  isRec,
-  list,
-  num,
-  txt,
-} from '@collector/adapters/daemondata/parse/lenient.js';
+import { isRec, txt } from '@collector/adapters/daemondata/parse/lenient.js';
 import {
   parseLibraryPacks,
   parseLibrarySkills,
   parseLibrarySpecs,
 } from '@collector/adapters/daemondata/parse/library.js';
+import {
+  parseDaemonHealth,
+  parseHealthContext,
+  parseHealthFindings,
+  parseHealthPolicy,
+  parseRestoreCheck,
+} from '@collector/adapters/daemondata/parse/health.js';
 import { parseSeatDetail } from '@collector/adapters/daemondata/parse/seatDetail.js';
+import { parseTransitionsPage } from '@collector/adapters/daemondata/parse/transitionsPage.js';
 import {
   parseWorkflowInstances,
   parseWorkflowSpecs,
@@ -96,217 +93,6 @@ const TRANSITIONS_PAGE = 128;
 
 /** Pages read per round, so the first read of a long history is spread over a few rounds. */
 const TRANSITIONS_PAGES_PER_ROUND = 12;
-
-/** The transition id: a string (trimmed) or a number (as text); anything else has none. */
-function idOf(raw: unknown): string {
-  if (typeof raw === 'string') {
-    return raw.trim();
-  }
-
-  return typeof raw === 'number' ? String(raw) : '';
-}
-
-/** An id of 1 to 30 characters and a time that parsed: what a row needs besides its qitem and state. */
-function hasRequired(id: string, ms: number): boolean {
-  return id !== '' && id.length <= 30 && Number.isFinite(ms);
-}
-
-/** When the transition happened, in ms: originalTimestamp if present, else createdAt; NaN if neither parses. */
-function whenOf(original: unknown, created: unknown): number {
-  const when = txt(original, TEXT_SHORT_MAX) ?? txt(created, TEXT_SHORT_MAX);
-
-  return when ? Date.parse(when) : NaN;
-}
-
-export function parseTransitionRow(r: unknown): TransitionRow | null {
-  if (!isRec(r)) {
-    return null;
-  }
-
-  const id = idOf(r.transitionId);
-  const qitemId = txt(r.qitemId, TEXT_XLONG_MAX);
-  const state = txt(r.state, TEXT_SHORT_MAX);
-  const ms = whenOf(r.originalTimestamp, r.createdAt);
-
-  if (!qitemId || !state || !hasRequired(id, ms)) {
-    return null;
-  }
-
-  return {
-    id,
-    qitemId,
-    at: new Date(ms).toISOString(),
-    state,
-    actor: txt(r.actorSession, TEXT_XLONG_MAX),
-    closureReason: txt(r.closureReason, TEXT_XLONG_MAX),
-    closureTarget: txt(r.closureTarget, TEXT_XLONG_MAX),
-  };
-}
-
-/** What a page of GET /api/telemetry/v1/queue-transitions carries that the reader needs. */
-function parseTransitionsPage(raw: unknown): {
-  rows: TransitionRow[];
-  nextCursor: string | null;
-  hasMore: boolean;
-  retainedHigh: number | null;
-  hostId: string | null;
-  bootEpoch: string | null;
-} {
-  if (!isRec(raw) || !Array.isArray(raw.rows) || !isRec(raw.page)) {
-    throw new Error('queue-transitions: expected {rows, page}');
-  }
-
-  const source = isRec(raw.source) ? raw.source : {};
-
-  return {
-    rows: raw.rows.flatMap((r) => parseTransitionRow(r) ?? []),
-    nextCursor: txt(raw.page.nextCursor, 2000),
-    hasMore: raw.page.hasMore === true,
-    retainedHigh: (() => {
-      const h = Number(raw.page.retainedHighWatermark);
-
-      return Number.isFinite(h) && h >= 0 ? Math.round(h) : null;
-    })(),
-    hostId: txt(source.hostId, TEXT_MEDIUM_MAX),
-    bootEpoch: txt(source.bootEpoch, TEXT_MEDIUM_MAX),
-  };
-}
-
-// ── step 5: health findings ───────────────────────────────────────────────
-
-/** GET /api/health: the findings list, its truncation, and per-source coverage. */
-export function parseHealthFindings(
-  raw: unknown
-): Pick<HealthData, 'findings' | 'findingsTotal' | 'findingsTruncated' | 'coverage'> {
-  if (!isRec(raw)) {
-    throw new Error('health: expected a JSON object');
-  }
-
-  return {
-    findings: list(raw.records)
-      .flatMap((r, i) => {
-        if (!isRec(r)) {
-          return [];
-        }
-
-        return [
-          {
-            id: txt(r.id, TEXT_XLONG_MAX) ?? txt(r.findingId, TEXT_XLONG_MAX) ?? `finding-${i}`,
-            detector:
-              txt(r.detector, TEXT_LONG_MAX) ??
-              txt(r.detectorId, TEXT_LONG_MAX) ??
-              txt(r.kind, TEXT_LONG_MAX),
-            severity: txt(r.severity, TEXT_SHORT_MAX),
-            summary:
-              txt(r.summary, TEXT_XXXLONG_MAX, true) ??
-              txt(r.title, TEXT_XXXLONG_MAX, true) ??
-              txt(r.message, TEXT_XXXLONG_MAX, true),
-            evaluatedAt: txt(r.evaluatedAt, TEXT_SHORT_MAX),
-          },
-        ];
-      })
-      .slice(0, 100),
-    findingsTotal: countOrNull(raw.total),
-    findingsTruncated: bool(raw.truncated),
-    coverage: list(raw.coverage)
-      .flatMap((c) => {
-        if (!isRec(c)) {
-          return [];
-        }
-
-        const source = txt(c.source, TEXT_LONG_MAX);
-
-        if (!source) {
-          return [];
-        }
-
-        return [
-          {
-            source,
-            unit: txt(c.unit, TEXT_LONG_MAX),
-            evaluated: countOrNull(c.evaluated),
-            total: countOrNull(c.total),
-            omitted: countOrNull(c.omitted),
-            partial: bool(c.partial),
-            evaluatedAt: txt(c.evaluatedAt, TEXT_SHORT_MAX),
-          },
-        ];
-      })
-      .slice(0, 20),
-  };
-}
-
-function parseHealthPolicy(raw: unknown): HealthData['policy'] {
-  if (!isRec(raw) || !isRec(raw.policy)) {
-    throw new Error('health policy: expected {policy}');
-  }
-
-  const p = raw.policy;
-  const diagnosis = isRec(p.diagnosis) ? p.diagnosis : {};
-  const names = (v: unknown) =>
-    list(v)
-      .flatMap((x) => txt(x, TEXT_LONG_MAX) ?? [])
-      .slice(0, 40);
-  const thresholds: Record<string, number> = {};
-
-  if (isRec(p.thresholds)) {
-    for (const [k, v] of Object.entries(p.thresholds)) {
-      if (typeof v === 'number' && Number.isFinite(v)) {
-        thresholds[k.slice(0, TEXT_SHORT_MAX)] = v;
-      }
-    }
-  }
-
-  return {
-    diagnosisEnabled: bool(diagnosis.enabled),
-    disabledDetectors: names(p.disabledDetectors),
-    detectors: names(diagnosis.detectors),
-    thresholds,
-  };
-}
-
-function parseHealthContext(raw: unknown): HealthData['contextSummary'] {
-  if (!isRec(raw)) {
-    throw new Error('health summary: expected a JSON object');
-  }
-
-  return {
-    total: countOrNull(raw.total),
-    critical: countOrNull(raw.critical),
-    warning: countOrNull(raw.warning),
-    stale: countOrNull(raw.stale),
-  };
-}
-
-function parseRestoreCheck(raw: unknown): HealthData['restore'] {
-  if (!isRec(raw)) {
-    throw new Error('restore check: expected a JSON object');
-  }
-
-  const c = isRec(raw.counts) ? raw.counts : {};
-
-  return {
-    verdict: txt(raw.verdict, TEXT_SHORT_MAX),
-    red: countOrNull(c.red),
-    yellow: countOrNull(c.yellow),
-    green: countOrNull(c.green),
-  };
-}
-
-function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
-  if (!isRec(raw)) {
-    throw new Error('healthz: expected a JSON object');
-  }
-
-  const loop = isRec(raw.eventLoop) ? raw.eventLoop : {};
-  const lag = num(loop.lagP99Ms);
-
-  return {
-    semver: txt(raw.semver, TEXT_SHORT_MAX),
-    commit: txt(raw.commit, TEXT_SHORT_MAX),
-    eventLoopLagP99Ms: lag !== null && lag >= 0 ? lag : null,
-  };
-}
 
 // ── the reader ─────────────────────────────────────────────────────────────────────────────────
 
