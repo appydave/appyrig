@@ -11,7 +11,7 @@ export { SchemaReader } from './dbschema.js';
 export { LoadoutReader, topologyRootOf, withSkillCounts, type LoadoutSeat } from './loadout.js';
 export { DbRowsReader } from './dbrows.js';
 export { seatConfigReader, withSeatCards } from './seatcard.js';
-export { DaemonDataReader } from './daemondata.js';
+export { DaemonDataReader } from './daemondata/reader.js';
 export { type SeatTarget } from './daemondata/reads/seatDetail.js';
 export { parseHealthFindings } from './daemondata/parse/health.js';
 export { parseTransitionRow } from './daemondata/parse/transitionRow.js';

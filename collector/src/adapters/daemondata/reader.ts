@@ -68,6 +68,17 @@ const DAEMON_DATA_EVERY_MS: Record<DaemonKind, number> = {
   settings: 5 * 60_000,
 };
 
+/** One round's pushes, and the signature to record for each once it is sent. */
+interface Round {
+  t: number;
+  pushes: DaemonDataPush[];
+  sigs: Map<string, string>;
+}
+
+/** The sent-record key of one push: `<kind>\0<key>`. */
+const sentKey = (kind: DaemonKind, key: string): string => `${kind}\u0000${key}`;
+
+/** What the hub was sent for one outcome, as a hash: equal signatures are not sent again. */
 const sigOf = (o: Outcome): string =>
   createHash('sha1')
     .update(JSON.stringify({ s: o.status, r: o.reason, d: o.data }))
@@ -117,7 +128,7 @@ export class DaemonDataReader {
    * sent again when it returns, with no reconnect.
    */
   forgetSeatsNotIn(ids: Set<string>): void {
-    const prefix = 'seatdetail\u0000';
+    const prefix = sentKey('seatdetail', '');
 
     for (const k of [...this.sent.keys()]) {
       if (k.startsWith(prefix) && !ids.has(k.slice(prefix.length))) {
@@ -139,71 +150,97 @@ export class DaemonDataReader {
   async next(targets: SeatTarget[]): Promise<PendingDaemonData | null> {
     this.targets = targets;
 
-    const t = this.now();
-    const pushes: DaemonDataPush[] = [];
-    const sigs = new Map<string, string>();
+    const round: Round = { t: this.now(), pushes: [], sigs: new Map() };
 
     for (const job of this.jobs) {
-      if (t - (this.lastRun.get(job.kind) ?? -Infinity) < job.everyMs) {
+      if (!this.isDue(job, round.t)) {
         continue;
       }
 
-      this.lastRun.set(job.kind, t);
+      this.lastRun.set(job.kind, round.t);
 
-      let outcomes: Outcome[];
-
-      try {
-        outcomes = await job.run();
-        this.failures.recovered(job.kind);
-      } catch (e) {
-        this.failures.fail(job.kind, `${job.kind} unreadable: ${errorMessage(e)}`);
-        continue;
-      }
-
-      for (const o of outcomes) {
-        const k = `${job.kind}\u0000${o.key}`;
-        const sig = sigOf(o);
-
-        if (this.sent.get(k) === sig) {
-          continue;
-        }
-
-        const parsed = DaemonDataPushSchema.safeParse({
-          kind: job.kind,
-          machineId: this.machineId,
-          collectedAt: new Date(t).toISOString(),
-          status: o.status,
-          reason: o.reason,
-          key: o.key,
-          data: o.status === 'ok' ? o.data : null,
-        });
-
-        if (!parsed.success) {
-          this.failures.fail(
-            `${job.kind}:shape`,
-            `${job.kind} read did not fit its contract, not sent: ${parsed.error.issues[0]?.path.join('.')}: ${parsed.error.issues[0]?.message}`
-          );
-          continue;
-        }
-
-        this.failures.recovered(`${job.kind}:shape`);
-        pushes.push(parsed.data);
-        sigs.set(k, sig);
+      for (const o of (await this.run(job)) ?? []) {
+        this.offer(round, job.kind, o);
       }
     }
 
-    if (pushes.length === 0) {
+    return round.pushes.length === 0 ? null : this.pending(round);
+  }
+
+  private isDue(job: Job, t: number): boolean {
+    return t - (this.lastRun.get(job.kind) ?? -Infinity) >= job.everyMs;
+  }
+
+  /** The read's outcomes, or null when it threw (logged once until it recovers). */
+  private async run(job: Job): Promise<Outcome[] | null> {
+    try {
+      const outcomes = await job.run();
+
+      this.failures.recovered(job.kind);
+
+      return outcomes;
+    } catch (e) {
+      this.failures.fail(job.kind, `${job.kind} unreadable: ${errorMessage(e)}`);
+
+      return null;
+    }
+  }
+
+  /** Adds one outcome to the round unless the hub already has it or it does not fit the contract. */
+  private offer(round: Round, kind: DaemonKind, o: Outcome): void {
+    const k = sentKey(kind, o.key);
+    const sig = sigOf(o);
+
+    if (this.sent.get(k) === sig) {
+      return;
+    }
+
+    const push = this.pushOf(kind, o, round.t);
+
+    if (push) {
+      round.pushes.push(push);
+      round.sigs.set(k, sig);
+    }
+  }
+
+  /** The outcome as a contract push, or null (logged once) when it does not fit. */
+  private pushOf(kind: DaemonKind, o: Outcome, t: number): DaemonDataPush | null {
+    const parsed = DaemonDataPushSchema.safeParse({
+      kind,
+      machineId: this.machineId,
+      collectedAt: new Date(t).toISOString(),
+      status: o.status,
+      reason: o.reason,
+      key: o.key,
+      data: o.status === 'ok' ? o.data : null,
+    });
+
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+
+      this.failures.fail(
+        `${kind}:shape`,
+        `${kind} read did not fit its contract, not sent: ${issue?.path.join('.')}: ${issue?.message}`
+      );
+
       return null;
     }
 
+    this.failures.recovered(`${kind}:shape`);
+
+    return parsed.data;
+  }
+
+  /** The round's pushes, with the sent-record kept only for the ones the pusher really sends. */
+  private pending(round: Round): PendingDaemonData {
     const skipped = new Set<string>();
 
     return {
-      pushes,
+      pushes: round.pushes,
       // A payload the pusher refused to send (too large) is not recorded as sent: it is offered
       // again on the next run of its read.
-      markSkipped: (p) => skipped.add(`${p.kind}\u0000${p.key}`),
-      markSent: () => sigs.forEach((sig, k) => skipped.has(k) || this.sent.set(k, sig)),
+      markSkipped: (p) => skipped.add(sentKey(p.kind, p.key)),
+      markSent: () => round.sigs.forEach((sig, k) => skipped.has(k) || this.sent.set(k, sig)),
     };
   }
 }

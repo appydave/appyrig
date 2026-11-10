@@ -3,7 +3,7 @@ import type { PendingRigFiles } from '@collector/adapters/rig/rigfiles.js';
 import type { PendingSchema } from '@collector/adapters/dbschema.js';
 import type { PendingLoadouts } from '@collector/adapters/loadout.js';
 import type { PendingDbRows } from '@collector/adapters/dbrows.js';
-import type { PendingDaemonData } from '@collector/adapters/daemondata.js';
+import type { PendingDaemonData } from '@collector/adapters/daemondata/reader.js';
 import type { PendingMissionFiles } from '@collector/adapters/missionfiles.js';
 import type { PendingRigSpecs } from '@collector/adapters/rig/rigspecs.js';
 import type { PendingRigCommands } from '@collector/adapters/rig/rigcommands.js';
