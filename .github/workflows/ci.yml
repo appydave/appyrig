@@ -37,6 +37,9 @@ jobs:
       - name: Folder cycles (baselined)
         run: npm run arch:folders
 
+      - name: Parent/child folder cycles (baselined, may only shrink)
+        run: npm run arch:parent-cycles
+
       - name: Cycle baselines can only shrink
         run: npm run arch:ratchet
 

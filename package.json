@@ -42,6 +42,8 @@
     "test:trust": "node scripts/test-trust.mjs",
     "arch:check": "depcruise shared/src server/src server/scripts client/src collector/src --config .dependency-cruiser.cjs --ignore-known .dependency-cruiser-known-violations.json && node scripts/arch-strings.mjs",
     "arch:folders": "depcruise shared/src server/src client/src collector/src --config .dependency-cruiser-folders.cjs --output-type baseline | prettier --stdin-filepath known.json | git diff --no-index --exit-code .dependency-cruiser-known-folder-cycles.json - || (echo 'FOLDER CYCLES CHANGED. Lines starting with + are new folder cycles: fix them (see the rule comment in .dependency-cruiser-folders.cjs). Lines starting with - are cycles you removed: record that with npm run arch:baseline.' && exit 1)",
+    "arch:parent-cycles": "node lint/gates/parent-cycles.mjs",
+    "arch:parent-cycles:baseline": "node lint/gates/parent-cycles.mjs --update",
     "arch:baseline": "node lint/gates/cycle-baseline.mjs",
     "arch:ratchet": "npm run arch:baseline && git diff --exit-code -- .dependency-cruiser-known-violations.json .dependency-cruiser-known-folder-cycles.json",
     "knip": "node lint/knip-gate.mjs",
