@@ -3,15 +3,11 @@ import {
   DaemonDataPushSchema,
   LIBRARY_FILES_MAX,
   LIBRARY_ROWS_MAX,
-  SETTING_PATH_HIDDEN,
-  SeatDetailDataSchema,
-  TEXT_SMALL_MAX,
   TEXT_XLONG_MAX,
   TEXT_MEDIUM_MAX,
   TEXT_LONG_MAX,
   TEXT_PATH_MAX,
   TEXT_XXLONG_MAX,
-  TEXT_TINY_MAX,
   TEXT_XXXLONG_MAX,
   TEXT_SHORT_MAX,
   TRANSITIONS_MAX,
@@ -20,14 +16,28 @@ import {
   type LibraryData,
   type HealthData,
   type LibraryRow,
-  type SettingsData,
   type WorkflowsData,
-  type SeatDetailData,
   type TransitionRow,
   type TransitionsData,
 } from '@appydave/shared';
-import { redactString } from '@collector/redact.js';
 import { errorMessage } from '@collector/adapters/narrow/errors.js';
+import {
+  isNotFound,
+  settle,
+  type DaemonGet,
+  type Settled,
+} from '@collector/adapters/daemondata/get.js';
+import {
+  bool,
+  countOrNull,
+  isRec,
+  list,
+  num,
+  rowsOf,
+  txt,
+} from '@collector/adapters/daemondata/parse/lenient.js';
+import { parseSeatDetail } from '@collector/adapters/daemondata/parse/seatDetail.js';
+import { parseSettings } from '@collector/adapters/daemondata/parse/settings.js';
 
 /**
  * v2 data channels: the READ-ONLY reads of the OpenRig daemon that the v2 pages need, pushed on one
@@ -46,8 +56,6 @@ import { errorMessage } from '@collector/adapters/narrow/errors.js';
  *  - Parsing is lenient: unknown values are read as `unknown` and checked with typeof, so one odd
  *    field drops that field (or that row), never the whole read.
  */
-
-export type DaemonGet = (path: string) => Promise<unknown>;
 
 export interface SeatTarget {
   /** The seat id (canonical session name). */
@@ -77,157 +85,6 @@ interface Outcome {
   data: unknown;
 }
 
-// ── lenient helpers ────────────────────────────────────────────────────────────────────────────
-
-const isRec = (v: unknown): v is Record<string, unknown> =>
-  typeof v === 'object' && v !== null && !Array.isArray(v);
-
-/** A non-empty string cut to `max`, else null. `redact` for free text. */
-function txt(v: unknown, max: number, redact = false): string | null {
-  if (typeof v !== 'string') {
-    return null;
-  }
-
-  const t = (redact ? redactString(v) : v).trim();
-
-  return t ? t.slice(0, max) : null;
-}
-
-const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
-
-const bool = (v: unknown): boolean | null => (typeof v === 'boolean' ? v : null);
-
-const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-
-/** True for the error `sources.ts` throws on a non-2xx reply of 404. */
-export const isNotFound = (e: unknown): boolean => /HTTP 404\b/.test(errorMessage(e));
-
-// ── step 2: seat detail ────────────────────────────────────────────────────────────────────────
-
-/**
- * GET /api/rigs/:rigId/nodes/:logicalId, reduced to what the Agent page shows: the resolved spec,
- * startup files and actions, peers, recovery notes and installed resources. NOT forwarded: the
- * resume token and command (they hold the Claude session id), transcript path, recent events,
- * identity evidence and every other field.
- */
-export function parseSeatDetail(raw: unknown): SeatDetailData {
-  if (!isRec(raw)) {
-    throw new Error('node detail: expected a JSON object');
-  }
-
-  return SeatDetailDataSchema.parse({
-    spec: specOf(raw),
-    startupFiles: kept(list(raw.startupFiles), startupFileOf),
-    startupActions: kept(list(raw.startupActions), startupActionOf),
-    peers: kept(list(raw.peers), peerOf),
-    recoveryNotes: notesOf(raw),
-    installedResources: kept(list(raw.installedResources), resourceOf),
-  });
-}
-
-/** The record, or an empty one: a field that is not an object reads as "nothing there". */
-const recOf = (v: unknown) => (isRec(v) ? v : {});
-
-/** The rows `one` accepts, in order; a row it returns null for is skipped, never guessed. */
-const kept = <T>(rows: unknown[], one: (row: unknown) => T | null): T[] =>
-  rows.map(one).filter((r): r is T => r !== null);
-
-/** A text field from the node itself, else the same field of its compact spec. */
-const specText = (own: unknown, compact: unknown, max: number) =>
-  txt(own, max) ?? txt(compact, max);
-
-/** The resolved spec (name, version, profile, hash); null when the node names none of them. */
-function specOf(raw: unknown) {
-  const node = recOf(raw);
-  const compact = recOf(node.compactSpec);
-  const spec = {
-    name: specText(node.resolvedSpecName, compact.name, TEXT_LONG_MAX),
-    version: specText(node.resolvedSpecVersion, compact.version, TEXT_SHORT_MAX),
-    profile: specText(node.profile, compact.profile, TEXT_LONG_MAX),
-    hash: txt(node.resolvedSpecHash, TEXT_LONG_MAX),
-  };
-
-  return Object.values(spec).some((v) => v !== null) ? spec : null;
-}
-
-/** The recovery guidance: its summary then its notes, redacted, at most ten. */
-function notesOf(raw: unknown): string[] {
-  const guidance = recOf(recOf(raw).recoveryGuidance);
-
-  return [
-    txt(guidance.summary, TEXT_XXLONG_MAX, true),
-    ...list(guidance.notes).map((n) => txt(n, TEXT_XXLONG_MAX, true)),
-  ]
-    .filter((n): n is string => n !== null)
-    .slice(0, 10);
-}
-
-/** One startup file; a row with no path is not a file. */
-function startupFileOf(f: unknown) {
-  const row = recOf(f);
-  const path = txt(row.path, TEXT_XXXLONG_MAX);
-
-  return path
-    ? {
-        path,
-        deliveryHint: txt(row.deliveryHint, TEXT_SHORT_MAX),
-        required: bool(row.required),
-        appliesOn: list(row.appliesOn)
-          .map((a) => txt(a, TEXT_SHORT_MAX))
-          .filter((a): a is string => a !== null)
-          .slice(0, 10),
-      }
-    : null;
-}
-
-/** One startup action; a row with no type is not an action. Its text is redacted. */
-function startupActionOf(a: unknown) {
-  const row = recOf(a);
-  const type = txt(row.type, TEXT_SHORT_MAX);
-
-  return type
-    ? {
-        type,
-        phase: txt(row.phase, TEXT_SHORT_MAX),
-        text: txt(row.value, TEXT_XXXLONG_MAX, true),
-      }
-    : null;
-}
-
-/** One peer seat; a row with no logical id is not a peer. */
-function peerOf(p: unknown) {
-  const row = recOf(p);
-  const logicalId = txt(row.logicalId, TEXT_XLONG_MAX);
-
-  return logicalId
-    ? {
-        logicalId,
-        session: txt(row.canonicalSessionName, TEXT_XLONG_MAX),
-        runtime: txt(row.runtime, TEXT_SHORT_MAX),
-      }
-    : null;
-}
-
-/** One installed resource; a row with no id is not a resource. */
-function resourceOf(r: unknown) {
-  const row = recOf(r);
-  const id = txt(row.id, TEXT_XLONG_MAX);
-
-  return id ? { id, category: txt(row.category, TEXT_SMALL_MAX) } : null;
-}
-
-/** One GET that never throws: the value, or what went wrong (404 kept apart from the rest). */
-export type Settled<T = unknown> =
-  { ok: true; value: T } | { ok: false; notFound: boolean; error: string };
-
-export async function settle(get: DaemonGet, path: string): Promise<Settled> {
-  try {
-    return { ok: true, value: await get(path) };
-  } catch (e) {
-    return { ok: false, notFound: isNotFound(e), error: errorMessage(e) };
-  }
-}
-
 // ── step 3: library ────────────────────────────────────────────────────────────────────────────
 
 const FACT_TEXT_MAX = 200;
@@ -249,19 +106,6 @@ function pickFacts(r: Record<string, unknown>, keys: string[]): LibraryRow['fact
   }
 
   return out;
-}
-
-/** An array of rows, or a `{<wrapper>: [...]}` envelope: lenient about which. */
-function rowsOf(raw: unknown, wrapper: string): unknown[] {
-  if (Array.isArray(raw)) {
-    return raw;
-  }
-
-  if (isRec(raw) && Array.isArray(raw[wrapper])) {
-    return raw[wrapper] as unknown[];
-  }
-
-  throw new Error(`expected a JSON array (or {${wrapper}: [...]})`);
 }
 
 /** GET /api/specs/library: agent, rig and workflow specs. Rows without an id or a name are skipped. */
@@ -541,12 +385,6 @@ export function parseWorkflowInstances(raw: unknown): NonNullable<WorkflowsData[
     .slice(0, 300);
 }
 
-const countOrNull = (v: unknown): number | null => {
-  const n = num(v);
-
-  return n !== null && n >= 0 ? Math.round(n) : null;
-};
-
 /** GET /api/health: the findings list, its truncation, and per-source coverage. */
 export function parseHealthFindings(
   raw: unknown
@@ -679,155 +517,6 @@ function parseDaemonHealth(raw: unknown): HealthData['daemon'] {
     commit: txt(raw.commit, TEXT_SHORT_MAX),
     eventLoopLagP99Ms: lag !== null && lag >= 0 ? lag : null,
   };
-}
-
-/**
- * The settings the hub may carry: an exact-key allowlist (never a prefix), chosen from OpenRig 0.6.6's
- * `/api/config` as numbers, flags and short enums that say how the daemon behaves. A key a newer
- * OpenRig adds is withheld until it is listed here.
- */
-export const SETTINGS_ALLOW: readonly string[] = [
-  'context.system_world',
-  'daemon.host',
-  'daemon.port',
-  'feed.subscriptions.action_required',
-  'feed.subscriptions.approvals',
-  'feed.subscriptions.audit_log',
-  'feed.subscriptions.progress',
-  'feed.subscriptions.shipped',
-  'health.context_pressure.critical_percent',
-  'health.context_pressure.warning_percent',
-  'host.name',
-  'host.selected',
-  'launch.non_interruptive',
-  'onboarding.default_pack.enabled',
-  'policies.claude_compaction.enabled',
-  'policies.claude_compaction.threshold_percent',
-  'policies.idle_gate_qitem.active_wake_interval_seconds',
-  'policies.idle_gate_qitem.auto_register',
-  'policies.idle_gate_qitem.scan_interval_seconds',
-  'queue.pickup_stall_threshold_minutes',
-  'queue.stuck_sweep_interval_seconds',
-  'queue.stuck_sweep_unclaimed_age_minutes',
-  'queue.wake_retry_cap',
-  'queue.wake_retry_interval_seconds',
-  'queue.wake_swap_grace_seconds',
-  'queue.wake_unconfirmed_window_minutes',
-  'recovery.auto_drive_provider_prompts',
-  'retention.batch_size',
-  'retention.enabled',
-  'retention.transitions_days',
-  'retention.usage_samples_days',
-  'retention.watchdog_days',
-  'retention.watchdog_keep_per_job',
-  'runtime.codex.hooks_enabled',
-  'runtime.readiness_timeout_seconds',
-  'snapshots.periodic.enabled',
-  'snapshots.periodic.interval_seconds',
-  'snapshots.periodic.retention_keep',
-  'terminal.status_bar',
-  'transcripts.enabled',
-  'transcripts.lines',
-  'transcripts.poll_interval_seconds',
-  'ui.enabled',
-  'ui.preview.default_lines',
-  'ui.preview.max_pins',
-  'ui.preview.refresh_interval_seconds',
-  'ui.terminal.max_live_terminals',
-  'ui.timezone',
-];
-
-/**
- * A key whose NAME suggests a path, a file, free instructions, a URL or a session is withheld whatever
- * its value, even if it were ever added to the allowlist; so is anything secret-looking.
- */
-const WITHHELD_KEY =
-  /path|root|file|dir|instruction|inline|url|webhook|session|token|secret|key|password|credential|cookie|bearer|oauth|authoriz/i;
-/** A value that is a filesystem path (absolute, home-relative, Windows drive) or names a home folder. */
-const PATH_LIKE = /^(\/|~\/|[A-Za-z]:[\\/])|\/Users\/|\/home\//;
-
-const isAllowed = (key: string): boolean => SETTINGS_ALLOW.includes(key);
-
-/** A setting's text: the string itself, or JSON for a list or object; null for anything else. */
-const settingText = (v: unknown): string | null =>
-  typeof v === 'string' ? v : Array.isArray(v) || isRec(v) ? JSON.stringify(v) : null;
-
-/** A value that needs no text handling: null, a flag, or a finite number. */
-const isPlainSetting = (v: unknown): v is boolean | number | null =>
-  v === null || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v));
-
-/** What a setting value reads as, and whether a path was hidden to get there. Undefined: skip it. */
-function settingValue(v: unknown) {
-  const text = settingText(v);
-
-  if (text === null) {
-    return isPlainSetting(v) ? { value: v, hidden: false } : undefined;
-  }
-
-  return PATH_LIKE.test(text)
-    ? { value: SETTING_PATH_HIDDEN, hidden: true }
-    : { value: redactString(text).slice(0, TEXT_XLONG_MAX), hidden: false };
-}
-
-/** One allowlisted entry: its value (skipped when unreadable) and default, and how many paths were hidden. */
-function settingOf(entry: unknown) {
-  const e = recOf(entry);
-  const v = settingValue(e.value);
-
-  if (!v) {
-    return null;
-  }
-
-  const d = settingValue(e.defaultValue);
-
-  return {
-    setting: {
-      value: v.value,
-      source: txt(e.source, TEXT_TINY_MAX),
-      defaultValue: d?.value ?? null,
-    },
-    hidden: Number(v.hidden) + Number(d?.hidden ?? false),
-  };
-}
-
-/** Held back whatever its value: not on the list, secret-looking by name, or an oversize key. */
-const isWithheld = (key: string): boolean =>
-  !isAllowed(key) || WITHHELD_KEY.test(key) || key.length > TEXT_LONG_MAX;
-
-/** The `settings` object of the config reply; any other shape is an error. */
-function settingsIn(raw: unknown) {
-  if (!isRec(raw) || !isRec(raw.settings)) {
-    throw new Error('config: expected {settings}');
-  }
-
-  return raw.settings;
-}
-
-/** GET /api/config: the allowlisted settings, with path-like values replaced and text redacted. */
-export function parseSettings(raw: unknown): SettingsData {
-  const settings: SettingsData['settings'] = {};
-  let withheld = 0;
-  let pathsHidden = 0;
-
-  for (const [key, entry] of Object.entries(settingsIn(raw))) {
-    if (!isRec(entry)) {
-      continue;
-    }
-
-    if (isWithheld(key)) {
-      withheld += 1;
-      continue;
-    }
-
-    const read = settingOf(entry);
-
-    if (read) {
-      settings[key] = read.setting;
-      pathsHidden += read.hidden;
-    }
-  }
-
-  return { settings, withheld, pathsHidden };
 }
 
 // ── the reader ─────────────────────────────────────────────────────────────────────────────────

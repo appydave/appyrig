@@ -614,7 +614,10 @@ describe('v2 Settings', () => {
 
   it('the sample settings use only keys on the collector allowlist (SETTINGS_ALLOW)', () => {
     const src = readFileSync(
-      path.resolve(__dirname, '../../../collector/src/adapters/daemondata.ts'),
+      path.resolve(
+        __dirname,
+        '../../../collector/src/adapters/daemondata/parse/settingsAllowlist.ts'
+      ),
       'utf8'
     );
     const allow = src.slice(
