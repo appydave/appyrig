@@ -7,7 +7,7 @@
 import ts from 'typescript';
 
 const FILE_LEVEL = '(file)';
-const EXPRESSION_RULE = 'sonarjs/expression-complexity';
+const EXPRESSION_RULE = 'g06/expression-shape';
 
 function scriptKind(file) {
   if (file.endsWith('.tsx')) {

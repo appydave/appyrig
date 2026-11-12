@@ -32,15 +32,15 @@ const deeplyNested = `export function f(a: number, b: number, c: number, d: numb
 }
 `;
 
-// Five operands joined by four operators: expression 4 (limit 3).
-const longCondition = `export const ok = (a: boolean, b: boolean, c: boolean, d: boolean, e: boolean) =>
-  a && b && c && d && e;
+// A ternary ladder inside an ||: the shape of sample 9 in David's expression ruling.
+const nestedTernary = `export const order = (n: number, x: string, y: string) =>
+  n || (x < y ? -1 : x > y ? 1 : 0);
 `;
 
 const BAD: Array<[string, string, string]> = [
   ['sonarjs/cyclomatic-complexity', 'function with 9 branches', manyBranches],
   ['sonarjs/cognitive-complexity', 'function with 5 nested ifs', deeplyNested],
-  ['sonarjs/expression-complexity', 'condition with 4 operators', longCondition],
+  ['g06/expression-shape', 'ternary ladder inside ||', nestedTernary],
 ];
 
 async function lint(code: string, name: string, ext = 'ts'): Promise<Linter.LintMessage[]> {
@@ -77,6 +77,14 @@ describe('G06 complexity limits', () => {
     expect(found?.message).toBe(
       'Function has a complexity of 9 which is greater than 6 authorized.'
     );
+  });
+
+  it('accepts a long flat && chain: a run of one operator counts as one', async () => {
+    const flat = `export const ok = (v: { a: boolean; b: boolean; c: boolean; d: boolean; e: boolean }) =>
+  v.a && v.b && v.c && v.d && v.e;
+`;
+
+    expect(await ruleIds(flat, 'g06-flat-chain')).toEqual([]);
   });
 
   it('accepts code at the limits', async () => {

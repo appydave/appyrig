@@ -34,7 +34,7 @@ const MANY_PARAMS = 'function many(a, b, c, d) {\n  return a;\n}\n';
 const NESTED =
   'function nested(a, b, c, d) {\n  if (a) { if (b) { if (c) { if (d) { run(); } } } }\n}\n';
 const BRANCHY = `function branchy(x) {\n${[1, 2, 3, 4, 5, 6, 7].map((n) => `  if (x === ${n}) { return ${n}; }`).join('\n')}\n}\n`;
-const WIDE = 'const wide = a && b && c && d && e;\n';
+const WIDE = 'const wide = x ?? (a ? b : c ? d : e);\n';
 
 const keysOf = async (code: string, ruleId: string) => {
   const found = (await lint(code)).filter((m) => m.ruleId === ruleId);
@@ -48,7 +48,7 @@ describe('the score in each rule message (pinned to the installed ESLint and Son
     ['max-params', MANY_PARAMS, 4],
     ['sonarjs/cognitive-complexity', NESTED, 10],
     ['sonarjs/cyclomatic-complexity', BRANCHY, 8],
-    ['sonarjs/expression-complexity', WIDE, 4],
+    ['g06/expression-shape', WIDE, 3],
   ])('%s reads as its score', async (ruleId, code, score) => {
     const message = (await lint(code)).find((m) => m.ruleId === ruleId);
 
@@ -86,9 +86,9 @@ describe('the key of a finding', () => {
   });
 
   it('keys an expression under the function around it', async () => {
-    const code = 'function check(a, b, c, d, e) {\n  return a && b && c && d && e;\n}\n';
+    const code = 'function check(x, a, b, c) {\n  return x || (a ? b : c);\n}\n';
 
-    expect(await keysOf(code, 'sonarjs/expression-complexity')).toEqual(['check>expr']);
+    expect(await keysOf(code, 'g06/expression-shape')).toEqual(['check>expr']);
   });
 });
 

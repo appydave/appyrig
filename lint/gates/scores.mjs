@@ -49,9 +49,9 @@ const RULES = {
     score: /complexity of (\d+) which/,
     advice: 'Move branches into named functions, or replace them with a lookup table.',
   },
-  'sonarjs/expression-complexity': {
-    score: /operators \((\d+)\)/,
-    advice: 'Name the sub-conditions as booleans.',
+  'g06/expression-shape': {
+    score: /\((\d+) operators\)/,
+    advice: 'Name the inner ternary or the bracketed group as a const or a small helper.',
   },
 };
 
