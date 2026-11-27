@@ -12,7 +12,6 @@ export default defineConfig({
     '.openrig/**',
     '.agents/**',
     '.codex/**',
-    'api/**',
     'scripts/provenance/out/**',
     'server/src/core/vendor/**',
     'test/fixtures/**',

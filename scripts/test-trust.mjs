@@ -18,13 +18,7 @@ const root = resolve(rootArg > 0 ? process.argv[rootArg + 1] : join(import.meta.
 const DIRS = ['client/src', 'server/src', 'collector/src', 'shared/src', 'e2e', 'test'];
 // Read by regex for docs/gates.md (scripts/gates-doc): keep this one plain literal list, nothing
 // appended with .concat or spread, or the extra entries are left out of the doc without an error.
-const SKIP_DIRS = new Set([
-  'node_modules',
-  'dist',
-  'fixtures',
-  'test-results',
-  'playwright-report',
-]);
+const SKIP_DIRS = new Set(['node_modules', 'dist', 'fixtures', 'test-results']);
 const TEST_FILE = /\.(test|spec)\.(ts|tsx|mjs|js)$/;
 
 const RULES = [

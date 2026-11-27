@@ -7,7 +7,7 @@ Reasons live in `scripts/gates-doc/reasons.mjs`. A reason starting "reason unkno
 
 Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.mjs ARCHLINT_EXCLUDES and SKIPPED_FILE, scripts/arch-strings.mjs SKIP, ALLOWED and COPY_ALLOWED, lint/root-imports-codemod.mjs NOT_SCANNED; also not listed: the inline disables in source (eslint-disable, v8 and istanbul ignore, oxlint-disable; 30 when counted on 2026-11-09) and the suppression baselines (eslint-suppressions.json, stylelint-suppressions.json, and the scores, oxlint, coupling and folder baselines).
 
-128 exemptions, 47 with reason unknown.
+120 exemptions, 0 with reason unknown.
 
 | Source | Where | Kind | Path or rule | Reason |
 | --- | --- | --- | --- | --- |
@@ -15,174 +15,176 @@ Not listed here: scripts/oxlint-gate.mjs NOT_SCANNED, lint/gates/archlint-scan.m
 | eslint | - | ignore | `.claude/**` | R1 |
 | eslint | - | ignore | `.agents/**` | R1 |
 | eslint | - | ignore | `.codex/**` | R1 |
-| eslint | - | ignore | `test/fixtures/**` | R2 |
-| eslint | - | ignore | `server/src/core/vendor/**` | R3 |
-| eslint | - | ignore | `test/root/fixtures/**` | R4 |
-| eslint | - | ignore | `**/dist/**` | R5 |
-| eslint | - | ignore | `**/build/**` | R5 |
-| eslint | - | ignore | `**/node_modules/**` | R5 |
-| eslint | - | ignore | `**/coverage/**` | R5 |
-| eslint | - | off no-undef | `**/*.{js,mjs,cjs,ts,tsx}` | R6 |
-| eslint | - | off no-unused-vars | `**/*.{js,mjs,cjs,ts,tsx}` | R7 |
-| eslint | - | off no-array-constructor | `**/*.{js,mjs,cjs,ts,tsx}` | R8 |
-| eslint | - | off no-unused-expressions | `**/*.{js,mjs,cjs,ts,tsx}` | R8 |
+| eslint | - | ignore | `server/src/core/vendor/**` | R2 |
+| eslint | - | ignore | `test/root/fixtures/**` | R3 |
+| eslint | - | ignore | `**/dist/**` | R4 |
+| eslint | - | ignore | `**/build/**` | R4 |
+| eslint | - | ignore | `**/node_modules/**` | R4 |
+| eslint | - | ignore | `**/coverage/**` | R4 |
+| eslint | - | off no-undef | `**/*.{js,mjs,cjs,ts,tsx}` | R5 |
+| eslint | - | off no-unused-vars | `**/*.{js,mjs,cjs,ts,tsx}` | R6 |
+| eslint | - | off no-array-constructor | `**/*.{js,mjs,cjs,ts,tsx}` | R7 |
+| eslint | - | off no-unused-expressions | `**/*.{js,mjs,cjs,ts,tsx}` | R7 |
 | eslint | - | off no-console | `**/*.{js,mjs,cjs,ts,tsx}` | R8 |
-| eslint | - | off react/no-unsafe | `**/*.{ts,tsx}` | R8 |
-| eslint | - | off react/prop-types | `**/*.{ts,tsx}` | R8 |
-| eslint | - | off react/react-in-jsx-scope | `**/*.{ts,tsx}` | R8 |
-| eslint | - | off max-lines-per-function | `tests` | R9 |
-| knip | . | ignore | `test/fixtures/**` | R10 |
-| knip | . | ignore | `test/root/fixtures/**` | R11 |
-| knip | client | project | `!src/**/*.test.{ts,tsx}!` | R12 |
-| knip | client | project | `!src/**/test/**!` | R12 |
-| knip | client | project | `!src/**/*test-kit*!` | R12 |
-| knip | server | ignore | `src/core/vendor/**` | R13 |
-| knip | server | project | `!src/**/*.test.{ts,tsx}!` | R12 |
-| knip | server | project | `!src/**/test/**!` | R12 |
-| knip | server | project | `!src/**/*test-kit*!` | R12 |
-| knip | collector | project | `!src/**/*.test.{ts,tsx}!` | R12 |
-| knip | collector | project | `!src/**/test/**!` | R12 |
-| knip | collector | project | `!src/**/*test-kit*!` | R12 |
-| knip | shared | project | `!src/**/*.test.{ts,tsx}!` | R12 |
-| knip | shared | project | `!src/**/test/**!` | R12 |
-| knip | shared | project | `!src/**/*test-kit*!` | R12 |
-| jscpd | - | ignore | `**/node_modules/**` | R5 |
-| jscpd | - | ignore | `**/dist/**` | R5 |
-| jscpd | - | ignore | `**/.git/**` | R14 |
-| jscpd | - | ignore | `**/.mochaccino/**` | R14 |
-| jscpd | - | ignore | `**/.claude/**` | R14 |
-| jscpd | - | ignore | `**/package-lock.json` | R14 |
-| jscpd | - | ignore | `**/playwright-report/**` | R14 |
-| jscpd | - | ignore | `**/test-results/**` | R5 |
-| jscpd | - | ignore | `**/coverage/**` | R5 |
-| jscpd | - | ignore | `**/.quality-results/**` | R5 |
-| jscpd | - | ignore | `**/.jscpd/**` | R14 |
-| jscpd | - | ignore | `.dependency-cruiser-known-*.json` | R14 |
-| jscpd | - | ignore | `scores-baseline.json` | R15 |
-| jscpd | - | ignore | `**/*.css` | R14 |
-| jscpd | - | ignore | `api/**` | R14 |
-| jscpd | - | ignore | `test/fixtures/**` | R14 |
-| jscpd | - | ignore | `test/root/fixtures/**` | R14 |
-| jscpd | - | ignore | `client/src/domain/learn/atlas.json` | R16 |
-| jscpd | - | ignore | `client/src/domain/learn/rig-commands.json` | R17 |
-| jscpd | - | ignore | `client/src/domain/learn/commands.ts` | R18 |
-| jscpd | - | ignore | `client/src/domain/learn/glossary.ts` | R18 |
-| jscpd | - | ignore | `client/src/domain/learn/lessons.ts` | R18 |
-| jscpd | - | ignore | `client/src/kit/v1ArchiveManifest.ts` | R18 |
-| tsconfig | tsconfig.e2e.json | exclude | `test/root/fixtures` | R19 |
-| tsconfig | client/tsconfig.json | exclude | `node_modules` | R5 |
-| tsconfig | server/tsconfig.json | exclude | `node_modules` | R5 |
-| tsconfig | server/tsconfig.json | exclude | `dist` | R5 |
-| tsconfig | collector/tsconfig.json | exclude | `node_modules` | R5 |
-| tsconfig | collector/tsconfig.json | exclude | `dist` | R5 |
-| tsconfig | collector/tsconfig.build.json | exclude | `node_modules` | R5 |
-| tsconfig | collector/tsconfig.build.json | exclude | `dist` | R5 |
-| tsconfig | collector/tsconfig.build.json | exclude | `src/**/*.test.ts` | R20 |
-| tsconfig | collector/tsconfig.build.json | exclude | `src/adapters/fixtureSources.ts` | R21 |
-| tsconfig | shared/tsconfig.json | exclude | `node_modules` | R5 |
-| tsconfig | shared/tsconfig.json | exclude | `dist` | R5 |
-| vitest | client/vitest.config.ts | coverage exclude | `src/**/*.test.{ts,tsx}` | R22 |
-| vitest | client/vitest.config.ts | coverage exclude | `src/test/**` | R22 |
-| vitest | server/vitest.config.ts | coverage exclude | `src/**/*.test.{ts,tsx}` | R22 |
-| vitest | server/vitest.config.ts | coverage exclude | `src/test/**` | R22 |
-| vitest | collector/vitest.config.ts | coverage exclude | `src/**/*.test.ts` | R22 |
-| prettier | - | ignore | `dist` | R5 |
-| prettier | - | ignore | `build` | R5 |
-| prettier | - | ignore | `node_modules` | R5 |
-| prettier | - | ignore | `coverage` | R5 |
-| prettier | - | ignore | `package-lock.json` | R23 |
-| prettier | - | ignore | `test-results` | R5 |
-| prettier | - | ignore | `playwright-report` | R23 |
-| prettier | - | ignore | `.openrig` | R24 |
-| prettier | - | ignore | `.appynet` | R25 |
-| prettier | - | ignore | `.claude` | R24 |
-| prettier | - | ignore | `.agents` | R24 |
-| prettier | - | ignore | `.codex` | R24 |
-| prettier | - | ignore | `test/fixtures` | R26 |
-| prettier | - | ignore | `CLAUDE.local.md` | R27 |
-| prettier | - | ignore | `.mcp.json` | R28 |
-| prettier | - | ignore | `server/src/core/vendor` | R29 |
-| prettier | - | ignore | `/api` | R30 |
-| prettier | - | ignore | `test/root/fixtures` | R31 |
-| prettier | - | ignore | `scripts/provenance/out` | R32 |
-| prettier | - | ignore | `eslint-suppressions.json` | R33 |
-| prettier | - | ignore | `stylelint-suppressions.json` | R34 |
-| prettier | - | ignore | `docs/gates.md` | R35 |
-| oxlint | - | ignore | `**/dist/**` | R5 |
-| oxlint | - | ignore | `**/node_modules/**` | R5 |
-| oxlint | - | ignore | `.claude/**` | R36 |
-| oxlint | - | ignore | `.openrig/**` | R36 |
-| oxlint | - | ignore | `.agents/**` | R36 |
-| oxlint | - | ignore | `.codex/**` | R36 |
-| oxlint | - | ignore | `api/**` | R36 |
-| oxlint | - | ignore | `scripts/provenance/out/**` | R37 |
-| oxlint | - | ignore | `server/src/core/vendor/**` | R37 |
-| oxlint | - | ignore | `test/fixtures/**` | R37 |
-| oxlint | - | ignore | `test/root/fixtures/**` | R37 |
-| oxlint | - | off anti-slop/require-safety-comment-for-type-assertion | `**/*.test.{ts,tsx,mjs,js}, **/*.spec.{ts,tsx,mjs,js}, e2e/**, test/**, **/test/**, **/*test-kit*` | R38 |
-| oxlint | - | off anti-slop/no-unknown-parameters | `collector/src/adapters/**` | R39 |
-| depcruise | - | pathNot | `\.test\.tsx?$` | R40 |
-| depcruise | - | pathNot | `\.test\.ts$` | R41 |
-| depcruise | - | pathNot | `\.(test\|spec)\.[cm]?[jt]sx?$` | R42 |
-| depcruise | - | pathNot | `(^\|/)test/` | R42 |
-| depcruise | - | pathNot | `test-kit` | R42 |
-| depcruise | - | doNotFollow | `node_modules` | R5 |
-| depcruise | - | exclude | `^(client\|server\|collector\|shared)/dist/` | R5 |
-| depcruise-folders | - | doNotFollow | `node_modules` | R5 |
-| depcruise-folders | - | exclude | `(node_modules\|dist)\|\.(test\|spec)\.tsx?$` | R43 |
-| folder-limits | - | not scanned | `test/fixtures/` | R37 |
-| folder-limits | - | not scanned | `test/root/fixtures/` | R37 |
-| folder-limits | - | not scanned | `server/src/core/vendor/` | R37 |
-| folder-limits | - | not scanned | `scripts/provenance/out/` | R37 |
-| test-trust | - | skip dir | `node_modules` | R5 |
-| test-trust | - | skip dir | `dist` | R5 |
-| test-trust | - | skip dir | `fixtures` | R44 |
-| test-trust | - | skip dir | `test-results` | R5 |
-| test-trust | - | skip dir | `playwright-report` | R44 |
+| eslint | - | off react/no-unsafe | `**/*.{ts,tsx}` | R9 |
+| eslint | - | off react/prop-types | `**/*.{ts,tsx}` | R10 |
+| eslint | - | off react/react-in-jsx-scope | `**/*.{ts,tsx}` | R11 |
+| eslint | - | off max-lines-per-function | `tests` | R12 |
+| knip | . | ignore | `test/root/fixtures/**` | R13 |
+| knip | client | project | `!src/**/*.test.{ts,tsx}!` | R14 |
+| knip | client | project | `!src/**/test/**!` | R14 |
+| knip | client | project | `!src/**/*test-kit*!` | R14 |
+| knip | server | ignore | `src/core/vendor/**` | R15 |
+| knip | server | project | `!src/**/*.test.{ts,tsx}!` | R14 |
+| knip | server | project | `!src/**/test/**!` | R14 |
+| knip | server | project | `!src/**/*test-kit*!` | R14 |
+| knip | collector | project | `!src/**/*.test.{ts,tsx}!` | R14 |
+| knip | collector | project | `!src/**/test/**!` | R14 |
+| knip | collector | project | `!src/**/*test-kit*!` | R14 |
+| knip | shared | project | `!src/**/*.test.{ts,tsx}!` | R14 |
+| knip | shared | project | `!src/**/test/**!` | R14 |
+| knip | shared | project | `!src/**/*test-kit*!` | R14 |
+| jscpd | - | ignore | `**/node_modules/**` | R4 |
+| jscpd | - | ignore | `**/dist/**` | R4 |
+| jscpd | - | ignore | `**/.git/**` | R16 |
+| jscpd | - | ignore | `**/.mochaccino/**` | R17 |
+| jscpd | - | ignore | `**/.claude/**` | R18 |
+| jscpd | - | ignore | `**/package-lock.json` | R19 |
+| jscpd | - | ignore | `**/test-results/**` | R4 |
+| jscpd | - | ignore | `**/coverage/**` | R4 |
+| jscpd | - | ignore | `**/.quality-results/**` | R4 |
+| jscpd | - | ignore | `**/.jscpd/**` | R20 |
+| jscpd | - | ignore | `.dependency-cruiser-known-*.json` | R21 |
+| jscpd | - | ignore | `scores-baseline.json` | R22 |
+| jscpd | - | ignore | `**/*.css` | R23 |
+| jscpd | - | ignore | `api/**` | R24 |
+| jscpd | - | ignore | `test/fixtures/**` | R25 |
+| jscpd | - | ignore | `test/root/fixtures/**` | R25 |
+| jscpd | - | ignore | `client/src/domain/learn/atlas.json` | R26 |
+| jscpd | - | ignore | `client/src/domain/learn/rig-commands.json` | R27 |
+| jscpd | - | ignore | `client/src/domain/learn/commands.ts` | R28 |
+| jscpd | - | ignore | `client/src/domain/learn/glossary.ts` | R28 |
+| jscpd | - | ignore | `client/src/domain/learn/lessons.ts` | R28 |
+| jscpd | - | ignore | `client/src/kit/v1ArchiveManifest.ts` | R28 |
+| tsconfig | tsconfig.e2e.json | exclude | `test/root/fixtures` | R29 |
+| tsconfig | client/tsconfig.json | exclude | `node_modules` | R4 |
+| tsconfig | server/tsconfig.json | exclude | `node_modules` | R4 |
+| tsconfig | server/tsconfig.json | exclude | `dist` | R4 |
+| tsconfig | collector/tsconfig.json | exclude | `node_modules` | R4 |
+| tsconfig | collector/tsconfig.json | exclude | `dist` | R4 |
+| tsconfig | collector/tsconfig.build.json | exclude | `node_modules` | R4 |
+| tsconfig | collector/tsconfig.build.json | exclude | `dist` | R4 |
+| tsconfig | collector/tsconfig.build.json | exclude | `src/**/*.test.ts` | R30 |
+| tsconfig | collector/tsconfig.build.json | exclude | `src/adapters/fixtureSources.ts` | R31 |
+| tsconfig | collector/tsconfig.build.json | exclude | `src/snapshotCases.ts` | R31 |
+| tsconfig | shared/tsconfig.json | exclude | `node_modules` | R4 |
+| tsconfig | shared/tsconfig.json | exclude | `dist` | R4 |
+| vitest | client/vitest.config.ts | coverage exclude | `src/test/**` | R32 |
+| vitest | server/vitest.config.ts | coverage exclude | `src/test/**` | R32 |
+| prettier | - | ignore | `dist` | R4 |
+| prettier | - | ignore | `build` | R4 |
+| prettier | - | ignore | `node_modules` | R4 |
+| prettier | - | ignore | `coverage` | R4 |
+| prettier | - | ignore | `package-lock.json` | R33 |
+| prettier | - | ignore | `test-results` | R4 |
+| prettier | - | ignore | `.openrig` | R34 |
+| prettier | - | ignore | `.appynet` | R35 |
+| prettier | - | ignore | `.claude` | R34 |
+| prettier | - | ignore | `.agents` | R34 |
+| prettier | - | ignore | `.codex` | R34 |
+| prettier | - | ignore | `test/fixtures` | R36 |
+| prettier | - | ignore | `CLAUDE.local.md` | R37 |
+| prettier | - | ignore | `.mcp.json` | R38 |
+| prettier | - | ignore | `server/src/core/vendor` | R39 |
+| prettier | - | ignore | `/api` | R40 |
+| prettier | - | ignore | `test/root/fixtures` | R41 |
+| prettier | - | ignore | `scripts/provenance/out` | R42 |
+| prettier | - | ignore | `eslint-suppressions.json` | R43 |
+| prettier | - | ignore | `stylelint-suppressions.json` | R44 |
+| prettier | - | ignore | `docs/gates.md` | R45 |
+| oxlint | - | ignore | `**/dist/**` | R4 |
+| oxlint | - | ignore | `**/node_modules/**` | R4 |
+| oxlint | - | ignore | `.claude/**` | R46 |
+| oxlint | - | ignore | `.openrig/**` | R46 |
+| oxlint | - | ignore | `.agents/**` | R46 |
+| oxlint | - | ignore | `.codex/**` | R46 |
+| oxlint | - | ignore | `scripts/provenance/out/**` | R47 |
+| oxlint | - | ignore | `server/src/core/vendor/**` | R47 |
+| oxlint | - | ignore | `test/fixtures/**` | R47 |
+| oxlint | - | ignore | `test/root/fixtures/**` | R47 |
+| oxlint | - | off anti-slop/require-safety-comment-for-type-assertion | `**/*.test.{ts,tsx,mjs,js}, **/*.spec.{ts,tsx,mjs,js}, e2e/**, test/**, **/test/**, **/*test-kit*` | R48 |
+| oxlint | - | off anti-slop/no-unknown-parameters | `collector/src/adapters/**` | R49 |
+| depcruise | - | pathNot | `\.test\.tsx?$` | R50 |
+| depcruise | - | pathNot | `\.test\.ts$` | R51 |
+| depcruise | - | pathNot | `\.(test\|spec)\.[cm]?[jt]sx?$` | R52 |
+| depcruise | - | pathNot | `(^\|/)test/` | R52 |
+| depcruise | - | pathNot | `test-kit` | R52 |
+| depcruise | - | doNotFollow | `node_modules` | R4 |
+| depcruise | - | exclude | `^(client\|server\|collector\|shared)/dist/` | R4 |
+| depcruise-folders | - | doNotFollow | `node_modules` | R4 |
+| depcruise-folders | - | exclude | `(node_modules\|dist)\|\.(test\|spec)\.tsx?$` | R53 |
+| folder-limits | - | not scanned | `test/fixtures/` | R47 |
+| folder-limits | - | not scanned | `test/root/fixtures/` | R47 |
+| folder-limits | - | not scanned | `server/src/core/vendor/` | R47 |
+| folder-limits | - | not scanned | `scripts/provenance/out/` | R47 |
+| test-trust | - | skip dir | `node_modules` | R4 |
+| test-trust | - | skip dir | `dist` | R4 |
+| test-trust | - | skip dir | `fixtures` | R54 |
+| test-trust | - | skip dir | `test-results` | R4 |
 
 ## Reasons
 
 - **R1**: OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours.
-- **R2**: reason unknown: added in 186c751 (P0b, which created these snapshot fixtures), message gives none; it sits among the OpenRig files in eslint.config.js, whose comment does not cover it.
-- **R3**: Keeps upstream bytes (server/src/core/vendor/LICENSE), so it is not reformatted or linted.
-- **R4**: OpenRig files copied in for the provenance check (Apache-2.0) keep upstream bytes.
-- **R5**: Git-ignored, so not source (git check-ignore confirms it against the repo .gitignore).
-- **R6**: TypeScript handles this (comment in the shared config).
-- **R7**: The TypeScript-aware version is used instead (comment in the shared config).
-- **R8**: reason unknown: set by @appydave/appystack-config/eslint/react with no reason given; ask the AppyStack template owner
-- **R9**: A describe() callback is a list of tests, not a long function (comment in eslint.config.js). max-lines still applies to test files.
-- **R10**: reason unknown: in the first knip.json (G11, 5c5f28a), whose message gives none.
-- **R11**: reason unknown: in the first knip.json (G11, 5c5f28a), whose message gives none; eslint treats the same folder as upstream bytes.
-- **R12**: Tests, e2e and test support are not production code, so knip does not count them as the project.
-- **R13**: Vendored fli-core files keep upstream bytes (added in G11, 5c5f28a).
-- **R14**: reason unknown: added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<pattern>" -- .jscpd.json
-- **R15**: A data file the scores gate writes (B04, e9206c5: ".jscpd.json ignores the data file").
-- **R16**: Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-atlas.mjs.
-- **R17**: Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-rig-commands.mjs.
-- **R18**: reason unknown: a content or data table (see its head); added with the G08 duplicate profiles (16d1c5a), no reason recorded. Find out: git log -S"<file>" -- .jscpd.json
-- **R19**: reason unknown: the exclude arrived with the first tsconfig.e2e.json (G00b, 48900cb), whose message gives none; the folder holds OpenRig spec files copied as-is.
-- **R20**: reason unknown: the build config leaves tests out of dist; no comment says so. Find out: git log -S"test.ts" -- collector/tsconfig.build.json
-- **R21**: reason unknown: no comment. Find out: git log -S"fixtureSources" -- collector/tsconfig.build.json
-- **R22**: reason unknown: no comment in the vitest config (the server one is from the scaffold, 5ef74dd). Find out: git log -S"exclude" -- <the config>
-- **R23**: reason unknown: in the first scaffold commit (5ef74dd, create-appystack), whose message gives none. Find out: git show 5ef74dd -- .prettierignore
-- **R24**: OpenRig drops its own runtime files into every seat folder (git-excluded); added in 186c751 with no reason in its message.
-- **R25**: An agent run folder inside a worktree (briefs and screenshots), git-ignored and not app source.
-- **R26**: reason unknown: added in 186c751 (P0b, the snapshot fixtures), message gives none. Find out: git show 186c751 -- .prettierignore
-- **R27**: reason unknown: added in 186c751, message gives none (the file is OpenRig-written and git-excluded). Find out: git show 186c751 -- .prettierignore
-- **R28**: OpenRig writes this file (dev-hub): D6, commit 988b51b.
-- **R29**: Vendored fli-core files keep upstream bytes; "excluded from prettier/eslint" in eb1a7a2 and the comment in .prettierignore.
-- **R30**: reason unknown: anchored to the repo root in fc51624 ("r1 collector P4 L1"), which gives no reason. Find out: git show fc51624
-- **R31**: OpenRig spec files copied as-is (Apache-2.0) so the schema test parses the real bytes (comment in .prettierignore, b07fa02).
-- **R32**: Provenance check output (comment in .prettierignore, 79e0d1f).
-- **R33**: ESLint rewrites this file itself (--prune-suppressions) in its own format (comment in .prettierignore).
-- **R34**: Stylelint writes this file itself (--suppress) in its own format (comment in .prettierignore).
-- **R35**: Generated by npm run docs:gates; prettier would pad the table and the pin test would then fail (List 7a-1, #85).
-- **R36**: reason unknown: in the first oxlint.config.ts (G02, 37d255c), whose message and comments give none.
-- **R37**: Vendored or recorded files (comment in lint/folder-limits.mjs, G09 4b1b721: "the same ones oxlint.config.ts ignores").
-- **R38**: Production code only: tests, e2e, test support and recorded fixtures are not counted (comment in oxlint.config.ts).
-- **R39**: The I/O boundary: adapters turn daemon JSON into domain types, so taking `unknown` is their job (comment in oxlint.config.ts).
-- **R40**: reason unknown: added to the client layer rules in W4 (7034ac9), whose message gives none.
-- **R41**: reason unknown: added with the collector adapters rule in G12 (211f10f), whose message gives none.
-- **R42**: Production code is src/ minus tests and test support (header comment in .dependency-cruiser.cjs, G12 211f10f).
-- **R43**: reason unknown: in the first .dependency-cruiser-folders.cjs (G11, 5c5f28a), whose message gives none. node_modules and dist are git-ignored; the test-file part has no comment.
-- **R44**: reason unknown: in the first test-trust.mjs (G00b, 48900cb), whose message and comments give none.
+- **R2**: Keeps upstream bytes (server/src/core/vendor/LICENSE), so it is not reformatted or linted.
+- **R3**: OpenRig files copied in for the provenance check (Apache-2.0) keep upstream bytes.
+- **R4**: Git-ignored, so not source (git check-ignore confirms it against the repo .gitignore).
+- **R5**: TypeScript handles this (comment in the shared config).
+- **R6**: The TypeScript-aware version is used instead (comment in the shared config).
+- **R7**: Set by @appydave/appystack-config: typescript-eslint recommended turns the core rule off and its TS-aware @typescript-eslint/ version on.
+- **R8**: Set by @appydave/appystack-config; a no-op here: nothing in this config turns no-console on, and the CLIs, scripts and server print to the console.
+- **R9**: Set by @appydave/appystack-config; eslint-plugin-react recommended leaves it off too, and there is no UNSAFE_ lifecycle code here.
+- **R10**: Set by @appydave/appystack-config: TypeScript types the props.
+- **R11**: Set by @appydave/appystack-config: the automatic JSX runtime (jsx: react-jsx, React 19) needs no React import.
+- **R12**: A describe() callback is a list of tests, not a long function (comment in eslint.config.js). max-lines still applies to test files.
+- **R13**: Upstream OpenRig sources (Apache-2.0, see PINNED.md) read as files by the provenance test, never imported, so knip would call them unused.
+- **R14**: Tests, e2e and test support are not production code, so knip does not count them as the project.
+- **R15**: Vendored fli-core files keep upstream bytes (added in G11, 5c5f28a).
+- **R16**: Git's object store, not source.
+- **R17**: Design mockups (docs/duplicate-detection.md, Scope).
+- **R18**: Agent skills from the AppyStack scaffold (docs/duplicate-detection.md, Scope).
+- **R19**: Lockfile written by npm, not hand-written code.
+- **R20**: jscpd's own baselines, which quote the clones they record.
+- **R21**: Generated cycle baselines (npm run arch:baseline), added with them in G11 (5c5f28a).
+- **R22**: A data file the scores gate writes (B04, e9206c5: ".jscpd.json ignores the data file").
+- **R23**: "The Stylelint ratchet owns styles; repeated declaration lists are not shareable code" (docs/duplicate-detection.md, Scope).
+- **R24**: Generated by npm run api:gen (docs/duplicate-detection.md, Scope).
+- **R25**: Captured OpenRig output and vendored spec files: data, not an implementation to share (docs/duplicate-detection.md, Scope).
+- **R26**: Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-atlas.mjs.
+- **R27**: Generated data, not hand-written code: it would be reported as a clone of itself. Written by scripts/sync-rig-commands.mjs.
+- **R28**: A content table with no logic: "literal normalization flags every table as a clone" (docs/duplicate-detection.md, Scope).
+- **R29**: Partial upstream OpenRig sources whose imports are not copied in, so typechecking them would fail.
+- **R30**: Keeps tests out of the built collector that launchd runs.
+- **R31**: Test-only fixture loading (used by tests and scripts/update-snapshots.ts), not shipped in the built collector.
+- **R32**: Test support code (setup, helpers); coverage measures production code.
+- **R33**: npm writes the lockfile in its own format.
+- **R34**: OpenRig drops its own runtime files into every seat folder (git-excluded); added in 186c751 with no reason in its message.
+- **R35**: An agent run folder inside a worktree (briefs and screenshots), git-ignored and not app source.
+- **R36**: Recorded, redacted OpenRig captures (test/fixtures/README.md), kept as captured; D6 in docs/contract.md.
+- **R37**: OpenRig writes it into seat folders (D6 in docs/contract.md); it is excluded only in .git/info/exclude, which prettier does not read.
+- **R38**: OpenRig writes this file (dev-hub): D6, commit 988b51b.
+- **R39**: Vendored fli-core files keep upstream bytes; "excluded from prettier/eslint" in eb1a7a2 and the comment in .prettierignore.
+- **R40**: Generated by npm run api:gen and compared byte-for-byte by npm run api:check; anchored to the root so no other folder named api is skipped.
+- **R41**: OpenRig spec files copied as-is (Apache-2.0) so the schema test parses the real bytes (comment in .prettierignore, b07fa02).
+- **R42**: Provenance check output (comment in .prettierignore, 79e0d1f).
+- **R43**: ESLint rewrites this file itself (--prune-suppressions) in its own format (comment in .prettierignore).
+- **R44**: Stylelint writes this file itself (--suppress) in its own format (comment in .prettierignore).
+- **R45**: Generated by npm run docs:gates; prettier would pad the table and the pin test would then fail (List 7a-1, #85).
+- **R46**: Agent-tooling and OpenRig runtime folders, not our code ("agent-tooling files", comment in scripts/oxlint-gate.mjs).
+- **R47**: Vendored or recorded files (comment in lint/folder-limits.mjs, G09 4b1b721: "the same ones oxlint.config.ts ignores").
+- **R48**: Production code only: tests, e2e, test support and recorded fixtures are not counted (comment in oxlint.config.ts).
+- **R49**: The I/O boundary: adapters turn daemon JSON into domain types, so taking `unknown` is their job (comment in oxlint.config.ts).
+- **R50**: Layer rules guard production code; a test renders the app above the layer it tests.
+- **R51**: The layer rule guards production code; an adapter test may import above the adapters.
+- **R52**: Production code is src/ minus tests and test support (header comment in .dependency-cruiser.cjs, G12 211f10f).
+- **R53**: Folder cycles count only code that runs, so no tests (header comment in .dependency-cruiser-folders.cjs); node_modules and dist are git-ignored.
+- **R54**: Fixture folders hold recorded or upstream files, not our tests (pinned in test/root/test-trust.test.ts).

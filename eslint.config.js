@@ -7,7 +7,7 @@ import { limitRules, sizeSelectors } from './lint/limits.js';
 import { spacingRules } from './lint/spacing.js';
 
 // OpenRig drops its own runtime files into every seat folder (git-excluded); they are not ours.
-const openRigFiles = ['.openrig/**', '.claude/**', '.agents/**', '.codex/**', 'test/fixtures/**'];
+const openRigFiles = ['.openrig/**', '.claude/**', '.agents/**', '.codex/**'];
 
 // Vendored fli-core files keep upstream bytes (server/src/core/vendor/LICENSE). So do the OpenRig
 // files copied into test/root/fixtures for the provenance check (Apache-2.0).

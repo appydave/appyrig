@@ -56,7 +56,10 @@ describe('Feature: every workspace with a coverage floor is measured in CI', () 
   it('Scenario: given the collector config, then coverage measures all of src except tests', () => {
     const config = read('collector/vitest.config.ts');
 
+    // Vitest 4 adds test.include to coverage.exclude, so the test files are left out without an
+    // exclude list; with none, no source file can be left out either.
+    expect(config).toContain("include: ['src/**/*.test.ts'],");
     expect(config).toContain("include: ['src/**/*.ts'],");
-    expect(config).toContain("exclude: ['src/**/*.test.ts'],");
+    expect(config).not.toMatch(/\bexclude\b/);
   });
 });

@@ -37,7 +37,7 @@ Hub-only variables (blank or absent = default):
 - **D3** `fleet:update` carries whole machines: `full: true` with every machine on connect, then only changed machines. Client replaces each listed machine by `machine.id`.
 - **D4** The pip state is `Seat.status` (`working | idle | blocked | stopped | unknown`), derived by the collector; `blocked` = `needsInput.count > 0` or a viewer-detected approval UI. `attention_required` stays in `lifecycleState`, not a pip.
 - **D5** Snapshot fixtures in AppyRig's own shape, not a second parser outside the adapters (plan review M6).
-- **D6** ESLint and Prettier ignore OpenRig's runtime files (`.openrig`, `.claude`, `.agents`, `.codex`, `CLAUDE.local.md`) and `test/fixtures`.
+- **D6** ESLint and Prettier ignore OpenRig's runtime files (`.openrig`, `.claude`, `.agents`, `.codex`, `CLAUDE.local.md`); Prettier also ignores `test/fixtures` (it holds no JS or TS, so ESLint needs no ignore for it).
 
 ## Running the hub as a service (P6)
 

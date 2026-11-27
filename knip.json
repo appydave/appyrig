@@ -20,7 +20,7 @@
         "playwright.config.ts"
       ],
       "project": ["bin/**", "scripts/**", "lint/**", "e2e/**", "test/**", "*.{js,ts,mjs}!"],
-      "ignore": ["test/fixtures/**", "test/root/fixtures/**"],
+      "ignore": ["test/root/fixtures/**"],
       "playwright": false,
       "ignoreBinaries": ["tsx", "vitest"]
     },
