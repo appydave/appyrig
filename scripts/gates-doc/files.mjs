@@ -10,11 +10,9 @@ const TSCONFIGS = [
   'collector/tsconfig.build.json',
   'shared/tsconfig.json',
 ];
-const VITEST_CONFIGS = [
-  'client/vitest.config.ts',
-  'server/vitest.config.ts',
-  'collector/vitest.config.ts',
-];
+// collector/vitest.config.ts has no coverage exclude (vitest 4 leaves test.include out of coverage
+// itself), so it is named exemption-free in test/root/docs/gates-doc.test.ts instead.
+const VITEST_CONFIGS = ['client/vitest.config.ts', 'server/vitest.config.ts'];
 // Known limit: the list ends at the first `]`, so a coverage pattern that contains one (a glob like
 // 'src/[a-z]/**') cuts the list short and the rest go unlisted. test/root/docs/gates-doc.test.ts does
 // not catch that.

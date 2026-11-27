@@ -105,7 +105,11 @@ describe('Feature: the checks fail on a deliberately bad example', () => {
 
 describe('Feature: a new tsconfig or vitest config cannot sit outside the list unseen', () => {
   // Tracked configs that have no exclude or coverage exclude to list.
-  const EXEMPTION_FREE = ['tsconfig.json', 'test/root/vitest.config.ts'];
+  const EXEMPTION_FREE = [
+    'tsconfig.json',
+    'test/root/vitest.config.ts',
+    'collector/vitest.config.ts',
+  ];
   const tracked = execFileSync('git', ['ls-files', '*tsconfig*.json', '*vitest.config.ts'], {
     cwd: ROOT,
     encoding: 'utf8',
@@ -113,18 +117,20 @@ describe('Feature: a new tsconfig or vitest config cannot sit outside the list u
     .split('\n')
     .filter(Boolean);
 
-  it('Scenario: given the two exemption-free configs, then neither has gained an exclude', () => {
+  it('Scenario: given the exemption-free configs, then none has gained an exclude', () => {
     const tsconfig = JSON.parse(readFileSync(join(ROOT, 'tsconfig.json'), 'utf8'));
-    const vitest = readFileSync(join(ROOT, 'test/root/vitest.config.ts'), 'utf8');
 
     expect(
       tsconfig,
       'tsconfig.json gained an exclude: list it in scripts/gates-doc/files.mjs'
     ).not.toHaveProperty('exclude');
-    expect(
-      vitest,
-      'test/root/vitest.config.ts gained an exclude: list it in scripts/gates-doc/files.mjs'
-    ).not.toMatch(/\bexclude\b/);
+
+    for (const file of ['test/root/vitest.config.ts', 'collector/vitest.config.ts']) {
+      expect(
+        readFileSync(join(ROOT, file), 'utf8'),
+        `${file} gained an exclude: list it in scripts/gates-doc/files.mjs`
+      ).not.toMatch(/\bexclude\b/);
+    }
   });
 
   it('Scenario: given the tracked tsconfigs and vitest configs, then each is listed or named exemption-free', () => {

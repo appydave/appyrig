@@ -24,7 +24,6 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts'],
       // The floor is on what is NOT covered (see UNCOVERED_* above); vitest reads a negative number as
       // "at most this many uncovered".
       thresholds: {
